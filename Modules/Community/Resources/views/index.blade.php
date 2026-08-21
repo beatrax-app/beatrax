@@ -31,13 +31,13 @@
                     <p class="max-w-prose text-sm text-slate-500 dark:text-slate-400">
                         {{ Lang::get('community::index.contribute_body') }}
                     </p>
-                    <a
-                        href="{{ route('community.mystery-merchants') }}"
+                    <x-core::neutral-button
+                        :href="route('community.mystery-merchants')"
+                        class="mt-4 min-h-[44px]"
                         wire:navigate
-                        class="mt-4 inline-flex min-h-[44px] items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                     >
                         {{ Lang::get('community::index.contribute_cta') }}
-                    </a>
+                    </x-core::neutral-button>
                 </x-core::card>
             </section>
 
@@ -61,14 +61,14 @@
                     <p class="mt-3 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                         {{ Lang::get('community::index.translations_how') }}
                     </p>
-                    <a
-                        href="{{ Lang::get('community::index.translations_url') }}"
+                    <x-core::secondary-button
+                        :href="Lang::get('community::index.translations_url')"
+                        class="mt-4 min-h-[44px]"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="mt-4 inline-flex min-h-[44px] items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                     >
                         {{ Lang::get('community::index.translations_cta') }} &rarr;
-                    </a>
+                    </x-core::secondary-button>
                 </x-core::card>
             </section>
 

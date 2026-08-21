@@ -52,11 +52,7 @@
             @endif
 
             <div class="flex justify-end gap-2">
-                <button
-                    type="button"
-                    wire:click="$dispatch('modal-close', { name: 'backfill-window-{{ $inboxId ?? 0 }}' })"
-                    class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                >{{ Lang::get('email-scan::backfill.cancel') }}</button>
+                <x-core::secondary-button wire:click="$dispatch('modal-close', { name: 'backfill-window-{{ $inboxId ?? 0 }}' })">{{ Lang::get('email-scan::backfill.cancel') }}</x-core::secondary-button>
                 <button
                     type="button"
                     wire:click="submit"

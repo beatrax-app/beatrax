@@ -29,7 +29,7 @@
         <x-onboarding::mini-step glyph="⬇️" :label="Lang::get('onboarding::connect_card.mini.download_label')" sub="PDF" state="upcoming" />
     </div>
 
-    <div class="format-chips" aria-label="{{ Lang::get('onboarding::connect_card.format_group_aria') }}">
+    <div role="group" class="format-chips" aria-label="{{ Lang::get('onboarding::connect_card.format_group_aria') }}">
         <span class="format-chips-label">{{ Lang::get('onboarding::connect_card.got_it_as') }}</span>
         <x-onboarding::format-chip label="PDF" :badge="Lang::get('onboarding::connect_card.badge_only_format')" />
     </div>
@@ -48,7 +48,7 @@
     </label>
 
     @if (count($statements) > 0)
-        <div class="per-file-chip-list" aria-label="{{ Lang::get('onboarding::connect_card.queue_aria') }}">
+        <div role="group" class="per-file-chip-list" aria-label="{{ Lang::get('onboarding::connect_card.queue_aria') }}">
             @foreach ($statements as $index => $statement)
                 <x-onboarding::per-file-chip
                     :filename="$statement->getClientOriginalName()"

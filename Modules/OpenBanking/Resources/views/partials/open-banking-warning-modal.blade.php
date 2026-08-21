@@ -22,38 +22,35 @@
                 {{ Lang::get('openbanking::messages.warning.body') }}
             </p>
 
-            <label class="flex items-start gap-2 text-left">
-                <input
-                    type="checkbox"
-                    wire:model.live="acknowledged"
-                    autofocus
-                    aria-label="{{ Lang::get('openbanking::messages.warning.acknowledge') }}"
-                    class="mt-1 h-4 w-4 rounded border-rose-300 text-slate-900 focus:ring-slate-900 dark:border-rose-700 dark:text-slate-100 dark:focus:ring-slate-100"
-                    data-testid="ob-warning-checkbox"
-                >
-                <span class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('openbanking::messages.warning.acknowledge') }}</span>
-            </label>
+            {{-- tone="danger" so the box is slate on this rose surface: an emerald
+                 tick on a warning modal reads as approval of the thing it warns
+                 about. text-left because the modal around it centres its text. --}}
+            <x-core::checkbox-field
+                tone="danger"
+                align="start"
+                class="text-left"
+                :label="Lang::get('openbanking::messages.warning.acknowledge')"
+                wire:model.live="acknowledged"
+                autofocus
+                aria-label="{{ Lang::get('openbanking::messages.warning.acknowledge') }}"
+                data-testid="ob-warning-checkbox"
+            />
 
             <div class="flex gap-3">
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    block="flex"
+                    class="min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                    :disabled="! $acknowledged"
                     wire:click="confirmWarning"
-                    @disabled(! $acknowledged)
                     aria-disabled="{{ $acknowledged ? 'false' : 'true' }}"
-                    class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                           hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none
-                           dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     data-testid="ob-warning-confirm"
-                >{{ Lang::get('openbanking::messages.warning.confirm') }}</button>
-                <button
-                    type="button"
+                >{{ Lang::get('openbanking::messages.warning.confirm') }}</x-core::neutral-button>
+                <x-core::secondary-button
+                    block="flex"
+                    class="min-h-[44px]"
                     wire:click="cancelWarning"
-                    class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                           hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                     data-testid="ob-warning-cancel"
-                >{{ Lang::get('openbanking::messages.warning.cancel') }}</button>
+                >{{ Lang::get('openbanking::messages.warning.cancel') }}</x-core::secondary-button>
             </div>
         </div>
     </flux:modal>

@@ -18,6 +18,7 @@
     reflection-only signatures in tools/phpstan-stubs.
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Illuminate\Support\Js')
 {{-- Full-screen safe-area chrome, matching setup-progress-screen and
      sync-complete-screen. This screen used to render inside layouts.app,
      which brought the drawer, sidebar and mobile top bar along with it —
@@ -97,19 +98,13 @@
                 aria-live="polite"
             >{{ Lang::get('mobile::pairing.camera_permission_pending') }}</p>
 
-            <button
-                type="button"
+            <x-core::neutral-button
+                block="full"
+                class="mt-4 min-h-[44px]"
                 x-on:click="toggle()"
                 x-bind:disabled="starting"
-                x-text="starting
-                    ? @js(Lang::get('mobile::pairing.opening_camera'))
-                    : (live
-                        ? @js(Lang::get('mobile::pairing.close_camera'))
-                        : @js(Lang::get('mobile::pairing.open_camera')))"
-                class="mt-4 w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
-                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
-            >{{ Lang::get('mobile::pairing.open_camera') }}</button>
+                x-text="starting ? {{ Js::from(Lang::get('mobile::pairing.opening_camera')) }} : (live ? {{ Js::from(Lang::get('mobile::pairing.close_camera')) }} : {{ Js::from(Lang::get('mobile::pairing.open_camera')) }})"
+            >{{ Lang::get('mobile::pairing.open_camera') }}</x-core::neutral-button>
         </div>
 
         {{-- Offered while importing too. A typed code carries the token and
@@ -172,38 +167,27 @@
         </div>
 
         <div class="flex gap-3">
-            <button
-                type="button"
-                {{-- The null is load-bearing: submitCode()'s first parameter
-                     is the scanned QR payload, and calling it with no argument
-                     at all makes Livewire try to resolve a ?string from the
-                     container, which 500s. --}}
+            <x-core::neutral-button
+                block="flex"
+                class="min-h-[44px] disabled:opacity-50 disabled:cursor-wait"
+                {{-- The null is load-bearing: submitCode()'s first parameter is the scanned QR payload, and calling it with no argument at all makes Livewire try to resolve a ?string from the container, which 500s. --}}
                 wire:click="submitCode(null)"
-                {{-- Submitting an import code asks the network who holds it,
-                     which takes a couple of seconds. Without this the button
-                     sat live and unresponsive for the whole browse, which
-                     reads as a tap that did not register. --}}
+                {{-- Submitting an import code asks the network who holds it, which takes a couple of seconds. Without this the button sat live and unresponsive for the whole browse, which reads as a tap that did not register. --}}
                 wire:loading.attr="disabled"
                 wire:target="submitCode"
-                class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       disabled:opacity-50 disabled:cursor-wait
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('mobile::pairing.submit_code') }}
-            </button>
+            </x-core::neutral-button>
             {{-- Backs out of TYPING, not out of pairing. cancelPairing() here
                  expired the token and left the flow entirely, landing the user
                  on a screen they had already finished. --}}
-            <button
-                type="button"
+            <x-core::secondary-button
+                block="flex"
+                class="min-h-[44px]"
                 wire:click="backToScan"
-                class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                       hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('mobile::pairing.cancel') }}
-            </button>
+            </x-core::secondary-button>
         </div>
     @endif
 
@@ -226,6 +210,7 @@
             @endphp
             <div
                 class="space-y-2"
+                role="group"
                 aria-label="{{ Lang::get('mobile::pairing.safety_words_aria', ['words' => strtoupper(implode(' ', $safetyWords))]) }}"
             >
                 <div class="flex justify-center gap-2">
@@ -252,28 +237,21 @@
             @endif
 
             <div class="mt-4 flex gap-3">
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    block="flex"
+                    :class="'min-h-[44px]' . ' ' . ($awaitingPeer ? 'opacity-50 cursor-wait' : '')"
+                    :disabled="$awaitingPeer"
                     wire:click="confirmMatch"
-                    @disabled($awaitingPeer)
-                    @class([
-                        'flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white',
-                        'hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2',
-                        'dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100',
-                        'opacity-50 cursor-wait' => $awaitingPeer,
-                    ])
                 >
                     {{ Lang::get('mobile::pairing.confirm_match') }}
-                </button>
-                <button
-                    type="button"
+                </x-core::neutral-button>
+                <x-core::secondary-button
+                    block="flex"
+                    class="min-h-[44px]"
                     wire:click="cancelPairing"
-                    class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                           hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                 >
                     {{ Lang::get('mobile::pairing.cancel') }}
-                </button>
+                </x-core::secondary-button>
             </div>
         </div>
     @endif
@@ -288,15 +266,13 @@
             <p class="mx-auto max-w-xs text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('mobile::pairing.success_body') }}
             </p>
-            <button
-                type="button"
+            <x-core::neutral-button
+                block="full"
+                class="min-h-[44px]"
                 wire:click="finishPairing"
-                class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
-                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('mobile::pairing.done') }}
-            </button>
+            </x-core::neutral-button>
         </div>
     @endif
 

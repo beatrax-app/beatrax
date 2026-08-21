@@ -103,6 +103,7 @@
                             <span class="ml-2">{{ $row->cadence->label() }}</span>
                             @if ($row->latestFundingChainLinkId !== null)
                                 <span
+                                    role="img"
                                     class="ml-2 inline-flex items-center rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                                     data-chain-badge="true"
                                     aria-label="{{ Lang::get('recurring::fixed_payments.chain_aria') }}"

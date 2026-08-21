@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Nyt beløb',
     ],
 
+    'series_name_fallback' => 'serie',
+
     'summary' => [
         'cancel' => 'Opsig :name',
         'series_fallback' => 'serie #:id',

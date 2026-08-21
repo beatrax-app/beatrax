@@ -53,12 +53,13 @@
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step1_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step1_body') }}</p>
-                            <a
+                            <x-core::secondary-button
                                 href="https://console.cloud.google.com/"
+                                size="sm"
+                                class="gap-1"
                                 target="_blank"
                                 rel="noopener"
-                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                            >{{ Lang::get('email-scan::wizard.gmail.step1_link') }}</a>
+                            >{{ Lang::get('email-scan::wizard.gmail.step1_link') }}</x-core::secondary-button>
                         </div>
                     </li>
 
@@ -83,14 +84,11 @@
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step4_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step4_body') }}</p>
-                            <label class="flex items-center gap-2 pt-1">
-                                <input
-                                    type="checkbox"
-                                    wire:model.live="publishedConfirmed"
-                                    class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700 dark:bg-slate-900 dark:text-emerald-500"
-                                >
-                                <span class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step4_checkbox') }}</span>
-                            </label>
+                            <x-core::checkbox-field
+                                class="pt-1"
+                                :label="Lang::get('email-scan::wizard.gmail.step4_checkbox')"
+                                wire:model.live="publishedConfirmed"
+                            />
                         </div>
                     </li>
 
@@ -99,12 +97,12 @@
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step5_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step5_body') }}</p>
-                            <button
-                                type="button"
+                            <x-core::secondary-button
+                                size="sm"
+                                class="gap-1 font-mono"
                                 x-data
                                 x-on:click="(async () => { const label = $el.querySelector('span'); const was = label.textContent; if (await window.beatraxCopy(was)) { label.textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => label.textContent = '{{ $redirectUri }}', 2000); } })()"
-                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-mono text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                            ><span>{{ $redirectUri }}</span></button>
+                            ><span>{{ $redirectUri }}</span></x-core::secondary-button>
                         </div>
                     </li>
 
@@ -140,12 +138,13 @@
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step1_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step1_body') }}</p>
-                            <a
+                            <x-core::secondary-button
                                 href="https://entra.microsoft.com/"
+                                size="sm"
+                                class="gap-1"
                                 target="_blank"
                                 rel="noopener"
-                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                            >{{ Lang::get('email-scan::wizard.microsoft.step1_link') }}</a>
+                            >{{ Lang::get('email-scan::wizard.microsoft.step1_link') }}</x-core::secondary-button>
                         </div>
                     </li>
 
@@ -162,12 +161,12 @@
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step3_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step3_body') }}</p>
-                            <button
-                                type="button"
+                            <x-core::secondary-button
+                                size="sm"
+                                class="gap-1 font-mono"
                                 x-data
                                 x-on:click="(async () => { const label = $el.querySelector('span'); const was = label.textContent; if (await window.beatraxCopy(was)) { label.textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => label.textContent = '{{ $redirectUri }}', 2000); } })()"
-                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-mono text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                            ><span>{{ $redirectUri }}</span></button>
+                            ><span>{{ $redirectUri }}</span></x-core::secondary-button>
                         </div>
                     </li>
 
@@ -219,11 +218,7 @@
             @endif
 
             <footer class="flex items-center justify-end gap-3">
-                <button
-                    type="button"
-                    wire:click="cancel"
-                    class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                >{{ Lang::get('email-scan::wizard.cancel') }}</button>
+                <x-core::secondary-button wire:click="cancel">{{ Lang::get('email-scan::wizard.cancel') }}</x-core::secondary-button>
                 <button
                     type="button"
                     wire:click="submit"

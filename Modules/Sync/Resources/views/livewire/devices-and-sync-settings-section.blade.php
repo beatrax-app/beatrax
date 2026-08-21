@@ -114,16 +114,13 @@
                     data-testid="encryption-offer-notice"
                 >
                     <p>{{ Lang::get('sync::devices.not_encrypted_offer') }}</p>
-                    <button
-                        type="button"
+                    <x-core::neutral-button
+                        class="mt-3 min-h-[44px]"
                         wire:click="showEnableEncryptionModal"
-                        class="mt-3 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                               hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                         data-testid="enable-encryption-cta"
                     >
                         {{ Lang::get('sync::devices.enable_encryption') }}
-                    </button>
+                    </x-core::neutral-button>
                 </div>
             @endif
         </div>
@@ -158,15 +155,13 @@
                                                    focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                                    dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                                         />
-                                        <button
-                                            type="button"
+                                        <x-core::neutral-button
+                                            size="sm"
+                                            class="min-h-[44px]"
                                             wire:click="renameDevice"
-                                            class="min-h-[44px] rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white
-                                                   hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                                   dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                                         >
                                             {{ Lang::get('sync::devices.save') }}
-                                        </button>
+                                        </x-core::neutral-button>
                                     </div>
                                 @else
                                     <div class="group flex items-center gap-2">
@@ -218,6 +213,7 @@
                                     @endphp
                                     <div
                                         class="space-y-2"
+                                        role="group"
                                         aria-label="{{ Lang::get('sync::devices.safety_number_words') }} {{ strtoupper(implode(' ', $words)) }}"
                                     >
                                         <div class="flex flex-wrap gap-2">
@@ -264,15 +260,13 @@
             {{-- Pair a new device (D-11) — dispatch a Livewire event the modal
                  component listens for; it owns its own open state so the hosting
                  <flux:modal> sees a real false→true transition. --}}
-            <button
-                type="button"
+            <x-core::neutral-button
+                block="full"
+                class="min-h-[44px]"
                 wire:click="$dispatch('open-pairing-modal')"
-                class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
-                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('sync::devices.pair_new_device') }}
-            </button>
+            </x-core::neutral-button>
 
             {{-- The per-peer status surface (D-06) used to render here as well
                  as at the top of the Data & Devices page, so that page carried
@@ -308,16 +302,13 @@
                                dark:focus-visible:ring-slate-100"
                         data-testid="relay-endpoint-input"
                     />
-                    <button
-                        type="button"
+                    <x-core::neutral-button
+                        class="min-h-[44px] flex-shrink-0"
                         wire:click="saveRelayEndpoint"
-                        class="min-h-[44px] flex-shrink-0 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                               hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                         data-testid="relay-endpoint-save"
                     >
                         {{ Lang::get('sync::devices.save') }}
-                    </button>
+                    </x-core::neutral-button>
                 </div>
 
                 {{-- Non-HTTPS warning (T-13-08 / Pitfall 6) --}}
@@ -379,28 +370,24 @@
                         <p class="mt-1">{{ Lang::get('sync::devices.search_plaintext') }}</p>
                     </div>
                     <div class="flex gap-3">
-                        <button
-                            type="button"
+                        <x-core::neutral-button
+                            block="flex"
+                            class="min-h-[44px]"
                             wire:click="enableEncryption"
                             wire:loading.attr="disabled"
                             wire:target="enableEncryption"
-                            class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                                   hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                             data-testid="confirm-enable-encryption"
                         >
                             {{ Lang::get('sync::devices.enable_encryption') }}
-                        </button>
-                        <button
-                            type="button"
+                        </x-core::neutral-button>
+                        <x-core::secondary-button
+                            block="flex"
+                            class="min-h-[44px]"
                             wire:click="declineEncryption"
-                            class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                                   hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                             data-testid="decline-encryption"
                         >
                             {{ Lang::get('sync::devices.keep_unencrypted') }}
-                        </button>
+                        </x-core::secondary-button>
                     </div>
                 @elseif ($encryptionStep === 'progress')
                     <div wire:poll.750ms="pollEncryptionProgress">
@@ -421,16 +408,14 @@
                         </svg>
                         <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100" aria-live="polite" aria-atomic="true">{{ Lang::get('sync::devices.encryption_enabled') }}</h3>
                         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.encryption_enabled_body') }}</p>
-                        <button
-                            type="button"
+                        <x-core::neutral-button
+                            block="full"
+                            class="min-h-[44px]"
                             wire:click="closeEncryptionModal"
-                            class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
-                                   hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                             data-testid="encryption-done"
                         >
                             {{ Lang::get('sync::devices.done_encryption_enabled') }}
-                        </button>
+                        </x-core::neutral-button>
                     </div>
                 @else
                     <div class="space-y-3 text-center">
@@ -439,16 +424,14 @@
                         </svg>
                         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" aria-live="polite" aria-atomic="true">{{ Lang::get('sync::devices.encryption_failed') }}</h3>
                         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.encryption_failed_body') }}</p>
-                        <button
-                            type="button"
+                        <x-core::secondary-button
+                            block="full"
+                            class="min-h-[44px]"
                             wire:click="closeEncryptionModal"
-                            class="w-full min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                                   hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                             data-testid="encryption-error-close"
                         >
                             {{ Lang::get('sync::devices.close_no_changes') }}
-                        </button>
+                        </x-core::secondary-button>
                     </div>
                 @endif
             </div>
@@ -481,16 +464,14 @@
                     >
                         {{ Lang::get('sync::devices.remove_device') }}
                     </button>
-                    <button
-                        type="button"
+                    <x-core::secondary-button
+                        block="flex"
+                        class="min-h-[44px]"
                         wire:click="cancelRemove"
-                        class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                               hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                         data-testid="cancel-remove-device"
                     >
                         {{ Lang::get('sync::devices.keep_device') }}
-                    </button>
+                    </x-core::secondary-button>
                 </div>
 
                 <div

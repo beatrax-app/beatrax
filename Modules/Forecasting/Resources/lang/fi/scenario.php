@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Uusi summa',
     ],
 
+    'series_name_fallback' => 'sarja',
+
     'summary' => [
         'cancel' => 'Irtisano :name',
         'series_fallback' => 'sarja #:id',

@@ -35,15 +35,16 @@
                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $error }}</p>
             @endif
 
-            <button
+            <x-core::secondary-button
+                size="sm"
+                class="disabled:opacity-50"
                 type="submit"
                 wire:loading.attr="disabled"
                 wire:target="download"
-                class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
             >
                 <span wire:loading.remove wire:target="download">{{ Lang::get('core::backup.download.submit') }}</span>
                 <span wire:loading wire:target="download">{{ Lang::get('core::backup.download.preparing') }}</span>
-            </button>
+            </x-core::secondary-button>
         </form>
     @endif
 </div>

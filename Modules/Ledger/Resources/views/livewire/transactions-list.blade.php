@@ -73,13 +73,12 @@
                     <flux:radio value="eur" label="{{ Lang::get('ledger::list.currency_eur') }}" />
                     <flux:radio value="original" label="{{ Lang::get('ledger::list.currency_original') }}" />
                 </flux:radio.group>
-                <button
-                    type="button"
+                <x-core::secondary-button
+                    size="sm"
                     wire:click="toggleFullHistory"
-                    class="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                 >
                     {{ $fullHistory ? Lang::get('ledger::list.show_recent') : Lang::get('ledger::list.show_full') }}
-                </button>
+                </x-core::secondary-button>
             </div>
         @endif
     </header>
@@ -260,7 +259,7 @@
 
                 {{-- Loading pulse shown while the loadMore request is in flight --}}
                 <div wire:loading wire:target="loadMore" class="flex justify-center py-2">
-                    <span class="dot-live" aria-label="{{ Lang::get('ledger::list.loading_more') }}"></span>
+                    <span role="status" class="dot-live" aria-label="{{ Lang::get('ledger::list.loading_more') }}"></span>
                 </div>
             @endif
         </div>
@@ -273,180 +272,175 @@
              Snippet rendered as a second line beneath counterparty.
              ============================================================ --}}
         <div class="hidden md:block">
-            <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-                <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
-                    <thead class="bg-slate-50 dark:bg-slate-900">
-                        <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.date') }}</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.counterparty') }}</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.category') }}</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.tax') }}</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.status') }}</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.amount') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody
-                        class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700"
-                        x-data="{ splitOpen: {} }"
-                    >
-                        @foreach ($page->rows as $row)
-                            @php
-                                $rowTaxState = $taxState[$row->id] ?? ['taxTagged' => false, 'taxCategoryShortName' => null];
-                                $rowArr = ['id' => $row->id, 'taxTagged' => $rowTaxState['taxTagged'], 'taxCategoryShortName' => $rowTaxState['taxCategoryShortName']];
-                                $isSearchRow = $isSearchMode && isset($searchRows[$row->id]);
-                                $sRow = $isSearchRow ? $searchRows[$row->id] : null;
-                                $rowLegs = $splitLegs[$row->id] ?? [];
-                                $isSplitRow = count($rowLegs) >= 2;
-                            @endphp
-                            <tr class="group {{ $isSearchMode ? 'srch-row' : '' }}">
-                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
+            {{-- scroll="false" because this table only exists above 768px — the
+                 wrapper above hides it, and the card list beside it is what a
+                 phone gets — so clipping cannot strand a column off-screen.
+
+                 x-data sits on the table rather than the tbody it used to be on:
+                 the component owns the tbody, and splitOpen is read by rows that
+                 are descendants of both. --}}
+            <x-core::data-table :scroll="false" x-data="{ splitOpen: {} }">
+                <x-slot:head>
+                    <x-core::th align="left">{{ Lang::get('ledger::list.table.date') }}</x-core::th>
+                    <x-core::th align="left">{{ Lang::get('ledger::list.table.counterparty') }}</x-core::th>
+                    <x-core::th align="left">{{ Lang::get('ledger::list.table.category') }}</x-core::th>
+                    <x-core::th align="left">{{ Lang::get('ledger::list.table.tax') }}</x-core::th>
+                    <x-core::th align="left">{{ Lang::get('ledger::list.table.status') }}</x-core::th>
+                    <x-core::th align="right">{{ Lang::get('ledger::list.table.amount') }}</x-core::th>
+                </x-slot:head>
+
+                @foreach ($page->rows as $row)
+                    @php
+                        $rowTaxState = $taxState[$row->id] ?? ['taxTagged' => false, 'taxCategoryShortName' => null];
+                        $rowArr = ['id' => $row->id, 'taxTagged' => $rowTaxState['taxTagged'], 'taxCategoryShortName' => $rowTaxState['taxCategoryShortName']];
+                        $isSearchRow = $isSearchMode && isset($searchRows[$row->id]);
+                        $sRow = $isSearchRow ? $searchRows[$row->id] : null;
+                        $rowLegs = $splitLegs[$row->id] ?? [];
+                        $isSplitRow = count($rowLegs) >= 2;
+                    @endphp
+                    <tr class="group {{ $isSearchMode ? 'srch-row' : '' }}">
+                        <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
+                            <a
+                                href="{{ route('transactions.show', ['transactionId' => $row->id]) }}"
+                                wire:navigate
+                                class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                data-testid="tx-row-link-{{ $row->id }}"
+                            >{{ $row->bookedAt }}</a>
+                        </td>
+                        <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
+                            {{-- In search mode: use {!! !!} ONLY for server-built FTS
+                                 highlight() markup — never for raw user input (T-08-09). --}}
+                            @if ($isSearchRow && $sRow !== null && $sRow->highlightedCounterparty !== null)
+                                @if ($row->counterpartySlug !== null)
                                     <a
-                                        href="{{ route('transactions.show', ['transactionId' => $row->id]) }}"
+                                        href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
                                         wire:navigate
                                         class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
-                                        data-testid="tx-row-link-{{ $row->id }}"
-                                    >{{ $row->bookedAt }}</a>
-                                </td>
-                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
-                                    {{-- In search mode: use {!! !!} ONLY for server-built FTS
-                                         highlight() markup — never for raw user input (T-08-09). --}}
-                                    @if ($isSearchRow && $sRow !== null && $sRow->highlightedCounterparty !== null)
-                                        @if ($row->counterpartySlug !== null)
-                                            <a
-                                                href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
-                                                wire:navigate
-                                                class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
-                                                data-testid="tx-row-counterparty-link-{{ $row->id }}"
-                                            >{!! $sRow->highlightedCounterparty !!}</a>
-                                        @else
-                                            <span data-testid="tx-row-counterparty-text-{{ $row->id }}">{!! $sRow->highlightedCounterparty !!}</span>
-                                        @endif
-                                        @if ($sRow->snippet !== null)
-                                            <p class="srch-snippet">{!! $sRow->snippet !!}</p>
-                                        @endif
-                                    @else
-                                        @if ($row->counterpartySlug !== null)
-                                            <a
-                                                href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
-                                                wire:navigate
-                                                class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
-                                                data-testid="tx-row-counterparty-link-{{ $row->id }}"
-                                            >{{ $row->counterpartyName ?? '—' }}</a>
-                                        @else
-                                            <span data-testid="tx-row-counterparty-text-{{ $row->id }}">{{ $row->counterpartyName ?? '—' }}</span>
-                                        @endif
-                                        @if (isset(($chainTxIds ?? [])[$row->id]))
-                                            <span
-                                                class="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
-                                                title="{{ Lang::get('ledger::list.chain_title') }}"
-                                                data-testid="tx-row-chain-badge-{{ $row->id }}"
-                                            >
-                                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 015.656 5.656l-3 3a4 4 0 01-5.656-5.656M10.172 13.828a4 4 0 01-5.656-5.656l3-3a4 4 0 015.656 5.656"/>
-                                                </svg>
-                                                {{ Lang::get('ledger::list.chain_badge') }}
-                                            </span>
-                                        @endif
-                                    @endif
-                                </td>
-                                <td class="px-4 py-2 text-slate-500 dark:text-slate-400">
-                                    @if ($isSplitRow)
-                                        {{-- Split badge REPLACES the InlineCategoryPicker for split
-                                             parents (D-01/D-11, UI-SPEC §5.1). No Livewire round
-                                             trip — legs are already server-rendered below;
-                                             visibility is a pure Alpine toggle. --}}
-                                        <button
-                                            type="button"
-                                            class="split-badge"
-                                            @click="splitOpen[{{ $row->id }}] = !splitOpen[{{ $row->id }}]"
-                                            :aria-expanded="!!splitOpen[{{ $row->id }}]"
-                                            aria-controls="split-legs-{{ $row->id }}"
-                                            aria-label="{{ Lang::get('ledger::list.split_expand_aria', ['count' => count($rowLegs)]) }}"
-                                            data-testid="split-badge-{{ $row->id }}"
-                                        >
-                                            {{ Lang::get('ledger::list.split_badge', ['count' => count($rowLegs)]) }}
-                                            <svg class="split-badge__chevron h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                                            </svg>
-                                        </button>
-                                    @else
-                                        @livewire(
-                                            'categorization.inline-category-picker',
-                                            ['transactionId' => $row->id, 'categoryId' => $row->categoryId],
-                                            key('cat-picker-' . $row->id)
-                                        )
-                                    @endif
-                                </td>
-                                {{-- Tax badge: hover-reveal on desktop (D-19/D-20). Unchanged on
-                                     search rows AND on split parents (UI-SPEC discretion — see
-                                     the per-leg read-only badges in the expanded sub-rows). --}}
+                                        data-testid="tx-row-counterparty-link-{{ $row->id }}"
+                                    >{!! $sRow->highlightedCounterparty !!}</a>
+                                @else
+                                    <span data-testid="tx-row-counterparty-text-{{ $row->id }}">{!! $sRow->highlightedCounterparty !!}</span>
+                                @endif
+                                @if ($sRow->snippet !== null)
+                                    <p class="srch-snippet">{!! $sRow->snippet !!}</p>
+                                @endif
+                            @else
+                                @if ($row->counterpartySlug !== null)
+                                    <a
+                                        href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
+                                        wire:navigate
+                                        class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                        data-testid="tx-row-counterparty-link-{{ $row->id }}"
+                                    >{{ $row->counterpartyName ?? '—' }}</a>
+                                @else
+                                    <span data-testid="tx-row-counterparty-text-{{ $row->id }}">{{ $row->counterpartyName ?? '—' }}</span>
+                                @endif
+                                @if (isset(($chainTxIds ?? [])[$row->id]))
+                                    <span
+                                        class="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
+                                        title="{{ Lang::get('ledger::list.chain_title') }}"
+                                        data-testid="tx-row-chain-badge-{{ $row->id }}"
+                                    >
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 015.656 5.656l-3 3a4 4 0 01-5.656-5.656M10.172 13.828a4 4 0 01-5.656-5.656l3-3a4 4 0 015.656 5.656"/>
+                                        </svg>
+                                        {{ Lang::get('ledger::list.chain_badge') }}
+                                    </span>
+                                @endif
+                            @endif
+                        </td>
+                        <td class="px-4 py-2 text-slate-500 dark:text-slate-400">
+                            @if ($isSplitRow)
+                                {{-- Split badge REPLACES the InlineCategoryPicker for split
+                                     parents (D-01/D-11, UI-SPEC §5.1). No Livewire round
+                                     trip — legs are already server-rendered below;
+                                     visibility is a pure Alpine toggle. --}}
+                                <button
+                                    type="button"
+                                    class="split-badge"
+                                    @click="splitOpen[{{ $row->id }}] = !splitOpen[{{ $row->id }}]"
+                                    :aria-expanded="!!splitOpen[{{ $row->id }}]"
+                                    aria-controls="split-legs-{{ $row->id }}"
+                                    aria-label="{{ Lang::get('ledger::list.split_expand_aria', ['count' => count($rowLegs)]) }}"
+                                    data-testid="split-badge-{{ $row->id }}"
+                                >
+                                    {{ Lang::get('ledger::list.split_badge', ['count' => count($rowLegs)]) }}
+                                    <svg class="split-badge__chevron h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </button>
+                            @else
+                                @livewire(
+                                    'categorization.inline-category-picker',
+                                    ['transactionId' => $row->id, 'categoryId' => $row->categoryId],
+                                    key('cat-picker-' . $row->id)
+                                )
+                            @endif
+                        </td>
+                        {{-- Tax badge: hover-reveal on desktop (D-19/D-20). Unchanged on
+                             search rows AND on split parents (UI-SPEC discretion — see
+                             the per-leg read-only badges in the expanded sub-rows). --}}
+                        <td class="px-4 py-2">
+                            <x-tax::tax-badge :transaction="$rowArr" :showAlways="false" />
+                        </td>
+                        {{-- Cleared/uncleared/reconciled badge (SC-1, D-11). Batch-loaded
+                             via $clearedState — no N+1 (Pitfall 1). --}}
+                        <td class="px-4 py-2">
+                            <x-ledger::cleared-badge :transaction="['id' => $row->id, 'status' => $clearedState[$row->id] ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
+                        </td>
+                        <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
+                            @if ($isSearchMode)
+                                <span class="block text-sm text-slate-900 dark:text-slate-100">
+                                    {{ Money::ofMinor($row->amountMinor, $row->amountCurrency)->format() }}
+                                </span>
+                            @else
+                                {{-- Always the parent total — never a client-recomputed
+                                     leg sum (UI-SPEC §5.1). --}}
+                                <span class="block text-sm text-slate-900 dark:text-slate-100">{{ $fmt($row->amount) }}</span>
+                                @if ($currency === 'original' && $row->secondaryAmount !== null)
+                                    <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">{{ $fmt($row->secondaryAmount) }}</span>
+                                @endif
+                            @endif
+                        </td>
+                    </tr>
+                    {{-- Expanded legs (UI-SPEC §5.2/§6): always server-rendered;
+                         visibility toggled client-side only via the shared
+                         $data.splitOpen map on the <tbody> host — no Livewire round
+                         trip. Legs render in creation order (sort_order). Read-only:
+                         editing only happens on TransactionDetail. --}}
+                    @if ($isSplitRow)
+                        @foreach ($rowLegs as $leg)
+                            <tr
+                                class="split-leg-subrow"
+                                @if ($loop->first) id="split-legs-{{ $row->id }}" @endif
+                                x-show="!!splitOpen[{{ $row->id }}]"
+                                data-testid="split-leg-{{ $row->id }}-{{ $leg['id'] }}"
+                            >
+                                <td class="px-4 py-2"></td>
+                                <td class="px-4 py-2 text-xs italic text-slate-500 dark:text-slate-400">{{ $leg['note'] ?? '' }}</td>
+                                <td class="px-4 py-2 text-xs text-slate-900 dark:text-slate-100">{{ $leg['categoryName'] }}</td>
                                 <td class="px-4 py-2">
-                                    <x-tax::tax-badge :transaction="$rowArr" :showAlways="false" />
-                                </td>
-                                {{-- Cleared/uncleared/reconciled badge (SC-1, D-11). Batch-loaded
-                                     via $clearedState — no N+1 (Pitfall 1). --}}
-                                <td class="px-4 py-2">
-                                    <x-ledger::cleared-badge :transaction="['id' => $row->id, 'status' => $clearedState[$row->id] ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
-                                </td>
-                                <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
-                                    @if ($isSearchMode)
-                                        <span class="block text-sm text-slate-900 dark:text-slate-100">
-                                            {{ Money::ofMinor($row->amountMinor, $row->amountCurrency)->format($row->amountCurrency === 'EUR' ? 'nl_NL' : 'en_US') }}
-                                        </span>
-                                    @else
-                                        {{-- Always the parent total — never a client-recomputed
-                                             leg sum (UI-SPEC §5.1). --}}
-                                        <span class="block text-sm text-slate-900 dark:text-slate-100">{{ $fmt($row->amount) }}</span>
-                                        @if ($currency === 'original' && $row->secondaryAmount !== null)
-                                            <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">{{ $fmt($row->secondaryAmount) }}</span>
-                                        @endif
+                                    @if ($leg['taxTagged'])
+                                        <x-tax::tax-badge
+                                            :transaction="['id' => $row->id, 'taxTagged' => true, 'taxCategoryShortName' => $leg['taxCategoryShortName']]"
+                                            :showAlways="false"
+                                            :readonly="true"
+                                        />
                                     @endif
+                                </td>
+                                <td class="px-4 py-2"></td>
+                                <td class="px-4 py-2 text-right text-xs text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
+                                    {{ $fmt(Money::ofMinor($leg['amountMinor'], $leg['amountCurrency'])) }}
                                 </td>
                             </tr>
-                            {{-- Expanded legs (UI-SPEC §5.2/§6): always server-rendered;
-                                 visibility toggled client-side only via the shared
-                                 $data.splitOpen map on the <tbody> host — no Livewire round
-                                 trip. Legs render in creation order (sort_order). Read-only:
-                                 editing only happens on TransactionDetail. --}}
-                            @if ($isSplitRow)
-                                @foreach ($rowLegs as $leg)
-                                    <tr
-                                        class="split-leg-subrow"
-                                        @if ($loop->first) id="split-legs-{{ $row->id }}" @endif
-                                        x-show="!!splitOpen[{{ $row->id }}]"
-                                        data-testid="split-leg-{{ $row->id }}-{{ $leg['id'] }}"
-                                    >
-                                        <td class="px-4 py-2"></td>
-                                        <td class="px-4 py-2 text-xs italic text-slate-500 dark:text-slate-400">{{ $leg['note'] ?? '' }}</td>
-                                        <td class="px-4 py-2 text-xs text-slate-900 dark:text-slate-100">{{ $leg['categoryName'] }}</td>
-                                        <td class="px-4 py-2">
-                                            @if ($leg['taxTagged'])
-                                                <x-tax::tax-badge
-                                                    :transaction="['id' => $row->id, 'taxTagged' => true, 'taxCategoryShortName' => $leg['taxCategoryShortName']]"
-                                                    :showAlways="false"
-                                                    :readonly="true"
-                                                />
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-2"></td>
-                                        <td class="px-4 py-2 text-right text-xs text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                                            {{ $fmt(Money::ofMinor($leg['amountMinor'], $leg['amountCurrency'])) }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            @endif
                         @endforeach
-                    </tbody>
-                </table>
-            </div>
+                    @endif
+                @endforeach
+            </x-core::data-table>
 
             @if ($page->hasMore && $page->nextCursorId !== null)
                 <div class="flex justify-center">
-                    <button
-                        type="button"
-                        wire:click="loadMore"
-                        class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                    >{{ Lang::get('ledger::list.load_more') }}</button>
+                    <x-core::secondary-button wire:click="loadMore">{{ Lang::get('ledger::list.load_more') }}</x-core::secondary-button>
                 </div>
             @endif
         </div>

@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Novi iznos',
     ],
 
+    'series_name_fallback' => 'serija',
+
     'summary' => [
         'cancel' => 'Otkaži :name',
         'series_fallback' => 'serija br. :id',

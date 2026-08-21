@@ -67,6 +67,7 @@
                 {{ $fmt($node->amount) }}
             </p>
             <span
+                role="img"
                 aria-label="{{ $tierAria }}"
                 class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $tierClasses }}"
             >{{ $node->confidenceTier }}</span>

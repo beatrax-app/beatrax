@@ -80,6 +80,7 @@
         {{-- PIN pad — dot display --}}
         <div
             class="flex justify-center gap-2 py-3"
+            role="status"
             aria-live="polite"
             x-bind:aria-label="pin.length + ' {{ Lang::get('mobile::lock.digits_entered') }}'"
         >

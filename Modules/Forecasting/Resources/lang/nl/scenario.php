@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Nieuw bedrag',
     ],
 
+    'series_name_fallback' => 'reeks',
+
     'summary' => [
         'cancel' => 'Opzeggen :name',
         'series_fallback' => 'reeks #:id',

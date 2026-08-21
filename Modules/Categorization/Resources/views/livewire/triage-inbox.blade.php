@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Illuminate\Support\Js')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -53,88 +54,78 @@
                 @endforeach
             "
         >
-            {{-- overflow-x-auto, not overflow-hidden: this table is the only
-                 rendering of these rows at every width, and hidden CLIPPED the
-                 right-hand columns on a phone rather than letting them scroll —
-                 so the category picker and row actions were unreachable.
-
-                 Scrolling was still not good enough. With real data the table
-                 is 484px against 346px of room, so it opens on DATUM /
+            {{-- Scrolling alone was not good enough here. With real data the
+                 table is 484px against 346px of room, so it opens on DATUM /
                  WINKELIER / BEDRAG and the category picker — the only control
                  on a screen whose entire purpose is choosing a category — is
                  off the right edge, reachable only by swiping a table nothing
                  marks as swipeable. `triage-inbox-table` restacks the row below
                  768px so the picker and the row actions are simply there. --}}
-            <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                <table class="triage-inbox-table min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
-                    <thead class="bg-slate-50 dark:bg-slate-900">
-                        <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::triage.col_date') }}</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::triage.col_counterparty') }}</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::triage.col_amount') }}</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::triage.col_category') }}</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                <span class="sr-only">{{ Lang::get('categorization::triage.col_row_actions') }}</span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
-                        @foreach ($batch->rows as $i => $row)
-                            <tr
-                                x-ref="row-{{ $i }}"
-                                data-txid="{{ $row->transactionId }}"
-                                x-bind:class="cursor === {{ $i }} ? 'bg-slate-100 dark:bg-slate-800' : ''"
-                                class="triage-row group"
+            <x-core::data-table class="triage-inbox-table">
+                <x-slot:head>
+                    <x-core::th align="left">{{ Lang::get('categorization::triage.col_date') }}</x-core::th>
+                    <x-core::th align="left">{{ Lang::get('categorization::triage.col_counterparty') }}</x-core::th>
+                    <x-core::th align="right">{{ Lang::get('categorization::triage.col_amount') }}</x-core::th>
+                    <x-core::th align="left">{{ Lang::get('categorization::triage.col_category') }}</x-core::th>
+                    <x-core::th align="right">
+                        <span class="sr-only">{{ Lang::get('categorization::triage.col_row_actions') }}</span>
+                    </x-core::th>
+                </x-slot:head>
+
+                @foreach ($batch->rows as $i => $row)
+                    <tr
+                        x-ref="row-{{ $i }}"
+                        data-txid="{{ $row->transactionId }}"
+                        x-bind:class="cursor === {{ $i }} ? 'bg-slate-100 dark:bg-slate-800' : ''"
+                        class="triage-row group"
+                    >
+                        <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
+                        {{-- Counterparty cell renders the resolved counterparty's
+                             display name. When the row's counterparty_id has been
+                             resolved (counterpartySlug is non-null), wrap the name
+                             in a link routing to counterparties.profile. Rows
+                             without a resolved counterparty render the name as
+                             plain text. --}}
+                        <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
+                            @if ($row->counterpartySlug !== null)
+                                <a
+                                    href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
+                                    class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                    data-testid="triage-row-counterparty-link-{{ $row->transactionId }}"
+                                >{{ $row->counterpartyName ?? '—' }}</a>
+                            @else
+                                <span data-testid="triage-row-counterparty-text-{{ $row->transactionId }}">{{ $row->counterpartyName ?? '—' }}</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->amountMinor, $row->currency) }}</td>
+                        <td class="px-4 py-2">
+                            <label for="triage-category-{{ $row->transactionId }}" class="sr-only">{{ Lang::get('categorization::triage.category_for', ['name' => $row->counterpartyName ?? Lang::get('categorization::triage.this_transaction')]) }}</label>
+                            <select
+                                id="triage-category-{{ $row->transactionId }}"
+                                x-on:change="$wire.selectForRow({{ $row->transactionId }}, $event.target.value ? parseInt($event.target.value, 10) : null)"
+                                class="block w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                             >
-                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
-                                {{-- Counterparty cell renders the resolved counterparty's
-                                     display name. When the row's counterparty_id has been
-                                     resolved (counterpartySlug is non-null), wrap the name
-                                     in a link routing to counterparties.profile. Rows
-                                     without a resolved counterparty render the name as
-                                     plain text. --}}
-                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
-                                    @if ($row->counterpartySlug !== null)
-                                        <a
-                                            href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
-                                            class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
-                                            data-testid="triage-row-counterparty-link-{{ $row->transactionId }}"
-                                        >{{ $row->counterpartyName ?? '—' }}</a>
-                                    @else
-                                        <span data-testid="triage-row-counterparty-text-{{ $row->transactionId }}">{{ $row->counterpartyName ?? '—' }}</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->amountMinor, $row->currency) }}</td>
-                                <td class="px-4 py-2">
-                                    <label for="triage-category-{{ $row->transactionId }}" class="sr-only">{{ Lang::get('categorization::triage.category_for', ['name' => $row->counterpartyName ?? Lang::get('categorization::triage.this_transaction')]) }}</label>
-                                    <select
-                                        id="triage-category-{{ $row->transactionId }}"
-                                        x-on:change="$wire.selectForRow({{ $row->transactionId }}, $event.target.value ? parseInt($event.target.value, 10) : null)"
-                                        class="block w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                                    >
-                                        <option value="">{{ Lang::get('categorization::triage.select_category') }}</option>
-                                        @foreach ($categories as $cat)
-                                            <option value="{{ $cat->id }}" @selected(($pending[$row->transactionId] ?? null) === $cat->id)>{{ $cat->path }}</option>
-                                        @endforeach
-                                    </select>
-                                </td>
-                                <td class="px-4 py-2">
-                                    <div class="row-cta flex items-center justify-end gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                        @if ($offerToContribute)
-                                            <button
-                                                type="button"
-                                                wire:click="$dispatch('suggest-mapping:open', { rawDescription: @js($row->description ?? ($row->counterpartyName ?? '')) })"
-                                                class="help-others-link inline-flex items-center rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-500 hover:border-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-200"
-                                                data-testid="help-others-cta"
-                                            >{{ Lang::get('categorization::triage.help_others') }}</button>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                                <option value="">{{ Lang::get('categorization::triage.select_category') }}</option>
+                                @foreach ($categories as $cat)
+                                    <option value="{{ $cat->id }}" @selected(($pending[$row->transactionId] ?? null) === $cat->id)>{{ $cat->path }}</option>
+                                @endforeach
+                            </select>
+                        </td>
+                        <td class="px-4 py-2">
+                            <div class="row-cta flex items-center justify-end gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                @if ($offerToContribute)
+                                    <button
+                                        type="button"
+                                        wire:click="$dispatch('suggest-mapping:open', { rawDescription: @js($row->description ?? ($row->counterpartyName ?? '')) })"
+                                        class="help-others-link inline-flex items-center rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-500 hover:border-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-200"
+                                        data-testid="help-others-cta"
+                                    >{{ Lang::get('categorization::triage.help_others') }}</button>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+            </x-core::data-table>
 
             <p class="mt-4 text-xs text-slate-500 dark:text-slate-400">
                 {{ Lang::get('categorization::triage.shortcuts') }}
@@ -142,11 +133,7 @@
 
             @if ($batch->hasMore && $batch->nextCursorId !== null)
                 <div class="mt-4 flex justify-center">
-                    <button
-                        type="button"
-                        wire:click="loadMore({{ $batch->nextCursorId }}, @js($batch->nextCursorPostedAt))"
-                        class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                    >{{ Lang::get('categorization::triage.load_more') }}</button>
+                    <x-core::secondary-button wire:click="loadMore({{ $batch->nextCursorId }}, {{ Js::from($batch->nextCursorPostedAt) }})">{{ Lang::get('categorization::triage.load_more') }}</x-core::secondary-button>
                 </div>
             @endif
         </div>

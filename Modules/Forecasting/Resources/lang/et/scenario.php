@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Uus summa',
     ],
 
+    'series_name_fallback' => 'seeria',
+
     'summary' => [
         'cancel' => 'Tühista :name',
         'series_fallback' => 'seeria #:id',

@@ -23,15 +23,11 @@
                 autocomplete="current-password"
             />
 
-            <label for="remember-me" class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                <input
-                    type="checkbox"
-                    id="remember-me"
-                    wire:model="rememberMe"
-                    class="rounded border-slate-300 dark:border-slate-600"
-                />
-                {{ Lang::get('auth::login.remember') }}
-            </label>
+            <x-core::checkbox-field
+                field-id="remember-me"
+                :label="Lang::get('auth::login.remember')"
+                wire:model="rememberMe"
+            />
 
             @if ($flashMessage !== '')
                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>

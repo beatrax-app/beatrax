@@ -287,40 +287,31 @@
             @if (count($summary->recentTransactions) === 0)
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.nothing_period') }}</p>
             @else
-                {{-- overflow-x-auto, not overflow-hidden: four columns do not fit a
-                     phone, and hidden CLIPPED them — the counterparty and amount
-                     simply vanished past the edge with no way to reach them.
+                {{-- Scrolling alone was not enough here. With real data on a phone
+                     the table opened on DATUM / TEGENPARTIJ / CATEGORIE and BEDRAG
+                     sat past the right edge — the one figure the row exists to
+                     show, reachable only by swiping a table nothing marks as
+                     swipeable. `dash-recent-table` restacks each row at phone width
+                     so the amount is on screen without any gesture. --}}
+                <x-core::data-table class="dash-recent-table">
+                    <x-slot:head>
+                        <x-core::th align="left">{{ Lang::get('core::dashboard.th_date') }}</x-core::th>
+                        <x-core::th align="left">{{ Lang::get('core::dashboard.th_counterparty') }}</x-core::th>
+                        <x-core::th align="left">{{ Lang::get('core::dashboard.th_category') }}</x-core::th>
+                        <x-core::th align="right">{{ Lang::get('core::dashboard.th_amount') }}</x-core::th>
+                    </x-slot:head>
 
-                     Scrolling was not enough either. With real data on a phone the
-                     table opened on DATUM / TEGENPARTIJ / CATEGORIE and BEDRAG sat
-                     past the right edge — the one figure the row exists to show,
-                     reachable only by swiping a table nothing marks as swipeable.
-                     `dash-recent-table` restacks each row at phone width so the
-                     amount is on screen without any gesture. --}}
-                <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                    <table class="dash-recent-table min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
-                        <thead class="bg-slate-50 dark:bg-slate-900">
-                            <tr>
-                                <x-core::th align="left">{{ Lang::get('core::dashboard.th_date') }}</x-core::th>
-                                <x-core::th align="left">{{ Lang::get('core::dashboard.th_counterparty') }}</x-core::th>
-                                <x-core::th align="left">{{ Lang::get('core::dashboard.th_category') }}</x-core::th>
-                                <x-core::th align="right">{{ Lang::get('core::dashboard.th_amount') }}</x-core::th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
-                            @foreach ($summary->recentTransactions as $row)
-                                <tr>
-                                    <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
-                                    <td class="px-4 py-2 text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
-                                    <td class="px-4 py-2 text-slate-500 dark:text-slate-400">{{ $row->categoryName ?? Lang::get('core::dashboard.uncategorized') }}</td>
-                                    <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                                        {{ $fmt($row->amount) }}
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                    @foreach ($summary->recentTransactions as $row)
+                        <tr>
+                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
+                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
+                            <td class="px-4 py-2 text-slate-500 dark:text-slate-400">{{ $row->categoryName ?? Lang::get('core::dashboard.uncategorized') }}</td>
+                            <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
+                                {{ $fmt($row->amount) }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </x-core::data-table>
             @endif
         </section>
     </div>

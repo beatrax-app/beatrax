@@ -25,12 +25,12 @@
                 {{ Lang::get('mobile::welcome.import') }}
             </x-core::primary-button>
 
-            <a
-                href="{{ route('signup') }}"
-                class="inline-block w-full border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+            <x-core::secondary-button
+                :href="route('signup')"
+                block="full"
             >
                 {{ Lang::get('mobile::welcome.create_account') }}
-            </a>
+            </x-core::secondary-button>
 
             <p class="text-xs text-slate-500 dark:text-slate-400">
                 {{ Lang::get('mobile::welcome.create_account_note') }}

@@ -52,16 +52,13 @@
             data-testid="ob-reconfirm-banner"
         >
             <p>{{ Lang::get('openbanking::messages.page.reconfirm_body') }}</p>
-            <button
-                type="button"
+            <x-core::neutral-button
+                class="mt-3 min-h-[44px]"
                 wire:click="reconfirmEnable"
                 wire:loading.attr="disabled"
                 wire:target="reconfirmEnable"
-                class="mt-3 inline-flex min-h-[44px] items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white
-                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                 data-testid="ob-reconfirm-button"
-            >{{ Lang::get('openbanking::messages.page.reconfirm_button') }}</button>
+            >{{ Lang::get('openbanking::messages.page.reconfirm_button') }}</x-core::neutral-button>
         </x-core::alert>
     @endif
 
@@ -117,21 +114,17 @@
                 @else
                     <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.sync.auto_caption') }}</p>
                 @endif
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    class="min-h-[44px] disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="$consentStatus === 'expired'"
                     wire:click="syncNow"
                     wire:loading.attr="disabled"
                     wire:target="syncNow"
-                    @disabled($consentStatus === 'expired')
-                    class="inline-flex min-h-[44px] items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white
-                           hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           disabled:cursor-not-allowed disabled:opacity-50
-                           dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     data-testid="ob-sync-now-button"
                 >
                     <x-core::spinner size="sm" wire:loading wire:target="syncNow" class="mr-2" />
                     {{ Lang::get('openbanking::messages.sync.sync_now') }}
-                </button>
+                </x-core::neutral-button>
             </div>
         </div>
     @endif
@@ -161,15 +154,13 @@
                                hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
                         data-testid="ob-confirm-disconnect"
                     >{{ Lang::get('openbanking::messages.disconnect.confirm') }}</button>
-                    <button
-                        type="button"
+                    <x-core::secondary-button
+                        block="flex"
+                        class="min-h-[44px]"
                         wire:click="cancelDisconnect"
                         autofocus
-                        class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                               hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                         data-testid="ob-cancel-disconnect"
-                    >{{ Lang::get('openbanking::messages.disconnect.cancel') }}</button>
+                    >{{ Lang::get('openbanking::messages.disconnect.cancel') }}</x-core::secondary-button>
                 </div>
             </div>
         </flux:modal>

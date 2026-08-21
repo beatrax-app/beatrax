@@ -36,7 +36,7 @@
         <x-onboarding::mini-step glyph="⬇️" :label="Lang::get('onboarding::connect_paypal.mini.download_label')" sub="Rapport Transactiegegevens" subLang="nl" state="upcoming" />
     </div>
 
-    <div class="format-chips" aria-label="{{ Lang::get('onboarding::connect_paypal.format_group_aria') }}">
+    <div role="group" class="format-chips" aria-label="{{ Lang::get('onboarding::connect_paypal.format_group_aria') }}">
         <span class="format-chips-label">{{ Lang::get('onboarding::connect_paypal.got_it_as') }}</span>
         <x-onboarding::format-chip label="PayPal CSV" :badge="Lang::get('onboarding::connect_paypal.badge_only_format')" />
     </div>

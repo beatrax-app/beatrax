@@ -41,7 +41,7 @@
     {{ $slot }}
 
     @if (! empty($recent))
-        <div class="cp-recent" aria-label="{{ Lang::get('counterparties::components.cp_card.recent_aria') }}">
+        <div role="group" class="cp-recent" aria-label="{{ Lang::get('counterparties::components.cp_card.recent_aria') }}">
             @foreach (array_slice($recent, 0, 2) as $line)
                 <span>{{ is_array($line) ? ($line['label'] ?? '') : $line }}</span>
             @endforeach

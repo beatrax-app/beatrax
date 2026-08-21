@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Novo montante',
     ],
 
+    'series_name_fallback' => 'série',
+
     'summary' => [
         'cancel' => 'Cancelar :name',
         'series_fallback' => 'série n.º :id',

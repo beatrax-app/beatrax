@@ -87,86 +87,77 @@
             </button>
         </x-core::empty-state>
     @else
-        {{-- overflow-x-auto, not overflow-hidden: this table is the only
-                 rendering of these rows at every width, and hidden CLIPPED the
-                 right-hand columns on a phone rather than letting them scroll —
-                 so the category picker and row actions were unreachable. --}}
-            <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-            <table class="rules-table min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead class="bg-slate-50 dark:bg-slate-900">
-                    <tr>
-                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rules.col_priority') }}</th>
-                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rules.col_conditions') }}</th>
-                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rules.col_actions') }}</th>
-                        <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rules.col_hits') }}</th>
-                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rules.col_created') }}</th>
-                        <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"><span class="sr-only">{{ Lang::get('categorization::rules.col_row_actions') }}</span></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
-                    @foreach ($rules as $rule)
-                        <tr class="min-h-12 hover:bg-slate-50 dark:hover:bg-slate-900">
-                            <td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $rule->priority }}</td>
-                            <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
-                                <div class="flex flex-wrap items-center gap-1">
-                                    @if (count($rule->conditions) >= 2)
-                                        <span class="chip">{{ $rule->combinator === 'any' ? 'ANY' : 'ALL' }}</span>
-                                    @endif
-                                    @if (count($rule->conditions) > 0)
-                                        <span>{{ \Modules\Categorization\Internal\Http\Livewire\RulesPage::conditionFragment($rule->conditions[0]) }}</span>
-                                    @endif
-                                    @if (count($rule->conditions) > 1)
-                                        @php
-                                            $remaining = collect($rule->conditions)->slice(1)->map(fn ($c) => \Modules\Categorization\Internal\Http\Livewire\RulesPage::conditionFragment($c))->implode('; ');
-                                        @endphp
-                                        <span class="chip" title="{{ $remaining }}">{{ Lang::get('categorization::rules.more_conditions', ['count' => count($rule->conditions) - 1]) }}</span>
-                                    @endif
-                                </div>
-                            </td>
-                            <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
-                                <div class="flex flex-wrap items-center gap-1">
-                                    @foreach ($rule->actions as $action)
-                                        <span class="chip">{{ \Modules\Categorization\Internal\Http\Livewire\RulesPage::actionChipLabel($action) }}</span>
-                                    @endforeach
-                                </div>
-                            </td>
-                            <td class="px-4 py-3 text-right text-sm {{ $rule->hitsCount === 0 ? 'text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">
-                                {{ $rule->hitsCount }}
-                            </td>
-                            <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                                {{ \Carbon\CarbonImmutable::instance($rule->createdAt)->translatedFormat('d M Y') }}
-                            </td>
-                            <td class="px-4 py-3 text-right text-sm">
-                                @if ($confirmingDeleteId === $rule->id)
-                                    <x-core::confirm-strip
-                                        :question="Lang::get('categorization::rules.delete_confirm')"
-                                        :cancel-label="Lang::get('categorization::rules.cancel')"
-                                        :confirm-label="Lang::get('categorization::rules.delete_yes')"
-                                        cancel="cancelDelete"
-                                        :confirm="'deleteRule('.$rule->id.')'"
-                                    />
-                                @else
-                                    <div class="flex items-center justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            wire:click="openEditModal({{ $rule->id }})"
-                                            aria-label="{{ Lang::get('categorization::rules.edit_aria', ['priority' => $rule->priority]) }}"
-                                            class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-slate-900 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100 dark:hover:bg-slate-800"
-                                        >{{ Lang::get('categorization::rules.edit') }}</button>
-                                        <button
-                                            type="button"
-                                            wire:click="confirmDelete({{ $rule->id }})"
-                                            aria-label="{{ Lang::get('categorization::rules.delete_aria', ['priority' => $rule->priority]) }}"
-                                            class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:text-rose-500 dark:hover:bg-rose-950"
-                                        >{{ Lang::get('categorization::rules.delete') }}</button>
-                                    </div>
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+        <x-core::data-table class="rules-table">
+            <x-slot:head>
+                <x-core::th align="left">{{ Lang::get('categorization::rules.col_priority') }}</x-core::th>
+                <x-core::th align="left">{{ Lang::get('categorization::rules.col_conditions') }}</x-core::th>
+                <x-core::th align="left">{{ Lang::get('categorization::rules.col_actions') }}</x-core::th>
+                <x-core::th align="right">{{ Lang::get('categorization::rules.col_hits') }}</x-core::th>
+                <x-core::th align="left">{{ Lang::get('categorization::rules.col_created') }}</x-core::th>
+                <x-core::th align="right"><span class="sr-only">{{ Lang::get('categorization::rules.col_row_actions') }}</span></x-core::th>
+            </x-slot:head>
+
+            @foreach ($rules as $rule)
+                <tr class="min-h-12 hover:bg-slate-50 dark:hover:bg-slate-900">
+                    <td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $rule->priority }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
+                        <div class="flex flex-wrap items-center gap-1">
+                            @if (count($rule->conditions) >= 2)
+                                <span class="chip">{{ $rule->combinator === 'any' ? 'ANY' : 'ALL' }}</span>
+                            @endif
+                            @if (count($rule->conditions) > 0)
+                                <span>{{ \Modules\Categorization\Internal\Http\Livewire\RulesPage::conditionFragment($rule->conditions[0]) }}</span>
+                            @endif
+                            @if (count($rule->conditions) > 1)
+                                @php
+                                    $remaining = collect($rule->conditions)->slice(1)->map(fn ($c) => \Modules\Categorization\Internal\Http\Livewire\RulesPage::conditionFragment($c))->implode('; ');
+                                @endphp
+                                <span class="chip" title="{{ $remaining }}">{{ Lang::get('categorization::rules.more_conditions', ['count' => count($rule->conditions) - 1]) }}</span>
+                            @endif
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
+                        <div class="flex flex-wrap items-center gap-1">
+                            @foreach ($rule->actions as $action)
+                                <span class="chip">{{ \Modules\Categorization\Internal\Http\Livewire\RulesPage::actionChipLabel($action) }}</span>
+                            @endforeach
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-right text-sm {{ $rule->hitsCount === 0 ? 'text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">
+                        {{ $rule->hitsCount }}
+                    </td>
+                    <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
+                        {{ \Carbon\CarbonImmutable::instance($rule->createdAt)->translatedFormat('d M Y') }}
+                    </td>
+                    <td class="px-4 py-3 text-right text-sm">
+                        @if ($confirmingDeleteId === $rule->id)
+                            <x-core::confirm-strip
+                                :question="Lang::get('categorization::rules.delete_confirm')"
+                                :cancel-label="Lang::get('categorization::rules.cancel')"
+                                :confirm-label="Lang::get('categorization::rules.delete_yes')"
+                                cancel="cancelDelete"
+                                :confirm="'deleteRule('.$rule->id.')'"
+                            />
+                        @else
+                            <div class="flex items-center justify-end gap-2">
+                                <button
+                                    type="button"
+                                    wire:click="openEditModal({{ $rule->id }})"
+                                    aria-label="{{ Lang::get('categorization::rules.edit_aria', ['priority' => $rule->priority]) }}"
+                                    class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-slate-900 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100 dark:hover:bg-slate-800"
+                                >{{ Lang::get('categorization::rules.edit') }}</button>
+                                <button
+                                    type="button"
+                                    wire:click="confirmDelete({{ $rule->id }})"
+                                    aria-label="{{ Lang::get('categorization::rules.delete_aria', ['priority' => $rule->priority]) }}"
+                                    class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:text-rose-500 dark:hover:bg-rose-950"
+                                >{{ Lang::get('categorization::rules.delete') }}</button>
+                            </div>
+                        @endif
+                    </td>
+                </tr>
+            @endforeach
+        </x-core::data-table>
 
         <p class="mt-6 max-w-3xl text-xs text-slate-500 dark:text-slate-400">
             {{ Lang::get('categorization::rules.footer_note') }}

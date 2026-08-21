@@ -15,7 +15,7 @@
 --}}
 <div>
     @if (count($cards) > 0)
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="{{ Lang::get('reports::pinned.reports_aria') }}">
+        <div role="group" class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="{{ Lang::get('reports::pinned.reports_aria') }}">
             @foreach ($cards as $card)
                 {{-- ApexCharts sizes its own bottom legend at half the chart box
                      and scrolls whatever will not fit — a 120px window onto every

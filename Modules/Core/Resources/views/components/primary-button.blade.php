@@ -24,7 +24,7 @@
 @if ($href !== null)
     {{-- inline-block and text-center because an anchor is neither by default,
          and this one has to fill the same box the button does. --}}
-    <a href="{{ $href }}" {{ $attributes->merge(['class' => $primaryButtonClass.' inline-block text-center']) }}>
+    <a href="{{ $href }}" {{ $attributes->merge(['class' => $primaryButtonClass.' tap-chip inline-block text-center']) }}>
         {{ $slot }}
     </a>
 @else

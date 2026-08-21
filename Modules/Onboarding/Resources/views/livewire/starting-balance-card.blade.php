@@ -43,18 +43,7 @@
         $cardClasses .= ' confirmed';
     }
 
-    $formatMinor = static function (int $minor, string $currency): string {
-        $absoluteMajor = abs($minor) / Money::MINOR_UNITS_PER_MAJOR;
-        $sign = $minor < 0 ? '-' : '';
-        $symbol = match ($currency) {
-            'EUR' => '€',
-            'USD' => '$',
-            'GBP' => '£',
-            default => $currency.' ',
-        };
-
-        return $sign.$symbol.number_format($absoluteMajor, 2, '.', ',');
-    };
+    $formatMinor = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
 @endphp
 <section
     class="{{ $cardClasses }}"
@@ -65,7 +54,7 @@
             {{ Lang::get('onboarding::starting_balance.eyebrow') }}
             <span class="funding-tag">{{ $accountShort }}</span>
             @if ($isConfirmed)
-                <span class="ready" aria-label="{{ Lang::get('onboarding::starting_balance.confirmed_aria') }}">✓</span>
+                <span role="img" class="ready" aria-label="{{ Lang::get('onboarding::starting_balance.confirmed_aria') }}">✓</span>
             @endif
         </p>
 

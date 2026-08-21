@@ -6,8 +6,8 @@
      `suggest-mapping:open` Livewire event (rawDescription param fills
      the pattern field). Submit builds a GitHub Compare URL and hands
      it to OpenExternalUrlAction, which delegates to the NativePHP
-     Shell contract. On success the modal dispatches `toast.show` and
-     `modal-hide`. On failure the inline error renders above the footer
+     Shell contract. On success the modal raises a `toast` and dispatches
+     `modal-close`. On failure the inline error renders above the footer
      and the modal stays open. --}}
 
 <div>
@@ -97,11 +97,7 @@
                 @endif
 
                 <div class="flex items-center justify-end gap-2">
-                    <button
-                        type="button"
-                        wire:click="cancel"
-                        class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                    >{{ Lang::get('community::suggest.cancel') }}</button>
+                    <x-core::secondary-button wire:click="cancel">{{ Lang::get('community::suggest.cancel') }}</x-core::secondary-button>
                     <button
                         type="submit"
                         class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"

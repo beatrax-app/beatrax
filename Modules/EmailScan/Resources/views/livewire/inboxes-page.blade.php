@@ -175,27 +175,25 @@
                         @if ($inbox->status === \Modules\EmailScan\Public\Enums\InboxScanStatus::NeedsReauth->value)
                             <a
                                 href="{{ route('oauth.connect', ['provider' => $inbox->provider]) }}?inbox_id={{ $inbox->inboxId }}"
-                                class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-sm font-medium text-rose-600 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
+                                class="tap-chip inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-sm font-medium text-rose-600 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
                             >{{ Lang::get('email-scan::inboxes.reconnect') }}</a>
                         @endif
 
-                        <button
-                            type="button"
-                            @if ($scanDisabled)
-                                disabled
-                                aria-disabled="true"
-                                title="{{ Lang::get('email-scan::inboxes.scan_in_progress_title') }}"
-                            @endif
+                        <x-core::secondary-button
+                            size="sm"
+                            class="gap-1 {{ $scanDisabled ? 'cursor-not-allowed opacity-60' : '' }}"
+                            :disabled="$scanDisabled"
+                            :aria-disabled="$scanDisabled ? 'true' : null"
+                            :title="$scanDisabled ? Lang::get('email-scan::inboxes.scan_in_progress_title') : null"
                             wire:click="scanNow({{ $inbox->inboxId }})"
-                            class="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900 {{ $scanDisabled ? 'cursor-not-allowed opacity-60' : '' }}"
-                        >{{ Lang::get('email-scan::inboxes.scan_now') }}</button>
-                        <button
-                            type="button"
+                        >{{ Lang::get('email-scan::inboxes.scan_now') }}</x-core::secondary-button>
+                        <x-core::secondary-button
+                            size="sm"
+                            class="gap-1"
                             wire:click="disconnect({{ $inbox->inboxId }})"
                             wire:confirm="{{ Lang::get('email-scan::inboxes.disconnect') }}"
                             data-testid="disconnect-inbox-{{ $inbox->inboxId }}"
-                            class="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-sm font-medium text-slate-600 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-900"
-                        >{{ Lang::get('email-scan::inboxes.disconnect') }}</button>
+                        >{{ Lang::get('email-scan::inboxes.disconnect') }}</x-core::secondary-button>
                     </div>
                 </li>
             @endforeach

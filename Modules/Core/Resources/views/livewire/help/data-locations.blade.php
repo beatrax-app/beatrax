@@ -96,14 +96,12 @@
                  until that route ships, the button is rendered as a
                  disabled stub so the page contract holds and the
                  verifier can catch when the wiring goes live. --}}
-            <button
-                type="button"
-                class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+            <x-core::neutral-button
                 data-testid="export-everything-cta"
                 disabled
                 aria-disabled="true"
                 title="{{ Lang::get('core::help.export_title_attr') }}"
-            >{{ Lang::get('core::help.export_cta') }}</button>
+            >{{ Lang::get('core::help.export_cta') }}</x-core::neutral-button>
         @else
             <x-core::alert tone="neutral">
                 <p class="font-medium">{{ Lang::get('core::help.dev_off') }}</p>

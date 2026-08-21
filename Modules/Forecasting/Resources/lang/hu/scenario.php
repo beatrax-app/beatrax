@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Új összeg',
     ],
 
+    'series_name_fallback' => 'sorozat',
+
     'summary' => [
         'cancel' => 'A(z) :name lemondása',
         'series_fallback' => ':id. sorozat',

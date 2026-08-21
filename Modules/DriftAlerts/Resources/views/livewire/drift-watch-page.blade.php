@@ -11,7 +11,7 @@
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
-        ->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+        ->format();
 
     $signed = static fn (int $minor, string $currency): string => ($minor >= 0 ? '+' : '−').$fmt(abs($minor), $currency);
 

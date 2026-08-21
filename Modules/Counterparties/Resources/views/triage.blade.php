@@ -2,9 +2,7 @@
 @extends('layouts.app', ['title' => Lang::get('counterparties::triage.page_title').' · Beatrax'])
 
 @section('content')
-    <main class="min-h-screen bg-white dark:bg-slate-950">
-        <div class="mx-auto max-w-3xl px-8 py-12">
-            @livewire('counterparties.triage')
-        </div>
-    </main>
+    <x-core::page-shell width="3xl">
+        @livewire('counterparties.triage')
+    </x-core::page-shell>
 @endsection

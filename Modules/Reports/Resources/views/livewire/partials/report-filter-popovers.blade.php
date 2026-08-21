@@ -1,3 +1,6 @@
+@use('Modules\Ledger\Public\Services\BaseCurrency')
+@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\ValueObjects\MoneyInput')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     Report builder filter chips (D-04 — reused Search filter language and
@@ -145,10 +148,16 @@
                 $amountLabel = Lang::get('reports::builder.filter.dir_out');
             }
             if (($filterAmountMin ?? '') !== '') {
-                $amountLabel .= ' &gt; €'.number_format((float) ($filterAmountMin ?? 0), 2, ',', '.');
+                $amountLabel .= ' &gt; '.Money::ofMinor(
+                    MoneyInput::tryToMinor((string) ($filterAmountMin ?? '')) ?? 0,
+                    BaseCurrency::value(),
+                )->format();
             }
             if (($filterAmountMax ?? '') !== '') {
-                $amountLabel .= ' &lt; €'.number_format((float) ($filterAmountMax ?? 0), 2, ',', '.');
+                $amountLabel .= ' &lt; '.Money::ofMinor(
+                    MoneyInput::tryToMinor((string) ($filterAmountMax ?? '')) ?? 0,
+                    BaseCurrency::value(),
+                )->format();
             }
         }
     @endphp

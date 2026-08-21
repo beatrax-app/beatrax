@@ -13,7 +13,7 @@
         };
     };
     $locale = ($user ?? null)?->locale ?? 'nl_NL';
-    $fmt = static fn ($money) => $money->format($locale === 'nl_NL' ? 'nl_NL' : 'en_US');
+    $fmt = static fn ($money) => $money->format();
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
@@ -98,13 +98,13 @@
                             @endif
                         </div>
                         <div class="flex shrink-0 items-center">
-                            <button
-                                type="button"
+                            <x-core::secondary-button
+                                size="sm"
+                                class="gap-1"
                                 wire:click="dismiss({{ $hint->chainLinkId }})"
                                 aria-label="{{ Lang::get('chains::hints.dismiss_aria', ['id' => $hint->chainLinkId]) }}"
-                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
                                 data-testid="chain-hint-dismiss-{{ $hint->chainLinkId }}"
-                            >{{ Lang::get('chains::hints.dismiss') }}</button>
+                            >{{ Lang::get('chains::hints.dismiss') }}</x-core::secondary-button>
                         </div>
                     </div>
                 </li>

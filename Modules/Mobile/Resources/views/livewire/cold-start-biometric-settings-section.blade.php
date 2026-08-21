@@ -65,13 +65,9 @@
                     autocomplete="off"
                 />
 
-                <button
-                    type="button"
-                    wire:click="enable"
-                    class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                >
+                <x-core::neutral-button wire:click="enable">
                     {{ Lang::get('mobile::biometric.enable') }}
-                </button>
+                </x-core::neutral-button>
             </div>
         @endunless
     @endunless

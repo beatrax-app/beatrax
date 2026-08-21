@@ -192,7 +192,7 @@
                             <span class="value" style="font-size: var(--text-sm);">{{ $avgFormatted }}</span>
                             <span class="label">{{ Lang::get('counterparties::index.stat_avg_mo') }}</span>
                         </div>
-                        <div class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
+                        <div role="img" class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
                             @foreach ($row->sparkline as $idx => $bar)
                                 @php
                                     $isLast = $idx === count($row->sparkline) - 1;

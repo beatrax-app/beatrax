@@ -46,12 +46,12 @@
                 <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     {{ Lang::get('import::aliases.selected_count', ['count' => count($selectedIds)]) }}
                 </p>
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    size="sm"
+                    class="disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="count($selectedIds) < 2"
                     wire:click="openMergeModal"
-                    @disabled(count($selectedIds) < 2)
-                    class="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
-                >{{ Lang::get('import::aliases.merge_selected') }}</button>
+                >{{ Lang::get('import::aliases.merge_selected') }}</x-core::neutral-button>
             </div>
 
             @if (count($aliases) === 0)
@@ -134,11 +134,10 @@
                 <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('import::aliases.backup_transfer') }}</h2>
 
                 <div class="flex flex-wrap items-center gap-3">
-                    <button
-                        type="button"
+                    <x-core::secondary-button
+                        size="sm"
                         wire:click="exportYaml"
-                        class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                    >{{ Lang::get('import::aliases.export_yaml') }}</button>
+                    >{{ Lang::get('import::aliases.export_yaml') }}</x-core::secondary-button>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
                         {!! Lang::get('import::aliases.export_help_html') !!}
                     </p>
@@ -155,12 +154,12 @@
                         <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                     @enderror
                     <div class="flex items-center gap-2">
-                        <button
-                            type="button"
+                        <x-core::neutral-button
+                            size="sm"
+                            class="disabled:opacity-50 disabled:cursor-not-allowed"
+                            :disabled="$importFile === null"
                             wire:click="parseUpload"
-                            @disabled($importFile === null)
-                            class="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-100 dark:text-slate-900"
-                        >{{ Lang::get('import::aliases.parse_preview') }}</button>
+                        >{{ Lang::get('import::aliases.parse_preview') }}</x-core::neutral-button>
                         @if ($importDiff !== [])
                             <button
                                 type="button"

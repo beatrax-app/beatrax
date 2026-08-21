@@ -15,7 +15,7 @@
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $fmt = static fn (int $minor, string $currency = 'EUR'): string => Money::ofMinor($minor, $currency)
-        ->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+        ->format();
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
@@ -74,11 +74,10 @@
                 @endif
             </p>
             @if ($showCopyBanner)
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    class="mt-3"
                     wire:click="copyLastMonth"
-                    class="mt-3 inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                >{{ Lang::get('budgets::messages.empty.copy_button') }}</button>
+                >{{ Lang::get('budgets::messages.empty.copy_button') }}</x-core::neutral-button>
             @endif
         </div>
     @endif
@@ -354,7 +353,11 @@
                 />
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" wire:click="$dispatch('modal-close', { name: 'envelope-move' })" class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400">{{ Lang::get('budgets::messages.modal.cancel') }}</button>
-                    <button type="submit" @disabled(count($moveDestinations) === 0) class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed">{{ Lang::get('budgets::messages.modal.move_funds') }}</button>
+                    <x-core::neutral-button
+                        class="disabled:opacity-50 disabled:cursor-not-allowed"
+                        :disabled="count($moveDestinations) === 0"
+                        type="submit"
+                    >{{ Lang::get('budgets::messages.modal.move_funds') }}</x-core::neutral-button>
                 </div>
             </form>
         </div>
@@ -401,8 +404,13 @@
                 @endif
             </div>
             <div class="flex gap-3 pt-2">
-                <button type="submit" @disabled(count($moveDestinations) === 0) class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('budgets::messages.modal.move_funds') }}</button>
-                <button type="button" wire:click="$dispatch('modal-close', { name: 'envelope-move' })" class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 focus:outline-none dark:border-slate-700">{{ Lang::get('budgets::messages.modal.cancel') }}</button>
+                <x-core::neutral-button
+                    block="flex"
+                    class="disabled:opacity-50"
+                    :disabled="count($moveDestinations) === 0"
+                    type="submit"
+                >{{ Lang::get('budgets::messages.modal.move_funds') }}</x-core::neutral-button>
+                <x-core::secondary-button wire:click="$dispatch('modal-close', { name: 'envelope-move' })">{{ Lang::get('budgets::messages.modal.cancel') }}</x-core::secondary-button>
             </div>
         </form>
     </x-core::bottom-sheet>

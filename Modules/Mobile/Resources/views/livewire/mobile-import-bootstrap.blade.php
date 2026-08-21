@@ -89,15 +89,13 @@
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>
                 @endif
 
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    block="full"
+                    class="min-h-[44px]"
                     wire:click="retryProvisioning"
-                    class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
-                           hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                 >
                     {{ Lang::get('mobile::import.try_again') }}
-                </button>
+                </x-core::neutral-button>
             </div>
         @endif
 
@@ -220,10 +218,11 @@
                     <p x-show="saveFailed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('mobile::import.recovery_save_failed') }}</p>
                 </div>
 
-                <label class="flex items-start gap-2">
-                    <input type="checkbox" x-model="confirmed" class="mt-1 rounded border-slate-300 dark:border-slate-600">
-                    <span class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('mobile::import.recovery_confirm') }}</span>
-                </label>
+                <x-core::checkbox-field
+                    align="start"
+                    :label="Lang::get('mobile::import.recovery_confirm')"
+                    x-model="confirmed"
+                />
 
                 {{-- A plain link, not wire:click. The Livewire round-trip this
                      replaced returned 419 on device, and the reload that

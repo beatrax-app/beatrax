@@ -125,15 +125,13 @@
             @endif
 
             <div class="mt-4">
-                <button
-                    type="button"
+                <x-core::secondary-button
+                    block="full"
+                    class="min-h-[44px]"
                     wire:click="cancelPairing"
-                    class="min-h-[44px] w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                           hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                 >
                     {{ Lang::get('sync::pairing.cancel_pairing') }}
-                </button>
+                </x-core::secondary-button>
             </div>
         </div>
     @endif
@@ -172,24 +170,20 @@
         </div>
 
         <div class="flex gap-3">
-            <button
-                type="button"
+            <x-core::neutral-button
+                block="flex"
+                class="min-h-[44px]"
                 wire:click="submitCode"
-                class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('sync::pairing.submit_code') }}
-            </button>
-            <button
-                type="button"
+            </x-core::neutral-button>
+            <x-core::secondary-button
+                block="flex"
+                class="min-h-[44px]"
                 wire:click="cancelPairing"
-                class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                       hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('sync::pairing.cancel_pairing') }}
-            </button>
+            </x-core::secondary-button>
         </div>
     @endif
 
@@ -213,6 +207,7 @@
             @endphp
             <div
                 class="space-y-2"
+                role="group"
                 aria-label="{{ Lang::get('sync::pairing.safety_number_words') }} {{ strtoupper(implode(' ', $safetyWords)) }}"
             >
                 <div class="flex justify-center gap-2">
@@ -239,28 +234,21 @@
             @endif
 
             <div class="mt-4 flex gap-3">
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    block="flex"
+                    :class="'min-h-[44px]' . ' ' . ($awaitingPeer ? 'opacity-50 cursor-wait' : '')"
+                    :disabled="$awaitingPeer"
                     wire:click="confirmMatch"
-                    @disabled($awaitingPeer)
-                    @class([
-                        'flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white',
-                        'hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2',
-                        'dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100',
-                        'opacity-50 cursor-wait' => $awaitingPeer,
-                    ])
                 >
                     {{ Lang::get('sync::pairing.confirm_match') }}
-                </button>
-                <button
-                    type="button"
+                </x-core::neutral-button>
+                <x-core::secondary-button
+                    block="flex"
+                    class="min-h-[44px]"
                     wire:click="cancelPairing"
-                    class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                           hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                 >
                     {{ Lang::get('sync::pairing.cancel_pairing') }}
-                </button>
+                </x-core::secondary-button>
             </div>
         </div>
     @endif
@@ -277,15 +265,13 @@
             </p>
             {{-- WR-03: success close uses closeModal() — it must NOT expire the
                  just-confirmed token the way the in-flow cancel does. --}}
-            <button
-                type="button"
+            <x-core::neutral-button
+                block="full"
+                class="min-h-[44px]"
                 wire:click="closeModal"
-                class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
-                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('sync::pairing.done') }}
-            </button>
+            </x-core::neutral-button>
         </div>
     @endif
 </div>

@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Yeni tutar',
     ],
 
+    'series_name_fallback' => 'seri',
+
     'summary' => [
         'cancel' => ':name iptali',
         'series_fallback' => 'seri #:id',

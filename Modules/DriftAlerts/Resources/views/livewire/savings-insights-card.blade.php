@@ -23,12 +23,13 @@
                                 $safe = str_starts_with($href, 'https://') || str_starts_with($href, 'http://');
                             @endphp
                             @if ($safe)
-                                <a
-                                    href="{{ $href }}"
+                                <x-core::secondary-button
+                                    :href="$href"
+                                    size="sm"
+                                    class="gap-1"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                                >{{ $insight->actionLabel }} <span aria-hidden="true" style="opacity:.6;">↗</span></a>
+                                >{{ $insight->actionLabel }} <span aria-hidden="true" style="opacity:.6;">↗</span></x-core::secondary-button>
                             @endif
                             <x-core::emoji-action
                                 :label="Lang::get('drift-alerts::savings.dismiss_aria')"

@@ -68,11 +68,8 @@
     </div>
 
     <div>
-        <a
-            href="{{ route('migrations.index') }}"
-            class="inline-flex items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
-        >
+        <x-core::secondary-button :href="route('migrations.index')">
             {{ Lang::get('migration::results.back') }}
-        </a>
+        </x-core::secondary-button>
     </div>
 </div>

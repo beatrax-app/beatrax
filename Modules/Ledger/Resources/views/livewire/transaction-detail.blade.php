@@ -102,14 +102,14 @@
                                     {{ $transaction->category?->name ?? '—' }}
                                 </p>
                             </div>
-                            <button
-                                type="button"
+                            <x-core::secondary-button
+                                size="sm"
+                                class="shadow-sm"
                                 wire:click="openSplitEditor"
-                                class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                                 data-testid="split-open-button"
                             >
                                 {{ Lang::get('ledger::detail.split.open') }}
-                            </button>
+                            </x-core::secondary-button>
                         </div>
                     @else
                         {{-- §7.3 Editor — open state. --}}
@@ -240,18 +240,18 @@
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3">
-                            <button
-                                type="button"
+                            <x-core::neutral-button
+                                size="sm"
+                                class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                                :disabled="$remainingMinor !== 0 || count($legs) < 2"
                                 wire:click="saveSplit"
                                 wire:loading.attr="disabled"
                                 wire:target="saveSplit"
-                                @disabled($remainingMinor !== 0 || count($legs) < 2)
-                                class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
                                 data-testid="split-save-button"
                             >
                                 <span wire:loading.remove wire:target="saveSplit">{{ Lang::get('ledger::detail.split.save') }}</span>
                                 <span wire:loading wire:target="saveSplit">{{ Lang::get('ledger::detail.split.saving') }}</span>
-                            </button>
+                            </x-core::neutral-button>
 
                             <button
                                 type="button"
@@ -392,14 +392,14 @@
                         @endforeach
                     </select>
 
-                    <button
-                        type="button"
+                    <x-core::neutral-button
+                        size="sm"
+                        class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                        :disabled="$reclassifyType === ''"
                         wire:click="reclassify($wire.reclassifyType)"
-                        @disabled($reclassifyType === '')
-                        class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100"
                     >
                         {{ Lang::get('ledger::detail.reclassify.save') }}
-                    </button>
+                    </x-core::neutral-button>
 
                     <span
                         x-show="toast"
@@ -453,14 +453,14 @@
                     ></textarea>
 
                     <div class="flex items-center gap-3">
-                        <button
-                            type="button"
+                        <x-core::neutral-button
+                            size="sm"
+                            class="shadow-sm"
                             wire:click="saveNote"
-                            class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                             data-testid="note-save-button"
                         >
                             {{ Lang::get('ledger::detail.note.save') }}
-                        </button>
+                        </x-core::neutral-button>
 
                         @if ($noteSaved)
                             <span
@@ -507,15 +507,15 @@
                             @endforeach
                         </select>
 
-                        <button
-                            type="button"
-                            :disabled="!selectedCp"
-                            @click="$wire.reassignCounterparty(Number(selectedCp))"
-                            class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
+                        <x-core::neutral-button
+                            size="sm"
+                            class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                            x-bind:disabled="!selectedCp"
+                            x-on:click="$wire.reassignCounterparty(Number(selectedCp))"
                             data-testid="counterparty-reassign-button"
                         >
                             {{ Lang::get('ledger::detail.reassign.submit') }}
-                        </button>
+                        </x-core::neutral-button>
                     </div>
                 </section>
             @endif
@@ -574,15 +574,15 @@
                                 @endforeach
                             </select>
 
-                            <button
-                                type="button"
-                                :disabled="!selectedGoal"
-                                @click="$wire.attributeToGoal(Number(selectedGoal)); selectedGoal = ''"
-                                class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
+                            <x-core::neutral-button
+                                size="sm"
+                                class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                                x-bind:disabled="!selectedGoal"
+                                x-on:click="$wire.attributeToGoal(Number(selectedGoal)); selectedGoal = ''"
                                 data-testid="goal-attribution-submit"
                             >
                                 {{ Lang::get('ledger::detail.goal.submit') }}
-                            </button>
+                            </x-core::neutral-button>
                         </div>
                     @endif
                 </section>

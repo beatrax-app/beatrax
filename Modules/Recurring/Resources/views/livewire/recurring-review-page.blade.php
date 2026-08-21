@@ -180,11 +180,11 @@
                                             x-model="newName"
                                             class="block w-full rounded-md border border-slate-200 px-2 py-1 text-xs dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                                         />
-                                        <button
-                                            type="button"
+                                        <x-core::neutral-button
+                                            size="sm"
+                                            class="mt-2 gap-1"
                                             x-on:click="$wire.editName({{ $row->seriesId }}, newName); editing = false"
-                                            class="mt-2 inline-flex items-center gap-1 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300"
-                                        >{{ Lang::get('recurring::review.save') }}</button>
+                                        >{{ Lang::get('recurring::review.save') }}</x-core::neutral-button>
                                     </div>
                                 </div>
                             @endif

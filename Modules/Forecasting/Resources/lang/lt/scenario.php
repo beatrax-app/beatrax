@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Nauja suma',
     ],
 
+    'series_name_fallback' => 'serija',
+
     'summary' => [
         'cancel' => 'Nutraukti :name',
         'series_fallback' => 'serija #:id',

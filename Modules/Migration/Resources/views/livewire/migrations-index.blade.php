@@ -45,19 +45,19 @@
                     </div>
 
                     @if ($run->status === \Modules\Migration\Public\Enums\MigrationRunStatus::Confirmed->value)
-                        <a
+                        <x-core::secondary-button
                             href="{{ route('migrations.new') }}?reconcile_of={{ $run->id }}"
-                            class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
+                            size="sm"
                         >
                             {{ Lang::get('migration::index.check_updates') }}
-                        </a>
+                        </x-core::secondary-button>
                     @else
-                        <a
-                            href="{{ route('migrations.preview', ['id' => $run->id]) }}"
-                            class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
+                        <x-core::secondary-button
+                            :href="route('migrations.preview', ['id' => $run->id])"
+                            size="sm"
                         >
                             {{ Lang::get('migration::index.resume_preview') }}
-                        </a>
+                        </x-core::secondary-button>
                     @endif
                 </li>
             @endforeach

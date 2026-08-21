@@ -231,6 +231,7 @@
                                         {{ $isNoCategory ? Lang::get('tax::page.no_category') : $catName }}
                                     </span>
                                     <span
+                                        role="img"
                                         style="display: inline-flex; align-items: center; padding: 1px 8px; border-radius: var(--radius-full); background: var(--color-surface); border: 1px solid var(--color-border); font-size: var(--text-xs); color: var(--color-text-muted);"
                                         aria-label="{{ Lang::get('tax::page.items_count_aria', ['count' => $count]) }}"
                                     >{{ $count }}</span>
@@ -308,7 +309,7 @@
                                                 {{-- Original (if non-EUR) --}}
                                                 <td class="px-3 py-2 text-right" style="font-size: var(--text-xs); color: var(--color-text-faint);">
                                                     @if ($showOrig)
-                                                        {{ $origCurrency }} {{ number_format(abs($origMinor) / Money::MINOR_UNITS_PER_MAJOR, 2) }}
+                                                        {{ Money::ofMinor(abs($origMinor), $origCurrency)->format() }}
                                                     @else
                                                         —
                                                     @endif
@@ -316,7 +317,7 @@
                                                 {{-- Year / override chip --}}
                                                 <td class="px-3 py-2 text-center">
                                                     @if ($hasOverride)
-                                                        <span class="tax-badge--amber" aria-label="{{ Lang::get('tax::page.override_aria', ['year' => $row['taxYearOverride']]) }}">
+                                                        <span role="img" class="tax-badge--amber" aria-label="{{ Lang::get('tax::page.override_aria', ['year' => $row['taxYearOverride']]) }}">
                                                             → {{ $row['taxYearOverride'] }}
                                                         </span>
                                                     @else

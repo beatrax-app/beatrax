@@ -57,16 +57,16 @@
             @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $series->seriesId], key('threshold-detail-'.$series->seriesId))
             @livewire('forecasting.model-what-if-dropdown', ['seriesId' => $series->seriesId], key('what-if-'.$series->seriesId))
             <div x-data="{ open: false }" class="relative">
-                <button
-                    type="button"
+                <x-core::secondary-button
+                    size="sm"
+                    class="gap-1"
                     x-on:click="open = ! open"
                     aria-haspopup="listbox"
                     aria-label="{{ Lang::get('recurring::detail.variance_tolerance_aria') }}"
-                    class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
                 >
                     <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.tolerance') }}</span>
                     <span style="font-variant-numeric: tabular-nums;">{{ $series->varianceTolerancePercent }}%</span>
-                </button>
+                </x-core::secondary-button>
                 <div
                     x-show="open"
                     x-cloak
@@ -120,19 +120,21 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.no_occurrences') }}</p>
             </x-core::card>
         @else
-            {{-- overflow-x: auto wrapper ensures the occurrences table is scrollable
-                 at phone width without horizontal page overflow (D-06). --}}
+            {{-- Two wrappers, not one: the outer element is the scroller and the
+                 inner one holds the 360px floor, so the frame grows past the
+                 viewport and the outer element is what scrolls. Put the floor on
+                 the scroller itself and there is nothing left to scroll.
+                 scroll="false" for the frame for the same reason — the scrolling
+                 already happened one level up (D-06). --}}
             <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-            <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700" style="min-width: 360px;">
-                <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
-                    <thead class="bg-slate-50 dark:bg-slate-900">
-                        <tr>
+                <div style="min-width: 360px;">
+                    <x-core::data-table :scroll="false">
+                        <x-slot:head>
                             <x-core::th align="left">{{ Lang::get('recurring::detail.table.date') }}</x-core::th>
                             <x-core::th align="right">{{ Lang::get('recurring::detail.table.amount') }}</x-core::th>
                             <x-core::th align="right">{{ Lang::get('recurring::detail.table.transaction') }}</x-core::th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
+                        </x-slot:head>
+
                         @foreach ($occurrences as $occ)
                             <tr>
                                 <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $occ->observedAt->translatedFormat('d M Y') }}</td>
@@ -145,10 +147,9 @@
                                 </td>
                             </tr>
                         @endforeach
-                    </tbody>
-                </table>
+                    </x-core::data-table>
+                </div>
             </div>
-            </div>{{-- end overflow-x scroller --}}
         @endif
     </section>
 </div>

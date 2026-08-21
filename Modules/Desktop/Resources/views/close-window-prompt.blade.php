@@ -27,14 +27,7 @@
                 {{ $body }}
             </p>
 
-            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                <input
-                    type="checkbox"
-                    wire:model="rememberChoice"
-                    class="rounded border-slate-300 text-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900"
-                />
-                {{ $checkboxRemember }}
-            </label>
+            <x-core::checkbox-field :label="$checkboxRemember" wire:model="rememberChoice" />
 
             <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 {{--

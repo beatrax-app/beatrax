@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Nowa kwota',
     ],
 
+    'series_name_fallback' => 'seria',
+
     'summary' => [
         'cancel' => 'Anulowanie: :name',
         'series_fallback' => 'seria #:id',

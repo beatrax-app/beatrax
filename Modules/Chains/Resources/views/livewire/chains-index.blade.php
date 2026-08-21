@@ -18,7 +18,7 @@
             default => $kind,
         };
     };
-    $fmt = static fn ($money) => $money->format($money->currency() === 'EUR' ? 'nl_NL' : 'en_US');
+    $fmt = static fn ($money) => $money->format();
 @endphp
 
 <div class="mx-auto max-w-3xl px-4 py-10 sm:py-12">
@@ -156,6 +156,7 @@
                             >{{ $fmt($settlement->legTotal) }}</span>
                         </p>
                         <span
+                            role="img"
                             class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-medium {{ $tierClasses }}"
                             aria-label="{{ Lang::get('chains::index.state_aria', ['state' => $settlement->state]) }}"
                         >{{ ucfirst($settlement->state) }}</span>

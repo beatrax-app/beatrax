@@ -93,20 +93,16 @@
 
         @if ($icsStatement !== null)
             <div class="mt-4">
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    class="min-h-[44px] disabled:cursor-not-allowed disabled:opacity-50"
                     wire:click="importIcsStatement"
                     wire:loading.attr="disabled"
                     wire:target="importIcsStatement,icsStatement"
-                    class="inline-flex min-h-[44px] items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white
-                           hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           disabled:cursor-not-allowed disabled:opacity-50
-                           dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     data-testid="ob-ics-import-button"
                 >
                     <x-core::spinner size="sm" wire:loading wire:target="importIcsStatement" class="mr-2" />
                     {{ Lang::get('openbanking::messages.ics.import_button') }}
-                </button>
+                </x-core::neutral-button>
             </div>
         @endif
     </x-core::card>

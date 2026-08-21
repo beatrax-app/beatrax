@@ -75,7 +75,7 @@
             <aside class="dev-side" aria-label="{{ Lang::get('dev::shell.sidebar_aria') }}" style="--side-w-dev: 220px;">
                 <div class="dev-side-head">
                     <span>{{ Lang::get('dev::shell.heading') }}</span>
-                    <span class="dev-on-chip" aria-label="{{ Lang::get('dev::shell.on_chip_aria') }}">{{ Lang::get('dev::shell.on_chip') }}</span>
+                    <span role="img" class="dev-on-chip" aria-label="{{ Lang::get('dev::shell.on_chip_aria') }}">{{ Lang::get('dev::shell.on_chip') }}</span>
                 </div>
 
                 @foreach ($devNavItems as $item)

@@ -216,14 +216,14 @@
                             if ($day->date->month !== $displayMonth) $cellClasses .= ' cal-cell--other-month';
                             elseif ($day->isPast && !$day->isToday) $cellClasses .= ' cal-cell--past';
 
-                            // IN-06: cells render whole euros (half-up) as a deliberate density
-                            // trade-off — sub-euro balances can read "−€0"/"€1" while the day
+                            // IN-06: cells render whole units (half-up) as a deliberate density
+                            // trade-off — sub-euro balances can read "€ -0"/"€ 1" while the day
                             // panel shows two decimals. The panel is the precise surface; the
                             // grid corner is a glanceable magnitude, and the rose risk tint
                             // (driven by the exact minor-unit sign, not this string) stays correct.
                             $balanceStr = $day->isComputing
                                 ? '—'
-                                : (($day->eodBalanceMinor < 0 ? '−' : '') . '€' . number_format(abs($day->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.'));
+                                : Money::ofMinor($day->eodBalanceMinor, $day->currency)->formatWholeUnits();
                             $balanceColor = ($day->isComputing || $day->eodBalanceMinor >= 0)
                                 ? 'var(--color-text-muted)'
                                 : 'var(--color-rose)';
@@ -236,7 +236,7 @@
                             ]);
                             if (!$day->isComputing) {
                                 // WR-10: announce the sign — a screen reader on a −€450 risk day must not hear "€450"
-                                $balanceAmount = number_format(abs($day->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.');
+                                $balanceAmount = Money::ofMinor(abs($day->eodBalanceMinor), $day->currency)->formatWholeUnits();
                                 $ariaLabel .= $day->eodBalanceMinor < 0
                                     ? Lang::get('calendar::messages.cell.aria_balance_negative', ['amount' => $balanceAmount])
                                     : Lang::get('calendar::messages.cell.aria_balance_positive', ['amount' => $balanceAmount]);
@@ -279,16 +279,19 @@
                                         if ($entry->isMissed)               $entryClass .= ' cal-entry--missed';
 
                                         $amountSign   = $entry->direction === 'income' ? '+' : '−';
-                                        $amountStr    = $amountSign . '€' . number_format(abs($entry->amountMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.');
+                                        $amountStr    = $amountSign . Money::ofMinor(abs($entry->amountMinor), $entry->currency)->formatWholeUnits();
                                     @endphp
                                     <div class="{{ $entryClass }}">
                                         <span class="min-w-0 flex-1 truncate">
                                             @if ($entry->isApproximate)<span aria-hidden="true" class="text-xs" style="color: var(--color-text-faint);">~</span>@endif{{ $entry->name }}
                                         </span>
+                                        {{-- The ✓ / ! markers below carry no aria-label: this span is
+                                             aria-hidden, so nothing inside it reaches a screen reader.
+                                             Per-entry paid/missed is announced in the day panel. --}}
                                         <span class="flex-shrink-0 tabular-nums text-xs" aria-hidden="true">
                                             {{ $amountStr }}
-                                            @if ($entry->isPaid)<span class="ml-0.5" style="color: var(--color-emerald);" aria-label="{{ Lang::get('calendar::messages.cell.paid') }}">✓</span>@endif
-                                            @if ($entry->isMissed)<span class="ml-0.5" style="color: var(--color-amber);" aria-label="{{ Lang::get('calendar::messages.cell.missed') }}">!</span>@endif
+                                            @if ($entry->isPaid)<span class="ml-0.5" style="color: var(--color-emerald);">✓</span>@endif
+                                            @if ($entry->isMissed)<span class="ml-0.5" style="color: var(--color-amber);">!</span>@endif
                                         </span>
                                     </div>
                                 @endforeach

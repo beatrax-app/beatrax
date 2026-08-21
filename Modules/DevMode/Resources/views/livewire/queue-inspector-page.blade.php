@@ -51,13 +51,13 @@
         <div class="card flex items-center gap-3 px-3 py-2" data-testid="bulk-actions">
             <span class="text-xs tabular-nums text-[var(--color-text-muted)]" data-testid="bulk-count">{{ Lang::get('dev::queue.selected', ['count' => count($selected)]) }}</span>
             @if ($tab === 'failed')
-                <button
-                    type="button"
+                <x-core::secondary-button
+                    size="sm"
+                    class="pill-btn"
                     x-data
                     x-on:click="$dispatch('open-modal', 'bulk-retry-confirm')"
-                    class="pill-btn inline-flex items-center rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                     data-testid="bulk-retry-button"
-                >{{ Lang::get('dev::queue.bulk_retry', ['count' => count($selected)]) }}</button>
+                >{{ Lang::get('dev::queue.bulk_retry', ['count' => count($selected)]) }}</x-core::secondary-button>
             @endif
             <button
                 type="button"
@@ -234,13 +234,12 @@
                     x-on:click="$dispatch('close-modal', 'bulk-retry-confirm')"
                     class="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                 >{{ Lang::get('dev::queue.cancel') }}</button>
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    class="pill-btn primary"
                     wire:click="bulkRetryConfirm"
                     x-data
                     x-on:click="$dispatch('close-modal', 'bulk-retry-confirm')"
-                    class="pill-btn primary inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300"
-                >{{ Lang::get('dev::queue.bulk_retry', ['count' => count($selected)]) }}</button>
+                >{{ Lang::get('dev::queue.bulk_retry', ['count' => count($selected)]) }}</x-core::neutral-button>
             </div>
         </div>
     </flux:modal>

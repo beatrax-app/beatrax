@@ -91,10 +91,11 @@
             <p x-show="failed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('auth::recovery_codes.copy_failed') }}</p>
         </div>
 
-        <label class="flex items-start gap-2">
-            <input type="checkbox" wire:model.live="confirmed" class="mt-1 rounded border-slate-300 dark:border-slate-600">
-            <span class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::recovery_codes.confirm') }}</span>
-        </label>
+        <x-core::checkbox-field
+            align="start"
+            :label="Lang::get('auth::recovery_codes.confirm')"
+            wire:model.live="confirmed"
+        />
 
         <button
             type="button"

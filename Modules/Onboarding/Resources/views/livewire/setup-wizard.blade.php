@@ -51,9 +51,11 @@
                         default => 'wiz-dot',
                     };
                 @endphp
+                {{-- The dots carry no aria-label: each one would repeat what the
+                     .wiz-dots-label text beside them already says, so labelling every
+                     dot made a screen reader read the step count once per dot. --}}
                 <span
                     class="{{ $dotClass }}"
-                    aria-label="{{ Lang::get('onboarding::wizard.step_dot_aria', ['number' => $index + 1, 'total' => $totalSteps]) }}"
                     @if ($isCurrent) aria-current="step" @endif
                 ></span>
             @endforeach
@@ -147,7 +149,7 @@
     </main>
 
     <footer class="wiz-footer">
-        <span class="privacy-pill" aria-label="{{ Lang::get('onboarding::wizard.privacy') }}">
+        <span class="privacy-pill">
             <span class="privacy-pill-dot" aria-hidden="true"></span>
             {{ Lang::get('onboarding::wizard.privacy') }}
         </span>

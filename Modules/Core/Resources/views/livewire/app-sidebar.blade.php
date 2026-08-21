@@ -91,7 +91,10 @@
         <span class="ic" aria-hidden="true">≡</span>
         {{ Lang::get('core::sidebar.nav.transactions') }}
         @if (($navCounts['transactions'] ?? 0) > 0)
-            <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.transactions', ['count' => $navCounts['transactions']]) }}">{{ $navCount('transactions') }}</span>
+            {{-- role="img" on every count badge in this sidebar: a bare <span>
+                 is a generic role, which takes no accessible name, so the
+                 aria-label saying what the number counts was dropped unread. --}}
+            <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.transactions', ['count' => $navCounts['transactions']]) }}">{{ $navCount('transactions') }}</span>
         @endif
     </a>
     <a href="{{ route('forecast.index') }}" class="side-item {{ $isActive('/forecast') }}">
@@ -112,7 +115,7 @@
         <span class="ic" aria-hidden="true">◈</span>
         {{ Lang::get('core::sidebar.nav.notifications') }}
         @if (($navCounts['notifications'] ?? 0) > 0)
-            <span class="side-badge" aria-label="{{ Lang::get('core::sidebar.badge.notifications', ['count' => $navCounts['notifications']]) }}">{{ $navCount('notifications') }}</span>
+            <span role="img" class="side-badge" aria-label="{{ Lang::get('core::sidebar.badge.notifications', ['count' => $navCounts['notifications']]) }}">{{ $navCount('notifications') }}</span>
         @endif
     </a>
 
@@ -128,14 +131,14 @@
         <span class="ic" aria-hidden="true">↻</span>
         {{ Lang::get('core::sidebar.nav.recurring') }}
         @if (($navCounts['recurring'] ?? 0) > 0)
-            <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.recurring', ['count' => $navCounts['recurring']]) }}">{{ $navCount('recurring') }}</span>
+            <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.recurring', ['count' => $navCounts['recurring']]) }}">{{ $navCount('recurring') }}</span>
         @endif
     </a>
     <a href="{{ route('drift.watch') }}" class="side-item {{ $isActive('/drift/watch') }}">
         <span class="ic" aria-hidden="true">↗</span>
         {{ Lang::get('core::sidebar.nav.subscriptions') }}
         @if (($navCounts['subscriptions'] ?? 0) > 0)
-            <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.subscriptions', ['count' => $navCounts['subscriptions']]) }}">{{ $navCount('subscriptions') }}</span>
+            <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.subscriptions', ['count' => $navCounts['subscriptions']]) }}">{{ $navCount('subscriptions') }}</span>
         @endif
     </a>
     {{-- The sidebar entry points at the /chains overview (all chains)
@@ -155,14 +158,14 @@
         <span class="ic" aria-hidden="true">◬</span>
         {{ Lang::get('core::sidebar.nav.unusual_charges') }}
         @if (($navCounts['anomaly'] ?? 0) > 0)
-            <span class="side-badge alert" aria-label="{{ Lang::get('core::sidebar.badge.anomaly', ['count' => $navCounts['anomaly']]) }}">{{ $navCount('anomaly') }}</span>
+            <span role="img" class="side-badge alert" aria-label="{{ Lang::get('core::sidebar.badge.anomaly', ['count' => $navCounts['anomaly']]) }}">{{ $navCount('anomaly') }}</span>
         @endif
     </a>
     <a href="{{ route('drift.index') }}" class="side-item {{ $isActive('/drift') }}">
         <span class="ic" aria-hidden="true">⚠</span>
         {{ Lang::get('core::sidebar.nav.drift_alerts') }}
         @if (($navCounts['drift'] ?? 0) > 0)
-            <span class="side-badge alert" aria-label="{{ Lang::get('core::sidebar.badge.drift', ['count' => $navCounts['drift']]) }}">{{ $navCount('drift') }}</span>
+            <span role="img" class="side-badge alert" aria-label="{{ Lang::get('core::sidebar.badge.drift', ['count' => $navCounts['drift']]) }}">{{ $navCount('drift') }}</span>
         @endif
     </a>
 
@@ -173,7 +176,7 @@
         <span class="ic" aria-hidden="true">⊙</span>
         {{ Lang::get('core::sidebar.nav.budgets') }}
         @if (($navCounts['budgets'] ?? 0) > 0)
-            <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.budgets', ['count' => $navCounts['budgets']]) }}">{{ $navCount('budgets') }}</span>
+            <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.budgets', ['count' => $navCounts['budgets']]) }}">{{ $navCount('budgets') }}</span>
         @endif
     </a>
     {{-- Tax tagging + per-year export (D-17). The muted side-badge shows the
@@ -182,7 +185,7 @@
         <span class="ic" aria-hidden="true">⊞</span>
         {{ Lang::get('core::sidebar.nav.tax') }}
         @if (($navCounts['tax_tagged'] ?? 0) > 0)
-            <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.tax', ['count' => $navCounts['tax_tagged']]) }}">{{ $navCount('tax_tagged') }}</span>
+            <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.tax', ['count' => $navCounts['tax_tagged']]) }}">{{ $navCount('tax_tagged') }}</span>
         @endif
     </a>
     <a href="{{ route('goals.index') }}" class="side-item {{ $isActive('/goals') }}">
@@ -218,7 +221,7 @@
         <span class="ic" aria-hidden="true">⊕</span>
         {{ Lang::get('core::sidebar.nav.imports') }}
         @if (($navCounts['imports'] ?? 0) > 0)
-            <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.imports', ['count' => $navCounts['imports']]) }}">{{ $navCount('imports') }}</span>
+            <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.imports', ['count' => $navCounts['imports']]) }}">{{ $navCount('imports') }}</span>
         @endif
     </a>
     {{-- Two entries are deliberately absent here.
@@ -257,7 +260,7 @@
         <span class="ic" aria-hidden="true">◉</span>
         {{ Lang::get('core::sidebar.nav.counterparties') }}
         @if (($navCounts['counterparties'] ?? 0) > 0)
-            <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.counterparties', ['count' => $navCounts['counterparties']]) }}">{{ $navCount('counterparties') }}</span>
+            <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.counterparties', ['count' => $navCounts['counterparties']]) }}">{{ $navCount('counterparties') }}</span>
         @endif
     </a>
     {{--
@@ -272,6 +275,7 @@
         {{ Lang::get('core::sidebar.nav.triage') }}
         @if ($unknownCounterpartyCount > 0)
             <span
+                role="img"
                 class="side-badge"
                 style="background: var(--color-amber-bg); color: var(--color-amber); font-weight: 600;"
                 aria-label="{{ Lang::get('core::sidebar.badge.triage', ['count' => $unknownCounterpartyCount]) }}"

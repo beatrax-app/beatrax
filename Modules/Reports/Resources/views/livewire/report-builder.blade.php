@@ -352,65 +352,55 @@
                 </div>
 
                 {{-- Always-on data table (Req 8) — same $displayRows as the chosen chart --}}
-                {{-- overflow-x-auto, not overflow-hidden: this table is the only
-                 rendering of these rows at every width, and hidden CLIPPED the
-                 right-hand columns on a phone rather than letting them scroll —
-                 so the category picker and row actions were unreachable. --}}
-            <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
-                        <thead class="bg-slate-50 dark:bg-slate-900">
-                            <tr>
-                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $groupHeader }}</th>
-                                <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $metricLabel }}</th>
-                                @if ($definition->compare)
-                                    <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('reports::builder.vs_previous') }}</th>
-                                @endif
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
-                            @foreach ($displayRows as $rowIndex => $row)
-                                <tr wire:key="report-row-{{ $row->groupKey ?? 'null' }}-{{ $rowIndex }}">
-                                    <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
-                                        <a
-                                            href="{{ $drilldownUrls[$rowIndex] ?? '#' }}"
-                                            class="hover:underline"
-                                            title="{{ Lang::get('reports::builder.view_transactions') }}"
-                                        >{{ $row->groupLabel }}</a>
-                                    </td>
-                                    <td class="px-4 py-2 text-right {{ $amountClass($row->amountMinor) }}" style="font-variant-numeric: tabular-nums;">
-                                        {{ $fmt($row->amountMinor, $row->currency) }}
-                                    </td>
-                                    @if ($definition->compare)
-                                        <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
-                                            @if ($row->deltaMinor !== null)
-                                                <span class="{{ $row->deltaMinor >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
-                                                    {{ $row->deltaMinor >= 0 ? '+' : '−' }}{{ $fmt(abs($row->deltaMinor), $row->currency) }}
-                                                </span>
-                                            @else
-                                                <span class="text-slate-400 dark:text-slate-500">—</span>
-                                            @endif
-                                        </td>
-                                    @endif
-                                </tr>
-                            @endforeach
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td class="px-4 py-2 font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('reports::builder.total') }}</td>
-                                <td class="px-4 py-2 text-right font-semibold {{ $amountClass($result->totalMinor) }}" style="font-variant-numeric: tabular-nums;">
-                                    {{ $fmt($result->totalMinor, $result->currency) }}
-                                </td>
-                                @if ($definition->compare)
-                                    <td class="px-4 py-2 text-right font-semibold" style="font-variant-numeric: tabular-nums;">
-                                        <span class="{{ $headlineDelta >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
-                                            {{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}
+                <x-core::data-table>
+                    <x-slot:head>
+                        <x-core::th align="left">{{ $groupHeader }}</x-core::th>
+                        <x-core::th align="right">{{ $metricLabel }}</x-core::th>
+                        @if ($definition->compare)
+                            <x-core::th align="right">{{ Lang::get('reports::builder.vs_previous') }}</x-core::th>
+                        @endif
+                    </x-slot:head>
+
+                    @foreach ($displayRows as $rowIndex => $row)
+                        <tr wire:key="report-row-{{ $row->groupKey ?? 'null' }}-{{ $rowIndex }}">
+                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
+                                <a
+                                    href="{{ $drilldownUrls[$rowIndex] ?? '#' }}"
+                                    class="hover:underline"
+                                    title="{{ Lang::get('reports::builder.view_transactions') }}"
+                                >{{ $row->groupLabel }}</a>
+                            </td>
+                            <td class="px-4 py-2 text-right {{ $amountClass($row->amountMinor) }}" style="font-variant-numeric: tabular-nums;">
+                                {{ $fmt($row->amountMinor, $row->currency) }}
+                            </td>
+                            @if ($definition->compare)
+                                <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
+                                    @if ($row->deltaMinor !== null)
+                                        <span class="{{ $row->deltaMinor >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
+                                            {{ $row->deltaMinor >= 0 ? '+' : '−' }}{{ $fmt(abs($row->deltaMinor), $row->currency) }}
                                         </span>
-                                    </td>
-                                @endif
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                                    @else
+                                        <span class="text-slate-400 dark:text-slate-500">—</span>
+                                    @endif
+                                </td>
+                            @endif
+                        </tr>
+                    @endforeach
+
+                    <x-slot:foot>
+                        <td class="px-4 py-2 font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('reports::builder.total') }}</td>
+                        <td class="px-4 py-2 text-right font-semibold {{ $amountClass($result->totalMinor) }}" style="font-variant-numeric: tabular-nums;">
+                            {{ $fmt($result->totalMinor, $result->currency) }}
+                        </td>
+                        @if ($definition->compare)
+                            <td class="px-4 py-2 text-right font-semibold" style="font-variant-numeric: tabular-nums;">
+                                <span class="{{ $headlineDelta >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
+                                    {{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}
+                                </span>
+                            </td>
+                        @endif
+                    </x-slot:foot>
+                </x-core::data-table>
             @endif
         </section>
     </div>

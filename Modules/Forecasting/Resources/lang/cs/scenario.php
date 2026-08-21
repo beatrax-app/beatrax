@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Nová částka',
     ],
 
+    'series_name_fallback' => 'řada',
+
     'summary' => [
         'cancel' => 'Zrušení: :name',
         'series_fallback' => 'řada #:id',

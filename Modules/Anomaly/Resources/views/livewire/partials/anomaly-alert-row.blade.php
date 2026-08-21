@@ -57,12 +57,14 @@
                     @php $label = $reasonLabels[$reason] ?? ucwords(str_replace('_', ' ', $reason)); @endphp
                     @if ($reason === 'first_time')
                         <span
+                            role="img"
                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                             style="background: var(--color-blue-bg); color: var(--color-blue);"
                             aria-label="{{ Lang::get('anomaly::alerts.reason_aria.first_time') }}"
                         >{{ $label }}</span>
                     @elseif ($reason === 'duplicate')
                         <span
+                            role="img"
                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                             style="background: var(--color-amber-bg); color: var(--color-amber);"
                             aria-label="{{ Lang::get('anomaly::alerts.reason_aria.duplicate') }}"
@@ -70,6 +72,7 @@
                     @else
                         {{-- large (or any future detector): direction-aware tint --}}
                         <span
+                            role="img"
                             class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium {{ $tint }} dark:bg-slate-800"
                             aria-label="{{ Lang::get('anomaly::alerts.reason_aria.generic', ['label' => strtolower($label)]) }}"
                         >{{ $label }}</span>

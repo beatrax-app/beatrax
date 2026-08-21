@@ -5201,9 +5201,21 @@ mark {
         min-width: 0;
     }
 
+    /*
+     * The same reach for a chip-shaped LINK. The floor lands on button and
+     * [role='button'], so an <a> drawn as a chip — x-core::secondary-button
+     * given :href, the /email "Reconnect" pill — sat at 28-34px next to
+     * controls the floor had already taken to 44. It has no floor to undo,
+     * so it takes the halo and nothing else.
+     */
+    .tap-chip {
+        position: relative;
+    }
+
     .switch::after,
     [role='switch']::after,
     .chip::after,
+    .tap-chip::after,
     .srch-chip-toggle::after,
     .split-badge::after,
     .tax-badge::after,

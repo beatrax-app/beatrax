@@ -164,12 +164,12 @@
                                 {{ Lang::get('core::settings.exchange_rates.next_refresh') }}
                             @endif
                         </p>
-                        <button
-                            type="button"
+                        <x-core::secondary-button
+                            size="sm"
+                            class="disabled:opacity-50"
                             wire:click="refreshFxRates"
                             wire:loading.attr="disabled"
-                            class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
-                        >{{ Lang::get('core::settings.exchange_rates.refresh_now') }}</button>
+                        >{{ Lang::get('core::settings.exchange_rates.refresh_now') }}</x-core::secondary-button>
                     </div>
                 @endif
             </div>
@@ -304,10 +304,10 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('core::settings.aliases.intro') }}
             </p>
-            <a
-                href="{{ route('settings.aliases') }}"
-                class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >{{ Lang::get('core::settings.aliases.manage') }}</a>
+            <x-core::secondary-button
+                :href="route('settings.aliases')"
+                size="sm"
+            >{{ Lang::get('core::settings.aliases.manage') }}</x-core::secondary-button>
         </section>
     </div>
 
@@ -328,11 +328,10 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('core::settings.about_updates.body') }}
             </p>
-            <button
-                type="button"
+            <x-core::secondary-button
+                size="sm"
                 wire:click="openReleasesPage"
-                class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >{{ Lang::get('core::settings.about_updates.open_releases') }}</button>
+            >{{ Lang::get('core::settings.about_updates.open_releases') }}</x-core::secondary-button>
         </section>
 
         {{-- The codes are the only way back into a locked-out account, and
@@ -353,13 +352,13 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('core::settings.privacy.body') }}
             </p>
-            <a
-                href="{{ LegalLinks::PRIVACY_POLICY_URL }}"
+            <x-core::secondary-button
+                :href="LegalLinks::PRIVACY_POLICY_URL"
+                size="sm"
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="privacy-policy-link"
-                class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >{{ Lang::get('core::settings.privacy.open') }}</a>
+            >{{ Lang::get('core::settings.privacy.open') }}</x-core::secondary-button>
             <p class="text-xs text-[var(--color-text-muted)]">
                 {{ Lang::get('core::settings.privacy.url_hint') }}
                 <span class="select-all font-mono">{{ LegalLinks::PRIVACY_POLICY_URL }}</span>
@@ -371,10 +370,10 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('core::settings.first_run_tour.body') }}
             </p>
-            <a
-                href="{{ route('setup', ['force' => 1]) }}"
-                class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >{{ Lang::get('core::settings.first_run_tour.run_again') }}</a>
+            <x-core::secondary-button
+                :href="route('setup', ['force' => 1])"
+                size="sm"
+            >{{ Lang::get('core::settings.first_run_tour.run_again') }}</x-core::secondary-button>
         </section>
     </div>
 

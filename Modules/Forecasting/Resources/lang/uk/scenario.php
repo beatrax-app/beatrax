@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Нова сума',
     ],
 
+    'series_name_fallback' => 'серія',
+
     'summary' => [
         'cancel' => 'Скасувати: :name',
         'series_fallback' => 'серія #:id',

@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Nov znesek',
     ],
 
+    'series_name_fallback' => 'serija',
+
     'summary' => [
         'cancel' => 'Prekliči :name',
         'series_fallback' => 'serija št. :id',

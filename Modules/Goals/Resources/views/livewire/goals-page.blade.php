@@ -16,7 +16,7 @@
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
-        ->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+        ->format();
 @endphp
 
 {{--
@@ -36,18 +36,10 @@
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.page.subtitle') }}</p>
         </div>
         {{-- Trigger: phone → dispatch open-sheet; desktop → $flux.modal().show() --}}
-        <button
-            type="button"
-            x-on:click="
-                $wire.set('editGoalId', 0);
-                if (window.innerWidth < 768) {
-                    $dispatch('open-sheet', { name: 'goal-form' });
-                } else {
-                    $flux.modal('goal-form').show();
-                }
-            "
-            class="inline-flex shrink-0 items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-        >{{ Lang::get('goals::messages.page.add_goal') }}</button>
+        <x-core::neutral-button
+            class="shrink-0"
+            x-on:click="$wire.set('editGoalId', 0); if (window.innerWidth < 768) { $dispatch('open-sheet', { name: 'goal-form' }); } else { $flux.modal('goal-form').show(); }"
+        >{{ Lang::get('goals::messages.page.add_goal') }}</x-core::neutral-button>
     </header>
 
     {{-- Active + completed goals list --}}
@@ -56,18 +48,7 @@
             :heading="Lang::get('goals::messages.empty.heading')"
             :body="Lang::get('goals::messages.empty.body')"
         >
-            <button
-                type="button"
-                x-on:click="
-                    $wire.set('editGoalId', 0);
-                    if (window.innerWidth < 768) {
-                        $dispatch('open-sheet', { name: 'goal-form' });
-                    } else {
-                        $flux.modal('goal-form').show();
-                    }
-                "
-                class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-            >{{ Lang::get('goals::messages.empty.add_first') }}</button>
+            <x-core::neutral-button x-on:click="$wire.set('editGoalId', 0); if (window.innerWidth < 768) { $dispatch('open-sheet', { name: 'goal-form' }); } else { $flux.modal('goal-form').show(); }">{{ Lang::get('goals::messages.empty.add_first') }}</x-core::neutral-button>
         </x-core::empty-state>
     @else
         {{-- Phone card list (hidden at >=768px via CSS .goals-phone-list display:none) --}}
@@ -378,19 +359,17 @@
             </div>
 
             <div class="flex gap-3 pt-2">
-                <button
+                <x-core::neutral-button
+                    block="flex"
                     type="submit"
-                    class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                >{{ $editGoalId ? Lang::get('goals::messages.form.save_changes') : Lang::get('goals::messages.form.save_goal') }}</button>
+                >{{ $editGoalId ? Lang::get('goals::messages.form.save_changes') : Lang::get('goals::messages.form.save_goal') }}</x-core::neutral-button>
                 {{-- Closes on the client as well as clearing server state: the
                      panel's open flag is Alpine's, so wire:click alone left it
                      on screen however many times it was tapped. --}}
-                <button
-                    type="button"
+                <x-core::secondary-button
                     x-on:click="open = false"
                     wire:click="cancel"
-                    class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none dark:border-slate-700 dark:hover:text-slate-100"
-                >{{ Lang::get('goals::messages.form.close') }}</button>
+                >{{ Lang::get('goals::messages.form.close') }}</x-core::secondary-button>
             </div>
         </form>
     </x-core::bottom-sheet>
@@ -528,10 +507,7 @@
                         wire:click="cancel"
                         class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
                     >{{ Lang::get('goals::messages.form.close') }}</button>
-                    <button
-                        type="submit"
-                        class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                    >{{ $editGoalId ? Lang::get('goals::messages.form.save_changes') : Lang::get('goals::messages.form.save_goal') }}</button>
+                    <x-core::neutral-button type="submit">{{ $editGoalId ? Lang::get('goals::messages.form.save_changes') : Lang::get('goals::messages.form.save_goal') }}</x-core::neutral-button>
                 </div>
             </form>
         </div>

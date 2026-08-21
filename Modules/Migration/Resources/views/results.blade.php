@@ -2,9 +2,7 @@
 @extends('layouts.app', ['title' => Lang::get('migration::results.page_title').' · Beatrax'])
 
 @section('content')
-    <main class="min-h-screen bg-white dark:bg-slate-950">
-        <div class="mx-auto max-w-3xl px-6 py-16">
-            @livewire('migration.migration-results', ['id' => $id])
-        </div>
-    </main>
+    <x-core::page-shell width="3xl">
+        @livewire('migration.migration-results', ['id' => $id])
+    </x-core::page-shell>
 @endsection

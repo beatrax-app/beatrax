@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Нова сума',
     ],
 
+    'series_name_fallback' => 'поредица',
+
     'summary' => [
         'cancel' => 'Прекрати :name',
         'series_fallback' => 'поредица №:id',

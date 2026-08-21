@@ -91,15 +91,13 @@
                     </x-slot:label>
                 </x-core::form-field>
 
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    block="full"
+                    class="min-h-[44px]"
                     wire:click="setPin"
-                    class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
-                           hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                 >
                     {{ Lang::get('auth::app_lock.set_pin') }}
-                </button>
+                </x-core::neutral-button>
             </div>
         </div>
     @endif
@@ -113,15 +111,13 @@
                 <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::app_lock.pin_row_label') }}</p>
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('auth::app_lock.pin_row_description') }}</p>
             </div>
-            <button
-                type="button"
+            <x-core::secondary-button
+                size="sm"
+                class="min-h-[44px]"
                 wire:click="confirmChangePin"
-                class="min-h-[44px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900
-                       hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('auth::app_lock.change_pin') }}
-            </button>
+            </x-core::secondary-button>
         </div>
 
         {{-- Phase 14 D-10: re-secured-encryption note appended to the Change-PIN
@@ -182,15 +178,13 @@
                             {{ Lang::get('auth::app_lock.remove') }}
                         </button>
                     @else
-                        <button
-                            type="button"
+                        <x-core::secondary-button
+                            size="sm"
+                            class="min-h-[44px]"
                             wire:click="startEnroll"
-                            class="min-h-[44px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900
-                                   hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                         >
                             {{ Lang::get('auth::app_lock.enroll') }}
-                        </button>
+                        </x-core::secondary-button>
                     @endif
                 </x-core::setting-row>
             @else
@@ -228,15 +222,13 @@
                         >
                             {{ Lang::get('auth::app_lock.remove_biometric') }}
                         </button>
-                        <button
-                            type="button"
+                        <x-core::secondary-button
+                            block="flex"
+                            class="min-h-[44px]"
                             wire:click="$set('confirmingDeenroll', false)"
-                            class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                                   hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                         >
                             {{ Lang::get('auth::app_lock.keep_biometric') }}
-                        </button>
+                        </x-core::secondary-button>
                     </div>
                 </div>
             </flux:modal>
@@ -283,24 +275,20 @@
                     placeholder="········"
                 />
                 <div class="flex gap-3">
-                    <button
-                        type="button"
+                    <x-core::neutral-button
+                        block="flex"
+                        class="min-h-[44px]"
                         wire:click="disable"
-                        class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                               hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     >
                         {{ Lang::get('auth::app_lock.disable_lock') }}
-                    </button>
-                    <button
-                        type="button"
+                    </x-core::neutral-button>
+                    <x-core::secondary-button
+                        block="flex"
+                        class="min-h-[44px]"
                         wire:click="$set('confirmingDisable', false)"
-                        class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                               hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                     >
                         {{ Lang::get('auth::app_lock.keep_lock') }}
-                    </button>
+                    </x-core::secondary-button>
                 </div>
             </div>
         </flux:modal>
@@ -351,24 +339,20 @@
                     />
                 </div>
                 <div class="flex gap-3">
-                    <button
-                        type="button"
+                    <x-core::neutral-button
+                        block="flex"
+                        class="min-h-[44px]"
                         wire:click="resetForgottenPin"
-                        class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                               hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     >
                         {{ Lang::get('auth::app_lock.reset_pin') }}
-                    </button>
-                    <button
-                        type="button"
+                    </x-core::neutral-button>
+                    <x-core::secondary-button
+                        block="flex"
+                        class="min-h-[44px]"
                         wire:click="$set('confirmingForgotPin', false)"
-                        class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                               hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                     >
                         {{ Lang::get('auth::app_lock.cancel') }}
-                    </button>
+                    </x-core::secondary-button>
                 </div>
             </div>
         </flux:modal>
@@ -417,24 +401,20 @@
                     />
                 </div>
                 <div class="flex gap-3">
-                    <button
-                        type="button"
+                    <x-core::neutral-button
+                        block="flex"
+                        class="min-h-[44px]"
                         wire:click="changePin"
-                        class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                               hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     >
                         {{ Lang::get('auth::app_lock.change_pin') }}
-                    </button>
-                    <button
-                        type="button"
+                    </x-core::neutral-button>
+                    <x-core::secondary-button
+                        block="flex"
+                        class="min-h-[44px]"
                         wire:click="$set('confirmingChangePin', false)"
-                        class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                               hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                     >
                         {{ Lang::get('auth::app_lock.keep_pin') }}
-                    </button>
+                    </x-core::secondary-button>
                 </div>
             </div>
         </flux:modal>

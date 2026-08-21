@@ -67,22 +67,21 @@
                             >
                                 {{ $arg->label !== '' ? $arg->label : $arg->name }}
                                 @if ($isRequired)
-                                    <span class="text-rose-600 dark:text-rose-400" aria-label="{{ Lang::get('dev::arg_prompt.required_aria') }}">*</span>
+                                    <span role="img" class="text-rose-600 dark:text-rose-400" aria-label="{{ Lang::get('dev::arg_prompt.required_aria') }}">*</span>
                                 @endif
                             </label>
 
                             @if ($arg->type === 'boolean')
-                                <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                                    <input
-                                        id="{{ $fieldId }}"
-                                        type="checkbox"
-                                        wire:model.live="values.{{ $arg->name }}"
-                                        @if ($idx === 0) x-init="$nextTick(() => $el.focus())" @endif
-                                        class="rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-                                        data-testid="arg-input-{{ $arg->name }}"
-                                    />
-                                    <span>{{ Lang::get('dev::arg_prompt.enable') }}</span>
-                                </label>
+                                {{-- :x-init, not @if inside the tag: a Blade directive
+                                     between a component tag's attributes stops Blade
+                                     matching the tag at all, and it ships as dead HTML. --}}
+                                <x-core::checkbox-field
+                                    :field-id="$fieldId"
+                                    :label="Lang::get('dev::arg_prompt.enable')"
+                                    wire:model.live="values.{{ $arg->name }}"
+                                    :x-init="$idx === 0 ? '$nextTick(() => $el.focus())' : null"
+                                    data-testid="arg-input-{{ $arg->name }}"
+                                />
                             @elseif ($arg->type === 'select' && is_array($arg->options))
                                 <select
                                     id="{{ $fieldId }}"
@@ -117,19 +116,19 @@
             @endif
 
             <div class="flex items-center justify-end gap-2 pt-2">
-                <button
-                    type="button"
+                <x-core::secondary-button
+                    size="sm"
                     wire:click="cancel"
-                    class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                     data-testid="command-arg-prompt-cancel"
-                >{{ Lang::get('dev::arg_prompt.cancel') }}</button>
-                <button
-                    type="button"
+                >{{ Lang::get('dev::arg_prompt.cancel') }}</x-core::secondary-button>
+                <x-core::neutral-button
+                    size="sm"
+                    class="disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="isset($missingRequired) && $missingRequired"
+                    :aria-disabled="isset($missingRequired) && $missingRequired ? 'true' : null"
                     wire:click="submit"
-                    @if (isset($missingRequired) && $missingRequired) disabled aria-disabled="true" @endif
-                    class="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                     data-testid="command-arg-prompt-submit"
-                >{{ Lang::get('dev::arg_prompt.run_command') }}</button>
+                >{{ Lang::get('dev::arg_prompt.run_command') }}</x-core::neutral-button>
             </div>
         </div>
     </flux:modal>

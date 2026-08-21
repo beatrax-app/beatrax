@@ -86,7 +86,7 @@
                             />
                         </template>
                         @if ($cat->corpus_key !== null)
-                            <span class="text-xs text-[var(--color-text-faint)] mr-2" aria-label="{{ Lang::get('tax::settings.from_corpus') }}">{{ Lang::get('tax::settings.from_corpus') }}</span>
+                            <span class="text-xs text-[var(--color-text-faint)] mr-2">{{ Lang::get('tax::settings.from_corpus') }}</span>
                         @endif
                         <template x-if="! editing">
                             <button

@@ -108,11 +108,11 @@
                         </p>
                     @endif
                 </div>
-                <button
-                    type="button"
+                <x-core::secondary-button
+                    size="sm"
+                    class="shrink-0"
                     wire:click="toggle"
-                    class="shrink-0 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                >{{ $expanded ? Lang::get('core::net_worth.toggle_hide') : Lang::get('core::net_worth.toggle_breakdown') }}</button>
+                >{{ $expanded ? Lang::get('core::net_worth.toggle_hide') : Lang::get('core::net_worth.toggle_breakdown') }}</x-core::secondary-button>
             </div>
 
             @if ($expanded)

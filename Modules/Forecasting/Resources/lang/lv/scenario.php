@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Jaunā summa',
     ],
 
+    'series_name_fallback' => 'sērija',
+
     'summary' => [
         'cancel' => 'Atcelt :name',
         'series_fallback' => 'sērija #:id',

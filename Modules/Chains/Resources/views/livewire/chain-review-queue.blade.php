@@ -143,11 +143,7 @@
             @endphp
             @if ($last !== null)
                 <div class="mt-6 flex justify-center">
-                    <button
-                        type="button"
-                        wire:click="loadMore({{ $last->chainLinkId }}, '{{ number_format($last->confidence, 3, '.', '') }}')"
-                        class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                    >{{ Lang::get('chains::review.show_more') }}</button>
+                    <x-core::secondary-button wire:click="loadMore({{ $last->chainLinkId }}, '{{ number_format($last->confidence, 3, '.', '') }}')">{{ Lang::get('chains::review.show_more') }}</x-core::secondary-button>
                 </div>
             @endif
         @endif

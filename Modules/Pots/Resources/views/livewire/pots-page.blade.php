@@ -15,7 +15,7 @@
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
-        ->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+        ->format();
 
     // Derived once for both withdraw surfaces. It used to be derived inside
     // the modal, which put it out of scope for the sheet that renders first.
@@ -62,18 +62,10 @@
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.subtitle') }}</p>
         </div>
         @if (count($accounts) > 0)
-            <button
-                type="button"
-                x-on:click="
-                    $wire.set('editPotId', 0);
-                    if (window.innerWidth < 768) {
-                        $dispatch('open-sheet', { name: 'pot-form' });
-                    } else {
-                        $flux.modal('pot-form').show();
-                    }
-                "
-                class="inline-flex shrink-0 items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-            >{{ Lang::get('pots::messages.add_pot') }}</button>
+            <x-core::neutral-button
+                class="shrink-0"
+                x-on:click="$wire.set('editPotId', 0); if (window.innerWidth < 768) { $dispatch('open-sheet', { name: 'pot-form' }); } else { $flux.modal('pot-form').show(); }"
+            >{{ Lang::get('pots::messages.add_pot') }}</x-core::neutral-button>
         @endif
     </header>
 
@@ -84,12 +76,10 @@
             :body="Lang::get('pots::messages.empty.body')"
         >
             @if (count($accounts) > 0)
-                <button
-                    type="button"
+                <x-core::neutral-button
                     x-on:click="$flux.modal('pot-form').show()"
                     wire:click="$set('editPotId', 0)"
-                    class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                >{{ Lang::get('pots::messages.empty.cta') }}</button>
+                >{{ Lang::get('pots::messages.empty.cta') }}</x-core::neutral-button>
             @endif
         </x-core::empty-state>
     @else
@@ -150,19 +140,10 @@
                     {{-- Account group header row --}}
                     <div class="flex items-center justify-between gap-4 mb-2">
                         <x-core::section-heading :title="$firstPot->accountName" />
-                        <button
-                            type="button"
-                            x-on:click="
-                                $wire.set('accountId', '{{ $accountId }}');
-                                $wire.set('editPotId', 0);
-                                if (window.innerWidth < 768) {
-                                    $dispatch('open-sheet', { name: 'pot-form' });
-                                } else {
-                                    $flux.modal('pot-form').show();
-                                }
-                            "
-                            class="rounded-md border border-slate-200 bg-transparent px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-900"
-                        >{{ Lang::get('pots::messages.add_pot') }}</button>
+                        <x-core::secondary-button
+                            size="sm"
+                            x-on:click="$wire.set('accountId', '{{ $accountId }}'); $wire.set('editPotId', 0); if (window.innerWidth < 768) { $dispatch('open-sheet', { name: 'pot-form' }); } else { $flux.modal('pot-form').show(); }"
+                        >{{ Lang::get('pots::messages.add_pot') }}</x-core::secondary-button>
                     </div>
 
                     {{-- Negative-unallocated amber warning banner (D-02) --}}
@@ -473,19 +454,17 @@
                 @endforeach
             </x-core::form-field>
             <div class="flex gap-3 pt-2">
-                <button
+                <x-core::neutral-button
+                    block="flex"
                     type="submit"
-                    class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                >{{ $editPotId ? Lang::get('pots::messages.form.save_changes') : Lang::get('pots::messages.form.save_pot') }}</button>
+                >{{ $editPotId ? Lang::get('pots::messages.form.save_changes') : Lang::get('pots::messages.form.save_pot') }}</x-core::neutral-button>
                 {{-- Closes on the client too: the sheet's open flag is
                      Alpine's, so wire:click alone cleared the form and left
                      the panel on screen. Same defect as the goals sheet. --}}
-                <button
-                    type="button"
+                <x-core::secondary-button
                     x-on:click="open = false"
                     wire:click="cancel"
-                    class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none dark:border-slate-700 dark:hover:text-slate-100"
-                >{{ Lang::get('pots::messages.common.cancel') }}</button>
+                >{{ Lang::get('pots::messages.common.cancel') }}</x-core::secondary-button>
             </div>
         </form>
     </x-core::bottom-sheet>
@@ -520,8 +499,11 @@
                 style="font-size: 16px;"
             />
             <div class="flex gap-3 pt-2">
-                <button type="submit" class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('pots::messages.fund.submit') }}</button>
-                <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-fund' })" class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 focus:outline-none dark:border-slate-700">{{ Lang::get('pots::messages.common.cancel') }}</button>
+                <x-core::neutral-button
+                    block="flex"
+                    type="submit"
+                >{{ Lang::get('pots::messages.fund.submit') }}</x-core::neutral-button>
+                <x-core::secondary-button wire:click="$dispatch('modal-close', { name: 'pot-fund' })">{{ Lang::get('pots::messages.common.cancel') }}</x-core::secondary-button>
             </div>
         </form>
     </x-core::bottom-sheet>
@@ -564,8 +546,11 @@
                 style="font-size: 16px;"
             />
             <div class="flex gap-3 pt-2">
-                <button type="submit" class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('pots::messages.actions.withdraw') }}</button>
-                <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-withdraw' })" class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 focus:outline-none dark:border-slate-700">{{ Lang::get('pots::messages.common.cancel') }}</button>
+                <x-core::neutral-button
+                    block="flex"
+                    type="submit"
+                >{{ Lang::get('pots::messages.actions.withdraw') }}</x-core::neutral-button>
+                <x-core::secondary-button wire:click="$dispatch('modal-close', { name: 'pot-withdraw' })">{{ Lang::get('pots::messages.common.cancel') }}</x-core::secondary-button>
             </div>
         </form>
     </x-core::bottom-sheet>
@@ -613,8 +598,13 @@
                 @endif
             </div>
             <div class="flex gap-3 pt-2">
-                <button type="submit" @disabled(count($moveDestPotsSheet) === 0) class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('pots::messages.move.submit') }}</button>
-                <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-move' })" class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 focus:outline-none dark:border-slate-700">{{ Lang::get('pots::messages.common.cancel') }}</button>
+                <x-core::neutral-button
+                    block="flex"
+                    class="disabled:opacity-50"
+                    :disabled="count($moveDestPotsSheet) === 0"
+                    type="submit"
+                >{{ Lang::get('pots::messages.move.submit') }}</x-core::neutral-button>
+                <x-core::secondary-button wire:click="$dispatch('modal-close', { name: 'pot-move' })">{{ Lang::get('pots::messages.common.cancel') }}</x-core::secondary-button>
             </div>
         </form>
     </x-core::bottom-sheet>
@@ -727,10 +717,7 @@
                         wire:click="cancel"
                         class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
                     >{{ Lang::get('pots::messages.common.cancel') }}</button>
-                    <button
-                        type="submit"
-                        class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                    >{{ $editPotId ? Lang::get('pots::messages.form.save_changes') : Lang::get('pots::messages.form.save_pot') }}</button>
+                    <x-core::neutral-button type="submit">{{ $editPotId ? Lang::get('pots::messages.form.save_changes') : Lang::get('pots::messages.form.save_pot') }}</x-core::neutral-button>
                 </div>
             </form>
         </div>
@@ -787,7 +774,7 @@
                 />
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-fund' })" class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400">{{ Lang::get('pots::messages.common.cancel') }}</button>
-                    <button type="submit" class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('pots::messages.fund.submit') }}</button>
+                    <x-core::neutral-button type="submit">{{ Lang::get('pots::messages.fund.submit') }}</x-core::neutral-button>
                 </div>
             </form>
         </div>
@@ -856,7 +843,11 @@
                 />
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-move' })" class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400">{{ Lang::get('pots::messages.common.cancel') }}</button>
-                    <button type="submit" @disabled(count($moveDestPots) === 0) class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed">{{ Lang::get('pots::messages.move.submit') }}</button>
+                    <x-core::neutral-button
+                        class="disabled:opacity-50 disabled:cursor-not-allowed"
+                        :disabled="count($moveDestPots) === 0"
+                        type="submit"
+                    >{{ Lang::get('pots::messages.move.submit') }}</x-core::neutral-button>
                 </div>
             </form>
         </div>
@@ -899,7 +890,7 @@
                 />
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-withdraw' })" class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400">{{ Lang::get('pots::messages.common.cancel') }}</button>
-                    <button type="submit" class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('pots::messages.actions.withdraw') }}</button>
+                    <x-core::neutral-button type="submit">{{ Lang::get('pots::messages.actions.withdraw') }}</x-core::neutral-button>
                 </div>
             </form>
         </div>

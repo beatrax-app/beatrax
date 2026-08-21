@@ -39,17 +39,12 @@
                 />
 
                 <div class="space-y-2">
-                    <label class="inline-flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
-                        <input
-                            type="checkbox"
-                            wire:model.live="remember"
-                            class="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700"
-                        />
-                        <span>
-                            <span class="block">{{ Lang::get('import::rename.remember', ['raw' => $raw]) }}</span>
-                            <span class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('import::rename.remember_help') }}</span>
-                        </span>
-                    </label>
+                    <x-core::checkbox-field
+                        align="start"
+                        :label="Lang::get('import::rename.remember', ['raw' => $raw])"
+                        :hint="Lang::get('import::rename.remember_help')"
+                        wire:model.live="remember"
+                    />
 
                     @if ($remember && $generalized !== '')
                         <p class="popover-preview-line">

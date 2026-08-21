@@ -33,7 +33,7 @@
         @if ($dayDto->isComputing || $dayDto->sodBalanceMinor === null)
             —
         @else
-            {{ $dayDto->sodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->sodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 2, ',', '.') }}
+            {{ Money::ofMinor($dayDto->sodBalanceMinor, $dayDto->currency)->format() }}
         @endif
     </span>
 </div>
@@ -46,7 +46,7 @@
         @foreach ($dayDto->entries as $entry)
             @php
                 $amountSign = $entry->direction === 'income' ? '+' : '−';
-                $amountStr  = $amountSign . '€' . number_format(abs($entry->amountMinor / Money::MINOR_UNITS_PER_MAJOR), 2, ',', '.');
+                $amountStr  = $amountSign . Money::ofMinor(abs($entry->amountMinor), $entry->currency)->format();
                 $amountColor = $entry->direction === 'income' ? 'var(--color-emerald)' : 'var(--color-text)';
             @endphp
             <div class="cal-panel-entry">
@@ -60,9 +60,9 @@
                                 {{ $entry->name }}
                             </span>
                             @if ($entry->isPaid)
-                                <span style="color: var(--color-emerald);" aria-label="{{ Lang::get('calendar::messages.cell.paid') }}">✓</span>
+                                <span role="img" style="color: var(--color-emerald);" aria-label="{{ Lang::get('calendar::messages.cell.paid') }}">✓</span>
                             @elseif ($entry->isMissed)
-                                <span style="color: var(--color-amber);" aria-label="{{ Lang::get('calendar::messages.cell.missed') }}">!</span>
+                                <span role="img" style="color: var(--color-amber);" aria-label="{{ Lang::get('calendar::messages.cell.missed') }}">!</span>
                             @endif
                         </div>
                         <div class="mt-0.5 text-xs" style="color: var(--color-text-faint);">
@@ -109,7 +109,7 @@
         @if ($dayDto->isComputing)
             —
         @else
-            {{ $dayDto->eodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 2, ',', '.') }}
+            {{ Money::ofMinor($dayDto->eodBalanceMinor, $dayDto->currency)->format() }}
         @endif
     </span>
 </div>

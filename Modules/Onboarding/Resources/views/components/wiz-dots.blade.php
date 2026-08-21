@@ -41,9 +41,11 @@
                 default => 'dot',
             };
         @endphp
+        {{-- The dots carry no aria-label: each one would repeat what the
+             .wiz-dots-label text beside them already says, so labelling every
+             dot made a screen reader read the step count once per dot. --}}
         <span
             class="{{ $dotClass }}"
-            aria-label="{{ Lang::get('onboarding::components.step_dot_aria', ['number' => $index + 1, 'total' => $totalSteps]) }}"
             @if ($isCurrent) aria-current="step" @endif
         ></span>
     @endforeach

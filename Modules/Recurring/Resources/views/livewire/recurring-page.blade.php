@@ -39,11 +39,11 @@
     <header class="mb-8">
         <div class="flex items-baseline justify-between gap-4">
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::index.title') }}</h1>
-            <button
-                type="button"
+            <x-core::secondary-button
+                size="sm"
+                class="gap-1"
                 wire:click="reDetect"
-                class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
-            >{{ Lang::get('recurring::index.re_detect') }}</button>
+            >{{ Lang::get('recurring::index.re_detect') }}</x-core::secondary-button>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('recurring::index.subtitle') }}
@@ -139,6 +139,7 @@
                                 <div class="flex shrink-0 items-center gap-3">
                                     @if ($row->latestFundingChainLinkId !== null)
                                         <span
+                                            role="img"
                                             class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                                             data-chain-badge="true"
                                             aria-label="{{ Lang::get('recurring::index.chain_aria') }}"
@@ -213,6 +214,7 @@
                                 <div class="flex shrink-0 items-center gap-3">
                                     @if ($row->latestFundingChainLinkId !== null)
                                         <span
+                                            role="img"
                                             class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                                             data-chain-badge="true"
                                             aria-label="{{ Lang::get('recurring::index.chain_aria') }}"

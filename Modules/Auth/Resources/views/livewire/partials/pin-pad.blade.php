@@ -31,6 +31,7 @@
 {{-- Dot display — aria-live so screen readers announce digit count changes --}}
 <div
     class="flex justify-center gap-2 py-3"
+    role="status"
     aria-live="polite"
     x-bind:aria-label="pin.length + ' {{ Lang::get('auth::lock_screen.digits_suffix') }}'"
 >

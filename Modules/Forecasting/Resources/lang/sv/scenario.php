@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Nytt belopp',
     ],
 
+    'series_name_fallback' => 'serie',
+
     'summary' => [
         'cancel' => 'Säg upp :name',
         'series_fallback' => 'serie #:id',

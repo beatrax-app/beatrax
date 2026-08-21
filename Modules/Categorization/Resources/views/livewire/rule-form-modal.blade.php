@@ -224,10 +224,10 @@
                                 <details class="text-xs text-slate-500 dark:text-slate-400">
                                     <summary class="cursor-pointer select-none">{{ Lang::get('categorization::rule_form.this_year_only') }}</summary>
                                     <div class="mt-2 flex items-center gap-2">
-                                        <label class="inline-flex items-center gap-1">
-                                            <input type="checkbox" wire:model.live="actions.{{ $i }}.year_override_enabled" />
-                                            {{ Lang::get('categorization::rule_form.override_tax_year') }}
-                                        </label>
+                                        <x-core::checkbox-field
+                                            :label="Lang::get('categorization::rule_form.override_tax_year')"
+                                            wire:model.live="actions.{{ $i }}.year_override_enabled"
+                                        />
                                         @if ($action['year_override_enabled'])
                                             <input
                                                 type="number"

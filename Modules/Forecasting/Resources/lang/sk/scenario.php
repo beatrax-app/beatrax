@@ -83,6 +83,8 @@ return [
         'new_amount' => 'Nová suma',
     ],
 
+    'series_name_fallback' => 'séria',
+
     'summary' => [
         'cancel' => 'Zrušiť: :name',
         'series_fallback' => 'séria č. :id',

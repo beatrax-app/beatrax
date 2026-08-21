@@ -74,7 +74,14 @@
     </header>
 
     @if ($total > 0)
-        <div class="progress-bar" aria-label="{{ Lang::get('counterparties::triage.progress_aria') }}">
+        <div
+            class="progress-bar"
+            role="progressbar"
+            aria-valuenow="{{ $percent }}"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-label="{{ Lang::get('counterparties::triage.progress_aria') }}"
+        >
             <div class="progress-fill" style="width: {{ $percent }}%;"></div>
         </div>
     @endif

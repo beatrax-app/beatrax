@@ -91,16 +91,19 @@
                         {{-- Status dot --}}
                         @if ($isFailed)
                             <span
+                                role="img"
                                 class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-rose-500 dark:bg-rose-400"
                                 aria-label="{{ Lang::get('sync::status.dot_error') }}"
                             ></span>
                         @elseif ($isActive)
                             <span
+                                role="img"
                                 class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-blue-500 dark:bg-blue-400"
                                 aria-label="{{ Lang::get('sync::status.dot_online') }}"
                             ></span>
                         @else
                             <span
+                                role="img"
                                 class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-slate-300 dark:bg-slate-600"
                                 aria-label="{{ Lang::get('sync::status.dot_offline') }}"
                             ></span>
