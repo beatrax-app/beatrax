@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Models\RecurringSeries;
 
+// The label is asked for rather than spelled out: this hard-coded the plural
+// arm, so at a count of one the badge claimed the plural of its own noun.
+// What is under test is the badge markup; the copy is pinned where it lives.
 function rcnbcUser(string $username): User
 {
     return User::query()->create([
@@ -42,8 +46,9 @@ afterEach(function (): void {
 
 function rcnbcBadge(int $count): string
 {
-    return '<span role="img" class="side-badge muted" aria-label="'
-        .$count.' recurring series">'.$count.'</span>';
+    $aria = Lang::choice('core::sidebar.badge.recurring', $count, ['count' => $count]);
+
+    return '<span role="img" class="side-badge muted" aria-label="'.$aria.'">'.$count.'</span>';
 }
 
 it('renders the sidebar badge as the count of active series, leaving pending and rejected out', function (): void {
