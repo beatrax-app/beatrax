@@ -1,8 +1,8 @@
 @use('Modules\Core\Public\Support\Lang')
 <div
     class="beatrax-shell min-h-screen flex items-center justify-center
-            px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
-            pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
+            pl-[var(--safe-left)] pr-[var(--safe-right)]
+            pt-[var(--safe-top)] pb-[var(--safe-bottom)]
             motion-reduce:transition-none"
     {{--
         PIN digits accumulate in this transient Alpine state,
