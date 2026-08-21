@@ -1,7 +1,7 @@
 {
     "name": "beatrax/beatrax-mobile",
     "type": "project",
-    "description": "beatrax mobile peer — thin NativePHP-for-Mobile app shell over the shared Modules/ domain codebase.",
+    "description": "Beatrax mobile peer — thin NativePHP-for-Mobile app shell over the shared Modules/ domain codebase.",
     "keywords": [
         "laravel",
         "personal-finance",
@@ -94,34 +94,10 @@
         ],
         "post-update-cmd": [
             "@php artisan native:install --with-icu --quiet",
-            "@php ../scripts/nativephp_grant_webview_camera.php",
-            "@php ../scripts/nativephp_android_file_chooser.php",
-            "@php ../scripts/nativephp_keep_webview_cookies.php",
-            "@php ../scripts/nativephp_exclude_data_from_backup.php",
-            "@php ../scripts/nativephp_strip_unused_permissions.php",
-            "@php ../scripts/nativephp_theme_native_shell.php",
-            "@php ../scripts/nativephp_brand_boot_splash.php",
-            "@php ../scripts/nativephp_android_adaptive_icon.php",
-            "@php ../scripts/nativephp_ios_app_icon.php",
-            "@php ../scripts/nativephp_extend_bundle_copy_timeout.php",
-            "@php ../scripts/nativephp_ios_request_body_stream.php",
-            "@php ../scripts/nativephp_ios_download_delegate.php",
-            "@php ../scripts/nativephp_ios_privacy_manifest.php",
-            "@php ../scripts/nativephp_ios_export_compliance.php"
+            "@php ../scripts/nativephp_patch_all.php"
         ],
         "native:patch": [
-            "@php ../scripts/nativephp_android_adaptive_icon.php",
-            "@php ../scripts/nativephp_ios_app_icon.php",
-            "@php ../scripts/nativephp_grant_webview_camera.php",
-            "@php ../scripts/nativephp_android_file_chooser.php",
-            "@php ../scripts/nativephp_keep_webview_cookies.php",
-            "@php ../scripts/nativephp_exclude_data_from_backup.php",
-            "@php ../scripts/nativephp_strip_unused_permissions.php",
-            "@php ../scripts/nativephp_theme_native_shell.php",
-            "@php ../scripts/nativephp_ios_request_body_stream.php",
-            "@php ../scripts/nativephp_ios_download_delegate.php",
-            "@php ../scripts/nativephp_ios_privacy_manifest.php",
-            "@php ../scripts/nativephp_ios_export_compliance.php"
+            "@php ../scripts/nativephp_patch_all.php"
         ]
     },
     "extra": {
