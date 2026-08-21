@@ -232,6 +232,46 @@ it('decrypts each candidate description before matching so suggestionFor() retur
     expect($suggestion->confidence)->toBe('high');
 });
 
+// A row that blanks cannot resolve to anything, so counting it in the
+// denominator turned a unanimous suggestion into a weak one and the triage
+// banner presented a correct answer as a guess.
+it('leaves an undecryptable row out of the confidence denominator', function (): void {
+    $user = cpteUser('cpte-confidence');
+    $session = $this->enablesEncryptionForUser($user);
+    $account = cpteAccount($user);
+    $run = cpteImportRun($user);
+    $unknown = cpteUnknown($user, 'cpte-mystery-confidence', 'NL44RABO0123456799');
+
+    /** @var SensitiveColumnCodec $codec */
+    $codec = $this->app->make(SensitiveColumnCodec::class);
+
+    for ($i = 0; $i < 3; $i++) {
+        cpteTx($user, $account, $unknown, $run, 'NETFLIX SUBSCRIPTION ROW '.$i, $codec, $session);
+    }
+    for ($i = 0; $i < 3; $i++) {
+        cpteTx($user, $account, $unknown, $run, base64_encode(random_bytes(48)));
+    }
+
+    DB::table('merchant_aliases')->insert([
+        'user_id' => $user->id,
+        'pattern' => 'NETFLIX',
+        'generalized_pattern' => 'netflix',
+        'friendly_name' => 'Netflix',
+        'merged_from' => null,
+        'created_at' => now()->toDateTimeString(),
+        'updated_at' => now()->toDateTimeString(),
+    ]);
+
+    /** @var CounterpartyTriageQueue $queue */
+    $queue = $this->app->make(CounterpartyTriageQueue::class);
+    $this->actingAs($user);
+
+    $suggestion = $queue->suggestionFor($unknown->fresh());
+
+    expect($suggestion)->not->toBeNull();
+    expect($suggestion->confidence)->toBe('high');
+});
+
 it('keeps the suggestionFor() candidate read bounded to the existing per-counterparty limit (no full-history decrypt scan)', function (): void {
     $source = file_get_contents(base_path('Modules/Counterparties/Public/Queries/CounterpartyTriageQueue.php'));
     expect($source)->not->toBeFalse();

@@ -94,7 +94,9 @@ function seedPaypalExpense(
         'currency' => 'EUR',
         'settled_amount_minor' => -$amountMinor,
         'settled_currency' => 'EUR',
-        'counterparty_name' => 'Some merchant',
+        // The fuzzy arm scores the readable name, because the normalised
+        // column is a keyed digest once at-rest encryption is on.
+        'counterparty_name' => $counterpartyNormalized,
         'counterparty_normalized' => $counterpartyNormalized,
         'normalization_version' => 3,
         'source_format' => 'paypal-csv',
@@ -125,7 +127,7 @@ function seedAsnTransferIn(
         'currency' => 'EUR',
         'settled_amount_minor' => $amountMinor,
         'settled_currency' => 'EUR',
-        'counterparty_name' => 'PayPal',
+        'counterparty_name' => $counterpartyNormalized,
         'counterparty_normalized' => $counterpartyNormalized,
         'normalization_version' => 3,
         'source_format' => 'asn-csv',

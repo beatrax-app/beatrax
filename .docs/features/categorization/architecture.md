@@ -310,6 +310,11 @@ auto-suggest the chosen category. It skips when `categoryId` is null
 `counterparty_normalized` is the empty-counterparty sentinel, or when
 no `merchants` row exists for `(user_id, normalized_name)` (population
 of that table is a Ledger/NormalizeStage concern, not this listener's).
+`merchants.normalized_name` is compared directly against
+`transactions.counterparty_normalized`, so the two carry the same
+construction: for a user with at-rest encryption on, both hold a keyed
+one-way digest under one derivation domain rather than the merchant name.
+See [Which columns are encrypted at rest](../sync/sensitive-columns-at-rest.md).
 It upserts on the `(user_id, merchant_id, category_id)` UNIQUE
 constraint via an insert-then-catch-and-update pattern: the DB
 serialises competing inserts, so exactly one of N concurrent events
@@ -343,12 +348,22 @@ touches this counter.
 
 ## Default seeders
 
-`DefaultCategoryTreeSeeder` installs a Dutch-aware default tree (13
-top-level sections, 17 leaves) with `user_id = NULL` so it acts as the
-shared starting set for every user. It uses `updateOrCreate` keyed on
+`DefaultCategoryTreeSeeder` installs a Dutch-household-shaped default
+tree (13 top-level sections, 17 leaves) with `user_id = NULL` so it
+acts as the shared starting set for every user. It is keyed on
 `(slug, user_id = NULL)` so the lookup only ever matches the global
 default-tree row, never a per-user override sharing the same slug —
 re-running is safe and never demotes a user-owned category to global.
+
+Structure is re-asserted on every run; the **name** is written once, at
+creation, alongside `name_is_default = true`. The name goes in as the
+app's canonical English and is translated per reader at render time
+from this module's `categories.php` lang files, keyed by slug — so the
+tree follows a language change instead of freezing in the signup
+locale. Re-asserting the name on a later run would undo a rename, which
+is why it is creation-only. Anything reading or matching a category
+name has to go through the seam that knows this:
+[category display names](../ledger/category-display-names.md).
 
 `DefaultCategorizationRuleSeeder` installs the universal-merchant rule
 set per-user (since `RuleEvaluator` scopes its pull by `user_id` with

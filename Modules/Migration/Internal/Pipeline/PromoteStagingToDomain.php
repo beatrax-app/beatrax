@@ -15,12 +15,12 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Goals\Public\Services\GoalWriter;
-use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Exceptions\UnresolvedStagedAccountException;
@@ -47,6 +47,7 @@ final class PromoteStagingToDomain
         private readonly PairsTransferLegs $transferPairer,
         private readonly GoalWriter $goalWriter,
         private readonly FingerprintComposer $fingerprints,
+        private readonly CounterpartyKey $counterpartyKey,
     ) {}
 
     /**
@@ -577,7 +578,7 @@ final class PromoteStagingToDomain
 
         $payeeExternalId = $row->payee_source_external_id;
         $counterpartyName = is_string($payeeExternalId) ? ($payeeNameMap[$payeeExternalId] ?? null) : null;
-        $counterpartyNormalized = $this->normalizeCounterpartyName($counterpartyName);
+        $counterpartyNormalized = $this->counterpartyKey->forName($counterpartyName, $user->id);
 
         $categoryExternalId = $row->category_source_external_id;
         $categoryId = is_string($categoryExternalId) ? ($categoryIdMap[$categoryExternalId] ?? null) : null;
@@ -663,17 +664,6 @@ final class PromoteStagingToDomain
         }
 
         return $map;
-    }
-
-    private function normalizeCounterpartyName(?string $name): string
-    {
-        if ($name === null || trim($name) === '') {
-            return NormalizeStage::NO_COUNTERPARTY;
-        }
-
-        $normalized = $this->fingerprints->normalize($name);
-
-        return $normalized === '' ? NormalizeStage::NO_COUNTERPARTY : $normalized;
     }
 
     private function migrationImportRunId(User $user, string $sourceProduct): int

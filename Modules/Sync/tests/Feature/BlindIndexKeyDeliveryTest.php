@@ -6,12 +6,14 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\GdkEpochWrapSignature;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Public\Services\BlindIndexCodec;
 
 uses(RefreshDatabase::class);
 
@@ -157,6 +159,29 @@ it('keeps the local blind-index key once this device has derived its counterpart
     bikDeliver($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex);
 
     expect($keyring->blindIndexKeyHex((int) $user->id, $session))->toBe($localKeyHex);
+});
+
+// A phone that enables encryption during pairing sweeps an empty database. If
+// that counted as "this device has derived keys" it would refuse the desktop's
+// key and the two would never agree on a merchant again.
+it('still adopts a peer key after a sweep that had no rows to convert', function (): void {
+    $user = bikUser('bik-empty-sweep');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    /** @var EncryptionMigrationService $migration */
+    $migration = app(EncryptionMigrationService::class);
+    $migration->migrate($user, $session);
+
+    /** @var BlindIndexCodec $codec */
+    $codec = app(BlindIndexCodec::class);
+    expect($codec->isEnrolled((int) $user->id))->toBeTrue();
+    expect($codec->hasDerived((int) $user->id))->toBeFalse();
+
+    [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
+    bikDeliver($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex);
+
+    expect(app(GdkKeyringService::class)->blindIndexKeyHex((int) $user->id, $session))->toBe($peerKeyHex);
 });
 
 it('never adopts a blind-index key as an epoch', function (): void {

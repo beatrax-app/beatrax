@@ -122,3 +122,25 @@ it('counts a description the corpus already knows as resolved once it is decrypt
         ->assertDontSee('ALBERT HEIJN 1234 AMSTERDAM')
         ->assertSee('100%');
 });
+
+// Every row blanking is not "everything is auto-named" — it is "this device
+// cannot read anything". A fabricated 100% is worse than admitting that.
+it('reports no auto-named percentage at all when no row can be decrypted', function (): void {
+    $user = makeCommunityTestUser('mme-keyless');
+    $session = $this->enablesEncryptionForUser($user);
+    $account = mmeAccount($user);
+    $run = mmeImportRun($user);
+
+    /** @var SensitiveColumnCodec $codec */
+    $codec = $this->app->make(SensitiveColumnCodec::class);
+
+    mmeEncryptedTx($user, $account, $run, 'BCK*ONBEKENDE WINKEL *4471', $codec, $session);
+
+    DB::table('transactions')->where('user_id', $user->id)->update([
+        'description' => base64_encode(random_bytes(48)),
+    ]);
+
+    Livewire::actingAs($user)->test(MysteryMerchantsPage::class)
+        ->assertSee('—')
+        ->assertDontSee('100%');
+});

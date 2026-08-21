@@ -19,6 +19,15 @@ module — `Chains`, `Recurring`, `Forecasting`, `DriftAlerts`,
 [data-model architecture topic](https://github.com/beatrax-app/spec/blob/main/20-architecture/data-model.md);
 this page describes the module's surface.
 
+Two columns this module owns do not mean what they look like, and both
+have their own page. `*_minor` amounts are integers rendered by exactly
+one class ([money representation](money-formatting.md)), and
+`categories.name` holds canonical English for a default category while
+the reader sees a per-locale translation
+([category display names](category-display-names.md)). Read the second
+before writing any query that matches, sorts, or groups on a category
+name.
+
 The "this period at a glance" query is the dashboard's load-bearing
 read: aggregate totals across the user's period-start-day window
 plus per-currency tiles plus the top categories. It runs in a single
@@ -440,9 +449,13 @@ current leg categories (enforced when the split is non-empty).
 transaction row takes as it flows through Ingestion/Import; only
 `RecordTransactions` persists it.
 
-- `counterparty_normalized` is never null: `NormalizeStage` substitutes
+- `counterparty_normalized` is never null: `CounterpartyKey` substitutes
   a sentinel when the counterparty name is empty, so the composite
   UNIQUE on `transactions` catches duplicates even without a `source_ref`.
+  For a user with at-rest encryption enabled it holds a keyed one-way digest
+  of the normalised name rather than the name — equality and uniqueness
+  survive, the merchant does not. See
+  [Which columns are encrypted at rest](../sync/sensitive-columns-at-rest.md).
 - `autoCategoryProvenance` is a nullable `{source: 'rule'|'memory',
   rule_id?, memory_id?, category_id}` shape stamped by
   `ApplyAutoCategoryStage`; the correction-divergence flow reads it to
@@ -549,7 +562,16 @@ would reject the second user's row as a "duplicate" of the first.
 `normalize()` collapses a raw counterparty name into the stable string
 used inside the fingerprint tuple: lowercased, NFD-stripped of
 combining marks, non-alphanumeric runs collapsed to single spaces,
-whitespace-collapsed, trimmed and truncated to 80 UTF-8 characters.
+whitespace-collapsed, trimmed and truncated to 80 UTF-8 characters. It is
+the *text* normaliser only — `CounterpartyKey` is what turns its output into
+the value the column stores, and for an encrypted user that is a keyed
+digest. `compose()` treats the result as an opaque tuple member either way,
+which is why a fingerprint re-derived from the stored column stays stable: a
+hash of a hash is still deterministic, and needs no key.
+
+`composeTuple()` takes the same seven values read straight from a row, for
+the enable-time sweep that rewrites `counterparty_normalized` and must
+rewrite `fingerprint` in the same statement.
 `booked_at` carries second-resolution so two same-day same-merchant
 same-amount entries posted seconds apart never collide. `source_ref`
 is intentionally absent from the tuple: the same real-world transaction

@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Sync\Public\Services\BlindIndexCodec;
 use stdClass;
 
@@ -37,18 +38,27 @@ final class CounterpartyKeyBackfill
     {
         $connection = $this->db->connection();
 
-        $this->convertTransactions($connection, $userId, $keyHex);
-        $this->convertMerchants($connection, $userId, $keyHex);
-        $this->convertExpenseSeries($connection, $userId, $keyHex);
+        $converted = $this->convertTransactions($connection, $userId, $keyHex);
+        $converted += $this->convertMerchants($connection, $userId, $keyHex);
+        $converted += $this->convertExpenseSeries($connection, $userId, $keyHex);
+
+        // Only when something was actually keyed. A joining device sweeps an
+        // empty database, and marking that would make it refuse the group's
+        // blind-index key in favour of the one it minted for itself.
+        if ($converted > 0) {
+            $this->blindIndex->markDerived($userId);
+        }
     }
 
-    private function convertTransactions(ConnectionInterface $connection, int $userId, string $keyHex): void
+    private function convertTransactions(ConnectionInterface $connection, int $userId, string $keyHex): int
     {
+        $converted = 0;
+
         $connection->table('transactions')
             ->where('user_id', $userId)
             ->where('counterparty_normalized', '<>', CounterpartyKey::NONE)
             ->orderBy('id')
-            ->chunkById(self::CHUNK_SIZE, function ($rows) use ($connection, $userId, $keyHex): void {
+            ->chunkById(self::CHUNK_SIZE, function ($rows) use ($connection, $userId, $keyHex, &$converted): void {
                 foreach ($rows as $row) {
                     /** @var stdClass $row */
                     $stored = self::toString($row->counterparty_normalized ?? null);
@@ -59,8 +69,11 @@ final class CounterpartyKeyBackfill
                     $connection->table('transactions')
                         ->where('id', $row->id)
                         ->update($this->convertedTransaction($row, $userId, $keyHex, $stored));
+                    $converted++;
                 }
             }, 'id');
+
+        return $converted;
     }
 
     // The date columns go back through CarbonImmutable before they reach the
@@ -87,8 +100,10 @@ final class CounterpartyKeyBackfill
         ];
     }
 
-    private function convertMerchants(ConnectionInterface $connection, int $userId, string $keyHex): void
+    private function convertMerchants(ConnectionInterface $connection, int $userId, string $keyHex): int
     {
+        $converted = 0;
+
         $rows = $connection->table('merchants')
             ->where('user_id', $userId)
             ->get(['id', 'normalized_name']);
@@ -105,17 +120,22 @@ final class CounterpartyKeyBackfill
                 ->update([
                     'normalized_name' => $this->blindIndex->deriveWithKey(CounterpartyKey::DOMAIN, $stored, $userId, $keyHex),
                 ]);
+            $converted++;
         }
+
+        return $converted;
     }
 
     // Expense rows only. An income series stores a decrypted IBAN in this
     // column, which the detector recomputes from the transaction each sweep
     // and never keys; converting it would leave the lookup matching nothing.
-    private function convertExpenseSeries(ConnectionInterface $connection, int $userId, string $keyHex): void
+    private function convertExpenseSeries(ConnectionInterface $connection, int $userId, string $keyHex): int
     {
+        $converted = 0;
+
         $rows = $connection->table('recurring_series')
             ->where('user_id', $userId)
-            ->where('direction', 'expense')
+            ->where('direction', Direction::Expense->value)
             ->get(['id', 'cluster_counterparty_key']);
 
         foreach ($rows as $row) {
@@ -130,6 +150,9 @@ final class CounterpartyKeyBackfill
                 ->update([
                     'cluster_counterparty_key' => $this->blindIndex->deriveWithKey(CounterpartyKey::DOMAIN, $stored, $userId, $keyHex),
                 ]);
+            $converted++;
         }
+
+        return $converted;
     }
 }

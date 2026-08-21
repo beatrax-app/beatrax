@@ -72,12 +72,17 @@ booked-at, amount (`brick/money` per [ADR 0009](https://github.com/beatrax-app/s
 currency, counterparty name + IBAN, raw description, account FK, and user
 FK, via four steps:
 
-1. Normalises the counterparty name through `FingerprintComposer`
-   (lowercase, diacritic strip, punctuation collapse, 80-char truncate).
+1. Produces `counterparty_normalized` through
+   `Ledger\Public\Services\CounterpartyKey`, which normalises the name
+   (lowercase, diacritic strip, punctuation collapse, 80-char truncate) and
+   then, for a user with at-rest encryption enabled, replaces it with a keyed
+   one-way digest. The readable name never reaches the column. See
+   [Which columns are encrypted at rest](../features/sync/sensitive-columns-at-rest.md).
 2. Substitutes the literal `_no_counterparty` sentinel when the
    counterparty name is null/empty/punctuation-only — the composite
    UNIQUE on `transactions` requires NOT NULL to catch duplicates that
-   lack a usable name.
+   lack a usable name. The sentinel is never keyed: it names no merchant,
+   and two guards downstream compare a stored value against it.
 3. Maps the amount sign to `Transaction.type` (positive → income,
    negative → expense, zero → adjustment); future transfer-pair
    detection overrides this for matched cross-account flows.

@@ -280,15 +280,18 @@ scheduled daemon) and decides whether to pass a session at all; every
 other caller resolving this class through the generic `SeriesDetector`
 interface still compiles and runs unchanged.
 
-**Known plaintext-derivative exception:** the decrypted IBAN is persisted
-verbatim into the unencrypted `recurring_series.cluster_counterparty_key`
-as a deterministic lookup key — random-nonce ciphertext cannot serve as a
-stable WHERE key, so this column is deliberately kept plaintext and
-recorded as a reviewed exception in `SensitiveFieldRegistry`'s deferred
-list. A future hardening pass would replace it with a keyed HMAC /
-blind-index (deterministic but non-reversible), which needs a stable key
-source and a migration of existing cluster keys to avoid splitting series
-— deferred rather than done silently.
+**Known plaintext-derivative exception, income path only:** the decrypted
+IBAN is persisted verbatim into the unencrypted
+`recurring_series.cluster_counterparty_key` as a deterministic lookup key
+— random-nonce ciphertext cannot serve as a stable WHERE key, so this
+column is deliberately kept plaintext on that path and recorded as a
+reviewed exception. The **expense** path no longer is: its cluster key is
+whatever `transactions.counterparty_normalized` holds, which for a user
+with at-rest encryption on is a keyed blind index. The income path was left
+alone because its key is recomputed from the transaction's IBAN each sweep
+and never keyed, so converting the stored copy would leave the lookup
+matching nothing. See
+[Which columns are encrypted at rest](../sync/sensitive-columns-at-rest.md).
 
 ## `DetectRecurringSeriesJob` concurrency contract
 

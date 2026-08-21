@@ -9,6 +9,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
+use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use SodiumException;
@@ -30,6 +31,7 @@ final class GdkEpochControlHandler
         private readonly LoggerInterface $logger,
         private readonly DeviceRegistryService $deviceRegistry,
         private readonly DeviceKeySigner $signer,
+        private readonly BlindIndexCodec $blindIndex,
     ) {}
 
     // Never throws on a malformed/tampered/foreign message — every rejection
@@ -329,7 +331,7 @@ final class GdkEpochControlHandler
                 return;
             }
 
-            if ($localKeyHex !== null && $this->usageProbe->hasDerivedCounterpartyKeys($userId)) {
+            if ($localKeyHex !== null && $this->blindIndex->hasDerived($userId)) {
                 // Keeping the local key keeps THIS device's dedup correct.
                 // Adopting would make every stored digest unmatchable by the
                 // value a re-import computes, and double the ledger.

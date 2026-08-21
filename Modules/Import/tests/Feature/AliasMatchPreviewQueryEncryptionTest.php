@@ -149,3 +149,63 @@ it('matches on the decrypted counterparty_name when the description is null', fu
     expect($result->total)->toBe(1);
     expect($result->first5[0]->counterparty_name)->toBe('Shell Nederland');
 })->group('AliasMatchPreviewQueryEncryption');
+
+// `decrypted: false` covers two states and only one of them is unreadable. An
+// import run under a locked app-lock writes plaintext on an encrypted user
+// (encryptAttrs is a documented pass-through), and treating that as ciphertext
+// reported "0 transactions match" for a pattern that does match.
+it('counts a plaintext row an encryption-enabled user still holds', function (): void {
+    $user = ampeUser();
+    $session = $this->enablesEncryptionForUser($user);
+    $account = ampeAccount($user);
+    $run = ampeImportRun($user);
+
+    /** @var SensitiveColumnCodec $codec */
+    $codec = app(SensitiveColumnCodec::class);
+
+    ampeSeed($user, $account, $run, $codec, $session, 0, 'BCK*SHELL PIETER NIEUW *0123', 'Shell Nederland');
+
+    DB::table('transactions')->where('user_id', $user->id)->update([
+        'description' => 'BCK*SHELL PIETER NIEUW *0123',
+        'counterparty_name' => 'Shell Nederland',
+    ]);
+
+    $result = app(AliasMatchPreviewQuery::class)->preview('shell', $user->id);
+
+    expect($result->total)->toBe(1)
+        ->and($result->first5[0]->description)->toBe('BCK*SHELL PIETER NIEUW *0123');
+})->group('AliasMatchPreviewQueryEncryption');
+
+it('still drops a row whose ciphertext no epoch in this keyring opens', function (): void {
+    $user = ampeUser();
+    $session = $this->enablesEncryptionForUser($user);
+    $account = ampeAccount($user);
+    $run = ampeImportRun($user);
+
+    /** @var SensitiveColumnCodec $codec */
+    $codec = app(SensitiveColumnCodec::class);
+
+    ampeSeed($user, $account, $run, $codec, $session, 0, 'BCK*SHELL PIETER NIEUW *0123', 'Shell Nederland');
+
+    DB::table('transactions')->where('user_id', $user->id)->update([
+        'description' => base64_encode(random_bytes(48)),
+    ]);
+
+    expect(app(AliasMatchPreviewQuery::class)->preview('shell', $user->id)->total)->toBe(0);
+})->group('AliasMatchPreviewQueryEncryption');
+
+// The preview exists to predict userGeneralizedMatch(), which anchors to whole
+// tokens. A substring test here promised matches the alias would never make.
+it('predicts the matcher s token boundary rather than any substring', function (): void {
+    $user = ampeUser();
+    $session = $this->enablesEncryptionForUser($user);
+    $account = ampeAccount($user);
+    $run = ampeImportRun($user);
+
+    /** @var SensitiveColumnCodec $codec */
+    $codec = app(SensitiveColumnCodec::class);
+
+    ampeSeed($user, $account, $run, $codec, $session, 0, 'Europese incasso internet en mobiel', 'KPN');
+
+    expect(app(AliasMatchPreviewQuery::class)->preview('obi', $user->id)->total)->toBe(0);
+})->group('AliasMatchPreviewQueryEncryption');
