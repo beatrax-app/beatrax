@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 use Modules\Import\Public\Dto\ConsolidatedPreviewSection;
+use Modules\Import\Public\Enums\PreviewSectionStatus;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 
 // A file that stops being readable part-way still yields rows before the stop,
 // so its section is READY. The count under the eyebrow is then simply lower
@@ -14,7 +16,7 @@ function consolidatedSectionHtml(?string $error): string
 {
     $row = new PreviewRowDto(
         rowIndex: 0,
-        status: 'new',
+        status: PreviewRowStatus::NewRow,
         accountId: 1,
         bookedAt: '10-05-2026',
         counterpartyName: 'Albert Heijn',
@@ -33,7 +35,7 @@ function consolidatedSectionHtml(?string $error): string
             importRunIds: [1],
             totalRows: 1,
             sampleRows: [$row],
-            status: 'ready',
+            status: PreviewSectionStatus::Ready,
             error: $error,
         )],
     );

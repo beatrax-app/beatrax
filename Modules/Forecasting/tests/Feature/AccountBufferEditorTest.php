@@ -54,7 +54,7 @@ it('pre-populates the input from the account current buffer', function (): void 
         'currentBufferMinor' => 50000,
         'currency' => 'EUR',
         'accountName' => 'ASN',
-    ])->assertSet('bufferInput', '500,00');
+    ])->assertSet('bufferInput', '500.00');
 });
 
 it('saves a new buffer + dispatches buffer-editor:saved and toast events', function (): void {

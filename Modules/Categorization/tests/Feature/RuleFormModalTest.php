@@ -116,9 +116,9 @@ it('hydrates the nested conditions/actions arrays in edit mode', function (): vo
     expect($component->get('conditions')[0]['field'])->toBe('counterparty');
     expect($component->get('conditions')[0]['value'])->toBe('SPOTIFY');
     expect($component->get('conditions')[1]['field'])->toBe('amount');
-    // Stored minor units round-trip to the Dutch-decimal display convention,
-    // not to the raw minor-unit string.
-    expect($component->get('conditions')[1]['value'])->toBe('-50,00');
+    // Stored minor units round-trip to the display convention of whoever is
+    // reading — this suite runs in English — not to the raw minor-unit string.
+    expect($component->get('conditions')[1]['value'])->toBe('-50.00');
 
     expect($component->get('actions')[0]['type'])->toBe('category');
     expect($component->get('actions')[0]['category_id'])->toBe($this->streaming->id);

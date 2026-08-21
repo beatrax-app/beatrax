@@ -58,7 +58,7 @@ it('mounts with the current series amount pre-populated', function (): void {
     Livewire::test(ModelWhatIfDropdown::class, ['seriesId' => $seriesId])
         ->assertSet('seriesName', 'Spotify')
         ->assertSet('currentAmountMinor', -999)
-        ->assertSet('newAmountInput', '9,99');
+        ->assertSet('newAmountInput', '9.99');
 });
 
 it('Model cancellation invokes CreateCancellationScenarioForSeries + redirects to /forecast', function (): void {
@@ -84,7 +84,7 @@ it('Model amount change form opens with the current amount pre-populated', funct
         ->call('openMenu')
         ->call('openAmountForm')
         ->assertSet('mode', 'amount-form')
-        ->assertSet('newAmountInput', '9,99');
+        ->assertSet('newAmountInput', '9.99');
 });
 
 it('Model amount change saves + invokes CreateAmountChangeScenarioForSeries + redirects', function (): void {

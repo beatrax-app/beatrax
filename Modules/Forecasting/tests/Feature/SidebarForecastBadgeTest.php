@@ -6,6 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
+use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -94,10 +96,18 @@ function tnfsSeedShortfall(User $user, Account $account, int $count = 1): void
 // The rendered badge, asserted whole: the dashboard's forecast tile carries
 // the same sentence inside its own aria-label, so the phrase alone would not
 // prove the count reached the sidebar.
+// The label is asked for rather than spelled out: this hard-coded the plural
+// arm, so a badge reading "1" claimed "1 active shortfall windows" and the
+// test agreed with it. What is under test is the badge markup; the copy is
+// pinned where the copy lives.
 function tnfsBadge(int $count, string $label): string
 {
-    return '<span role="img" class="side-badge alert" aria-label="'
-        .$count.' active shortfall windows in the next 30 days">'.$label.'</span>';
+    $aria = Lang::choice('core::sidebar.badge.forecast', $count, [
+        'count' => $count,
+        'days' => ForecastHighlightsQuery::HORIZON_DAYS,
+    ]);
+
+    return '<span role="img" class="side-badge alert" aria-label="'.$aria.'">'.$label.'</span>';
 }
 
 beforeEach(function (): void {

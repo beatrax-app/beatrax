@@ -99,9 +99,9 @@ it('renders live and updates the result when a control changes', function (): vo
 
     Livewire::test(ReportBuilder::class)
         ->assertSee('Reports')
-        ->assertSee('50,00') // default metric=spend, category dimension, this_month
+        ->assertSee('50.00') // default metric=spend, category dimension, this_month
         ->set('metric', 'income')
-        ->assertSee('80,00');
+        ->assertSee('80.00');
 });
 
 it('shows the friendly empty state when a selection has no results, and the rail stays interactive', function (): void {

@@ -36,10 +36,10 @@ function rceAccount(User $user): Account
     ]);
 }
 
-function rceDefinition(string $dimension): ReportDefinition
+function rceDefinition(string $dimension, string $metric = 'spend'): ReportDefinition
 {
     return new ReportDefinition(
-        metric: 'spend',
+        metric: $metric,
         dimension: $dimension,
         periodPreset: 'this_month',
         granularity: ReportGranularity::Monthly,
@@ -133,6 +133,56 @@ it('data rows match the aggregator totals for the same definition', function ():
     expect($dataRow[1])->toBe('spend');
     expect($dataRow[2])->toBe('75.00');
     expect($dataRow[3])->toBe('EUR');
+});
+
+it('writes the Amount column unsigned, so a negative aggregate keeps its magnitude', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = rceUser();
+    test()->actingAs($user);
+    $account = rceAccount($user);
+
+    $runId = $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/rce-neg-'.bin2hex(random_bytes(4)).'.csv',
+        'sha256' => hash('sha256', 'rce-neg-'.bin2hex(random_bytes(4))),
+        'uploaded_at' => now(),
+        'status' => 'committed',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $db->connection()->table('transactions')->insert([
+        'user_id' => $user->id,
+        'account_id' => $account->id,
+        'import_run_id' => $runId,
+        'type' => 'expense',
+        'posted_at' => now()->toDateString(),
+        'booked_at' => now()->toDateTimeString(),
+        'value_date' => now()->toDateString(),
+        'amount_minor' => -7_500,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -7_500,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'RCE Vendor',
+        'counterparty_normalized' => 'rce-vendor',
+        'normalization_version' => 1,
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint' => hash('sha256', 'rce-neg-tx-'.bin2hex(random_bytes(8))),
+        'fingerprint_version' => 3,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $csv = app(ReportCsvExporter::class)->export($user, rceDefinition('category', 'net'));
+    $lines = array_values(array_filter(explode("\n", trim($csv))));
+
+    expect(count($lines))->toBe(2);
+    $dataRow = str_getcsv($lines[1]);
+    expect($dataRow[2])->toBe('75.00')
+        ->and($dataRow[2])->not->toContain('-');
 });
 
 it('escapes formula-leading group labels so the CSV is safe to open in Excel', function (): void {

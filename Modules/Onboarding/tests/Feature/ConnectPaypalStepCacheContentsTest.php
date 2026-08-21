@@ -6,6 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\PreviewCache;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectPaypalStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
@@ -60,10 +61,10 @@ it('caches `new`-status rows for the stashed paypal_import_run_id on first submi
     $newRowCount = 0;
     $errorRowCount = 0;
     foreach ($preview->rows as $previewRow) {
-        if ($previewRow->status === 'new') {
+        if ($previewRow->status === PreviewRowStatus::NewRow) {
             $newRowCount++;
         }
-        if ($previewRow->status === 'error') {
+        if ($previewRow->status === PreviewRowStatus::Error) {
             $errorRowCount++;
         }
     }

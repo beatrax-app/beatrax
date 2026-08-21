@@ -297,9 +297,11 @@ it('preserves the minus sign when the lowest projected balance is negative (over
     $response->assertOk();
     $body = $response->getContent();
     expect($body)->not->toBeFalse();
-    // An earlier abs() in the tile rendered "€ 123,45" and hid the overdraft, so
-    // the sign is the assertion; intl formats this one as "€ -123,45".
-    expect($body)->toContain('-123,45');
+    // An earlier abs() in the tile rendered the figure unsigned and hid the
+    // overdraft, so the sign is the assertion — asserted together with the
+    // symbol, because where the sign sits relative to it is the reader's
+    // convention too, and English puts it first where Dutch writes "€ -123,45".
+    expect($body)->toContain('-€123.45');
 });
 
 it('does not surface another user shortfall in the tile (cross-user isolation)', function (): void {

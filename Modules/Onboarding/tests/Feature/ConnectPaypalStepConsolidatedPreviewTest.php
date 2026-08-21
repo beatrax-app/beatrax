@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Import\Public\Enums\PreviewSectionStatus;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectPaypalStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
@@ -57,6 +58,6 @@ it('produces a non-zero totalRows in the consolidated preview for the stashed pa
     $section = $batch->sections[0];
 
     expect($section->sourceFormat)->toBe('paypal-csv');
-    expect($section->status)->toBe('ready');
+    expect($section->status)->toBe(PreviewSectionStatus::Ready);
     expect($section->totalRows)->toBeGreaterThan(0);
 });
