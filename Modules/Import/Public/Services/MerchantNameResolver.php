@@ -6,6 +6,7 @@ namespace Modules\Import\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Services\CommunityCorpusQuery;
+use Modules\Community\Public\Services\CorpusPatternMatcher;
 use stdClass;
 
 final class MerchantNameResolver
@@ -51,7 +52,10 @@ final class MerchantNameResolver
         foreach ($generalized as $row) {
             $needle = is_string($row->generalized_pattern) ? $row->generalized_pattern : '';
             $friendly = is_string($row->friendly_name) ? $row->friendly_name : '';
-            if ($needle !== '' && $friendly !== '' && mb_strpos($haystack, mb_strtolower($needle)) !== false) {
+            // Whole token, as the corpus tier does: this tier is consulted
+            // FIRST, so an unanchored match here wins before the corpus is even
+            // asked and `obi` still renamed a phone bill after a DIY chain.
+            if ($needle !== '' && $friendly !== '' && CorpusPatternMatcher::containsToken($haystack, $needle)) {
                 return $friendly;
             }
         }

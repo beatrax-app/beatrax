@@ -37,6 +37,11 @@ it('still matches a literal pattern that stands as its own token', function (str
     'at the very start' => ['RDW WEGENBELASTING', 'RDW'],
     'at the very end' => ['INCASSO KPN', 'KPN'],
     'accented, case-insensitively' => ['Café Zürich', 'café'],
+    // A pattern ending in punctuation carries its own boundary; asserting past
+    // it stopped AMAZON. matching AMAZON.NL.
+    'needle ending in a dot' => ['AMAZON.NL BESTELLING', 'AMAZON.'],
+    'needle ending in a plus' => ['CANAL+ ABONNEMENT', 'CANAL+'],
+    'needle starting with punctuation' => ['*ALBERT HEIJN 1042', '*ALBERT'],
 ]);
 
 it('matches a regex: pattern anchored against the whole haystack', function (): void {
