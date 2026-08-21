@@ -1899,6 +1899,7 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         // three tables in one transaction, because they are compared against
         // each other; splitting it across module seams would let a device sit
         // with two of the three converted. See sensitive-columns-at-rest.md.
+        'Modules/Ledger/Public/Services/CounterpartyKeyBackfill.php chain_links 1',
         'Modules/Ledger/Public/Services/CounterpartyKeyBackfill.php recurring_series 1',
         'Modules/Migration/Internal/Pipeline/EntityChangeApplier.php transactions 1',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php import_runs 1',
@@ -2023,6 +2024,8 @@ it('does not allow a cross-module Internal import outside the pinned production 
     $pinnedTestCrossings = [
         'Modules/Anomaly/tests/Feature/AnomalyAlertPaginationTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
         'Modules/Anomaly/tests/Feature/AnomalyAlertsHomeTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
+        'Modules/Auth/tests/Feature/AFailingCountrySeedNeverCostsTheRecoveryCodesTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Auth/tests/Feature/AFailingCountrySeedNeverCostsTheRecoveryCodesTest.php -> Modules\\Tax\\Internal\\Http\\Livewire\\TaxPage',
         'Modules/Auth/tests/Feature/AppLockProvisionerGdkRewrapTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Auth/tests/Feature/CrossUserIsolationTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\AliasesSettingsPage',
         'Modules/Auth/tests/Feature/SignupReturnsPersistedDefaultsTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
@@ -2061,6 +2064,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/FX/tests/Feature/FxOnlineToggleTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
         'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
+        'Modules/Import/tests/Feature/LockedImportSaysSoWithoutNamingAClassTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Import/tests/Feature/PreviewWizardTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
         'Modules/Import/tests/Feature/PreviewWizardTest.php -> Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
         'Modules/Ingestion/tests/Feature/PaypalFundingLegTypingTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\ClassifyTransactionType',
@@ -2071,6 +2075,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Ledger/tests/Feature/RecordTransactionsEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Migration/tests/Contracts/MigrationImportBaselineRegistryColumnsTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'Modules/Migration/tests/Contracts/MigrationSourceMapRegistryColumnsTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'Modules/Mobile/tests/Feature/ImportWizardRecoveryDownloadTest.php -> Modules\\Desktop\\Internal\\Http\\Middleware\\EnsureDatabaseReady',
         'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkRotationService',
         'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
@@ -2108,6 +2113,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\Signing\\DeviceKeySigner',
         'Modules/Mobile/tests/Feature/MobilePairingResumeOwnershipTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
         'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkEpochControlHandler',
+        'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkEpochWrapSignature',
         'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkRotationService',
         'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
@@ -2137,6 +2143,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Unit/DispatchMobileNotificationTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/Mobile/tests/Unit/Identity/BiometricKeyVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockKeyWrap',
         'Modules/Mobile/tests/Unit/PeerLanAddressTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
+        'Modules/Notifications/tests/Feature/ABudgetNudgeNamesTheCategoryInTheReadersLanguageTest.php -> Modules\\Budgets\\Internal\\Jobs\\EmitBudgetNudgesJob',
         'Modules/Notifications/tests/Feature/BudgetNudgeTriggerTest.php -> Modules\\Budgets\\Internal\\Jobs\\EmitBudgetNudgesJob',
         'Modules/Notifications/tests/Feature/PaymentReminderTriggerTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
         'Modules/Notifications/tests/Feature/PerTriggerToggleTest.php -> Modules\\Budgets\\Internal\\Jobs\\EmitBudgetNudgesJob',
@@ -2171,6 +2178,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Search/tests/Feature/SearchEncryptionFallbackTest.php -> Modules\\Counterparties\\Internal\\Resolver\\CounterpartyResolverService',
         'Modules/Sync/tests/Feature/DuplicateReminderConvergenceTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/Sync/tests/Feature/ManualEntryReachesOtherDevicesTest.php -> Modules\\CashBook\\Internal\\Actions\\RecordManualTransaction',
+        'Modules/Sync/tests/Feature/PairingStateLapsesWithItsTtlTest.php -> Modules\\Mobile\\Internal\\Http\\Livewire\\MobilePairingScan',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\PinVerificationService',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Recovery\\RecoveryCodeAuthenticator',
@@ -2180,6 +2188,8 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\Counterparties\\Internal\\Http\\Livewire\\CounterpartyProfile',
         'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
+        'Modules/Tax/tests/Feature/TaxCountryPromptPointsAtTheControlTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Tax/tests/Feature/TheCountrysOwnWordingIsNamedAsSuchTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Transfers/tests/Feature/PairTransferCandidatesAliasBridgeTest.php -> Modules\\Import\\Internal\\Services\\KnownCounterpartyIbanResolver',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\DriftEvaluator',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\RevivedExpiredDriftSnoozesJob',
@@ -2202,7 +2212,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Feature/InstallLaunchdCommandTest.php -> Modules\\Core\\Internal\\Console\\InstallCommand',
         'tests/Feature/TrustedHostGuardTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\TrustedHostGuard',
         'tests/Snapshot/SidebarTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\AppSidebar',
-    ];
+        ];
 
     // BoundaryRule hooks UseItem nodes, so a fully-qualified reference written
     // inline crosses the boundary without an import and neither guard sees it.
