@@ -58,8 +58,8 @@ it('a save while a SECOND user exists logs the single-user-constraint warning (a
 
     Log::shouldHaveReceived('warning')
         ->once()
-        ->withArgs(fn (string $message): bool => str_contains($message, 'WR-08')
-            && str_contains($message, 'SINGLE-USER v1'));
+        ->withArgs(fn (string $message): bool => str_contains($message, 'no per-user isolation')
+            && str_contains($message, 'single global secrets file'));
 });
 
 it('a save with a single user emits no single-user-constraint warning', function (): void {

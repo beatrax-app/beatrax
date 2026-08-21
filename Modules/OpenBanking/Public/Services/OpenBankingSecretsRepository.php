@@ -130,8 +130,8 @@ class OpenBankingSecretsRepository
             $this->logger->warning(
                 'OpenBankingSecretsRepository: writing the single global secrets file while '
                 .'more than one user account exists. This store has no per-user isolation '
-                .'yet (WR-08, SINGLE-USER v1) — per-user or per-connection secret keying is '
-                .'required before a second user can safely use open banking.'
+                .'yet — per-user or per-connection secret keying is required before a '
+                .'second user can safely use open banking.'
             );
         }
     }
