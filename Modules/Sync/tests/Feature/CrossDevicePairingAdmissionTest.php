@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 
@@ -74,8 +75,8 @@ it('admits the initiator (desktop) into the phone-simulated local registry after
 
     // One database stands in for both sides here: the second confirm() is the
     // desktop's confirm signal arriving on this same row.
-    $service->confirm((int) $row->id, (int) $user->id, 'phone-self');
-    $state = $service->confirm((int) $row->id, (int) $user->id, 'desktop-initiator');
+    $service->confirm((int) $row->id, (int) $user->id, 'phone-self', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
+    $state = $service->confirm((int) $row->id, (int) $user->id, 'desktop-initiator', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
 
     expect($state)->toBe('confirmed');
 
@@ -128,8 +129,8 @@ it('refuses to admit an initiator whose device_id collides with the local self-r
     $service->accept($token, (int) $user->id, 'phone-self-2', str_repeat('c', 64), str_repeat('d', 64));
 
     $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
-    $service->confirm((int) $row->id, (int) $user->id, 'phone-self-2');
-    $service->confirm((int) $row->id, (int) $user->id, 'colliding-device');
+    $service->confirm((int) $row->id, (int) $user->id, 'phone-self-2', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
+    $service->confirm((int) $row->id, (int) $user->id, 'colliding-device', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
 
     $self = $db->connection()->table('device_registry')
         ->where('user_id', $user->id)
@@ -200,8 +201,8 @@ it('leaves the desktop-side single-database flow unchanged: admitResponderDevice
     $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
     expect($row->initiator_seeded_at)->toBeNull();
 
-    $service->confirm((int) $row->id, (int) $user->id, 'device-init');
-    $service->confirm((int) $row->id, (int) $user->id, 'device-resp');
+    $service->confirm((int) $row->id, (int) $user->id, 'device-init', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
+    $service->confirm((int) $row->id, (int) $user->id, 'device-resp', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
 
     $responderRow = $db->connection()->table('device_registry')
         ->where('user_id', $user->id)

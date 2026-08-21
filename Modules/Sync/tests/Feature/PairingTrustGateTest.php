@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 
@@ -50,8 +51,8 @@ it('does not trust a device that confirms both sides from a single device id', f
 
     // A single responder device trying to drive BOTH confirmation columns by
     // calling confirm() twice with its own device id.
-    $service->confirm((int) $row->id, (int) $user->id, 'device-resp');
-    $service->confirm((int) $row->id, (int) $user->id, 'device-resp');
+    $service->confirm((int) $row->id, (int) $user->id, 'device-resp', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
+    $service->confirm((int) $row->id, (int) $user->id, 'device-resp', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
 
     $after = $db->connection()->table('pairing_tokens')->where('id', $row->id)->first();
 
@@ -82,7 +83,7 @@ it('rejects a confirm from a device id that owns neither side of the token', fun
 
     $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
 
-    $service->confirm((int) $row->id, (int) $user->id, 'device-stranger');
+    $service->confirm((int) $row->id, (int) $user->id, 'device-stranger', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
 
     $after = $db->connection()->table('pairing_tokens')->where('id', $row->id)->first();
 

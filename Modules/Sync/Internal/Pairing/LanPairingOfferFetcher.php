@@ -105,12 +105,9 @@ final readonly class LanPairingOfferFetcher
         return is_array($attempt) ? $attempt : null;
     }
 
-    // The same request, keeping WHICH ending happened. A peer that answered at
-    // all — even to refuse — proves the network reached it.
-    //
-    // Plaintext http, exactly as the sync listener speaks it: the offer carries
-    // public keys only, and the safety-number comparison — not the transport —
-    // is what proves who answered.
+    // Keeps WHICH ending happened: a peer that answered at all, even to refuse,
+    // proves the network reached it. Plaintext http as the listener speaks it —
+    // the offer carries public keys only.
     /**
      * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
      */

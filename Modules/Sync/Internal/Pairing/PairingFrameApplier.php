@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-// The one place an inbound pairing frame is read and applied, whichever road it
-// arrived by. The relay drain and the LAN route share it deliberately: the
-// idempotency and fail-closed rules below are the whole security posture of the
-// handshake, and two transports each with their own copy is how the two would
-// drift apart.
+// The one place an inbound pairing frame is applied, whichever road it arrived
+// by: the idempotency and fail-closed rules here are the handshake's whole
+// security posture, and two transports with a copy each would drift apart.
 /**
  * @link ../../../../.docs/features/sync/pairing-handshake.md
  */

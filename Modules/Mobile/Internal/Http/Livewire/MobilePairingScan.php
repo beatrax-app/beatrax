@@ -384,6 +384,14 @@ final class MobilePairingScan extends Component
             }
         }
 
+        // Re-emitted for the same reason the accept above is: a confirm the peer
+        // deferred, or lost in flight, is otherwise never sent again and the
+        // ceremony completes on one device only. Gated on having actually
+        // tapped — sending it sooner would assert a confirmation never given.
+        if ($this->awaitingPeer && $state !== PairingGateway::STATE_CONFIRMED) {
+            $this->sendConfirmOverRelay($gateway, $userId, $db, $session, $logger);
+        }
+
         // Expired, refused or cancelled on the other device: without this the
         // poll spins forever on a handshake that already ended out of sight.
         if ($state === null || $state === PairingGateway::STATE_EXPIRED) {
@@ -446,7 +454,13 @@ final class MobilePairingScan extends Component
             return;
         }
 
-        $state = $gateway->confirm((int) $this->pairingTokenId, $userId, $deviceId);
+        // Bound to the words on screen, not to whatever the row says now.
+        $state = $gateway->confirm(
+            (int) $this->pairingTokenId,
+            $userId,
+            $deviceId,
+            $this->safetyWords === [] ? '' : hash('sha256', implode('|', $this->safetyWords)),
+        );
 
         // Safe regardless of $state: the frame is only consumable once the
         // peer's own local side independently confirms too.

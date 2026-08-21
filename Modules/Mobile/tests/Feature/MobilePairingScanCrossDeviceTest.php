@@ -22,6 +22,7 @@ use Modules\Sync\Internal\Pairing\RelayBootstrap;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 uses(CrossDevicePairingHarness::class);
@@ -151,7 +152,7 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
         $row = app(DatabaseManager::class)->connection()->table('pairing_tokens')
             ->where('token_hash', hash('sha256', $issuedToken))
             ->first();
-        $state = app(PairingTokenService::class)->confirm((int) $row->id, MPS_DESKTOP_USER_ID, $desktopIdentity->deviceId);
+        $state = app(PairingTokenService::class)->confirm((int) $row->id, MPS_DESKTOP_USER_ID, $desktopIdentity->deviceId, PairingSafetyDigest::forToken((int) $row->id, MPS_DESKTOP_USER_ID));
         expect($state)->toBe(PairingState::AwaitingConfirm->value);
 
         app(PairingGateway::class)->sendConfirm(MPS_DESKTOP_USER_ID, (int) $row->id, $phoneIdentity->deviceId, $session);

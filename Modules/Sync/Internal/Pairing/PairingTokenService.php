@@ -24,6 +24,7 @@ final class PairingTokenService
         private readonly PairingStateMachine $stateMachine,
         private readonly PairedDeviceAdmitter $admitter,
         private readonly PeerConfirmVerifier $peerConfirmVerifier,
+        private readonly SafetyNumberDeriver $safetyDeriver,
     ) {}
 
     // Mints a pairing token for the initiator and persists its hash. Returns
@@ -195,12 +196,24 @@ final class PairingTokenService
     // The confirming side is derived from the caller's OWN device id, not a
     // client-supplied string, so a device can only confirm the side it
     // actually owns. Returns the resulting pairing state (see @link).
-    public function confirm(int $tokenId, int $userId, string $confirmingDeviceId): ?string
+    /**
+     * @param  string  $expectedSafetyDigest  Fingerprint of the six words the
+     *                                        human actually compared, taken
+     *                                        when they were shown.
+     */
+    public function confirm(int $tokenId, int $userId, string $confirmingDeviceId, string $expectedSafetyDigest): ?string
     {
         // An unknown token and a device that owns neither side are the same
         // refusal: this device has nothing it may confirm on this token.
         $side = $this->confirmableSideFor($tokenId, $userId, $confirmingDeviceId);
         if ($side === null) {
+            return null;
+        }
+
+        // The tap confirms the keys behind the words on screen, not whatever the
+        // row says now: without this a responder rebinding between the reading
+        // and the tap inherits a confirmation nobody gave it (see @link).
+        if (! $this->safetyDigestStillMatches($tokenId, $userId, $expectedSafetyDigest)) {
             return null;
         }
 
@@ -223,6 +236,38 @@ final class PairingTokenService
         }
 
         return $this->finalizeIfBothConfirmed($row, $userId);
+    }
+
+    // Re-derives the safety number from the keys the row holds RIGHT NOW and
+    // compares it with the one the caller was shown. Any drift means the pair
+    // being confirmed is not the pair that was read aloud.
+    private function safetyDigestStillMatches(int $tokenId, int $userId, string $expectedSafetyDigest): bool
+    {
+        if ($expectedSafetyDigest === '') {
+            return false;
+        }
+
+        $row = $this->db->connection()->table('pairing_tokens')
+            ->where('id', $tokenId)
+            ->where('user_id', $userId)
+            ->first(['initiator_ed25519_pub_hex', 'responder_ed25519_pub_hex']);
+
+        if ($row === null
+            || ! is_string($row->initiator_ed25519_pub_hex)
+            || ! is_string($row->responder_ed25519_pub_hex)) {
+            return false;
+        }
+
+        try {
+            $current = $this->safetyDeriver->digestFor(
+                $row->initiator_ed25519_pub_hex,
+                $row->responder_ed25519_pub_hex,
+            );
+        } catch (InvalidPublicKeyException) {
+            return false;
+        }
+
+        return hash_equals($current, $expectedSafetyDigest);
     }
 
     // Applies a relayed PAIR_RESPONDER_ACCEPT frame, binding the phone's
@@ -307,16 +352,10 @@ final class PairingTokenService
         return true;
     }
 
-    // First-binding-wins used to be absolute, which handed anyone on the same
-    // network a permanent denial: answer an mDNS browse, harvest the token hash
-    // the responder sends in the clear, and race an accept in first — the real
-    // phone could then never bind, however many times it tried.
-    //
-    // A binding nobody has confirmed is not yet a decision, so a later accept
-    // may replace it. The moment either side confirms, it is one, and the
-    // binding is immutable — a squatter can delay a pairing, never capture one.
-    // The safety-number comparison was always the trust gate and still is; this
-    // is about not letting a stranger hold the slot.
+    // A binding nobody has confirmed is not yet a decision, so a later accept may
+    // replace it — absolute first-binding-wins let anyone on the network hold the
+    // slot forever. What stops a replacement becoming a capture is confirm()
+    // binding the tap to the compared keys (see @link).
     private function rebindOrIdempotent(
         \stdClass $row,
         int $userId,

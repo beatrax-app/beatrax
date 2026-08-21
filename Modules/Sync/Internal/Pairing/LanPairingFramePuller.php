@@ -10,15 +10,11 @@ use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
 use Modules\Sync\Internal\Transport\PairingFramePullHandler;
 use Throwable;
 
-// Collects the frames waiting for THIS device on peers that can be reached over
-// the network, and applies them. It is the phone's half of the return leg: the
-// desktop cannot dial a phone, so the phone asks.
-//
-// Asking a hostile peer costs nothing. Whatever comes back goes through the same
-// applier every other road uses, so an unsigned or unknown frame is refused
-// there — a peer that answers can waste this device's time and nothing else.
+// The phone's half of the return leg: it cannot be dialled, so it asks. Whatever
+// answers goes through the same applier every road uses, so a hostile peer wastes
+// this device's time and nothing else (see @link).
 /**
- * @link ../../../../.docs/features/sync/pairing-handshake.md
+ * @link ../../../../.docs/features/sync/pairing-handshake.md#the-two-roads-and-why-the-lan-one-had-to-be-built
  */
 final readonly class LanPairingFramePuller
 {

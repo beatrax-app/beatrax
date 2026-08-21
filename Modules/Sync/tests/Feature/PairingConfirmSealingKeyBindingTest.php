@@ -13,6 +13,7 @@ use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 uses(CrossDevicePairingHarness::class);
@@ -109,12 +110,12 @@ it('rejects the both-confirm when a malicious relay keeps the responder Ed25519 
 
     // Both humans confirm, and the phone signs over its real sealing key.
     $on('desktop', fn () => app(PairingTokenService::class)
-        ->confirm((int) $desktopTokenId, PSKB_DESKTOP_USER_ID, $desktop->deviceId));
+        ->confirm((int) $desktopTokenId, PSKB_DESKTOP_USER_ID, $desktop->deviceId, PairingSafetyDigest::forToken((int) $desktopTokenId, PSKB_DESKTOP_USER_ID)));
     $on('phone', function () use ($desktop, $phone): void {
         /** @var DatabaseManager $db */
         $db = app(DatabaseManager::class);
         $phoneTokenId = (int) $db->connection()->table('pairing_tokens')->value('id');
-        app(PairingTokenService::class)->confirm($phoneTokenId, PSKB_PHONE_USER_ID, $phone->deviceId);
+        app(PairingTokenService::class)->confirm($phoneTokenId, PSKB_PHONE_USER_ID, $phone->deviceId, PairingSafetyDigest::forToken($phoneTokenId, PSKB_PHONE_USER_ID));
 
         /** @var Session $session */
         $session = app(Session::class);
@@ -152,12 +153,12 @@ it('control: the identical handshake with the responder X25519 UNCHANGED complet
     $desktopTokenId = pskbHandshakeUntilResponderBound($on, $desktop, $phone, $phone->x25519PublicKeyHex);
 
     $on('desktop', fn () => app(PairingTokenService::class)
-        ->confirm((int) $desktopTokenId, PSKB_DESKTOP_USER_ID, $desktop->deviceId));
+        ->confirm((int) $desktopTokenId, PSKB_DESKTOP_USER_ID, $desktop->deviceId, PairingSafetyDigest::forToken((int) $desktopTokenId, PSKB_DESKTOP_USER_ID)));
     $on('phone', function () use ($desktop, $phone): void {
         /** @var DatabaseManager $db */
         $db = app(DatabaseManager::class);
         $phoneTokenId = (int) $db->connection()->table('pairing_tokens')->value('id');
-        app(PairingTokenService::class)->confirm($phoneTokenId, PSKB_PHONE_USER_ID, $phone->deviceId);
+        app(PairingTokenService::class)->confirm($phoneTokenId, PSKB_PHONE_USER_ID, $phone->deviceId, PairingSafetyDigest::forToken($phoneTokenId, PSKB_PHONE_USER_ID));
 
         /** @var Session $session */
         $session = app(Session::class);

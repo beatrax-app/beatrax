@@ -11,6 +11,7 @@ use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 
@@ -71,7 +72,7 @@ it('delivers zero wraps while only ONE side has confirmed (awaiting_confirm)', f
     $tokenService->accept($plaintextToken, (int) $user->id, 'device-resp-awaiting', str_repeat('c', 64), str_repeat('d', 64));
 
     // Only one side has confirmed so far.
-    $tokenService->confirm($tokenId, (int) $user->id, 'device-resp-awaiting');
+    $tokenService->confirm($tokenId, (int) $user->id, 'device-resp-awaiting', PairingSafetyDigest::forToken($tokenId, (int) $user->id));
 
     expect($db->connection()->table('relay_mailbox')->where('recipient_did', 'device-resp-awaiting')->count())->toBe(0);
 
@@ -111,7 +112,7 @@ it('delivers wraps to the newly-confirmed device ONLY after both-confirm (CONFIR
     /** @var PairingTokenService $tokenService */
     $tokenService = app(PairingTokenService::class);
     $tokenService->accept($plaintextToken, (int) $user->id, 'device-resp-confirmed', str_repeat('e', 64), str_repeat('f', 64));
-    $tokenService->confirm($tokenId, (int) $user->id, 'device-resp-confirmed');
+    $tokenService->confirm($tokenId, (int) $user->id, 'device-resp-confirmed', PairingSafetyDigest::forToken($tokenId, (int) $user->id));
 
     expect($db->connection()->table('relay_mailbox')->where('recipient_did', 'device-resp-confirmed')->count())->toBe(0);
 
@@ -173,7 +174,7 @@ it('delivers zero wraps for a token expired/cancelled BEFORE both-confirm', func
 
     // confirm() has no expiry re-check of its own; the gates are upstream. So
     // this pins the end-to-end outcome rather than the branch: no wraps.
-    $tokenService->confirm($tokenId, (int) $user->id, 'device-resp-expired');
+    $tokenService->confirm($tokenId, (int) $user->id, 'device-resp-expired', PairingSafetyDigest::forToken($tokenId, (int) $user->id));
 
     expect($db->connection()->table('relay_mailbox')->where('recipient_did', 'device-resp-expired')->count())->toBe(0);
 });

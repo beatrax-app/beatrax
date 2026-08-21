@@ -16,6 +16,7 @@ use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 uses(CrossDevicePairingHarness::class);
@@ -109,7 +110,7 @@ it('checkPairingState() drains the phone\'s frames and confirmMatch() sends this
 
     $this->asDevice('phone', function () use ($tokenHash, $phoneIdentity, $desktopIdentity, $session): void {
         $row = app(DatabaseManager::class)->connection()->table('pairing_tokens')->where('token_hash', $tokenHash)->first();
-        $state = app(PairingTokenService::class)->confirm((int) $row->id, PFM_PHONE_USER_ID, $phoneIdentity->deviceId);
+        $state = app(PairingTokenService::class)->confirm((int) $row->id, PFM_PHONE_USER_ID, $phoneIdentity->deviceId, PairingSafetyDigest::forToken((int) $row->id, PFM_PHONE_USER_ID));
         expect($state)->toBe(PairingState::AwaitingConfirm->value);
 
         app(PairingGateway::class)->sendConfirm(PFM_PHONE_USER_ID, (int) $row->id, $desktopIdentity->deviceId, $session);

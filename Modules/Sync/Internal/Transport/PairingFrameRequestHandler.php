@@ -14,27 +14,11 @@ use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Pairing\PairingFrameOutcome;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 
-// The second route in front of the WebSocket, and the counterpart of the first.
-// `/pair/offer` lets a responder LEARN the initiator's identity over the LAN;
-// this lets it DELIVER the two frames that finish the handshake there too.
-//
-// Without it the frames had only one road — the relay — so two devices on one
-// wifi could not pair at all unless an internet relay was configured, which the
-// design says is for devices that cannot see each other.
-//
-// The WebSocket cannot carry them: its Noise session authenticates against the
-// confirmed-device registry, and a device mid-pairing is by definition not in it
-// yet. That is the chicken-and-egg this route breaks.
-//
-// It is not a new trust boundary. These frames already travel a channel that
-// authenticates nothing — the relay is deliberately zero-knowledge — so every
-// guarantee lives inside the frame: PAIR_CONFIRM is Ed25519-signed under a
-// domain-separated message, PAIR_RESPONDER_ACCEPT binds first-wins and grants
-// nothing on its own, and neither can advance a row without the 128-bit
-// single-use token hash. Carrying them over the LAN removes a third party
-// rather than adding one.
+// Carries a responder's frames to the device that listens. The WebSocket cannot:
+// its Noise session authenticates against the confirmed-device registry, and a
+// device mid-pairing is not in it yet (see @link).
 /**
- * @link ../../../../.docs/features/sync/pairing-handshake.md
+ * @link ../../../../.docs/features/sync/pairing-handshake.md#the-two-roads-and-why-the-lan-one-had-to-be-built
  */
 final readonly class PairingFrameRequestHandler implements RequestHandler
 {
@@ -101,9 +85,9 @@ final readonly class PairingFrameRequestHandler implements RequestHandler
     private function decodeBody(Request $request): ?array
     {
         try {
-            $body = $request->getBody()->buffer(limit: self::MAX_BODY_BYTES);
+            $payload = $request->getBody()->buffer(limit: self::MAX_BODY_BYTES);
             /** @var mixed $decoded */
-            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+            $decoded = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
             return null;
         }
