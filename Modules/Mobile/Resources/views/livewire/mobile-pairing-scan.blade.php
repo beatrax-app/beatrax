@@ -25,8 +25,8 @@
      app navigation wrapped around a blocking setup step the user cannot
      leave, and tapping it left the wizard mid-ceremony. --}}
 <div class="min-h-screen bg-white dark:bg-slate-950
-            px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
-            pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+            pl-[var(--safe-left)] pr-[var(--safe-right)]
+            pt-[var(--safe-top)] pb-[var(--safe-bottom)]"
      data-testid="mobile-pairing-scan"
      wire:key="pairing-step-{{ $step }}">
 <div class="max-w-lg mx-auto px-6 py-8 space-y-4">

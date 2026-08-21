@@ -561,6 +561,36 @@ are named as strings in exactly the same way, so the rule reads all of them and
 asks the view finder whether anything answers. `x-<ns>::` component tags resolve
 through the Blade component resolver rather than the finder and stay outside it.
 
+## A bare `env(safe-area-inset-*)` on Android
+
+`tests/Contracts/SafeAreaReadsTheSeamArchTest.php`
+
+iOS populates `env(safe-area-inset-*)` once the viewport is `viewport-fit=cover`.
+The Android shell does not populate it at all — it measures the system bars and
+injects `--inset-top`, `--inset-bottom`, `--inset-left` and `--inset-right` onto
+`:root` instead. A template reading `env()` directly therefore pads by zero on
+Android, and only on Android.
+
+Nothing reports it. The declaration is valid CSS, `env()` falls back to its
+second argument or to `0px`, the page returns 200, and the screenshot looks
+plausible unless you know where the status bar ends. It surfaced as a lock
+screen whose title sat under the clock and a pairing screen whose action sat
+under the gesture bar — on one platform, while the same code was correct on the
+other.
+
+`resources/css/app.css` defines `--safe-*` as `max()` of the two sources, so a
+template that reads the variable is right on both. The rule scans every Blade
+template for a direct `env(safe-area-inset-` outside that definition, ignoring
+Blade comments so the layout may still explain why `viewport-fit=cover` is on
+the viewport tag.
+
+A second arm covers the shape found alongside it in all six offenders:
+`px-[…left]` followed by `pr-[…right]`. `px-*` writes *both* horizontal
+paddings, so the left inset is mirrored onto the right and then overwritten —
+correct only because Tailwind emits `pr` after `px`, and wrong on a notched
+phone held in landscape, where the two edges genuinely differ. `pl-*` with
+`pr-*` says what was meant.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
