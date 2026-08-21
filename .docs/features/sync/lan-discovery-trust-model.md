@@ -145,6 +145,33 @@ Two more properties:
   cheapest path and never reaches the database. As on the relay, the bucket key
   drops the ephemeral port so one host is one bucket.
 
+### The three answers a client can get, and the three things it may say
+
+The single `404` body is a *server* decision and must stay one. The **client**
+still has three distinguishable outcomes without the server telling it anything
+more, and `PairingOfferLookup` is the enum that keeps them apart:
+
+| What happened | Case | What the screen says |
+|---|---|---|
+| No HTTP response at all — connect refused, mDNS miss, timeout | `NoPeerReached` | "Cannot reach the other device…" — the only outcome for which a network question is the right question |
+| A peer answered and refused, or answered something unusable | `CodeNotAccepted` | "No device on this network accepted that code." |
+| A peer answered `429` | `RateLimited` | "Too many attempts. Wait a minute and try again." |
+
+`RateLimited` is not cosmetic. Folded into `CodeNotAccepted` it produced *"This
+code is invalid or has expired. Ask the other device to generate a new one"* —
+advice that cannot work, and that sends the reader to mint a fresh code straight
+into the same bucket. The responder screen re-emits every three seconds, so a
+phone that has hit the limiter is exactly the phone most likely to be told this.
+
+Across several peers the precedence is **RateLimited > CodeNotAccepted >
+NoPeerReached**: a typed code names no device, so any peer may be the one holding
+it, and "wait" is true whichever of them that is while "regenerate" is false for
+the limited one. A peer that answers with a real offer still wins over all three
+— being limited by the wrong desktop must not discard the right one's reply.
+
+`LanPairingOfferFetcher` reads `HttpStatus::TOO_MANY_REQUESTS`, the same constant
+`PairingOfferRequestHandler` answers with, so the two sides cannot drift.
+
 ## What actually proves identity
 
 Nothing on this page does. Identity is established twice, both times outside

@@ -35,9 +35,9 @@ it('keeps another region reachable for a reader who lives there', function (): v
 
 // A reader who never named a country keeps what they had rather than losing
 // classification entirely.
-it('falls back to every region when no country is set', function (string $unset): void {
-    expect(count(governmentRegions($unset)))->toBeGreaterThan(1);
-})->with(['null' => [''], 'empty string' => ['']]);
+it('falls back to every region when the country is set to an empty string', function (): void {
+    expect(count(governmentRegions('')))->toBeGreaterThan(1);
+});
 
 it('loads more than one region when nothing is asked for', function (): void {
     expect(count(governmentRegions(null)))->toBeGreaterThan(1);

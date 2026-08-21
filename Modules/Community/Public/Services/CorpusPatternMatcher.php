@@ -39,11 +39,17 @@ final class CorpusPatternMatcher
 
     // Whole token, not any substring: merchant tokens are short, so an
     // unanchored search matched OBI inside "mobiel" and RDW inside "Nordwind".
-    // Edges are tested rather than \b, which means the opposite of what is
-    // wanted beside a pattern that begins or ends with punctuation.
     public static function containsToken(string $haystack, string $needle): bool
     {
         if ($needle === '' || $haystack === '') {
+            return false;
+        }
+
+        // A preg_quote'd literal between two zero-width lookarounds cannot
+        // exhaust the backtrack limit, so invalid UTF-8 is the only way the /u
+        // match below can fail — and a byte string that is not text holds no
+        // token to find.
+        if (! mb_check_encoding($haystack, 'UTF-8') || ! mb_check_encoding($needle, 'UTF-8')) {
             return false;
         }
 

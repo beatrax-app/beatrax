@@ -70,7 +70,6 @@ final class AppLockProvisioner
 
         $pinHash = $this->pinHasher->hash($pin);
 
-        // updateOrInsert does not manage timestamps; created_at on insert only.
         $now = $this->clock->now()->toDateTimeString();
         $exists = $this->db->connection()
             ->table('user_app_lock_configs')
@@ -209,7 +208,8 @@ final class AppLockProvisioner
                 'pin_wrapped_key' => $newPinWrappedKey,
             ]);
 
-        // $dataKey is unchanged by a plain PIN change; only its wrap moved.
+        // A PIN change re-wraps the data key without changing it, so the event
+        // deliberately carries the same key as both its old and its new value.
         $this->events->dispatch(new AppLockPassphraseChanged($userId, $dataKey, $dataKey));
 
         sodium_memzero($dataKey);
@@ -314,7 +314,6 @@ final class AppLockProvisioner
         return $dataKey === false ? null : $dataKey;
     }
 
-    // Absent row and off-schema column mean the same to every caller here.
     private static function stringColumn(?object $row, string $column): ?string
     {
         if ($row === null) {

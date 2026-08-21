@@ -30,10 +30,15 @@ return [
         'aria' => ':name: %:pct tamamlandı',
     ],
 
+    'card' => [
+        'target_date' => 'Son tarih: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Hedefe ulaşıldı',
         'add_contributions' => 'Tahmin görmek için katkı ekle',
         'not_enough_history' => 'Tarih tahmini için henüz yeterli geçmiş yok',
+        'no_recent_contributions' => 'Tahmin yapılacak yakın tarihli katkı yok',
         'est' => 'Tahmini :date ·',
         'projection_note' => '(tahmin)',
         'projected' => 'Öngörülen: :date',

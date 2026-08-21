@@ -15,7 +15,8 @@ interface ColdStartVault
     // affordance without handling exceptions.
     public function isAvailable(): bool;
 
-    // MUST NOT prompt: the lock screen reads this on render.
+    // Must not prompt: the lock screen calls this on every render, so a prompt
+    // here would fire before the user has asked to unlock anything.
     public function isEnrolled(int $userId): bool;
 
     // Called while unlocked. False when the platform refused to protect the

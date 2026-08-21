@@ -28,7 +28,8 @@ final class LogoutAction
         /** @var StatefulGuard $guard */
         $guard = $this->auth->guard();
 
-        // Read before logout(), while the user is still resolvable.
+        // Read before logout(): the guard resolves no user afterwards, so the
+        // locale would come back null and the login page lose the language.
         $locale = $this->currentLocale($guard);
 
         $guard->logout();

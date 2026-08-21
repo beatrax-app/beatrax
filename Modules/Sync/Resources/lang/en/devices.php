@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Go to App lock',
 
     'encrypted_at_rest' => 'Data encrypted at rest',
-    'encrypted_at_rest_help' => 'Your data is secured with your app-lock passphrase.',
+    'encrypted_at_rest_scope' => 'Notes, transaction descriptions and the names and IBANs of who you pay are encrypted with your app-lock passphrase. Amounts, dates and your own account name and IBAN are not, and some merchant names still appear in plain text elsewhere in the database file.',
     'on' => 'On',
     'securing' => 'Securing your data…',
     'do_not_close' => 'Do not close this window.',

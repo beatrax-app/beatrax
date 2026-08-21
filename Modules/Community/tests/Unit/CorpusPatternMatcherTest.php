@@ -16,11 +16,10 @@ it('matches a literal pattern as a case-insensitive substring', function (): voi
     expect(matcher()->matches('JUMBO', 'ALBERT HEIJN'))->toBeFalse();
 });
 
-// Corpus tokens are short by nature, so an unanchored search does not merely
-// risk matching inside a longer word — it does it routinely. A phone bill's
-// "Europese incasso internet en mobiel" was renamed after a DIY chain because
-// OBI sits inside "mobiel", and an employer was typed as government because RDW
-// sits inside "Nordwind".
+// Corpus tokens are short by nature, so an unanchored search matches inside a
+// longer word routinely: OBI sits inside "mobiel" and renamed a phone bill
+// after a DIY chain, RDW sits inside "Nordwind" and typed an employer as
+// government.
 it('does not match a literal pattern buried inside a longer word', function (string $haystack, string $pattern): void {
     expect(matcher()->matches($pattern, $haystack))->toBeFalse();
 })->with([

@@ -14,6 +14,16 @@
         <details class="text-sm text-slate-500 dark:text-slate-400">
             <summary class="cursor-pointer">{{ Lang::get('import::results.show_duplicates', ['count' => $importRun->duplicate_count]) }}</summary>
             <p class="mt-2 text-slate-500 dark:text-slate-400">{{ Lang::get('import::results.duplicates_help') }}</p>
+            @if (count($duplicateIssues) > 0)
+                <ul class="mt-2 space-y-1 text-slate-700 dark:text-slate-300">
+                    @foreach ($duplicateIssues as $issue)
+                        <li>{{ Lang::get('import::results.issues.duplicate', ['row' => $issue->rowIndex === null ? '?' : $issue->rowIndex + 1]) }}</li>
+                    @endforeach
+                    @if ($importRun->duplicate_count > count($duplicateIssues))
+                        <li>{{ Lang::get('import::results.issues.more', ['count' => $importRun->duplicate_count - count($duplicateIssues)]) }}</li>
+                    @endif
+                </ul>
+            @endif
         </details>
     @endif
 
@@ -21,6 +31,25 @@
         <details class="text-sm text-slate-500 dark:text-slate-400" open>
             <summary class="cursor-pointer">{{ Lang::get('import::results.show_errors', ['count' => $importRun->error_count]) }}</summary>
             <p class="mt-2 text-slate-500 dark:text-slate-400">{{ Lang::get('import::results.errors_help') }}</p>
+            {{-- The help sentence is the preamble; these are the content. A count
+                 in the summary promises a list, and what opened was a definition
+                 of the word "error" — nothing a reader could use to fix the file. --}}
+            @if (count($errorIssues) > 0)
+                <ul class="mt-2 space-y-1 text-slate-700 dark:text-slate-300">
+                    @foreach ($errorIssues as $issue)
+                        <li>
+                            @if ($issue->rowIndex === null)
+                                {{ Lang::get('import::results.issues.file', ['reason' => $issue->describe() ?? Lang::get('import::results.issues.unknown_reason')]) }}
+                            @else
+                                {{ Lang::get('import::results.issues.row', ['row' => $issue->rowIndex + 1, 'reason' => $issue->describe() ?? Lang::get('import::results.issues.unknown_reason')]) }}
+                            @endif
+                        </li>
+                    @endforeach
+                    @if ($importRun->error_count > count($errorIssues))
+                        <li>{{ Lang::get('import::results.issues.more', ['count' => $importRun->error_count - count($errorIssues)]) }}</li>
+                    @endif
+                </ul>
+            @endif
         </details>
     @endif
 

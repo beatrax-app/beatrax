@@ -435,7 +435,7 @@ it('fans out the current epoch last, so a joining device settles on it', functio
     $epochOrder = [];
     foreach (app(RelayMailbox::class)->drain(bikRecipientDeviceId((int) $user->id, $recipientId), 50) as $row) {
         $decoded = json_decode(is_string($row->blob) ? $row->blob : '', true);
-        if (is_array($decoded) && ($decoded['key_role'] ?? 'epoch') === 'epoch' && is_int($decoded['epoch_id'] ?? null)) {
+        if (is_array($decoded) && GdkEpochWrapSignature::carriesEpoch($decoded) && is_int($decoded['epoch_id'] ?? null)) {
             $epochOrder[] = $decoded['epoch_id'];
         }
     }

@@ -30,10 +30,15 @@ return [
         'aria' => ':name: :pct% concluído',
     ],
 
+    'card' => [
+        'target_date' => 'Data-alvo: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Meta atingida',
         'add_contributions' => 'Adiciona contribuições para veres uma projeção',
         'not_enough_history' => 'Ainda não há histórico suficiente para projetar uma data',
+        'no_recent_contributions' => 'Sem contribuições recentes para projetar uma data',
         'est' => 'Est. :date ·',
         'projection_note' => '(projeção)',
         'projected' => 'Projetado: :date',

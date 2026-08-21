@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Zur App-Sperre',
 
     'encrypted_at_rest' => 'Daten im Ruhezustand verschlüsselt',
-    'encrypted_at_rest_help' => 'Deine Daten sind mit der Passphrase deiner App-Sperre geschützt.',
+    'encrypted_at_rest_scope' => 'Notizen, Buchungstexte und die Namen und IBANs deiner Zahlungsempfänger sind mit der Passphrase deiner App-Sperre verschlüsselt. Beträge, Daten sowie dein eigener Kontoname und deine eigene IBAN sind es nicht, und einige Händlernamen stehen weiterhin im Klartext an anderer Stelle in der Datenbankdatei.',
     'on' => 'An',
     'securing' => 'Deine Daten werden geschützt…',
     'do_not_close' => 'Schließe dieses Fenster nicht.',

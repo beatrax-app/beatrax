@@ -1,17 +1,29 @@
 @use('Modules\Core\Public\Support\Lang')
 @php
+    use Modules\Import\Internal\Enums\ImportFailureReason;
+    use Modules\Import\Internal\Enums\PreviewRowStatus;
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
 
     // Header-action enablement. Discard is meaningful whenever a preview
-    // is still in cache; Confirm requires every naming step to be resolved.
+    // is still in cache; Confirm requires every naming step to be resolved
+    // AND at least one row that confirming would actually write.
     $hasLivePreview = $preview !== null && ! $previewExpired;
     $unnamedAccountCount = $hasLivePreview ? count($preview->accountsToName) : 0;
     $canConfirmImport = $hasLivePreview
         && ! $needsIcsAccountName
         && ! $needsPaypalAccountName
-        && $unnamedAccountCount === 0;
+        && $unnamedAccountCount === 0
+        && $importableRowCount > 0;
+
+    // A file-level failure is not a row and has no cells of its own. It says
+    // where the read stopped, which is the only thing that explains the rows
+    // that are missing rather than present-and-failed.
+    $fileFailure = $hasLivePreview && $preview->fileFailureReason !== null;
+    $fileFailureDetail = $hasLivePreview ? $preview->fileFailureDetail : null;
+    $parsedRowCount = $hasLivePreview ? count($preview->rows) : 0;
+    $nothingToImport = $hasLivePreview && $importableRowCount === 0;
 @endphp
 
 <div class="space-y-6">
@@ -36,7 +48,9 @@
                 </button>
             </div>
         </div>
-        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.subtitle') }}</p>
+        @unless ($nothingToImport)
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.subtitle') }}</p>
+        @endunless
     </header>
 
     @if ($preview === null || $previewExpired)
@@ -130,6 +144,53 @@
                 @endforeach
             </section>
         @else
+            @if ($nothingToImport)
+                <x-core::alert tone="danger" role="alert">
+                    <p class="font-medium">{{ Lang::get('import::preview.failed.heading') }}</p>
+                    <p class="mt-2">
+                        @if ($parsedRowCount === 0 && ! $fileFailure)
+                            {{ Lang::get('import::preview.failed.no_rows') }}
+                        @elseif ($parsedRowCount === 0)
+                            {{ Lang::get('import::preview.failed.nothing_read') }}
+                        @else
+                            {{ Lang::get('import::preview.failed.every_row') }}
+                        @endif
+                    </p>
+                    @if ($fileFailure)
+                        <p class="mt-2">{{ Lang::get('import::preview.failed.likely_cause') }}</p>
+                    @endif
+                    @if ($fileFailureDetail !== null)
+                        <p class="mt-2">
+                            <span class="font-medium">{{ Lang::get('import::preview.failed.detail_label') }}</span>
+                            <span class="font-mono text-xs">{{ $fileFailureDetail }}</span>
+                        </p>
+                    @endif
+                </x-core::alert>
+            @elseif ($fileFailure)
+                <x-core::alert tone="warning" role="alert">
+                    <p class="font-medium">{{ Lang::get('import::preview.failed.truncated_heading') }}</p>
+                    <p class="mt-2">{{ Lang::get('import::preview.failed.truncated') }}</p>
+                    <p class="mt-2">
+                        {{ Lang::get('import::preview.failed.rows_read_label') }}: {{ $importableRowCount }}
+                    </p>
+                    @if ($fileFailureDetail !== null)
+                        <p class="mt-2">
+                            <span class="font-medium">{{ Lang::get('import::preview.failed.detail_label') }}</span>
+                            <span class="font-mono text-xs">{{ $fileFailureDetail }}</span>
+                        </p>
+                    @endif
+                </x-core::alert>
+            @elseif ($failedRowCount > 0)
+                <x-core::alert tone="warning" role="alert">
+                    <p>{{ Lang::get('import::preview.failed.some_rows') }}</p>
+                    <p class="mt-2">
+                        {{ Lang::get('import::preview.failed.rows_read_label') }}: {{ $importableRowCount }}
+                        · {{ Lang::get('import::preview.failed.rows_skipped_label') }}: {{ $failedRowCount }}
+                    </p>
+                </x-core::alert>
+            @endif
+
+            @if ($parsedRowCount > 0)
             <x-core::data-table style="font-feature-settings: 'tnum';">
                 <x-slot:head>
                     <x-core::th align="left">{{ Lang::get('import::preview.col_date') }}</x-core::th>
@@ -185,11 +246,11 @@
                             @endif
                         </td>
                         <td class="px-4 py-2 text-sm">
-                            @if ($row->status === 'new')
+                            @if ($row->status === PreviewRowStatus::NewRow->value)
                                 <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:text-emerald-400" title="{{ Lang::get('import::preview.status.new_title') }}">{{ Lang::get('import::preview.status.new') }}</span>
-                            @elseif ($row->status === 'duplicate')
+                            @elseif ($row->status === PreviewRowStatus::Duplicate->value)
                                 <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950" title="{{ Lang::get('import::preview.status.duplicate_title') }}">{{ Lang::get('import::preview.status.duplicate') }}</span>
-                            @elseif ($row->status === 'enriched')
+                            @elseif ($row->status === PreviewRowStatus::Enriched->value)
                                 <span class="inline-flex items-center rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-600/20" title="{{ Lang::get('import::preview.status.enriched_title') }}">{{ Lang::get('import::preview.status.enriched') }}</span>
                                 @if ($row->diff && isset($row->diff['source_ref']))
                                     <div class="mt-1 text-xs text-slate-500 font-mono dark:text-slate-400">
@@ -200,12 +261,26 @@
                                     </div>
                                 @endif
                             @else
-                                <span class="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20 dark:bg-rose-950 dark:text-rose-500" title="{{ $row->error }}">{{ Lang::get('import::preview.status.error') }}</span>
+                                {{-- The reason, spelled out under the badge rather than hidden in a
+                                     title attribute. There is no hover on a phone, so the tooltip was
+                                     unreachable on the device this screen is mostly used from — and it
+                                     carried the exception's own words, which name internal classes and
+                                     the reader's user id. --}}
+                                @php
+                                    $rowReason = $row->errorReason === null
+                                        ? null
+                                        : ImportFailureReason::tryFrom($row->errorReason);
+                                @endphp
+                                <span class="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20 dark:bg-rose-950 dark:text-rose-500">{{ Lang::get('import::preview.status.error') }}</span>
+                                <div class="mt-1 text-xs text-rose-700 dark:text-rose-400">
+                                    {{ ($rowReason ?? ImportFailureReason::RowUnreadable)->label() }}
+                                </div>
                             @endif
                         </td>
                     </tr>
                 @endforeach
             </x-core::data-table>
+            @endif
         @endif
     @endif
 

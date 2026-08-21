@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 function cpTriageUser(string $username): User
 {
@@ -235,4 +238,75 @@ it('Test 23: empty queue renders the verbatim 🎉 caught-up copy', function ():
 
     $component->assertSee('🎉 All caught up — every counterparty is labeled.', escape: false);
     $component->assertSee('Back to counterparties →', escape: false);
+});
+
+// android-19: the recent-transactions list applied abs() unconditionally, so a
+// €52,60 charge and a €52,60 refund rendered identically — and /transactions
+// showed the same row signed, so a reader cross-checking got two different
+// numbers with no way to tell which was right. Direction is the strongest
+// signal this screen has for the question it is asking about an unknown IBAN.
+
+/** @return list<string> the rendered text of each triage-tx__amount span, in order */
+function cpTriageAmountsFor(int $userId): array
+{
+    $html = (string) Livewire::actingAs(User::query()->findOrFail($userId))
+        ->test(CounterpartyTriage::class)
+        ->html();
+
+    preg_match_all('/triage-tx__amount"[^>]*>(.*?)<\/span>/s', $html, $matches);
+
+    return array_values(array_map(
+        static fn (string $raw): string => html_entity_decode(trim($raw), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        $matches[1],
+    ));
+}
+
+it('android-19: renders an expense and an income of equal size differently', function (): void {
+    $user = cpTriageUser('cp-triage-sign');
+    $account = cpTriageAccount($user);
+    $run = cpTriageImportRun($user);
+    $unknown = cpTriageUnknown((int) $user->id, 'sign-unknown', 'NL10BANK0000000303');
+
+    cpTriageTx($user, $account, $unknown, $run, 'Betaalautomaat Apotheek Zuiderhout', -2345, '2026-08-20');
+    cpTriageTx($user, $account, $unknown, $run, 'Terugbetaling Apotheek Zuiderhout', 2345, '2026-08-19');
+
+    $rendered = cpTriageAmountsFor((int) $user->id);
+
+    expect($rendered)->toHaveCount(2);
+    expect($rendered[0])->not->toBe($rendered[1]);
+});
+
+// Verbatim from the device: a Dutch reader, `€ -23,45` on /transactions and
+// `€ 23,45` on triage for the same row. The Dutch rule puts the symbol before
+// the sign, and Money::format() already does that — the sign just has to survive.
+it('android-19: shows a Dutch reader the same signed amount the ledger shows', function (): void {
+    App::setLocale('nl');
+
+    $user = cpTriageUser('cp-triage-sign-nl');
+    $account = cpTriageAccount($user);
+    $run = cpTriageImportRun($user);
+    $unknown = cpTriageUnknown((int) $user->id, 'sign-nl', 'NL10BANK0000000404');
+
+    cpTriageTx($user, $account, $unknown, $run, 'Betaalautomaat Apotheek Zuiderhout', -2345, '2026-08-20');
+
+    $rendered = cpTriageAmountsFor((int) $user->id);
+
+    expect($rendered[0])->toBe(Money::ofMinor(-2345, Currency::Eur->value)->format());
+    expect($rendered[0])->toContain('-');
+    expect($rendered[0])->toContain('23,45');
+});
+
+it('android-19: renders a non-euro row in its own currency rather than as euros', function (): void {
+    $user = cpTriageUser('cp-triage-currency');
+    $account = cpTriageAccount($user);
+    $run = cpTriageImportRun($user);
+    $unknown = cpTriageUnknown((int) $user->id, 'sign-usd', 'NL10BANK0000000505');
+
+    cpTriageTx($user, $account, $unknown, $run, 'Overseas charge', -2345, '2026-08-20');
+    DB::table('transactions')->where('counterparty_id', $unknown)->update(['currency' => 'USD']);
+
+    $rendered = cpTriageAmountsFor((int) $user->id);
+
+    expect($rendered[0])->toBe(Money::ofMinor(-2345, 'USD')->format());
+    expect($rendered[0])->not->toContain('€');
 });

@@ -20,8 +20,5 @@ final class NullKeyCustodian implements KeyCustodian
         return $handle;
     }
 
-    public function forget(string $handle): void
-    {
-        // Nothing to release: the handle is the key, not a reference to it.
-    }
+    public function forget(string $handle): void {}
 }

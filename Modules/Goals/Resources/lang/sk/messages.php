@@ -30,10 +30,15 @@ return [
         'aria' => ':name: dokončené na :pct%',
     ],
 
+    'card' => [
+        'target_date' => 'Cieľový dátum: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Cieľ dosiahnutý',
         'add_contributions' => 'Pridaj príspevky a zobrazí sa prognóza',
         'not_enough_history' => 'Zatiaľ nie je dosť histórie na odhad dátumu',
+        'no_recent_contributions' => 'Žiadne nedávne vklady, z ktorých by sa dalo odhadovať',
         'est' => 'Odhad :date ·',
         'projection_note' => '(prognóza)',
         'projected' => 'Prognóza: :date',

@@ -6,13 +6,14 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
-use Modules\Ledger\Public\Services\CounterpartyKey;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
 use Modules\Sync\Public\Services\BlindIndexCodec;
@@ -114,19 +115,22 @@ function rcgMachineryLeaks(string $html, array $markers): array
 }
 
 /**
- * The blind index is not in SensitiveFieldRegistry and never will be — AEAD over
- * it would make it unmatchable — but a digest on a screen is the same defect as
- * ciphertext on a screen, so the census has to cover both mechanisms.
+ * Read from the registry, not copied. `columns()` and `blindIndexColumns()` are
+ * deliberately separate — one is an instruction that applies AEAD, the other
+ * describes columns AEAD must never touch — but a guard needs both, and one
+ * place to add a column is the whole point of the second accessor.
  *
  * @return array<string, list<string>> table => columns holding a keyed digest
  */
 function rcgBlindIndexColumns(): array
 {
-    return [
-        'transactions' => ['counterparty_normalized'],
-        'merchants' => ['normalized_name'],
-        'recurring_series' => ['cluster_counterparty_key'],
-    ];
+    $byTable = [];
+    foreach (array_keys(SensitiveFieldRegistry::blindIndexColumns()) as $pair) {
+        [$table, $column] = explode('.', $pair, 2);
+        $byTable[$table][] = $column;
+    }
+
+    return $byTable;
 }
 
 /**
@@ -245,7 +249,7 @@ function rcgSeedWorld(User $user): void
         'updated_at' => $now,
     ]);
 
-    // CounterpartyKey::NONE is stored verbatim — the sweep skips it on purpose,
+    // The sentinel is stored verbatim — the sweep skips it on purpose,
     // because it records the absence of a counterparty rather than naming one.
     // It is still a machine token in a column the reader must never be shown,
     // so the census carries it beside the digests.
@@ -263,7 +267,7 @@ function rcgSeedWorld(User $user): void
         'settled_currency' => 'EUR',
         'description' => RCG_UNNAMED_DESCRIPTION,
         'counterparty_name' => null,
-        'counterparty_normalized' => CounterpartyKey::NONE,
+        'counterparty_normalized' => SensitiveFieldRegistry::blindIndexSentinel(),
         'normalization_version' => 1,
         'source_format' => 'asn-csv',
         'import_run_id' => $importRunId,
@@ -552,6 +556,24 @@ function rcgLeaks(string $html, array $census): array
 }
 
 /**
+ * `html()` alone is not what a Livewire component sends. A public property
+ * reaches the browser inside the wire:snapshot payload whether or not the view
+ * prints it, and PaletteSearchEndpoint is a hidden container whose results live
+ * only there. Both halves are the browser's copy, so both are searched.
+ *
+ * @param  list<string>  $properties
+ */
+function rcgLivewirePayload(Testable $component, array $properties): string
+{
+    $parts = [$component->html()];
+    foreach ($properties as $property) {
+        $parts[] = (string) json_encode($component->get($property));
+    }
+
+    return implode("\n", $parts);
+}
+
+/**
  * @param  list<string>  $mustBeVisible
  * @return list<string>
  */
@@ -689,7 +711,7 @@ it('actually holds ciphertext and keyed digests at rest before a single screen i
                 if (! is_string($value) || $value === '') {
                     continue;
                 }
-                if (! BlindIndexCodec::looksDerived($value) && $value !== CounterpartyKey::NONE) {
+                if (! BlindIndexCodec::looksDerived($value) && $value !== SensitiveFieldRegistry::blindIndexSentinel()) {
                     $notDerived[] = "{$table}.{$column}#{$index} = {$value}";
                 }
             }
@@ -832,13 +854,136 @@ it('never renders a stored sensitive value on /reports', function (): void {
 
 it('never renders a stored sensitive value on a recurring series detail page', function (): void {
     $seriesId = $this->app->make(DatabaseManager::class)->connection()
-        ->table('recurring_series')->where('user_id', $this->rcgUser->id)->value('id');
+        ->table('recurring_series')->where('user_id', $this->rcgUser->id)
+        ->where('cluster_key', 'rcg-sentinel-cluster')->value('id');
 
     $response = $this->get("/recurring/series/{$seriesId}");
     $response->assertOk();
 
     rcgExpectReadable('/recurring/series/{id}', $response->getContent(), $this->rcgCensus, [
         RCG_SERIES_NAME,
+    ]);
+});
+
+it('never renders a stored sensitive value on /cash', function (): void {
+    $response = $this->get('/cash');
+    $response->assertOk();
+
+    rcgExpectReadable('/cash', $response->getContent(), $this->rcgCensus, [
+        RCG_CASH_MERCHANT,
+        RCG_MERCHANT,
+    ]);
+});
+
+it('never renders a stored sensitive value on /recurring', function (): void {
+    $response = $this->get('/recurring');
+    $response->assertOk();
+
+    rcgExpectReadable('/recurring', $response->getContent(), $this->rcgCensus, [
+        RCG_APPROVED_SERIES_NAME,
+    ]);
+});
+
+it('never renders a stored sensitive value on /calendar', function (): void {
+    $response = $this->get('/calendar');
+    $response->assertOk();
+
+    rcgExpectReadable('/calendar', $response->getContent(), $this->rcgCensus, [
+        RCG_APPROVED_SERIES_NAME,
+        RCG_MERCHANT,
+    ]);
+});
+
+// The widest surface of the lot: the palette searches counterparty, category
+// and series names across the whole app, and every hit lands in a public
+// property. A name that matched as ciphertext would find nothing; a name
+// rendered as ciphertext would be shipped to the browser in the snapshot.
+it('never renders a stored sensitive value through the command palette', function (): void {
+    $transactionId = (int) $this->app->make(DatabaseManager::class)->connection()
+        ->table('transactions')->where('user_id', $this->rcgUser->id)
+        ->where('source_row_index', 1)->value('id');
+
+    $this->app->make(SearchIndexWriterContract::class)
+        ->upsertForTransaction($transactionId, (int) $this->rcgUser->id);
+
+    $component = Livewire::actingAs($this->rcgUser)
+        ->test('search.palette-search-endpoint')
+        ->call('search', 'Qwyxberg');
+
+    $payload = rcgLivewirePayload($component, ['entityHits', 'transactionHits', 'totalCount']);
+
+    rcgExpectReadable('⌘K palette', $payload, $this->rcgCensus, [
+        RCG_MERCHANT,
+        RCG_SERIES_NAME,
+    ]);
+});
+
+it('never renders a stored sensitive value in the chain drawer', function (): void {
+    $transactionId = (int) $this->app->make(DatabaseManager::class)->connection()
+        ->table('transactions')->where('user_id', $this->rcgUser->id)
+        ->where('source_row_index', 1)->value('id');
+
+    $component = Livewire::actingAs($this->rcgUser)
+        ->test('chains.chain-drawer')
+        ->call('open', $transactionId);
+
+    rcgExpectReadable('chain drawer', rcgLivewirePayload($component, ['transactionId']), $this->rcgCensus, [
+        RCG_MERCHANT,
+        RCG_CASH_MERCHANT,
+    ]);
+});
+
+// pending_enrichment_conflicts holds DECRYPTED values on purpose, so the prompt
+// never has ciphertext to render. This is the case that proves that exception is
+// still true rather than assuming it.
+it('never renders a stored sensitive value in the receipt conflict toast', function (): void {
+    $component = Livewire::actingAs($this->rcgUser)->test('receipts.receipt-conflict-toast');
+
+    $payload = rcgLivewirePayload($component, ['receiptValue', 'csvValue', 'field']);
+
+    rcgExpectReadable('receipt conflict toast', $payload, $this->rcgCensus, [
+        RCG_MERCHANT,
+        RCG_RECEIPT_INCOMING,
+    ]);
+});
+
+// The counterparty picker only exists once the rule has a "reassign
+// counterparty" action, and that select is the whole reason this modal reads an
+// encrypted column: every option label is a decrypted display_name.
+it('never renders a stored sensitive value in the rule form modal', function (): void {
+    $component = Livewire::actingAs($this->rcgUser)
+        ->test('categorization.rule-form-modal')
+        ->call('open', null)
+        ->set('actions', [[
+            'id' => null,
+            'type' => 'counterparty',
+            'category_id' => null,
+            'counterparty_id' => null,
+            'note_text' => '',
+            'note_mode' => 'set',
+            'deduction_category_id' => null,
+            'year_override_enabled' => false,
+            'year_override' => null,
+        ]]);
+
+    rcgExpectReadable('rule form modal', rcgLivewirePayload($component, ['conditions', 'actions']), $this->rcgCensus, [
+        RCG_MERCHANT,
+    ]);
+});
+
+// The popover is handed its raw string by the import preview rather than reading
+// a column, so the visible value below is the one passed in. It is here for the
+// absence half: it writes a merchant alias, and a leak would be one keystroke
+// from being stored as a pattern.
+it('never renders a stored sensitive value in the rename-counterparty popover', function (): void {
+    $component = Livewire::actingAs($this->rcgUser)
+        ->test('import.rename-counterparty-popover')
+        ->call('open', RCG_DESCRIPTION, 1);
+
+    $payload = rcgLivewirePayload($component, ['raw', 'generalized', 'friendly']);
+
+    rcgExpectReadable('rename-counterparty popover', $payload, $this->rcgCensus, [
+        RCG_DESCRIPTION,
     ]);
 });
 
@@ -918,11 +1063,13 @@ it('goes RED when a screen stops showing the plaintext it exists to show (negati
         ->toBe([RCG_DESCRIPTION]);
 });
 
-// The blind index is the half no registry-driven scan can reach. It is not in
-// SensitiveFieldRegistry and it never will be, so a guard that reads only that
-// list treats a digest on a screen as a value it has no opinion about.
-it('carries the blind-index columns that SensitiveFieldRegistry deliberately omits', function (): void {
+// The two accessors must stay disjoint. A blind-index column appearing in
+// columns() would put AEAD over a column the database matches on, and the census
+// below would go on looking correct while the ledger stopped deduplicating.
+it('keeps the blind-index columns out of the AEAD list, and seeds a row for each', function (): void {
     $registry = rcgSensitiveColumns();
+
+    expect(rcgBlindIndexColumns())->not->toBe([]);
 
     foreach (rcgBlindIndexColumns() as $table => $columns) {
         foreach ($columns as $column) {
@@ -940,9 +1087,9 @@ it('goes RED on a crypto exception message printed as copy (negative probe, in-m
 });
 
 it('goes RED on the _no_counterparty sentinel reaching a body (negative probe, in-memory)', function (): void {
-    $sentinelKey = array_search(CounterpartyKey::NONE, $this->rcgCensus, true);
+    $sentinelKey = array_search(SensitiveFieldRegistry::blindIndexSentinel(), $this->rcgCensus, true);
 
     expect($sentinelKey)->not->toBeFalse();
-    expect(rcgLeaks('<span class="primary">'.CounterpartyKey::NONE.'</span>', $this->rcgCensus))
+    expect(rcgLeaks('<span class="primary">'.SensitiveFieldRegistry::blindIndexSentinel().'</span>', $this->rcgCensus))
         ->toContain("{$sentinelKey}: the whole stored value");
 });

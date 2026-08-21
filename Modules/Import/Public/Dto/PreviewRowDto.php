@@ -14,6 +14,8 @@ final class PreviewRowDto extends Data
 {
     /**
      * @param  array<string, array{from: ?string, to: string}>|null  $diff
+     * @param  string|null  $error  Diagnostic text for the log, written only from an exception that declares it names no user data. No view renders it: an exception message is machine text, and the reader gets $errorReason instead.
+     * @param  string|null  $errorReason  An `ImportFailureReason` backing value, the same way $status carries a `PreviewRowStatus` one.
      */
     public function __construct(
         public readonly int $rowIndex,
@@ -32,5 +34,6 @@ final class PreviewRowDto extends Data
         public readonly ?array $diff = null,
         public readonly ?PaymentType $paymentType = null,
         public readonly ?string $aliasFriendlyName = null,
+        public readonly ?string $errorReason = null,
     ) {}
 }

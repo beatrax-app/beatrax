@@ -152,7 +152,6 @@ final class PinVerificationService
         // lock, so leaving it demands a second PIN on the next request.
         $session->forget(AppLockMiddleware::SESSION_CONFIG_CACHE);
 
-        // A PIN unlock re-arms every disarmed biometric credential.
         $this->biometricStore->resetAllForUser($userId);
 
         $this->lockState->unlock($session, $dataKey);

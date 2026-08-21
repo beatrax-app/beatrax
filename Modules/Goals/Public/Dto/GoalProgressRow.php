@@ -20,6 +20,7 @@ final class GoalProgressRow extends Data
         public readonly string $progressState,
         public readonly ?string $projectedFinishDate,
         public readonly bool $projectionBeyondHorizon,
+        public readonly bool $projectionStalled = false,
     ) {}
 
     // Floored as well as capped: an attributed spend is a withdrawal, so the sum

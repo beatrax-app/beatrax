@@ -166,7 +166,6 @@ final class MobileLockScreen extends Component
         }
     }
 
-    // Nothing to do: the always-visible PIN pad remains the fallback.
     #[On('cold-start-failed')]
     public function onColdStartFailed(): void {}
 

@@ -43,7 +43,6 @@ final class LoginAction
         $guard = $this->auth->guard();
         $guard->login($user, $rememberMe);
 
-        // While the plaintext password is still in hand.
         $this->provisioner->primeSessionAfterLogin($user->id, $password, ($this->session)());
 
         return true;

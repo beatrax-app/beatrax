@@ -3,11 +3,17 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+
+// NormalizeStage now asks whether this user's counterparty key is keyed, which
+// is per-user state in sync_encryption_state. A user with no row is not
+// enrolled and the stage returns the plain normalised name, as it always did.
+uses(RefreshDatabase::class);
 
 function makeSourceDto(array $overrides = []): SourceTransactionDto
 {
@@ -59,7 +65,7 @@ function makeUserForNormalize(): User
 }
 
 it('substitutes the _no_counterparty sentinel when counterparty name is null', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto(['counterpartyName' => null]);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7, sourceFormat: 'asn-csv');
@@ -69,7 +75,7 @@ it('substitutes the _no_counterparty sentinel when counterparty name is null', f
 });
 
 it('substitutes the _no_counterparty sentinel when counterparty name is empty', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto(['counterpartyName' => '   ']);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7, sourceFormat: 'asn-csv');
@@ -78,7 +84,7 @@ it('substitutes the _no_counterparty sentinel when counterparty name is empty', 
 });
 
 it('substitutes the _no_counterparty sentinel when name is punctuation-only', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto(['counterpartyName' => '!!!???']);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7, sourceFormat: 'asn-csv');
@@ -87,7 +93,7 @@ it('substitutes the _no_counterparty sentinel when name is punctuation-only', fu
 });
 
 it('maps negative amounts to expense type', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto(['amountMinor' => -1299]);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
@@ -96,7 +102,7 @@ it('maps negative amounts to expense type', function (): void {
 });
 
 it('maps positive amounts to income type', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto(['amountMinor' => 250000]);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
@@ -105,7 +111,7 @@ it('maps positive amounts to income type', function (): void {
 });
 
 it('maps zero amounts to adjustment type', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto(['amountMinor' => 0]);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
@@ -114,7 +120,7 @@ it('maps zero amounts to adjustment type', function (): void {
 });
 
 it('normalises counterparty name via FingerprintComposer (lowercase, diacritics, truncation)', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto(['counterpartyName' => 'Café Plein']);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
@@ -123,7 +129,7 @@ it('normalises counterparty name via FingerprintComposer (lowercase, diacritics,
 });
 
 it('preserves user_id, account_id, import_run_id, source_row_index and source_format', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto(['sourceRowIndex' => 12]);
 
     $canonical = $stage->run($source, accountId: 99, user: makeUserForNormalize(), importRunId: 7, sourceFormat: 'asn-csv');
@@ -136,14 +142,14 @@ it('preserves user_id, account_id, import_run_id, source_row_index and source_fo
 });
 
 it('passes through the sourceFormat supplied by the caller', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $canonical = $stage->run(makeSourceDto(), accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'ics-csv');
 
     expect($canonical->sourceFormat)->toBe('ics-csv');
 });
 
 it('mirrors native amount/currency to settled amount/currency by default', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto(['amountMinor' => -3999, 'currency' => 'EUR']);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
@@ -154,7 +160,7 @@ it('mirrors native amount/currency to settled amount/currency by default', funct
 });
 
 it('mirrors settled = native and leaves fx_rate_used NULL when source omits the settled pair', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto([
         'amountMinor' => -1500,
         'currency' => 'EUR',
@@ -169,7 +175,7 @@ it('mirrors settled = native and leaves fx_rate_used NULL when source omits the 
 })->group('phase-3');
 
 it('derives fx_rate_used when source supplies a different settled currency', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto([
         'amountMinor' => 1299,
         'currency' => 'USD',
@@ -188,7 +194,7 @@ it('derives fx_rate_used when source supplies a different settled currency', fun
 })->group('phase-3');
 
 it('leaves fx_rate_used NULL when source-supplied settled currency equals native currency', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto([
         'amountMinor' => 1299,
         'currency' => 'EUR',
@@ -204,7 +210,7 @@ it('leaves fx_rate_used NULL when source-supplied settled currency equals native
 })->group('phase-3');
 
 it('leaves fx_rate_used NULL when amountMinor is zero', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer);
+    $stage = app(NormalizeStage::class);
     $source = makeSourceDto([
         'amountMinor' => 0,
         'currency' => 'USD',
@@ -220,8 +226,8 @@ it('leaves fx_rate_used NULL when amountMinor is zero', function (): void {
 })->group('phase-3');
 
 it('records the normalization version from the FingerprintComposer', function (): void {
-    $composer = new FingerprintComposer;
-    $stage = new NormalizeStage($composer);
+    $composer = app(FingerprintComposer::class);
+    $stage = app(NormalizeStage::class);
     $canonical = $stage->run(makeSourceDto(), accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
 
     expect($canonical->normalizationVersion)->toBe($composer->version());

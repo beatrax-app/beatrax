@@ -78,6 +78,10 @@
                                 · <span class="text-amber-600 dark:text-amber-400">{{ Lang::get('goals::messages.status.overdue') }}</span>
                             @elseif ($row->progressState === 'reached')
                                 · <span class="text-emerald-600 dark:text-emerald-400">{{ Lang::get('goals::messages.status.reached') }}</span>
+                            @elseif ($phoneCompleted)
+                                {{-- Completed lived only on the desktop badge, so a
+                                     finished goal read as an unfinished one at 375pt. --}}
+                                · <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.status.completed') }}</span>
                             @endif
                         </p>
 
@@ -94,11 +98,19 @@
                             </div>
                         @endunless
 
+                        @if ($row->targetDate !== '')
+                            <p class="secondary mt-1 text-xs">
+                                {{ Lang::get('goals::messages.card.target_date', ['date' => \Carbon\CarbonImmutable::parse($row->targetDate)->isoFormat('D MMM YYYY')]) }}
+                            </p>
+                        @endif
+
                         <p class="secondary mt-1 text-xs">
                             @if ($phoneCompleted || $row->progressState === 'reached')
                                 {{ Lang::get('goals::messages.projection.target_reached') }}
                             @elseif ($row->projectedFinishDate === null && $row->contributedMinor <= 0)
                                 {{ Lang::get('goals::messages.projection.add_contributions') }}
+                            @elseif ($row->projectedFinishDate === null && $row->projectionStalled)
+                                {{ Lang::get('goals::messages.projection.no_recent_contributions') }}
                             @elseif ($row->projectedFinishDate === null)
                                 {{ Lang::get('goals::messages.projection.not_enough_history') }}
                             @elseif ($row->projectionBeyondHorizon)
@@ -212,6 +224,8 @@
                                 {{ Lang::get('goals::messages.projection.target_reached') }}
                             @elseif ($row->projectedFinishDate === null && $row->contributedMinor <= 0)
                                 {{ Lang::get('goals::messages.projection.add_contributions') }}
+                            @elseif ($row->projectedFinishDate === null && $row->projectionStalled)
+                                {{ Lang::get('goals::messages.projection.no_recent_contributions') }}
                             @elseif ($row->projectedFinishDate === null)
                                 {{ Lang::get('goals::messages.projection.not_enough_history') }}
                             @elseif ($row->projectionBeyondHorizon)
@@ -222,6 +236,15 @@
                             @endif
                         </p>
                     </div>
+
+                    {{-- The date the form refuses to save a goal without. It was
+                         rendered on neither card, so the only way back to it was
+                         reopening the edit sheet. --}}
+                    @if ($row->targetDate !== '')
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {{ Lang::get('goals::messages.card.target_date', ['date' => \Carbon\CarbonImmutable::parse($row->targetDate)->isoFormat('D MMM YYYY')]) }}
+                        </p>
+                    @endif
 
                     {{-- Archive micro-confirm or footer actions --}}
                     @if ($archivingGoalId === $row->id)

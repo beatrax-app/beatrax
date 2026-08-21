@@ -30,10 +30,15 @@ return [
         'aria' => ':name: :pct% fuldført',
     ],
 
+    'card' => [
+        'target_date' => 'Måldato: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Målet er nået',
         'add_contributions' => 'Tilføj indbetalinger for at se en prognose',
         'not_enough_history' => 'Endnu ikke nok historik til at anslå en dato',
+        'no_recent_contributions' => 'Ingen nylige indbetalinger at anslå ud fra',
         'est' => 'Ca. :date ·',
         'projection_note' => '(prognose)',
         'projected' => 'Forventet: :date',

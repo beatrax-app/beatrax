@@ -20,9 +20,12 @@ final class OpenExternalUrlAction
 
     public function __invoke(string $url): void
     {
+        // Scrubbed for the same reason the log line below is: this message
+        // reaches a public Livewire property, and the query string carries the
+        // user's own statement description.
         if (filter_var($url, FILTER_VALIDATE_URL) === false || ! str_starts_with($url, 'https://')) {
             throw new InvalidArgumentException(
-                'OpenExternalUrlAction: URL must be a valid https:// URL, got: '.$url,
+                'OpenExternalUrlAction: URL must be a valid https:// URL, got: '.self::withoutQuery($url),
             );
         }
 
@@ -35,8 +38,9 @@ final class OpenExternalUrlAction
 
         $this->shell->openExternal($url);
         // The query string carries the suggest-mapping YAML body, i.e. the
-        // user's own statement description. Encryption at rest exists to keep
-        // that off the disk, so the log line records only which page opened.
+        // user's own statement description, and encryption at rest exists to
+        // keep that off the disk. The retained path still holds a stable
+        // sha256 prefix of that description, which is the branch name.
         $this->logger->info('OpenExternalUrlAction: launched system browser.', ['url' => self::withoutQuery($url)]);
     }
 

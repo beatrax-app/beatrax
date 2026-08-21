@@ -30,10 +30,15 @@ return [
         'aria' => ':name: ukończono :pct%',
     ],
 
+    'card' => [
+        'target_date' => 'Data docelowa: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Cel osiągnięty',
         'add_contributions' => 'Dodaj wpłaty, aby zobaczyć prognozę',
         'not_enough_history' => 'Za mało historii, aby przewidzieć datę',
+        'no_recent_contributions' => 'Brak niedawnych wpłat, na których można oprzeć prognozę',
         'est' => 'Szac. :date ·',
         'projection_note' => '(prognoza)',
         'projected' => 'Prognoza: :date',

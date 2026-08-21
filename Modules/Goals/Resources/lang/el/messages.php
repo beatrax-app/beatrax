@@ -30,10 +30,15 @@ return [
         'aria' => ':name: :pct% ολοκληρωμένο',
     ],
 
+    'card' => [
+        'target_date' => 'Ημερομηνία-στόχος: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Ο στόχος επιτεύχθηκε',
         'add_contributions' => 'Πρόσθεσε καταθέσεις για να δεις πρόβλεψη',
         'not_enough_history' => 'Δεν υπάρχει ακόμη αρκετό ιστορικό για πρόβλεψη ημερομηνίας',
+        'no_recent_contributions' => 'Καμία πρόσφατη συνεισφορά για να γίνει πρόβλεψη',
         'est' => 'Εκτ. :date ·',
         'projection_note' => '(πρόβλεψη)',
         'projected' => 'Προβλεπόμενη: :date',

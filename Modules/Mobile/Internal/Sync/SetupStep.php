@@ -24,7 +24,6 @@ enum SetupStep: string
         return [self::Connect, self::Keys, self::Transfer, self::Rebuild];
     }
 
-    // Absent means the pull is working rather than waiting: the transfer step.
     public static function forBlocked(?SyncBlockedReason $blocked): self
     {
         return match ($blocked) {

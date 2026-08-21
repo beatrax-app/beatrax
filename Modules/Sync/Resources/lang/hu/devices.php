@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Ugrás az alkalmazászárhoz',
 
     'encrypted_at_rest' => 'Az adatok nyugalmi állapotban titkosítva',
-    'encrypted_at_rest_help' => 'Az adataidat az alkalmazászár jelmondata védi.',
+    'encrypted_at_rest_scope' => 'A jegyzetek, a tranzakciók leírásai, valamint a kedvezményezettek nevei és IBAN-jai az alkalmazászár jelmondatával titkosítva vannak. Az összegek, a dátumok, valamint a saját számlád neve és IBAN-ja nincsenek, és egyes kereskedőnevek továbbra is olvashatóan szerepelnek az adatbázisfájl más részein.',
     'on' => 'Be',
     'securing' => 'Az adataid védelme…',
     'do_not_close' => 'Ne zárd be ezt az ablakot.',

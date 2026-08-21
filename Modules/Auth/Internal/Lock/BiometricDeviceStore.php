@@ -11,7 +11,6 @@ use stdClass;
 
 final class BiometricDeviceStore
 {
-    // Consecutive failures before the credential is disarmed until a PIN unlock.
     public const BIOMETRIC_DISABLE_THRESHOLD = 5;
 
     public function __construct(

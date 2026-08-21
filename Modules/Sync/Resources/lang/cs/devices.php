@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Přejít na Zámek aplikace',
 
     'encrypted_at_rest' => 'Data šifrovaná v úložišti',
-    'encrypted_at_rest_help' => 'Tvá data jsou chráněná heslem zámku aplikace.',
+    'encrypted_at_rest_scope' => 'Poznámky, popisy transakcí a jména a IBAN příjemců jsou šifrovány přístupovou frází zámku aplikace. Částky, data a název a IBAN tvého vlastního účtu nikoli a některá jména obchodníků zůstávají čitelná jinde v souboru databáze.',
     'on' => 'Zapnuto',
     'securing' => 'Zabezpečují se tvá data…',
     'do_not_close' => 'Nezavírej toto okno.',

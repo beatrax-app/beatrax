@@ -57,9 +57,12 @@ final class MysteryMerchantsPage extends Component
 
         $cards = array_slice(array_values($grouped), 0, self::CARD_LIMIT);
 
-        $autoNamedPercent = $scan['totalScanned'] > 0
-            ? (int) round(($scan['resolvedScanned'] / $scan['totalScanned']) * 100)
-            : 0;
+        // Null, not 0 and not 100: with no keyring every row blanks, and a
+        // percentage over nothing is a number the page invented.
+        $readableScanned = $scan['totalScanned'] - $scan['unreadableScanned'];
+        $autoNamedPercent = $readableScanned > 0
+            ? (int) round(($scan['resolvedScanned'] / $readableScanned) * 100)
+            : null;
 
         $stats = [
             'mysteryCount' => count($grouped),
@@ -76,7 +79,7 @@ final class MysteryMerchantsPage extends Component
 
     /**
      * @param  iterable<stdClass>  $rows
-     * @return array{grouped: array<string, array{description: string, count: int, lastSeen: ?string, paymentType: ?PaymentType}>, totalScanned: int, resolvedScanned: int}
+     * @return array{grouped: array<string, array{description: string, count: int, lastSeen: ?string, paymentType: ?PaymentType}>, totalScanned: int, resolvedScanned: int, unreadableScanned: int}
      */
     private function scanMysteryRows(
         iterable $rows,
@@ -88,16 +91,27 @@ final class MysteryMerchantsPage extends Component
         $grouped = [];
         $totalScanned = 0;
         $resolvedScanned = 0;
+        $unreadableScanned = 0;
         foreach ($rows as $row) {
             $totalScanned++;
-            $description = is_string($row->description) ? trim($row->description) : '';
+            $stored = is_string($row->description) ? trim($row->description) : '';
             // transactions.description is a SensitiveFieldRegistry column and
             // the raw builder applies no cast. Undecrypted it never matches the
             // corpus, and the card's suggest button would offer the ciphertext
             // for publication to the shared list.
-            if ($description !== '') {
-                $description = trim($codec->decryptValue('transactions', 'description', $description, $userId, $session)['value']);
+            $description = $stored === ''
+                ? ''
+                : trim($codec->decryptValue('transactions', 'description', $stored, $userId, $session)['value']);
+
+            // A row that HAD a description and lost it to the decrypt is not
+            // auto-named, it is unreadable — the difference between an honest
+            // empty page and a fabricated 100%.
+            if ($stored !== '' && $description === '') {
+                $unreadableScanned++;
+
+                continue;
             }
+
             if ($description === '' || $resolver->resolve($description, $userId) !== null) {
                 $resolvedScanned++;
 
@@ -106,7 +120,12 @@ final class MysteryMerchantsPage extends Component
             $this->accumulate($grouped, $row, $description);
         }
 
-        return ['grouped' => $grouped, 'totalScanned' => $totalScanned, 'resolvedScanned' => $resolvedScanned];
+        return [
+            'grouped' => $grouped,
+            'totalScanned' => $totalScanned,
+            'resolvedScanned' => $resolvedScanned,
+            'unreadableScanned' => $unreadableScanned,
+        ];
     }
 
     /**

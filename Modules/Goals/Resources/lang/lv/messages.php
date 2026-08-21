@@ -30,10 +30,15 @@ return [
         'aria' => ':name: paveikti :pct%',
     ],
 
+    'card' => [
+        'target_date' => 'Mērķa datums: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Mērķis sasniegts',
         'add_contributions' => 'Pievienojiet iemaksas, lai redzētu prognozi',
         'not_enough_history' => 'Vēl nepietiek vēstures, lai prognozētu datumu',
+        'no_recent_contributions' => 'Nav nesenu iemaksu, uz kurām balstīt prognozi',
         'est' => 'Apt. :date ·',
         'projection_note' => '(prognoze)',
         'projected' => 'Prognoze: :date',

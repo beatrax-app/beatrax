@@ -71,12 +71,16 @@ final class CounterpartyResolverService implements CounterpartyResolver
         private readonly UserCountry $countries,
     ) {}
 
-    /** @var array<int, string> */
-    private array $regionByUser = [];
+    // Held for the length of ONE resolve() and no longer. This service is a
+    // singleton in a process the desktop never restarts, so a memo that
+    // outlived the call went on classifying against a country the reader had
+    // already changed in Settings.
+    private ?string $region = null;
 
     public function resolve(CanonicalTransaction $tx, User $user): ?CounterpartyResolutionDto
     {
         $userId = $user->id;
+        $this->region = null;
 
         // The order is the classification rule, not an implementation detail:
         // first match wins, so reordering this list changes what a row
@@ -223,11 +227,11 @@ final class CounterpartyResolverService implements CounterpartyResolver
     }
 
     // Empty when the reader has named no country, which loads every region as
-    // before rather than classifying nothing. Memoised: this runs per
-    // transaction and the answer cannot change inside one import.
+    // before rather than classifying nothing. Read once per transaction, since
+    // the two rule tiers below both ask.
     private function regionFor(int $userId): string
     {
-        return $this->regionByUser[$userId] ??= $this->countries->current($userId);
+        return $this->region ??= $this->countries->current($userId);
     }
 
     private function resolveGovernment(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto

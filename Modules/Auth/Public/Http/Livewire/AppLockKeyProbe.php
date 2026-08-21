@@ -19,10 +19,7 @@ final class AppLockKeyProbe extends Component
         $keyService->withhold($session);
     }
 
-    public function refresh(): void
-    {
-        // The round trip is the point; Livewire re-renders after any action.
-    }
+    public function refresh(): void {}
 
     public function render(ViewFactory $views, AppLockKeyService $keyService, Session $session): View
     {

@@ -20,6 +20,28 @@ final class GdkEpochWrapSignature
 
     public const string ROLE_BLIND_INDEX = 'blind_index';
 
+    // What a wrap carries, read from the envelope rather than inferred from
+    // `epoch_id`. A blind-index wrap sends `epoch_id: 0` because the field is
+    // required by the shape, and a reader that treated that as an epoch id
+    // would count one epoch too many.
+    /**
+     * @param  array<string, mixed>  $wrap
+     */
+    public static function roleOf(array $wrap): string
+    {
+        $role = $wrap['key_role'] ?? self::ROLE_EPOCH;
+
+        return is_string($role) ? $role : self::ROLE_EPOCH;
+    }
+
+    /**
+     * @param  array<string, mixed>  $wrap
+     */
+    public static function carriesEpoch(array $wrap): bool
+    {
+        return self::roleOf($wrap) === self::ROLE_EPOCH;
+    }
+
     // The canonical message a wrap's Ed25519 signature covers: the sealed key
     // bytes, epoch id, and both device ids — binding all of them makes a
     // signature non-replayable into another epoch, recipient, or sender. Each
@@ -30,6 +52,7 @@ final class GdkEpochWrapSignature
         string $recipientDeviceId,
         string $senderDeviceId,
         string $role = self::ROLE_EPOCH,
+        bool $senderHoldsKeyedRows = false,
     ): string {
         $parts = [
             self::SIG_CONTEXT,
@@ -39,8 +62,13 @@ final class GdkEpochWrapSignature
             strlen($senderDeviceId).':'.$senderDeviceId,
         ];
 
+        // Both terms, in both states, but only for a non-default role: an epoch
+        // wrap signs byte-identically to one a build without roles produced,
+        // while flipping either term on a blind-index wrap breaks the signature
+        // rather than changing which key the recipient decides to keep.
         if ($role !== self::ROLE_EPOCH) {
             $parts[] = 'role:'.$role;
+            $parts[] = 'keyed:'.($senderHoldsKeyedRows ? '1' : '0');
         }
 
         return implode('|', $parts);

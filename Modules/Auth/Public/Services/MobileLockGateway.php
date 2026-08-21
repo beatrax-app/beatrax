@@ -42,7 +42,6 @@ final class MobileLockGateway
             ->update(['last_activity_at' => $this->clock->now()]);
     }
 
-    // A plain flag, so reading enrolment never triggers a biometric prompt.
     public function markColdStartEnrolled(int $userId, bool $enrolled): void
     {
         $this->db->connection()->table('user_app_lock_configs')
@@ -69,7 +68,6 @@ final class MobileLockGateway
 
         $lastRaw = $row?->last_pin_unlock_at;
         if (! is_string($lastRaw)) {
-            // Never unlocked or unparseable: require the PIN.
             return true;
         }
 

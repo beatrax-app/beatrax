@@ -56,7 +56,6 @@ final readonly class AppLockMiddleware
     // this middleware.
     public const SESSION_LAST_PAGE = 'beatrax_lock_last_page';
 
-    // Written by lock.js on backgrounding, as a unix timestamp.
     public const SESSION_BACKGROUNDED_AT = 'beatrax_lock_backgrounded_at';
 
     // Mirrors lock.js's GRACE_MS, and is the only clock that works on Android:
@@ -298,7 +297,6 @@ final readonly class AppLockMiddleware
     {
         $cached = $session->get(self::SESSION_CONFIG_CACHE);
 
-        // The injected Clock, not time(), so the TTL honours test time-travel.
         $now = $this->clock->now()->getTimestamp();
 
         if (is_array($cached)

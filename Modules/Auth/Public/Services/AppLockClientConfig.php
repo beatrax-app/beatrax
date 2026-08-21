@@ -28,7 +28,6 @@ final class AppLockClientConfig
         return $row !== null && (bool) $row->lock_enabled;
     }
 
-    // Null when no lock row exists, which callers read as nothing to protect.
     public function lastActivityAt(int $userId): ?CarbonImmutable
     {
         $value = $this->db->connection()

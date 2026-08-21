@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Services\AccountSlugResolver;
 
 // Without this synthetic-IBAN account every imported PayPal row is an
 // unknown-IBAN error, the statement_summaries writer never fires, and the
@@ -18,15 +19,17 @@ final readonly class EnsurePaypalAccountAction
     // (iban, user_id), so the two must agree.
     public const string PAYPAL_OWN_IBAN = 'PAYPAL';
 
-    public function __construct(private DatabaseManager $db) {}
+    public function __construct(
+        private DatabaseManager $db,
+        private AccountSlugResolver $slugs,
+    ) {}
 
     public function __invoke(
         User $user,
         ?string $nameOverride = null,
-        ?string $slugBodyOverride = null,
     ): bool {
-        // Raw builder rather than Account::query()->exists(), which trips
-        // PHPStan strict-rules staticMethod.dynamicCall.
+        // Account::query()->exists() trips the strict-rules staticMethod.dynamicCall
+        // check, so the existence probe goes through the raw query builder.
         $exists = $this->db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
@@ -38,14 +41,11 @@ final readonly class EnsurePaypalAccountAction
         }
 
         $name = ($nameOverride !== null && $nameOverride !== '') ? $nameOverride : 'PayPal';
-        $slug = ($slugBodyOverride !== null && $slugBodyOverride !== '')
-            ? $slugBodyOverride.'-paypal'
-            : 'paypal-paypal';
 
         Account::query()->create([
             'user_id' => $user->id,
             'name' => $name,
-            'slug' => $slug,
+            'slug' => $this->slugs->resolveUnique($user->id, $name),
             'kind' => AccountKind::Paypal->value,
             'iban' => self::PAYPAL_OWN_IBAN,
             'default_currency' => 'EUR',

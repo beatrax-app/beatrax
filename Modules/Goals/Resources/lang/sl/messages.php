@@ -30,10 +30,15 @@ return [
         'aria' => ':name: dokončano :pct%',
     ],
 
+    'card' => [
+        'target_date' => 'Ciljni datum: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Cilj je dosežen',
         'add_contributions' => 'Dodaj vplačila, da vidiš napoved',
         'not_enough_history' => 'Zaenkrat premalo zgodovine za napoved datuma',
+        'no_recent_contributions' => 'Ni nedavnih vplačil, na katerih bi temeljila napoved',
         'est' => 'Pred. :date ·',
         'projection_note' => '(napoved)',
         'projected' => 'Napoved: :date',

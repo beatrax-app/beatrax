@@ -57,8 +57,10 @@ it('matches a regex row that sits far beyond the old regex cap', function (): vo
 it('still answers with the earliest matching row when several could match', function (): void {
     $db = app(DatabaseManager::class);
 
-    // Insertion order is file-sort order and first match wins — removing the cap
-    // must not disturb that, or a broader pattern later in the file starts winning.
+    // The MOST SPECIFIC pattern wins, not the first-loaded one: file-sort order
+    // put the Czech `ALBERT` ahead of the Dutch `ALBERT HEIJN` and handed a Dutch
+    // supermarket to a Czech chain. Ties still fall back to load order, and
+    // removing the scan cap must not disturb either rule.
     seedCorpusRow($db, 0, 'ALBERT HEIJN', 'albert heijn', 'Albert Heijn');
     seedCorpusRow($db, 1, 'ALBERT', 'albert', 'Albert');
 

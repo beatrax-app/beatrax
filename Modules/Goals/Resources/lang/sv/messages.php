@@ -30,10 +30,15 @@ return [
         'aria' => ':name: :pct% klart',
     ],
 
+    'card' => [
+        'target_date' => 'Måldatum: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Målet är uppnått',
         'add_contributions' => 'Lägg till insättningar för att se en prognos',
         'not_enough_history' => 'Ännu inte tillräckligt med historik för att uppskatta ett datum',
+        'no_recent_contributions' => 'Inga nyliga insättningar att uppskatta utifrån',
         'est' => 'Ca :date ·',
         'projection_note' => '(prognos)',
         'projected' => 'Prognos: :date',

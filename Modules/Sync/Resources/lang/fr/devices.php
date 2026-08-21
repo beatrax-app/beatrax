@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Aller au verrouillage de l\'app',
 
     'encrypted_at_rest' => 'Données chiffrées au repos',
-    'encrypted_at_rest_help' => 'Tes données sont protégées par la phrase secrète de verrouillage de l\'app.',
+    'encrypted_at_rest_scope' => 'Tes notes, les libellés de transaction et les noms et IBAN de tes bénéficiaires sont chiffrés avec la phrase secrète de verrouillage de l\'app. Les montants, les dates et le nom et l\'IBAN de ton propre compte ne le sont pas, et certains noms de commerçants restent en clair ailleurs dans le fichier de base de données.',
     'on' => 'Activé',
     'securing' => 'Sécurisation de tes données…',
     'do_not_close' => 'Ne ferme pas cette fenêtre.',

@@ -115,7 +115,6 @@ final class AuthServiceProvider extends ServiceProvider
         $router->aliasMiddleware('first-user-only', FirstUserOnlyMiddleware::class);
         $router->aliasMiddleware('developer', RequireDeveloperMiddleware::class);
 
-        // The middleware exempts auth.lock and logout, or it loops.
         $router->pushMiddlewareToGroup('auth', AppLockMiddleware::class);
 
         // Exempts the change-password page and logout by name, or a flagged
@@ -126,7 +125,8 @@ final class AuthServiceProvider extends ServiceProvider
         // framework middleware is prepended to keep guests out.
         $router->prependMiddlewareToGroup('auth', Authenticate::class);
 
-        // Or a locked session bypasses the gate through /livewire/update.
+        // Livewire's update endpoint runs outside the route middleware group,
+        // so without this a locked session keeps working through /livewire/update.
         $livewire->addPersistentMiddleware(AppLockMiddleware::class);
 
         $livewire->component('auth.login-page', LoginPage::class);

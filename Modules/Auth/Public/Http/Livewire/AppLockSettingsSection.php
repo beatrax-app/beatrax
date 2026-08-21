@@ -39,7 +39,6 @@ final class AppLockSettingsSection extends Component
 
     public bool $biometricEnrolled = false;
 
-    // Overwritten by JS on mount; the server cannot see WebAuthn capability.
     public bool $biometricCapable = false;
 
     public string $biometricLabel = 'biometric unlock';
@@ -63,7 +62,6 @@ final class AppLockSettingsSection extends Component
     #[Validate(self::PIN_RULES)]
     public string $currentPin = '';
 
-    // Transient input for the password recovery wrap; never stored.
     #[Validate('nullable|string')]
     public string $accountPassword = '';
 
@@ -73,7 +71,6 @@ final class AppLockSettingsSection extends Component
 
     public bool $confirmingForgotPin = false;
 
-    // Success copy only; $flashMessage is reserved for errors.
     public string $changePinSuccessMessage = '';
 
     public function mount(
@@ -93,7 +90,6 @@ final class AppLockSettingsSection extends Component
             ->first(['lock_enabled', 'idle_timeout_minutes']);
 
         if ($row === null) {
-            // updateOrInsert does not manage timestamps, so they are set here.
             $now = $clock->now()->toDateTimeString();
             $db->connection()->table('user_app_lock_configs')->updateOrInsert(
                 ['user_id' => $user->id],
@@ -213,7 +209,6 @@ final class AppLockSettingsSection extends Component
         }
 
         $this->lockEnabled = false;
-        // disable() destroyed the data key, so every biometric wrap went with it.
         $this->biometricEnrolled = false;
         $this->confirmingDisable = false;
         $this->currentPin = '';

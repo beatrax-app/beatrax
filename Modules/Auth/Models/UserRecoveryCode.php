@@ -35,7 +35,6 @@ final class UserRecoveryCode extends Model
         'used_at',
     ];
 
-    // The table defaults created_at itself and has no updated_at column.
     /** @var bool */
     public $timestamps = false;
 

@@ -105,7 +105,7 @@ final class GoalProgressQuery
             default => 'in_progress',
         };
 
-        ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon] =
+        ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon, 'stalled' => $stalled] =
             $this->projection->project($goal, $contributedMinor, $user, $linkedPot);
 
         return new GoalProgressRow(
@@ -120,6 +120,7 @@ final class GoalProgressQuery
             progressState: $progressState,
             projectedFinishDate: $projectedDate,
             projectionBeyondHorizon: $beyondHorizon,
+            projectionStalled: $stalled,
         );
     }
 

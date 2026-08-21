@@ -27,7 +27,6 @@ final class LockStateManager
         private readonly KeyCustodian $custodian = new NullKeyCustodian,
     ) {}
 
-    // Absent means unlocked, covering both "no PIN set up" and a fresh session.
     public function isLocked(Session $session): bool
     {
         return (bool) $session->get(self::SESSION_KEY, false);
@@ -58,7 +57,8 @@ final class LockStateManager
         $session->forget(self::DATA_KEY_SESSION);
     }
 
-    // The caller still owns sodium_memzero() on its own copy of $dataKey.
+    // The session holds the key from here on, but the caller's own copy is
+    // still live: sodium_memzero() on it remains the caller's responsibility.
     public function unlock(Session $session, string $dataKey): void
     {
         $session->put(self::SESSION_KEY, false);

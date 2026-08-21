@@ -63,7 +63,6 @@ abstract class StatementSummaryStartingBalanceDetector implements DetectsStartin
             if (! isset($earliestDatePerAccount[$accountId])) {
                 $earliestDatePerAccount[$accountId] = $isoDate;
             } elseif ($isoDate !== $earliestDatePerAccount[$accountId]) {
-                // Sorted ASC, so anything past the earliest date is later.
                 continue;
             }
 
@@ -85,7 +84,6 @@ abstract class StatementSummaryStartingBalanceDetector implements DetectsStartin
         return $out;
     }
 
-    // accounts.starting_balance_date is a `date` column.
     private static function dateOnly(string $raw): string
     {
         $spacePos = strpos($raw, ' ');

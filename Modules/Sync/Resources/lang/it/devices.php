@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => "Vai a Blocco dell'app",
 
     'encrypted_at_rest' => 'Dati crittografati a riposo',
-    'encrypted_at_rest_help' => "I tuoi dati sono protetti dalla passphrase di blocco dell'app.",
+    'encrypted_at_rest_scope' => 'Le note, le descrizioni delle transazioni e i nomi e gli IBAN di chi paghi sono cifrati con la passphrase del blocco app. Gli importi, le date e il nome e l\'IBAN del tuo conto no, e alcuni nomi di esercenti restano in chiaro altrove nel file di database.',
     'on' => 'Attivo',
     'securing' => 'Protezione dei tuoi dati…',
     'do_not_close' => 'Non chiudere questa finestra.',

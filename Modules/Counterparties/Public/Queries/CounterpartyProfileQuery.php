@@ -159,7 +159,8 @@ final readonly class CounterpartyProfileQuery
             return [];
         }
 
-        // Raw builder for the same `staticMethod.dynamicCall` reason as above.
+        // Raw builder: whereIn() through the Eloquent\Builder __call forwarding
+        // trips larastan-strict staticMethod.dynamicCall, as in identitiesForIds().
         $rows = $this->db->connection()->table('counterparties')
             ->where('user_id', $user->id)
             ->whereIn('slug', $clean)

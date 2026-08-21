@@ -13,6 +13,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Import\Internal\Enums\PreviewRowStatus;
 use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
 use Modules\Import\Internal\Exceptions\PreviewExpiredException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
@@ -21,12 +22,14 @@ use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Services\AccountSlugResolver;
 
 /**
  * @link ../../../../../.docs/features/import/architecture.md#preview-wizard-inline-account-naming
@@ -51,7 +54,6 @@ final class PreviewWizard extends Component
 
     public bool $previewExpired = false;
 
-    // null (pre-mount) → pending → running → complete/failed.
     public ?string $chainResolutionStatus = null;
 
     public int $chainResolutionLinkedCount = 0;
@@ -99,7 +101,6 @@ final class PreviewWizard extends Component
     ): void {
         $user = $currentUser->user();
 
-        // Equality, never LIKE: a substring match lets user_id=1 match 11.
         $row = $db->connection()->table('chain_resolution_runs')
             ->where('user_id', $user->id)
             ->orderByDesc('id')
@@ -184,11 +185,12 @@ final class PreviewWizard extends Component
     public function saveIcsAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
+        AccountSlugResolver $slugs,
     ): void {
         $this->resetErrorBag('icsAccountName');
 
         try {
-            [$trimmed, $slugBody] = AccountNamer::validateName($this->icsAccountName);
+            $trimmed = AccountNamer::validateName($this->icsAccountName);
         } catch (InvalidAccountNameException $e) {
             $this->addError('icsAccountName', $e->getMessage());
 
@@ -202,7 +204,7 @@ final class PreviewWizard extends Component
         Account::query()->create([
             'user_id' => $user->id,
             'name' => $trimmed,
-            'slug' => $slugBody.'-ics-card',
+            'slug' => $slugs->resolveUnique($user->id, $trimmed),
             'kind' => AccountKind::IcsCard->value,
             'iban' => self::ICS_OWN_IBAN,
             'default_currency' => 'EUR',
@@ -225,7 +227,6 @@ final class PreviewWizard extends Component
         $this->icsAccountName = '';
     }
 
-    // Mirrors saveIcsAccountName() with the PayPal synthetic IBAN and kind.
     public function savePaypalAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -234,7 +235,7 @@ final class PreviewWizard extends Component
         $this->resetErrorBag('paypalAccountName');
 
         try {
-            [$trimmed, $slugBody] = AccountNamer::validateName($this->paypalAccountName);
+            $trimmed = AccountNamer::validateName($this->paypalAccountName);
         } catch (InvalidAccountNameException $e) {
             $this->addError('paypalAccountName', $e->getMessage());
 
@@ -245,7 +246,7 @@ final class PreviewWizard extends Component
 
         $user = $currentUser->user();
 
-        ($ensurePaypal)($user, nameOverride: $trimmed, slugBodyOverride: $slugBody);
+        ($ensurePaypal)($user, nameOverride: $trimmed);
 
         /** @var ImportRun $importRun */
         $importRun = ImportRun::query()
@@ -293,6 +294,12 @@ final class PreviewWizard extends Component
             return;
         }
 
+        // Nothing importable means nothing to confirm, and confirming it wrote
+        // a confirmed run whose own summary reported zero of everything.
+        if (self::importableRowCount($preview) === 0) {
+            return;
+        }
+
         try {
             ($confirmer)($this->importRunId, $currentUser->user());
         } catch (PreviewExpiredException) {
@@ -334,6 +341,8 @@ final class PreviewWizard extends Component
             'previewExpired' => $this->previewExpired,
             'needsIcsAccountName' => $needsIcsAccountName,
             'needsPaypalAccountName' => $needsPaypalAccountName,
+            'importableRowCount' => self::importableRowCount($preview),
+            'failedRowCount' => self::failedRowCount($preview),
         ]);
     }
 
@@ -366,7 +375,6 @@ final class PreviewWizard extends Component
         return $icsAccountCount === 0;
     }
 
-    // Mirrors needsIcsAccountName() for the PayPal branch.
     private function needsPaypalAccountName(CurrentUser $currentUser, DatabaseManager $db): bool
     {
         $user = $currentUser->user();
@@ -392,5 +400,32 @@ final class PreviewWizard extends Component
             ->count();
 
         return $paypalAccountCount === 0;
+    }
+
+    // What confirming would actually write. A row that failed is not one of
+    // them, and neither is the file-level failure, which is not a row at all.
+    private static function importableRowCount(?ImportPreviewResult $preview): int
+    {
+        if ($preview === null) {
+            return 0;
+        }
+
+        return count($preview->rows) - self::failedRowCount($preview);
+    }
+
+    private static function failedRowCount(?ImportPreviewResult $preview): int
+    {
+        if ($preview === null) {
+            return 0;
+        }
+
+        $failed = 0;
+        foreach ($preview->rows as $row) {
+            if ($row->status === PreviewRowStatus::Error->value) {
+                $failed++;
+            }
+        }
+
+        return $failed;
     }
 }

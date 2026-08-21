@@ -13,6 +13,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use SodiumException;
 
@@ -34,6 +35,7 @@ final class GdkRotationService
         private readonly SodiumPrimitives $sodium,
         private readonly DeviceIdentityLoader $identityLoader,
         private readonly DeviceKeySigner $signer,
+        private readonly BlindIndexCodec $blindIndex,
     ) {}
 
     // $session is per-method, never constructor-held: this class is a
@@ -125,7 +127,7 @@ final class GdkRotationService
     // sealed bytes + epoch id + both device ids gives sender authenticity, so a
     // forged wrap is refused rather than the channel being trusted.
     /**
-     * @return array{type: string, epoch_id: int, wrapped_key_b64: string, recipient_device_id: string, sender_device_id: string, sig_hex: string, key_role?: string}
+     * @return array{type: string, epoch_id: int, wrapped_key_b64: string, recipient_device_id: string, sender_device_id: string, sig_hex: string, key_role?: string, sender_holds_keyed_rows?: bool}
      *
      * @throws InvalidArgumentException when a required argument is empty.
      * @throws SodiumException on a libsodium failure (translated by callers).
@@ -138,6 +140,7 @@ final class GdkRotationService
         string $senderDeviceId,
         string $senderEd25519SecretKeyHex,
         string $role = GdkEpochWrapSignature::ROLE_EPOCH,
+        bool $senderHoldsKeyedRows = false,
     ): array {
         if ($rawGdkKey === '' || $recipientX25519PublicKeyBin === ''
             || $senderDeviceId === '' || $senderEd25519SecretKeyHex === '') {
@@ -152,7 +155,7 @@ final class GdkRotationService
 
         try {
             $sigHex = $this->signer->sign(
-                GdkEpochWrapSignature::signingMessage($epochId, $sealed, $recipientDeviceId, $senderDeviceId, $role),
+                GdkEpochWrapSignature::signingMessage($epochId, $sealed, $recipientDeviceId, $senderDeviceId, $role, $senderHoldsKeyedRows),
                 $senderSecretBin,
             );
         } finally {
@@ -170,6 +173,7 @@ final class GdkRotationService
 
         if ($role !== GdkEpochWrapSignature::ROLE_EPOCH) {
             $wrap['key_role'] = $role;
+            $wrap['sender_holds_keyed_rows'] = $senderHoldsKeyedRows;
         }
 
         return $wrap;
@@ -209,9 +213,23 @@ final class GdkRotationService
             // reported as two types, depending on which key it was converting.
             $recipientPub = $this->sodium->hexToBin($recipient['pubHex']);
 
-            $this->db->connection()->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity): void {
+            // The recipient's appendEpoch() advances current_epoch to whatever
+            // it applied last, and nothing on the wire says which epoch is
+            // current. Delivering the current one last is what makes that
+            // arrival order agree with this device's own answer.
+            $currentEpochId = $this->currentEpochIdOrNull($userId, $session);
+
+            $this->db->connection()->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity, $userId, $currentEpochId): void {
                 foreach ($keyring->epochs() as $epoch) {
-                    $this->deliverWrap($epoch->epochId, $epoch->keyHex, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity);
+                    if ($epoch->epochId !== $currentEpochId) {
+                        $this->deliverWrap($epoch->epochId, $epoch->keyHex, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity);
+                    }
+                }
+
+                foreach ($keyring->epochs() as $epoch) {
+                    if ($epoch->epochId === $currentEpochId) {
+                        $this->deliverWrap($epoch->epochId, $epoch->keyHex, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity);
+                    }
                 }
 
                 // Rides the same sealed, signed, still-confirmed-sender channel
@@ -228,6 +246,7 @@ final class GdkRotationService
                         $selfDeviceId,
                         $identity,
                         GdkEpochWrapSignature::ROLE_BLIND_INDEX,
+                        $this->blindIndex->holdsDerivedRows($userId),
                     );
                 }
             });
@@ -247,11 +266,12 @@ final class GdkRotationService
         ?string $selfDeviceId,
         DeviceIdentityDto $identity,
         string $role = GdkEpochWrapSignature::ROLE_EPOCH,
+        bool $senderHoldsKeyedRows = false,
     ): void {
         $rawKey = $this->sodium->hexToBin($keyHex);
 
         try {
-            $wrap = $this->buildGdkEpochWrap($epochId, $rawKey, $recipientPub, $recipientDeviceId, $identity->deviceId, $identity->ed25519SecretKeyHex, $role);
+            $wrap = $this->buildGdkEpochWrap($epochId, $rawKey, $recipientPub, $recipientDeviceId, $identity->deviceId, $identity->ed25519SecretKeyHex, $role, $senderHoldsKeyedRows);
 
             $this->relayMailbox->deliver(
                 senderDid: $selfDeviceId ?? '',
@@ -260,6 +280,18 @@ final class GdkRotationService
             );
         } finally {
             sodium_memzero($rawKey);
+        }
+    }
+
+    // Null when encryption was never enabled, or when the recorded epoch has
+    // no key in the keyring — a stranded state EncryptionMigrationService
+    // reports separately, and not one this fan-out should decide anything on.
+    private function currentEpochIdOrNull(int $userId, Session $session): ?int
+    {
+        try {
+            return $this->keyringService->currentEpoch($userId, $session)->epochId;
+        } catch (\LogicException|\RuntimeException) {
+            return null;
         }
     }
 

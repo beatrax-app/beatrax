@@ -6,7 +6,8 @@ namespace Modules\Import\Public\Enums;
 
 use Modules\Core\Public\Support\Lang;
 
-// A trigger on transactions.payment_type rejects anything outside this set.
+// A database trigger rejects any transactions.payment_type outside these
+// backing values, so a new case needs a migration to widen the trigger first.
 enum PaymentType: string
 {
     case Pin = 'pin';
@@ -37,7 +38,6 @@ enum PaymentType: string
         return $glyph.' '.Lang::get('import::payment_type.'.$this->value);
     }
 
-    // A bare modifier; consumers compose `.ptype-chip.{class}`.
     public function chipClass(): string
     {
         return match ($this) {

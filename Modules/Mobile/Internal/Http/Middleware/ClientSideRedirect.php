@@ -11,10 +11,8 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
 
-// A server redirect never moves the address bar inside the ANDROID shell:
-// shouldInterceptRequest() can only hand the WebView a body for the URL it
-// asked for, so /login rendered the dashboard under /login. iOS is excluded —
-// its PHPSchemeHandler already follows Location with a real navigation.
+// A server redirect never moved the address bar in the Android shell, so
+// /login rendered the dashboard under /login.
 final class ClientSideRedirect
 {
     public function __construct(private readonly Vite $vite) {}
@@ -29,7 +27,7 @@ final class ClientSideRedirect
         // instanceof, not just isRedirection(): StreamedResponse and
         // BinaryFileResponse throw from setContent(), so a 3xx of either class
         // would 500 where it used to redirect.
-        if (UserDataPathService::platform() !== 'android'
+        if (UserDataPathService::platform()?->needsClientSideRedirect() !== true
             || ! $response instanceof RedirectResponse
             || ! $this->isDocumentNavigation($request)
         ) {

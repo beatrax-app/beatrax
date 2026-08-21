@@ -39,7 +39,6 @@ final class LanSyncClient
 
     private const float READ_TIMEOUT_SECONDS = 15.0;
 
-    // Amplification guard, mirroring SyncWebSocketHandler's own limit.
     private const int MAX_CATCHUP_FRAMES = 100_000;
 
     // A larger backlog is picked up on the next connect rather than pinning
@@ -151,7 +150,6 @@ final class LanSyncClient
         $confirmed = $this->registryService->deviceX25519Keys($identity->userId);
         unset($confirmed[$identity->deviceId]);
 
-        // Single-household pairing: the first confirmed non-self device.
         $values = array_values($confirmed);
 
         return $values[0] ?? null;
@@ -238,7 +236,6 @@ final class LanSyncClient
 
         $resp = $this->catchUp->parseControlMessage($syncSession->decrypt($respMsg->buffer()));
         $declaredFrameCount = isset($resp['frame_count']) && is_int($resp['frame_count']) ? $resp['frame_count'] : 0;
-        // Clamped so a corrupted or hostile frame_count cannot pin the burst.
         $frameCount = max(0, min($declaredFrameCount, self::MAX_CATCHUP_FRAMES));
 
         for ($i = 0; $i < $frameCount; $i++) {

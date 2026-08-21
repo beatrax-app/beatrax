@@ -27,16 +27,18 @@ function recoveryCodesSaveUser(string $username): User
     return $user;
 }
 
-it('offers the share sheet when the mobile export endpoint is reachable', function (): void {
+it('asks the endpoint on a shell that drops WebView downloads', function (): void {
     $user = recoveryCodesSaveUser('recovery-native');
 
     $this->actingAs($user)->withSession([
         RecoveryCodesDisplay::SESSION_KEY => ['ABCD-EFGH-JKLM-NPQR-STUV'],
     ]);
 
-    // The route is registered in every composer root; only the phone runtime
-    // has a share sheet behind it.
-    $_SERVER['NATIVEPHP_PLATFORM'] = 'ios';
+    // Android, not iOS. The route is registered in every composer root, and the
+    // Android shell registers no DownloadListener, so a blob <a download> there
+    // is dropped without a word and the kept copy is all there is. The iOS shell
+    // saves the download and shows a share sheet, so it is not sent here.
+    $_SERVER['NATIVEPHP_PLATFORM'] = 'android';
 
     try {
         $html = Livewire::test(RecoveryCodesDisplay::class)->html();
