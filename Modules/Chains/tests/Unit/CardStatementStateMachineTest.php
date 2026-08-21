@@ -14,17 +14,6 @@ use Modules\Ledger\Models\ImportRun;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the CardStatementStateMachine lifecycle.
- *
- * Tests the four canonical transitions (settled / overpaid /
- * partially_settled / no-op) plus the cross-user safety guard.
- *
- * Pest dataset shape mirrors the IcsAmountParserTest fixture pattern
- * — one row per transition, single closure body, parameterised
- * expected outputs.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -116,14 +105,12 @@ it('applies the documented lifecycle transition per dataset row', function (int 
 })->with('state_transitions');
 
 it('refuses to apply settlement against another user\'s statement and leaves the row untouched', function (): void {
-    // The cross-user case raises the same type as a genuinely absent row,
-    // on purpose: distinguishing them would confirm that another user's
-    // statement exists.
+    // Absent row and other-user row raise the same type on purpose:
+    // distinguishing them would confirm another user's statement exists.
     expect(fn () => $this->machine->applySettlement($this->statementId, 84732, $this->otherUser))
         ->toThrow(CardStatementNotFoundException::class);
 
-    // Confirm the row is unchanged — no partial write leaked through
-    // the transaction frame.
+    // No partial write leaked through the transaction frame.
     /** @var CardStatement $row */
     $row = CardStatement::query()->findOrFail($this->statementId);
     expect($row->open_balance_minor)->toBe(84732);

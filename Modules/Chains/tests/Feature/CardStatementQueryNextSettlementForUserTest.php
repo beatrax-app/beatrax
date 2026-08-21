@@ -12,24 +12,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * Feature coverage for CardStatementQuery::nextSettlementForUser —
- * the funder-aware Chains Public surface Wave 3 chain-aware
- * forecasting consumes. Covers:
- *
- *   - Null when no open / partially_settled card_statement exists.
- *   - Returns DTO with funder=ASN when an open card_statement +
- *     confirmed historical settlement exists.
- *   - Falls back to the user's first ASN account when no historical
- *     settlement exists.
- *   - Null when no ASN account exists at all (graceful degradation).
- *   - Cross-user isolation — never leaks user B's data to user A.
- *   - Picks the most-recent open statement.
- *   - partially_settled state is included.
- *   - Funder resolution picks the most-recent chain_link when
- *     multiple historical settlements exist.
- */
-
 function nsmUser(string $username): User
 {
     return User::query()->create([
@@ -75,12 +57,6 @@ function nsmImportRun(User $user): ImportRun
     ]);
 }
 
-/**
- * Seeds a synthetic transaction on the supplied account with a
- * unique fingerprint. Used to wire the from/to ends of an
- * `ics_bulk_settle` chain_link without depending on the real ICS
- * adapter stack.
- */
 function nsmTransaction(User $user, Account $account, ImportRun $run, string $tag, int $amountMinor): Transaction
 {
     return Transaction::query()->create([
@@ -105,10 +81,6 @@ function nsmTransaction(User $user, Account $account, ImportRun $run, string $ta
     ]);
 }
 
-/**
- * Inserts a confirmed ics_bulk_settle chain_link wiring the supplied
- * funded (ICS) transaction to the supplied funder (ASN) transaction.
- */
 function nsmChainLink(
     DatabaseManager $db,
     User $user,
@@ -166,13 +138,10 @@ it('returns a DTO with funder=ASN when an open card_statement + historical settl
     $ics = nsmIcsAccount($user, 'nsm-ics-funder');
     $run = nsmImportRun($user);
 
-    // Historical settlement: a confirmed ics_bulk_settle linking an
-    // ICS expense to an ASN→ICS funder transaction.
     $historicalIcsExpense = nsmTransaction($user, $ics, $run, 'hist-ics', -1500);
     $historicalAsnFunder = nsmTransaction($user, $asn, $run, 'hist-asn', -1500);
     nsmChainLink($this->db, $user, $historicalIcsExpense, $historicalAsnFunder, '2026-04-15 12:00:00');
 
-    // Open card_statement for the same ICS account.
     $openStatement = CardStatement::query()->create([
         'user_id' => $user->id,
         'account_id' => $ics->id,
@@ -193,6 +162,32 @@ it('returns a DTO with funder=ASN when an open card_statement + historical settl
     expect($dto?->amount->currency())->toBe('EUR');
     expect($dto?->dueDate->format('Y-m-d'))->toBe('2026-05-05');
     expect($dto?->state)->toBe('open');
+});
+
+it('states the amount in the currency the statement was stored in', function (): void {
+    // The read site used to hardcode EUR, which was right only for as long as
+    // every stored row happened to be EUR.
+    $user = nsmUser('nsm-currency');
+    $asn = nsmAsnAccount($user, 'nsm-asn-currency', 'NL06ASNB1234567099');
+    $ics = nsmIcsAccount($user, 'nsm-ics-currency');
+    $run = nsmImportRun($user);
+
+    CardStatement::query()->create([
+        'user_id' => $user->id,
+        'account_id' => $ics->id,
+        'import_run_id' => $run->id,
+        'period_start' => '2026-04-01 00:00:00',
+        'period_end' => '2026-04-30 23:59:59',
+        'total_amount_minor' => -4200,
+        'open_balance_minor' => 4200,
+        'currency' => 'USD',
+        'state' => 'open',
+    ]);
+
+    $dto = $this->query->nextSettlementForUser($user);
+
+    expect($dto?->amount->currency())->toBe('USD');
+    expect($dto?->accountId)->toBe($asn->id);
 });
 
 it('falls back to the user\'s first ASN account when no historical settlement exists', function (): void {
@@ -241,7 +236,6 @@ it('isolates by user — user B\'s open statement never leaks to user A', functi
     $userA = nsmUser('nsm-iso-a');
     $userB = nsmUser('nsm-iso-b');
 
-    // User B has an open card_statement + ASN; user A has nothing.
     nsmAsnAccount($userB, 'nsm-asn-iso-b', 'NL49ASNB1234567004');
     $icsB = nsmIcsAccount($userB, 'nsm-ics-iso-b');
     $runB = nsmImportRun($userB);
@@ -331,12 +325,10 @@ it('funder resolution picks the most-recent chain_link when multiple historical 
     $ics = nsmIcsAccount($user, 'nsm-ics-multi');
     $run = nsmImportRun($user);
 
-    // Older settlement via asnOld.
     $oldIcsExpense = nsmTransaction($user, $ics, $run, 'old-ics', -2500);
     $oldAsnFunder = nsmTransaction($user, $asnOld, $run, 'old-asn', -2500);
     nsmChainLink($this->db, $user, $oldIcsExpense, $oldAsnFunder, '2026-02-15 12:00:00');
 
-    // Newer settlement via asnNew.
     $newIcsExpense = nsmTransaction($user, $ics, $run, 'new-ics', -3500);
     $newAsnFunder = nsmTransaction($user, $asnNew, $run, 'new-asn', -3500);
     nsmChainLink($this->db, $user, $newIcsExpense, $newAsnFunder, '2026-04-15 12:00:00');

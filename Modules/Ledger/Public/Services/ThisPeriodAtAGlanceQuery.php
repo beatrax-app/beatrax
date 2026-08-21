@@ -184,6 +184,7 @@ final class ThisPeriodAtAGlanceQuery
             ->select(
                 'card_statements.id as id',
                 'card_statements.open_balance_minor as open_balance_minor',
+                'card_statements.currency as currency',
                 'card_statements.period_end as period_end',
                 'card_statements.state as state',
             )
@@ -197,7 +198,7 @@ final class ThisPeriodAtAGlanceQuery
         $openBalanceMinor = self::toInt($row->open_balance_minor);
 
         return new CardStatementForecastTile(
-            amount: Money::ofMinor($openBalanceMinor, 'EUR'),
+            amount: Money::ofMinor($openBalanceMinor, self::toString($row->currency)),
             dueDate: $periodEnd->addDays(CardStatementQuery::STATEMENT_DUE_GRACE_DAYS)->startOfDay(),
             statementId: self::toInt($row->id),
             state: self::toString($row->state),

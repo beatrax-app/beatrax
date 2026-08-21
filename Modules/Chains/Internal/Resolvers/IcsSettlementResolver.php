@@ -21,6 +21,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -194,6 +195,7 @@ final class IcsSettlementResolver
                     'from_statement_id' => $statementId,
                     'to_statement_id' => null,
                     'amount_minor' => $surplus,
+                    'currency' => $this->statementCurrency($statementId, $user),
                     'reason' => CardStatementCreditReason::Overpayment->value,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -333,6 +335,7 @@ final class IcsSettlementResolver
             'from_statement_id' => $closedStatementId,
             'to_statement_id' => $nextStatementId,
             'amount_minor' => abs($refundAmount),
+            'currency' => $this->statementCurrency($closedStatementId, $user),
             'reason' => CardStatementCreditReason::RefundAfterClose->value,
             'created_at' => $now,
             'updated_at' => $now,
@@ -408,6 +411,19 @@ final class IcsSettlementResolver
                 'transactions.posted_at',
                 'transactions.counterparty_normalized',
             ]);
+    }
+
+    // A credit is denominated in the statement it came off, never in
+    // whatever the reading side would otherwise have assumed.
+    private function statementCurrency(int $statementId, User $user): string
+    {
+        $currency = $this->db->connection()
+            ->table('card_statements')
+            ->where('user_id', $user->id)
+            ->where('id', $statementId)
+            ->value('currency');
+
+        return is_string($currency) && $currency !== '' ? $currency : Currency::Eur->value;
     }
 
     private function priorCreditsMinor(int $statementId, User $user): int

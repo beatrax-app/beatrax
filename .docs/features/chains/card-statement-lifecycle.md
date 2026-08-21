@@ -22,6 +22,7 @@ One row models one statement period on one ICS-kind account.
 |---|---|
 | `total_amount_minor` | The statement total, **negative** — money owed. Carries `statement_summaries.closing_balance_minor`'s sign verbatim. |
 | `open_balance_minor` | What is still to settle, **positive**. Starts at `abs(total_amount_minor)`. |
+| `currency` | What the two amounts above count. Taken from `statement_summaries.closing_balance_currency`; `EUR` when the summary states none, which is every row the ICS reader wrote. |
 | `state` | `open`, `partially_settled`, `settled`, `overpaid`. |
 | `period_start` / `period_end` | The statement window. Both are required. |
 | `import_run_id` | Nullable, `nullOnDelete` — a back-populated row outlives the import that produced it. |
@@ -106,8 +107,10 @@ this the only mutator: no other file may write `card_statements.state`.
 ## Credits between statements
 
 `card_statement_credits` is the carry-forward ledger. A row is a
-`(from_statement_id, to_statement_id, amount_minor, reason)` tuple, and
-`reason` is restricted by its own trigger pair to exactly two values:
+`(from_statement_id, to_statement_id, amount_minor, currency, reason)`
+tuple whose `currency` is the one the source statement is denominated
+in, and `reason` is restricted by its own trigger pair to exactly two
+values:
 
 - **`overpayment`** — the surplus left when a settlement overshoots.
   Written by the resolver's main pass at the moment the state machine

@@ -14,30 +14,7 @@ use Modules\Ledger\Models\StatementSummary;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for CardStatementUpserter — the per-import upsert path
- * that promotes statement_summaries rows on ICS-kind accounts into
- * card_statements rows. Locks six behavioral invariants:
- *
- *   1. Promotes a fresh ICS statement_summary into a card_statements
- *      row with the correct sign convention.
- *   2. Idempotent on re-runs — zero new rows, return value 0.
- *   3. firstOrCreate semantics — re-runs do NOT mutate the existing
- *      row's state column (a future refactor to updateOrCreate would
- *      reset it; this test catches that regression).
- *   4. Strict accounts.kind='ics_card' filter — ASN / PayPal summaries
- *      are skipped.
- *   5. Skips rows with null period_start or null period_end (UNIQUE
- *      constraint requires both, so the upserter silently drops them).
- *   6. Per-import-run scoped — does NOT promote summaries from prior
- *      import_runs.
- */
-
 /**
- * Build a User + ICS / ASN Account + ImportRun + statement_summary
- * fixture in one call. Returns the ImportRun id so the test can pass
- * it through to the upserter.
- *
  * @param  array<string, mixed>  $summaryOverrides
  * @return array{user: User, account: Account, run: ImportRun, summary: StatementSummary}
  */
@@ -178,11 +155,9 @@ it('does NOT mutate an existing card_statements row state column on re-run (firs
 });
 
 it('skips statement_summaries whose owning account.kind is not ics_card', function (): void {
-    // The statement_summaries UNIQUE (user_id, import_run_id) prevents
-    // two summaries on the same import_run. So the kind-filter test
-    // verifies the filter by calling the upserter against the ASN
-    // import_run separately: zero ICS-kind summaries on that run →
-    // zero card_statements rows written.
+    // statement_summaries has UNIQUE (user_id, import_run_id), so the ASN and
+    // PayPal summaries live on their own import_runs and the filter is
+    // verified by upserting against each run separately.
     $asnUser = User::query()->create([
         'username' => 'upsert-kind-asn',
         'password' => 'fixture-password',
@@ -225,9 +200,8 @@ it('skips statement_summaries whose owning account.kind is not ics_card', functi
     expect($inserted)->toBe(0);
     expect(CardStatement::query()->where('user_id', $asnUser->id)->count())->toBe(0);
 
-    // A PayPal summary on another run for the same user also fails
-    // the filter — confirms the predicate is `kind='ics_card'`, not
-    // `kind!='bank'`.
+    // A PayPal summary also fails, proving the predicate is kind='ics_card'
+    // and not kind!='bank'.
     $paypalAccount = Account::query()->create([
         'user_id' => $asnUser->id,
         'name' => 'PayPal',
@@ -265,10 +239,8 @@ it('skips statement_summaries whose owning account.kind is not ics_card', functi
 });
 
 it('skips statement_summaries with null period_start or null period_end', function (): void {
-    // statement_summaries has UNIQUE (user_id, import_run_id), so the
-    // null-period test seeds ONE import_run with ONE summary whose
-    // period_end is NULL — the upserter silently skips it. No DB
-    // exception, no UNIQUE violation, zero card_statements rows.
+    // The UNIQUE (user_id, import_run_id) means one summary per run, so this
+    // seeds a single run whose period_end is NULL.
     $fixture = seedIcsSummary(
         username: 'upsert-null',
         accountKind: 'ics_card',
@@ -308,7 +280,6 @@ it('is per-import-run scoped — does NOT promote rows from prior import runs', 
         periodEnd: '2026-01-31 23:59:59',
     );
 
-    // Build a SECOND import_run for the SAME user + ICS account.
     $secondRun = ImportRun::query()->create([
         'user_id' => $fixture['user']->id,
         'source_format' => 'ics-pdf',
@@ -332,12 +303,10 @@ it('is per-import-run scoped — does NOT promote rows from prior import runs', 
         'entry_count' => 1,
     ]);
 
-    // Upsert ONLY against the second import_run.
     $inserted = $this->upserter->upsertForImportRun($secondRun->id, $fixture['user']);
 
     expect($inserted)->toBe(1);
-    // The first (Jan) summary stayed unpromoted because its
-    // import_run_id is the first run, not the second.
+    // The January summary stays unpromoted: its import_run_id is the first run.
     expect(CardStatement::query()->where('user_id', $fixture['user']->id)->count())->toBe(1);
     /** @var CardStatement $row */
     $row = CardStatement::query()->where('user_id', $fixture['user']->id)->firstOrFail();
