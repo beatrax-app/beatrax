@@ -7,8 +7,10 @@ namespace Modules\Budgets\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Budgets\Public\Dto\BudgetProgressRow;
+use Modules\Budgets\Public\Enums\BudgetProgressStatus;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\LocaleCollator;
 use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
@@ -63,9 +65,9 @@ final class BudgetProgressQuery
 
             $fraction = $budgetMinor > 0 ? $spentMinor / $budgetMinor : 0.0;
             $status = match (true) {
-                $fraction > 1.0 => 'over',
-                $fraction >= self::NEAR_THRESHOLD => 'near',
-                default => 'under',
+                $fraction > 1.0 => BudgetProgressStatus::Over,
+                $fraction >= self::NEAR_THRESHOLD => BudgetProgressStatus::Near,
+                default => BudgetProgressStatus::Under,
             };
 
             $rows[] = new BudgetProgressRow(
@@ -81,8 +83,11 @@ final class BudgetProgressQuery
 
         // Alphabetical by what the reader sees, not by what is stored — the
         // stored English orders a Dutch budget screen by the wrong word.
-        usort($rows, static fn (BudgetProgressRow $a, BudgetProgressRow $b): int => strcasecmp($a->name, $b->name)
-            ?: $a->categoryId <=> $b->categoryId);
+        usort($rows, static function (BudgetProgressRow $a, BudgetProgressRow $b): int {
+            $byName = LocaleCollator::compare($a->name, $b->name);
+
+            return $byName !== 0 ? $byName : $a->categoryId <=> $b->categoryId;
+        });
 
         return $rows;
     }
@@ -113,7 +118,7 @@ final class BudgetProgressQuery
             ->where(static function (QueryBuilder $query) use ($user): void {
                 $query->whereNull('user_id')->orWhere('user_id', $user->id);
             })
-            ->get(['id', 'name', 'slug', 'name_is_default']);
+            ->get(['id', ...CategoryDisplayName::bareColumns()]);
 
         $naming = [];
         foreach ($rows as $row) {
@@ -126,7 +131,11 @@ final class BudgetProgressQuery
 
         // Alphabetical by the resolved name, which is the order every caller
         // of this and of expenseCategories() renders in.
-        uksort($naming, static fn (int $a, int $b): int => strnatcasecmp($naming[$a]['name'], $naming[$b]['name']) ?: $a <=> $b);
+        uksort($naming, static function (int $a, int $b) use ($naming): int {
+            $byName = LocaleCollator::compare($naming[$a]['name'], $naming[$b]['name']);
+
+            return $byName !== 0 ? $byName : $a <=> $b;
+        });
 
         return $naming;
     }

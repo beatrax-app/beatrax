@@ -16,6 +16,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\LocaleCollator;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Reports\Internal\Actions\SaveReport;
@@ -313,7 +314,7 @@ final class ReportBuilder extends Component
             ->where(static function (Builder $query) use ($userId): void {
                 $query->whereNull('user_id')->orWhere('user_id', $userId);
             })
-            ->get(['id', 'name', 'slug', 'name_is_default'])
+            ->get(['id', ...CategoryDisplayName::bareColumns()])
             ->all();
 
         $options = array_values(array_map(static function (stdClass $row): array {
@@ -323,7 +324,11 @@ final class ReportBuilder extends Component
             ];
         }, $rows));
 
-        usort($options, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']) ?: $a['id'] <=> $b['id']);
+        usort($options, static function (array $a, array $b): int {
+            $byName = LocaleCollator::compare($a['name'], $b['name']);
+
+            return $byName !== 0 ? $byName : $a['id'] <=> $b['id'];
+        });
 
         return $options;
     }

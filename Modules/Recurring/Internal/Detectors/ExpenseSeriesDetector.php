@@ -21,6 +21,9 @@ use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use stdClass;
 
+/**
+ * @phpstan-type SeriesIndex array{cluster: array<string, RecurringSeries>, counterparty: array<string, RecurringSeries>, tolerance: array<string, int>}
+ */
 final class ExpenseSeriesDetector implements SeriesDetector
 {
     use CoercesScalars;
@@ -30,6 +33,13 @@ final class ExpenseSeriesDetector implements SeriesDetector
     private const DEFAULT_VARIANCE_TOLERANCE_PERCENT = 25;
 
     private const MIN_OCCURRENCES = 2;
+
+    private const TOLERANCE_STATES = [
+        RecurringSeriesState::Pending->value,
+        RecurringSeriesState::Approved->value,
+        RecurringSeriesState::CadenceChanged->value,
+        RecurringSeriesState::Snoozed->value,
+    ];
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -86,17 +96,98 @@ final class ExpenseSeriesDetector implements SeriesDetector
             $groups[$key]['rows'][] = $row;
         }
 
+        $currencies = [];
         foreach ($groups as $group) {
-            $this->processCluster($user, $group['counterparty_normalized'], $group['currency'], $group['rows']);
+            $currencies[] = $group['currency'];
         }
+
+        $index = $this->existingSeriesIndex($user, array_values(array_unique($currencies)));
+
+        foreach ($groups as $group) {
+            $this->processCluster($user, $group['counterparty_normalized'], $group['currency'], $group['rows'], $index);
+        }
+    }
+
+    // Three separate lookups per cluster is three queries per distinct
+    // merchant, and every answer they can give lives in this user's own
+    // expense series — which is one read for the whole sweep.
+    /**
+     * @param  list<string>  $currencies
+     * @return SeriesIndex
+     */
+    private function existingSeriesIndex(User $user, array $currencies): array
+    {
+        $index = self::emptyIndex();
+        if ($currencies === []) {
+            return $index;
+        }
+
+        // Ascending id is the order an index scan on either key hands back, so
+        // the row a lookup lands on here is the row `first()` lands on there.
+        $rows = $this->db->connection()->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->where('direction', Direction::Expense->value)
+            ->whereIn('latest_currency', $currencies)
+            ->orderBy('id')
+            ->get()
+            ->all();
+
+        foreach (RecurringSeries::hydrate(array_map(
+            static fn (stdClass $row): array => (array) $row,
+            $rows,
+        )) as $row) {
+            self::indexSeries($index, $row);
+        }
+
+        return $index;
+    }
+
+    /**
+     * @return SeriesIndex
+     */
+    private static function emptyIndex(): array
+    {
+        return ['cluster' => [], 'counterparty' => [], 'tolerance' => []];
+    }
+
+    /**
+     * @param  SeriesIndex  $index
+     */
+    private static function indexSeries(array &$index, RecurringSeries $row): void
+    {
+        $clusterKey = self::indexKey($row->cluster_key, $row->latest_currency);
+        if (! array_key_exists($clusterKey, $index['cluster'])) {
+            $index['cluster'][$clusterKey] = $row;
+        }
+
+        $counterpartyKey = $row->cluster_counterparty_key;
+        if ($counterpartyKey === null) {
+            return;
+        }
+
+        $key = self::indexKey($counterpartyKey, $row->latest_currency);
+        if (! array_key_exists($key, $index['counterparty'])) {
+            $index['counterparty'][$key] = $row;
+        }
+
+        if (in_array($row->state, self::TOLERANCE_STATES, true) && ! array_key_exists($key, $index['tolerance'])) {
+            $index['tolerance'][$key] = $row->variance_tolerance_percent;
+        }
+    }
+
+    private static function indexKey(string $key, string $currency): string
+    {
+        return $key."\0".$currency;
     }
 
     /**
      * @param  list<stdClass>  $rows
+     * @param  SeriesIndex  $index
      */
-    private function processCluster(User $user, string $counterparty, string $currency, array $rows): void
+    private function processCluster(User $user, string $counterparty, string $currency, array $rows, array &$index): void
     {
-        $qualified = $this->qualifyCluster($user, $counterparty, $currency, $rows);
+        $counterpartyKey = self::indexKey($counterparty, $currency);
+        $qualified = $this->qualifyCluster($index['tolerance'][$counterpartyKey] ?? null, $rows);
         if ($qualified === null) {
             return;
         }
@@ -110,26 +201,10 @@ final class ExpenseSeriesDetector implements SeriesDetector
         );
 
         // cluster_key encodes cadence + currency, so this only matches a series
-        // whose cadence has not moved. A flip falls through to the query below.
-        /** @var RecurringSeries|null $existingBySameCluster */
-        $existingBySameCluster = RecurringSeries::query()
-            ->where('user_id', $user->id)
-            ->where('direction', Direction::Expense->value)
-            ->where('cluster_key', $clusterKey)
-            ->where('latest_currency', $currency)
-            ->first();
-
-        // cluster_counterparty_key carries no cadence, so a flipped series is
-        // found here and refreshed instead of inserted as a duplicate.
-        /** @var RecurringSeries|null $existingByCounterparty */
-        $existingByCounterparty = RecurringSeries::query()
-            ->where('user_id', $user->id)
-            ->where('direction', Direction::Expense->value)
-            ->where('cluster_counterparty_key', $counterparty)
-            ->where('latest_currency', $currency)
-            ->first();
-
-        $existing = $existingBySameCluster ?? $existingByCounterparty;
+        // whose cadence has not moved. A flip falls through to the second
+        // lookup, which carries no cadence and refreshes rather than duplicates.
+        $existing = $index['cluster'][self::indexKey($clusterKey, $currency)] ?? null;
+        $existing ??= $index['counterparty'][$counterpartyKey] ?? null;
 
         $latestRow = $filtered[count($filtered) - 1];
         $latestAmount = self::toInt($latestRow->amount_minor);
@@ -137,7 +212,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $detected = DetectedSeries::fromCadence($clusterKey, $cadenceResult, $latestAmount, $currency, $filtered);
 
         if ($existing === null) {
-            $this->insertNewSeries($user, $counterparty, $detected);
+            $this->insertNewSeries($user, $counterparty, $detected, $index);
 
             return;
         }
@@ -157,22 +232,44 @@ final class ExpenseSeriesDetector implements SeriesDetector
             Direction::Expense->value,
             $this->merchantNames->healed($existing->detected_name, $user->id, $counterparty),
         );
+
+        self::reindexRefreshed($index, $existing, $clusterKey, $currency);
+    }
+
+    // A refresh rewrites cluster_key and latest_currency on the row, and a
+    // later cluster in the same sweep reads the index rather than the table.
+    /**
+     * @param  SeriesIndex  $index
+     */
+    private static function reindexRefreshed(array &$index, RecurringSeries $existing, string $clusterKey, string $currency): void
+    {
+        $staleKey = self::indexKey($existing->cluster_key, $existing->latest_currency);
+        if (($index['cluster'][$staleKey] ?? null) === $existing) {
+            unset($index['cluster'][$staleKey]);
+        }
+
+        $existing->cluster_key = $clusterKey;
+        $existing->latest_currency = $currency;
+        self::indexSeries($index, $existing);
     }
 
     // Null means the cluster failed one of the qualifying tests and there is
     // nothing to record.
     /**
+     * @param  int|null  $existingTolerance  the variance tolerance percent stored on an existing
+     *                                       series for this (user, counterparty, currency); honours
+     *                                       a user-edited value so a widened tolerance does not
+     *                                       fragment the cluster on the next sweep
      * @param  list<stdClass>  $rows
      * @return array{0: list<stdClass>, 1: array{cadence: SeriesCadence, median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}}|null
      */
-    private function qualifyCluster(User $user, string $counterparty, string $currency, array $rows): ?array
+    private function qualifyCluster(?int $existingTolerance, array $rows): ?array
     {
         if (count($rows) < self::MIN_OCCURRENCES) {
             return null;
         }
 
-        $tolerance = $this->existingToleranceFor($user, $counterparty, $currency)
-            ?? self::DEFAULT_VARIANCE_TOLERANCE_PERCENT;
+        $tolerance = $existingTolerance ?? self::DEFAULT_VARIANCE_TOLERANCE_PERCENT;
         $filtered = self::applyVarianceFilter($rows, $tolerance);
         if (count($filtered) < self::MIN_OCCURRENCES) {
             return null;
@@ -185,38 +282,6 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $cadenceResult = $this->cadenceInferrer->infer($timestamps);
 
         return $cadenceResult['cadence']->isRegular() ? [$filtered, $cadenceResult] : null;
-    }
-
-    /**
-     * @return int|null the variance tolerance percent stored on an existing series for this
-     *                  (user, counterparty, currency), or null when none exists yet — honours user-edited
-     *                  tolerance values on the next sweep so a widened tolerance does not fragment the cluster
-     */
-    private function existingToleranceFor(User $user, string $counterparty, string $currency): ?int
-    {
-        $row = $this->db->connection()->table('recurring_series')
-            ->where('user_id', $user->id)
-            ->where('direction', Direction::Expense->value)
-            ->where('cluster_counterparty_key', $counterparty)
-            ->where('latest_currency', $currency)
-            ->whereIn('state', [
-                RecurringSeriesState::Pending->value,
-                RecurringSeriesState::Approved->value,
-                RecurringSeriesState::CadenceChanged->value,
-                RecurringSeriesState::Snoozed->value,
-            ])
-            ->first(['variance_tolerance_percent']);
-
-        if ($row === null) {
-            return null;
-        }
-
-        $value = $row->variance_tolerance_percent ?? null;
-        if (! is_numeric($value)) {
-            return null;
-        }
-
-        return (int) $value;
     }
 
     /**
@@ -253,7 +318,10 @@ final class ExpenseSeriesDetector implements SeriesDetector
         return $kept;
     }
 
-    private function insertNewSeries(User $user, string $counterparty, DetectedSeries $detected): void
+    /**
+     * @param  SeriesIndex  $index
+     */
+    private function insertNewSeries(User $user, string $counterparty, DetectedSeries $detected, array &$index): void
     {
         $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
@@ -284,6 +352,14 @@ final class ExpenseSeriesDetector implements SeriesDetector
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+
+        // Two merchant keys can normalise onto one cluster_key — an ampersand
+        // and a space both become a hyphen — so a later cluster in this sweep
+        // has to find the row just written instead of inserting over it.
+        $inserted = RecurringSeries::query()->find($newId);
+        if ($inserted !== null) {
+            self::indexSeries($index, $inserted);
+        }
 
         $this->occurrences->write($user->id, $newId, $detected->rows, $detected->currency);
 

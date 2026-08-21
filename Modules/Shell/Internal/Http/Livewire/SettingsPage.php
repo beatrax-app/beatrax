@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Shell\Internal\Http\Livewire;
 
-use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
@@ -117,7 +117,8 @@ final class SettingsPage extends Component
         string $locale,
         CurrentUser $currentUser,
         WriteUserPreference $writeUserPreference,
-        Application $app,
+        LocaleNegotiator $negotiator,
+        UrlGenerator $urls,
     ): void {
         $this->locale = $locale;
         $this->validateOnly('locale');
@@ -126,16 +127,13 @@ final class SettingsPage extends Component
 
         ($writeUserPreference)($currentUser->user()->id, ['locale' => $storedLocale]);
 
-        // Through the application, not the translator alone: Livewire snapshots
-        // `app()->getLocale()` on dehydrate and re-applies it next action, so
-        // retargeting the translator alone reverted the language one action later.
-        $app->setLocale($storedLocale ?? Locale::DEFAULT);
+        $negotiator->apply($storedLocale ?? Locale::DEFAULT);
 
         // The sidebar, top bar and command palette live in the layout, which a
         // component update does not re-render — so they kept the old language
         // until the reader happened to navigate. Re-requesting the page is what
         // makes the switch mean the whole screen.
-        $this->redirect(url()->current());
+        $this->redirect($urls->current());
     }
 
     // Empty is the placeholder, and nothing else in the app can put the

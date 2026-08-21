@@ -425,10 +425,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             return null;
         }
 
-        /** @var LaravelSession $session */
-        $session = $container->make(LaravelSession::class);
-
-        return $session;
+        return $container->make(LaravelSession::class);
     }
 
     // Null when the mailbox is unbound, which is an ordinary build rather than
