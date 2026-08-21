@@ -46,6 +46,38 @@ it('user with no lock can enable it by setting a valid PIN with matching confirm
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 });
 
+// The three inputs blank themselves on success, which on its own reads as "it
+// did not take" — the sibling write on this same screen has always confirmed.
+it('confirms that the PIN was set', function (): void {
+    $this->actingAs(appLockSettingsUser('confirm-set-user'));
+
+    Livewire::test(AppLockSettingsSection::class)
+        ->set('newPin', '123456')
+        ->set('confirmPin', '123456')
+        ->set('accountPassword', 'settings-pass')
+        ->call('setPin')
+        ->assertDispatched('toast');
+});
+
+// Resetting a forgotten PIN leaves the lock on and the screen unchanged, so
+// silence here is indistinguishable from a reset that failed.
+it('confirms that a forgotten PIN was reset', function (): void {
+    $user = appLockSettingsUser('confirm-forgot-user');
+    $this->actingAs($user);
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+    $provisioner->enable($user->id, '123456', 'settings-pass');
+
+    Livewire::test(AppLockSettingsSection::class)
+        ->set('newPin', '654321')
+        ->set('confirmPin', '654321')
+        ->set('accountPassword', 'settings-pass')
+        ->call('resetForgottenPin')
+        ->assertSet('flashMessage', '')
+        ->assertDispatched('toast');
+});
+
 it('rejects a PIN shorter than 6 digits with the correct error copy', function (): void {
     $user = appLockSettingsUser('short-pin-user');
     $this->actingAs($user);
