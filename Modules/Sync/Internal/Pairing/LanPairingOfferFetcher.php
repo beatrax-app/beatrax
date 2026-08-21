@@ -10,7 +10,7 @@ use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
-use Amp\Http\HttpStatus;
+use Modules\Sync\Internal\Transport\PairingHttpStatus;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 use Throwable;
 
@@ -126,7 +126,7 @@ final readonly class LanPairingOfferFetcher
 
         // The one refusal that is neither the code nor the network. Read off the
         // same constant the handler answers with, so the two cannot drift.
-        if ($response->status() === HttpStatus::TOO_MANY_REQUESTS) {
+        if ($response->status() === PairingHttpStatus::TOO_MANY_REQUESTS) {
             return PairingOfferLookup::RateLimited;
         }
 
