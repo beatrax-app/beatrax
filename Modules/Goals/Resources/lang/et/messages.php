@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Siht saavutatud',
         'add_contributions' => 'Lisa sissemakseid, et näha prognoosi',
-        'building' => 'Koostan prognoosi…',
+        'not_enough_history' => 'Ajalugu ei ole veel piisav kuupäeva prognoosimiseks',
         'est' => 'Hinnanguliselt :date ·',
         'projection_note' => '(prognoos)',
         'projected' => 'Prognoositud: :date',

@@ -36,13 +36,14 @@ final readonly class FixedPaymentsViewQuery
 
         $fallbackMap = $this->resolveFallbackChainIds($user, $rows);
 
-        // The merchant-memory result below is deliberately discarded: no DTO
-        // field needs it yet, but keeping the cross-module read on the happy
-        // path is what lets the boundary arch test catch a regression.
+        // The merchant-memory result is deliberately discarded: keeping the
+        // cross-module read on the happy path is what lets the boundary arch
+        // test catch a regression. It matches on the normalised key, so it
+        // is fed cluster_counterparty_key and never the name as written.
         $counterpartyNames = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $counterpartyNames[] = self::toString($row->detected_name);
+            $counterpartyNames[] = self::toString($row->cluster_counterparty_key);
         }
         $hasExpenseRow = false;
         foreach ($rows as $row) {
@@ -170,6 +171,7 @@ final readonly class FixedPaymentsViewQuery
                 'rs.next_expected_at',
                 'rs.next_expected_confidence_low',
                 'rs.cluster_key',
+                'rs.cluster_counterparty_key',
                 'cl.state as chain_link_state',
             ]);
 

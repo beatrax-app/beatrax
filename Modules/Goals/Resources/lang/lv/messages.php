@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Mērķis sasniegts',
         'add_contributions' => 'Pievienojiet iemaksas, lai redzētu prognozi',
-        'building' => 'Veido prognozi…',
+        'not_enough_history' => 'Vēl nepietiek vēstures, lai prognozētu datumu',
         'est' => 'Apt. :date ·',
         'projection_note' => '(prognoze)',
         'projected' => 'Prognoze: :date',

@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Tavoite saavutettu',
         'add_contributions' => 'Lisää talletuksia, niin näet ennusteen',
-        'building' => 'Muodostetaan ennustetta…',
+        'not_enough_history' => 'Historiaa ei ole vielä tarpeeksi päivän ennustamiseen',
         'est' => 'Arvio :date ·',
         'projection_note' => '(ennuste)',
         'projected' => 'Ennuste: :date',

@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Målet är uppnått',
         'add_contributions' => 'Lägg till insättningar för att se en prognos',
-        'building' => 'Bygger en prognos…',
+        'not_enough_history' => 'Ännu inte tillräckligt med historik för att uppskatta ett datum',
         'est' => 'Ca :date ·',
         'projection_note' => '(prognos)',
         'projected' => 'Prognos: :date',

@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Целта е достигната',
         'add_contributions' => 'Добави вноски, за да видиш прогноза',
-        'building' => 'Прогнозата се изчислява…',
+        'not_enough_history' => 'Все още няма достатъчно история за прогноза за дата',
         'est' => 'Прибл. :date ·',
         'projection_note' => '(прогноза)',
         'projected' => 'Прогноза: :date',

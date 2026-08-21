@@ -184,7 +184,7 @@
                             @elseif ($row->projectedFinishDate === null && $row->contributedMinor <= 0)
                                 {{ Lang::get('goals::messages.projection.add_contributions') }}
                             @elseif ($row->projectedFinishDate === null)
-                                {{ Lang::get('goals::messages.projection.building') }}
+                                {{ Lang::get('goals::messages.projection.not_enough_history') }}
                             @elseif ($row->projectionBeyondHorizon)
                                 {{ Lang::get('goals::messages.projection.est', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
                                 <span class="text-slate-400 dark:text-slate-500">{{ Lang::get('goals::messages.projection.projection_note') }}</span>

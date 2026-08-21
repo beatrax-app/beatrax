@@ -618,13 +618,10 @@ final class PairingFlowModal extends Component
         return $views->make('sync::livewire.pairing-flow-modal');
     }
 
-    // Delivers this device's Ed25519-signed PAIR_CONFIRM frame to the PEER
-    // side of the in-flight token. Best-effort: a RuntimeException from the
-    // courier (no relay configured) is caught and logged (ids/counts only),
-    // not surfaced as a flash error.
     // No relay check: the courier tries the LAN, then the relay, then holds the
-    // frame for collection. Returning early on an unconfigured relay is what
-    // left a LAN-only pairing confirmed on one device and not the other.
+    // frame for collection, so returning early on an unconfigured relay left a
+    // LAN-only pairing confirmed on one device and not the other. Best-effort —
+    // a courier failure is logged, never flashed.
     private function sendConfirmOverRelay(
         DatabaseManager $db,
         PairingFrameCourier $relayCourier,

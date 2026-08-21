@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Obiettivo raggiunto',
         'add_contributions' => 'Aggiungi contributi per vedere una proiezione',
-        'building' => 'Creazione della proiezione…',
+        'not_enough_history' => 'Storico ancora insufficiente per stimare una data',
         'est' => 'Stima :date ·',
         'projection_note' => '(proiezione)',
         'projected' => 'Previsto: :date',

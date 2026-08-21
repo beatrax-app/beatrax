@@ -184,7 +184,14 @@ final class IncomeSeriesDetector implements SeriesDetector
             return;
         }
 
-        $this->refresher->refresh($existing, $counterpartyKey, $detected, $user, Direction::Income->value);
+        $this->refresher->refresh(
+            $existing,
+            $counterpartyKey,
+            $detected,
+            $user,
+            Direction::Income->value,
+            $this->merchantNames->healed($existing->detected_name, $user->id, $counterpartyNormalized),
+        );
     }
 
     // Unlike the expense detector this applies no variance filter, so it

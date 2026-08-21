@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Meta atingida',
         'add_contributions' => 'Adiciona contribuições para veres uma projeção',
-        'building' => 'A construir uma projeção…',
+        'not_enough_history' => 'Ainda não há histórico suficiente para projetar uma data',
         'est' => 'Est. :date ·',
         'projection_note' => '(projeção)',
         'projected' => 'Projetado: :date',

@@ -23,7 +23,8 @@ final class GoalProjectionService
 
     // Below this, one early deposit would extrapolate a misleadingly-soon
     // finish (a goal created today divides by a 1-day window) — the card
-    // shows "building a projection" copy instead until enough signal accrues.
+    // states it has too little history instead, which stays true for a goal
+    // that never accrues a second contribution.
     private const int MIN_OBSERVATION_DAYS = 7;
 
     /** @var array{date: null, beyondHorizon: false} */

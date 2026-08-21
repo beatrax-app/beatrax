@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Hedefe ulaşıldı',
         'add_contributions' => 'Tahmin görmek için katkı ekle',
-        'building' => 'Tahmin oluşturuluyor…',
+        'not_enough_history' => 'Tarih tahmini için henüz yeterli geçmiş yok',
         'est' => 'Tahmini :date ·',
         'projection_note' => '(tahmin)',
         'projected' => 'Öngörülen: :date',

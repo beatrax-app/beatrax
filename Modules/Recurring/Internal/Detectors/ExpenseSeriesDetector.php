@@ -149,7 +149,14 @@ final class ExpenseSeriesDetector implements SeriesDetector
             return;
         }
 
-        $this->refresher->refresh($existing, $counterparty, $detected, $user, Direction::Expense->value);
+        $this->refresher->refresh(
+            $existing,
+            $counterparty,
+            $detected,
+            $user,
+            Direction::Expense->value,
+            $this->merchantNames->healed($existing->detected_name, $user->id, $counterparty),
+        );
     }
 
     // Null means the cluster failed one of the qualifying tests and there is
