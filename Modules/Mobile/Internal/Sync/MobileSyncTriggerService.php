@@ -110,7 +110,7 @@ final class MobileSyncTriggerService
     }
 
     // This device presents its OWN per-device drain secret, TOFU-verified by
-    // the relay and matching PairingRelayCourier — the shared HMAC token every
+    // the relay and matching PairingFrameCourier — the shared HMAC token every
     // relay peer could recompute is gone. Minting can only fail on a
     // secrets-file write error, treated here as nothing to dial.
     private function drainSecret(): ?string

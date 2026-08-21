@@ -349,7 +349,7 @@ it('leaves a foreign frame type in the mailbox for its own transport', function 
     ]);
 
     $source = (string) file_get_contents(
-        dirname(__DIR__, 2).'/Internal/Pairing/PairingRelayCourier.php'
+        dirname(__DIR__, 2).'/Internal/Pairing/PairingFrameCourier.php'
     );
 
     expect($userId)->toBeGreaterThan(0)

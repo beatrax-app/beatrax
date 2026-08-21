@@ -11,13 +11,14 @@ use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
 use Modules\Sync\Internal\Pairing\LanPairingOfferFetcher;
-use Modules\Sync\Internal\Pairing\PairingRelayCourier;
+use Modules\Sync\Internal\Pairing\PairingFrameCourier;
 use Modules\Sync\Internal\Pairing\PairingRowGuards;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenRowReader;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Enums\PairingOfferLookup;
 use stdClass;
 
 final class PairingGateway
@@ -38,16 +39,17 @@ final class PairingGateway
         private readonly GdkRotationService $rotationService,
         private readonly RelayConfig $relayConfig,
         private readonly DeviceNameDetector $deviceNameDetector,
-        private readonly PairingRelayCourier $relayCourier,
+        private readonly PairingFrameCourier $relayCourier,
         private readonly LanPairingOfferFetcher $lanOfferFetcher,
     ) {}
 
     // A word-code carries the token alone, so a fresh responder has no local row to
     // accept against; this asks the LAN for the identity half the code cannot carry.
+    // On failure it returns WHY, because the two reasons need opposite advice.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|null
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
      */
-    public function discoverInitiatorOnLan(string $wordCode): ?array
+    public function discoverInitiatorOnLan(string $wordCode): array|PairingOfferLookup
     {
         return $this->lanOfferFetcher->fetchForWordCode($wordCode);
     }

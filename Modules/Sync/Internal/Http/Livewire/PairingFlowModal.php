@@ -20,7 +20,7 @@ use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsPairingTokenRow;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
-use Modules\Sync\Internal\Pairing\PairingRelayCourier;
+use Modules\Sync\Internal\Pairing\PairingFrameCourier;
 use Modules\Sync\Internal\Pairing\PairingRowGuards;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
@@ -105,7 +105,7 @@ final class PairingFlowModal extends Component
         CurrentUser $currentUser,
         Dispatcher $events,
         PairingGateway $gateway,
-        PairingRelayCourier $relayCourier,
+        PairingFrameCourier $relayCourier,
         LoggerInterface $logger,
         Session $session,
         DeviceRegistryService $registry,
@@ -136,7 +136,7 @@ final class PairingFlowModal extends Component
     private function resumeInFlight(
         int $userId,
         PairingGateway $gateway,
-        PairingRelayCourier $relayCourier,
+        PairingFrameCourier $relayCourier,
         LoggerInterface $logger,
         Session $session,
         DeviceRegistryService $registry,
@@ -311,7 +311,7 @@ final class PairingFlowModal extends Component
         EncryptionMigrationService $migrationService,
         PairingGateway $gateway,
         LoggerInterface $logger,
-        PairingRelayCourier $relayCourier,
+        PairingFrameCourier $relayCourier,
         PreSyncHistoryCapture $historyCapture,
         DeviceRegistryService $registry,
     ): void {
@@ -404,7 +404,7 @@ final class PairingFlowModal extends Component
         DatabaseManager $db,
         PairingGateway $gateway,
         LoggerInterface $logger,
-        PairingRelayCourier $relayCourier,
+        PairingFrameCourier $relayCourier,
         RelayConfig $relayConfig,
         PreSyncHistoryCapture $historyCapture,
     ): void {
@@ -596,7 +596,7 @@ final class PairingFlowModal extends Component
     // not surfaced as a flash error.
     private function sendConfirmOverRelay(
         DatabaseManager $db,
-        PairingRelayCourier $relayCourier,
+        PairingFrameCourier $relayCourier,
         RelayConfig $relayConfig,
         DeviceIdentityDto $identity,
         LoggerInterface $logger,

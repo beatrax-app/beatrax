@@ -10,6 +10,7 @@ use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
 use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
+use Modules\Sync\Public\Enums\PairingOfferLookup;
 use Throwable;
 
 // Recovers the initiator's public identity for a token the user typed, by
@@ -45,18 +46,25 @@ final readonly class LanPairingOfferFetcher
         private WordCodeEncoder $wordEncoder,
     ) {}
 
+    // Returns the initiator's identity, or WHY it could not be had. It used to
+    // return a bare null for every ending, so the screen that asks could only
+    // ever say one thing — and what it said was "check your network", to a
+    // reader whose network was fine and whose code had simply expired.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|null
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
      */
-    public function fetchForWordCode(string $wordCode): ?array
+    public function fetchForWordCode(string $wordCode): array|PairingOfferLookup
     {
         try {
             $tokenHex = $this->wordEncoder->decode($wordCode);
         } catch (InvalidArgumentException) {
-            return null;
+            // Not a word code at all — a truncated or over-long paste. Nothing
+            // was asked of the network, so the network cannot be the answer.
+            return PairingOfferLookup::CodeNotAccepted;
         }
 
         $tried = 0;
+        $anyPeerAnswered = false;
 
         foreach ($this->discovery->browse(MdnsAdvertiser::SERVICE_TYPE, self::BROWSE_TIMEOUT_SECONDS) as $peer) {
             if ($tried >= self::MAX_PEERS_TRIED) {
@@ -68,14 +76,20 @@ final readonly class LanPairingOfferFetcher
             }
 
             $tried++;
-            $offer = $this->offerFrom($peer, $tokenHex);
+            $attempt = $this->attempt($peer, $tokenHex);
 
-            if ($offer !== null) {
-                return $offer;
+            if (is_array($attempt)) {
+                return $attempt;
             }
+
+            $anyPeerAnswered = $anyPeerAnswered || $attempt === PairingOfferLookup::CodeNotAccepted;
         }
 
-        return null;
+        // A peer that answered and refused is the difference that matters: the
+        // network reached it, so the code is the problem. Only when nothing
+        // answered at all is "are both devices on the same network?" the
+        // question worth asking.
+        return $anyPeerAnswered ? PairingOfferLookup::CodeNotAccepted : PairingOfferLookup::NoPeerReached;
     }
 
     // Ask one discovered peer whether it holds this token. Null covers every
@@ -86,9 +100,22 @@ final readonly class LanPairingOfferFetcher
      */
     public function offerFrom(DiscoveredPeer $peer, string $tokenHex): ?array
     {
-        // Plaintext http, exactly as the sync listener speaks it: the offer
-        // carries public keys only, and the safety-number comparison — not
-        // the transport — is what proves who answered.
+        $attempt = $this->attempt($peer, $tokenHex);
+
+        return is_array($attempt) ? $attempt : null;
+    }
+
+    // The same request, keeping WHICH ending happened. A peer that answered at
+    // all — even to refuse — proves the network reached it.
+    //
+    // Plaintext http, exactly as the sync listener speaks it: the offer carries
+    // public keys only, and the safety-number comparison — not the transport —
+    // is what proves who answered.
+    /**
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
+     */
+    private function attempt(DiscoveredPeer $peer, string $tokenHex): array|PairingOfferLookup
+    {
         $url = "http://{$peer->host}:{$peer->port}".PairingOfferRequestHandler::OFFER_PATH;
 
         try {
@@ -96,21 +123,31 @@ final readonly class LanPairingOfferFetcher
                 ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
                 ->timeout(self::REQUEST_TIMEOUT_SECONDS)
                 ->get($url, ['token' => hash('sha256', $tokenHex)]);
-
-            if (! $response->successful()) {
-                return null;
-            }
-
-            $body = $response->json();
         } catch (Throwable) {
-            // A refused connection, a timeout, or a body that is not JSON all
-            // mean the same thing here: this peer is not the one. Nothing is
-            // logged — the token hash is in the request and the identity in the
-            // reply, and neither belongs in a log file.
-            return null;
+            // Refused or timed out. Nothing is logged — the token hash is in
+            // the request and the identity in the reply, and neither belongs in
+            // a log file.
+            return PairingOfferLookup::NoPeerReached;
         }
 
-        return is_array($body) ? $this->identityFrom($body, $tokenHex) : null;
+        // It answered. Whatever it said, the network is not the story: a 404 is
+        // this peer refusing the token, and the peer refuses an unknown, an
+        // expired and another user's token identically on purpose.
+        if (! $response->successful()) {
+            return PairingOfferLookup::CodeNotAccepted;
+        }
+
+        try {
+            $body = $response->json();
+        } catch (Throwable) {
+            return PairingOfferLookup::CodeNotAccepted;
+        }
+
+        if (! is_array($body)) {
+            return PairingOfferLookup::CodeNotAccepted;
+        }
+
+        return $this->identityFrom($body, $tokenHex) ?? PairingOfferLookup::CodeNotAccepted;
     }
 
     /**

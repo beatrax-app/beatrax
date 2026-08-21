@@ -40,6 +40,7 @@ use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
+use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
@@ -220,9 +221,13 @@ final class SyncServiceProvider extends ServiceProvider
             // owns the crypto deps it uses so the host stays a thin orchestrator.
             'PairedDeviceAdmitter',
             'PeerConfirmVerifier',
+            // Applies an inbound frame whichever transport carried it, so the
+            // relay drain and the LAN route cannot drift apart.
+            'PairingFrameApplier',
+            'LanPairingFrameCourier',
             // Relay courier for the cross-device both-confirm handshake
             // (PairingFrame is static-only, no binding needed).
-            'PairingRelayCourier',
+            'PairingFrameCourier',
         ] as $pairingClass) {
             $this->singletonIfExists($pairingNamespace.$pairingClass);
         }
@@ -410,6 +415,7 @@ final class SyncServiceProvider extends ServiceProvider
                 shutdown: $this->app->make(DaemonShutdownSignal::class),
                 offers: $this->app->make(PairingOfferService::class),
                 offerRateLimiter: $this->app->make(PairingOfferRateLimiter::class),
+                frameApplier: $this->app->make(PairingFrameApplier::class),
             ));
         }
 

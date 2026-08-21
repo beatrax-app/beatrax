@@ -11,10 +11,12 @@ use Amp\Websocket\Server\Websocket;
 use Closure;
 use Illuminate\Console\Command;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
+use Modules\Sync\Internal\Transport\PairingFrameRequestHandler;
 use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Modules\Sync\Public\Services\SyncPorts;
@@ -40,6 +42,7 @@ final class SyncServeCommand extends Command
         private readonly DaemonShutdownSignal $shutdown,
         private readonly PairingOfferService $offers,
         private readonly PairingOfferRateLimiter $offerRateLimiter,
+        private readonly PairingFrameApplier $frameApplier,
     ) {
         parent::__construct();
     }
@@ -79,12 +82,25 @@ final class SyncServeCommand extends Command
             $acceptor = new Rfc6455Acceptor;
             $wsServer = new Websocket($httpServer, $this->logger, $acceptor, $handler);
 
-            // One extra route in front of the upgrade: a device holding only
-            // a typed word-code has no way to learn this device's public
-            // identity, and a fresh responder cannot accept a token without
-            // it. Everything that is not that route reaches the WebSocket.
-            $requestHandler = new PairingOfferRequestHandler(
+            // Two extra routes in front of the upgrade, and the WebSocket
+            // cannot serve either: its Noise session authenticates against the
+            // confirmed-device registry, and both of these exist precisely for
+            // a device that is not in it yet.
+            //
+            // The frame route is innermost so the offer route is matched first;
+            // anything that is neither reaches the WebSocket untouched.
+            $frameHandler = new PairingFrameRequestHandler(
                 $wsServer,
+                $this->frameApplier,
+                $this->offerRateLimiter,
+                $handler->localUserId(),
+            );
+
+            // A device holding only a typed word-code has no way to learn this
+            // device's public identity, and a fresh responder cannot accept a
+            // token without it.
+            $requestHandler = new PairingOfferRequestHandler(
+                $frameHandler,
                 $this->offers,
                 $this->offerRateLimiter,
                 $handler->localUserId(),

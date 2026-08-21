@@ -10,6 +10,7 @@ use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
+use Modules\Sync\Public\Enums\PairingOfferLookup;
 
 uses(RefreshDatabase::class);
 
@@ -122,11 +123,31 @@ it('drops an oversized device id rather than passing it on', function (): void {
     expect(lanOfferFetcher()->offerFrom(lanOfferPeer(), str_repeat('c', 32)))->toBeNull();
 });
 
-it('yields nothing for a word-code that is not a pairing code', function (): void {
+// The lookup used to answer every one of these endings with a bare null, so the
+// screen that asks could only ever say one thing — and what it said was "check
+// that both devices are on the same network", which is true for exactly one of
+// them. A reader whose code had expired was sent to debug a healthy network.
+it('blames the code, not the network, for a word-code that is not a pairing code', function (): void {
     Http::fake();
 
-    expect(lanOfferFetcher()->fetchForWordCode('NOPE'))->toBeNull();
+    expect(lanOfferFetcher()->fetchForWordCode('NOPE'))
+        ->toBe(PairingOfferLookup::CodeNotAccepted);
 
     // A code that cannot decode must not reach the network at all.
     Http::assertNothingSent();
+});
+
+it('blames the code when a peer answered and refused the token', function (): void {
+    // 404 is the peer refusing this token — it deliberately answers an unknown,
+    // an expired and another user's token identically, so "the code did not
+    // work" is the most this side can honestly say. It IS reachable.
+    Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
+
+    expect(lanOfferFetcher()->offerFrom(lanOfferPeer(), str_repeat('c', 32)))->toBeNull();
+});
+
+it('blames the code when a peer answers with a body that is not an identity', function (): void {
+    Http::fake(['*' => Http::response('not json at all')]);
+
+    expect(lanOfferFetcher()->offerFrom(lanOfferPeer(), str_repeat('c', 32)))->toBeNull();
 });
