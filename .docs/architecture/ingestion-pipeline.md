@@ -76,7 +76,9 @@ FK, via four steps:
    `Ledger\Public\Services\CounterpartyKey`, which normalises the name
    (lowercase, diacritic strip, punctuation collapse, 80-char truncate) and
    then, for a user with at-rest encryption enabled, replaces it with a keyed
-   one-way digest. The readable name never reaches the column. See
+   one-way digest. For a user who has never enabled encryption it stays the
+   plain normalised name, deliberately: every other column of theirs is
+   plaintext too. See
    [Which columns are encrypted at rest](../features/sync/sensitive-columns-at-rest.md).
 2. Substitutes the literal `_no_counterparty` sentinel when the
    counterparty name is null/empty/punctuation-only — the composite
@@ -310,16 +312,36 @@ mechanised.
 ## Per-row error handling
 
 Per-row exceptions inside the try-catch around stages 4-8 produce
-ERROR-status `PreviewRowDto` entries with the exception message
-surfaced to the user. The full stack trace lands in the application
-log via the injected `LoggerInterface` — a developer reading
-`/dev/logs` sees which adapter or stage threw, while the wizard shows
-only the user-facing message.
+ERROR-status `PreviewRowDto` entries. The row carries an
+`errorReason` — an `ImportFailureReason` backing value — and the view
+translates that; the exception's own message never reaches the screen.
+A caught message names internal classes and, for
+`BlindIndexKeyUnavailableException`, the reader's own user id, so it
+goes to the application log via the injected `LoggerInterface` and
+nowhere else. A developer reading `/dev/logs` sees which adapter or
+stage threw; the reader sees a sentence about their file.
+
+`BlindIndexKeyUnavailableException` has its own catch arm ahead of the
+general one, because it is the one failure the reader can act on: the
+app lock is engaged, and unlocking and re-uploading fixes it.
 
 Adapter-level exceptions (bad header, encoding mismatch, malformed XML)
-are caught at the outermost try-catch and produce a single ERROR row
-covering the whole file, so the wizard can render its preview screen
-rather than 500-ing.
+are caught at the outermost try-catch. They are **not** a row. Parsing
+stops where they are raised, so rows past that point are absent from
+`rows` rather than present-and-failed, and the failure is reported on
+`ImportPreviewResult` as `fileFailureReason` plus an optional
+`fileFailureDetail`. The detail is the parser's own wording and is
+carried only when the exception implements
+`Core\Public\Support\MessageNamesNoUserData` — the sniffer's "this CSV
+is missing the 'Bedrag bij / af' column" is the case worth keeping,
+because it names the likely cause and what to do about it.
+
+Reported as a row, this failure rendered as a table row whose every
+cell was an em-dash, above an enabled "Confirm import" — a transaction
+that did not exist, on the one screen whose job is to let the reader
+check before committing. The preview now refuses to offer a confirm
+that would write nothing, and says the file was only read part-way when
+some rows did arrive before the stop.
 
 ## Statement metadata side-channel
 

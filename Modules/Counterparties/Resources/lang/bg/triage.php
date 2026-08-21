@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Съвпадение по шаблон: **:name** — ниска увереност. Провери, преди да свържеш.',
     'suggestion_high' => '✨ Изглежда като **:name** — висока увереност',
 
-    'reasoning' => ':hits от :total скорошни транзакции по този IBAN сочат към :name.',
+    'reasoning' => ':hits от :total скорошна транзакция по този IBAN сочи към :name.|:hits от :total скорошни транзакции по този IBAN сочат към :name.',
     'yes_link' => 'Да, свържи с :name ↵',
     'no_not' => 'Не, това не е :name',
 

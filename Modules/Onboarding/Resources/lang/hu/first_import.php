@@ -20,7 +20,7 @@ return [
     'to_commit' => 'véglegesítendő ·',
     'already_imported' => 'már importálva',
     'commit_committing' => 'Véglegesítés…',
-    'commit_count' => 'Minden véglegesítése (:count tranzakció) →',
+    'commit_count' => 'Minden véglegesítése (:count tranzakció) →|Minden véglegesítése (:count tranzakció) →',
     'commit_empty' => 'Minden véglegesítése (—) →',
     'skip' => 'Kihagyás egyelőre',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Partner',
         'col_amount' => 'Összeg',
         'load_more' => 'Továbbiak betöltése (még :remaining)',
-        'rows_shown' => ':count sor látható',
+        'rows_shown' => ':count sor látható|:count sor látható',
     ],
 ];

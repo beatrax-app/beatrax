@@ -6,7 +6,7 @@ return [
     'page_title' => 'Protistrany',
     'heading' => 'Protistrany',
 
-    'entities' => 'Subjekty: :count',
+    'entities' => ':count subjekt|:count subjekty|:count subjektů',
     'need_identification' => 'K identifikaci: :count',
 
     'search_placeholder' => 'Hledej podle názvu, aliasu nebo IBAN…',

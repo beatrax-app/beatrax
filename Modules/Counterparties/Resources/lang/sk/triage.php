@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Zhoda podľa vzoru: **:name** — nízka istota. Pred prepojením over.',
     'suggestion_high' => '✨ Vyzerá to na **:name** — vysoká istota',
 
-    'reasoning' => ':hits z :total nedávnych transakcií na tomto IBAN ukazuje na :name.',
+    'reasoning' => ':hits z :total nedávnej transakcie na tomto IBAN ukazuje na :name.|:hits z :total nedávnych transakcií na tomto IBAN ukazuje na :name.|:hits z :total nedávnych transakcií na tomto IBAN ukazuje na :name.',
     'yes_link' => 'Áno, prepojiť: :name ↵',
     'no_not' => 'Nie, nie je to :name',
 

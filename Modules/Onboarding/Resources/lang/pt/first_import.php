@@ -20,7 +20,7 @@ return [
     'to_commit' => 'por confirmar ·',
     'already_imported' => 'já importadas',
     'commit_committing' => 'A confirmar…',
-    'commit_count' => 'Confirmar tudo (:count transações) →',
+    'commit_count' => 'Confirmar tudo (:count transação) →|Confirmar tudo (:count transações) →',
     'commit_empty' => 'Confirmar tudo (—) →',
     'skip' => 'Ignorar por agora',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Contraparte',
         'col_amount' => 'Montante',
         'load_more' => 'Carregar mais (:remaining restantes)',
-        'rows_shown' => ':count linhas mostradas',
+        'rows_shown' => ':count linha mostrada|:count linhas mostradas',
     ],
 ];

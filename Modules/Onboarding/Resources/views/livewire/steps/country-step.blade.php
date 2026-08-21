@@ -4,7 +4,7 @@
     Settings offer, asked once more here so the per-country deduction
     categories are seeded before setup finishes.
     Reuses the wizard chrome (wiz-eyebrow / wiz-h1 / wiz-lede / wiz-actions).
-    The select binds `taxCountryCode` live so the additive-seed reassurance
+    The select binds `countryCode` live so the additive-seed reassurance
     note appears as soon as a country is chosen; Continue persists through
     Core's UserCountry seam, Skip bubbles `wizard.step.skipped`.
     Blade default {{ }} escaping throughout.
@@ -20,7 +20,7 @@
         <label for="wiz-tax-country-select" class="sr-only">{{ Lang::get('onboarding::tax_country.select_label') }}</label>
         <select
             id="wiz-tax-country-select"
-            wire:model.live="taxCountryCode"
+            wire:model.live="countryCode"
             class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             data-testid="wiz-tax-country-select"
         >
@@ -29,7 +29,7 @@
                 <option value="{{ $code }}">{{ $label }}</option>
             @endforeach
         </select>
-        @if ($taxCountryCode !== '')
+        @if ($countryCode !== '')
             <p class="text-xs text-[var(--color-amber)]">
                 {{ Lang::get('onboarding::tax_country.additive_note') }}
             </p>

@@ -6,7 +6,7 @@ return [
     'page_title' => 'Counterparties',
     'heading' => 'Counterparties',
 
-    'entities' => ':count entities',
+    'entities' => ':count entity|:count entities',
     'need_identification' => ':count need identification',
 
     'search_placeholder' => 'Search by name, alias, or IBAN…',

@@ -30,7 +30,6 @@ final class RulesPage extends Component
 
     public ?int $confirmingDeleteId = null;
 
-    // True from the dispatch until render() sees a status='done' payload.
     public bool $reapplyDispatched = false;
 
     public function openCreateModal(): void

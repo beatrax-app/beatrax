@@ -82,7 +82,6 @@ return [
     ['category' => 'transport-fuel', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'Tinq'],
     ['category' => 'transport-fuel', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'Tango'],
 
-    // Both are ICS-card receipt strings for a cash withdrawal.
     ['category' => 'cash-withdrawal', 'field' => 'counterparty', 'match' => 'starts_with', 'value' => 'KOSTEN KASOPNAME'],
     ['category' => 'cash-withdrawal', 'field' => 'counterparty', 'match' => 'starts_with', 'value' => 'GELDMAAT'],
 

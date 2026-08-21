@@ -128,8 +128,12 @@ final readonly class CounterpartyTriageQueue
                 continue;
             }
             // Decrypt before matching: substring/corpus matching against
-            // ciphertext always misses.
+            // ciphertext always misses. A row that blanks cannot resolve, and
+            // counting it would present a correct suggestion as a weak one.
             $description = $this->codec->decryptValue('transactions', 'description', $description, $unknown->user_id, $this->session)['value'];
+            if ($description === '') {
+                continue;
+            }
             $total++;
             $resolved = $this->merchantResolver->resolve($description, $unknown->user_id);
             if ($resolved === null) {
@@ -156,7 +160,9 @@ final readonly class CounterpartyTriageQueue
         // Translated, not sprintf'd: this sentence renders directly beneath a
         // localised suggestion banner, and an English format string put two
         // languages in one card.
-        $reasoning = Lang::get('counterparties::triage.reasoning', [
+        // Chosen on :total, which is the noun's number — ":hits of :total
+        // transactions" agrees with the pool, not with the matches inside it.
+        $reasoning = Lang::choice('counterparties::triage.reasoning', $total, [
             'hits' => $topHits,
             'total' => $total,
             'name' => $topName,

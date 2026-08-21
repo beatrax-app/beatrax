@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Släpp din kontoutdragsfil här',
     'drop_zone_sublink' => 'eller bläddra efter en fil',
     'drop_zone_touch_lead' => 'Tryck för att välja en fil',
+    'drop_zone_touch_lead_named' => 'Tryck för att välja din :file-fil',
 
     'vd_optional' => ' — valfritt',
 

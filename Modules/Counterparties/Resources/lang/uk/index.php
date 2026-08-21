@@ -6,7 +6,7 @@ return [
     'page_title' => 'Контрагенти',
     'heading' => 'Контрагенти',
 
-    'entities' => 'Суб’єкти: :count',
+    'entities' => ':count суб’єкт|:count суб’єкти|:count суб’єктів',
     'need_identification' => 'Без ідентифікації: :count',
 
     'search_placeholder' => 'Пошук за назвою, псевдонімом або IBAN…',

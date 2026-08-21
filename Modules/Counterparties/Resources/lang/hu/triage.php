@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Mintaegyezés: **:name** — alacsony megbízhatóság. Ellenőrizd, mielőtt összekapcsolod.',
     'suggestion_high' => '✨ Úgy tűnik, ez **:name** — magas megbízhatóság',
 
-    'reasoning' => 'Ezen az IBAN-on :total közelmúltbeli tranzakcióból :hits mutat a következőre: :name.',
+    'reasoning' => 'Ezen az IBAN-on :total közelmúltbeli tranzakcióból :hits mutat a következőre: :name.|Ezen az IBAN-on :total közelmúltbeli tranzakcióból :hits mutat a következőre: :name.',
     'yes_link' => 'Igen, kapcsold ide: :name ↵',
     'no_not' => 'Nem, ez nem :name',
 

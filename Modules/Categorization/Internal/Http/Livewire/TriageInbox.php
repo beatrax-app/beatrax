@@ -18,8 +18,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 // never silently drop between pages.
 final class TriageInbox extends Component
 {
-    // Capped so the chip row stays on one line in the triage grid.
-    private const int QUICK_ASSIGN_CATEGORY_LIMIT = 9;
+    private const int QUICK_ASSIGN_CHIPS_PER_ROW = 9;
 
     /** @var array<int, ?int> map of transactionId => pending categoryId */
     public array $pending = [];
@@ -79,7 +78,7 @@ final class TriageInbox extends Component
             ->count();
 
         $categories = $options->for($user);
-        $topCategories = array_slice($categories, 0, self::QUICK_ASSIGN_CATEGORY_LIMIT);
+        $topCategories = array_slice($categories, 0, self::QUICK_ASSIGN_CHIPS_PER_ROW);
 
         // Default is true so a user who never opens the Settings panel
         // still sees the per-row CTA.

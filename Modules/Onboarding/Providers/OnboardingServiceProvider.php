@@ -18,7 +18,7 @@ use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectEmailStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectPaypalStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\DoneStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\FirstImportStep;
-use Modules\Onboarding\Internal\Http\Livewire\Steps\TaxCountryStep;
+use Modules\Onboarding\Internal\Http\Livewire\Steps\CountryStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\WelcomeStep;
 use Modules\Onboarding\Internal\Listeners\InitializeWizardProgressOnInstall;
 use Modules\Onboarding\Internal\Services\ResumeStepResolver;
@@ -53,7 +53,7 @@ final class OnboardingServiceProvider extends ServiceProvider
         $livewire->component('onboarding.steps.connect-email-step', ConnectEmailStep::class);
         $livewire->component('onboarding.steps.first-import-step', FirstImportStep::class);
         $livewire->component('onboarding.steps.budgets-step', BudgetsStep::class);
-        $livewire->component('onboarding.steps.tax-country-step', TaxCountryStep::class);
+        $livewire->component('onboarding.steps.country-step', CountryStep::class);
         $livewire->component('onboarding.starting-balance-card', StartingBalanceCard::class);
     }
 }

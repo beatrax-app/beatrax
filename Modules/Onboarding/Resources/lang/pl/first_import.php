@@ -20,7 +20,7 @@ return [
     'to_commit' => 'do zatwierdzenia ·',
     'already_imported' => 'już zaimportowano',
     'commit_committing' => 'Zatwierdzanie…',
-    'commit_count' => 'Zatwierdź wszystko (transakcje: :count) →',
+    'commit_count' => 'Zatwierdź wszystko (:count transakcja) →|Zatwierdź wszystko (:count transakcje) →|Zatwierdź wszystko (:count transakcji) →',
     'commit_empty' => 'Zatwierdź wszystko (—) →',
     'skip' => 'Pomiń na razie',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Kontrahent',
         'col_amount' => 'Kwota',
         'load_more' => 'Wczytaj więcej (pozostało: :remaining)',
-        'rows_shown' => 'Pokazane wiersze: :count',
+        'rows_shown' => 'pokazany :count wiersz|pokazane :count wiersze|pokazanych :count wierszy',
     ],
 ];

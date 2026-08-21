@@ -6,7 +6,7 @@ return [
     'page_title' => 'Darījuma partneri',
     'heading' => 'Darījuma partneri',
 
-    'entities' => 'Vienības: :count',
+    'entities' => ':count vienību|:count vienība|:count vienības',
     'need_identification' => 'Jāatpazīst: :count',
 
     'search_placeholder' => 'Meklēt pēc nosaukuma, aizstājvārda vai IBAN…',

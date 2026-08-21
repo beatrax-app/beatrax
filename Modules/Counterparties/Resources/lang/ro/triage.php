@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Potrivire după tipar: **:name** — încredere scăzută. Verifică înainte de asociere.',
     'suggestion_high' => '✨ Pare a fi **:name** — încredere ridicată',
 
-    'reasoning' => ':hits din :total tranzacții recente pe acest IBAN indică :name.',
+    'reasoning' => ':hits din :total tranzacție recentă pe acest IBAN indică :name.|:hits din :total tranzacții recente pe acest IBAN indică :name.|:hits din :total de tranzacții recente pe acest IBAN indică :name.',
     'yes_link' => 'Da, asociază cu :name ↵',
     'no_not' => 'Nu, nu este :name',
 

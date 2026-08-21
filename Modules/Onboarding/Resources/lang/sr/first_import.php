@@ -20,7 +20,7 @@ return [
     'to_commit' => 'za potvrdu ·',
     'already_imported' => 'već uvezeno',
     'commit_committing' => 'Potvrđivanje…',
-    'commit_count' => 'Potvrdi sve (:count transakcija) →',
+    'commit_count' => 'Potvrdi sve (:count transakcija) →|Potvrdi sve (:count transakcije) →|Potvrdi sve (:count transakcija) →',
     'commit_empty' => 'Potvrdi sve (—) →',
     'skip' => 'Preskoči zasad',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Druga strana',
         'col_amount' => 'Iznos',
         'load_more' => 'Učitaj još (preostalo :remaining)',
-        'rows_shown' => 'prikazanih redova: :count',
+        'rows_shown' => 'prikazan :count red|prikazana :count reda|prikazano :count redova',
     ],
 ];

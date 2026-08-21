@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Upuść tutaj plik wyciągu',
     'drop_zone_sublink' => 'lub wybierz plik z dysku',
     'drop_zone_touch_lead' => 'Dotknij, aby wybrać plik',
+    'drop_zone_touch_lead_named' => 'Dotknij, aby wybrać swój plik :file',
 
     'vd_optional' => ' — opcjonalnie',
 

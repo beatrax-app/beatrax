@@ -9,13 +9,13 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-// Name-only search across palette entity types: counterparties are
-// decrypt-then-substring matched (display_name is ciphertext once
-// encryption is enabled); categories/goals/pots/recurring stay
-// LIKE-matched. Every read goes through the entity's public table.
+// Name-only search across the palette's entity types. Two of them cannot be
+// matched in SQL: a counterparty's display_name is ciphertext once encryption
+// is on, and a category's stored name is not the name on screen.
 final class EntityNameSearch
 {
     private const COUNTERPARTY_MATCH_LIMIT = 3;
@@ -105,7 +105,12 @@ final class EntityNameSearch
         return $result['value'];
     }
 
+    // Matching the stored name alone inverts what the reader sees, because a
+    // default category stores English and displays a translation. Matching
+    // moves to PHP for that, and the cap moves with it.
     /**
+     * @link ../../../../.docs/features/ledger/category-display-names.md
+     *
      * @return list<array{id: int, type: string, label: string, url: string}>
      */
     private function categoryMatches(User $user, string $q): array
@@ -117,22 +122,37 @@ final class EntityNameSearch
                 // every user sees the shared seeded set.
                 $scope->where('user_id', $user->id)->orWhereNull('user_id');
             })
-            ->where('name', 'LIKE', $this->likePattern($q))
-            ->limit(self::ENTITY_MATCH_LIMIT)
-            ->get(['id', 'name', 'slug']);
+            ->orderBy('id')
+            ->get(['id', 'name', 'slug', 'name_is_default']);
 
+        $needle = mb_strtolower($q);
         $results = [];
         foreach ($rows as $row) {
+            if (count($results) >= self::ENTITY_MATCH_LIMIT) {
+                break;
+            }
+
+            $label = CategoryDisplayName::fromRow($row) ?? '';
+            $stored = is_string($row->name) ? $row->name : '';
+            if (! self::contains($label, $needle) && ! self::contains($stored, $needle)) {
+                continue;
+            }
+
             $id = $this->intField($row, 'id');
             $results[] = [
                 'id' => $id,
                 'type' => 'category',
-                'label' => is_string($row->name) ? $row->name : '',
+                'label' => $label,
                 'url' => '/transactions?category='.$id,
             ];
         }
 
         return $results;
+    }
+
+    private static function contains(string $haystack, string $needle): bool
+    {
+        return $haystack !== '' && str_contains(mb_strtolower($haystack), $needle);
     }
 
     // Goals and pots share the same shape: own-rows-only, LIKE on `name`,

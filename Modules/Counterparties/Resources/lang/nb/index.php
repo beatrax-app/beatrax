@@ -6,7 +6,7 @@ return [
     'page_title' => 'Motparter',
     'heading' => 'Motparter',
 
-    'entities' => ':count entiteter',
+    'entities' => ':count entitet|:count entiteter',
     'need_identification' => ':count må identifiseres',
 
     'search_placeholder' => 'Søk på navn, alias eller IBAN…',

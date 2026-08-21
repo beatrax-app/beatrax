@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Correspondance de motif : **:name** — confiance faible. Vérifie avant de lier.',
     'suggestion_high' => '✨ On dirait **:name** — confiance élevée',
 
-    'reasoning' => ':hits opérations récentes sur :total sur cet IBAN correspondent à :name.',
+    'reasoning' => ':hits sur :total opération récente sur cet IBAN correspond à :name.|:hits sur :total opérations récentes sur cet IBAN correspondent à :name.',
     'yes_link' => 'Oui, lier à :name ↵',
     'no_not' => 'Non, pas :name',
 

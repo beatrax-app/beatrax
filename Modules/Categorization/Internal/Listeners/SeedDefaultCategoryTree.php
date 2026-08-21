@@ -10,7 +10,6 @@ final class SeedDefaultCategoryTree
 {
     public function __construct(private readonly DefaultCategoryTreeSeeder $seeder) {}
 
-    // The tree is identical for every user, so the event payload is unread.
     public function handle(): void
     {
         $this->seeder->run();

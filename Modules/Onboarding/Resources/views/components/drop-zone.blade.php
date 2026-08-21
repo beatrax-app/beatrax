@@ -14,6 +14,9 @@
       :glyph      — single emoji ("📥").
       :accept     — HTML accept attribute (".csv,.xml,.sta,.mt940,.940"
                      for ASN; ".pdf" for ICS).
+      :fileLabel  — the format's own name ("ASN CSV", "PDF"), untranslated
+                     like the format chips. Keeps the touch copy specific.
+      :multiple   — allow several files at once (the ICS statements step).
 
     The drop-zone is purely visual — Livewire's `wire:model` on the
     nested `input` is the upload pipeline; no JavaScript drag
@@ -22,7 +25,9 @@
     Which is why the phone runtime gets different copy. The whole label is
     the file picker, so tapping it has always worked — but "Drop your ASN CSV
     here" names a gesture the device does not have, and the only line that
-    described a reachable action was the smaller one underneath.
+    described a reachable action was the smaller one underneath. The caller's
+    format is not thrown away with the gesture: the touch lead names it too,
+    so the reader still knows which file the zone wants.
 --}}
 @use('Modules\Core\Public\Services\UserDataPathService')
 @use('Modules\Core\Public\Support\Lang')
@@ -32,6 +37,8 @@
     'sublink' => null,
     'glyph' => '📥',
     'accept' => '',
+    'fileLabel' => null,
+    'multiple' => false,
 ])
 @php
     /** @var string $wireModel */
@@ -39,12 +46,16 @@
     /** @var ?string $sublink */
     /** @var string $glyph */
     /** @var string $accept */
+    /** @var ?string $fileLabel */
+    /** @var bool $multiple */
 
     $lead ??= Lang::get('onboarding::components.drop_zone_lead');
     $sublink ??= Lang::get('onboarding::components.drop_zone_sublink');
 
     if (UserDataPathService::isMobileRuntime()) {
-        $lead = Lang::get('onboarding::components.drop_zone_touch_lead');
+        $lead = $fileLabel === null
+            ? Lang::get('onboarding::components.drop_zone_touch_lead')
+            : Lang::get('onboarding::components.drop_zone_touch_lead_named', ['file' => $fileLabel]);
         $sublink = null;
     }
 @endphp
@@ -60,5 +71,6 @@
         class="drop-zone-input"
         wire:model="{{ $wireModel }}"
         @if ($accept !== '') accept="{{ $accept }}" @endif
+        @if ($multiple) multiple @endif
     />
 </label>

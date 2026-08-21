@@ -55,7 +55,7 @@
 
     $commitButtonLabel = match (true) {
         $isCommitting => Lang::get('onboarding::first_import.commit_committing'),
-        $preview->dedupedTotalCount > 0 => Lang::get('onboarding::first_import.commit_count', ['count' => $preview->dedupedTotalCount]),
+        $preview->dedupedTotalCount > 0 => Lang::choice('onboarding::first_import.commit_count', $preview->dedupedTotalCount),
         default => Lang::get('onboarding::first_import.commit_empty'),
     };
 

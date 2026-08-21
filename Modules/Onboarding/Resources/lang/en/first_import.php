@@ -20,7 +20,7 @@ return [
     'to_commit' => 'to commit ·',
     'already_imported' => 'already imported',
     'commit_committing' => 'Committing…',
-    'commit_count' => 'Commit everything (:count transactions) →',
+    'commit_count' => 'Commit everything (:count transaction) →|Commit everything (:count transactions) →',
     'commit_empty' => 'Commit everything (—) →',
     'skip' => 'Skip for now',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Counterparty',
         'col_amount' => 'Amount',
         'load_more' => 'Load more (:remaining remaining)',
-        'rows_shown' => ':count rows shown',
+        'rows_shown' => ':count row shown|:count rows shown',
     ],
 ];

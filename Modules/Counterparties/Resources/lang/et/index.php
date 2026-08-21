@@ -6,7 +6,7 @@ return [
     'page_title' => 'Vastaspooled',
     'heading' => 'Vastaspooled',
 
-    'entities' => ':count üksust',
+    'entities' => ':count üksus|:count üksust',
     'need_identification' => ':count vajab tuvastamist',
 
     'search_placeholder' => 'Otsi nime, aliase või IBAN-i järgi…',

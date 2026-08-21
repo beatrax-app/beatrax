@@ -6,7 +6,7 @@ return [
     'page_title' => 'Protustranke',
     'heading' => 'Protustranke',
 
-    'entities' => 'Subjekti: :count',
+    'entities' => ':count subjekt|:count subjekta|:count subjekata',
     'need_identification' => 'Za identifikaciju: :count',
 
     'search_placeholder' => 'Pretraži po nazivu, aliasu ili IBAN-u…',

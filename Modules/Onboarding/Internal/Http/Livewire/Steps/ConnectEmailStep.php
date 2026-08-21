@@ -11,7 +11,6 @@ use Livewire\Component;
 
 final class ConnectEmailStep extends Component
 {
-    // Read by the blade to dim the button the user did not click.
     public ?string $authStartedFor = null;
 
     public function authorizeProvider(string $provider): void

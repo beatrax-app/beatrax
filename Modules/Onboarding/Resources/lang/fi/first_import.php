@@ -20,7 +20,7 @@ return [
     'to_commit' => 'kirjattavana ·',
     'already_imported' => 'jo tuotu',
     'commit_committing' => 'Kirjataan…',
-    'commit_count' => 'Kirjaa kaikki (:count tapahtumaa) →',
+    'commit_count' => 'Kirjaa kaikki (:count tapahtuma) →|Kirjaa kaikki (:count tapahtumaa) →',
     'commit_empty' => 'Kirjaa kaikki (—) →',
     'skip' => 'Ohita toistaiseksi',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Vastapuoli',
         'col_amount' => 'Summa',
         'load_more' => 'Lataa lisää (:remaining jäljellä)',
-        'rows_shown' => ':count riviä näkyvissä',
+        'rows_shown' => ':count rivi näkyvissä|:count riviä näkyvissä',
     ],
 ];

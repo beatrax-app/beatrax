@@ -7,6 +7,7 @@ namespace Modules\Search\Internal\Services;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Fmt;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Search\Public\Dto\SearchRowDto;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -43,7 +44,7 @@ final class SearchRowMapper
             counterpartyName: $counterpartyName,
             counterpartySlug: $this->counterpartySlug($row),
             categoryId: $row->category_id === null ? null : self::toInt($row->category_id),
-            categoryName: $row->category_name === null ? null : self::toString($row->category_name),
+            categoryName: CategoryDisplayName::fromRow($row, 'category'),
             amountMinor: self::toInt($row->display_minor),
             amountCurrency: self::toString($row->display_currency),
             secondaryMinor: $secondaryMinor,

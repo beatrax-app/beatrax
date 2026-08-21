@@ -6,7 +6,7 @@ return [
     'page_title' => 'Contrapartes',
     'heading' => 'Contrapartes',
 
-    'entities' => ':count entidades',
+    'entities' => ':count entidad|:count entidades',
     'need_identification' => ':count por identificar',
 
     'search_placeholder' => 'Buscar por nombre, alias o IBAN…',

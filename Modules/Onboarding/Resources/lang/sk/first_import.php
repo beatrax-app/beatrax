@@ -20,7 +20,7 @@ return [
     'to_commit' => 'na potvrdenie ·',
     'already_imported' => 'už importovaných',
     'commit_committing' => 'Potvrdzuje sa…',
-    'commit_count' => 'Potvrdiť všetko (transakcie: :count) →',
+    'commit_count' => 'Potvrdiť všetko (:count transakcia) →|Potvrdiť všetko (:count transakcie) →|Potvrdiť všetko (:count transakcií) →',
     'commit_empty' => 'Potvrdiť všetko (—) →',
     'skip' => 'Zatiaľ preskočiť',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Protistrana',
         'col_amount' => 'Suma',
         'load_more' => 'Načítať ďalšie (zostáva :remaining)',
-        'rows_shown' => 'Zobrazené riadky: :count',
+        'rows_shown' => ':count zobrazený riadok|:count zobrazené riadky|:count zobrazených riadkov',
     ],
 ];

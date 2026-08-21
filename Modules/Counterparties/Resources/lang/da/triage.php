@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Mønstermatch: **:name** — lav sikkerhed. Kontrollér, før du kobler.',
     'suggestion_high' => '✨ Ligner **:name** — høj sikkerhed',
 
-    'reasoning' => ':hits af :total nylige posteringer på denne IBAN peger på :name.',
+    'reasoning' => ':hits af :total nylig postering på denne IBAN peger på :name.|:hits af :total nylige posteringer på denne IBAN peger på :name.',
     'yes_link' => 'Ja, kobl til :name ↵',
     'no_not' => 'Nej, ikke :name',
 

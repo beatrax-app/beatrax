@@ -53,6 +53,14 @@ final class CorpusPatternMatcher
             return false;
         }
 
+        // Both edges are asserted only where the needle's own edge is a word
+        // character, so a needle made only of punctuation asserts neither and
+        // decays to a bare substring search: the pattern `-` would rename
+        // every transaction carrying a hyphen.
+        if (preg_match('/[\p{L}\p{N}]/u', $needle) !== 1) {
+            return false;
+        }
+
         // Each edge is asserted only where the needle's OWN edge is alphanumeric.
         // A pattern ending in punctuation carries its own boundary — asserting
         // past it made `AMAZON.` stop matching `AMAZON.NL`.
@@ -62,9 +70,12 @@ final class CorpusPatternMatcher
         return preg_match('#'.$before.preg_quote($needle, '#').$after.'#iu', $haystack) === 1;
     }
 
+    // \p{M} counts: an NFD needle ends in a combining mark, and reading that
+    // as punctuation asserted no trailing boundary at all, so `café` decomposed
+    // matched inside `caféteria`.
     private static function isWordEdge(string $character): bool
     {
-        return preg_match('/^[\p{L}\p{N}]$/u', $character) === 1;
+        return preg_match('/^[\p{L}\p{N}\p{M}]$/u', $character) === 1;
     }
 
     public function isRegex(string $pattern): bool

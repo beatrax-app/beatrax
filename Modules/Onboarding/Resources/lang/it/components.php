@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Trascina qui il file del tuo estratto conto',
     'drop_zone_sublink' => 'oppure cerca un file',
     'drop_zone_touch_lead' => 'Tocca per scegliere un file',
+    'drop_zone_touch_lead_named' => 'Tocca per scegliere il tuo file :file',
 
     'vd_optional' => ' — facoltativo',
 

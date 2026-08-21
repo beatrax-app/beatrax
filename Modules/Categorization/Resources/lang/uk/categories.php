@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-// Keyed by the slug DefaultCategoryTreeSeeder assigns, never by display name.
 return [
     'income' => 'Доходи',
     'income-salary' => 'Зарплата',

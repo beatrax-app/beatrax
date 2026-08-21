@@ -579,17 +579,189 @@ under the gesture bar — on one platform, while the same code was correct on th
 other.
 
 `resources/css/app.css` defines `--safe-*` as `max()` of the two sources, so a
-template that reads the variable is right on both. The rule scans every Blade
-template for a direct `env(safe-area-inset-` outside that definition, ignoring
-Blade comments so the layout may still explain why `viewport-fit=cover` is on
-the viewport tag.
+template that reads the variable is right on both. The first arm scans every
+Blade template for a direct `env(safe-area-inset-` outside that definition,
+case-insensitively and tolerant of inner whitespace — CSS function names are
+ASCII case-insensitive, so a literal lowercase search let `ENV(` and
+`env( safe-area-inset-top )` through. It ignores Blade comments, so the layout
+may still explain why `viewport-fit=cover` is on the viewport tag. Five
+templates have ever carried the shape and all five are fixed; this arm is what
+keeps them from coming back.
 
-A second arm covers the shape found alongside it in all six offenders:
-`px-[…left]` followed by `pr-[…right]`. `px-*` writes *both* horizontal
-paddings, so the left inset is mirrored onto the right and then overwritten —
-correct only because Tailwind emits `pr` after `px`, and wrong on a notched
-phone held in landscape, where the two edges genuinely differ. `pl-*` with
-`pr-*` says what was meant.
+The second arm keeps the seam those templates depend on: all four `--safe-*`
+must still be defined as the `max()` of both sources. Whitespace is collapsed
+before the comparison, so reformatting the declaration no longer reports the
+seam as lost when it is intact.
+
+The third arm is a forward guard rather than a detector of those five — it
+matches the post-migration spelling, `px-[var(--safe-left)]` or
+`py-[var(--safe-top)]`, which has never appeared in this repository. `px-*`
+writes *both* horizontal paddings and `py-*` both vertical ones, so one edge's
+inset is mirrored onto the opposite edge and then overwritten — correct only
+because Tailwind emits the single-edge utility after the pair, and wrong on a
+notched phone, where the two edges genuinely differ. The vertical form is the
+more reachable of the two, since top and bottom differ in portrait. `pl-*` with
+`pr-*`, and `pt-*` with `pb-*`, say what was meant. It reads the same
+comment-stripped body the first arm does, so documenting the anti-pattern does
+not fail the build.
+
+The fourth arm is the invariant the other three only spell. `layouts.lock`
+yields straight into `<body>` under `viewport-fit=cover` and draws no chrome of
+its own, so every component that extends it is the only thing between its
+content and the system bars. The arm resolves each `extends('layouts.lock')`
+component to the view it renders and fails when any of the four edges is
+unpadded — including when it cannot resolve the view at all, because an
+unreadable consumer is an unchecked one. A new lock-layout screen with a bare
+`min-h-screen` root passes all three other arms and still sits under the status
+bar on both platforms.
+
+One caveat about this page itself: Tailwind v4 scans the project root, `.docs/`
+included, so a utility name written in a sentence here is a real candidate for
+the bundle. `px-[…left]` in an earlier draft of this section shipped as
+`padding-inline:…left` in `public/build`. `app.css` now carries
+`@source not "../../.docs"` so that prose about a class can never emit it.
+
+## An encrypted column rendered to the reader as ciphertext
+
+`Modules/Sync/tests/Feature/RenderedCiphertextGuardTest.php`
+
+A read of a `SensitiveFieldRegistry` column that never reaches
+`SensitiveColumnCodec` returns the stored bytes: XChaCha20-Poly1305 ciphertext,
+base64 of a nonce and a tag. Nothing raises. The page returns 200, the column is
+a non-empty string, every formatter downstream accepts it, and the card prints
+it.
+
+One branch fixed this three times in an afternoon, each time because a human
+looked at a phone. `/counterparties/triage` read the queue through the raw
+builder and hydrated models from the rows, so no cast ran; the card put the
+stored `counterparties.iban` through the IBAN mask and read
+`7F · ·· HUX5 ···· ···· ==` — on the screen whose entire job is to ask the
+reader which IBAN this is. `/community/mystery-merchants` listed nineteen base64
+blobs and offered a button to publish one of them to a shared corpus, and the
+same action logged the composed URL, so the description reached
+`storage/logs` as well. Then the alias match preview: no codec injected, so both
+columns came back as base64, the substring match ran against the ciphertext and
+reported the wrong count, and the values reached a public Livewire property,
+which puts them in the browser payload as well as on the screen.
+
+Three static designs were tried against it and all three fail, which is why the
+rule is behavioural:
+
+- **Scan Blade for the column names.** The registry lists `title`, `body`,
+  `note`, `description` and `params`. A Blade `$title` is a page title; 28 files
+  match on that word alone.
+- **Flag a file that names a sensitive column and carries no codec marker.** The
+  pre-fix triage queue already carried three markers — it decrypted transaction
+  descriptions a few lines below the counterparty columns it missed. A file-level
+  marker gives a false negative on the exact defect.
+- **Diff the columns a file selects against the columns it decrypts.** The
+  offending query selects `*` and calls `Model::hydrate()`, so the leaking
+  columns are not named in the source at all.
+
+So the guard enables encryption for real through `EncryptionMigrationService`,
+renders twenty-two surfaces over the ciphertext that produces, and asserts the
+exact bytes sitting in the database do not appear in what reaches the browser —
+which for a Livewire component means the `wire:snapshot` payload as well as the
+HTML, because a public property ships either way. Asserting on
+the stored value rather than on "does this look like base64" is what keeps it
+precise: there is nothing to tune and no shape to argue about.
+
+The absence half cannot see a value a view masks, truncates or reformats first,
+because only a few characters of it survive — the triage card printed six. Each
+screen therefore also asserts the plaintext it exists to show, in whatever form
+it shows it, and for the triage card that is the mask over the *plaintext* IBAN.
+That half doubles as the check that the fixture still reaches the screen: an
+empty state passes an absence assertion perfectly.
+
+The precondition is not optional. Decrypting a plaintext value is a documented
+no-op, so a fixture that quietly failed to encrypt would let a completely broken
+read path pass on every screen at once — green, silent, and worth nothing. The
+first case in the file reads every registered column back and requires
+`decrypted: true` before a single screen is rendered.
+
+Three columns are covered by the same census and are **not** in
+`SensitiveFieldRegistry::columns()`: `transactions.counterparty_normalized`,
+`merchants.normalized_name` and `recurring_series.cluster_counterparty_key`.
+They hold a keyed HMAC rather than AEAD, for reasons argued in
+[sensitive columns at rest](../features/sync/sensitive-columns-at-rest.md), and
+putting them on that list would encrypt the columns the database has to match on.
+They live behind `blindIndexColumns()` instead, and the guard reads both
+accessors and pins that they stay disjoint — a guard driven by the AEAD list
+alone has no opinion about a digest on a screen, which is the same defect wearing
+a different mechanism.
+
+The `_no_counterparty` sentinel, from `blindIndexSentinel()`, is in the census
+beside them, and it is the case a shape rule misses: it is stored verbatim on
+purpose, so `looksDerived()` answers `false` for it and any rule written as
+"reject what looks derived" lets a machine token through to the reader.
+
+The census also covers the crypto layer's own vocabulary — an exception message
+caught and printed as if it were copy. That is a different shape from a leaked
+value, and it has a live instance: the import preview prints
+`BlindIndexKeyUnavailableException`'s message once per row, naming an internal
+class and the reader's own user id.
+
+## A comment rule written down and never enforced
+
+`tests/Contracts/CommentPolicyArchTest.php`
+
+The comment policy has six mechanical rules. The test implemented five of them.
+M1 — no lone single-line comment — had no test at all, and nobody noticed for
+as long as the file has existed, because the other five passing is
+indistinguishable from all six passing.
+
+What that cost is not one defect but a habit. One branch added ten lone
+one-liners; the tree as a whole had **476**, across 298 files and every module.
+Each one individually looks harmless, which is exactly why the count reached
+476: there was never a moment where the next one was obviously the problem.
+The sibling rule made it worse rather than better — M2's failure message read
+*"a comment worth only one line should BE one line"*, so the file that should
+have been enforcing the floor was arguing against it in prose.
+
+Three things fell out of writing the rule that were not visible before it:
+
+- **The directive allow-list matched a word, not a directive.** The pattern
+  accepted any comment whose first token was `phpstan`, `psalm`, `phpcs`, `var`
+  or `codeCoverage`, so five ordinary sentences that happened to open with
+  "PHPStan" were exempt — from M2, M3 and M4 as well. An allow-list hit is
+  silent by construction: those lines were not passing the rules, they were
+  invisible to them. A real directive is `@var`, `@codeCoverageIgnore`, or a
+  tool name followed by `-` or `:`, and the pattern now says so.
+- **`mobile-app/` was outside every file root.** The second Composer root's own
+  bootstrap carried a 54-line block comment, nine `//` blocks over the M2 cap,
+  and requirement identifiers M5 bans — all of it green, because nothing looked
+  there. The tree is mostly symlinks back to this root, so the walk prunes
+  symlinked directories at the branch rather than resolving them: following one
+  reports every shared file a second time under a second spelling.
+- **A rule with no failing state proves nothing.** M1 was verified by
+  reintroducing a lone comment, watching the suite go red on it, removing it,
+  and watching it go green. That step is cheap and it is the only thing that
+  separates a rule from a comment about a rule.
+
+## A `.docs` page linking a file that was never written
+
+`tests/Contracts/CommentPolicyArchTest.php`
+
+M6 proves that a documentation link *out of the source* resolves. Nothing proved
+that a link *between two pages* resolves, and the two failure modes are not the
+same size. A stale page describes a real past. A page that names a class, a
+method and a test which have never existed describes nothing at all — and reads
+identically to a page describing shipped code, because prose carries no version.
+
+Both pages added on one branch did exactly that. One documented a notification
+copy spec whose methods had not landed, and asserted on that basis that a
+separate open defect was already fixed. The other named a query method and a
+test file where `git grep` returned exactly one hit each: the page itself.
+
+The rule walks every `.md` under `.docs`, takes the inline and reference-style
+link targets, drops schemes and bare anchors, and resolves what is left against
+the page's own directory. Fenced blocks and inline code are stripped first — a
+page teaching a syntax, or quoting a path deliberately, is illustrating rather
+than pointing. A directory target passes; only a path resolving to nothing fails.
+
+It catches the invented-ahead-of-the-code page only where that page links what
+it invented, which is the common case and not the whole of it. Prose naming a
+class without linking it still passes.
 
 ## Related
 

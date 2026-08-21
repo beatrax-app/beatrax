@@ -304,7 +304,6 @@ trait NormalisesRuleInput
         }
     }
 
-    // A method, not a const, so the translation is read at call time.
     private static function duplicateMessage(): string
     {
         return Lang::get('categorization::rule_form.error_duplicate');

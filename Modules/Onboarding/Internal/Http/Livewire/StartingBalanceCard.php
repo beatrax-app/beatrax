@@ -13,7 +13,6 @@ use Modules\Core\Public\Support\Lang;
 
 final class StartingBalanceCard extends Component
 {
-    // ±€10M caps a typo or a tampered-frontend cent value.
     private const MIN_BALANCE_MINOR = -1_000_000_000_00;
 
     private const MAX_BALANCE_MINOR = 1_000_000_000_00;
@@ -45,7 +44,6 @@ final class StartingBalanceCard extends Component
     /** @var list<array{minor: int, date: string, sourceLabel: string}> */
     public array $alternativeCandidates = [];
 
-    // Defaults to 0 — the earliest-date candidate, which wins on date alone.
     public int $selectedConflictIndex = 0;
 
     /**

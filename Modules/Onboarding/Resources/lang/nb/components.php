@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Slipp kontoutskriftsfilen din her',
     'drop_zone_sublink' => 'eller velg en fil',
     'drop_zone_touch_lead' => 'Trykk for å velge en fil',
+    'drop_zone_touch_lead_named' => 'Trykk for å velge :file-filen din',
 
     'vd_optional' => ' — valgfritt',
 

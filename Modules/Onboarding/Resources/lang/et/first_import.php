@@ -20,7 +20,7 @@ return [
     'to_commit' => 'kinnitamiseks ·',
     'already_imported' => 'juba imporditud',
     'commit_committing' => 'Kinnitan…',
-    'commit_count' => 'Kinnita kõik (:count tehingut) →',
+    'commit_count' => 'Kinnita kõik (:count tehing) →|Kinnita kõik (:count tehingut) →',
     'commit_empty' => 'Kinnita kõik (—) →',
     'skip' => 'Jäta praegu vahele',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Vastaspool',
         'col_amount' => 'Summa',
         'load_more' => 'Laadi veel (jäänud :remaining)',
-        'rows_shown' => 'kuvatud :count rida',
+        'rows_shown' => 'kuvatud :count rida|kuvatud :count rida',
     ],
 ];

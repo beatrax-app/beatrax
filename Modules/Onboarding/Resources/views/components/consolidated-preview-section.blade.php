@@ -157,7 +157,7 @@
                 </button>
             </div>
         @elseif ($shownCount > 0 && $section->totalRows > 0)
-            <p class="preview-section-more">{{ Lang::get('onboarding::first_import.section.rows_shown', ['count' => $shownCount]) }}</p>
+            <p class="preview-section-more">{{ Lang::choice('onboarding::first_import.section.rows_shown', $shownCount) }}</p>
         @endif
     @endif
 </section>

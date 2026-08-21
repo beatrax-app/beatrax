@@ -6,7 +6,7 @@ return [
     'page_title' => 'Αντισυμβαλλόμενοι',
     'heading' => 'Αντισυμβαλλόμενοι',
 
-    'entities' => ':count οντότητες',
+    'entities' => ':count οντότητα|:count οντότητες',
     'need_identification' => ':count χρειάζονται αναγνώριση',
 
     'search_placeholder' => 'Αναζήτηση με όνομα, ψευδώνυμο ή IBAN…',

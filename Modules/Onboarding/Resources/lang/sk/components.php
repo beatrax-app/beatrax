@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Sem presuň súbor s výpisom z účtu',
     'drop_zone_sublink' => 'alebo vyber súbor',
     'drop_zone_touch_lead' => 'Ťuknutím vyber súbor',
+    'drop_zone_touch_lead_named' => 'Ťuknutím vyber svoj súbor :file',
 
     'vd_optional' => ' — nepovinné',
 

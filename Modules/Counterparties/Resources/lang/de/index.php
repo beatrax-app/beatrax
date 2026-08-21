@@ -6,7 +6,7 @@ return [
     'page_title' => 'Zahlungspartner',
     'heading' => 'Zahlungspartner',
 
-    'entities' => ':count Einheiten',
+    'entities' => ':count Einheit|:count Einheiten',
     'need_identification' => ':count zu identifizieren',
 
     'search_placeholder' => 'Nach Name, Alias oder IBAN suchen…',

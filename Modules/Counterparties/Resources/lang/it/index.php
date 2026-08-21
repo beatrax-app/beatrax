@@ -6,7 +6,7 @@ return [
     'page_title' => 'Controparti',
     'heading' => 'Controparti',
 
-    'entities' => ':count entità',
+    'entities' => ':count entità|:count entità',
     'need_identification' => ':count da identificare',
 
     'search_placeholder' => 'Cerca per nome, alias o IBAN…',

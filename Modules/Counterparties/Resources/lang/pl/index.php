@@ -6,7 +6,7 @@ return [
     'page_title' => 'Kontrahenci',
     'heading' => 'Kontrahenci',
 
-    'entities' => 'Podmioty: :count',
+    'entities' => ':count podmiot|:count podmioty|:count podmiotów',
     'need_identification' => 'Do zidentyfikowania: :count',
 
     'search_placeholder' => 'Szukaj po nazwie, aliasie lub numerze IBAN…',

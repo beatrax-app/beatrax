@@ -167,7 +167,8 @@ final class SetupWizard extends Component
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
 
-        // A returned RedirectResponse is dropped; only $this->redirect() navigates.
+        // Livewire drops a RedirectResponse returned from an action, so
+        // navigation has to go through $this->redirect() or it silently no-ops.
         return $this->redirect('/');
     }
 

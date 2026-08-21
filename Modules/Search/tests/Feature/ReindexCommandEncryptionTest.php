@@ -115,3 +115,25 @@ it('still rebuilds a plaintext user when another user is refused', function (): 
     expect(rceBody($plainTxId))->toContain('Jumbo');
     expect(rceBody($encryptedTx['id']))->toBe('');
 })->group('ReindexCommandEncryption');
+
+// A blanked column is ciphertext no epoch in this keyring opens. Writing the
+// empty string over it removed the row from the index and still printed "FTS
+// index rebuilt", so a search that silently stopped finding it looked healthy.
+it('leaves a row it cannot decrypt out of the index and reports the rebuild incomplete', function (): void {
+    $user = rceUser('rce-foreign-epoch');
+    $session = $this->enablesEncryptionForUser($user);
+
+    /** @var SensitiveColumnCodec $codec */
+    $codec = app(SensitiveColumnCodec::class);
+    $readable = rceEncryptedTransaction($user, $codec, $session, 'Jumbo', 'Weekly groceries');
+    $unreadable = rceEncryptedTransaction($user, $codec, $session, 'Albert Heijn', 'Weekly groceries');
+
+    app(DatabaseManager::class)->connection()->table('transactions')
+        ->where('id', $unreadable['id'])
+        ->update(['description' => base64_encode(random_bytes(48))]);
+
+    $this->artisan('search:reindex')->assertExitCode(1);
+
+    expect(rceBody($readable['id']))->toContain('Jumbo');
+    expect(rceBody($unreadable['id']))->toBe('');
+})->group('ReindexCommandEncryption');

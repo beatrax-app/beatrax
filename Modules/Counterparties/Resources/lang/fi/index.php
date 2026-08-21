@@ -6,7 +6,7 @@ return [
     'page_title' => 'Vastapuolet',
     'heading' => 'Vastapuolet',
 
-    'entities' => ':count kohdetta',
+    'entities' => ':count kohde|:count kohdetta',
     'need_identification' => ':count vaatii tunnistamista',
 
     'search_placeholder' => 'Hae nimellä, aliaksella tai IBANilla…',

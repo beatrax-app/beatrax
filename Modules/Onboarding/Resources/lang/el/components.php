@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Ρίξε εδώ το αρχείο της κατάστασης κινήσεων',
     'drop_zone_sublink' => 'ή αναζήτησε ένα αρχείο',
     'drop_zone_touch_lead' => 'Πάτησε για να επιλέξεις αρχείο',
+    'drop_zone_touch_lead_named' => 'Πάτησε για να επιλέξεις το αρχείο :file',
 
     'vd_optional' => ' — προαιρετικό',
 

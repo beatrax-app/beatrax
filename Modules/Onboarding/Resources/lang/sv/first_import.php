@@ -20,7 +20,7 @@ return [
     'to_commit' => 'att bokföra ·',
     'already_imported' => 'redan importerade',
     'commit_committing' => 'Bokför…',
-    'commit_count' => 'Bokför allt (:count transaktioner) →',
+    'commit_count' => 'Bokför allt (:count transaktion) →|Bokför allt (:count transaktioner) →',
     'commit_empty' => 'Bokför allt (—) →',
     'skip' => 'Hoppa över tills vidare',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Motpart',
         'col_amount' => 'Belopp',
         'load_more' => 'Ladda fler (:remaining kvar)',
-        'rows_shown' => ':count rader visas',
+        'rows_shown' => ':count rad visas|:count rader visas',
     ],
 ];

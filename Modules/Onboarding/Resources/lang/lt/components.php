@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Vilk išrašo failą čia',
     'drop_zone_sublink' => 'arba pasirink failą',
     'drop_zone_touch_lead' => 'Palieskite, kad pasirinktumėte failą',
+    'drop_zone_touch_lead_named' => 'Palieskite, kad pasirinktumėte savo :file failą',
 
     'vd_optional' => ' — neprivaloma',
 

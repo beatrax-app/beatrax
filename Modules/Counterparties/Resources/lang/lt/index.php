@@ -6,7 +6,7 @@ return [
     'page_title' => 'Kitos šalys',
     'heading' => 'Kitos šalys',
 
-    'entities' => 'Subjektų: :count',
+    'entities' => ':count subjektas|:count subjektai|:count subjektų',
     'need_identification' => 'Reikia atpažinti: :count',
 
     'search_placeholder' => 'Ieškoti pagal pavadinimą, alternatyvų pavadinimą ar IBAN…',

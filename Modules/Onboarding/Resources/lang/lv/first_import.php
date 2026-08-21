@@ -20,7 +20,7 @@ return [
     'to_commit' => 'apstiprināšanai ·',
     'already_imported' => 'jau importēti',
     'commit_committing' => 'Apstiprina…',
-    'commit_count' => 'Apstiprināt visu (darījumi: :count) →',
+    'commit_count' => 'Apstiprināt visu (:count darījumu) →|Apstiprināt visu (:count darījums) →|Apstiprināt visu (:count darījumi) →',
     'commit_empty' => 'Apstiprināt visu (—) →',
     'skip' => 'Pagaidām izlaist',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Darījuma partneris',
         'col_amount' => 'Summa',
         'load_more' => 'Ielādēt vairāk (vēl :remaining)',
-        'rows_shown' => 'Rādītās rindas: :count',
+        'rows_shown' => 'rādītas :count rindu|rādīta :count rinda|rādītas :count rindas',
     ],
 ];

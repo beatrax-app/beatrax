@@ -20,7 +20,7 @@ return [
     'to_commit' => 'at bogføre ·',
     'already_imported' => 'allerede importeret',
     'commit_committing' => 'Bogfører…',
-    'commit_count' => 'Bogfør det hele (:count transaktioner) →',
+    'commit_count' => 'Bogfør det hele (:count transaktion) →|Bogfør det hele (:count transaktioner) →',
     'commit_empty' => 'Bogfør det hele (—) →',
     'skip' => 'Spring over for nu',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Modpart',
         'col_amount' => 'Beløb',
         'load_more' => 'Indlæs flere (:remaining tilbage)',
-        'rows_shown' => ':count rækker vist',
+        'rows_shown' => ':count række vist|:count rækker vist',
     ],
 ];

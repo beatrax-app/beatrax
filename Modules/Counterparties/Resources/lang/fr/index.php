@@ -6,7 +6,7 @@ return [
     'page_title' => 'Tiers',
     'heading' => 'Tiers',
 
-    'entities' => ':count entités',
+    'entities' => ':count entité|:count entités',
     'need_identification' => ':count à identifier',
 
     'search_placeholder' => 'Rechercher par nom, alias ou IBAN…',

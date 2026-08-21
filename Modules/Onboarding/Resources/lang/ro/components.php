@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Trage aici fișierul cu extrasul de cont',
     'drop_zone_sublink' => 'sau caută un fișier',
     'drop_zone_touch_lead' => 'Atinge pentru a alege un fișier',
+    'drop_zone_touch_lead_named' => 'Atinge pentru a alege fișierul tău :file',
 
     'vd_optional' => ' — opțional',
 

@@ -20,7 +20,7 @@ return [
     'to_commit' => 'om vast te leggen ·',
     'already_imported' => 'al geïmporteerd',
     'commit_committing' => 'Bezig met vastleggen…',
-    'commit_count' => 'Leg alles vast (:count transacties) →',
+    'commit_count' => 'Leg alles vast (:count transactie) →|Leg alles vast (:count transacties) →',
     'commit_empty' => 'Leg alles vast (—) →',
     'skip' => 'Voorlopig overslaan',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Tegenpartij',
         'col_amount' => 'Bedrag',
         'load_more' => 'Meer laden (:remaining resterend)',
-        'rows_shown' => ':count rijen getoond',
+        'rows_shown' => ':count rij getoond|:count rijen getoond',
     ],
 ];
