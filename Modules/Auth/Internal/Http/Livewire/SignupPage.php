@@ -22,18 +22,28 @@ final class SignupPage extends Component
 {
     use HoldsFlashMessage;
 
+    // The three boxes on the form. SignupAction also rejects under `signup`
+    // when the device gained an owner mid-submit, and that has no box to sit
+    // under, so it stays on the form-level line.
+    private const array FIELD_KEYS = ['username', 'password', 'passwordConfirmation'];
+
     public string $username = '';
 
     public string $password = '';
 
     public string $passwordConfirmation = '';
 
+    // A rejected submit leaves both password boxes as the reader typed them.
+    // Emptying them turned a username error into a retyped 12-character
+    // passphrase on a phone keyboard, and left the live checklist ticking
+    // requirements about boxes that no longer held anything.
     public function submit(SignupAction $signup, UrlGenerator $urls): void
     {
+        $this->resetErrorBag();
+        $this->flashMessage = '';
+
         if ($this->password !== $this->passwordConfirmation) {
-            $this->flashMessage = Lang::get('auth::signup.error_mismatch');
-            $this->password = '';
-            $this->passwordConfirmation = '';
+            $this->addError('passwordConfirmation', Lang::get('auth::signup.error_mismatch'));
 
             return;
         }
@@ -41,9 +51,7 @@ final class SignupPage extends Component
         try {
             $signup($this->username, $this->password);
         } catch (ValidationException $e) {
-            $this->flashMessage = ValidationMessages::first($e, 'auth::signup.error_generic');
-            $this->password = '';
-            $this->passwordConfirmation = '';
+            $this->reportRejection($e);
 
             return;
         }
@@ -63,6 +71,30 @@ final class SignupPage extends Component
         $view->extends('layouts.app', ['title' => Lang::get('auth::signup.page_title')]);
 
         return $view;
+    }
+
+    // Field-scoped, so the message renders under the box it is about and the
+    // control carries aria-invalid. One shared form-level line put the
+    // username error below two other fields and the checklist, out of sight
+    // behind a raised keyboard and unannounced on the field it described.
+    private function reportRejection(ValidationException $exception): void
+    {
+        $placed = false;
+
+        foreach ($exception->errors() as $field => $messages) {
+            if (! in_array($field, self::FIELD_KEYS, true)) {
+                continue;
+            }
+
+            foreach ($messages as $message) {
+                $this->addError($field, $message);
+                $placed = true;
+            }
+        }
+
+        if (! $placed) {
+            $this->flashMessage = ValidationMessages::first($exception, 'auth::signup.error_generic');
+        }
     }
 
     // The screen the reader arrived from. It renders for a guest, so the app

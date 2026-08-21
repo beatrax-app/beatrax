@@ -12,6 +12,8 @@ return [
     'download' => 'Lataa .txt-tiedostona',
 
     'saved_as' => 'Tallennettu nimellä beatrax-recovery-codes-:username.txt',
+
+    'saved_native' => 'Beatrax pyysi laitettasi tallentamaan tiedoston. Jos mitään ei näkynyt, käytä sen sijaan Kopioi koodit -painiketta. Beatraxin oma kopio poistetaan, jos asennat sovelluksen uudelleen.',
     'confirm' => 'Olen tallentanut nämä koodit turvalliseen paikkaan.',
     'continue' => 'Jatka Beatraxiin',
 

@@ -12,6 +12,8 @@ return [
     'download' => 'Laadi alla .txt-failina',
 
     'saved_as' => 'Salvestatud kui beatrax-recovery-codes-:username.txt',
+
+    'saved_native' => 'Beatrax palus sinu seadmel faili salvestada. Kui midagi ei ilmunud, kasuta selle asemel nuppu Kopeeri koodid. Beatraxi enda koopia kustutatakse, kui rakenduse uuesti paigaldad.',
     'confirm' => 'Olen need koodid kindlasse kohta salvestanud.',
     'continue' => 'Jätka Beatraxi',
 

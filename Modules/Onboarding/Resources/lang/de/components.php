@@ -6,6 +6,7 @@ return [
 
     'drop_zone_lead' => 'Lege deine Kontoauszugsdatei hier ab',
     'drop_zone_sublink' => 'oder suche eine Datei aus',
+    'drop_zone_touch_lead' => 'Tippe, um eine Datei zu wählen',
 
     'vd_optional' => ' — optional',
 

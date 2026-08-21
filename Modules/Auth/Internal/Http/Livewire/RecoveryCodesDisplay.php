@@ -12,6 +12,7 @@ use Illuminate\Routing\Router;
 use Livewire\Component;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -74,14 +75,20 @@ final class RecoveryCodesDisplay extends Component
         // reports nothing, and left this screen claiming it had saved a file
         // that was never there. The share sheet is the only route that works,
         // and the endpoint behind it answers whether it did.
+
+        // The runtime, not just the route: the route is registered in every
+        // composer root, so gating on it alone sent the desktop through an
+        // endpoint that refuses off-device — turning a download that works
+        // into a reported failure.
         $exportRoute = 'mobile.recovery-codes.export';
+        $nativeExport = UserDataPathService::isMobileRuntime() && $router->has($exportRoute);
 
         $view = $views->make('auth::livewire.recovery-codes-display', [
             'codes' => $codes,
             'downloadFilename' => $formatter->filenameFor($username),
             'downloadSlug' => $formatter->usernameSlug($username),
             'downloadPayload' => $formatter->format($codes),
-            'exportUrl' => $router->has($exportRoute) ? $urls->route($exportRoute) : null,
+            'exportUrl' => $nativeExport ? $urls->route($exportRoute) : null,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

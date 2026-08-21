@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'drop_zone_lead' => 'Zet je afschriftbestand hier neer',
     'drop_zone_sublink' => 'of blader naar een bestand',
+    'drop_zone_touch_lead' => 'Tik om een bestand te kiezen',
 
     'vd_optional' => ' — optioneel',
 

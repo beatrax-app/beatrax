@@ -12,6 +12,8 @@ return [
     'download' => 'Atsisiųsti kaip .txt',
 
     'saved_as' => 'Išsaugota kaip beatrax-recovery-codes-:username.txt',
+
+    'saved_native' => 'Beatrax paprašė tavo įrenginio išsaugoti failą. Jei niekas nepasirodė, naudok mygtuką Kopijuoti kodus. Paties Beatrax saugoma kopija ištrinama iš naujo įdiegus programėlę.',
     'confirm' => 'Išsaugojau šiuos kodus saugioje vietoje.',
     'continue' => 'Tęsti į Beatrax',
 

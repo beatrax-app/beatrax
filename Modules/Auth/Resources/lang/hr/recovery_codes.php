@@ -12,6 +12,8 @@ return [
     'download' => 'Preuzmi kao .txt',
 
     'saved_as' => 'Spremljeno kao beatrax-recovery-codes-:username.txt',
+
+    'saved_native' => 'Beatrax je zatražio od tvog uređaja da spremi datoteku. Ako se ništa nije pojavilo, upotrijebi Kopiraj kodove. Kopiju koju čuva sam Beatrax briše ponovna instalacija aplikacije.',
     'confirm' => 'Kodovi su spremljeni na sigurnom mjestu.',
     'continue' => 'Nastavi na Beatrax',
 

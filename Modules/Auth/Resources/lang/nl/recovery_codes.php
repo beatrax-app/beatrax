@@ -11,6 +11,7 @@ return [
     'copy_failed' => 'Kopiëren is niet gelukt. Schrijf de codes op.',
     'download' => 'Downloaden als .txt',
     'saved_as' => 'Opgeslagen als beatrax-recovery-codes-:username.txt',
+    'saved_native' => 'Beatrax heeft je apparaat gevraagd het bestand op te slaan. Als er niets verscheen, gebruik dan Codes kopiëren. De kopie die Beatrax zelf bewaart, verdwijnt als je de app opnieuw installeert.',
     'confirm' => 'Ik heb deze codes op een veilige plek bewaard.',
     'continue' => 'Doorgaan naar Beatrax',
 

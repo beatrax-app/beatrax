@@ -12,6 +12,8 @@ return [
     'download' => 'Hent som .txt',
 
     'saved_as' => 'Gemt som beatrax-recovery-codes-:username.txt',
+
+    'saved_native' => 'Beatrax bad din enhed om at gemme filen. Hvis der ikke skete noget, så brug Kopiér koder i stedet. Den kopi, Beatrax selv gemmer, slettes, hvis du geninstallerer appen.',
     'confirm' => 'Jeg har gemt disse koder et sikkert sted.',
     'continue' => 'Fortsæt til Beatrax',
 

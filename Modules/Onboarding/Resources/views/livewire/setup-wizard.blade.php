@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Onboarding\Internal\Http\Livewire\SetupWizard')
 {{--
     Parent view for the first-run setup wizard. Renders the wizard
     chrome (top brand row + progress dots + resume-later affordance),
@@ -21,7 +22,15 @@
     public property is bounded by SetupWizard::goToStep — every prior
     step must be done|skipped before a step is reachable.
 --}}
-<div class="wiz-page">
+{{-- Nine steps share one page, so a step change re-renders rather than
+     navigates and the browser keeps the offset it had: step 3 opened 424px
+     down, below its own heading, with the chrome dragged under the status
+     bar. --}}
+<div
+    class="wiz-page"
+    x-data
+    x-on:{{ SetupWizard::STEP_CHANGED_EVENT }}.window="window.scrollTo({ top: 0 })"
+>
     <header class="wiz-top" aria-label="{{ Lang::get('onboarding::wizard.header_aria') }}">
         <div class="wiz-brand">
             <img

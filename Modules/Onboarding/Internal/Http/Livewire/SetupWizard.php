@@ -25,6 +25,12 @@ use Psr\Log\LoggerInterface;
 #[Layout('onboarding::layouts.app-wizard')]
 final class SetupWizard extends Component
 {
+    // A step change is a re-render of one page, not a navigation, so nothing
+    // resets the scroll: step 3 opened 424px down, past its own heading, with
+    // the wizard chrome dragged under the status bar. The browser is the only
+    // thing that can put the viewport back at the top.
+    public const string STEP_CHANGED_EVENT = 'wizard-step-changed';
+
     public string $currentStepKey = 'welcome';
 
     // Rebuilt on every mount, so tampering with it client-side survives
@@ -115,6 +121,7 @@ final class SetupWizard extends Component
 
         $this->currentStepKey = $stepKey;
         $this->progress = $progress;
+        $this->dispatch(self::STEP_CHANGED_EVENT);
     }
 
     #[On('wizard.step.completed')]
@@ -216,5 +223,6 @@ final class SetupWizard extends Component
 
         $this->isResuming = false;
         $this->progress = $query->list($userId);
+        $this->dispatch(self::STEP_CHANGED_EVENT);
     }
 }

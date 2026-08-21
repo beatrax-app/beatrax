@@ -6,6 +6,7 @@ return [
 
     'drop_zone_lead' => 'Přetáhni sem soubor s výpisem z účtu',
     'drop_zone_sublink' => 'nebo soubor vyber',
+    'drop_zone_touch_lead' => 'Klepnutím vyber soubor',
 
     'vd_optional' => ' — volitelné',
 

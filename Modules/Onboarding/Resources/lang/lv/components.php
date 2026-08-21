@@ -6,6 +6,7 @@ return [
 
     'drop_zone_lead' => 'Ievelciet šeit konta izraksta failu',
     'drop_zone_sublink' => 'vai izvēlieties failu',
+    'drop_zone_touch_lead' => 'Pieskaries, lai izvēlētos failu',
 
     'vd_optional' => ' — neobligāti',
 

@@ -34,7 +34,15 @@ it('offers the share sheet when the mobile export endpoint is reachable', functi
         RecoveryCodesDisplay::SESSION_KEY => ['ABCD-EFGH-JKLM-NPQR-STUV'],
     ]);
 
-    $html = Livewire::test(RecoveryCodesDisplay::class)->html();
+    // The route is registered in every composer root; only the phone runtime
+    // has a share sheet behind it.
+    $_SERVER['NATIVEPHP_PLATFORM'] = 'ios';
+
+    try {
+        $html = Livewire::test(RecoveryCodesDisplay::class)->html();
+    } finally {
+        unset($_SERVER['NATIVEPHP_PLATFORM']);
+    }
 
     // The endpoint is the thing that knows whether the file was kept, so the
     // screen has to ask it rather than assume. It arrives JSON-encoded into the

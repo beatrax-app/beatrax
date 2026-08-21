@@ -12,6 +12,8 @@ return [
     'download' => 'Letöltés .txt fájlként',
 
     'saved_as' => 'Mentve így: beatrax-recovery-codes-:username.txt',
+
+    'saved_native' => 'A Beatrax megkérte az eszközödet, hogy mentse el a fájlt. Ha semmi nem jelent meg, használd inkább a Kódok másolása gombot. A Beatrax saját másolata törlődik, ha újratelepíted az alkalmazást.',
     'confirm' => 'Biztonságos helyre mentettem ezeket a kódokat.',
     'continue' => 'Tovább a Beatraxhoz',
 

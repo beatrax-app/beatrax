@@ -6,6 +6,7 @@ return [
 
     'drop_zone_lead' => 'Larga aqui o ficheiro do teu extrato',
     'drop_zone_sublink' => 'ou procura um ficheiro',
+    'drop_zone_touch_lead' => 'Toca para escolher um ficheiro',
 
     'vd_optional' => ' — opcional',
 

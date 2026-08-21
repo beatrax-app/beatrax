@@ -1,5 +1,8 @@
 @use('Modules\Core\Public\Support\Lang')
-<div class="min-h-screen bg-white py-12 dark:bg-slate-950">
+{{-- The system bars are painted over this screen: without the bottom inset
+     the Android navigation bar covers the lower half of "Continue to Beatrax",
+     which is the only way off a screen shown exactly once. --}}
+<div class="min-h-screen bg-white pb-[calc(3rem+var(--safe-bottom))] pl-[var(--safe-left)] pr-[var(--safe-right)] pt-[calc(3rem+var(--safe-top))] dark:bg-slate-950">
     <div class="max-w-xl mx-auto px-6 space-y-6">
         <x-core::page-header
             :title="Lang::get('auth::recovery_codes.title')"
@@ -107,7 +110,14 @@
 
             </div>
 
-            <p x-show="saved" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_as', ['username' => $downloadSlug]) }}</p>
+            {{-- Two different truths, so neither is a promise the platform does
+                 not keep. A browser download manager puts the file where the
+                 reader named it. A phone has no such place: the endpoint writes
+                 into the app's own container — unreachable in Files, and
+                 destroyed by the reinstall these codes exist to survive — and
+                 hands it to the OS, which on iOS surfaced nothing at all. --}}
+            <p x-show="saved && ! exportUrl" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_as', ['username' => $downloadSlug]) }}</p>
+            <p x-show="saved && exportUrl" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_native') }}</p>
             <p x-show="failed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('auth::recovery_codes.copy_failed') }}</p>
         </div>
 
