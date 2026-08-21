@@ -11,6 +11,7 @@ use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Enums\PairingOfferLookup;
 use Modules\Sync\Public\Services\PairingGateway;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -54,11 +55,19 @@ trait AcceptsPairingCode
         // safety-number comparison is still the only trust gate.
         $discovered = $gateway->discoverInitiatorOnLan($this->wordCode);
 
-        if ($discovered === null) {
-            $this->flashMessage = Lang::get('mobile::pairing.errors.relay_unreachable');
+        if ($discovered instanceof PairingOfferLookup) {
+            // Both endings used to say "cannot reach the other device", which
+            // is advice that can only ever work for one of them: a reader whose
+            // code had expired was sent to debug a network that was fine.
+            $this->flashMessage = Lang::get(match ($discovered) {
+                PairingOfferLookup::CodeNotAccepted => 'mobile::pairing.errors.invalid_code',
+                PairingOfferLookup::NoPeerReached => 'mobile::pairing.errors.relay_unreachable',
+            });
+
+            return false;
         }
 
-        return $discovered ?? false;
+        return $discovered;
     }
 
     /**

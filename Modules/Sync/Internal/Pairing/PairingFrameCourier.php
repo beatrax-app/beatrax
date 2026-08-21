@@ -17,7 +17,7 @@ use Throwable;
 /**
  * @link ../../../../.docs/features/sync/pairing-handshake.md
  */
-final class PairingRelayCourier
+final class PairingFrameCourier
 {
     // Mirrors GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP — that class belongs
     // to the crypto transport, so this is the wire string, not a reference.
@@ -28,6 +28,8 @@ final class PairingRelayCourier
         private readonly RelayConfig $relayConfig,
         private readonly DeviceKeySigner $signer,
         private readonly PairingTokenService $tokenService,
+        private readonly PairingFrameApplier $applier,
+        private readonly LanPairingFrameCourier $lanCourier,
         private readonly DatabaseManager $db,
         private readonly ?LoggerInterface $logger = null,
     ) {}
@@ -56,7 +58,7 @@ final class PairingRelayCourier
             $responderName,
         );
 
-        $this->relayClient->deliver($senderDid, $recipientDesktopDid, json_encode($frame, JSON_THROW_ON_ERROR));
+        $this->deliver($senderDid, $recipientDesktopDid, $frame);
     }
 
     // $self's OWN secret key signs the frame — the relay never holds it and
@@ -83,7 +85,30 @@ final class PairingRelayCourier
 
         $frame = PairingFrame::buildConfirm($tokenHash, $self->deviceId, $peerDid, $sigHex);
 
-        $this->relayClient->deliver($self->deviceId, $peerDid, json_encode($frame, JSON_THROW_ON_ERROR));
+        $this->deliver($self->deviceId, $peerDid, $frame);
+    }
+
+    // The LAN first, the relay second. Two devices on one network finishing a
+    // handshake have no reason to route it through the internet, and until this
+    // existed they had no choice: with no relay configured the frame had
+    // nowhere to go at all, so pairing on a home wifi could not complete.
+    //
+    // The relay stays the road for devices that cannot see each other, and the
+    // fallback is silent by design — which road a frame took is not something
+    // the reader chose or can act on.
+    /**
+     * @param  array<string, mixed>  $frame
+     *
+     * @throws RuntimeException when the LAN peer could not be reached AND the
+     *                          relay is unconfigured or its delivery failed.
+     */
+    private function deliver(string $senderDid, string $recipientDid, array $frame): void
+    {
+        if ($this->lanCourier->deliver($recipientDid, $frame)) {
+            return;
+        }
+
+        $this->relayClient->deliver($senderDid, $recipientDid, json_encode($frame, JSON_THROW_ON_ERROR));
     }
 
     // The peer's bound X25519 (sealing) key from THIS device's own pairing
@@ -144,7 +169,7 @@ final class PairingRelayCourier
             try {
                 $this->applyDrainedRow($userId, $drainToken, $row);
             } catch (Throwable $e) {
-                $this->logger?->warning('PairingRelayCourier: failed to apply a drained pairing frame.', [
+                $this->logger?->warning('PairingFrameCourier: failed to apply a drained pairing frame.', [
                     'user_id' => $userId,
                     'exception' => $e::class,
                     ...SafeExceptionContext::describe($e),
@@ -177,7 +202,7 @@ final class PairingRelayCourier
         try {
             $drainToken = $this->relayConfig->deviceDrainSecret();
         } catch (Throwable $e) {
-            $this->logger?->warning('PairingRelayCourier: could not resolve device drain secret.', [
+            $this->logger?->warning('PairingFrameCourier: could not resolve device drain secret.', [
                 'user_id' => $userId,
                 'exception' => $e::class,
                 ...SafeExceptionContext::describe($e),
@@ -199,7 +224,7 @@ final class PairingRelayCourier
         try {
             return $this->relayClient->drain($selfDeviceId, $drainToken);
         } catch (Throwable $e) {
-            $this->logger?->warning('PairingRelayCourier: drain failed.', [
+            $this->logger?->warning('PairingFrameCourier: drain failed.', [
                 'user_id' => $userId,
                 'exception' => $e::class,
                 ...SafeExceptionContext::describe($e),
@@ -245,14 +270,15 @@ final class PairingRelayCourier
 
         /** @var array<string, mixed> $decoded */
         $terminal = match ($decoded['type']) {
-            PairingFrame::TYPE_RESPONDER_ACCEPT => $this->applyResponderAcceptFrame($userId, $decoded),
-            PairingFrame::TYPE_CONFIRM => $this->applyConfirmFrame($userId, $decoded),
             // Another transport's frame. Confirming it here DELETED it: GDK
             // epoch wraps wait in this same mailbox for the authenticated
             // sync session to carry them, and a pairing poll that ate one
             // left the peer permanently without that epoch's key.
             self::FOREIGN_FRAME_TYPES => false,
-            default => true,
+            // Deferred is the only outcome worth redelivering: the frame is
+            // valid but the local human has not confirmed yet. Applied and
+            // Refused are both done with this copy of it.
+            default => $this->applier->apply($userId, $decoded) !== PairingFrameOutcome::Deferred,
         };
 
         if ($terminal) {
@@ -260,75 +286,5 @@ final class PairingRelayCourier
         }
         // else: a valid-but-deferred PAIR_CONFIRM — leave the row pending
         // for the next poll to redeliver, once the local side confirms.
-    }
-
-    /**
-     * @param  array<string, mixed>  $frame
-     */
-    private function applyResponderAcceptFrame(int $userId, array $frame): bool
-    {
-        $tokenHash = isset($frame['token_hash']) && is_string($frame['token_hash']) ? $frame['token_hash'] : null;
-        $responderDeviceId = isset($frame['responder_device_id']) && is_string($frame['responder_device_id']) ? $frame['responder_device_id'] : null;
-        $responderEd = isset($frame['responder_ed25519_pub_hex']) && is_string($frame['responder_ed25519_pub_hex']) ? $frame['responder_ed25519_pub_hex'] : null;
-        $responderKx = isset($frame['responder_x25519_pub_hex']) && is_string($frame['responder_x25519_pub_hex']) ? $frame['responder_x25519_pub_hex'] : null;
-
-        if ($tokenHash === null || $responderDeviceId === null || $responderEd === null || $responderKx === null) {
-            return true;
-        }
-
-        // The device id arrives from an untrusted drained frame. Reject
-        // anything that is not a UUIDv4 (DeviceIdentityService's format)
-        // before it is persisted or signed over.
-        if (! self::isValidDeviceId($responderDeviceId)) {
-            return true;
-        }
-
-        // applyResponderAccept() never defers — it either binds (or
-        // idempotently no-ops) or fails closed (false). Either outcome is
-        // terminal for this frame.
-        $responderName = isset($frame['responder_name']) && is_string($frame['responder_name'])
-            ? $frame['responder_name']
-            : '';
-
-        $this->tokenService->applyResponderAccept($userId, $tokenHash, $responderDeviceId, $responderEd, $responderKx, $responderName);
-
-        return true;
-    }
-
-    /**
-     * @param  array<string, mixed>  $frame
-     */
-    private function applyConfirmFrame(int $userId, array $frame): bool
-    {
-        $tokenHash = isset($frame['token_hash']) && is_string($frame['token_hash']) ? $frame['token_hash'] : null;
-        $confirmingDeviceId = isset($frame['confirming_device_id']) && is_string($frame['confirming_device_id']) ? $frame['confirming_device_id'] : null;
-        $peerDeviceId = isset($frame['peer_device_id']) && is_string($frame['peer_device_id']) ? $frame['peer_device_id'] : null;
-        $sigHex = isset($frame['sig_hex']) && is_string($frame['sig_hex']) ? $frame['sig_hex'] : null;
-
-        if ($tokenHash === null || $confirmingDeviceId === null || $peerDeviceId === null || $sigHex === null) {
-            return true;
-        }
-
-        if (! self::isValidDeviceId($confirmingDeviceId) || ! self::isValidDeviceId($peerDeviceId)) {
-            return true;
-        }
-
-        $result = $this->tokenService->applyPeerConfirm($userId, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex);
-
-        // 'deferred' is the ONLY non-terminal outcome — everything else
-        // (a real state string, or null for a permanent rejection) is
-        // terminal for this exact frame.
-        return $result !== 'deferred';
-    }
-
-    // A device id from an untrusted drained frame is only accepted when it
-    // is a UUIDv4 — the exact shape DeviceIdentityService mints. This bounds
-    // length + charset and structurally excludes the '|' signing-message delimiter.
-    private static function isValidDeviceId(string $deviceId): bool
-    {
-        return preg_match(
-            '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/',
-            $deviceId,
-        ) === 1;
     }
 }

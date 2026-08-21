@@ -6,10 +6,6 @@ namespace Modules\Sync\Internal\Pairing;
 
 final class PairingFrame
 {
-    public const string TYPE_RESPONDER_ACCEPT = 'PAIR_RESPONDER_ACCEPT';
-
-    public const string TYPE_CONFIRM = 'PAIR_CONFIRM';
-
     // Domain-separation context prefixed onto every PAIR_CONFIRM signing
     // message — a signature produced for this context can never be replayed
     // as valid input to a different signing domain in this codebase, even
@@ -27,7 +23,7 @@ final class PairingFrame
         string $responderName = '',
     ): array {
         return [
-            'type' => self::TYPE_RESPONDER_ACCEPT,
+            'type' => PairingFrameType::ResponderAccept->value,
             'token_hash' => $tokenHash,
             'responder_device_id' => $responderDeviceId,
             'responder_ed25519_pub_hex' => $responderEd25519Hex,
@@ -75,7 +71,7 @@ final class PairingFrame
         string $sigHex,
     ): array {
         return [
-            'type' => self::TYPE_CONFIRM,
+            'type' => PairingFrameType::Confirm->value,
             'token_hash' => $tokenHash,
             'confirming_device_id' => $confirmingDeviceId,
             'peer_device_id' => $peerDeviceId,

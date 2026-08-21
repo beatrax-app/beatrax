@@ -84,7 +84,7 @@ trait CrossDevicePairingHarness
             new NullLogger,
         );
 
-        // Rebound as an instance so Livewire components and PairingRelayCourier
+        // Rebound as an instance so Livewire components and PairingFrameCourier
         // resolve the fake-transport client rather than opening a real connection.
         $this->app->instance(RelayClient::class, $relayClient);
     }
