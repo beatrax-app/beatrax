@@ -89,8 +89,14 @@ it('auto-navigates to imports.results on chain_resolution_runs.status=complete',
         ->assertRedirect(route('imports.results', ['id' => $this->importRunId]));
 });
 
-it('surfaces failed status + truncated last_error when chain_resolution_runs.status=failed', function (): void {
-    $longError = str_repeat('e', 500);
+// This pinned the truncated last_error onto a PUBLIC Livewire property, which
+// put it in the wire:snapshot whether or not a view printed it. last_error is
+// written as "<JobClass>: <first line of the message>", and the crypto layer's
+// version of that names an internal class and the reader's own user id. What
+// the wizard owes the reader is the failed state and a door to the job log, so
+// that is what this pins now.
+it('surfaces failed status without carrying the job error to the browser', function (): void {
+    $longError = 'ResolveChainLinksJob: BlindIndexCodec: encryption is enabled for user 1';
     $now = CarbonImmutable::now()->toDateTimeString();
     $this->db->connection()->table('chain_resolution_runs')->insert([
         'user_id' => $this->user->id,
@@ -100,13 +106,16 @@ it('surfaces failed status + truncated last_error when chain_resolution_runs.sta
         'updated_at' => $now,
     ]);
 
-    $component = Livewire::actingAs($this->user)
+    $html = Livewire::actingAs($this->user)
         ->test(PreviewWizard::class, ['id' => $this->importRunId])
         ->call('refreshChainResolutionStatus')
-        ->assertSet('chainResolutionStatus', 'failed');
+        ->assertSet('chainResolutionStatus', 'failed')
+        ->assertSee('Chain resolution failed')
+        ->assertSee('the details are in the job log')
+        ->html();
 
-    // last_error truncated to <= 200 chars.
-    $component->assertSet('chainResolutionError', substr($longError, 0, 200));
+    expect($html)->not->toContain('ResolveChainLinksJob')
+        ->and($html)->not->toContain('BlindIndexCodec');
 });
 
 it('cross-user isolation — user A does NOT observe user B\'s chain_resolution_runs row', function (): void {

@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Riadok :row: :reason',
-        'file' => 'Súbor sa nepodarilo načítať celý: :reason',
+        'file_stopped' => 'Súbor sa nepodarilo načítať ďalej než po riadok :row. Nič za týmto riadkom nebolo importované.',
+        'file_none' => 'Súbor sa nepodarilo načítať vôbec.',
+        'detail' => 'Čítačka ohlásila: :reason',
         'duplicate' => 'Riadok :row už bol v tvojej knihe.',
         'more' => '+ :count neuvedených',
         'unknown_reason' => 'Dôvod nebol zaznamenaný.',

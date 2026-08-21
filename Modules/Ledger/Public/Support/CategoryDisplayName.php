@@ -13,10 +13,9 @@ use stdClass;
 // have. `name_is_default` says which, and this is the one place that asks.
 final class CategoryDisplayName
 {
-    private const KEY_PREFIX = 'categorization::categories.';
+    private const string KEY_PREFIX = 'categorization::categories.';
 
-    /** @var list<string> */
-    private const PARTS = ['name', 'slug', 'name_is_default'];
+    private const array PARTS = ['name', 'slug', 'name_is_default'];
 
     /**
      * @return list<string>

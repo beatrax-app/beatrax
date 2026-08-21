@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Rinda :row: :reason',
-        'file' => 'Failu neizdevās nolasīt pilnībā: :reason',
+        'file_stopped' => 'Failu neizdevās nolasīt tālāk par rindu :row. Nekas pēc šīs rindas netika importēts.',
+        'file_none' => 'Failu neizdevās nolasīt nemaz.',
+        'detail' => 'Lasītājs ziņoja: :reason',
         'duplicate' => 'Rinda :row jau bija tavā virsgrāmatā.',
         'more' => '+ :count nav uzskaitīts',
         'unknown_reason' => 'Iemesls netika reģistrēts.',

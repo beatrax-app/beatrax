@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Import\Internal\Enums\ImportIssueKind')
 {{-- UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
      scrolls horizontally at phone width rather than forcing page overflow. --}}
 <div class="space-y-6 overflow-x-auto">
@@ -38,10 +39,21 @@
                 <ul class="mt-2 space-y-1 text-slate-700 dark:text-slate-300">
                     @foreach ($errorIssues as $issue)
                         <li>
-                            @if ($issue->rowIndex === null)
-                                {{ Lang::get('import::results.issues.file', ['reason' => $issue->describe() ?? Lang::get('import::results.issues.unknown_reason')]) }}
+                            @if ($issue->kind === ImportIssueKind::FileError)
+                                @if ($issue->rowIndex === null)
+                                    {{ Lang::get('import::results.issues.file_none') }}
+                                @else
+                                    {{ Lang::get('import::results.issues.file_stopped', ['row' => $issue->rowIndex + 1]) }}
+                                @endif
                             @else
-                                {{ Lang::get('import::results.issues.row', ['row' => $issue->rowIndex + 1, 'reason' => $issue->describe() ?? Lang::get('import::results.issues.unknown_reason')]) }}
+                                {{ Lang::get('import::results.issues.row', ['row' => ($issue->rowIndex ?? 0) + 1, 'reason' => $issue->reasonLabel() ?? Lang::get('import::results.issues.unknown_reason')]) }}
+                            @endif
+                            {{-- The detail is additional to the reason, never a substitute for
+                                 it. Substituted, a reason with no detail behind it explained
+                                 itself with itself: "could not be read in full: could not be
+                                 read". --}}
+                            @if ($issue->detail !== null)
+                                <span class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('import::results.issues.detail', ['reason' => $issue->detail]) }}</span>
                             @endif
                         </li>
                     @endforeach

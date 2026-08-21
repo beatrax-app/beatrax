@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Red :row: :reason',
-        'file' => 'Fajl nije bilo moguće pročitati u celosti: :reason',
+        'file_stopped' => 'Fajl nije bilo moguće pročitati dalje od reda :row. Ništa posle tog reda nije uvezeno.',
+        'file_none' => 'Fajl uopšte nije bilo moguće pročitati.',
+        'detail' => 'Čitač je prijavio: :reason',
         'duplicate' => 'Red :row je već bio u tvojoj knjizi.',
         'more' => '+ :count nije navedeno',
         'unknown_reason' => 'Razlog nije zabeležen.',

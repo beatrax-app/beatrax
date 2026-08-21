@@ -60,7 +60,7 @@ final class ImportPipeline
     ) {}
 
     /**
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?string, fileFailureDetail: ?string}
+     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?string, fileFailureDetail: ?string, fileFailureRowIndex: ?int}
      */
     public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, ?BankCsvFormatHint $formatHint = null): array
     {
@@ -87,6 +87,7 @@ final class ImportPipeline
             'unknownIbans' => $built['unknownIbans'],
             'fileFailureReason' => $built['fileFailureReason'],
             'fileFailureDetail' => $built['fileFailureDetail'],
+            'fileFailureRowIndex' => $built['fileFailureRowIndex'],
         ];
     }
 
@@ -94,7 +95,7 @@ final class ImportPipeline
      * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
      *
      * @param  Generator<int, SourceTransactionDto>  $sourceRows
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?string, fileFailureDetail: ?string}
+     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?string, fileFailureDetail: ?string, fileFailureRowIndex: ?int}
      */
     public function previewFromGenerator(Generator $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
     {
@@ -107,12 +108,13 @@ final class ImportPipeline
             'unknownIbans' => $built['unknownIbans'],
             'fileFailureReason' => $built['fileFailureReason'],
             'fileFailureDetail' => $built['fileFailureDetail'],
+            'fileFailureRowIndex' => $built['fileFailureRowIndex'],
         ];
     }
 
     /**
      * @param  iterable<int, SourceTransactionDto>  $sourceRows
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?string, fileFailureDetail: ?string, lastResolvedAccountId: ?int}
+     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?string, fileFailureDetail: ?string, fileFailureRowIndex: ?int, lastResolvedAccountId: ?int}
      */
     private function buildPreviewRows(iterable $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
     {
@@ -127,6 +129,7 @@ final class ImportPipeline
         $lastResolvedAccountId = null;
         $fileFailureReason = null;
         $fileFailureDetail = null;
+        $fileFailureRowIndex = null;
 
         try {
             foreach ($sourceRows as $source) {
@@ -218,6 +221,7 @@ final class ImportPipeline
                         currency: $source->currency,
                         error: $rowReason->label(),
                         errorReason: $rowReason->value,
+                        errorDetail: self::safeDetail($e),
                     );
 
                     continue;
@@ -281,6 +285,11 @@ final class ImportPipeline
             ]);
             $fileFailureReason = self::reasonFor($e, ImportFailureReason::FileUnreadable)->value;
             $fileFailureDetail = self::safeDetail($e);
+            // One preview row per source row, so the count is the index of the
+            // one being read when it stopped. Counted rather than read out of
+            // the message, which for most of these adapters quotes a cell and
+            // so cannot be shown or stored.
+            $fileFailureRowIndex = $preview === [] ? null : count($preview);
         }
 
         return [
@@ -290,6 +299,7 @@ final class ImportPipeline
             'unknownIbans' => array_values($unknownIbans),
             'fileFailureReason' => $fileFailureReason,
             'fileFailureDetail' => $fileFailureDetail,
+            'fileFailureRowIndex' => $fileFailureRowIndex,
             'lastResolvedAccountId' => $lastResolvedAccountId,
         ];
     }

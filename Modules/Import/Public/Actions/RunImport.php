@@ -112,6 +112,7 @@ final class RunImport implements RunsImports
             enrichedCount: $enrichedCount,
             fileFailureReason: $result['fileFailureReason'],
             fileFailureDetail: $result['fileFailureDetail'],
+            fileFailureRowIndex: $result['fileFailureRowIndex'],
         );
 
         $this->cache->put($importRun->id, $previewResult, $result['canonical'], $result['enrichments']);
@@ -243,6 +244,7 @@ final class RunImport implements RunsImports
             enrichedCount: $enrichedCount,
             fileFailureReason: $result['fileFailureReason'],
             fileFailureDetail: $result['fileFailureDetail'],
+            fileFailureRowIndex: $result['fileFailureRowIndex'],
         );
 
         $this->cache->put($importRun->id, $previewResult, $result['canonical'], $result['enrichments']);

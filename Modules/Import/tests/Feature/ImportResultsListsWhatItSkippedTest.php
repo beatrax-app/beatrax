@@ -59,6 +59,7 @@ it('lists the rows it skipped instead of defining the word for them', function (
             currency: 'EUR',
             error: 'This row could not be read.',
             errorReason: 'row_unreadable',
+            errorDetail: 'The date in row 5 was written 31-13-2026.',
         ),
     ];
 
@@ -70,6 +71,7 @@ it('lists the rows it skipped instead of defining the word for them', function (
             accountsToName: [],
             fileFailureReason: 'file_unreadable',
             fileFailureDetail: 'Expected 19 or 20 columns, got 5.',
+            fileFailureRowIndex: null,
         ),
         canonical: [],
         enrichments: [],
@@ -79,7 +81,9 @@ it('lists the rows it skipped instead of defining the word for them', function (
 
     Livewire::test(ImportResults::class, ['id' => $run->id])
         ->assertSee('Row 5: This row could not be read.')
-        ->assertSee('The file could not be read in full: Expected 19 or 20 columns, got 5.')
+        ->assertSee('The date in row 5 was written 31-13-2026.')
+        ->assertSee('The file could not be read at all.')
+        ->assertSee('The reader reported: Expected 19 or 20 columns, got 5.')
         ->assertSee('Row 1 was already in your ledger.');
 });
 
@@ -100,6 +104,10 @@ it('names the truncation on the results screen after a part-read file is confirm
     expect($run->inserted_count)->toBe(3);
     expect($run->error_count)->toBe(1);
 
+    // The preview knew reading stopped at the fourth row and that three were
+    // read. The results screen is the one the reader comes back to next month,
+    // so it is the one that has to still know it.
     Livewire::test(ImportResults::class, ['id' => $preview->importRunId])
-        ->assertSee('The file could not be read in full:');
+        ->assertSee('The file could not be read past row 4.')
+        ->assertSee('Nothing after that row was imported.');
 });

@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Riga :row: :reason',
-        'file' => 'Non è stato possibile leggere il file per intero: :reason',
+        'file_stopped' => 'Non è stato possibile leggere il file oltre la riga :row. Nulla dopo quella riga è stato importato.',
+        'file_none' => 'Non è stato possibile leggere il file per niente.',
+        'detail' => 'Il lettore ha segnalato: :reason',
         'duplicate' => 'La riga :row era già nel tuo registro.',
         'more' => '+ :count non elencate',
         'unknown_reason' => 'Non è stato registrato alcun motivo.',

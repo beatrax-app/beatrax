@@ -282,6 +282,9 @@
                                 <div class="mt-1 text-xs text-rose-700 dark:text-rose-400">
                                     {{ ($rowReason ?? ImportFailureReason::RowUnreadable)->label() }}
                                 </div>
+                                @if ($row->errorDetail !== null)
+                                    <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $row->errorDetail }}</div>
+                                @endif
                             @endif
                         </td>
                     </tr>

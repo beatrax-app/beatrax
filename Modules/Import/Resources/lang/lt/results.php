@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Eilutė :row: :reason',
-        'file' => 'Nepavyko perskaityti viso failo: :reason',
+        'file_stopped' => 'Failo nepavyko perskaityti toliau nei :row eilutė. Niekas po tos eilutės nebuvo importuota.',
+        'file_none' => 'Failo išvis nepavyko perskaityti.',
+        'detail' => 'Skaitytuvas pranešė: :reason',
         'duplicate' => 'Eilutė :row jau buvo tavo knygoje.',
         'more' => '+ :count nenurodyta',
         'unknown_reason' => 'Priežastis neužfiksuota.',

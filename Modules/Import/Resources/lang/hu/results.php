@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => ':row. sor: :reason',
-        'file' => 'A fájlt nem sikerült teljesen beolvasni: :reason',
+        'file_stopped' => 'A fájlt nem sikerült a(z) :row. soron túl beolvasni. Az azutáni sorokból semmi nem került importálásra.',
+        'file_none' => 'A fájlt egyáltalán nem sikerült beolvasni.',
+        'detail' => 'A beolvasó jelentése: :reason',
         'duplicate' => 'A :row. sor már szerepelt a főkönyvedben.',
         'more' => '+ :count nincs felsorolva',
         'unknown_reason' => 'Nem rögzítettünk okot.',

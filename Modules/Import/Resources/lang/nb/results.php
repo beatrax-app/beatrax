@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Rad :row: :reason',
-        'file' => 'Filen kunne ikke leses i sin helhet: :reason',
+        'file_stopped' => 'Filen kunne ikke leses lenger enn til rad :row. Ingenting etter den raden ble importert.',
+        'file_none' => 'Filen kunne ikke leses i det hele tatt.',
+        'detail' => 'Innleseren meldte: :reason',
         'duplicate' => 'Rad :row var allerede i hovedboken din.',
         'more' => '+ :count ikke listet',
         'unknown_reason' => 'Ingen årsak ble registrert.',

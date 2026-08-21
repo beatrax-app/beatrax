@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Fila :row: :reason',
-        'file' => 'El archivo no se ha podido leer por completo: :reason',
+        'file_stopped' => 'El archivo no se ha podido leer más allá de la fila :row. Nada posterior a esa fila se ha importado.',
+        'file_none' => 'El archivo no se ha podido leer en absoluto.',
+        'detail' => 'El lector informó: :reason',
         'duplicate' => 'La fila :row ya estaba en tu libro mayor.',
         'more' => '+ :count sin listar',
         'unknown_reason' => 'No se registró ningún motivo.',
