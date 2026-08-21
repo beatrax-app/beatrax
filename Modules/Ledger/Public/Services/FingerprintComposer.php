@@ -15,17 +15,38 @@ final class FingerprintComposer
 
     public function compose(CanonicalTransaction $tx): string
     {
-        $tuple = implode('|', [
-            (string) ($tx->userId ?? 0),
-            (string) $tx->accountId,
+        return $this->composeTuple(
+            $tx->userId ?? 0,
+            $tx->accountId,
             $tx->postedAt->toDateString(),
             $tx->bookedAt->toDateTimeString(),
-            (string) $tx->amountMinor,
+            $tx->amountMinor,
             $tx->currency,
             $tx->counterpartyNormalized,
-        ]);
+        );
+    }
 
-        return hash('sha256', $tuple);
+    // The same tuple over values read straight from a row, for the sweeps that
+    // rewrite counterparty_normalized and must rewrite the fingerprint with it
+    // rather than rebuild a whole canonical DTO to reach seven of its fields.
+    public function composeTuple(
+        int $userId,
+        int $accountId,
+        string $postedAtDate,
+        string $bookedAtDateTime,
+        int $amountMinor,
+        string $currency,
+        string $counterpartyNormalized,
+    ): string {
+        return hash('sha256', implode('|', [
+            (string) $userId,
+            (string) $accountId,
+            $postedAtDate,
+            $bookedAtDateTime,
+            (string) $amountMinor,
+            $currency,
+            $counterpartyNormalized,
+        ]));
     }
 
     public function normalize(string $rawName): string

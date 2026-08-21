@@ -12,6 +12,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\CategoryDelta;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Dto\SpendTrend;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 
 // Spend is EUR-settled outflow over [start, endExclusive), the same definition
 // the rest of the ledger uses, so the figures reconcile with the dashboard.
@@ -92,13 +93,12 @@ final class CategorySpendTrendQuery
             ->where(static function (Builder $query) use ($userId): void {
                 $query->whereNull('user_id')->orWhere('user_id', $userId);
             })
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'slug', 'name_is_default']);
 
         $names = [];
         foreach ($rows as $row) {
-            $names[self::toInt($row->id)] = is_string($row->name)
-                ? $row->name
-                : Lang::get('ledger::common.uncategorized');
+            $names[self::toInt($row->id)] = CategoryDisplayName::fromRow($row)
+                ?? Lang::get('ledger::common.uncategorized');
         }
 
         return $names;

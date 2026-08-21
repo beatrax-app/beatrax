@@ -10,6 +10,7 @@ use Illuminate\Database\Query\JoinClause;
 use Modules\Categorization\Public\Dto\CategoryOption;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use stdClass;
 
 // A row is offered when its user_id is null (the seeded default tree) or
@@ -42,9 +43,9 @@ final class CategoryOptionsQuery
             ->orderBy('c.display_order')
             ->select([
                 'c.id',
-                'c.name',
                 'c.display_order',
-                'p.name as parent_name',
+                ...CategoryDisplayName::columns('c'),
+                ...CategoryDisplayName::columns('p', 'parent'),
             ])
             ->get();
 
@@ -58,8 +59,8 @@ final class CategoryOptionsQuery
 
     private function mapOption(stdClass $row): CategoryOption
     {
-        $name = self::toString($row->name);
-        $parent = $row->parent_name === null ? null : self::toString($row->parent_name);
+        $name = CategoryDisplayName::fromRow($row, 'category') ?? '';
+        $parent = CategoryDisplayName::fromRow($row, 'parent');
         $path = $parent === null ? $name : $parent.' / '.$name;
 
         return new CategoryOption(

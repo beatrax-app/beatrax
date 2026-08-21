@@ -14,6 +14,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 // One explicit reimbursement pair, distinct from DemoTransactionsSeeder's
@@ -26,6 +27,7 @@ final class DemoTransferPairsSeeder
 
     public function __construct(
         private readonly FingerprintComposer $fingerprints,
+        private readonly CounterpartyKey $counterpartyKey,
     ) {}
 
     /**
@@ -98,7 +100,7 @@ final class DemoTransferPairsSeeder
         DemoTransferLeg $leg,
         CarbonImmutable $date,
     ): void {
-        $normalized = $this->fingerprints->normalize($leg->description);
+        $normalized = $this->counterpartyKey->forName($leg->description, $user->id);
         $bookedAt = $date->setTime(12, 0, 0);
         $isOut = $leg->type === TransactionType::TransferOut;
 

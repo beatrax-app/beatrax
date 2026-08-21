@@ -269,8 +269,8 @@ it('namesTheUnsplitSurvivorRadioGroupAndFormatsItsAmountsThroughMoney', function
 
     // Money::format(), not a literal € glued to the raw input string — hence
     // the non-breaking space ICU puts after the symbol.
-    expect($html)->toContain("€60.00")
-        ->and($html)->toContain("€20.00")
+    expect($html)->toContain('€60.00')
+        ->and($html)->toContain('€20.00')
         ->and($html)->not->toContain('€60,00');
 })->group('phase-13.1');
 

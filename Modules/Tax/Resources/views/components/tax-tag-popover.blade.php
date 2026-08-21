@@ -107,7 +107,7 @@
                 max-height: 70vh;
                 overflow-y: auto;
                 padding: var(--space-4, 1rem);
-                padding-bottom: calc(var(--space-4, 1rem) + env(safe-area-inset-bottom, 0px));
+                padding-bottom: calc(var(--space-4, 1rem) + var(--safe-bottom, 0px));
             "
         >
             {{-- Handle bar --}}

@@ -15,6 +15,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 final class DemoTransactionsSeeder
@@ -32,6 +33,7 @@ final class DemoTransactionsSeeder
 
     public function __construct(
         private readonly FingerprintComposer $fingerprints,
+        private readonly CounterpartyKey $counterpartyKey,
     ) {}
 
     /**
@@ -648,8 +650,9 @@ final class DemoTransactionsSeeder
         $settledCurrency = $row['settledCurrency'] ?? Currency::Eur->value;
         $fxRateUsed = $row['fxRateUsed'] ?? null;
 
-        $normalized = $this->fingerprints->normalize(
+        $normalized = $this->counterpartyKey->forName(
             $row['counterpartyName'] ?? ($row['description'] !== '' ? $row['description'] : 'demo'),
+            $user->id,
         );
 
         $bookedAt = $row['date']->setTime(12, 0, 0);

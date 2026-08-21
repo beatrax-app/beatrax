@@ -14,6 +14,7 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 // Routed through the same canonical pipeline imports use, so a hand-entered
@@ -31,6 +32,7 @@ final class RecordManualTransaction
         private readonly FingerprintComposer $fingerprints,
         private readonly Clock $clock,
         private readonly BaseCurrency $baseCurrency,
+        private readonly CounterpartyKey $counterpartyKey,
     ) {}
 
     public function __invoke(
@@ -50,7 +52,7 @@ final class RecordManualTransaction
         $importRunId = $this->manualRunId($user);
         $counterpartyName = trim($counterparty) !== '' ? trim($counterparty) : 'Cash';
 
-        $counterpartyNormalized = $this->fingerprints->normalize($counterpartyName);
+        $counterpartyNormalized = $this->counterpartyKey->forName($counterpartyName, $user->id);
 
         // Both fingerprint indexes key booked_at at second precision, so two
         // identical same-second cash spends collide.

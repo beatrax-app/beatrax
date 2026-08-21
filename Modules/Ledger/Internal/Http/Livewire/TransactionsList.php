@@ -16,6 +16,7 @@ use Modules\Ledger\Public\Dto\TransactionRowDto;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\TransactionListQuery;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Dto\SearchRowDto;
 use Modules\Search\Public\Services\SearchQuery;
@@ -454,16 +455,21 @@ final class TransactionsList extends Component
             ->where(static function (Builder $query) use ($userId): void {
                 $query->whereNull('user_id')->orWhere('user_id', $userId);
             })
-            ->orderBy('name')
-            ->get(['id', 'name'])
+            ->get(['id', 'name', 'slug', 'name_is_default'])
             ->all();
 
-        return array_values(array_map(static function (object $row): array {
+        $options = array_values(array_map(static function (object $row): array {
             return [
                 'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'name' => is_string($row->name) ? $row->name : '',
+                'name' => CategoryDisplayName::fromRow($row) ?? '',
             ];
         }, $rows));
+
+        // Sorted on what the reader sees; the stored English orders a
+        // translated picker by a word that is not on screen.
+        usort($options, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']));
+
+        return $options;
     }
 
     // Money is not Livewire-dehydratable, so a row carries the minor integer
@@ -531,7 +537,7 @@ final class TransactionsList extends Component
                 'transaction_splits.settled_amount_minor',
                 'transaction_splits.settled_currency',
                 'transaction_splits.note',
-                'categories.name as category_name',
+                ...CategoryDisplayName::columns('categories'),
             ]);
 
         // Leg-scoped tax state — one batched query, keyed by
@@ -551,7 +557,7 @@ final class TransactionsList extends Component
             $map[$txId] ??= [];
             $map[$txId][] = [
                 'id' => $legId,
-                'categoryName' => is_string($row->category_name) ? $row->category_name : '—',
+                'categoryName' => CategoryDisplayName::fromRow($row, 'category') ?? '—',
                 'amountMinor' => is_numeric($row->settled_amount_minor) ? (int) $row->settled_amount_minor : 0,
                 'amountCurrency' => is_string($row->settled_currency) ? $row->settled_currency : 'EUR',
                 'note' => $legNote,
