@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Gå til App-lås',
 
     'encrypted_at_rest' => 'Data krypteret i hvile',
-    'encrypted_at_rest_help' => 'Dine data er beskyttet med adgangssætningen til din app-lås.',
+    'encrypted_at_rest_scope' => 'Noter, transaktionsbeskrivelser og navne og IBAN på dem, du betaler, er krypteret med din app-låseadgangskode. Beløb, datoer og din egen kontos navn og IBAN er ikke, og nogle forhandlernavne står stadig i klartekst andre steder i databasefilen.',
     'on' => 'Til',
     'securing' => 'Beskytter dine data…',
     'do_not_close' => 'Luk ikke dette vindue.',

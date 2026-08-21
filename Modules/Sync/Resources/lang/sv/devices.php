@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Gå till Applås',
 
     'encrypted_at_rest' => 'Data krypterade i vila',
-    'encrypted_at_rest_help' => 'Dina data skyddas med lösenfrasen för ditt applås.',
+    'encrypted_at_rest_scope' => 'Anteckningar, transaktionsbeskrivningar och namn och IBAN för dem du betalar krypteras med din applåslösenfras. Belopp, datum och ditt eget kontonamn och IBAN gör det inte, och vissa handlarnamn står fortfarande i klartext på andra ställen i databasfilen.',
     'on' => 'På',
     'securing' => 'Skyddar dina data…',
     'do_not_close' => 'Stäng inte det här fönstret.',

@@ -136,7 +136,6 @@ final class CounterpartyTriage extends Component
             return;
         }
 
-        // Codec-before-save, mirroring acceptSuggestion() above.
         $attrs = ['display_name' => $name];
         if ($type === CounterpartyType::Merchant->value) {
             $attrs['merchant_name'] = $name;
@@ -248,7 +247,7 @@ final class CounterpartyTriage extends Component
             ->orderByDesc('posted_at')
             ->orderByDesc('id')
             ->limit(5)
-            ->get(['id', 'posted_at', 'description', 'amount_minor']);
+            ->get(['id', 'posted_at', 'description', 'amount_minor', 'currency']);
 
         // transactions.description is a SensitiveFieldRegistry column stored
         // as AEAD ciphertext; the raw query builder applies no cast, so

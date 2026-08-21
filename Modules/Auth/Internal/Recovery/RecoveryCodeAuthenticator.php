@@ -40,7 +40,7 @@ final class RecoveryCodeAuthenticator
 
             /** @var User|null $user */
             $user = User::query()->where('username', $username)->first();
-            $candidate = $this->reformat($this->normalizer->normalize($codeInput));
+            $candidate = $this->hyphenate($this->normalizer->normalize($codeInput));
 
             $matchedId = $this->matchingCodeId($candidate, $this->unusedCodes($connection, $user));
 
@@ -72,7 +72,6 @@ final class RecoveryCodeAuthenticator
         return $result;
     }
 
-    // Row-locked, so a matched code is consumed atomically by the caller.
     /** @return array<int, stdClass> */
     private function unusedCodes(Connection $connection, ?User $user): array
     {
@@ -111,8 +110,7 @@ final class RecoveryCodeAuthenticator
         return $matchedId;
     }
 
-    // The bare code is hashed in hyphenated shape, so restore it before check.
-    private function reformat(string $bareCode): string
+    private function hyphenate(string $bareCode): string
     {
         $groups = str_split($bareCode, self::GROUP_LENGTH);
 

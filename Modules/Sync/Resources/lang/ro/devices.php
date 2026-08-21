@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Mergi la blocarea aplicației',
 
     'encrypted_at_rest' => 'Date criptate în repaus',
-    'encrypted_at_rest_help' => 'Datele tale sunt protejate cu fraza de acces a blocării aplicației.',
+    'encrypted_at_rest_scope' => 'Notele, descrierile tranzacțiilor și numele și IBAN-urile celor cărora le plătești sunt criptate cu parola de blocare a aplicației. Sumele, datele și numele și IBAN-ul propriului tău cont nu sunt, iar unele nume de comercianți rămân în text clar în alte locuri din fișierul bazei de date.',
     'on' => 'Activat',
     'securing' => 'Se securizează datele tale…',
     'do_not_close' => 'Nu închide această fereastră.',

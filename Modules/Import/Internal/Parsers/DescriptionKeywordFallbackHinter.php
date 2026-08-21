@@ -10,7 +10,8 @@ final class DescriptionKeywordFallbackHinter extends DescriptionKeywordHinter
 {
     private const CONFIDENCE = 40;
 
-    // Longest lexeme first, so `automatische incasso` beats `incasso`.
+    // The scan returns on the first keyword found, so a shorter lexeme above
+    // a longer one shadows it: `automatische incasso` must precede `incasso`.
     /**
      * @var list<array{keyword: string, type: PaymentType}>
      */
@@ -32,7 +33,6 @@ final class DescriptionKeywordFallbackHinter extends DescriptionKeywordHinter
         ['keyword' => 'fee', 'type' => PaymentType::Fee],
     ];
 
-    // Last in the registry, so it answers for every row whatever its origin.
     protected function handles(string $sourceFormat): bool
     {
         unset($sourceFormat);

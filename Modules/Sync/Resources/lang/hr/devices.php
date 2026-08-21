@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Idi na Zaključavanje aplikacije',
 
     'encrypted_at_rest' => 'Podaci šifrirani u mirovanju',
-    'encrypted_at_rest_help' => 'Tvoji podaci osigurani su zaporkom za zaključavanje aplikacije.',
+    'encrypted_at_rest_scope' => 'Bilješke, opisi transakcija te imena i IBAN onih kojima plaćaš šifriraju se zaporkom za zaključavanje aplikacije. Iznosi, datumi te naziv i IBAN tvojeg vlastitog računa nisu šifrirani, a neka imena trgovaca i dalje ostaju čitljiva na drugim mjestima u datoteci baze podataka.',
     'on' => 'Uključeno',
     'securing' => 'Osiguravanje tvojih podataka…',
     'do_not_close' => 'Ne zatvaraj ovaj prozor.',

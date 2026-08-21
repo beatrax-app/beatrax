@@ -39,7 +39,6 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
 
     Route::get('/lock', LockScreen::class)->name('auth.lock');
 
-    // Called by lock.js when the grace timer expires or the idle threshold hits.
     Route::post('/lock/engage', LockEngageController::class)->name('auth.lock.engage');
 
     // The empty body is the point: passing through AppLockMiddleware is what

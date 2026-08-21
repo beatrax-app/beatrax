@@ -13,6 +13,8 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
  */
 final readonly class CounterpartySlugResolver
 {
+    private const int SLUG_COLUMN_MAX_LENGTH = 128;
+
     public function __construct(
         private DatabaseManager $db,
         private SensitiveColumnCodec $codec,
@@ -59,7 +61,6 @@ final readonly class CounterpartySlugResolver
         return $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, ($this->session)())['value'];
     }
 
-    // 128 is the width of the slug column carrying the (user_id, slug) UNIQUE.
     private function slugify(string $value): string
     {
         $ascii = (string) iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
@@ -71,6 +72,6 @@ final readonly class CounterpartySlugResolver
             return 'counterparty';
         }
 
-        return substr($trimmed, 0, 128);
+        return substr($trimmed, 0, self::SLUG_COLUMN_MAX_LENGTH);
     }
 }

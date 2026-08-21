@@ -38,13 +38,11 @@ final class UploadWizard extends Component
         'paypal-csv',
         'eml',
         'mbox',
-        // Mirrored from CsvPresetRegistry.
         'n26-csv',
         'revolut-csv',
         'ing-nl-csv',
     ];
 
-    // A mismatched issuer/format pair fails in rules(), before ParseStage.
     /**
      * @var array<string, list<string>>
      */

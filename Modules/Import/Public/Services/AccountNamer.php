@@ -32,7 +32,7 @@ final class AccountNamer implements NamesAccounts
 
     public function __invoke(string $iban, string $userSuppliedName, User $user): int
     {
-        [$trimmed] = self::validateName($userSuppliedName);
+        $trimmed = self::validateName($userSuppliedName);
 
         // Structural only. Mod-97 is deliberately not enforced: counterparty
         // IBANs from MT940 and CAMT extracts arrive truncated, and rejecting
@@ -61,12 +61,10 @@ final class AccountNamer implements NamesAccounts
         return $account->id;
     }
 
-    // Shared by both naming paths so the bound and the slug guard cannot
-    // drift apart.
-    /**
-     * @return array{0: string, 1: string}
-     */
-    public static function validateName(string $userSuppliedName): array
+    // Shared by every naming path so the bound and the slug guard cannot
+    // drift apart. The slug itself is AccountSlugResolver's answer, not this
+    // one's — all this owes the caller is a name it can build one from.
+    public static function validateName(string $userSuppliedName): string
     {
         $trimmed = trim($userSuppliedName);
         $length = mb_strlen($trimmed);
@@ -81,13 +79,12 @@ final class AccountNamer implements NamesAccounts
         // A name made entirely of characters Str::slug() cannot transliterate
         // — emoji, punctuation, some scripts — clears the length bound and
         // still slugs to nothing.
-        $slugBody = Str::slug($trimmed);
-        if ($slugBody === '') {
+        if (Str::slug($trimmed) === '') {
             throw new InvalidAccountNameException(
                 Lang::get('import::accounts.errors.name_slug')
             );
         }
 
-        return [$trimmed, $slugBody];
+        return $trimmed;
     }
 }

@@ -30,10 +30,15 @@ return [
         'aria' => ':name: įvykdyta :pct %',
     ],
 
+    'card' => [
+        'target_date' => 'Tikslo data: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Tikslas pasiektas',
         'add_contributions' => 'Pridėk įnašų, kad matytum prognozę',
         'not_enough_history' => 'Kol kas per mažai istorijos datai prognozuoti',
+        'no_recent_contributions' => 'Nėra naujausių įnašų, pagal kuriuos būtų galima prognozuoti',
         'est' => 'Apytiksliai :date ·',
         'projection_note' => '(prognozė)',
         'projected' => 'Prognozuojama: :date',

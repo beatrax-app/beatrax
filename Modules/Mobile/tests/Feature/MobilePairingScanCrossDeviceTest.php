@@ -12,6 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
+use Modules\Sync\Internal\Crypto\GdkEpochWrapSignature;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -199,12 +200,12 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
                 /** @var mixed $decoded */
                 $decoded = json_decode((string) $row->blob, true);
 
-                // The blind-index key rides the same frame type under the
-                // reserved epoch id 0, and is not an epoch being fanned out.
+                // This frame type carries two kinds of key. Read the role off
+                // the envelope rather than inferring it from the placeholder
+                // epoch id a blind-index wrap has to send.
                 return is_array($decoded)
                     && ($decoded['type'] ?? null) === 'GDK_EPOCH_WRAP'
-                    && is_int($decoded['epoch_id'] ?? null)
-                    && $decoded['epoch_id'] > 0;
+                    && GdkEpochWrapSignature::carriesEpoch($decoded);
             })
             ->values();
     });

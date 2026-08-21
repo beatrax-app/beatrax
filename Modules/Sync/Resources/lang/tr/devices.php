@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Uygulama kilidine git',
 
     'encrypted_at_rest' => 'Veriler durağan halde şifreli',
-    'encrypted_at_rest_help' => 'Verilerin uygulama kilidi parolanla korunuyor.',
+    'encrypted_at_rest_scope' => 'Notlar, işlem açıklamaları ve ödeme yaptığın kişilerin adları ile IBAN\'ları uygulama kilidi parolanla şifrelenir. Tutarlar, tarihler ve kendi hesabının adı ile IBAN\'ı şifrelenmez ve bazı satıcı adları veritabanı dosyasının başka yerlerinde hâlâ açık metin olarak bulunur.',
     'on' => 'Açık',
     'securing' => 'Verilerin güvenceye alınıyor…',
     'do_not_close' => 'Bu pencereyi kapatma.',

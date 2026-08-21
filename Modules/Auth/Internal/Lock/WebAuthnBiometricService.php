@@ -374,7 +374,6 @@ final class WebAuthnBiometricService
             return false;
         }
 
-        // Counter bump is replay protection.
         $this->store->updateCounter((int) $credRowId, $updatedRecord->counter);
         $this->store->resetFailureCount((int) $credRowId);
 

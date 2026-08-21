@@ -35,7 +35,6 @@ final class InitialSyncPuller
         private readonly LoggerInterface $logger,
     ) {}
 
-    // A cheap no-op once phase reaches complete, so a poll can keep calling.
     /**
      * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
      */
@@ -84,7 +83,6 @@ final class InitialSyncPuller
         $result = $this->trigger->syncOnce($userId, $session, $lanHost, $lanPort);
 
         if ($result === null) {
-            // The key became unavailable mid-flow: skip, mutate nothing.
             return [...$this->toProgressArray($cursor), 'blocked' => SyncBlockedReason::Locked];
         }
 
@@ -249,7 +247,6 @@ final class InitialSyncPuller
             ->exists();
     }
 
-    // Single-household pairing: the one confirmed non-self device.
     private function resolvePeerDeviceId(int $userId, string $localDeviceId): ?string
     {
         $confirmed = $this->registryService->deviceKeys($userId);

@@ -30,10 +30,15 @@ return [
         'aria' => ':name: :pct% завършени',
     ],
 
+    'card' => [
+        'target_date' => 'Целева дата: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Целта е достигната',
         'add_contributions' => 'Добави вноски, за да видиш прогноза',
         'not_enough_history' => 'Все още няма достатъчно история за прогноза за дата',
+        'no_recent_contributions' => 'Няма скорошни вноски, върху които да се направи прогноза',
         'est' => 'Прибл. :date ·',
         'projection_note' => '(прогноза)',
         'projected' => 'Прогноза: :date',

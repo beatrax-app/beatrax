@@ -13,7 +13,6 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = 'paypal-csv';
 
-    // Lower-cased on both sides so NL and EN exports resolve identically.
     /**
      * @var array<string, array{type: PaymentType, confidence: int}>
      */
@@ -74,7 +73,6 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
             return null;
         }
 
-        // $events is non-empty: the guard above returned on [].
         $first = $events[array_key_first($events)];
         if (! is_array($first)) {
             return null;

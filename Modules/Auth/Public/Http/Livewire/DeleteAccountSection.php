@@ -56,7 +56,6 @@ final class DeleteAccountSection extends Component
             // into the wire snapshot, and a mistyped password is a near-miss.
             $this->password = '';
 
-            // Rethrown so Livewire maps it onto the field's error bag.
             throw $e;
         } catch (Throwable $e) {
             $this->password = '';
@@ -85,7 +84,6 @@ final class DeleteAccountSection extends Component
         ]);
     }
 
-    // Must mirror DeleteAccountAction's successor choice.
     private function successorUsername(DatabaseManager $db, int $userId, bool $isAdministrator): ?string
     {
         if (! $isAdministrator) {

@@ -30,10 +30,15 @@ return [
         'aria' => ':name: :pct% complete',
     ],
 
+    'card' => [
+        'target_date' => 'Target date: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Target reached',
         'add_contributions' => 'Add contributions to see a projection',
         'not_enough_history' => 'Not enough history to project a date yet',
+        'no_recent_contributions' => 'No recent contributions to project from',
         'est' => 'Est. :date ·',
         'projection_note' => '(projection)',
         'projected' => 'Projected: :date',

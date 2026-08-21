@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Community\Public\Services\CorpusPatternMatcher;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Dto\AliasMatchPreviewResultDto;
@@ -67,15 +68,19 @@ final class AliasMatchPreviewQuery
         return $rows;
     }
 
-    // Null when encryption is on and either column is still ciphertext: a
-    // substring test against base64 answers the wrong question, and the row
-    // would carry that base64 into the Livewire payload.
+    // Null when a column came back BLANKED, which is the codec's signal for
+    // ciphertext no epoch here opens. `decrypted: false` alone is not that
+    // signal — it is also an ordinary plaintext row handed back untouched,
+    // and dropping those reported "0 matches" for a pattern that does match.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
+     */
     private function decryptedRow(stdClass $row, int $userId, bool $encryptionEnabled): ?stdClass
     {
         $description = $this->decryptField('description', $row->description ?? null, $userId);
         $counterparty = $this->decryptField('counterparty_name', $row->counterparty_name ?? null, $userId);
 
-        if ($encryptionEnabled && (! $description['decrypted'] || ! $counterparty['decrypted'])) {
+        if ($encryptionEnabled && (self::isUnreadable($description) || self::isUnreadable($counterparty))) {
             return null;
         }
 
@@ -98,12 +103,23 @@ final class AliasMatchPreviewQuery
         return $this->codec->decryptValue('transactions', $column, $stored, $userId, ($this->session)());
     }
 
+    /**
+     * @param  array{value: string, decrypted: bool}  $field
+     */
+    private static function isUnreadable(array $field): bool
+    {
+        return ! $field['decrypted'] && $field['value'] === '';
+    }
+
+    // The same matcher MerchantNameResolver's generalized tier runs, because
+    // this preview exists to predict that tier: a substring test here would
+    // promise matches the alias will never make.
     private static function rowContains(stdClass $row, string $needle): bool
     {
         $description = isset($row->description) && is_string($row->description) ? $row->description : '';
         $counterparty = isset($row->counterparty_name) && is_string($row->counterparty_name) ? $row->counterparty_name : '';
         $haystack = mb_strtolower($description !== '' ? $description : $counterparty);
 
-        return $haystack !== '' && mb_strpos($haystack, $needle) !== false;
+        return CorpusPatternMatcher::containsToken($haystack, $needle);
     }
 }

@@ -22,21 +22,4 @@ final readonly class GdkEpochUsageProbe
             ->where('gdk_epoch', $epochId)
             ->exists();
     }
-
-    // Whether this device's counterparty matching keys are already derived
-    // under the blind-index key it holds. Adopting a peer's different key
-    // after that point would leave every stored digest unmatchable by the
-    // value a re-import computes, which is how a ledger doubles.
-    /**
-     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
-     */
-    public function hasDerivedCounterpartyKeys(int $userId): bool
-    {
-        $row = $this->db->connection()
-            ->table('sync_encryption_state')
-            ->where('user_id', $userId)
-            ->first(['counterparty_key_backfilled_at']);
-
-        return $row !== null && ($row->counterparty_key_backfilled_at ?? null) !== null;
-    }
 }

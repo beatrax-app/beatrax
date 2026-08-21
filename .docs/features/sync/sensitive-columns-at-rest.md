@@ -122,6 +122,123 @@ safe. Three reasons are legitimate:
 Anything else is the bug the guard exists to find, and the fix is the query, not the list.
 Write the reason so the next reader can re-derive the judgement without opening the file.
 
+## The guard that catches a column rendered as ciphertext
+
+The predicate guard above is a source scan, and this class of defect is not visible to one.
+Three static designs were tried against the real bug and all three fail:
+
+- scanning Blade for the registry's column names drowns in `title`, `body`, `note`,
+  `description` and `params` — a Blade `$title` is a page title, and 28 files match that word
+  alone;
+- flagging a file that names a sensitive column and carries no codec marker gives a **false
+  negative on the exact defect**, because the pre-fix `CounterpartyTriageQueue` already carried
+  three markers: it decrypted transaction descriptions a few lines below the counterparty
+  columns it missed;
+- diffing selected columns against decrypted columns per file reports `selected=[]`, because
+  the offending query selects `*` through the raw builder and calls `Model::hydrate()`, so the
+  leaking columns are never named in the source.
+
+`RenderedCiphertextGuardTest` is behavioural instead. It seeds recognisable plaintext, enables
+encryption through `EncryptionMigrationService::migrate()` — the production enable path, not a
+hand-rolled fixture — then renders twenty-two surfaces over the ciphertext that produces and
+asserts that the exact bytes stored in the database do not appear in what reaches the browser.
+
+Twelve are full HTTP renders: `/counterparties/triage`, `/counterparties`,
+`/counterparties/{slug}`, `/community/mystery-merchants`, `/transactions`, `/transactions/{id}`,
+`/uncategorized`, `/notifications`, `/recurring`, `/recurring/review`, `/recurring/series/{id}`,
+`/tax`, `/reports`, `/cash`, `/calendar` and `/imports/{id}/preview`. Six are components with no
+route of their own, mounted by alias so no module boundary is crossed: the ⌘K palette, the chain
+drawer, the receipt-conflict toast, the rule-form modal, the rename-counterparty popover, and the
+alias match preview on `/settings/aliases`.
+
+For a Livewire component the assertion runs over `html()` **and** the public properties. A leaked
+value reaches the browser inside the `wire:snapshot` payload whether or not the view prints it,
+and the palette is a hidden container whose results live only there — checking the rendered HTML
+alone would have called it clean.
+
+The census is built from `SensitiveFieldRegistry::columns()` and
+`SensitiveFieldRegistry::blindIndexColumns()`, so a column added to either accessor is covered on
+every one of those surfaces for free, provided the fixture writes a row in its table.
+
+Two surfaces are deliberately excluded, and the reason is the same for both: they render nothing
+that comes from a registered column. The import preview's **rows** are parsed from the uploaded
+file and held in `PreviewCache`; `TaxSummaryCard` renders totals. Covering either would add a
+case that cannot fail. The import preview is in the list above for a different reason, below.
+
+Two things about it are load bearing and easy to remove by accident.
+
+**The precondition.** Decrypting plaintext is a documented no-op, so a fixture that quietly
+failed to encrypt would let a completely broken read path pass on every screen at once. The
+first case reads every registered column back out and requires `decrypted: true` before a
+single screen is rendered.
+
+**The positive half.** The absence assertion cannot see a value a view masks, truncates or
+reformats first — the triage card puts the IBAN through a mask that prints six characters of
+it, which is exactly why the shipped bug read `7F · ·· HUX5 ···· ···· ==` rather than a
+recognisable blob. Each screen therefore also asserts the plaintext it exists to show, in the
+form it shows it. That half doubles as the check that the fixture still reaches the screen,
+since an empty state passes an absence assertion perfectly.
+
+The blind index rides along in the same census. All **three** of its columns do —
+`transactions.counterparty_normalized`, `merchants.normalized_name`, and the expense half of
+`recurring_series.cluster_counterparty_key`, which
+`CounterpartyKeyBackfill::convertExpenseSeries()` converts and which is the one
+`CounterpartyKeyHasOneProducerTest` omits from its write markers. They are keyed digests rather
+than AEAD and are deliberately absent from `SensitiveFieldRegistry`, so a guard reading that
+list alone has no opinion about a digest on a screen — which is the same defect wearing a
+different mechanism.
+
+`CounterpartyKey::NONE` — `_no_counterparty` — is in the census beside the digests. The sweep
+stores it verbatim on purpose, because it records the *absence* of a counterparty rather than
+naming one, which is the right call for the two guards that compare against it. It is still a
+machine token in a column the reader must never be shown, and it is the one blind-index value
+`looksDerived()` answers `false` for, so a rule written as "reject what looks derived" lets it
+straight through. That is not hypothetical: `MerchantDisplayName::forStoredKey()` returns null
+only when `looksDerived()`, so a cluster of un-named expenses writes `detected_name =
+'_no_counterparty'` and the recurring review screen renders it.
+
+The same census run also asserts the crypto layer's own vocabulary is absent —
+`BlindIndexCodec`, `SensitiveColumnCodec`, `OpLogFieldCrypto`, a `Modules\Sync\` namespace
+fragment. That is a different shape from a leaked value and it has a live instance:
+`ImportPipeline` catches `Throwable` around the normalise stage and puts `$e->getMessage()`
+into the preview row, so `BlindIndexKeyUnavailableException` is printed to the reader once per
+row, naming an internal class and their own user id where "unlock the app and try again"
+belongs. The same file already routes its *log* message through `MessageNamesNoUserData`; the
+preview row does not, and a screen needs the stricter rule of the two.
+
+### Why the two column lists stay separate
+
+`SensitiveFieldRegistry::columns()` is not a description, it is an instruction: `encryptAttrs()`,
+`decryptRow()`, `OpLogValueProjector` and the enable-time sweep all *act* on every entry. Adding a
+blind-index column to it would put AEAD over the one column the database has to match on, which is
+the failure this whole design exists to avoid. So the two lists must not merge.
+
+They should still be reachable together, because the readers that want both are guards, audits and
+the question "could a human read this value". The shape that satisfies both is a **third accessor**
+beside `columns()` and `knowinglyPlaintext()`, and it now exists: `blindIndexColumns()` returns the
+three columns with the domain each derives under, and `blindIndexSentinel()` names the one value
+they hold in the clear. `columns()` is unchanged and is still the only thing the codec consults. A
+guard composes the two explicitly rather than one list quietly acquiring a second meaning.
+
+The render guard reads both accessors and pins that they stay disjoint, which fails loudly if a
+blind-index column is ever added to the registry — the change that would put AEAD over a column
+the database matches on, and leave the ledger silently failing to deduplicate.
+
+### What the enable-time sweep does not reach
+
+`notifications` is in `SensitiveFieldRegistry` and is **not** in
+`PreMigrationSnapshot::PROJECTION_COLUMNS`. `EncryptionMigrationService` calls
+`encryptProjectionTable()` for `transactions`, `counterparties`, `tax_transaction_tags` and
+`transaction_splits`, and for nothing else, so a user who already had notification rows when
+they turned encryption on keeps those rows in plaintext on disk indefinitely, while the UI
+reports encryption **On**. New notifications are fine — `NotificationWriter` encrypts on write
+— and the op-log arm of the sweep covers `op_log_entries` for every registered field. It is
+only the existing projection rows for that table that are never rewritten.
+
+This also narrows a claim made further down this page: adding a column to the registry covers a
+not-yet-enabled user *only when that column's table is already in `PROJECTION_COLUMNS`*. A new
+table needs an entry there in the same change, or its history is left in the clear.
+
 ## The identity columns that are still plaintext, and what it would take to fix them
 
 An audit of a live desktop database found that `accounts.iban`, `accounts.name`,
@@ -149,11 +266,31 @@ it never collides, and a route parameter built from it resolves to nothing.
   caught it never fires.
 - **`categories.slug`** additionally has global rows with `user_id IS NULL`, and the codec
   keys on a user. There is no key to encrypt them under.
+- **`accounts.slug`** carries `unique(user_id, slug)` and `AccountSlugResolver::isTaken()`
+  walks collisions with `where('slug', …)->exists()`. Same shape as `counterparties.slug`:
+  ciphertext reads every candidate as free and the UNIQUE index never fires.
 - **`accounts.name`** is the only one of the five with no equality predicate. It is
-  encryptable, at the cost of ten `ORDER BY` sites that would silently sort by ciphertext
-  bytes, roughly fifteen display sites, a three-way merge that compares against a plaintext
-  baseline, and a `PROJECTION_COLUMNS` entry. The pattern to follow is
-  `CounterpartyIndexQuery`, which orders by `id` in SQL and `usort()`s after decrypting.
+  encryptable in isolation, at the cost of ten `ORDER BY` sites that would silently sort by
+  ciphertext bytes, roughly fifteen display sites across forty-four files that reach
+  `table('accounts')`, a three-way merge that compares against a plaintext baseline, and a
+  `PROJECTION_COLUMNS` entry (`accounts` has none today, so a registry entry alone would not
+  even sweep an existing user). The pattern to follow is `CounterpartyIndexQuery`, which
+  orders by `id` in SQL and `usort()`s after decrypting.
+
+  **But encrypting it in isolation is incoherent, not merely expensive.** `accounts.slug` is
+  `Str::slug()` of `accounts.name` and provably cannot be sealed, so a sealed `name` leaves a
+  readable copy of itself one column over — exactly the objection the audit raised against
+  `counterparties.display_name` sitting beside a plaintext `counterparties.slug`. `accounts.name`
+  and `accounts.slug` move together or not at all, and moving them together means a blind index,
+  not an allowlist entry.
+
+### The decision is recorded, not merely absent
+
+`SensitiveFieldRegistry::knowinglyPlaintext()` lists these four columns with a one-line reason
+each, so "not on the encrypted list" stops reading the same as "nobody looked". Three tests in
+`SensitiveColumnPredicateGuardTest` hold the two lists honest against each other: they must be
+disjoint, every column an allowlist reason leans on must appear in `knowinglyPlaintext()`, and
+no allowlist reason may cite a column the registry has since started encrypting.
 
 ### The keyed blind index in `counterparty_normalized`
 
@@ -389,6 +526,28 @@ added to the registry, those six exemptions silently cover the six most dangerou
 in the codebase, and the allowlist honesty check cannot detect it — it only greps reasons for
 `broken`/`TODO`/`FIXME`. Any change that lists `accounts.iban` must delete those six entries
 in the same commit.
+
+That is now enforced rather than merely written down. `SensitiveColumnPredicateGuardTest` pulls
+the `{table}.{column}` pairs back out of each allowlist *reason* and fails if any of them has
+entered `SensitiveFieldRegistry::columns()`, with an in-memory negative probe pinning that the
+check really does catch all six. Promoting `accounts.iban` without deleting the exemptions goes
+red on two tests, not zero.
+
+### What the reader is told, and why the old sentence had to go
+
+`/data-devices` used to caption the status row *"Your data is secured with your app-lock
+passphrase."* — one clause, no qualification, next to a database file whose `accounts.iban`,
+`accounts.name`, both `slug` columns and `transaction_search_docs.search_body` are readable with
+no key at all. A privacy-motivated reader reasonably concluded their merchant history was
+unreadable. It was not.
+
+`sync::devices.encrypted_at_rest_scope` replaces it — a **new key**, so no locale can be left
+behind still rendering the old promise, and the retired `encrypted_at_rest_help` is gone from all
+26. It names both halves: what the passphrase covers, and that amounts, dates, the reader's own
+account name and IBAN, and some merchant names elsewhere in the file are not covered. The
+enable-encryption modal already made that disclosure; the status row is the surface a reader
+actually returns to, so it has to make it too. Pinned by `DevicesAndSyncEncryptionUiTest`, which
+asserts the row names what is *not* covered and asserts the unqualified sentence is absent.
 
 ## See also
 

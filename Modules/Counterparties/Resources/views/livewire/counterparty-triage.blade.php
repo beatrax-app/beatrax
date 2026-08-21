@@ -21,6 +21,7 @@
       $recentTransactions  list<\stdClass>
       $queueEmpty          bool
 --}}
+@use('Modules\Ledger\Public\Enums\Currency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
 
@@ -162,11 +163,20 @@
                                 // other date in the app read 13-08-2026. Fmt follows
                                 // the reader's locale, day-first in all of them.
                                 $date = is_string($tx->posted_at ?? null) ? Fmt::shortDate($tx->posted_at) : '';
+
+                                // Signed, unlike the 12-month totals on the index and profile
+                                // pages: this is one transaction, not an aggregate, and an abs()
+                                // made a charge and a refund of the same size read identically
+                                // on the one screen whose question direction most helps answer.
+                                $amountMinor = (int) ($tx->amount_minor ?? 0);
+                                $currency = is_string($tx->currency ?? null) && $tx->currency !== ''
+                                    ? $tx->currency
+                                    : Currency::Eur->value;
                             @endphp
                             <li class="triage-tx">
                                 <span class="triage-tx__date">{{ $date }}</span>
                                 <span class="triage-tx__desc">{{ $tx->description ?? '' }}</span>
-                                <span class="triage-tx__amount">{{ Money::ofMinor(abs((int) ($tx->amount_minor ?? 0)), 'EUR')->format() }}</span>
+                                <span class="triage-tx__amount">{{ Money::ofMinor($amountMinor, $currency)->format() }}</span>
                             </li>
                         @endforeach
                     </ul>

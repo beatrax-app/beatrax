@@ -38,9 +38,6 @@ final class ClassificationRuleProvider
         return $this->rulesForType(self::TYPE_BANK_FEES, $region);
     }
 
-    /**
-     * @return list<ClassificationRule>
-     */
     // A rule outside the reader's own country classified a Dutch health insurer
     // as a Belgian agency, because ZORGPREMIE is the ordinary Dutch word for a
     // health-insurance premium and every region's file was loaded at once. A
@@ -74,9 +71,9 @@ final class ClassificationRuleProvider
         $files = glob($dir.'/*.yaml');
         $rules = [];
         foreach ($files !== false ? $files : [] as $file) {
-            $region = strtoupper(pathinfo($file, PATHINFO_FILENAME));
+            $fileRegion = strtoupper(pathinfo($file, PATHINFO_FILENAME));
             foreach ($this->reader->readEntries($file) as $raw) {
-                $rule = $this->buildRule($raw, $region);
+                $rule = $this->buildRule($raw, $fileRegion);
                 if ($rule !== null) {
                     $rules[] = $rule;
                 }

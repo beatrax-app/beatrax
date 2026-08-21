@@ -7,6 +7,8 @@ namespace Modules\Import\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Internal\Enums\ImportFailureReason;
+use Modules\Import\Internal\Enums\PreviewRowStatus;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
 use Modules\Import\Public\Dto\ConsolidatedPreviewSection;
@@ -19,7 +21,6 @@ final readonly class BuildConsolidatedPreviewQuery
     // the day-level window keeps the contract explicit at the query layer.
     public const int STALE_WINDOW_DAYS = 14;
 
-    // Mirrors AliasMatchPreviewQuery's five-row cap.
     public const int SAMPLE_ROW_LIMIT = 5;
 
     public function __construct(
@@ -123,7 +124,6 @@ final readonly class BuildConsolidatedPreviewQuery
         return $ordered;
     }
 
-    // One cache read per run: a second read could cross a TTL expiry.
     /**
      * @param  list<int>  $importRunIds
      * @param  ?int  $override  When non-null and positive, replaces the
@@ -134,9 +134,13 @@ final readonly class BuildConsolidatedPreviewQuery
     private function buildSection(string $sourceFormat, array $importRunIds, ?int $override = null): array
     {
         $allRows = [];
+        /** @var list<PreviewRowDto> $sampleCandidates */
+        $sampleCandidates = [];
         $committableRowCount = 0;
         $duplicateRowCount = 0;
         $hasCacheMiss = false;
+        $fileFailed = false;
+        $fileFailureText = null;
 
         foreach ($importRunIds as $runId) {
             $preview = $this->cache->getPreview($runId);
@@ -145,22 +149,32 @@ final readonly class BuildConsolidatedPreviewQuery
 
                 continue;
             }
+            if ($preview->fileFailureReason !== null) {
+                $fileFailed = true;
+                $fileFailureText ??= $preview->fileFailureDetail
+                    ?? ImportFailureReason::tryFrom($preview->fileFailureReason)?->label();
+            }
             foreach ($preview->rows as $row) {
                 $allRows[] = $row;
-                if ($row->status === 'new' || $row->status === 'enriched') {
+                if ($row->status === PreviewRowStatus::NewRow->value || $row->status === PreviewRowStatus::Enriched->value) {
                     $committableRowCount++;
-                } elseif ($row->status === 'duplicate') {
+                } elseif ($row->status === PreviewRowStatus::Duplicate->value) {
                     $duplicateRowCount++;
+                }
+                // The sample stands for what committing writes, and a failed
+                // row writes nothing. Shown among the others in a table with
+                // no status column, it reads as one more transaction.
+                if ($row->status !== PreviewRowStatus::Error->value) {
+                    $sampleCandidates[] = $row;
                 }
             }
         }
 
-        $status = $this->resolveSectionStatus($hasCacheMiss, $allRows);
+        $status = $this->resolveSectionStatus($hasCacheMiss, $allRows, $fileFailed);
 
         $limit = ($override !== null && $override > 0) ? $override : self::SAMPLE_ROW_LIMIT;
 
-        /** @var list<PreviewRowDto> $sampleRows */
-        $sampleRows = array_slice($allRows, 0, $limit);
+        $sampleRows = array_slice($sampleCandidates, 0, $limit);
 
         return [
             new ConsolidatedPreviewSection(
@@ -169,7 +183,7 @@ final readonly class BuildConsolidatedPreviewQuery
                 totalRows: $committableRowCount,
                 sampleRows: $sampleRows,
                 status: $status,
-                error: $this->resolveSectionError($allRows),
+                error: $fileFailureText ?? self::resolveSectionError($allRows),
             ),
             $duplicateRowCount,
         ];
@@ -178,18 +192,20 @@ final readonly class BuildConsolidatedPreviewQuery
     /**
      * @param  list<PreviewRowDto>  $allRows
      */
-    private function resolveSectionStatus(bool $hasCacheMiss, array $allRows): string
+    private function resolveSectionStatus(bool $hasCacheMiss, array $allRows, bool $fileFailed): string
     {
         if ($hasCacheMiss) {
             return 'error';
         }
         if ($allRows === []) {
-            return 'empty';
+            // A file that failed before it yielded anything is a failure, not
+            // an empty statement: 'empty' says every row was already imported.
+            return $fileFailed ? 'error' : 'empty';
         }
 
-        // A failed parse contributes a single error row, which counts as
-        // neither committable nor duplicate. Without this the section reads
-        // 'ready' with a total of zero and offers a commit button.
+        // A row that failed counts as neither committable nor duplicate.
+        // Without this the section reads 'ready' with a total of zero and
+        // offers a commit button.
         return $this->everyRowFailed($allRows) ? 'error' : 'ready';
     }
 
@@ -199,7 +215,7 @@ final readonly class BuildConsolidatedPreviewQuery
     private function everyRowFailed(array $allRows): bool
     {
         foreach ($allRows as $row) {
-            if ($row->status !== 'error') {
+            if ($row->status !== PreviewRowStatus::Error->value) {
                 return false;
             }
         }
@@ -207,16 +223,21 @@ final readonly class BuildConsolidatedPreviewQuery
         return true;
     }
 
-    // The parser's own reason — which format it expected, what to
-    // re-download — carried to the screen rather than only to the log.
+    // The reason, translated, rather than the exception's own words: those name
+    // internal classes and the reader's user id, and this string is rendered.
     /**
      * @param  list<PreviewRowDto>  $allRows
      */
-    private function resolveSectionError(array $allRows): ?string
+    private static function resolveSectionError(array $allRows): ?string
     {
         foreach ($allRows as $row) {
-            if ($row->status === 'error' && is_string($row->error) && $row->error !== '') {
-                return $row->error;
+            if ($row->status !== PreviewRowStatus::Error->value || $row->errorReason === null) {
+                continue;
+            }
+
+            $reason = ImportFailureReason::tryFrom($row->errorReason);
+            if ($reason !== null) {
+                return $reason->label();
             }
         }
 

@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Ga naar App-vergrendeling',
 
     'encrypted_at_rest' => 'Gegevens versleuteld opgeslagen',
-    'encrypted_at_rest_help' => 'Je gegevens zijn beveiligd met je app-vergrendelingswachtwoord.',
+    'encrypted_at_rest_scope' => 'Notities, omschrijvingen van transacties en de namen en IBANs van wie je betaalt zijn versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en je eigen rekeningnaam en IBAN niet, en sommige namen van winkels staan nog steeds leesbaar elders in het databasebestand.',
     'on' => 'Aan',
     'securing' => 'Je gegevens worden beveiligd…',
     'do_not_close' => 'Sluit dit venster niet.',

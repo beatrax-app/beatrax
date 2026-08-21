@@ -9,7 +9,6 @@ use Modules\Import\Public\Dto\StartingBalanceCandidate;
 
 interface DetectsStartingBalance
 {
-    // Introspection only: the aggregator walks every tagged detector anyway.
     public function supports(string $sourceFormat): bool;
 
     // Empty when none of the supplied run ids are this detector's format,

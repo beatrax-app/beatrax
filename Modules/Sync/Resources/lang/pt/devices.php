@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Ir para Bloqueio da aplicação',
 
     'encrypted_at_rest' => 'Dados encriptados em repouso',
-    'encrypted_at_rest_help' => 'Os teus dados estão protegidos com a frase-passe do bloqueio da aplicação.',
+    'encrypted_at_rest_scope' => 'As notas, as descrições das transações e os nomes e IBAN de quem pagas estão encriptados com a palavra-passe do bloqueio da app. Os valores, as datas e o nome e IBAN da tua própria conta não estão, e alguns nomes de comerciantes continuam legíveis noutras partes do ficheiro da base de dados.',
     'on' => 'Ligado',
     'securing' => 'A proteger os teus dados…',
     'do_not_close' => 'Não feches esta janela.',

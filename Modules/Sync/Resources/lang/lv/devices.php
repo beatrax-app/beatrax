@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Doties uz lietotnes bloķēšanu',
 
     'encrypted_at_rest' => 'Dati šifrēti glabāšanā',
-    'encrypted_at_rest_help' => 'Jūsu dati ir aizsargāti ar lietotnes bloķēšanas paroles frāzi.',
+    'encrypted_at_rest_scope' => 'Piezīmes, darījumu apraksti un maksājumu saņēmēju vārdi un IBAN ir šifrēti ar tavu lietotnes bloķēšanas paroles frāzi. Summas, datumi un tava paša konta nosaukums un IBAN nav šifrēti, un daži tirgotāju nosaukumi joprojām ir lasāmi citviet datubāzes failā.',
     'on' => 'Ieslēgts',
     'securing' => 'Aizsargā jūsu datus…',
     'do_not_close' => 'Neaizveriet šo logu.',

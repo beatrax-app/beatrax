@@ -231,3 +231,39 @@ it('returns null projectedFinishDate for a goal with nothing attributed and no p
     expect($rows[0]->projectedFinishDate)->toBeNull();
     expect($rows[0]->projectionBeyondHorizon)->toBeFalse();
 });
+
+// Six months of history and a €500 deposit four months ago: the rate is zero
+// because the trailing window is empty, not because the goal is new. The card
+// said "Not enough history", which is a definite claim and a false one.
+it('reports a stalled projection, not missing history, for a long-lived goal with nothing recent', function (): void {
+    $goal = Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'target_minor' => 300000,
+        'start_date' => CarbonImmutable::now()->subDays(180)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'status' => 'active',
+    ]);
+
+    projContribution($this->user, $this->account->id, $this->run->id, $goal->id, 50000, CarbonImmutable::now()->subDays(120)->toDateString());
+
+    $rows = app(GoalProgressQuery::class)->forUser($this->user);
+
+    expect($rows[0]->contributedMinor)->toBe(50000);
+    expect($rows[0]->projectedFinishDate)->toBeNull();
+    expect($rows[0]->projectionStalled)->toBeTrue();
+});
+
+it('reports missing history, not a stall, for a goal younger than the observation window', function (): void {
+    Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'target_minor' => 100000,
+        'start_date' => CarbonImmutable::now()->subDays(2)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'status' => 'active',
+    ]);
+
+    $rows = app(GoalProgressQuery::class)->forUser($this->user);
+
+    expect($rows[0]->projectedFinishDate)->toBeNull();
+    expect($rows[0]->projectionStalled)->toBeFalse();
+});

@@ -30,7 +30,6 @@ final class BiometricKeyBlobCodec
         return $blob;
     }
 
-    // Null when the blob is malformed, tampered, or not one this codec made.
     public function unwrap(string $blob): ?string
     {
         if (strlen($blob) <= SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {

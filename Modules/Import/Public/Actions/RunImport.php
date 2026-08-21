@@ -9,6 +9,7 @@ use Illuminate\Contracts\Filesystem\Factory as StorageFactory;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Internal\Enums\PreviewRowStatus;
 use Modules\Import\Internal\Exceptions\RacedImportRunVanishedException;
 use Modules\Import\Internal\Exceptions\UploadStagingException;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
@@ -99,7 +100,7 @@ final class RunImport implements RunsImports
 
         $enrichedCount = 0;
         foreach ($result['rows'] as $row) {
-            if ($row->status === 'enriched') {
+            if ($row->status === PreviewRowStatus::Enriched->value) {
                 $enrichedCount++;
             }
         }
@@ -109,6 +110,8 @@ final class RunImport implements RunsImports
             rows: $result['rows'],
             accountsToName: $result['unknownIbans'],
             enrichedCount: $enrichedCount,
+            fileFailureReason: $result['fileFailureReason'],
+            fileFailureDetail: $result['fileFailureDetail'],
         );
 
         $this->cache->put($importRun->id, $previewResult, $result['canonical'], $result['enrichments']);
@@ -228,7 +231,7 @@ final class RunImport implements RunsImports
 
         $enrichedCount = 0;
         foreach ($result['rows'] as $row) {
-            if ($row->status === 'enriched') {
+            if ($row->status === PreviewRowStatus::Enriched->value) {
                 $enrichedCount++;
             }
         }
@@ -238,6 +241,8 @@ final class RunImport implements RunsImports
             rows: $result['rows'],
             accountsToName: $result['unknownIbans'],
             enrichedCount: $enrichedCount,
+            fileFailureReason: $result['fileFailureReason'],
+            fileFailureDetail: $result['fileFailureDetail'],
         );
 
         $this->cache->put($importRun->id, $previewResult, $result['canonical'], $result['enrichments']);
@@ -252,7 +257,6 @@ final class RunImport implements RunsImports
         return sprintf('open-banking://%s', $idempotencyKey);
     }
 
-    // Null on the remote-fetch path, which leaves its synthetic marker alone.
     private function resetPreviewedRun(ImportRun $run, string $sourceFormat, ?string $stablePath): ImportRun
     {
         $attributes = [

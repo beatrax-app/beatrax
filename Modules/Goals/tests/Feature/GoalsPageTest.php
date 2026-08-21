@@ -486,3 +486,65 @@ it('tells the phone what it says about the finish date, not only a percentage', 
     // Nothing contributed yet, so the honest line is the one asking for some.
     expect($phone)->toContain(Lang::get('goals::messages.projection.add_contributions'));
 });
+
+// ios-15: the form refuses a goal without a target date, and then neither list
+// rendered it — `targetDate` appeared only in the three wire:model bindings, so
+// the only way back to it was reopening the edit sheet.
+
+/** @return array{phone: string, desktop: string} the two list branches, sliced out of one render */
+function goalsListBranches(string $html): array
+{
+    // Both class names also appear in the media query at the top, so slice on
+    // the LAST occurrence — the markup, not the stylesheet.
+    $phoneAt = (int) strrpos($html, 'goals-phone-list');
+    $desktopAt = (int) strrpos($html, 'goals-desktop-list');
+
+    return [
+        'phone' => substr($html, $phoneAt, $desktopAt - $phoneAt),
+        'desktop' => substr($html, $desktopAt),
+    ];
+}
+
+function goalWithTargetDate(int $userId, string $targetDate, string $status = 'active'): void
+{
+    Goal::create([
+        'user_id' => $userId,
+        'name' => 'Noodfonds',
+        'target_minor' => 500000,
+        'currency' => 'EUR',
+        'start_date' => CarbonImmutable::now()->toDateString(),
+        'target_date' => $targetDate,
+        'status' => $status,
+    ]);
+}
+
+it('shows the target date the form insisted on in the phone list', function (): void {
+    goalWithTargetDate((int) $this->user->id, '2026-12-31');
+
+    $branches = goalsListBranches((string) Livewire::test(GoalsPage::class)->html());
+
+    expect($branches['phone'])->toContain(
+        Lang::get('goals::messages.card.target_date', ['date' => '31 Dec 2026'])
+    );
+});
+
+it('shows the target date in the desktop list too', function (): void {
+    goalWithTargetDate((int) $this->user->id, '2026-12-31');
+
+    $branches = goalsListBranches((string) Livewire::test(GoalsPage::class)->html());
+
+    expect($branches['desktop'])->toContain(
+        Lang::get('goals::messages.card.target_date', ['date' => '31 Dec 2026'])
+    );
+});
+
+// The finding's secondary half: the phone status conditional covered
+// overdue/reached only, so the Completed badge existed on the desktop branch
+// alone and a finished goal read as an unfinished one at 375pt.
+it('tells the phone list a completed goal is completed, as the desktop list already did', function (): void {
+    goalWithTargetDate((int) $this->user->id, '2026-12-31', 'completed');
+
+    $branches = goalsListBranches((string) Livewire::test(GoalsPage::class)->html());
+
+    expect($branches['phone'])->toContain(Lang::get('goals::messages.status.completed'));
+});

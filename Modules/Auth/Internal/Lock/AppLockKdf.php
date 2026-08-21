@@ -8,7 +8,8 @@ namespace Modules\Auth\Internal\Lock;
 // entropy is not cheaply brute-forced out of a stolen database.
 final class AppLockKdf
 {
-    // The caller must sodium_memzero() the returned key bytes after use.
+    // Returns raw key material that nothing here retains, so only the caller
+    // can sodium_memzero() it once the wrap or unwrap is done.
     public function deriveWrapKey(string $secret, string $salt): string
     {
         return sodium_crypto_pwhash(
@@ -21,7 +22,6 @@ final class AppLockKdf
         );
     }
 
-    // One fresh salt per PIN enrollment — never reuse one across enrollments.
     public function generateSalt(): string
     {
         return random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);

@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Eiti į programėlės užraktą',
 
     'encrypted_at_rest' => 'Duomenys šifruojami saugykloje',
-    'encrypted_at_rest_help' => 'Tavo duomenys apsaugoti programėlės užrakto slaptafraze.',
+    'encrypted_at_rest_scope' => 'Užrašai, operacijų aprašymai ir gavėjų vardai bei IBAN yra užšifruoti tavo programėlės užrakto slaptafraze. Sumos, datos ir tavo paties sąskaitos pavadinimas bei IBAN – ne, o kai kurie prekybininkų pavadinimai vis dar matomi atviru tekstu kitose duomenų bazės failo vietose.',
     'on' => 'Įjungta',
     'securing' => 'Apsaugomi tavo duomenys…',
     'do_not_close' => 'Neuždaryk šio lango.',

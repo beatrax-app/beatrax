@@ -100,7 +100,6 @@ final class CounterpartyProfile extends Component
             ? $recurring->approvedSeriesForCounterparty($profile->id, $user)
             : [];
 
-        // One tax-tag query for the whole list, not one per rendered badge.
         $recentActivity = $query->recentActivity($cpModel, 10);
         $recentIds = array_map(static fn (object $row): int => is_numeric($row->id) ? (int) $row->id : 0, $recentActivity->all());
         $taxState = $this->taxTagStateFor($recentIds, $taxTagQuery, $currentUser);

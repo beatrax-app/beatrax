@@ -36,7 +36,7 @@
         <div class="rounded-lg border border-slate-200 px-4 py-3 dark:border-slate-700">
             <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.stats.auto_named') }}</p>
             <p class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                {{ $stats['autoNamedPercent'] }}%
+                {{ $stats['autoNamedPercent'] === null ? '—' : $stats['autoNamedPercent'].'%' }}
             </p>
         </div>
         <div class="rounded-lg border border-slate-200 px-4 py-3 dark:border-slate-700">

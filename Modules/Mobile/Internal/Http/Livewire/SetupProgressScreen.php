@@ -131,12 +131,10 @@ final class SetupProgressScreen extends Component
         return match (true) {
             $this->phase === 'complete' => 100,
             $this->step === SetupStep::Transfer && $hasRealTotal => $transferPercent,
-            // Indeterminate beats a number that only moves at the end.
             default => 0,
         };
     }
 
-    // Livewire cannot call enum statics from a view.
     /**
      * @return list<SetupStep>
      */

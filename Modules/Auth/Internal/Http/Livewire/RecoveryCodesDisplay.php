@@ -68,20 +68,14 @@ final class RecoveryCodesDisplay extends Component
         $codes = $this->codesFromSession($session);
         $username = $currentUser->user()->username;
 
-        // Built in the browser, not streamed from a Livewire action: a WebView
-        // has no download manager for a StreamedResponse.
-
-        // On a phone the blob download the browser path uses writes nothing,
-        // reports nothing, and left this screen claiming it had saved a file
-        // that was never there. The share sheet is the only route that works,
-        // and the endpoint behind it answers whether it did.
-
-        // The runtime, not just the route: the route is registered in every
-        // composer root, so gating on it alone sent the desktop through an
-        // endpoint that refuses off-device — turning a download that works
-        // into a reported failure.
+        // The endpoint keeps a copy inside the app's private container, which
+        // is the best a shell that drops WebView downloads can do. A shell that
+        // saves them hands the file to the reader instead, so it must not be
+        // diverted here. An unmodelled platform keeps the copy.
         $exportRoute = 'mobile.recovery-codes.export';
-        $nativeExport = UserDataPathService::isMobileRuntime() && $router->has($exportRoute);
+        $nativeExport = UserDataPathService::isMobileRuntime()
+            && $router->has($exportRoute)
+            && UserDataPathService::platform()?->savesWebViewDownloads() !== true;
 
         $view = $views->make('auth::livewire.recovery-codes-display', [
             'codes' => $codes,

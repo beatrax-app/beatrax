@@ -125,7 +125,6 @@ final class SupportResourceProvider
 
         $map = [];
         foreach ($files as $file) {
-            // The country code is the filename, as in the other corpora.
             $code = mb_strtolower(basename($file, '.yaml'));
             foreach ($this->reader->readEntries($file) as $raw) {
                 $this->addResource($map, $code, $raw);

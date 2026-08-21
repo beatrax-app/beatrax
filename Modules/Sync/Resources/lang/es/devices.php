@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Ir a Bloqueo de la app',
 
     'encrypted_at_rest' => 'Datos cifrados en reposo',
-    'encrypted_at_rest_help' => 'Tus datos están protegidos con la contraseña del bloqueo de la app.',
+    'encrypted_at_rest_scope' => 'Las notas, las descripciones de las transacciones y los nombres e IBAN de a quién pagas están cifrados con la contraseña de bloqueo de la app. Los importes, las fechas y el nombre e IBAN de tu propia cuenta no lo están, y algunos nombres de comercios siguen apareciendo en texto claro en otras partes del archivo de base de datos.',
     'on' => 'Activado',
     'securing' => 'Protegiendo tus datos…',
     'do_not_close' => 'No cierres esta ventana.',

@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Przejdź do Blokady aplikacji',
 
     'encrypted_at_rest' => 'Dane szyfrowane w spoczynku',
-    'encrypted_at_rest_help' => 'Twoje dane są chronione hasłem blokady aplikacji.',
+    'encrypted_at_rest_scope' => 'Notatki, opisy transakcji oraz nazwy i numery IBAN odbiorców są szyfrowane hasłem blokady aplikacji. Kwoty, daty oraz nazwa i IBAN Twojego własnego konta nie są, a niektóre nazwy sprzedawców nadal występują jawnie w innych miejscach pliku bazy danych.',
     'on' => 'Wł.',
     'securing' => 'Zabezpieczanie Twoich danych…',
     'do_not_close' => 'Nie zamykaj tego okna.',

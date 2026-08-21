@@ -22,13 +22,15 @@ final class GoalProjectionService
     private const int HORIZON_LIMIT_DAYS = 90;
 
     // Below this, one early deposit would extrapolate a misleadingly-soon
-    // finish (a goal created today divides by a 1-day window) — the card
-    // states it has too little history instead, which stays true for a goal
-    // that never accrues a second contribution.
+    // finish, so the card says it has too little history instead. Past it, a
+    // zero rate means an empty trailing window, which is a different sentence.
     private const int MIN_OBSERVATION_DAYS = 7;
 
-    /** @var array{date: null, beyondHorizon: false} */
-    private const array NO_PROJECTION = ['date' => null, 'beyondHorizon' => false];
+    /** @var array{date: null, beyondHorizon: false, stalled: false} */
+    private const array NO_PROJECTION = ['date' => null, 'beyondHorizon' => false, 'stalled' => false];
+
+    /** @var array{date: null, beyondHorizon: false, stalled: true} */
+    private const array STALLED = ['date' => null, 'beyondHorizon' => false, 'stalled' => true];
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -36,9 +38,13 @@ final class GoalProjectionService
         private readonly PotBalanceQuery $potBalance,
     ) {}
 
+    // `stalled` separates the two reasons a rate can be zero, because the card
+    // says one of two different things: a goal younger than the observation
+    // window has too little history, and an older one with an empty trailing
+    // window has plenty of history and nothing recent in it.
     /**
      * @param  array{balance: int, currency: string, potId: int}|null  $linkedPot
-     * @return array{date: ?string, beyondHorizon: bool}
+     * @return array{date: ?string, beyondHorizon: bool, stalled: bool}
      */
     public function project(Goal $goal, int $contributedMinor, User $user, ?array $linkedPot = null): array
     {
@@ -46,9 +52,13 @@ final class GoalProjectionService
             return self::NO_PROJECTION;
         }
 
+        if ($this->observedDays($goal) < self::MIN_OBSERVATION_DAYS) {
+            return self::NO_PROJECTION;
+        }
+
         $dailyRateMinor = $this->dailyContributionRate($goal, $user, $linkedPot);
         if ($dailyRateMinor <= 0.0) {
-            return self::NO_PROJECTION;
+            return self::STALLED;
         }
 
         $remainingMinor = $goal->target_minor - $contributedMinor;
@@ -57,6 +67,7 @@ final class GoalProjectionService
         return [
             'date' => CarbonImmutable::today()->addDays($daysToFinish)->format('Y-m-d'),
             'beyondHorizon' => $daysToFinish > self::HORIZON_LIMIT_DAYS,
+            'stalled' => false,
         ];
     }
 
@@ -68,21 +79,30 @@ final class GoalProjectionService
      */
     private function dailyContributionRate(Goal $goal, User $user, ?array $linkedPot): float
     {
-        $windowStart = CarbonImmutable::today()->subDays(self::TRAILING_WINDOW_DAYS)->toDateString();
-        $effectiveStart = $goal->start_date->toDateString() > $windowStart
-            ? $goal->start_date->toDateString()
-            : $windowStart;
-
-        $elapsedDays = CarbonImmutable::parse($effectiveStart)->diffInDays(CarbonImmutable::today());
-        if ($elapsedDays < self::MIN_OBSERVATION_DAYS) {
-            return 0.0;
-        }
+        $effectiveStart = $this->effectiveStart($goal);
+        $elapsedDays = $this->observedDays($goal);
 
         $windowSum = $linkedPot !== null
             ? $this->potWindowSum($linkedPot, $goal->target_currency, $effectiveStart, $user)
             : $this->attributedWindowSum($goal, $effectiveStart, $user);
 
         return $windowSum / max(1, $elapsedDays);
+    }
+
+    // The trailing window, clipped to the goal's own start: a goal created
+    // today would otherwise divide one early deposit by 90 days.
+    private function effectiveStart(Goal $goal): string
+    {
+        $windowStart = CarbonImmutable::today()->subDays(self::TRAILING_WINDOW_DAYS)->toDateString();
+
+        return $goal->start_date->toDateString() > $windowStart
+            ? $goal->start_date->toDateString()
+            : $windowStart;
+    }
+
+    private function observedDays(Goal $goal): int
+    {
+        return (int) CarbonImmutable::parse($this->effectiveStart($goal))->diffInDays(CarbonImmutable::today());
     }
 
     /**

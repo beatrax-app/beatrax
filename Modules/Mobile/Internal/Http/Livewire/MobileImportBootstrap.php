@@ -16,6 +16,7 @@ use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\ValidationMessages;
 use Modules\Mobile\Internal\Identity\MobileProvisioningCredentials;
@@ -30,11 +31,22 @@ final class MobileImportBootstrap extends Component
 
     private const RECOVERY_CODES_SESSION_KEY = 'auth.signup.recovery_codes_plain';
 
+    // Written the moment the codes reach the screen, so a later mount can tell
+    // a display still owed from a return trip to one already made.
+    private const RECOVERY_CODES_SHOWN_SESSION_KEY = 'mobile.import.recovery_codes_shown';
+
     // Server-side only, for the lifetime of the provisioning_failed retry
     // window, and forgotten the moment provisioning succeeds.
     private const PENDING_CREDENTIALS_SESSION_KEY = 'mobile.import.pending_credentials';
 
     private const MINIMUM_PASSWORD_LENGTH = 12;
+
+    private const MINIMUM_PIN_LENGTH = 6;
+
+    // The five boxes on the form. SignupAction also rejects under `signup` when
+    // the device gained an owner mid-submit, and that has no box to sit under,
+    // so it stays on the form-level line.
+    private const array FIELD_KEYS = ['username', 'password', 'passwordConfirmation', 'pin', 'confirmPin'];
 
     public string $step = 'collect_pin';
 
@@ -53,11 +65,17 @@ final class MobileImportBootstrap extends Component
 
         // Codes still in the session means signup just happened and the
         // one-time display is still owed.
-        if ($this->recoveryCodesFromSession($session) !== []) {
+        if ($this->recoveryCodesFromSession($session) !== [] && ! $this->recoveryCodesAlreadyShown($session)) {
             $this->step = 'recovery_codes';
 
             return;
         }
+
+        // A mount that arrives after the display was made is a way back in —
+        // cancelling out of pairing, above all — and that screen has promised
+        // its codes are shown once. They are hashed at rest and the session
+        // copy is encrypted, so repeating them breaks a promise, not a secret.
+        $this->forgetRecoveryCodes($session);
 
         // Flagged rather than redirected: a failed provisioning also leaves an
         // authenticated user with no codes, and its retry screen must stay
@@ -83,17 +101,13 @@ final class MobileImportBootstrap extends Component
         DatabaseManager $db,
         MobileImportIntentGate $importIntent,
     ): void {
-        if (($passwordError = $this->passwordError()) !== null) {
-            $this->flashMessage = $passwordError;
-            $this->password = '';
-            $this->passwordConfirmation = '';
+        $this->resetErrorBag();
+        $this->flashMessage = '';
 
-            return;
-        }
-
-        if (($pinError = $this->pinError()) !== null) {
-            $this->flashMessage = $pinError;
-
+        // Every broken rule at once, and none of the boxes emptied: a rejected
+        // submit used to clear both password boxes, so a mistyped PIN cost a
+        // 12-character passphrase retyped on a phone keyboard.
+        if ($this->reportBrokenFieldRules()) {
             return;
         }
 
@@ -102,16 +116,15 @@ final class MobileImportBootstrap extends Component
             // over sync, and a local set would collide id-for-id with them.
             $userId = $signup->__invoke($this->username, $this->password, seedsStarterData: false)['user']->id;
         } catch (ValidationException $e) {
-            $this->flashMessage = ValidationMessages::first($e, 'mobile::import.errors.account_failed');
-            $this->password = '';
-            $this->passwordConfirmation = '';
+            $this->reportRejection($e);
 
             return;
         }
 
-        // A public Livewire property survives re-renders inside the serialized
-        // wire:snapshot sent to the browser on every subsequent request, so
-        // the plaintext PIN and password must not linger in one.
+        // Handed to provisioning and then dropped from the properties: past
+        // this point they are no longer what the reader is typing, and a public
+        // property rides the serialized wire:snapshot to the browser on every
+        // later render.
         $credentials = new MobileProvisioningCredentials($userId, $this->pin, $this->password);
         $this->pin = '';
         $this->confirmPin = '';
@@ -132,22 +145,56 @@ final class MobileImportBootstrap extends Component
         }
     }
 
-    private function passwordError(): ?string
+    // Field-scoped, so each message renders under the box it is about and that
+    // control carries aria-invalid. One shared line reported the password rule
+    // beneath the PIN's own "6-10 digits" hint, where the two read as a
+    // contradiction — and said nothing at all about an empty username.
+    private function reportBrokenFieldRules(): bool
     {
-        return match (true) {
-            $this->password !== $this->passwordConfirmation => Lang::get('mobile::import.errors.passwords_mismatch'),
-            strlen($this->password) < self::MINIMUM_PASSWORD_LENGTH => Lang::get('mobile::import.errors.password_length'),
-            default => null,
-        };
+        $broken = [];
+
+        if ($this->username === '') {
+            $broken['username'] = Lang::get('mobile::import.errors.username_required');
+        }
+
+        if (strlen($this->password) < self::MINIMUM_PASSWORD_LENGTH) {
+            $broken['password'] = Lang::get('mobile::import.errors.password_length');
+        }
+
+        if ($this->password !== $this->passwordConfirmation) {
+            $broken['passwordConfirmation'] = Lang::get('mobile::import.errors.passwords_mismatch');
+        }
+
+        if (strlen($this->pin) < self::MINIMUM_PIN_LENGTH) {
+            $broken['pin'] = Lang::get('mobile::import.errors.pin_length');
+        }
+
+        if ($this->pin !== $this->confirmPin) {
+            $broken['confirmPin'] = Lang::get('mobile::import.errors.pins_mismatch');
+        }
+
+        foreach ($broken as $field => $message) {
+            $this->addError($field, $message);
+        }
+
+        return $broken !== [];
     }
 
-    private function pinError(): ?string
+    private function reportRejection(ValidationException $exception): void
     {
-        return match (true) {
-            strlen($this->pin) < 6 => Lang::get('mobile::import.errors.pin_length'),
-            $this->pin !== $this->confirmPin => Lang::get('mobile::import.errors.pins_mismatch'),
-            default => null,
-        };
+        $placed = false;
+        $errors = $exception->validator->errors()->messages();
+
+        foreach (self::FIELD_KEYS as $field) {
+            foreach ($errors[$field] ?? [] as $message) {
+                $this->addError($field, $message);
+                $placed = true;
+            }
+        }
+
+        if (! $placed) {
+            $this->flashMessage = ValidationMessages::first($exception, 'mobile::import.errors.account_failed');
+        }
     }
 
     // Idempotent-safe retry of the provisioning steps only - never
@@ -200,7 +247,7 @@ final class MobileImportBootstrap extends Component
     // dashboard.
     public function continueToPairing(Session $session, UrlGenerator $urls): void
     {
-        $session->forget(self::RECOVERY_CODES_SESSION_KEY);
+        $this->forgetRecoveryCodes($session);
 
         $this->redirect($urls->route('mobile.pair', ['mode' => 'import']), navigate: false);
     }
@@ -218,6 +265,14 @@ final class MobileImportBootstrap extends Component
         // threw "No authenticated user is bound to the current guard".
         $showingCodes = $this->step === 'recovery_codes';
 
+        // Recorded here because the render IS the display: the way off this
+        // step is a plain link, so no later server call reports that the codes
+        // were seen, and mount() would otherwise re-enter the step on the way
+        // back and show them a second time.
+        if ($showingCodes) {
+            $session->put(self::RECOVERY_CODES_SHOWN_SESSION_KEY, true);
+        }
+
         $view = $views->make('mobile::livewire.mobile-import-bootstrap', [
             'codes' => $showingCodes ? $this->recoveryCodesFromSession($session) : [],
             // The browser saves the file itself and navigates by link, so the
@@ -227,10 +282,13 @@ final class MobileImportBootstrap extends Component
                 ? $formatter->filenameFor($currentUser->user()->username)
                 : '',
             'pairingUrl' => $urls->route('mobile.pair', ['mode' => 'import']),
-            // The Android webview drops a blob download without a word, so on
-            // a phone the file goes out through the OS share sheet instead —
-            // and the screen only claims to have saved it when that answers.
-            'nativeExport' => $showingCodes && $exportBridge->isAvailable(),
+            // The Android webview drops a blob download without a word, so
+            // there the endpoint keeps a copy and the screen says so. A shell
+            // that saves the download hands the file to the reader instead, so
+            // it keeps the blob and is never sent to the endpoint.
+            'nativeExport' => $showingCodes
+                && $exportBridge->isAvailable()
+                && UserDataPathService::platform()?->savesWebViewDownloads() !== true,
             'exportUrl' => $urls->route('mobile.recovery-codes.export'),
         ]);
 
@@ -290,5 +348,15 @@ final class MobileImportBootstrap extends Component
         $codes = $session->get(self::RECOVERY_CODES_SESSION_KEY);
 
         return $codes ?? [];
+    }
+
+    private function recoveryCodesAlreadyShown(Session $session): bool
+    {
+        return $session->get(self::RECOVERY_CODES_SHOWN_SESSION_KEY) === true;
+    }
+
+    private function forgetRecoveryCodes(Session $session): void
+    {
+        $session->forget([self::RECOVERY_CODES_SESSION_KEY, self::RECOVERY_CODES_SHOWN_SESSION_KEY]);
     }
 }

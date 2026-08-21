@@ -227,12 +227,23 @@ trait CrossDevicePairingHarness
             $table->integer('current_epoch')->nullable();
             $table->boolean('migration_in_progress')->default(false);
             $table->timestamp('enabled_at')->nullable();
+            $table->timestamp('counterparty_key_backfilled_at')->nullable();
             $table->timestamps();
         });
 
         $db->connection($connection)->statement(
             'CREATE UNIQUE INDEX sync_encryption_state_user_idx ON sync_encryption_state (user_id)'
         );
+
+        // The fan-out asks whether this device already holds rows keyed under
+        // its blind-index key, because the answer decides which side gives way
+        // when two devices hold different ones. Only the column that question
+        // reads is mirrored; nothing here exercises the ledger itself.
+        $schema->create('transactions', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedInteger('user_id');
+            $table->string('counterparty_normalized', 80);
+        });
     }
 
     private function harnessMigrateRelaySchema(DatabaseManager $db, string $connection): void

@@ -344,7 +344,7 @@ final class GdkKeyringService
 
     // Null distinguishes two states the caller must not conflate: encryption
     // was never enabled (no keyring file), or the keyring predates the blind
-    // index. Both are answered by BlindIndexKeyring, never here.
+    // index. BlindIndexCodec::keyHexOrNull() is what tells them apart.
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
      * @throws BackupDecryptionException when the held KEK does not open the file.
@@ -383,7 +383,7 @@ final class GdkKeyringService
 
     // Mints a blind-index key for a keyring written before the column existed,
     // and answers the one already held otherwise. Two devices that each reach
-    // this independently converge later, on the rule BlindIndexKeyring applies.
+    // this independently converge on GdkEpochControlHandler's adoption rule.
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
      * @throws BackupDecryptionException when the held KEK does not open the file.

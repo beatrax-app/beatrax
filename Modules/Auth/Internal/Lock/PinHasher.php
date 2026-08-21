@@ -18,7 +18,8 @@ final class PinHasher
         );
     }
 
-    // libsodium takes ($hash, $password) — the reverse of this method's order.
+    // libsodium's verify takes ($hash, $password), the reverse of this method's
+    // parameter order — swapping them back makes every verification fail.
     public function verify(string $pin, string $hash): bool
     {
         return sodium_crypto_pwhash_str_verify($hash, $pin);

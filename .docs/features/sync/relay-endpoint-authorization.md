@@ -122,9 +122,12 @@ The two lifetimes are:
 Garbage collection compares `expires_at` as a plain string, which is only
 correct while every timestamp is zero-padded UTC Zulu — an offset form such as
 `+02:00` sorts wrongly and would either collect live blobs early or never
-collect them at all. `RelayMailbox::assertZulu()` guards every write site so a
-refactor that changes the format fails loudly rather than corrupting the
-ordering quietly.
+collect them at all. `ZuluTimestamp::stamp()` is the only way any write site
+produces one, and both halves of it are load-bearing: it converts to UTC *and*
+asserts the shape, throwing rather than writing a value the comparison cannot
+order. An inlined `->toIso8601String()` looks like the same call and is not —
+it emits the local offset, which is exactly what filled `pairing_tokens` with
+`+02:00` rows that a migration then had to delete.
 
 ## Transport: a pinned self-signed certificate
 

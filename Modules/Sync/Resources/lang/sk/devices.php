@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Prejsť na Zámok aplikácie',
 
     'encrypted_at_rest' => 'Údaje šifrované v pokoji',
-    'encrypted_at_rest_help' => 'Tvoje údaje chráni prístupová fráza zámku aplikácie.',
+    'encrypted_at_rest_scope' => 'Poznámky, popisy transakcií a mená a IBAN príjemcov sú šifrované prístupovou frázou zámku aplikácie. Sumy, dátumy a názov a IBAN tvojho vlastného účtu nie sú a niektoré mená obchodníkov zostávajú čitateľné inde v súbore databázy.',
     'on' => 'Zap.',
     'securing' => 'Zabezpečujú sa tvoje údaje…',
     'do_not_close' => 'Nezatváraj toto okno.',

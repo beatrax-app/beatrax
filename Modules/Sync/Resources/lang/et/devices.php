@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Ava rakenduse lukk',
 
     'encrypted_at_rest' => 'Andmed on kettal krüpteeritud',
-    'encrypted_at_rest_help' => 'Sinu andmed on kaitstud rakenduse luku paroolifraasiga.',
+    'encrypted_at_rest_scope' => 'Märkmed, tehingute kirjeldused ning saajate nimed ja IBAN-id on krüpteeritud sinu rakenduseluku paroolifraasiga. Summad, kuupäevad ning sinu enda konto nimi ja IBAN ei ole, ja mõned kaupmeeste nimed on endiselt loetavad andmebaasifaili teistes kohtades.',
     'on' => 'Sees',
     'securing' => 'Kaitsen sinu andmeid…',
     'do_not_close' => 'Ära sulge seda akent.',

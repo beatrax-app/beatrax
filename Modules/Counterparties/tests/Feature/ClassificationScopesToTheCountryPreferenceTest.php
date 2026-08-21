@@ -107,3 +107,18 @@ it('reads the country straight off the renamed users column', function (): void 
 
     expect($resolved?->type)->toBe(CounterpartyType::Government->value);
 });
+
+// CounterpartyResolver is a singleton and the desktop runs one long-lived
+// process, so a memo that outlived the resolve() call meant changing the
+// country in Settings and re-importing classified every row against the old
+// one for the rest of the session.
+it('picks up a country changed between two resolves on the same instance', function (): void {
+    app(UserCountry::class)->store($this->user->id, 'be');
+    expect(resolveDescription($this->user, $this->account, 'ZORGPREMIE MAART')?->type)
+        ->toBe(CounterpartyType::Government->value);
+
+    app(UserCountry::class)->store($this->user->id, 'nl');
+
+    expect(resolveDescription($this->user, $this->account, 'ZORGPREMIE APRIL')?->type)
+        ->not->toBe(CounterpartyType::Government->value);
+});

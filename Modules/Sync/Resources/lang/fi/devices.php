@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Siirry sovelluslukkoon',
 
     'encrypted_at_rest' => 'Tiedot salattu levylle',
-    'encrypted_at_rest_help' => 'Tietosi on suojattu sovelluslukkosi salalauseella.',
+    'encrypted_at_rest_scope' => 'Muistiinpanot, tapahtumakuvaukset sekä maksunsaajien nimet ja IBAN-tilinumerot salataan sovelluslukituksen tunnuslauseella. Summia, päivämääriä eikä oman tilisi nimeä ja IBANia ei salata, ja jotkin kauppiaiden nimet näkyvät yhä selkokielisenä muualla tietokantatiedostossa.',
     'on' => 'Päällä',
     'securing' => 'Suojataan tietojasi…',
     'do_not_close' => 'Älä sulje tätä ikkunaa.',

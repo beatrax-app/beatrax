@@ -14,35 +14,48 @@ final class CommunityCorpusQuery
     /** @var list<string> */
     private const CONTACT_COLUMNS = ['website', 'cancel_url', 'support_url', 'support_phone', 'support_email'];
 
+    // The key a null or empty region memoises under: every region at once, for
+    // a reader who has named no country.
+    private const ALL_REGIONS = '*';
+
     // The `LIMIT 1000` / `LIMIT 500` these scans once carried, ordered by id,
     // truncated the corpus in bundled-file order rather than sampling it: once
     // the corpus outgrew the cap, every country past it stopped resolving.
     /**
-     * @var list<array{needle: string, name: string}>|null
+     * @var array<string, list<array{needle: string, name: string}>>
      */
-    private ?array $generalizedRows = null;
+    private array $generalizedRows = [];
 
-    /** @var list<array{pattern: string, name: string}>|null */
-    private ?array $regexRows = null;
+    /** @var array<string, list<array{pattern: string, name: string}>> */
+    private array $regexRows = [];
 
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly CorpusPatternMatcher $matcher,
     ) {}
 
-    public function lookupExact(string $rawDescription): ?string
+    // Region-scoped like ClassificationRuleProvider's government and bank-fee
+    // rules already are: every region's corpus was consulted at once, so a Dutch
+    // `Albert Heijn 1042` resolved to the Czech chain ALBERT — cz.yaml seeds
+    // before nl.yaml and won the first-match scan on the lower id.
+    public function lookupExact(string $rawDescription, ?string $region = null): ?string
     {
         $value = $this->db->connection()->table('community_merchant_mappings')
             ->whereNull('user_id')
             ->where('pattern', $rawDescription)
+            ->where(static fn (Builder $query): Builder => self::inRegion($query, $region))
             ->value('name');
 
         return is_string($value) && $value !== '' ? $value : null;
     }
 
-    public function lookupGeneralized(string $rawDescription): ?string
+    // The rows arrive longest-needle-first, so the FIRST hit is the most specific
+    // one and the scan can still short-circuit. `Albert Heijn 1042` matched both
+    // the Czech `albert` and the Dutch `albert heijn`, and file-sort order handed
+    // it to whichever seeded first.
+    public function lookupGeneralized(string $rawDescription, ?string $region = null): ?string
     {
-        foreach ($this->generalizedRows() as $row) {
+        foreach ($this->generalizedRows($region) as $row) {
             // Whole token, not any substring: a bare search matched the corpus
             // token OBI inside "mobiel". The match is case-insensitive, so the
             // haystack is no longer lowered first.
@@ -54,9 +67,9 @@ final class CommunityCorpusQuery
         return null;
     }
 
-    public function lookupRegex(string $rawDescription): ?string
+    public function lookupRegex(string $rawDescription, ?string $region = null): ?string
     {
-        foreach ($this->regexRows() as $row) {
+        foreach ($this->regexRows($region) as $row) {
             if ($this->matcher->matches($row['pattern'], $rawDescription)) {
                 return $row['name'];
             }
@@ -70,16 +83,19 @@ final class CommunityCorpusQuery
     /**
      * @return list<array{needle: string, name: string}>
      */
-    private function generalizedRows(): array
+    private function generalizedRows(?string $region): array
     {
-        if ($this->generalizedRows !== null) {
-            return $this->generalizedRows;
+        $key = self::memoKey($region);
+
+        if (isset($this->generalizedRows[$key])) {
+            return $this->generalizedRows[$key];
         }
 
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('community_merchant_mappings')
             ->whereNull('user_id')
             ->where('generalized_pattern', '!=', '')
+            ->where(static fn (Builder $query): Builder => self::inRegion($query, $region))
             ->orderBy('id')
             ->get(['generalized_pattern', 'name']);
 
@@ -93,22 +109,25 @@ final class CommunityCorpusQuery
             $loaded[] = ['needle' => mb_strtolower($needle), 'name' => $name];
         }
 
-        return $this->generalizedRows = $loaded;
+        return $this->generalizedRows[$key] = self::specificFirst($loaded);
     }
 
     /**
      * @return list<array{pattern: string, name: string}>
      */
-    private function regexRows(): array
+    private function regexRows(?string $region): array
     {
-        if ($this->regexRows !== null) {
-            return $this->regexRows;
+        $key = self::memoKey($region);
+
+        if (isset($this->regexRows[$key])) {
+            return $this->regexRows[$key];
         }
 
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('community_merchant_mappings')
             ->whereNull('user_id')
             ->where('pattern', 'like', CorpusPatternMatcher::REGEX_PREFIX.'%')
+            ->where(static fn (Builder $query): Builder => self::inRegion($query, $region))
             ->orderBy('id')
             ->get(['pattern', 'name']);
 
@@ -122,7 +141,50 @@ final class CommunityCorpusQuery
             $loaded[] = ['pattern' => $pattern, 'name' => $name];
         }
 
-        return $this->regexRows = $loaded;
+        return $this->regexRows[$key] = $loaded;
+    }
+
+    // Longest needle first, ties broken by the order the corpus loaded in, so the
+    // scan below is deterministic and a broader pattern can never take a
+    // description a narrower one also matches. Sorted once per memo key rather
+    // than compared per lookup.
+    /**
+     * @param  list<array{needle: string, name: string}>  $rows
+     * @return list<array{needle: string, name: string}>
+     */
+    private static function specificFirst(array $rows): array
+    {
+        // usort is stable as of PHP 8.0, so equal-length needles keep the order
+        // the corpus loaded them in and the scan stays deterministic.
+        usort(
+            $rows,
+            static fn (array $left, array $right): int => mb_strlen($right['needle']) <=> mb_strlen($left['needle']),
+        );
+
+        return $rows;
+    }
+
+    // A row claiming no region belongs to every reader: the column is nullable
+    // and CorpusLoader leaves it empty for a file it could not read a code from,
+    // so excluding those would drop mappings nobody meant to scope.
+    private static function inRegion(Builder $query, ?string $region): Builder
+    {
+        $wanted = self::memoKey($region);
+
+        if ($wanted === self::ALL_REGIONS) {
+            return $query;
+        }
+
+        return $query->where('region', $wanted)
+            ->orWhereNull('region')
+            ->orWhere('region', '');
+    }
+
+    // The corpus stores what CorpusLoader read off the filename, upper-cased;
+    // UserCountry hands back the lowercase ISO code the reader picked.
+    private static function memoKey(?string $region): string
+    {
+        return $region === null || $region === '' ? self::ALL_REGIONS : strtoupper($region);
     }
 
     public function contactForMerchant(string $name): ?MerchantContactDto

@@ -30,10 +30,15 @@ return [
         'aria' => ':name: :pct % valmiina',
     ],
 
+    'card' => [
+        'target_date' => 'Tavoitepäivä: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Tavoite saavutettu',
         'add_contributions' => 'Lisää talletuksia, niin näet ennusteen',
         'not_enough_history' => 'Historiaa ei ole vielä tarpeeksi päivän ennustamiseen',
+        'no_recent_contributions' => 'Ei viimeaikaisia lisäyksiä, joiden pohjalta ennustaa',
         'est' => 'Arvio :date ·',
         'projection_note' => '(ennuste)',
         'projected' => 'Ennuste: :date',

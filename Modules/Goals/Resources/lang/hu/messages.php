@@ -30,10 +30,15 @@ return [
         'aria' => ':name: :pct% kész',
     ],
 
+    'card' => [
+        'target_date' => 'Céldátum: :date',
+    ],
+
     'projection' => [
         'target_reached' => 'Cél elérve',
         'add_contributions' => 'Adj hozzá befizetéseket az előrejelzéshez',
         'not_enough_history' => 'Még nincs elég előzmény a dátum előrejelzéséhez',
+        'no_recent_contributions' => 'Nincs friss befizetés, amiből előre lehetne jelezni',
         'est' => 'Becsült: :date ·',
         'projection_note' => '(előrejelzés)',
         'projected' => 'Előrejelzés: :date',

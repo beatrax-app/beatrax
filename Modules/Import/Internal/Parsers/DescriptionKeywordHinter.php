@@ -25,7 +25,6 @@ abstract class DescriptionKeywordHinter implements PaymentTypeHinter
      */
     protected const KEYWORDS = [];
 
-    // Only the fallback overrides this, to answer for every row.
     protected function handles(string $sourceFormat): bool
     {
         return $sourceFormat === static::SOURCE_FORMAT;

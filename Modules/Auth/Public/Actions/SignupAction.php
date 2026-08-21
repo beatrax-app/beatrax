@@ -21,6 +21,9 @@ use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 final class SignupAction
 {
@@ -38,6 +41,7 @@ final class SignupAction
         private readonly Dispatcher $events,
         private readonly Translator $translator,
         private readonly UserCountry $countries,
+        private readonly LoggerInterface $log,
     ) {}
 
     /**
@@ -70,7 +74,6 @@ final class SignupAction
             // zero-count snapshot under SQLite WAL.
             $this->db->connection()->statement('UPDATE users SET id = id WHERE 0 = 1');
 
-            // The count outside the transaction can predate a concurrent commit.
             if ($this->db->connection()->table('users')->count() > 0) {
                 throw ValidationException::withMessages([
                     'signup' => Lang::get('auth::signup.error_closed'),
@@ -125,7 +128,17 @@ final class SignupAction
         // Through the same seam Settings writes, so the country-scoped
         // reference data a fresh install needs is seeded here too. An empty
         // code is the reader skipping the picker, and store() leaves it unset.
-        $this->countries->store($result['user']->id, $countryCode);
+        try {
+            $this->countries->store($result['user']->id, $countryCode);
+        } catch (Throwable $e) {
+            // The user row is already committed and the recovery codes below
+            // are the only way back into this account. A country the reader
+            // can set again from Settings is never worth that screen.
+            $this->log->error('SignupAction: the chosen country could not be stored', [
+                ...SafeExceptionContext::describe($e),
+                'userId' => $result['user']->id,
+            ]);
+        }
 
         /** @var StatefulGuard $guard */
         $guard = $this->auth->guard();

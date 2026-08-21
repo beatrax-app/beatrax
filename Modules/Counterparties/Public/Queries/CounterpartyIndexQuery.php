@@ -23,8 +23,8 @@ final readonly class CounterpartyIndexQuery
         private Session $session,
     ) {}
 
-    // typeFilter is one of all|merchant|personal|bank|government|self|unknown.
     /**
+     * @param  string  $typeFilter  one of all|merchant|personal|bank|government|self|unknown
      * @return Collection<int, CounterpartyIndexRow>
      */
     public function forUser(User $user, string $typeFilter = 'all'): Collection
@@ -178,9 +178,8 @@ final readonly class CounterpartyIndexQuery
         return $counts;
     }
 
-    // Ordered oldest -> newest, so the last bar is the current month.
     /**
-     * @return array<int, int>
+     * @return array<int, int> twelve monthly totals, oldest first — the last is the current month
      */
     private function sparklineFor(User $user, int $counterpartyId, string $cutoffDate): array
     {
