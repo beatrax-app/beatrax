@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Зареди още',
-    'group_count' => ':count отворени отклонения',
+    'group_count' => ':count отворено отклонение|:count отворени отклонения',
 
     'anomaly_empty' => [
         'open_heading' => 'Няма необичайни плащания',

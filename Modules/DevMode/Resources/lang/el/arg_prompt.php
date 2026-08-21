@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Άγνωστη εντολή: :command',
         'missing' => 'Απουσία :noun: :list',
         'invalid_args' => 'Ένα ή περισσότερα ορίσματα δεν είναι έγκυρα.',
-        'arg_singular' => 'ορίσματος',
-        'arg_plural' => 'ορισμάτων',
+        'arg' => 'ορίσματος|ορισμάτων',
     ],
 ];

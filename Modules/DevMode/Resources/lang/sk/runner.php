@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Neznámy príkaz: :command',
         'missing_args' => 'Príkaz :command sa nedá spustiť — vyžaduje :noun: :list',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumenty',
+        'arg' => 'argument|argumenty|argumenty',
         'started' => 'Spustené :command (spustenie :runId)',
         'run_expired' => 'Záznam o spustení expiroval — nedá sa spustiť znova.',
         'reran' => 'Znova spustené :command (spustenie :runId)',

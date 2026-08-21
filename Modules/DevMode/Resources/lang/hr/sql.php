@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Omogući Advanced (Dev Mode → Advanced) za pokretanje upita.',
     'statement_label' => 'SELECT naredba',
     'run' => 'Pokreni',
-    'rows_meta' => ':rows redaka · :durationms',
+    'rows_meta' => ':rows redak · :durationms|:rows retka · :durationms|:rows redaka · :durationms',
     'no_rows' => 'Upit nije vratio nijedan redak.',
 
     'errors' => [

@@ -141,7 +141,7 @@ it('an eligible connection: syncNow surfaces "N new transactions found." with a 
     Livewire::test(OpenBankingSettingsPage::class)
         ->call('syncNow')
         ->assertSet('syncFlashTone', 'success')
-        ->assertSet('syncFlashMessage', '1 new transactions found.')
+        ->assertSet('syncFlashMessage', '1 new transaction found.')
         ->assertSeeHtml('data-testid="ob-review-import-link"');
 
     /** @var DatabaseManager $db */

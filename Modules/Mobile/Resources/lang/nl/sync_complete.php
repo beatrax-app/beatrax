@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Dit apparaat is gesynchroniseerd',
     'heading' => 'Dit apparaat is gesynchroniseerd',
-    'records' => ':count records gekopieerd van :peer.',
+    'records' => ':count record gekopieerd van :peer.|:count records gekopieerd van :peer.',
     'records_none' => 'Bijgewerkt met :peer. Er was niets nieuws om te kopiëren.',
     'how_it_works' => 'Vanaf nu',
     'automatic_title' => 'Het blijft zichzelf bijwerken',

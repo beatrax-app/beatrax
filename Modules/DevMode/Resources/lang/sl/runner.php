@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Neznan ukaz: :command',
         'missing_args' => 'Ukaza :command ni mogoče zagnati — potrebuje :noun: :list',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumente',
+        'arg' => 'argument|argumente|argumente|argumente',
         'started' => 'Začeto :command (zagon :runId)',
         'run_expired' => 'Zapis o zagonu je potekel — ponovni zagon ni mogoč.',
         'reran' => 'Znova zagnano :command (zagon :runId)',

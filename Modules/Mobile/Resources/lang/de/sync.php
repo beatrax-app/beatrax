@@ -7,7 +7,7 @@ return [
     'heading' => 'Daten & Geräte',
     'sync_status' => 'Sync-Status',
     'your_devices' => 'Deine Geräte',
-    'syncing_progress' => 'Wird synchronisiert… :count Datensätze',
+    'syncing_progress' => 'Wird synchronisiert… :count Datensatz|Wird synchronisiert… :count Datensätze',
     'initial_sync_aria' => 'Fortschritt der ersten Synchronisierung',
     'no_peers' => 'Koppele ein anderes Gerät, um mit dem Synchronisieren zu beginnen.',
     'sync_now' => 'Jetzt synchronisieren',

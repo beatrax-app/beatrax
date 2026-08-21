@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Továbbiak betöltése',
-    'group_count' => ':count nyitott eltérés',
+    'group_count' => ':count nyitott eltérés|:count nyitott eltérés',
 
     'anomaly_empty' => [
         'open_heading' => 'Nincs szokatlan terhelés',

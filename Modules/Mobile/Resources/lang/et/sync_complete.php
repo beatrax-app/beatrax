@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'See seade on sünkroonitud',
     'heading' => 'See seade on sünkroonitud',
-    'records' => 'Seadmest :peer kopeeriti :count kirjet.',
+    'records' => 'Seadmest :peer kopeeriti :count kirje.|Seadmest :peer kopeeriti :count kirjet.',
     'records_none' => 'Seadmega :peer ollakse ühel lainel. Uut polnud midagi kopeerida.',
     'how_it_works' => 'Edaspidi',
     'automatic_title' => 'See hoiab end ise ajakohasena',

@@ -17,7 +17,6 @@ final class Mt940HeaderProfile
     // exporters put the EOM `-` on its own line and `}` on the next.
     public const SWIFT_ENVELOPE_REGEX = '/\{4:\s*([\s\S]+?)\s*-\s*\}/';
 
-    // :20: is the Transaction Reference Number, the first tag of a statement.
     public const SIGNATURE_REGEX = '/(?:^|[\r\n])\s*:20:/';
 
     public const SOURCE_ENCODING = 'UTF-8';

@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'A hozzájárulás lejárt — csatlakozz újra.',
         'unavailable' => 'Az Enable Banking átmenetileg nem érhető el. Próbáld újra hamarosan.',
-        'new_found' => ':count új tranzakció található.',
+        'new_found' => ':count új tranzakció található.|:count új tranzakció található.',
         'none' => 'Nincs új tranzakció.',
     ],
 

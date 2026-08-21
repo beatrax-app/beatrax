@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Noteikums saglabāts.',
     'flash_reapplying' => 'Piemēro noteikumus jūsu vēsturei…',
     'summary_no_changes' => 'Nav izmaiņu — jūsu vēsture jau atbilst noteikumiem.',
-    'summary_updated' => 'Atjaunināti :fields lauki :transactions darījumos.',
-    'summary_reconciled_skipped' => 'Izlaisti saskaņotie darījumi: :count.',
+    'summary_updated' => 'Atjaunināts: :fields, :transactions.',
+    'summary_fields' => ':count lauku|:count lauks|:count lauki',
+    'summary_transactions' => ':count darījumu|:count darījums|:count darījumi',
+    'summary_reconciled_skipped' => 'Izlaisti :count saskaņotu darījumu.|Izlaists :count saskaņots darījums.|Izlaisti :count saskaņoti darījumi.',
 ];

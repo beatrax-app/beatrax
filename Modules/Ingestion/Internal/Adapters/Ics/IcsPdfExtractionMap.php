@@ -21,7 +21,6 @@ final class IcsPdfExtractionMap
         '/^.*Uw betalingen aan International Card Services BV.*$/m',
     ];
 
-    // Prefixes the continuation line of a two-line foreign-currency row.
     public const FX_LINE_ANCHOR = 'Wisselkoers ';
 
     public const CARD_LAST4_LINE_PREFIX = 'Uw Card met als laatste vier cijfers ';

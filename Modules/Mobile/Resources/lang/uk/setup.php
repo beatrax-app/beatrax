@@ -29,6 +29,6 @@ return [
     'resuming' => 'Продовження налаштування…',
     'setting_up' => 'Налаштування цього пристрою…',
     'progress_aria' => 'Прогрес налаштування',
-    'records' => 'Записів: :count',
+    'records' => ':count запис|:count записи|:count записів',
     'records_preparing' => 'Очікування іншого пристрою…',
 ];

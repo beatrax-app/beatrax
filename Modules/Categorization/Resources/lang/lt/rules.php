@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Taisyklė išsaugota.',
     'flash_reapplying' => 'Taisyklės iš naujo taikomos tavo istorijai…',
     'summary_no_changes' => 'Pakeitimų nėra — tavo istorija jau atitinka taisykles.',
-    'summary_updated' => 'Atnaujinta laukų: :fields, operacijų: :transactions.',
-    'summary_reconciled_skipped' => 'Praleista suderintų operacijų: :count.',
+    'summary_updated' => 'Atnaujinta: :fields, :transactions.',
+    'summary_fields' => ':count laukas|:count laukai|:count laukų',
+    'summary_transactions' => ':count operacija|:count operacijos|:count operacijų',
+    'summary_reconciled_skipped' => 'Praleista :count suderinta operacija.|Praleistos :count suderintos operacijos.|Praleista :count suderintų operacijų.',
 ];

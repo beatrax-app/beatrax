@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Anslut Microsoft 365',
     'readonly_note' => 'Beatrax läser bara meddelanden. Det skickar, etiketterar, flyttar eller raderar aldrig något i din inkorg.',
 
-    'month' => '1 månad',
-    'months' => ':count månader',
+    'months' => ':count månad|:count månader',
     'not_scanned_yet' => 'inte skannad än',
     'last_scanned' => 'senast skannad',
     'window_prefix' => 'Period:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Upptäckta avsändare',
     'discovered_body' => 'Avsändare som ser ut att skicka kvitton men som ännu inte finns på din lista över kända kvittoavsändare. Lägg till dem du vill att Beatrax ska skanna och stäng resten.',
     'last_seen' => 'senast sedd',
-    'seen_times' => 'Sedd :count gånger',
+    'seen_times' => 'Sedd :count gång|Sedd :count gånger',
     'add' => 'Lägg till',
     'add_aria' => 'Lägg till :email',
     'dismiss' => 'Stäng',

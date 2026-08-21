@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Carica altri',
-    'group_count' => ':count scostamenti aperti',
+    'group_count' => ':count scostamento aperto|:count scostamenti aperti',
 
     'anomaly_empty' => [
         'open_heading' => 'Nessun addebito insolito',

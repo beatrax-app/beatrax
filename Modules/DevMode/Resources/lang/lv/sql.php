@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Lai izpildītu vaicājumus, ieslēdziet paplašināto režīmu (Izstrādes režīms → Paplašināts).',
     'statement_label' => 'SELECT priekšraksts',
     'run' => 'Izpildīt',
-    'rows_meta' => ':rows rindas · :durationms',
+    'rows_meta' => ':rows rindu · :durationms|:rows rinda · :durationms|:rows rindas · :durationms',
     'no_rows' => 'Vaicājums neatgrieza nevienu rindu.',
 
     'errors' => [

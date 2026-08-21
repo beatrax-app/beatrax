@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'host os',
     'effective_config' => 'Configurazione effettiva',
-    'show_entries' => 'Mostra :count voci',
+    'show_entries' => 'Mostra :count voce|Mostra :count voci',
     'hide' => 'Nascondi',
 ];

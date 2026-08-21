@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Import voltooid',
     'heading_update' => 'Update toegepast',
 
-    'summary_line' => ':categories categorieën, :budget_months budgetmaanden en :transactions transacties geïmporteerd.',
-    'summary_attention' => ':count items vereisen nog aandacht — zie hieronder.',
+    'summary_line' => ':categories, :budget_months en :transactions geïmporteerd.',
+    'summary_categories' => ':count categorie|:count categorieën',
+    'summary_budget_months' => ':count budgetmaand|:count budgetmaanden',
+    'summary_transactions' => ':count transactie|:count transacties',
+    'summary_attention' => ':count item vereist nog aandacht — zie hieronder.|:count items vereisen nog aandacht — zie hieronder.',
 
     'stats' => [
         'category' => 'Categorieën',

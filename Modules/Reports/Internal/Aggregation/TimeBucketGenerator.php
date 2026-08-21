@@ -58,7 +58,6 @@ final class TimeBucketGenerator
         );
 
         if ($uncappedPointCount > self::MAX_BUCKET_POINTS) {
-            // Widen to quarterly rather than truncate the requested window.
             return $this->stepBuckets(
                 $period,
                 static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addMonthsNoOverflow(3),

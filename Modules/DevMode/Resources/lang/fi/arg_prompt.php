@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Tuntematon komento: :command',
         'missing' => ':noun puuttuu: :list',
         'invalid_args' => 'Yksi tai useampi argumentti on virheellinen.',
-        'arg_singular' => 'Argumentti',
-        'arg_plural' => 'Argumentit',
+        'arg' => 'Argumentti|Argumentit',
     ],
 ];

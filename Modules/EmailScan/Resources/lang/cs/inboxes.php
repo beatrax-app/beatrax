@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Připojit Microsoft 365',
     'readonly_note' => 'Beatrax zprávy pouze čte. Ve schránce nikdy nic neodesílá, neoznačuje, nepřesouvá ani nemaže.',
 
-    'month' => '1 měsíc',
-    'months' => ':count měs.',
+    'months' => ':count měs.|:count měs.|:count měs.',
     'not_scanned_yet' => 'zatím neskenováno',
     'last_scanned' => 'naposledy skenováno',
     'window_prefix' => 'Okno:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Nalezení odesílatelé',
     'discovered_body' => 'Odesílatelé, kteří vypadají, že posílají účtenky, ale zatím nejsou na seznamu známých. Přidej ty, které má Beatrax skenovat; zbytek zamítni.',
     'last_seen' => 'naposledy viděno',
-    'seen_times' => 'Počet výskytů: :count',
+    'seen_times' => 'Počet výskytů: :count|Počet výskytů: :count|Počet výskytů: :count',
     'add' => 'Přidat',
     'add_aria' => 'Přidat :email',
     'dismiss' => 'Zamítnout',

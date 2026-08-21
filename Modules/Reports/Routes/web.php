@@ -21,11 +21,8 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         CurrentUser $currentUser,
         ReportDefinitionRequestFactory $definitions,
     ): StreamedResponse {
-        // Defence in depth: the 'auth' group above already makes this unreachable.
         if (! $currentUser->isAuthenticated()) {
-            return new StreamedResponse(static function (): void {
-                // Empty body: satisfies the return type without leaking a report.
-            });
+            return new StreamedResponse(static function (): void {});
         }
 
         $user = $currentUser->user();
@@ -45,6 +42,5 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         'report' => $request->integer('report') ?: null,
     ]))->name('reports.index');
 
-    // No wrapper view: this component's own render() calls $view->extends().
     Route::get('/reports/library', ReportsIndex::class)->name('reports.library');
 });

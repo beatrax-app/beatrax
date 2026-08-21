@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'hosti os',
     'effective_config' => 'Tegelik konfiguratsioon',
-    'show_entries' => 'Näita :count kirjet',
+    'show_entries' => 'Näita :count kirjet|Näita :count kirjet',
     'hide' => 'Peida',
 ];

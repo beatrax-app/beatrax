@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Kural kaydedildi.',
     'flash_reapplying' => 'Kurallar geçmişine yeniden uygulanıyor…',
     'summary_no_changes' => 'Değişiklik yok — geçmişin kurallarınla zaten uyumlu.',
-    'summary_updated' => ':transactions işlemde :fields alan güncellendi.',
+    'summary_updated' => ':transactions, :fields güncellendi.',
+    'summary_fields' => ':count alan',
+    'summary_transactions' => ':count işlemde',
     'summary_reconciled_skipped' => 'Mutabakatlı :count işlem atlandı.',
 ];

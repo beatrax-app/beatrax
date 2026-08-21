@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Regra guardada.',
     'flash_reapplying' => 'A reaplicar as regras ao teu histórico…',
     'summary_no_changes' => 'Sem alterações — o teu histórico já corresponde às tuas regras.',
-    'summary_updated' => 'Atualizados :fields campos em :transactions transações.',
-    'summary_reconciled_skipped' => ':count transações reconciliadas foram ignoradas.',
+    'summary_updated' => 'Atualizados :fields em :transactions.',
+    'summary_fields' => ':count campo|:count campos',
+    'summary_transactions' => ':count transação|:count transações',
+    'summary_reconciled_skipped' => ':count transação reconciliada foi ignorada.|:count transações reconciliadas foram ignoradas.',
 ];

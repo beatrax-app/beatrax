@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Import on lõpetatud',
     'heading_update' => 'Uuendus on rakendatud',
 
-    'summary_line' => 'Imporditud :categories kategooriat, :budget_months eelarvekuud ja :transactions tehingut.',
-    'summary_attention' => ':count kirjet vajab endiselt tähelepanu — vaata allpool.',
+    'summary_line' => 'Imporditud :categories, :budget_months ja :transactions.',
+    'summary_categories' => ':count kategooria|:count kategooriat',
+    'summary_budget_months' => ':count eelarvekuu|:count eelarvekuud',
+    'summary_transactions' => ':count tehing|:count tehingut',
+    'summary_attention' => ':count kirje vajab endiselt tähelepanu — vaata allpool.|:count kirjet vajab endiselt tähelepanu — vaata allpool.',
 
     'stats' => [
         'category' => 'Kategooriad',

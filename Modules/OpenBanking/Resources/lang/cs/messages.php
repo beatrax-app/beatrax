@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Souhlas vypršel — připoj se znovu.',
         'unavailable' => 'Enable Banking je dočasně nedostupné. Zkus to za chvíli znovu.',
-        'new_found' => 'Nalezené nové transakce: :count.',
+        'new_found' => 'Nalezena :count nová transakce.|Nalezeny :count nové transakce.|Nalezeno :count nových transakcí.',
         'none' => 'Žádné nové transakce.',
     ],
 

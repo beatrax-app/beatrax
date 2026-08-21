@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Regola salvata.',
     'flash_reapplying' => 'Riapplicazione delle regole alla tua cronologia…',
     'summary_no_changes' => 'Nessuna modifica — la tua cronologia corrisponde già alle tue regole.',
-    'summary_updated' => 'Aggiornati :fields campi su :transactions transazioni.',
-    'summary_reconciled_skipped' => ':count transazioni riconciliate sono state saltate.',
+    'summary_updated' => 'Aggiornati :fields su :transactions.',
+    'summary_fields' => ':count campo|:count campi',
+    'summary_transactions' => ':count transazione|:count transazioni',
+    'summary_reconciled_skipped' => ':count transazione riconciliata è stata saltata.|:count transazioni riconciliate sono state saltate.',
 ];

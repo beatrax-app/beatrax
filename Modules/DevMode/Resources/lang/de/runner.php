@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Unbekannter Befehl: :command',
         'missing_args' => ':command kann nicht ausgeführt werden — benötigt :noun: :list',
-        'arg_singular' => 'Argument',
-        'arg_plural' => 'Argumente',
+        'arg' => 'Argument|Argumente',
         'started' => 'Gestartet :command (Lauf :runId)',
         'run_expired' => 'Lauf-Datensatz abgelaufen — erneutes Ausführen nicht möglich.',
         'reran' => 'Erneut ausgeführt :command (Lauf :runId)',

@@ -17,7 +17,7 @@ return [
         'pin_length' => 'Codul PIN trebuie să aibă cel puțin 6 cifre.',
 
         'too_many_attempts' => 'Prea multe încercări — încearcă din nou peste :secondss.',
-        'incorrect_pin_remaining' => 'Cod PIN incorect. Ți-au mai rămas :count încercări.',
+        'incorrect_pin_remaining' => 'Cod PIN incorect. Ți-a mai rămas :count încercare.|Cod PIN incorect. Ți-au mai rămas :count încercări.|Cod PIN incorect. Ți-au mai rămas :count de încercări.',
         'incorrect_pin' => 'Cod PIN incorect.',
     ],
 ];

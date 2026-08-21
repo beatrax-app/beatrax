@@ -11,11 +11,9 @@ final class IcsDateParser
 {
     /** @var array<string, int> */
     private const NL_MONTHS = [
-        // Abbreviations, stored without the trailing period ICS prints.
         'jan' => 1, 'feb' => 2, 'mrt' => 3, 'apr' => 4,
         'mei' => 5, 'jun' => 6, 'jul' => 7, 'aug' => 8,
         'sep' => 9, 'okt' => 10, 'nov' => 11, 'dec' => 12,
-        // Full names, as used in the statement-header date.
         'januari' => 1, 'februari' => 2, 'maart' => 3, 'april' => 4,
         'juni' => 6, 'juli' => 7, 'augustus' => 8,
         'september' => 9, 'oktober' => 10, 'november' => 11, 'december' => 12,
@@ -44,7 +42,6 @@ final class IcsDateParser
             return $parsed->startOfDay();
         }
 
-        // The statement-header date: day + Dutch month name + year.
         if (preg_match('/^(\d{1,2})\s+([a-z]+)\s+(\d{4})$/', $trimmed, $m) === 1) {
             $month = self::NL_MONTHS[$m[2]] ?? null;
             if ($month === null) {

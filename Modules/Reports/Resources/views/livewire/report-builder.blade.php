@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Reports\Internal\Enums\ReportGranularity')
 {{--
     The `/reports` live single-page builder — control
     rail (left) + result panel (right, chart above an always-on table).
@@ -198,8 +199,8 @@
                 <div>
                     <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.granularity.heading') }}</p>
                     <div class="view-toggle" role="group" aria-label="{{ Lang::get('reports::builder.granularity.aria') }}">
-                        <button type="button" wire:click="$set('granularity', 'monthly')" class="{{ $granularity === 'monthly' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $granularity === 'monthly' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.granularity.monthly') }}</button>
-                        <button type="button" wire:click="$set('granularity', 'weekly')" class="{{ $granularity === 'weekly' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $granularity === 'weekly' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.granularity.weekly') }}</button>
+                        <button type="button" wire:click="$set('granularity', '{{ ReportGranularity::Monthly->value }}')" class="{{ $granularity === ReportGranularity::Monthly->value ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $granularity === ReportGranularity::Monthly->value ? 'true' : 'false' }}">{{ Lang::get('reports::builder.granularity.monthly') }}</button>
+                        <button type="button" wire:click="$set('granularity', '{{ ReportGranularity::Weekly->value }}')" class="{{ $granularity === ReportGranularity::Weekly->value ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $granularity === ReportGranularity::Weekly->value ? 'true' : 'false' }}">{{ Lang::get('reports::builder.granularity.weekly') }}</button>
                     </div>
                 </div>
             @endif

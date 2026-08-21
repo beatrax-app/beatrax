@@ -31,7 +31,6 @@ final class CommandPaletteModal extends Component
         $this->recent = $this->loadRecent($user, $cache);
     }
 
-    // Alpine owns the open transition; this exists only to reseed Recent.
     #[On('palette:open')]
     public function open(CurrentUser $user, CacheRepository $cache): void
     {

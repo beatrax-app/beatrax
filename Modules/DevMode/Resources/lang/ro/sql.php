@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Activează Advanced (Dev Mode → Advanced) ca să rulezi interogări.',
     'statement_label' => 'Instrucțiune SELECT',
     'run' => 'Rulează',
-    'rows_meta' => ':rows rânduri · :durationms',
+    'rows_meta' => ':rows rând · :durationms|:rows rânduri · :durationms|:rows de rânduri · :durationms',
     'no_rows' => 'Interogarea nu a returnat niciun rând.',
 
     'errors' => [

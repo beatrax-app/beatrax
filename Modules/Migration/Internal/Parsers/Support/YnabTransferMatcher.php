@@ -26,7 +26,6 @@ final class YnabTransferMatcher
      */
     public function pair(array $legs): array
     {
-        // The map is bidirectional; an unmatched leg is simply absent from it.
         $pairs = [];
         $used = [];
 

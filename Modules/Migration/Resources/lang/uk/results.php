@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Імпорт завершено',
     'heading_update' => 'Оновлення застосовано',
 
-    'summary_line' => 'Імпортовано категорій: :categories, місяців бюджету: :budget_months, транзакцій: :transactions.',
-    'summary_attention' => 'Потребують уваги позицій: :count — дивись нижче.',
+    'summary_line' => 'Імпортовано: :categories, :budget_months і :transactions.',
+    'summary_categories' => ':count категорія|:count категорії|:count категорій',
+    'summary_budget_months' => ':count місяць бюджету|:count місяці бюджету|:count місяців бюджету',
+    'summary_transactions' => ':count транзакція|:count транзакції|:count транзакцій',
+    'summary_attention' => ':count позиція потребує уваги — дивись нижче.|:count позиції потребують уваги — дивись нижче.|:count позицій потребує уваги — дивись нижче.',
 
     'stats' => [
         'category' => 'Категорії',

@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Ligar o Microsoft 365',
     'readonly_note' => 'O Beatrax apenas lê mensagens. Nunca envia, etiqueta, move nem elimina nada na tua caixa de entrada.',
 
-    'month' => '1 mês',
-    'months' => ':count meses',
+    'months' => ':count mês|:count meses',
     'not_scanned_yet' => 'ainda não analisada',
     'last_scanned' => 'última análise',
     'window_prefix' => 'Janela:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Remetentes descobertos',
     'discovered_body' => 'Remetentes que parecem enviar recibos mas que ainda não estão na tua lista de recibos conhecidos. Adiciona os que queres que o Beatrax analise; dispensa os restantes.',
     'last_seen' => 'visto pela última vez',
-    'seen_times' => 'Visto :count vezes',
+    'seen_times' => 'Visto :count vez|Visto :count vezes',
     'add' => 'Adicionar',
     'add_aria' => 'Adicionar :email',
     'dismiss' => 'Dispensar',

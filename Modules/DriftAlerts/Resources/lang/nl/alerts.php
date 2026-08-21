@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Meer laden',
-    'group_count' => ':count open drifts',
+    'group_count' => ':count open drift|:count open drifts',
 
     'anomaly_empty' => [
         'open_heading' => 'Geen ongewone afschrijvingen',

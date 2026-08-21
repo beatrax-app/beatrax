@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Carregar mais',
-    'group_count' => ':count desvios em aberto',
+    'group_count' => ':count desvio em aberto|:count desvios em aberto',
 
     'anomaly_empty' => [
         'open_heading' => 'Não há cobranças invulgares',

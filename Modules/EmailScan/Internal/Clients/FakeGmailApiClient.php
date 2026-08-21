@@ -159,7 +159,6 @@ final class FakeGmailApiClient implements GmailApiClientContract
         ];
     }
 
-    // Sender metadata only: the discovery surface never sees a raw .eml body.
     /**
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
@@ -184,7 +183,6 @@ final class FakeGmailApiClient implements GmailApiClientContract
             return array_shift($this->queuedDiscoveryResponses);
         }
 
-        // Dates match the .eml fixtures so callers can cross-reference.
         return [
             'messages' => [
                 ['id' => 'paypal-sample-receipt', 'fromAddress' => 'service@paypal.com', 'fromName' => 'PayPal', 'internalDate' => '2026-05-11T09:14:21Z'],

@@ -305,7 +305,6 @@ final class PotsPage extends Component
         }
 
         try {
-            // The placeholder '' casts to 0, which PotWriter rejects.
             $writer->transfer(
                 $user,
                 $this->operationPotId,

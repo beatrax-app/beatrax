@@ -39,7 +39,6 @@ final class CheckForUpdates
             ->where('status', MigrationRunStatus::Confirmed->value)
             ->firstOrFail();
 
-        // Stages the newer export; nothing domain-side is written by this call.
         $newRun = $this->startMigrationRun->__invoke($user, $sourceProduct, $extractedPath, $prior->original_filename);
 
         $decision = $this->resolver->resolve($newRun->id, $user, $sourceProduct);

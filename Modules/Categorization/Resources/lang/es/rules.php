@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Regla guardada.',
     'flash_reapplying' => 'Volviendo a aplicar las reglas a tu historial…',
     'summary_no_changes' => 'Sin cambios — tu historial ya coincide con tus reglas.',
-    'summary_updated' => 'Se han actualizado :fields campos en :transactions transacciones.',
-    'summary_reconciled_skipped' => 'Se han omitido :count transacciones conciliadas.',
+    'summary_updated' => 'Se han actualizado :fields en :transactions.',
+    'summary_fields' => ':count campo|:count campos',
+    'summary_transactions' => ':count transacción|:count transacciones',
+    'summary_reconciled_skipped' => 'Se ha omitido :count transacción conciliada.|Se han omitido :count transacciones conciliadas.',
 ];

@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Tundmatu käsk: :command',
         'missing' => 'Puudu on :noun: :list',
         'invalid_args' => 'Üks või mitu argumenti on vigased.',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumendid',
+        'arg' => 'argument|argumendid',
     ],
 ];

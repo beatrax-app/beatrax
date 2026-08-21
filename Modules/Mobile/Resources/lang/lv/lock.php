@@ -17,7 +17,7 @@ return [
         'pin_length' => 'PIN kodā jābūt vismaz 6 cipariem.',
 
         'too_many_attempts' => 'Pārāk daudz mēģinājumu — mēģiniet vēlreiz pēc :secondss.',
-        'incorrect_pin_remaining' => 'Nepareizs PIN kods. Atlikušie mēģinājumi: :count.',
+        'incorrect_pin_remaining' => 'Nepareizs PIN kods. Atlikuši :count mēģinājumu.|Nepareizs PIN kods. Atlicis :count mēģinājums.|Nepareizs PIN kods. Atlikuši :count mēģinājumi.',
         'incorrect_pin' => 'Nepareizs PIN kods.',
     ],
 ];

@@ -11,8 +11,7 @@ use Throwable;
 
 final class Mt940Tag61Parser
 {
-    // SWIFT sliding pivot: a `yy` further than this from now rolls a century.
-    private const int SWIFT_YEAR_WINDOW = 50;
+    private const int YEARS_BEFORE_CENTURY_ROLL = 50;
 
     private const REGEX = '/^'
         .'(?P<year>\d{2})(?P<month>\d{2})(?P<day>\d{2})'
@@ -73,7 +72,6 @@ final class Mt940Tag61Parser
         );
     }
 
-    // MT940 omits the fractional part on a whole amount.
     private function parseAmountToMinor(string $raw): int
     {
         $normalised = str_replace(',', '.', $raw);
@@ -110,10 +108,10 @@ final class Mt940Tag61Parser
         $century = ((int) ($today->year / 100)) * 100;
         $candidate = $century + $yy;
 
-        if ($candidate - $today->year > self::SWIFT_YEAR_WINDOW) {
+        if ($candidate - $today->year > self::YEARS_BEFORE_CENTURY_ROLL) {
             return $candidate - 100;
         }
-        if ($today->year - $candidate > self::SWIFT_YEAR_WINDOW) {
+        if ($today->year - $candidate > self::YEARS_BEFORE_CENTURY_ROLL) {
             return $candidate + 100;
         }
 

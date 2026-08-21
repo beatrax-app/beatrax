@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Włącz tryb zaawansowany (Dev Mode → Advanced), aby uruchamiać zapytania.',
     'statement_label' => 'Zapytanie SELECT',
     'run' => 'Uruchom',
-    'rows_meta' => ':rows wierszy · :durationms',
+    'rows_meta' => ':rows wiersz · :durationms|:rows wiersze · :durationms|:rows wierszy · :durationms',
     'no_rows' => 'Zapytanie nie zwróciło żadnych wierszy.',
 
     'errors' => [

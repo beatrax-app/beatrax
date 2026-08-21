@@ -6,7 +6,6 @@ namespace Modules\OpenBanking\Internal\Console\Concerns;
 
 use Symfony\Component\Process\Process;
 
-// Single-threaded: one select/accept/relay pump serves every connection.
 trait RunsTlsProxyLoop
 {
     private const READ_CHUNK = 65536;
@@ -16,7 +15,6 @@ trait RunsTlsProxyLoop
      */
     private function runProxyLoop($server, int $backendPort, ?Process $backend): int
     {
-        // Keyed by resource id; wbuf is what is waiting to be written TO it.
         /** @var array<int, array{sock: resource, peer: int, wbuf: string}> $conns */
         $conns = [];
 
@@ -143,7 +141,6 @@ trait RunsTlsProxyLoop
      */
     private function accept($server, int $backendPort, array &$conns): void
     {
-        // A stalled handshake would block the whole single-threaded loop.
         $client = @stream_socket_accept($server, 5);
         if ($client === false) {
             return;

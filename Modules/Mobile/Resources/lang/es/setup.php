@@ -29,6 +29,6 @@ return [
     'resuming' => 'Retomando la configuración…',
     'setting_up' => 'Configurando este dispositivo…',
     'progress_aria' => 'Progreso de la configuración',
-    'records' => ':count registros',
+    'records' => ':count registro|:count registros',
     'records_preparing' => 'Esperando al otro dispositivo…',
 ];

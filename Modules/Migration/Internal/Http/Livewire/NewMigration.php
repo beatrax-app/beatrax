@@ -178,7 +178,6 @@ final class NewMigration extends Component
 
     private function sanitiseFilename(string $original): string
     {
-        // The user-supplied name never reaches a disk path unreduced.
         $stem = pathinfo($original, PATHINFO_FILENAME);
         $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);
         $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;

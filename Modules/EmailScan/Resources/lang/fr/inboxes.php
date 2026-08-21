@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Connecter Microsoft 365',
     'readonly_note' => 'Beatrax lit uniquement les messages. Il n\'envoie, n\'étiquette, ne déplace et ne supprime jamais rien dans ta boîte de réception.',
 
-    'month' => '1 mois',
-    'months' => ':count mois',
+    'months' => ':count mois|:count mois',
     'not_scanned_yet' => 'pas encore analysée',
     'last_scanned' => 'dernière analyse',
     'window_prefix' => 'Période :',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Expéditeurs détectés',
     'discovered_body' => 'Des expéditeurs qui ont l\'air d\'envoyer des reçus mais qui ne figurent pas encore sur ta liste de reçus connus. Ajoute ceux que tu veux faire analyser par Beatrax ; ignore les autres.',
     'last_seen' => 'dernière apparition',
-    'seen_times' => 'Vu :count fois',
+    'seen_times' => 'Vu :count fois|Vu :count fois',
     'add' => 'Ajouter',
     'add_aria' => 'Ajouter :email',
     'dismiss' => 'Ignorer',

@@ -22,7 +22,6 @@ enum AuditEvent: string
 
     case QueueFailedForget = 'queue.failed.forget';
 
-    // A retry also removes the failed_jobs row, not just re-pushes the payload.
     case QueueFailedRetry = 'queue.failed.retry';
 
     case QueueBatchCancel = 'queue.batch.cancel';
@@ -31,7 +30,6 @@ enum AuditEvent: string
 
     case QueueBatchRetryFailures = 'queue.batch.retry-failures';
 
-    // Triple-gated; QueueBulkRetry below is only single-confirm.
     case QueueBulkDelete = 'queue.bulk.delete';
 
     case QueueBulkRetry = 'queue.bulk.retry';

@@ -68,7 +68,6 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
 
         $this->precompileViews();
 
-        // Width/height are first-launch defaults only; rememberState() wins after.
         $this->windows->open('main')
             ->width(self::WINDOW_WIDTH)
             ->height(self::WINDOW_HEIGHT)

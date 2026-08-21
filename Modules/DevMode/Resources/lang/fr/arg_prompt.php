@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Commande inconnue : :command',
         'missing' => ':noun requis : :list',
         'invalid_args' => 'Un ou plusieurs arguments sont invalides.',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'arguments',
+        'arg' => 'argument|arguments',
     ],
 ];

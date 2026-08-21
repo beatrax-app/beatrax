@@ -31,7 +31,6 @@ final class QueueInspectorPage extends Component
 
     public string $tab = 'pending';
 
-    // Pending ids are ints rendered as strings; the other tabs hold uuids.
     /**
      * @var list<string>
      */

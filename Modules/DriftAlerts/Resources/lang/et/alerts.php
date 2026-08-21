@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Laadi veel',
-    'group_count' => ':count muutust lahti',
+    'group_count' => ':count muutus lahti|:count muutust lahti',
 
     'anomaly_empty' => [
         'open_heading' => 'Ebatavalisi makseid pole',

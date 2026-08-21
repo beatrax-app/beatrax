@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Cargar más',
-    'group_count' => ':count desviaciones abiertas',
+    'group_count' => ':count desviación abierta|:count desviaciones abiertas',
 
     'anomaly_empty' => [
         'open_heading' => 'No hay cargos inusuales',

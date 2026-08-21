@@ -18,13 +18,15 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
  */
 final class IcsPdfAdapter implements SourceAdapter
 {
-    // Credit cards carry no IBAN; AccountResolver scopes by user, so one literal is unambiguous.
+    // A credit-card statement carries no IBAN, so this literal stands in as the
+    // account key; AccountResolver scopes by user, so it cannot collide.
     private const ICS_OWN_IBAN = 'ICS-CARD';
 
     private const SCRUB_LITERAL = '<discarded per security policy>';
 
-    // One euro summary cell: an amount followed by its Af/Bij direction marker.
     private const AMOUNT_AF_BIJ_FRAGMENT = '€\s+([\d.,]+)\s+(?:Af|Bij)';
+
+    private const TRAILING_COUNTRY_CODE_REGEX = '/\s+[A-Z]{2}$/';
 
     /** @var array<string, int> */
     private const MONTH_ABBREV = [
@@ -47,7 +49,8 @@ final class IcsPdfAdapter implements SourceAdapter
         return IcsPdfHeaderProfile::FORMAT;
     }
 
-    // Assembled in parse()'s terminator step: an abandoned iterator leaves this null.
+    // The metadata is assembled in parse()'s terminator step, so a caller that
+    // abandons the generator part-way still reads null here.
     public function statementMetadata(): ?StatementSummaryData
     {
         return $this->lastStatementMetadata;
@@ -60,7 +63,8 @@ final class IcsPdfAdapter implements SourceAdapter
 
         $text = $this->extractor->extract($localPath);
 
-        // stripPageNoise() deletes the very lines the statement metadata is read from.
+        // stripPageNoise() strips the very header lines the statement date and
+        // card number are read from, so the raw text is kept beside the cleaned.
         $rawText = $text;
         $cleaned = $this->stripPageNoise($text);
 
@@ -298,8 +302,7 @@ final class IcsPdfAdapter implements SourceAdapter
             return null;
         }
 
-        // The trailing alpha-2 country code is the only stable terminator; street/city fragments survive.
-        $stripped = preg_replace('/\s+[A-Z]{2}$/', '', $trimmed) ?? $trimmed;
+        $stripped = preg_replace(self::TRAILING_COUNTRY_CODE_REGEX, '', $trimmed) ?? $trimmed;
         $compact = trim(preg_replace('/\s{2,}/', ' ', $stripped) ?? $stripped);
 
         return $compact === '' ? null : $compact;
@@ -355,7 +358,8 @@ final class IcsPdfAdapter implements SourceAdapter
         $creditLimit = $twoColumn['creditLimit'] ?? null;
         $minDue = $twoColumn['minDue'] ?? null;
 
-        // ICS prints these positive with an "Af" (owed to ICS) marker; ledger semantics need debits negative.
+        // ICS prints the summary block positive with an "Af" marker meaning owed
+        // to ICS; the ledger stores what is owed as a negative balance.
         $opening = $opening === null ? null : -$opening;
         $closing = $closing === null ? null : -$closing;
         $charges = $charges === null ? null : -$charges;

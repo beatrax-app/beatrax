@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Den här enheten är synkroniserad',
     'heading' => 'Den här enheten är synkroniserad',
-    'records' => 'Kopierade :count poster från :peer.',
+    'records' => 'Kopierade :count post från :peer.|Kopierade :count poster från :peer.',
     'records_none' => 'Ikapp med :peer. Det fanns inget nytt att kopiera.',
     'how_it_works' => 'Härifrån och framåt',
     'automatic_title' => 'Den håller sig uppdaterad själv',

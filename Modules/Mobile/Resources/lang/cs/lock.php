@@ -17,7 +17,7 @@ return [
         'pin_length' => 'PIN musí mít alespoň 6 číslice.',
 
         'too_many_attempts' => 'Příliš mnoho pokusů — zkus to znovu za :secondss.',
-        'incorrect_pin_remaining' => 'Nesprávný PIN. Zbývá pokusů: :count.',
+        'incorrect_pin_remaining' => 'Nesprávný PIN. Zbývá :count pokus.|Nesprávný PIN. Zbývají :count pokusy.|Nesprávný PIN. Zbývá :count pokusů.',
         'incorrect_pin' => 'Nesprávný PIN.',
     ],
 ];

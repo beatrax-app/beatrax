@@ -135,7 +135,9 @@ final class InboxesPage extends Component
             try {
                 ($acknowledge)($alertId, $user);
             } catch (NotFoundHttpException) {
-                // Already acknowledged between the lookup and the call.
+                // The id list and this call are separate statements, so a
+                // concurrent acknowledge from another surface can retire the
+                // row in between — the alert is already in the wanted state.
             }
         }
     }
@@ -245,7 +247,6 @@ final class InboxesPage extends Component
         return $this->redirect($target);
     }
 
-    // Already-imported receipts live in file_imports and survive this.
     public function disconnect(
         int $inboxId,
         CurrentUser $currentUser,

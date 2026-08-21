@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Règle enregistrée.',
     'flash_reapplying' => 'Réapplication des règles à ton historique…',
     'summary_no_changes' => 'Aucun changement — ton historique correspond déjà à tes règles.',
-    'summary_updated' => ':fields champs mis à jour sur :transactions transactions.',
-    'summary_reconciled_skipped' => ':count transactions rapprochées ont été ignorées.',
+    'summary_updated' => ':fields mis à jour sur :transactions.',
+    'summary_fields' => ':count champ|:count champs',
+    'summary_transactions' => ':count transaction|:count transactions',
+    'summary_reconciled_skipped' => ':count transaction rapprochée a été ignorée.|:count transactions rapprochées ont été ignorées.',
 ];

@@ -158,7 +158,6 @@ class GoogleOAuthProvider
                 'access_token' => $accessToken,
             ]);
             $owner = $provider->getResourceOwner($tokenObj);
-            // The narrower instanceof is what lets PHPStan see getEmail().
             if (! $owner instanceof GoogleUser) {
                 throw new OAuthExchangeFailed(
                     'Google userinfo response was not a GoogleUser.',
@@ -196,7 +195,6 @@ class GoogleOAuthProvider
 
     private function safeMessage(Throwable $e): string
     {
-        // Shared so every provider-error surface caps the same way.
         return SafeMessage::cap($e->getMessage());
     }
 }

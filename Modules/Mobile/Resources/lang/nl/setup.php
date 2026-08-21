@@ -29,6 +29,6 @@ return [
     'resuming' => 'Instellen hervatten…',
     'setting_up' => 'Dit apparaat instellen…',
     'progress_aria' => 'Voortgang instellen',
-    'records' => ':count records',
+    'records' => ':count record|:count records',
     'records_preparing' => 'Wachten op het andere apparaat…',
 ];

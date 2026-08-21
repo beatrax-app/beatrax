@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Comando sconosciuto: :command',
         'missing' => ':noun da indicare: :list',
         'invalid_args' => 'Uno o più argomenti non sono validi.',
-        'arg_singular' => 'argomento',
-        'arg_plural' => 'argomenti',
+        'arg' => 'argomento|argomenti',
     ],
 ];

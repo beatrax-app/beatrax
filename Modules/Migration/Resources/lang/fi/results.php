@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Tuonti valmis',
     'heading_update' => 'Päivitys otettu käyttöön',
 
-    'summary_line' => 'Tuotiin :categories kategoriaa, :budget_months budjettikuukautta ja :transactions tapahtumaa.',
-    'summary_attention' => ':count kohdetta vaatii yhä huomiota — katso alta.',
+    'summary_line' => 'Tuotiin :categories, :budget_months ja :transactions.',
+    'summary_categories' => ':count kategoria|:count kategoriaa',
+    'summary_budget_months' => ':count budjettikuukausi|:count budjettikuukautta',
+    'summary_transactions' => ':count tapahtuma|:count tapahtumaa',
+    'summary_attention' => ':count kohde vaatii yhä huomiota — katso alta.|:count kohdetta vaatii yhä huomiota — katso alta.',
 
     'stats' => [
         'category' => 'Kategoriat',

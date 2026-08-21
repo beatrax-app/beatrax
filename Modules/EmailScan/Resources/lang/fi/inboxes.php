@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Yhdistä Microsoft 365',
     'readonly_note' => 'Beatrax vain lukee viestejä. Se ei koskaan lähetä, merkitse, siirrä tai poista mitään postilaatikossasi.',
 
-    'month' => '1 kuukausi',
-    'months' => ':count kuukautta',
+    'months' => ':count kuukausi|:count kuukautta',
     'not_scanned_yet' => 'ei vielä skannattu',
     'last_scanned' => 'viimeksi skannattu',
     'window_prefix' => 'Ikkuna:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Löydetyt lähettäjät',
     'discovered_body' => 'Lähettäjät, jotka näyttävät lähettävän kuitteja mutta joita ei vielä ole tunnettujen kuittilähettäjien listallasi. Lisää ne, jotka haluat Beatraxin skannaavan, ja ohita loput.',
     'last_seen' => 'viimeksi nähty',
-    'seen_times' => 'Nähty :count kertaa',
+    'seen_times' => 'Nähty :count kerran|Nähty :count kertaa',
     'add' => 'Lisää',
     'add_aria' => 'Lisää :email',
     'dismiss' => 'Ohita',

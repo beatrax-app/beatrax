@@ -7,7 +7,6 @@ namespace Modules\Migration\Internal\Pipeline;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use stdClass;
 
-// $rows and $canonicals are index-aligned.
 final readonly class PreparedTransactionBatch
 {
     /**

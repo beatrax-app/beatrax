@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Увімкни «Додатково» (Режим розробника → Додатково), щоб виконувати запити.',
     'statement_label' => 'Вираз SELECT',
     'run' => 'Виконати',
-    'rows_meta' => 'Рядків: :rows · :durationмс',
+    'rows_meta' => ':rows рядок · :durationмс|:rows рядки · :durationмс|:rows рядків · :durationмс',
     'no_rows' => 'Запит не повернув жодного рядка.',
 
     'errors' => [

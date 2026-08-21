@@ -240,7 +240,6 @@ class OAuthSecretsRepository
         if ($blob === null || $blob === '') {
             return [];
         }
-        // Reveal before decoding; identity when the blob isn't ciphertext.
         $blob = $this->shield->reveal($blob);
         $decoded = json_decode($blob, true);
         if (! is_array($decoded)) {

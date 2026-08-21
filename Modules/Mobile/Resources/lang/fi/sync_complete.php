@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Tämä laite on synkronoitu',
     'heading' => 'Tämä laite on synkronoitu',
-    'records' => 'Kopioitiin :count tietuetta. Lähde: :peer.',
+    'records' => 'Kopioitiin :count tietue. Lähde: :peer.|Kopioitiin :count tietuetta. Lähde: :peer.',
     'records_none' => 'Ei uutta kopioitavaa — kaikki on jo ajan tasalla. Lähde: :peer.',
     'how_it_works' => 'Tästä eteenpäin',
     'automatic_title' => 'Se pysyy itse ajan tasalla',

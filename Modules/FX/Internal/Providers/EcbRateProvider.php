@@ -11,7 +11,6 @@ use SimpleXMLElement;
 
 final class EcbRateProvider implements RateProvider
 {
-    // Published ~16:00 CET each business day, public holidays excepted.
     private const string URL = 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml';
 
     private const string NS = 'http://www.ecb.int/vocabulary/2002-08-01/eurofxref';

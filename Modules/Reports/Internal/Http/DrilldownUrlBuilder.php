@@ -17,7 +17,6 @@ final class DrilldownUrlBuilder
         $params = [];
 
         if ($groupKey !== null) {
-            // time_bucket, and anything unrecognised, carries no id to filter by.
             $groupParams = match ($dimension) {
                 'category' => ['category' => [(int) $groupKey]],
                 'account' => ['account' => [(int) $groupKey]],

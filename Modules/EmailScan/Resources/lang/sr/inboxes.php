@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Poveži Microsoft 365',
     'readonly_note' => 'Beatrax samo čita poruke. Nikad ništa ne šalje, ne označava, ne premešta niti ne briše u tvom prijemnom sandučetu.',
 
-    'month' => '1 mesec',
-    'months' => ':count mes.',
+    'months' => ':count mes.|:count mes.|:count mes.',
     'not_scanned_yet' => 'još nije skenirano',
     'last_scanned' => 'poslednje skeniranje',
     'window_prefix' => 'Period:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Otkriveni pošiljaoci',
     'discovered_body' => 'Pošiljaoci koji izgledaju kao da šalju potvrde, ali još nisu na tvojoj listi poznatih pošiljalaca potvrda. Dodaj one koje želiš da Beatrax skenira, ostale odbaci.',
     'last_seen' => 'poslednji put viđeno',
-    'seen_times' => 'Broj pojavljivanja: :count',
+    'seen_times' => 'Broj pojavljivanja: :count|Broj pojavljivanja: :count|Broj pojavljivanja: :count',
     'add' => 'Dodaj',
     'add_aria' => 'Dodaj :email',
     'dismiss' => 'Odbaci',

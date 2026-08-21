@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Nežinoma komanda: :command',
         'missing' => 'Trūksta :noun: :list',
         'invalid_args' => 'Vienas ar keli argumentai netinkami.',
-        'arg_singular' => 'argumento',
-        'arg_plural' => 'argumentų',
+        'arg' => 'argumento|argumentų|argumentų',
     ],
 ];

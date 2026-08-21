@@ -17,7 +17,7 @@ return [
         'pin_length' => 'PIN має містити щонайменше 6 цифри.',
 
         'too_many_attempts' => 'Забагато спроб — повтори через :secondsс.',
-        'incorrect_pin_remaining' => 'Неправильний PIN. Залишилося спроб: :count.',
+        'incorrect_pin_remaining' => 'Неправильний PIN. Залишилася :count спроба.|Неправильний PIN. Залишилося :count спроби.|Неправильний PIN. Залишилося :count спроб.',
         'incorrect_pin' => 'Неправильний PIN.',
     ],
 ];

@@ -17,7 +17,7 @@ return [
         'pin_length' => 'Το PIN πρέπει να έχει τουλάχιστον 6 ψηφία.',
 
         'too_many_attempts' => 'Πάρα πολλές προσπάθειες — δοκίμασε ξανά σε :seconds δευτ.',
-        'incorrect_pin_remaining' => 'Λάθος PIN. Απομένουν :count προσπάθειες.',
+        'incorrect_pin_remaining' => 'Λάθος PIN. Απομένει :count προσπάθεια.|Λάθος PIN. Απομένουν :count προσπάθειες.',
         'incorrect_pin' => 'Λάθος PIN.',
     ],
 ];

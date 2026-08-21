@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Unknown command: :command',
         'missing_args' => "Can't run :command — needs :noun: :list",
-        'arg_singular' => 'argument',
-        'arg_plural' => 'arguments',
+        'arg' => 'argument|arguments',
         'started' => 'Started :command (run :runId)',
         'run_expired' => 'Run record expired — cannot re-run.',
         'reran' => 'Re-ran :command (run :runId)',

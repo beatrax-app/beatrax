@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Ühenda Microsoft 365',
     'readonly_note' => 'Beatrax ainult loeb kirju. See ei saada, sildista, teisalda ega kustuta sinu postkastis kunagi midagi.',
 
-    'month' => '1 kuu',
-    'months' => ':count kuud',
+    'months' => ':count kuu|:count kuud',
     'not_scanned_yet' => 'veel skannimata',
     'last_scanned' => 'viimati skannitud',
     'window_prefix' => 'Aken:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Leitud saatjad',
     'discovered_body' => 'Saatjad, kes näivad kviitungeid saatvat, kuid keda pole veel sinu teadaolevate kviitungisaatjate loendis. Lisa need, keda soovid Beatraxil skannida, ja peida ülejäänud.',
     'last_seen' => 'viimati nähtud',
-    'seen_times' => 'Nähtud :count korda',
+    'seen_times' => 'Nähtud :count kord|Nähtud :count korda',
     'add' => 'Lisa',
     'add_aria' => 'Lisa :email',
     'dismiss' => 'Peida',

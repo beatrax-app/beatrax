@@ -119,7 +119,6 @@ final readonly class ArtisanStreamController
         $this->flushOutput();
     }
 
-    // Catches a final chunk written between the last tail and the exit.
     private function emitFinalChunk(string $outPath, int $offset): int
     {
         $finalChunk = $this->tailer->tailOnce($outPath, $offset);
@@ -154,7 +153,6 @@ final readonly class ArtisanStreamController
                     'exception_class' => get_class($error),
                 ]);
         } catch (\Throwable) {
-            // Even an unresolvable logger must let the SSE frame close.
         }
     }
 

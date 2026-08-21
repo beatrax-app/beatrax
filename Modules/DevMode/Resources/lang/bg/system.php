@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'режим NativePHP',
     'runtime_host_os' => 'хост ОС',
     'effective_config' => 'Действаща конфигурация',
-    'show_entries' => 'Покажи :count записа',
+    'show_entries' => 'Покажи :count запис|Покажи :count записа',
     'hide' => 'Скрий',
 ];

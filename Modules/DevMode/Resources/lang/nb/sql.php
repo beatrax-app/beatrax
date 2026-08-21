@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Aktiver Advanced (Dev Mode → Advanced) for å kjøre spørringer.',
     'statement_label' => 'SELECT-setning',
     'run' => 'Kjør',
-    'rows_meta' => ':rows rader · :durationms',
+    'rows_meta' => ':rows rad · :durationms|:rows rader · :durationms',
     'no_rows' => 'Spørringen returnerte ingen rader.',
 
     'errors' => [

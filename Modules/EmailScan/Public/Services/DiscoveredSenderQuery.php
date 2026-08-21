@@ -20,10 +20,8 @@ final class DiscoveredSenderQuery
 
     public const MIN_OCCURRENCES = 2;
 
-    // Older observations are ignored, not deleted — the row stays for audit.
     public const WITHIN_DAYS = 90;
 
-    // The panel paginates client-side, so this bounds the render.
     public const PANEL_PAGE_SIZE = 25;
 
     public function __construct(

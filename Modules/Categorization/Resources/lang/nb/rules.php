@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Regelen er lagret.',
     'flash_reapplying' => 'Bruker reglene på historikken din på nytt…',
     'summary_no_changes' => 'Ingen endringer — historikken din samsvarer allerede med reglene dine.',
-    'summary_updated' => 'Oppdaterte :fields felter på tvers av :transactions transaksjoner.',
-    'summary_reconciled_skipped' => ':count avstemte transaksjoner ble hoppet over.',
+    'summary_updated' => 'Oppdaterte :fields på tvers av :transactions.',
+    'summary_fields' => ':count felt|:count felter',
+    'summary_transactions' => ':count transaksjon|:count transaksjoner',
+    'summary_reconciled_skipped' => ':count avstemt transaksjon ble hoppet over.|:count avstemte transaksjoner ble hoppet over.',
 ];

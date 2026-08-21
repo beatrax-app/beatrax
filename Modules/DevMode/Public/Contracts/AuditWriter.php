@@ -27,9 +27,9 @@ interface AuditWriter
         bool $cancelled,
     ): bool;
 
-    // `context` is a free-form bag — job id, batch id, whatever the action has.
     /**
-     * @param  array<string, mixed>  $context
+     * @param  array<string, mixed>  $context  a free-form bag — job id, batch
+     *                                         id, whatever the action has
      */
     public function recordDestructiveQueueAction(
         string $action,
@@ -37,7 +37,10 @@ interface AuditWriter
         int $callerUserId,
     ): void;
 
-    // `query` is the verbatim SQL the operator typed, not a normalised form.
+    /**
+     * @param  string  $query  the verbatim SQL the operator typed, not a
+     *                         normalised form
+     */
     public function recordSelectQuery(
         string $query,
         int $rowcount,

@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Import finalizat',
     'heading_update' => 'Actualizare aplicată',
 
-    'summary_line' => 'S-au importat :categories categorii, :budget_months luni de buget și :transactions tranzacții.',
-    'summary_attention' => ':count elemente încă necesită atenție — vezi mai jos.',
+    'summary_line' => 'S-au importat :categories, :budget_months și :transactions.',
+    'summary_categories' => ':count categorie|:count categorii|:count de categorii',
+    'summary_budget_months' => ':count lună de buget|:count luni de buget|:count de luni de buget',
+    'summary_transactions' => ':count tranzacție|:count tranzacții|:count de tranzacții',
+    'summary_attention' => ':count element încă necesită atenție — vezi mai jos.|:count elemente încă necesită atenție — vezi mai jos.|:count de elemente încă necesită atenție — vezi mai jos.',
 
     'stats' => [
         'category' => 'Categorii',

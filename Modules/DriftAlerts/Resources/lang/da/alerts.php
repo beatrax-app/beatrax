@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Indlæs mere',
-    'group_count' => ':count åbne afvigelser',
+    'group_count' => ':count åben afvigelse|:count åbne afvigelser',
 
     'anomaly_empty' => [
         'open_heading' => 'Ingen usædvanlige posteringer',

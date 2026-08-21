@@ -24,7 +24,6 @@ final readonly class InboxScanContext
         private int $userId,
     ) {}
 
-    // The property stays private so nothing but the guard bind reads it.
     public function userId(): int
     {
         return $this->userId;

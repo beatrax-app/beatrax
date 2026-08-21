@@ -214,7 +214,6 @@ class MicrosoftOAuthProvider
 
     private function safeMessage(Throwable $e): string
     {
-        // Shared so every provider-error surface caps the same way.
         return SafeMessage::cap($e->getMessage());
     }
 }

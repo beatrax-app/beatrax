@@ -29,6 +29,6 @@ return [
     'resuming' => 'Gjenopptar oppsettet…',
     'setting_up' => 'Setter opp denne enheten…',
     'progress_aria' => 'Fremdrift for oppsettet',
-    'records' => ':count oppføringer',
+    'records' => ':count oppføring|:count oppføringer',
     'records_preparing' => 'Venter på den andre enheten…',
 ];

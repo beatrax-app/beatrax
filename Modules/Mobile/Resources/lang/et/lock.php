@@ -17,7 +17,7 @@ return [
         'pin_length' => 'PIN-kood peab olema vähemalt 6 numbrit.',
 
         'too_many_attempts' => 'Liiga palju katseid — proovi uuesti :secondss pärast.',
-        'incorrect_pin_remaining' => 'Vale PIN-kood. Jäänud on :count katset.',
+        'incorrect_pin_remaining' => 'Vale PIN-kood. Jäänud on :count katse.|Vale PIN-kood. Jäänud on :count katset.',
         'incorrect_pin' => 'Vale PIN-kood.',
     ],
 ];

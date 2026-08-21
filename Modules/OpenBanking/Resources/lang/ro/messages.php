@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Consimțământul a expirat — reconectează-te.',
         'unavailable' => 'Enable Banking este temporar indisponibil. Încearcă din nou în scurt timp.',
-        'new_found' => ':count tranzacții noi găsite.',
+        'new_found' => ':count tranzacție nouă găsită.|:count tranzacții noi găsite.|:count de tranzacții noi găsite.',
         'none' => 'Nicio tranzacție nouă.',
     ],
 

@@ -39,7 +39,6 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = ScanJobBudget::TIMEOUT_SECONDS;
 
-    // Mixed English + Dutch to match the user's likely receipt-sender pool.
     /** @var list<string> */
     private const DISCOVERY_KEYWORDS = [
         'receipt',
@@ -50,7 +49,6 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         'bevestiging',
     ];
 
-    // 10 pages x 100 candidates = 1000 observations per inbox per day.
     private const DISCOVERY_MAX_PAGES = 10;
 
     public function __construct(public readonly int $userId) {}
@@ -132,7 +130,6 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         return array_values(array_unique(array_merge($knownPatterns, $dismissedSenders)));
     }
 
-    // Returns false only on a rate limit, which stops the whole daily sweep.
     /**
      * @param  list<string>  $allExcludes
      */
@@ -155,7 +152,8 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                 // per-inbox lifecycle column to transition.
                 return false;
             } catch (Throwable) {
-                // Best-effort: one inbox's failure must not abort the pass.
+                // The caller walks every inbox on the account, so one inbox's
+                // failure must not abort the pass; tomorrow's tick retries it.
             }
         }
 

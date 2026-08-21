@@ -70,7 +70,6 @@ final class DismissAnomalyAlertAsExpected
         return $rulesWritten;
     }
 
-    // The band is derived from the persisted alert, never the client.
     private function insertSuppressionRules(AnomalyAlert $alert, User $user, string $nowString): bool
     {
         $reasons = $alert->reasons;

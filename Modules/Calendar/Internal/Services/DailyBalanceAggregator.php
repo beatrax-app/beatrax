@@ -18,7 +18,6 @@ final readonly class DailyBalanceAggregator
 {
     use CoercesScalars;
 
-    // A full year, so any month the user navigates to has projection data.
     private const int FORECAST_HORIZON_DAYS = 365;
 
     public function __construct(
@@ -54,7 +53,6 @@ final readonly class DailyBalanceAggregator
 
         $map = $this->overlayActualBalances($map, $effectiveBalance, $user, $monthStart, $monthEnd, $baseCurrency);
 
-        // A partially-computing aggregate has no honest SoD anchor to report.
         return ['map' => $map, 'todayAnchorMinor' => $isComputingAny ? null : $todayAnchorMinor];
     }
 

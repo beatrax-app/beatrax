@@ -17,7 +17,7 @@ return [
         'pin_length' => 'PIN-koodissa on oltava vähintään 6 numeroa.',
 
         'too_many_attempts' => 'Liikaa yrityksiä — yritä uudelleen :secondss kuluttua.',
-        'incorrect_pin_remaining' => 'Väärä PIN-koodi. :count yritystä jäljellä.',
+        'incorrect_pin_remaining' => 'Väärä PIN-koodi. :count yritys jäljellä.|Väärä PIN-koodi. :count yritystä jäljellä.',
         'incorrect_pin' => 'Väärä PIN-koodi.',
     ],
 ];

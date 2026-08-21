@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Bilinmeyen komut: :command',
         'missing' => 'Eksik :noun: :list',
         'invalid_args' => 'Bir veya daha fazla argüman geçersiz.',
-        'arg_singular' => 'argüman',
-        'arg_plural' => 'argümanlar',
+        'arg' => 'argüman',
     ],
 ];

@@ -86,7 +86,6 @@ final class DevOverviewPage extends Component
         ];
     }
 
-    // Deliberately unscoped by user: this tile is system-wide.
     private function resolveLastCommand(DatabaseManager $db): ?string
     {
         $row = $db->connection()->table('dev_mode_audit')

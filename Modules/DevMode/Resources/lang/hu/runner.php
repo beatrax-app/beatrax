@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Ismeretlen parancs: :command',
         'missing_args' => 'A(z) :command nem futtatható — hiányzó :noun: :list',
-        'arg_singular' => 'argumentum',
-        'arg_plural' => 'argumentumok',
+        'arg' => 'argumentum|argumentumok',
         'started' => 'Elindítva: :command (futtatás: :runId)',
         'run_expired' => 'A futtatási bejegyzés lejárt — nem lehet újrafuttatni.',
         'reran' => 'Újrafuttatva: :command (futtatás: :runId)',

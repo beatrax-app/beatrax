@@ -40,7 +40,6 @@ final class OpenBankingFetchService
         return $this->importer->runFromRemoteFetch($sourceRows, $this->adapter->format(), $user, $idempotencyKey);
     }
 
-    // The scheduled path: no user is in the loop to review a preview screen.
     public function fetchAndConfirm(int $connectionId, User $user): ImportConfirmResult
     {
         $preview = $this->preview($connectionId, $user);

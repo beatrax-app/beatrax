@@ -39,7 +39,6 @@ final class DispatchOsNotification
         $this->fire($event->title, $body, $event->deepLinkRoute);
     }
 
-    // When focused the in-app banner already surfaces the same information.
     private function shouldFire(): bool
     {
         return ! $this->focus->isFocused();

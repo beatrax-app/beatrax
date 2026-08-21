@@ -68,7 +68,6 @@ final class GraphErrorMapper
         return $delta > 0 ? $delta : 60;
     }
 
-    // Never includes request headers or the bearer token.
     private function extractErrorMessage(string $rawBody): string
     {
         if ($rawBody === '') {

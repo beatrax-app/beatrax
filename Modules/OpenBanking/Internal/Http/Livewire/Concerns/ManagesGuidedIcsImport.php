@@ -32,7 +32,6 @@ trait ManagesGuidedIcsImport
     public function rules(): array
     {
         return [
-            // mimetypes sniffs the content type, not the supplied extension.
             'icsStatement' => ['required', 'file', 'max:1024', 'mimetypes:application/pdf', 'extensions:pdf'],
         ];
     }

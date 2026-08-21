@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Prijungti Microsoft 365',
     'readonly_note' => 'Beatrax laiškus tik skaito. Ji niekada nieko nesiunčia, nežymi, neperkelia ir netrina tavo pašto dėžutėje.',
 
-    'month' => '1 mėnuo',
-    'months' => ':count mėnesių',
+    'months' => ':count mėnuo|:count mėnesiai|:count mėnesių',
     'not_scanned_yet' => 'dar nenuskaityta',
     'last_scanned' => 'paskutinį kartą nuskaityta',
     'window_prefix' => 'Laikotarpis:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Aptikti siuntėjai',
     'discovered_body' => 'Siuntėjai, kurie panašūs į kvitų siuntėjus, bet dar nėra tavo žinomų kvitų sąraše. Pridėk tuos, kuriuos nori, kad Beatrax nuskaitytų; likusius paslėpk.',
     'last_seen' => 'paskutinį kartą matyta',
-    'seen_times' => 'Matyta :count kartų',
+    'seen_times' => 'Matyta :count kartą|Matyta :count kartus|Matyta :count kartų',
     'add' => 'Pridėti',
     'add_aria' => 'Pridėti :email',
     'dismiss' => 'Slėpti',

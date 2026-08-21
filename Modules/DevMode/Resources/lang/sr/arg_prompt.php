@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Nepoznata komanda: :command',
         'missing' => 'Nedostaje :noun: :list',
         'invalid_args' => 'Jedan ili više argumenata nije ispravan.',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumenata',
+        'arg' => 'argument|argumenata|argumenata',
     ],
 ];

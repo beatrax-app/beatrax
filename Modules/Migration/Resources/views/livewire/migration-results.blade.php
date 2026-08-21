@@ -8,13 +8,16 @@
         ['label' => Lang::get('migration::results.stats.budget'), 'value' => $budgetMonthsCount],
     ];
 
+    // Each count picks its own plural form before the sentence is
+    // assembled: one trans_choice cannot serve three counts, and a
+    // language with three forms needs all three chosen independently.
     $summaryLine = Lang::get('migration::results.summary_line', [
-        'categories' => $run->categories_count,
-        'budget_months' => $budgetMonthsCount,
-        'transactions' => $run->transactions_inserted_count,
+        'categories' => Lang::choice('migration::results.summary_categories', $run->categories_count),
+        'budget_months' => Lang::choice('migration::results.summary_budget_months', $budgetMonthsCount),
+        'transactions' => Lang::choice('migration::results.summary_transactions', $run->transactions_inserted_count),
     ]);
     if ($stillNeedsAttention > 0) {
-        $summaryLine .= ' '.Lang::get('migration::results.summary_attention', ['count' => $stillNeedsAttention]);
+        $summaryLine .= ' '.Lang::choice('migration::results.summary_attention', $stillNeedsAttention);
     }
 @endphp
 

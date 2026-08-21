@@ -76,7 +76,6 @@ final class HeaderSniffer
         return $this->sniffPresetCsv($preset, $localPath, $head);
     }
 
-    // The header-signature check is order-independent, so a reordered export still sniffs.
     private function sniffPresetCsv(CsvPreset $preset, string $path, string $head): SniffResult
     {
         if (preg_match(self::CSV_EXTENSION_REGEX, $path) !== 1) {
@@ -113,7 +112,6 @@ final class HeaderSniffer
         );
     }
 
-    // The header-anchor check rejects a renamed .eml before the zbateson parser is invoked.
     private function sniffEml(string $path, string $head): SniffResult
     {
         if (preg_match('/\.eml$/i', $path) !== 1) {
@@ -137,7 +135,6 @@ final class HeaderSniffer
         );
     }
 
-    // The literal "From " envelope prefix rejects a single-message .eml renamed to .mbox.
     private function sniffMbox(string $path, string $head): SniffResult
     {
         if (preg_match('/\.mbox$/i', $path) !== 1) {
@@ -188,7 +185,6 @@ final class HeaderSniffer
                 .'open the custom statements view, switch to the Betalingen tab, and pick Rapport Transactiegegevens.'
             );
         }
-        // The NL export ships some headers with a trailing space inside the quoted cell.
         $columns = array_map(static fn (?string $c): string => trim($c ?? ''), $columns);
 
         $profile = PaypalCsvLanguageProfile::detect($columns);
@@ -209,7 +205,6 @@ final class HeaderSniffer
         );
     }
 
-    // The magic-byte check rejects a renamed .pdf before pdftotext is invoked.
     private function sniffIcsPdf(string $path, string $head): SniffResult
     {
         if (preg_match('/\.pdf$/i', $path) !== 1) {

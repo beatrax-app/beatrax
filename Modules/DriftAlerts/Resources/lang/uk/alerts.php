@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Завантажити ще',
-    'group_count' => 'відкритих відхилень: :count',
+    'group_count' => ':count відкрите відхилення|:count відкриті відхилення|:count відкритих відхилень',
 
     'anomaly_empty' => [
         'open_heading' => 'Незвичних списань немає',

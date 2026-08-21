@@ -37,7 +37,6 @@ final class SelectOnlyValidator
             throw ValidationException::withMessages(['sql' => 'tokenizer_error:'.$e->getMessage()]);
         }
 
-        // Cursor::next() skips one token type per call, hence the loop.
         do {
             $token = $cursor->next();
             if ($token === null) {

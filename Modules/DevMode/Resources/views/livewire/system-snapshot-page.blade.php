@@ -125,7 +125,7 @@
         <h2 class="text-sm font-semibold mb-3 flex items-center justify-between">
             {{ Lang::get('dev::system.effective_config') }}
             <button type="button" class="text-xs text-[var(--color-text-muted)] underline" x-on:click="open = !open">
-                <span x-show="!open">{{ Lang::get('dev::system.show_entries', ['count' => count($effectiveConfig)]) }}</span>
+                <span x-show="!open">{{ Lang::choice('dev::system.show_entries', count($effectiveConfig)) }}</span>
                 <span x-show="open" x-cloak>{{ Lang::get('dev::system.hide') }}</span>
             </button>
         </h2>

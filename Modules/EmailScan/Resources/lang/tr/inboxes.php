@@ -18,7 +18,6 @@ return [
     'connect_microsoft' => 'Microsoft 365 bağla',
     'readonly_note' => 'Beatrax yalnızca mesajları okur. Gelen kutunda hiçbir şey göndermez, etiketlemez, taşımaz veya silmez.',
 
-    'month' => '1 ay',
     'months' => ':count ay',
     'not_scanned_yet' => 'henüz taranmadı',
     'last_scanned' => 'son tarama',

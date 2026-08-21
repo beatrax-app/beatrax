@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Load more',
-    'group_count' => ':count drifts open',
+    'group_count' => ':count drift open|:count drifts open',
 
     'anomaly_empty' => [
         'open_heading' => 'No unusual charges',

@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Internal\Listeners;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Services\UserDataPathService;
 
@@ -32,7 +33,7 @@ final class EmitOAuthReauthRequiredAlert
             $this->alerts->raiseForUser(
                 userId: $this->currentUser->id(),
                 kind: self::REAUTH_KIND,
-                severity: 'warning',
+                severity: SystemAlertSeverity::Warning->value,
                 message: self::MESSAGE,
             );
         }

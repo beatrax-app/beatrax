@@ -38,7 +38,6 @@ class OpenBankingSecretsRepository
         // Second at-rest layer: keeps the file ciphertext on the targets where
         // SecretShield binds to the identity PassthroughSecretShield.
         private readonly Encrypter $encrypter,
-        // Injected because larastan's strict rules forbid the Log facade here.
         private readonly LoggerInterface $logger = new NullLogger,
     ) {}
 
@@ -147,7 +146,6 @@ class OpenBankingSecretsRepository
             return [];
         }
 
-        // Undo the write layers outer-to-inner: shield, then APP_KEY.
         $revealed = $this->shield->reveal($raw);
         $json = $this->decryptAtRest($revealed);
 
@@ -160,7 +158,6 @@ class OpenBankingSecretsRepository
             return [];
         }
 
-        // PHPStan cannot infer that a decoded JSON object has only string keys.
         $out = [];
         foreach ($decoded as $key => $value) {
             $out[(string) $key] = $value;
@@ -190,7 +187,6 @@ class OpenBankingSecretsRepository
         $absolute = $this->absolutePath();
         $this->ensureSecretsDirectory(dirname($absolute));
 
-        // Inner-to-outer: APP_KEY encrypter, then the shield.
         $ciphertext = $this->encrypter->encrypt($this->encodePayload($data, $absolute), false);
         $bytes = $this->shield->protect($ciphertext);
 

@@ -12,7 +12,8 @@ interface RateProvider
     // traced back to the provider that supplied it.
     public function key(): string;
 
-    // Higher is tried earlier: ECB=200, Frankfurter=100, Bundled=0.
+    // Higher priority is tried first: ECB at 200, Frankfurter at 100, and the
+    // bundled fallback at 0.
     public function priority(): int;
 
     /**

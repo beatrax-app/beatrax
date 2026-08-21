@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Aktivera Advanced (Dev Mode → Advanced) för att köra frågor.',
     'statement_label' => 'SELECT-sats',
     'run' => 'Kör',
-    'rows_meta' => ':rows rader · :durationms',
+    'rows_meta' => ':rows rad · :durationms|:rows rader · :durationms',
     'no_rows' => 'Frågan returnerade inga rader.',
 
     'errors' => [

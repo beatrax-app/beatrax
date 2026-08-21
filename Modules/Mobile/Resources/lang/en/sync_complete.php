@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'This device is synced',
     'heading' => 'This device is synced',
-    'records' => 'Copied :count records from :peer.',
+    'records' => 'Copied :count record from :peer.|Copied :count records from :peer.',
     'records_none' => 'Caught up with :peer. There was nothing new to copy.',
     'how_it_works' => 'From here on',
     'automatic_title' => 'It keeps itself up to date',

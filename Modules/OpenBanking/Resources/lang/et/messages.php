@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Nõusolek on aegunud — ühenda uuesti.',
         'unavailable' => 'Enable Banking pole ajutiselt saadaval. Proovi peagi uuesti.',
-        'new_found' => 'Leiti :count uut tehingut.',
+        'new_found' => 'Leiti :count uus tehing.|Leiti :count uut tehingut.',
         'none' => 'Uusi tehinguid pole.',
     ],
 

@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Okänt kommando: :command',
         'missing' => 'Saknas :noun: :list',
         'invalid_args' => 'Ett eller flera argument är ogiltiga.',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argument',
+        'arg' => 'argument|argument',
     ],
 ];

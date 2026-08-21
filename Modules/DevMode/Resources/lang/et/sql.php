@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Päringute käivitamiseks lülita sisse täpsem režiim (Arendusrežiim → Täpsem).',
     'statement_label' => 'SELECT-lause',
     'run' => 'Käivita',
-    'rows_meta' => ':rows rida · :durationms',
+    'rows_meta' => ':rows rida · :durationms|:rows rida · :durationms',
     'no_rows' => 'Päring ei tagastanud ühtegi rida.',
 
     'errors' => [

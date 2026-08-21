@@ -17,7 +17,7 @@ return [
         'pin_length' => 'PIN-koden må ha minst 6 sifre.',
 
         'too_many_attempts' => 'For mange forsøk — prøv igjen om :secondss.',
-        'incorrect_pin_remaining' => 'Feil PIN-kode. :count forsøk igjen.',
+        'incorrect_pin_remaining' => 'Feil PIN-kode. :count forsøk igjen.|Feil PIN-kode. :count forsøk igjen.',
         'incorrect_pin' => 'Feil PIN-kode.',
     ],
 ];

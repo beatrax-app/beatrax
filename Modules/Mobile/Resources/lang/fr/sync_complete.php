@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Cet appareil est synchronisé',
     'heading' => 'Cet appareil est synchronisé',
-    'records' => ':count enregistrements copiés depuis :peer.',
+    'records' => ':count enregistrement copié depuis :peer.|:count enregistrements copiés depuis :peer.',
     'records_none' => 'À jour avec :peer. Il n\'y avait rien de nouveau à copier.',
     'how_it_works' => 'À partir de maintenant',
     'automatic_title' => 'Ça reste à jour tout seul',

@@ -41,7 +41,6 @@ final class ReportsServiceProvider extends ServiceProvider
         $this->singletonIfExists(self::REPORT_AGGREGATOR_CLASS);
         $this->singletonIfExists(self::TIME_BUCKET_GENERATOR_CLASS);
         $this->singletonIfExists(self::REPORT_CSV_EXPORTER_CLASS);
-        // All stateless, so singletons avoid re-instantiating per request.
         $this->singletonIfExists(self::SPEND_FILTER_APPLIER_CLASS);
         $this->singletonIfExists(self::REPORT_DEFINITION_REQUEST_FACTORY_CLASS);
         $this->singletonIfExists(self::SAVE_REPORT_CLASS);

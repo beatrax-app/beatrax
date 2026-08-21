@@ -23,7 +23,7 @@
             @if ($pairedDeviceNames === [])
                 {{ Lang::get('auth::delete_account.devices_none') }}
             @else
-                {{ Lang::get('auth::delete_account.devices_body', ['devices' => implode(', ', $pairedDeviceNames)]) }}
+                {{ Lang::choice('auth::delete_account.devices_body', count($pairedDeviceNames), ['devices' => implode(', ', $pairedDeviceNames)]) }}
             @endif
         </p>
         @if ($successorUsername !== null)

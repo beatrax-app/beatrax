@@ -7,7 +7,7 @@ return [
     'heading' => 'Date și dispozitive',
     'sync_status' => 'Starea sincronizării',
     'your_devices' => 'Dispozitivele tale',
-    'syncing_progress' => 'Se sincronizează… :count înregistrări',
+    'syncing_progress' => 'Se sincronizează… :count înregistrare|Se sincronizează… :count înregistrări|Se sincronizează… :count de înregistrări',
     'initial_sync_aria' => 'Progresul sincronizării inițiale',
     'no_peers' => 'Împerechează un alt dispozitiv pentru a începe sincronizarea.',
     'sync_now' => 'Sincronizează acum',

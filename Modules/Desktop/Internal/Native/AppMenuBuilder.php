@@ -9,7 +9,6 @@ use Modules\Core\Public\Support\Lang;
 use Native\Desktop\Contracts\MenuItem;
 use Native\Desktop\Facades\Menu;
 
-// The const labels are the English canonical, mirrored in desktop::native.menu.*.
 final class AppMenuBuilder
 {
     public const FILE_IMPORT = 'Import file…';
@@ -45,7 +44,6 @@ final class AppMenuBuilder
             Menu::app(),
             Menu::file()->submenu(
                 Menu::route('imports.new', Lang::get('desktop::native.menu.file_import')),
-                // No scan-now route exists; the inboxes page hosts the per-inbox button.
                 Menu::route('inboxes.index', Lang::get('desktop::native.menu.file_scan_email')),
             ),
             Menu::edit(),
@@ -54,7 +52,6 @@ final class AppMenuBuilder
             Menu::help()->submenu(
                 Menu::link(self::GITHUB_REPO_URL, Lang::get('desktop::native.menu.help_github_repo'))->openInBrowser(),
                 Menu::link(self::REPORT_ISSUE_URL, Lang::get('desktop::native.menu.help_report_issue'))->openInBrowser(),
-                // No /about route exists; Settings already surfaces version + metadata.
                 Menu::route('settings', Lang::get('desktop::native.menu.help_about')),
             ),
         ];

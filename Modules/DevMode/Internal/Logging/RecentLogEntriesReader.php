@@ -86,7 +86,6 @@ final readonly class RecentLogEntriesReader
         return is_array($all) ? $all : [];
     }
 
-    // null means "not a log-header line"; the caller folds those forward.
     /**
      * @return ?array{timestamp: string, severity: string, channel: string, message: string}
      */

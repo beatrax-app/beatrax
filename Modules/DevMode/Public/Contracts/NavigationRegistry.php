@@ -8,7 +8,6 @@ use Modules\DevMode\Public\Dto\NavigationEntry;
 
 interface NavigationRegistry
 {
-    // Order is significant: the palette renders rows as they arrive.
     /**
      * @return list<NavigationEntry>
      */

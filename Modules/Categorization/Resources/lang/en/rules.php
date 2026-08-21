@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Rule saved.',
     'flash_reapplying' => 'Re-applying rules to your history…',
     'summary_no_changes' => 'No changes — your history already matches your rules.',
-    'summary_updated' => 'Updated :fields fields across :transactions transactions.',
-    'summary_reconciled_skipped' => ':count reconciled transactions were skipped.',
+    'summary_updated' => 'Updated :fields across :transactions.',
+    'summary_fields' => ':count field|:count fields',
+    'summary_transactions' => ':count transaction|:count transactions',
+    'summary_reconciled_skipped' => ':count reconciled transaction was skipped.|:count reconciled transactions were skipped.',
 ];

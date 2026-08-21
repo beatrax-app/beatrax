@@ -17,7 +17,7 @@ return [
         'pin_length' => 'PIN-koden skal have mindst 6 cifre.',
 
         'too_many_attempts' => 'For mange forsøg — prøv igen om :secondss.',
-        'incorrect_pin_remaining' => 'Forkert PIN-kode. :count forsøg tilbage.',
+        'incorrect_pin_remaining' => 'Forkert PIN-kode. :count forsøg tilbage.|Forkert PIN-kode. :count forsøg tilbage.',
         'incorrect_pin' => 'Forkert PIN-kode.',
     ],
 ];

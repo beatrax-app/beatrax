@@ -6,6 +6,7 @@ namespace Modules\EmailScan\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Public\Enums\MailProvider;
@@ -16,8 +17,6 @@ use Throwable;
 final class RaiseReconsentAlertOnTokenFailure
 {
     private const ALERT_KIND = 'oauth_reconsent_required';
-
-    private const ALERT_SEVERITY = 'warning';
 
     private const MESSAGE_GMAIL = 'Reconnect your Gmail';
 
@@ -45,7 +44,7 @@ final class RaiseReconsentAlertOnTokenFailure
             $this->alerts->raiseForUser(
                 userId: $userId,
                 kind: self::ALERT_KIND,
-                severity: self::ALERT_SEVERITY,
+                severity: SystemAlertSeverity::Warning->value,
                 message: $this->messageFor($event->provider),
                 metadata: [
                     'inbox_id' => $inboxId,

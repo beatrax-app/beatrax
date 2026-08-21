@@ -166,9 +166,7 @@ final class CommandArgPromptModal extends Component
         $missing = $this->missingRequiredArgs($spec->argsSchema);
         if ($missing !== []) {
             $this->submitError = Lang::get('dev::arg_prompt.errors.missing', [
-                'noun' => count($missing) === 1
-                    ? Lang::get('dev::arg_prompt.errors.arg_singular')
-                    : Lang::get('dev::arg_prompt.errors.arg_plural'),
+                'noun' => Lang::choice('dev::arg_prompt.errors.arg', count($missing)),
                 'list' => implode(', ', $missing),
             ]);
 

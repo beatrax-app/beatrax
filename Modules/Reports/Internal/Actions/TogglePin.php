@@ -29,7 +29,6 @@ final class TogglePin
 
     public function toggle(User $user, int $reportId): SavedReport
     {
-        // A foreign or missing id 404s rather than 403s.
         /** @var SavedReport|null $existing */
         $existing = SavedReport::query()
             ->withoutGlobalScope(UserScope::class)

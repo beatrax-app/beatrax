@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Nežinoma komanda: :command',
         'missing_args' => 'Nepavyksta įvykdyti :command — reikia :noun: :list',
-        'arg_singular' => 'argumento',
-        'arg_plural' => 'argumentų',
+        'arg' => 'argumento|argumentų|argumentų',
         'started' => 'Pradėta :command (vykdymas :runId)',
         'run_expired' => 'Vykdymo įrašas nebegalioja — pakartoti negalima.',
         'reran' => 'Pakartota :command (vykdymas :runId)',

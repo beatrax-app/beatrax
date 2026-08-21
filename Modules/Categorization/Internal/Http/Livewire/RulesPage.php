@@ -180,13 +180,15 @@ final class RulesPage extends Component
             return Lang::get('categorization::rules.summary_no_changes');
         }
 
+        // Two counts, two plural choices: one trans_choice selects on one
+        // number, so each phrase picks its own form before it is placed.
         $base = Lang::get('categorization::rules.summary_updated', [
-            'fields' => $fieldsUpdated,
-            'transactions' => $transactionsUpdated,
+            'fields' => Lang::choice('categorization::rules.summary_fields', $fieldsUpdated),
+            'transactions' => Lang::choice('categorization::rules.summary_transactions', $transactionsUpdated),
         ]);
 
         if ($reconciledSkipped > 0) {
-            return $base.' '.Lang::get('categorization::rules.summary_reconciled_skipped', ['count' => $reconciledSkipped]);
+            return $base.' '.Lang::choice('categorization::rules.summary_reconciled_skipped', $reconciledSkipped);
         }
 
         return $base;

@@ -97,9 +97,7 @@ final class ArtisanRunnerPage extends Component
             $this->toast(
                 Lang::get('dev::runner.toast.missing_args', [
                     'command' => $command,
-                    'noun' => count($missing) === 1
-                        ? Lang::get('dev::runner.toast.arg_singular')
-                        : Lang::get('dev::runner.toast.arg_plural'),
+                    'noun' => Lang::choice('dev::runner.toast.arg', count($missing)),
                     'list' => implode(', ', $missing),
                 ]),
             );

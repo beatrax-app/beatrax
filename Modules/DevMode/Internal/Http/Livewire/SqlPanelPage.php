@@ -72,7 +72,6 @@ final class SqlPanelPage extends Component
         );
     }
 
-    // Runs ahead of the SELECT-only validator; null means "may proceed".
     private function preflightError(Session $session, string $sql): ?string
     {
         return match (true) {

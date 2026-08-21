@@ -66,14 +66,14 @@
                     x-data
                     x-on:click="$dispatch('modal-show', { name: 'bulk-retry-confirm' })"
                     data-testid="bulk-retry-button"
-                >{{ Lang::get('dev::queue.bulk_retry', ['count' => count($selected)]) }}</x-core::secondary-button>
+                >{{ Lang::choice('dev::queue.bulk_retry', count($selected)) }}</x-core::secondary-button>
             @endif
             <button
                 type="button"
                 wire:click="bulkDeleteRequest"
                 class="pill-btn danger inline-flex items-center rounded border border-rose-300 bg-white px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
                 data-testid="bulk-delete-button"
-            >{{ Lang::get('dev::queue.bulk_delete', ['count' => count($selected)]) }}</button>
+            >{{ Lang::choice('dev::queue.bulk_delete', count($selected)) }}</button>
         </div>
     @endif
 
@@ -239,7 +239,7 @@
          through to bulkRetryConfirm(). --}}
     <flux:modal name="bulk-retry-confirm" :dismissible="true">
         <div class="space-y-4">
-            <flux:heading size="lg">{{ Lang::get('dev::queue.retry_modal_heading', ['count' => count($selected)]) }}</flux:heading>
+            <flux:heading size="lg">{{ Lang::choice('dev::queue.retry_modal_heading', count($selected)) }}</flux:heading>
             <p class="text-sm text-slate-700 dark:text-slate-300">
                 {{ Lang::get('dev::queue.retry_modal_intro') }}
             </p>
@@ -255,7 +255,7 @@
                     wire:click="bulkRetryConfirm"
                     x-data
                     x-on:click="$dispatch('modal-close', { name: 'bulk-retry-confirm' })"
-                >{{ Lang::get('dev::queue.bulk_retry', ['count' => count($selected)]) }}</x-core::neutral-button>
+                >{{ Lang::choice('dev::queue.bulk_retry', count($selected)) }}</x-core::neutral-button>
             </div>
         </div>
     </flux:modal>

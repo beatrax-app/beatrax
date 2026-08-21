@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Η εισαγωγή ολοκληρώθηκε',
     'heading_update' => 'Η ενημέρωση εφαρμόστηκε',
 
-    'summary_line' => 'Εισήχθησαν :categories κατηγορίες, :budget_months μήνες προϋπολογισμού και :transactions συναλλαγές.',
-    'summary_attention' => ':count στοιχεία χρειάζονται ακόμη προσοχή — δες παρακάτω.',
+    'summary_line' => 'Εισήχθησαν :categories, :budget_months και :transactions.',
+    'summary_categories' => ':count κατηγορία|:count κατηγορίες',
+    'summary_budget_months' => ':count μήνα προϋπολογισμού|:count μήνες προϋπολογισμού',
+    'summary_transactions' => ':count συναλλαγή|:count συναλλαγές',
+    'summary_attention' => ':count στοιχείο χρειάζεται ακόμη προσοχή — δες παρακάτω.|:count στοιχεία χρειάζονται ακόμη προσοχή — δες παρακάτω.',
 
     'stats' => [
         'category' => 'Κατηγορίες',

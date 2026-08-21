@@ -248,7 +248,6 @@ final class Mt940Adapter implements SourceAdapter
         }
     }
 
-    // MT940 omits the fractional part on a whole amount.
     private function parseBalanceAmount(string $raw): int
     {
         $normalised = str_replace(',', '.', $raw);

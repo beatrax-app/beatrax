@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Regel opgeslagen.',
     'flash_reapplying' => 'Regels opnieuw op je geschiedenis toepassen…',
     'summary_no_changes' => 'Geen wijzigingen — je geschiedenis komt al overeen met je regels.',
-    'summary_updated' => ':fields velden bijgewerkt in :transactions transacties.',
-    'summary_reconciled_skipped' => ':count afgeletterde transacties zijn overgeslagen.',
+    'summary_updated' => ':fields bijgewerkt in :transactions.',
+    'summary_fields' => ':count veld|:count velden',
+    'summary_transactions' => ':count transactie|:count transacties',
+    'summary_reconciled_skipped' => ':count afgeletterde transactie is overgeslagen.|:count afgeletterde transacties zijn overgeslagen.',
 ];

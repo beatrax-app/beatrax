@@ -33,7 +33,6 @@ final class ConfigFlattener
 
             if (is_array($value)) {
                 if ($this->isScalarList($value)) {
-                    // A scalar list reads better inline than as N dotted rows.
                     $flat[$key] = json_encode($value);
 
                     continue;

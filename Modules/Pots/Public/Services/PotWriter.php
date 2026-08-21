@@ -413,7 +413,8 @@ final class PotWriter
         ));
     }
 
-    // Bypasses the global scope so ownership is independent of guard state.
+    // The global user scope is dropped deliberately: ownership comes from the
+    // explicit user_id filter, so this holds even when no guard is resolved.
     private function findOwnedActivePot(User $user, int $potId): ?Pot
     {
         return Pot::query()

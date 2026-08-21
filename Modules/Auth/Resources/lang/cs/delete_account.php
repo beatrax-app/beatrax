@@ -7,7 +7,7 @@ return [
     'body' => 'Smazáním účtu ho odstraníš z tohoto zařízení včetně všeho, co k němu patří. Nejde to vzít zpět.',
     'removes' => 'Zmizí tvoje transakce, účty, rozpočty, cíle a sestavy, spolu s pravidly, předvolbami, obnovovacími kódy, synchronizační identitou a šifrovacími klíči.',
     'devices_heading' => 'Tvoje ostatní zařízení si svou kopii ponechají',
-    'devices_body' => 'Beatrax nemá server, takže na dálku nejde smazat nic. Tato zařízení stále drží úplnou kopii a je potřeba je vyřešit přímo na nich — :devices',
+    'devices_body' => 'Beatrax nemá server, takže na dálku nejde smazat nic. Toto zařízení stále drží úplnou kopii a je potřeba ho vyřešit přímo na něm — :devices|Beatrax nemá server, takže na dálku nejde smazat nic. Tato zařízení stále drží úplnou kopii a je potřeba je vyřešit přímo na nich — :devices|Beatrax nemá server, takže na dálku nejde smazat nic. Tato zařízení stále drží úplnou kopii a je potřeba je vyřešit přímo na nich — :devices',
     'devices_none' => 'S tímto zařízením není spárované žádné jiné, takže tohle je jediná kopie tvých dat.',
     'successor' => 'Toto zařízení spravuješ ty, takže po smazání tvého účtu roli přebírá :username.',
     'password_label' => 'Pro potvrzení zadej své heslo',

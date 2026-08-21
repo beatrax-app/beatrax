@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Toto zařízení je synchronizované',
     'heading' => 'Toto zařízení je synchronizované',
-    'records' => 'Zkopírované záznamy: :count. Zdroj: :peer.',
+    'records' => 'Zkopírován :count záznam z :peer.|Zkopírovány :count záznamy z :peer.|Zkopírováno :count záznamů z :peer.',
     'records_none' => 'Vše je aktuální — nebylo co kopírovat. Zdroj: :peer.',
     'how_it_works' => 'Od téhle chvíle',
     'automatic_title' => 'Udržuje se aktuální samo',

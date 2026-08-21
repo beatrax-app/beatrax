@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Denne enhed er synkroniseret',
     'heading' => 'Denne enhed er synkroniseret',
-    'records' => 'Kopierede :count poster fra :peer.',
+    'records' => 'Kopierede :count post fra :peer.|Kopierede :count poster fra :peer.',
     'records_none' => 'Ajour med :peer. Der var ikke noget nyt at kopiere.',
     'how_it_works' => 'Herfra og frem',
     'automatic_title' => 'Den holder sig selv opdateret',

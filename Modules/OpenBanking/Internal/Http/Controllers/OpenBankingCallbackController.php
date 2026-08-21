@@ -220,7 +220,6 @@ final class OpenBankingCallbackController
                 return;
             }
 
-            // Re-link path: restore the pre-update consent_expires_at/account_uid.
             $connection->table('open_banking_connections')
                 ->where('id', $upsert['id'])
                 ->where('user_id', $userId)

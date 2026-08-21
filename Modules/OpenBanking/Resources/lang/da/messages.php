@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Samtykket er udløbet — tilslut igen.',
         'unavailable' => 'Enable Banking er midlertidigt utilgængelig. Prøv igen om lidt.',
-        'new_found' => ':count nye transaktioner fundet.',
+        'new_found' => ':count ny transaktion fundet.|:count nye transaktioner fundet.',
         'none' => 'Ingen nye transaktioner.',
     ],
 

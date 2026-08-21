@@ -89,7 +89,7 @@ final class MobileLockScreen extends Component
 
             $remaining = $gateway->remainingPinAttempts($user->id);
             $this->flashMessage = $remaining !== null
-                ? Lang::get('mobile::lock.errors.incorrect_pin_remaining', ['count' => $remaining])
+                ? Lang::choice('mobile::lock.errors.incorrect_pin_remaining', $remaining)
                 : Lang::get('mobile::lock.errors.incorrect_pin');
 
             return;

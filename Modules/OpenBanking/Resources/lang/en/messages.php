@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Consent expired — reconnect.',
         'unavailable' => 'Enable Banking is temporarily unavailable. Try again shortly.',
-        'new_found' => ':count new transactions found.',
+        'new_found' => ':count new transaction found.|:count new transactions found.',
         'none' => 'No new transactions.',
     ],
 

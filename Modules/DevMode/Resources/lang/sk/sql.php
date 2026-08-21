@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Dopyty spustíš po zapnutí Pokročilého režimu (Dev Mode → Advanced).',
     'statement_label' => 'Príkaz SELECT',
     'run' => 'Spustiť',
-    'rows_meta' => ':rows riadkov · :durationms',
+    'rows_meta' => ':rows riadok · :durationms|:rows riadky · :durationms|:rows riadkov · :durationms',
     'no_rows' => 'Dopyt nevrátil žiadne riadky.',
 
     'errors' => [

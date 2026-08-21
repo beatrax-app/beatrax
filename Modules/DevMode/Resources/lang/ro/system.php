@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'host os',
     'effective_config' => 'Configurație efectivă',
-    'show_entries' => 'Afișează :count intrări',
+    'show_entries' => 'Afișează :count intrare|Afișează :count intrări|Afișează :count de intrări',
     'hide' => 'Ascunde',
 ];

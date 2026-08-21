@@ -17,7 +17,8 @@ final class PaypalDateParser
             throw new InvalidDateException('Empty PayPal date string.');
         }
 
-        // The Activity Download ships US numeric M/D/YYYY whatever the account's display locale.
+        // The Activity Download ships US numeric M/D/YYYY whatever the account's
+        // display locale is, so day and month are never the other way round.
         if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $trimmed) === 1) {
             try {
                 $parsed = CarbonImmutable::createFromFormat('!n/j/Y', $trimmed);
@@ -34,7 +35,6 @@ final class PaypalDateParser
             }
         }
 
-        // ISO 8601 fallback for PayPal export shape drift.
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $trimmed) === 1) {
             try {
                 $parsed = CarbonImmutable::createFromFormat('!Y-m-d', $trimmed);

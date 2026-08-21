@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Неизвестна команда: :command',
         'missing_args' => ':command не може да се изпълни — изисква :noun: :list',
-        'arg_singular' => 'аргумент',
-        'arg_plural' => 'аргументи',
+        'arg' => 'аргумент|аргументи',
         'started' => 'Стартирано :command (изпълнение :runId)',
         'run_expired' => 'Записът за изпълнението изтече — не може да се изпълни отново.',
         'reran' => 'Изпълнено отново :command (изпълнение :runId)',

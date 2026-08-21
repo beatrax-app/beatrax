@@ -89,7 +89,6 @@ final readonly class SpatieAuditWriter implements AuditWriter
         return true;
     }
 
-    // null routes the caller to the append-only fallback record.
     /**
      * @return array{id: int, properties: mixed}|null
      */

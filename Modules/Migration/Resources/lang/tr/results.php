@@ -8,7 +8,10 @@ return [
     'heading_complete' => 'İçe aktarma tamamlandı',
     'heading_update' => 'Güncelleme uygulandı',
 
-    'summary_line' => ':categories kategori, :budget_months bütçe ayı ve :transactions işlem içe aktarıldı.',
+    'summary_line' => ':categories, :budget_months ve :transactions içe aktarıldı.',
+    'summary_categories' => ':count kategori',
+    'summary_budget_months' => ':count bütçe ayı',
+    'summary_transactions' => ':count işlem',
     'summary_attention' => ':count öğe hâlâ ilgi bekliyor — aşağıya bak.',
 
     'stats' => [

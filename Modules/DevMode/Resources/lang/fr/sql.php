@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Active Advanced (Dev Mode → Advanced) pour lancer des requêtes.',
     'statement_label' => 'Instruction SELECT',
     'run' => 'Exécuter',
-    'rows_meta' => ':rows lignes · :durationms',
+    'rows_meta' => ':rows ligne · :durationms|:rows lignes · :durationms',
     'no_rows' => 'La requête n\'a renvoyé aucune ligne.',
 
     'errors' => [

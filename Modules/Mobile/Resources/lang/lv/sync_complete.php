@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Šī ierīce ir sinhronizēta',
     'heading' => 'Šī ierīce ir sinhronizēta',
-    'records' => 'Nokopētie ieraksti: :count. Avota ierīce: :peer.',
+    'records' => 'No :peer nokopēti :count ierakstu.|No :peer nokopēts :count ieraksts.|No :peer nokopēti :count ieraksti.',
     'records_none' => 'Viss ir aktuāls — nekas jauns nebija jākopē. Avota ierīce: :peer.',
     'how_it_works' => 'No šī brīža',
     'automatic_title' => 'Viss notiek pats no sevis',

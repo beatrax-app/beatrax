@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Afficher plus',
-    'group_count' => ':count dérives en cours',
+    'group_count' => ':count dérive en cours|:count dérives en cours',
 
     'anomaly_empty' => [
         'open_heading' => 'Aucun débit inhabituel',

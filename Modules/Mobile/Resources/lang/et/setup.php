@@ -29,6 +29,6 @@ return [
     'resuming' => 'Jätkan seadistamist…',
     'setting_up' => 'Seadistan seda seadet…',
     'progress_aria' => 'Seadistamise edenemine',
-    'records' => ':count kirjet',
+    'records' => ':count kirje|:count kirjet',
     'records_preparing' => 'Ootan teist seadet…',
 ];

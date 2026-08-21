@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Sutikimas nustojo galioti — prisijunk iš naujo.',
         'unavailable' => 'Enable Banking laikinai neprieinama. Netrukus bandyk dar kartą.',
-        'new_found' => 'Rasta naujų operacijų: :count.',
+        'new_found' => 'Rasta :count nauja operacija.|Rastos :count naujos operacijos.|Rasta :count naujų operacijų.',
         'none' => 'Naujų operacijų nėra.',
     ],
 

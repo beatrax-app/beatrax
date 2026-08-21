@@ -29,6 +29,6 @@ return [
     'resuming' => 'Jatketaan käyttöönottoa…',
     'setting_up' => 'Otetaan tätä laitetta käyttöön…',
     'progress_aria' => 'Käyttöönoton edistyminen',
-    'records' => ':count tietuetta',
+    'records' => ':count tietue|:count tietuetta',
     'records_preparing' => 'Odotetaan toista laitetta…',
 ];

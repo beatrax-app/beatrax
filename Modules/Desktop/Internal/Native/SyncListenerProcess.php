@@ -17,7 +17,6 @@ final readonly class SyncListenerProcess
 {
     private const ALIAS = 'sync-listener';
 
-    // Loopback only, so a bound port answers immediately and boot stays fast.
     private const PROBE_TIMEOUT_SECONDS = 1;
 
     public function __construct(

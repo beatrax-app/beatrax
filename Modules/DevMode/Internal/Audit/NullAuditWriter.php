@@ -12,10 +12,7 @@ use Modules\DevMode\Public\Dto\CommandRunAudit;
 // the runtime binding is SpatieAuditWriter.
 final class NullAuditWriter implements AuditWriter
 {
-    public function recordCommandRun(CommandRunAudit $run): void
-    {
-        // Storing nothing is what makes finalizeCommandRun()'s false honest.
-    }
+    public function recordCommandRun(CommandRunAudit $run): void {}
 
     public function finalizeCommandRun(
         string $runId,

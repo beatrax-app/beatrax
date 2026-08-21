@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Įjunk išplėstinį režimą (Kūrėjo režimas → Išplėstinis), kad galėtum vykdyti užklausas.',
     'statement_label' => 'SELECT sakinys',
     'run' => 'Vykdyti',
-    'rows_meta' => 'eilučių: :rows · :durationms',
+    'rows_meta' => ':rows eilutė · :durationms|:rows eilutės · :durationms|:rows eilučių · :durationms',
     'no_rows' => 'Užklausa negrąžino nė vienos eilutės.',
 
     'errors' => [

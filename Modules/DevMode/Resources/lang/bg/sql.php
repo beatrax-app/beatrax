@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Включи Advanced (Dev Mode → Advanced), за да изпълняваш заявки.',
     'statement_label' => 'SELECT заявка',
     'run' => 'Изпълни',
-    'rows_meta' => ':rows реда · :durationms',
+    'rows_meta' => ':rows ред · :durationms|:rows реда · :durationms',
     'no_rows' => 'Заявката не върна редове.',
 
     'errors' => [

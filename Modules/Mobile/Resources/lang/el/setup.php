@@ -29,6 +29,6 @@ return [
     'resuming' => 'Συνέχιση ρύθμισης…',
     'setting_up' => 'Ρύθμιση αυτής της συσκευής…',
     'progress_aria' => 'Πρόοδος ρύθμισης',
-    'records' => ':count εγγραφές',
+    'records' => ':count εγγραφή|:count εγγραφές',
     'records_preparing' => 'Αναμονή για την άλλη συσκευή…',
 ];

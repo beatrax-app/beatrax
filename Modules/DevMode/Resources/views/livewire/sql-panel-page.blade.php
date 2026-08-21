@@ -114,7 +114,7 @@
                 >{{ Lang::get('dev::sql.run') }}</button>
                 @if ($rowcount !== null)
                     <span class="text-xs text-[var(--color-text-muted)]" style="font-variant-numeric: tabular-nums;">
-                        {{ Lang::get('dev::sql.rows_meta', ['rows' => $rowcount, 'duration' => $durationMs]) }}
+                        {{ Lang::choice('dev::sql.rows_meta', $rowcount, ['rows' => $rowcount, 'duration' => $durationMs]) }}
                     </span>
                 @endif
             </div>

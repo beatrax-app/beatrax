@@ -16,7 +16,8 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
 
 final class PaypalCsvAdapter implements SourceAdapter
 {
-    // PayPal wallets have no real IBAN; AccountResolver scopes by user, so one literal is unambiguous.
+    // A PayPal wallet has no IBAN, so this literal stands in as the account
+    // key; AccountResolver scopes by user, so it cannot collide.
     private const PAYPAL_OWN_IBAN = 'PAYPAL';
 
     private ?StatementSummaryData $lastStatementMetadata = null;
