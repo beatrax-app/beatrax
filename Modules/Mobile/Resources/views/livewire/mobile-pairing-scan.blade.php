@@ -159,9 +159,17 @@
                 spellcheck="false"
                 wire:model="wordCode"
                 x-on:input="format($event.target)"
-                placeholder="XXXX-XXXX-XXXX-XXXX"
+                {{-- Seven groups, the last of two: a 16-byte token is 26
+                     base-32 characters. The four-group mask read as "you
+                     pasted the wrong thing" beside a real code twice its
+                     length, next to an error that blames the network. --}}
+                placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XX"
+                maxlength="32"
                 aria-label="{{ Lang::get('mobile::pairing.word_code_aria') }}"
-                class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base font-mono uppercase tracking-widest text-slate-900
+                {{-- No tracking: the widest step pushed the full mask past the
+                     right edge of a 375pt field, so the shape it exists to
+                     show was the part that got clipped. --}}
+                class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base font-mono uppercase text-slate-900
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
             />

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Mobile\Internal\Http\Middleware\RequireUnlockedIdentityForPairing;
 
 // Deliberately OUTSIDE the `auth` group - it renders BEFORE any user
 // account exists on the device, gated in front of it by
@@ -58,12 +59,16 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         return app($component)();
     })->name('mobile.lock');
 
+    // On the page load only, never on the Livewire endpoint behind it: the
+    // app-lock allow-list exempts this screen so a live ceremony's poll is not
+    // interrupted, and that same exemption is what let a locked reader type and
+    // spend a one-shot code before being shown the PIN pad.
     Route::get('/mobile/pair', static function () {
         $component = 'Modules\Mobile\Internal\Http\Livewire\MobilePairingScan';
         abort_unless(class_exists($component), 404);
 
         return app($component)();
-    })->name('mobile.pair');
+    })->middleware(RequireUnlockedIdentityForPairing::class)->name('mobile.pair');
 
     // Blocking full-screen resumable initial-sync gate - the post-pairing
     // landing page.
