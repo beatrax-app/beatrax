@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- Surface B7: Guided ICS file-import affordance (Req 13, UI-SPEC Surface
-     B7, 19-15). Visually and functionally SEPARATE from the live OB cards
+{{-- Surface B7: guided ICS file-import affordance (UI-SPEC Surface B7).
+     Visually and functionally SEPARATE from the live OB cards
      above — this path stores NO credentials and routes a dropped statement
      directly through the EXISTING ICS SourceAdapter (`ics-pdf`) via
      RunsImports::runFromUpload, skipping the generic import wizard's
@@ -16,7 +16,7 @@
      there is no CAMT.053/CSV ICS adapter in this codebase (confirmed
      against `Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter`) — so
      the mini-step row and format chip below say "PDF statement", matching
-     what the existing adapter actually accepts (Rule 1 correction vs the
+     what the existing adapter actually accepts (a correction to the
      UI-SPEC's generic "CAMT.053 or CSV" placeholder copy, which described
      the ASN bank-statement shape, not ICS). --}}
 <section id="ics-import" class="space-y-3" data-testid="open-banking-ics-import-card">

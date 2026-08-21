@@ -1,6 +1,6 @@
 {{--
-    Biometric-primary mobile app-lock unlock screen (R6, MOBILE-01,
-    15-UI-SPEC.md §4). Structurally identical to
+    Biometric-primary mobile app-lock unlock screen (15-UI-SPEC.md §4).
+    Structurally identical to
     Modules/Auth/Resources/views/livewire/lock-screen.blade.php — the naked
     full-screen safe-area chrome (lines 1-5) and the 48x48 /icon.png app-mark
     block are reused verbatim, and the PIN-pad markup below is duplicated
@@ -18,7 +18,7 @@
 
     Only behavioral difference: on mount, when a biometric credential is
     enrolled ($biometricAvailable), the platform biometric prompt
-    auto-invokes via x-init (R6/D-03 Claude's Discretion: biometric-primary
+    auto-invokes via x-init (biometric-primary
     means AUTO-INVOKED, not just visually-first) — no tap required. Tapping
     the biometric button retries the prompt manually.
 --}}
@@ -29,9 +29,8 @@
             pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
             motion-reduce:transition-none"
     {{--
-        WR-10 / T-05-12 (same discipline as the Auth lock screen): PIN
-        digits accumulate in this transient Alpine state, never in a
-        Livewire property.
+        Same discipline as the Auth lock screen: PIN digits accumulate
+        in this transient Alpine state, never in a Livewire property.
     --}}
     x-data="{
         pin: '',
@@ -197,7 +196,7 @@
             </button>
         @endif
 
-        {{-- Sign out (D-03). Forgot-PIN recovery mirrors the Auth lock
+        {{-- Sign out. Forgot-PIN recovery mirrors the Auth lock
              screen exactly — sign out leads back to password login. --}}
         <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
             @csrf

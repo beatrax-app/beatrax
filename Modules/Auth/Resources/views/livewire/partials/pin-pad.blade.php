@@ -5,15 +5,12 @@
     Requires the surrounding Alpine scope from lock-screen.blade.php:
     `pin` (local string), press(d), back(), submitPin().
 
-    Threat mitigations:
-      T-05-12 (WR-10): digits accumulate in client-side Alpine state — the
-               dots below render from the local `pin`, the buttons mutate it
-               locally, and only submitPin() sends the PIN to the server
-               (once, as a method argument). Digits are displayed as bullet
-               glyphs in an aria-live region, never as an `input` of type
-               `password`.
-               No autocomplete attribute is set. OS password managers and
-               screenshot tools see only bullets.
+    Threat mitigation: digits accumulate in client-side Alpine state — the
+    dots below render from the local `pin`, the buttons mutate it locally,
+    and only submitPin() sends the PIN to the server (once, as a method
+    argument). Digits are displayed as bullet glyphs in an aria-live region,
+    never as an `input` of type `password`. No autocomplete attribute is set.
+    OS password managers and screenshot tools see only bullets.
 
     Accessibility contract (UI-SPEC):
       - aria-label="Digit N" on each digit button.

@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    The `/reports` live single-page builder (D-01, Req 1/8/12) — control
+    The `/reports` live single-page builder — control
     rail (left) + result panel (right, chart above an always-on table).
     Every control writes straight to a `#[Url]`-bound property via
     wire:click="$set(...)"/wire:model.live; changing anything re-renders
@@ -193,7 +193,7 @@
                 </div>
             </div>
 
-            {{-- Time-granularity (Req 7) — only for time-series reports --}}
+            {{-- Time-granularity — only for time-series reports --}}
             @if ($showGranularity)
                 <div>
                     <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.granularity.heading') }}</p>
@@ -204,7 +204,7 @@
                 </div>
             @endif
 
-            {{-- Filters (D-04 — reused Search filter language) --}}
+            {{-- Filters — reused Search filter language --}}
             <div>
                 <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.filters.heading') }}</p>
                 <div class="srch-chips" style="flex-wrap: wrap;">
@@ -212,7 +212,7 @@
                 </div>
             </div>
 
-            {{-- Compare to previous period (Req 13) --}}
+            {{-- Compare to previous period --}}
             <div class="flex items-center justify-between gap-2">
                 <label for="report-compare-switch" class="srch-filter-label" style="margin: 0;">{{ Lang::get('reports::builder.compare') }}</label>
                 <x-core::switch
@@ -245,7 +245,7 @@
             {{-- Actions row --}}
             <div class="flex items-center gap-2 flex-wrap">
                 @if (! $showSaveForm)
-                    {{-- CR-01: button copy distinguishes "editing a loaded report" from "saving a fresh one" so the user understands which action they're about to take. --}}
+                    {{-- Button copy distinguishes "editing a loaded report" from "saving a fresh one" so the user understands which action they're about to take. --}}
                     <button type="button" wire:click="openSaveForm" @disabled(! $hasResults) class="pill-btn-primary">{{ $loadedReportId !== null ? Lang::get('reports::builder.actions.update_report') : Lang::get('reports::builder.actions.save_report') }}</button>
                 @else
                     <form wire:submit.prevent="save" class="flex items-center gap-2">
@@ -255,7 +255,7 @@
                     </form>
                 @endif
 
-                {{-- WR-02: Export CSV is a real Livewire action (ReportBuilder::export()) so it can participate in wire:loading — mirrors Tax page's ↓ → … swap verbatim. --}}
+                {{-- Export CSV is a real Livewire action (ReportBuilder::export()) so it can participate in wire:loading — mirrors Tax page's ↓ → … swap verbatim. --}}
                 @if ($hasResults)
                     <button
                         type="button"
@@ -274,7 +274,7 @@
                     <span class="pill-btn-ghost" style="opacity: .5; cursor: not-allowed;" aria-disabled="true">↓ {{ Lang::get('reports::builder.actions.export_csv') }}</span>
                 @endif
 
-                {{-- WR-02: report-recompute loading feedback — the existing inline "…" glyph pattern, keyed to every mutable control-rail property so any rail interaction (metric/dimension/period/currency/granularity/filters/compare/viz) shows it. --}}
+                {{-- Report-recompute loading feedback — the existing inline "…" glyph pattern, keyed to every mutable control-rail property so any rail interaction (metric/dimension/period/currency/granularity/filters/compare/viz) shows it. --}}
                 <span
                     wire:loading
                     wire:target="metric,dimension,periodPreset,customFrom,customTo,granularity,currencyMode,viz,compare,filterAccounts,filterCategories,filterCounterparties,filterAmountMin,filterAmountMax,filterAmountDir"
@@ -351,7 +351,7 @@
                     @endif
                 </div>
 
-                {{-- Always-on data table (Req 8) — same $displayRows as the chosen chart --}}
+                {{-- Always-on data table — same $displayRows as the chosen chart --}}
                 <x-core::data-table>
                     <x-slot:head>
                         <x-core::th align="left">{{ $groupHeader }}</x-core::th>

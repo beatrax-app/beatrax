@@ -95,7 +95,7 @@
         @endif
     </header>
 
-    {{-- Level 1 — type switch (D-02). Segmented button group; "type
+    {{-- Level 1 — type switch. Segmented button group; "type
          first, lifecycle second". Stacks full-width on phone. --}}
     <div class="mb-6 flex w-full gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800 sm:w-auto sm:inline-flex" role="tablist" aria-label="{{ Lang::get('drift-alerts::alerts.type_aria') }}">
         @foreach (['drift' => Lang::get('drift-alerts::alerts.type.drift'), 'anomaly' => Lang::get('drift-alerts::alerts.type.anomaly')] as $typeKey => $typeLabel)

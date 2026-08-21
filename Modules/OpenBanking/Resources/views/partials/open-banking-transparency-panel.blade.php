@@ -1,8 +1,8 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- Transparency panel (Surface B4, Req 6). Rendered whenever OB is
+{{-- Transparency panel (Surface B4). Rendered whenever OB is
      enabled, in ANY consent state — this is the trust-defining surface,
      never hidden behind a disclosure toggle. "Last successful sync" is
-     ALWAYS shown (Req 7's never-stale-as-fresh invariant: it is the ONLY
+     ALWAYS shown (the never-stale-as-fresh invariant: it is the ONLY
      freshness indicator anywhere on this page); "Last attempt" renders
      ONLY when the last attempt did not succeed. --}}
 @if ($enabled)

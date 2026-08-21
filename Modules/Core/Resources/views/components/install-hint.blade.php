@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Standing install-hint surface (D-22, UI-SPEC §14).
+    Standing install-hint surface (UI-SPEC §14).
 
     Two placements: dashboard card (bottom of main content column) and
     Settings → General row ("Install as app"). Use the same component in both.

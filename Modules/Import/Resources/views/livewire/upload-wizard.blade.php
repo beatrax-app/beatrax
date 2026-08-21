@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-06 / UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
+{{-- UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
      scrolls horizontally at phone width rather than forcing page overflow. --}}
 <div class="space-y-6 overflow-x-auto">
     <header class="space-y-1">

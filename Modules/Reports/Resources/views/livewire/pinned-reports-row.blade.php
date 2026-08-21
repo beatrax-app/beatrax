@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Dashboard "pinned reports" mini-card row (Req 10). Up to 3 chart-only
+    Dashboard "pinned reports" mini-card row. Up to 3 chart-only
     mini cards, ADDITIVE among the dashboard's other fixed cards — same
     card chrome as the neighboring goals/tax/budgets tiles (rounded-lg
     border-only, no shadow), reduced ~180-200px chart height, no control

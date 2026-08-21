@@ -106,7 +106,7 @@
     a Livewire-driven horizon / scenario flip refreshes the line
     chart without remounting the component.
 --}}
-{{-- D-11: width:100% ensures the chart fills the container column at all
+{{-- width:100% ensures the chart fills the container column at all
      viewport widths including phone. The responsive[] breakpoints above
      handle tick/label tuning at <768px. --}}
 <div

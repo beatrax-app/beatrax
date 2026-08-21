@@ -209,7 +209,7 @@
         @endif
     @endif
 
-    {{-- Chain-resolution polling surface (D-103 / D-105).
+    {{-- Chain-resolution polling surface.
 
          Polls the `chain_resolution_runs` audit table via
          `wire:poll.2s="refreshChainResolutionStatus"`. The auto-navigate
@@ -217,7 +217,7 @@
          itself; the rendered Blade body covers pending / running /
          failed states only.
 
-         Issue #1 + #8 lock: the polling target queries
+         The polling target queries
          `chain_resolution_runs` by exact user_id — NEVER
          `failed_jobs.payload LIKE '%userId:N%'` (which leaks
          cross-user state via id-prefix substring matches). --}}

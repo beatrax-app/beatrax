@@ -71,7 +71,7 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
             && $appLockKeyService->release($session) === null
         ) {
             $logger->info(
-                'PruneNotificationsJob: no app-lock KEK available for an encrypted user in this run. This is informational only — the retention sweep needs no KEK because it keys solely on the unencrypted created_at column (D-37) — logged so a future contributor who adds an encrypted-column predicate here notices this precedent.',
+                'PruneNotificationsJob: no app-lock KEK available for an encrypted user in this run. This is informational only — the retention sweep needs no KEK because it keys solely on the unencrypted created_at column — logged so a future contributor who adds an encrypted-column predicate here notices this precedent.',
                 ['user_id' => $this->userId],
             );
         }

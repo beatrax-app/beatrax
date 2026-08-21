@@ -62,7 +62,7 @@
     @else
         {{-- ============================================================
              PHONE card-list (visible only at <768px)
-             Each card links to the series detail page (D-12).
+             Each card links to the series detail page.
              ============================================================ --}}
         <div class="md:hidden overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 -mx-6 mb-4">
             @foreach ($rows as $row)

@@ -2,7 +2,7 @@
 {{--
     Recurring series detail chart options partial.
 
-    Merges the server-rendered $apexOptions with D-11 phone-tuned
+    Merges the server-rendered $apexOptions with phone-tuned
     responsive breakpoints and encodes the result as a JSON string
     for the chart's `data-options` attribute.
 
@@ -40,7 +40,7 @@
     }
 @endphp
 
-{{-- D-11: width:100% ensures the chart fills the container column at all
+{{-- width:100% ensures the chart fills the container column at all
      viewport widths including phone. --}}
 <div
     style="width:100%"

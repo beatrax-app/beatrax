@@ -18,7 +18,7 @@ final class MobilePullCommand extends Command
     protected $signature = 'sync:mobile-pull';
 
     /** @var string */
-    protected $description = 'Run one bounded background sync burst per user (D-07 background cadence leg, best-effort).';
+    protected $description = 'Run one bounded background sync burst per user (best-effort).';
 
     public function __construct(
         private readonly MobileSyncTriggerService $trigger,

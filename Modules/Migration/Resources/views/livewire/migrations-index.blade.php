@@ -35,16 +35,16 @@
                             {{ $this->formatLabel($run->source_product) }}
                         </span>
                         <span class="text-sm text-slate-500 dark:text-slate-400">{{ substr((string) $run->created_at, 0, 10) }}</span>
-                        @if ($run->status === \Modules\Migration\Public\Enums\MigrationRunStatus::Confirmed->value)
+                        @if ($run->status === \Modules\Migration\Internal\Enums\MigrationRunStatus::Confirmed->value)
                             <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:text-emerald-400">{{ Lang::get('migration::index.status.confirmed') }}</span>
-                        @elseif ($run->status === \Modules\Migration\Public\Enums\MigrationRunStatus::NeedsAttention->value)
+                        @elseif ($run->status === \Modules\Migration\Internal\Enums\MigrationRunStatus::NeedsAttention->value)
                             <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950">{{ Lang::get('migration::index.status.needs_attention') }}</span>
                         @else
                             <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ Lang::get('migration::index.status.parsed') }}</span>
                         @endif
                     </div>
 
-                    @if ($run->status === \Modules\Migration\Public\Enums\MigrationRunStatus::Confirmed->value)
+                    @if ($run->status === \Modules\Migration\Internal\Enums\MigrationRunStatus::Confirmed->value)
                         <x-core::secondary-button
                             href="{{ route('migrations.new') }}?reconcile_of={{ $run->id }}"
                             size="sm"

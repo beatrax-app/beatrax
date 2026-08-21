@@ -1,7 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    A single anomaly alert row (D-16: one alert per transaction,
-    multi-reason). Cloned from drift-alert-row but re-shaped for a
+    A single anomaly alert row — one alert per transaction, possibly
+    multi-reason. Cloned from drift-alert-row but re-shaped for a
     point-in-time unusual charge:
       - reason micro-chips (large / first-time / duplicate) after the
         merchant name, color-coded per UI-SPEC §2

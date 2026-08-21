@@ -1,13 +1,15 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    /forecast page — Wave 4 surface.
+    /forecast page — the cash-flow projection surface: a baseline
+    balance range, a horizon control, and side-by-side scenario
+    comparison.
 
     Page contract:
       - Heading + subheading + "Adjust buffers" deep link.
-      - Per-account tab bar (Wave 2).
-      - 30 / 60 / 90 horizon segmented control (Wave 2).
-      - View by funder toggle (Wave 4 wires the URL state; Wave 5
-        implements the collapse semantics).
+      - Per-account tab bar.
+      - 30 / 60 / 90 horizon segmented control.
+      - View by funder toggle — the URL carries the state; the
+        funder grouping owns the collapse semantics.
       - Scenario picker — baseline radio + one radio per saved
         scenario + "+ New scenario" chip with inline create form.
       - When scenarioId !== null:
@@ -17,8 +19,7 @@
             scenario RIGHT) sharing y-axis.
           * Scenario sidebar in the right rail with Rename / Delete
             scenario / mutation list + Add chooser.
-      - When scenarioId === null: baseline-only single panel (Wave 2/3
-        behaviour preserved).
+      - When scenarioId === null: baseline-only single panel.
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php

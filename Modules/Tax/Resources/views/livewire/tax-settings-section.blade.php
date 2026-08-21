@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Tax Settings Section — Country + Category Management (D-07/D-08)
+    Tax Settings Section — Country + Category Management
     UI-SPEC § 12: .settings-section primitive (280px meta-side + body grid)
     Livewire component: tax.settings-section
 --}}
@@ -73,7 +73,6 @@
                                 {{ $cat->name }}
                             </span>
                         </template>
-                        {{-- Inline rename input (WR-11) --}}
                         <template x-if="editing">
                             <input
                                 type="text"
@@ -161,7 +160,7 @@
                     @foreach ($archived as $cat)
                         <li class="toggle-row group py-1">
                             <span class="flex-1 text-sm text-[var(--color-text-muted)]">{{ $cat->name }}</span>
-                            {{-- WR-11: archiving is reversible. --}}
+                            {{-- Archiving is reversible. --}}
                             <button
                                 type="button"
                                 wire:click="unarchiveCategory({{ $cat->id }})"

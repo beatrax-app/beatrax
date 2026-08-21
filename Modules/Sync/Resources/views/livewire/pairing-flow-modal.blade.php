@@ -1,13 +1,13 @@
 {{--
-    Pairing-flow modal — UI-SPEC Surface B (Phase 12, D-04/D-05/D-07/D-13).
+    Pairing-flow modal — UI-SPEC Surface B.
     Nested Livewire component hosted inside the Devices & Sync section's
     <flux:modal>. A step-based bidirectional pairing flow:
 
       Step 1  choose_direction — two equal cards: Show my code / Enter a code
-      Step 2a show_code        — 240px QR + word-code + live countdown (D-05/D-13)
+      Step 2a show_code        — 240px QR + word-code + live countdown
       Step 2b enter_code       — monospace uppercase input + inline error
       Step 3  confirm          — 6-word safety-number, mandatory both-screen
-                                 confirmation (D-07); the sole gate to confirmed_at
+                                 confirmation; the sole gate to confirmed_at
       Step 4  success          — "Device paired"
 
     wire:poll.3s="checkPairingState" runs only on the show_code and confirm steps
@@ -20,7 +20,7 @@
 <flux:modal wire:model="open" class="md:max-w-md" @close="$wire.cancelPairing()">
 <div class="space-y-4 p-6" wire:key="pairing-step-{{ $step }}">
 
-    {{-- ===== Step 1: choose direction (D-04) ===== --}}
+    {{-- ===== Step 1: choose direction ===== --}}
     @if ($step === 'choose_direction')
         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.title') }}</h3>
         <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_1_of_3') }}</p>
@@ -60,7 +60,7 @@
         </div>
     @endif
 
-    {{-- ===== Step 2a: show my code (QR + word-code + countdown, D-05/D-13) ===== --}}
+    {{-- ===== Step 2a: show my code (QR + word-code + countdown) ===== --}}
     @if ($step === 'show_code')
         <div wire:poll.3s="checkPairingState">
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.show_this_code') }}</h3>
@@ -68,7 +68,7 @@
 
             @if ($expiresInSeconds > 0)
                 {{-- 240px QR on a white tile (QR needs a white background in dark mode too) --}}
-                {{-- IN-03: $qrSvg is raw-echoed by necessity (inline SVG). SAFE because
+                {{-- $qrSvg is raw-echoed by necessity (inline SVG). SAFE because
                      the QR payload is built ENTIRELY from server-side identity + a CSPRNG
                      token (QrPayloadBuilder) — NO user input ever reaches it, and the
                      property is #[Locked] so the client cannot rehydrate markup into it.
@@ -103,7 +103,7 @@
                 </p>
             @else
                 {{-- Expired state --}}
-                {{-- IN-03: see note above — $qrSvg is server-generated from CSPRNG +
+                {{-- See note above — $qrSvg is server-generated from CSPRNG +
                      identity only, never from user input, and #[Locked] against
                      client rehydration. --}}
                 <div class="mx-auto w-fit rounded-xl bg-white dark:bg-white p-4 opacity-30">
@@ -136,7 +136,7 @@
         </div>
     @endif
 
-    {{-- ===== Step 2b: enter a code (D-05) ===== --}}
+    {{-- ===== Step 2b: enter a code ===== --}}
     @if ($step === 'enter_code')
         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.enter_the_code') }}</h3>
         <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_2_of_3') }}</p>
@@ -187,7 +187,7 @@
         </div>
     @endif
 
-    {{-- ===== Step 3: confirm safety numbers (the trust gate, D-07/D-08) ===== --}}
+    {{-- ===== Step 3: confirm safety numbers (the trust gate) ===== --}}
     @if ($step === 'confirm')
         <div wire:poll.3s="checkPairingState">
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.compare_words') }}</h3>
@@ -263,7 +263,7 @@
             <p class="mx-auto max-w-xs text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('sync::pairing.device_paired_help') }}
             </p>
-            {{-- WR-03: success close uses closeModal() — it must NOT expire the
+            {{-- Success close uses closeModal() — it must NOT expire the
                  just-confirmed token the way the in-flow cancel does. --}}
             <x-core::neutral-button
                 block="full"

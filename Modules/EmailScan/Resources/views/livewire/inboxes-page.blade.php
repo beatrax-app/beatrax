@@ -1,13 +1,12 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
-{{-- /inboxes page (D-124 / D-127).
+{{-- /inboxes page.
 
      Renders the empty-state hero when no inboxes are connected and
      the connected-inboxes table-driven layout once at least one
-     inbox exists. Plan 03 ships the hero + minimal table + Add-
-     inbox card pair + Connect buttons; Plan 05 adds the backfill-
-     window modal; Plan 07 adds the row actions + discovered-senders
-     panel.
+     inbox exists: the table, the Add-inbox card pair and Connect
+     buttons, the backfill-window modal, the per-row actions, and
+     the discovered-senders panel.
 
      All copy is locked verbatim against 06-UI-SPEC.md § Copywriting
      Contract. --}}

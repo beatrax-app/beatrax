@@ -1,9 +1,9 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    /notifications — the unified inbox (Req 2, Req 3; D-01, D-02, D-04).
+    /notifications — the unified inbox.
     Direct clone of DriftPage's outer shape (Modules/DriftAlerts/Resources/
     views/livewire/drift-page.blade.php) minus its Level-1 type switch —
-    this surface has only ONE level of tabs (D-02: /drift stays separate).
+    this surface has only ONE level of tabs — /drift stays separate.
 
     Cursor pagination limit: 26 (25 + 1 lookahead), the exact
     NotificationQuery/DriftAlertQuery precedent.

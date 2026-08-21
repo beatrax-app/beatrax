@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- Consent-expiry banner (Surface B5, Req 7/8). A status notice (standard
+{{-- Consent-expiry banner (Surface B5). A status notice (standard
      1px rose border), NOT the B2 loud-modal treatment — this fires on an
      already-connected user whose consent lapsed, not a first-time consent
      gate. `role="alert"` — an urgent, unprompted state change the user

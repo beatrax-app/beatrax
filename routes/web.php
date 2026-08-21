@@ -9,19 +9,19 @@ use Illuminate\Support\Facades\Route;
 // each module's ServiceProvider.
 
 /*
- * Service-worker route (D-17/D-19, PWA-03).
+ * Service-worker route.
  *
  * MUST live in the base routes/web.php — NOT inside a module ServiceProvider —
  * so no module-level auth middleware can wrap it and 302-redirect the SW
- * registration request (Pitfall 2).
+ * registration request.
  *
  * Headers:
  *   Content-Type: application/javascript — required for SW registration
  *   Cache-Control: no-cache, no-store, must-revalidate — SW must always
- *     fetch the latest version; stale SW → stale assets (T-04-02-03)
+ *     fetch the latest version; stale SW → stale assets
  *   Service-Worker-Allowed: / — allows the SW to control the full origin
  *
- * Middleware: ['web'] only — NO auth guard (T-04-02-02)
+ * Middleware: ['web'] only — NO auth guard
  */
 /*
  * Reads the file into the response body rather than returning a
@@ -56,14 +56,14 @@ Route::get('/sw.js', function () {
 })->middleware(['web'])->name('sw');
 
 /*
- * Web manifest route (PWA-02).
+ * Web manifest route.
  *
  * Serves public/site.webmanifest as JSON. In production nginx serves it
  * as a static file; this route exists so the PwaManifestTest can assert
  * 200 + correct body via Laravel's HTTP test client (which routes through
  * PHP, not the real web server). Content-Type is correct for installability.
  *
- * Middleware: ['web'] only — public artifact, no auth guard (T-04-02-02)
+ * Middleware: ['web'] only — public artifact, no auth guard
  */
 Route::get('/site.webmanifest', function () {
     return response(
@@ -74,14 +74,14 @@ Route::get('/site.webmanifest', function () {
 })->middleware(['web'])->name('site.webmanifest');
 
 /*
- * PWA icon routes (PWA-02).
+ * PWA icon routes.
  *
  * Serves the icon set from public/icons/. Same rationale as the manifest
  * route above — static files for production, routed for test-client
- * coverage. Only the four files generated in Task 1 are served; no
+ * coverage. Only the four generated icon files are served; no
  * wildcard to avoid inadvertent path traversal.
  *
- * Middleware: ['web'] only — public artifacts (T-04-02-02)
+ * Middleware: ['web'] only — public artifacts
  */
 Route::get('/icons/{icon}', function (string $icon) {
     $allowed = ['icon-192.png', 'icon-512.png', 'icon-512-maskable.png', 'apple-touch-icon.png'];

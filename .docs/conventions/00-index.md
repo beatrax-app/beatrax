@@ -51,6 +51,15 @@ row it traces to is not. Standards names share the shape an identifier has, so
 `SHA-256` and its neighbours sit in a named allow-list in that test — extend the
 list rather than working around the pattern.
 
+It holds for **Blade comments** too. A `{{-- --}}` block is inline HTML to the
+PHP tokeniser, so the token-based passes cannot see one and a separate pass
+lifts them out of the raw source. A `UI-SPEC §`-section reference is a pointer
+into a living document rather than a requirement identifier, and stays. The
+identifier ban also covers `config/` and `routes/`, which the style rules do
+not — an identifier sat unnoticed in `config/nativephp.php` for exactly that
+reason. A handful of Blade files mid-move between modules are pinned in the
+test as held back; that list only ever shrinks.
+
 ## Related
 
 - [Architecture](../architecture/00-index.md) — the system's shape

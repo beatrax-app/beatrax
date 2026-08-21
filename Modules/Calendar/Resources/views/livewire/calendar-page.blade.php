@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    /calendar page — Phase 6 Plan 03 full UI-SPEC implementation.
+    /calendar page — the full month-grid surface.
 
     Renders:
       - Month summary strip (§6.2) — rose text when risk days exist; computing spinner
@@ -82,7 +82,7 @@
             <div
                 x-show="popoverOpen"
                 @click.outside="popoverOpen = false; $wire.persistAccountPrefs()"
-                {{-- IN-08: guard on popoverOpen — a window-scoped Escape (e.g. closing
+                {{-- Guard on popoverOpen — a window-scoped Escape (e.g. closing
                      the day panel) must not fire a persistence round-trip --}}
                 @keydown.escape.window="if (popoverOpen) { popoverOpen = false; $wire.persistAccountPrefs() }"
                 class="absolute right-0 z-30 mt-1 rounded-lg border bg-white py-2 shadow-lg dark:bg-slate-900"

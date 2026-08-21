@@ -1,12 +1,12 @@
 {{--
-    Dedicated `/sync` status surface (D-05/D-06, 15-UI-SPEC.md §3).
+    Dedicated `/sync` status surface (15-UI-SPEC.md §3).
     Composition top-to-bottom: page title (Display role) -> "Your devices"
     section (Heading role) embedding the EXISTING per-peer status
     component UNCHANGED below (reuse, not rebuild; overall banner +
     per-device list) + this screen's own initial-sync "{n} of {m} records"
     progress line -> "Sync now" primary CTA (accent-ink, min-h-44px) ->
     "Network" section (Heading role) with the "Pause sync on cellular"
-    toggle (D-10, `.switch`/`.switch--on` markup reused verbatim from
+    toggle (`.switch`/`.switch--on` markup reused verbatim from
     devices-and-sync-settings-section.blade.php).
 
     No `font-bold` anywhere (project caps at semibold/600, UI-SPEC
@@ -46,7 +46,7 @@
         @endif
     </section>
 
-    {{-- ===== "Sync now" primary CTA (D-08) — accent-ink, min-h-44px ===== --}}
+    {{-- ===== "Sync now" primary CTA — accent-ink, min-h-44px ===== --}}
     {{-- Inert until a peer exists. With no confirmed device the burst dials
          nobody and returns cleanly, so an enabled button reported success on a
          device that had never been paired. --}}
@@ -93,7 +93,7 @@
     <section class="space-y-3">
         <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.network') }}</h2>
 
-        {{-- ===== "Pause sync on cellular" toggle (D-10) ===== --}}
+        {{-- ===== "Pause sync on cellular" toggle ===== --}}
         <x-core::setting-row
             :label="Lang::get('mobile::sync.pause_cellular')"
             :description="Lang::get('mobile::sync.pause_cellular_help')"

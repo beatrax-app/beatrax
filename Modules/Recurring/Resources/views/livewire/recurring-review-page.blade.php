@@ -78,7 +78,7 @@
             :body="$emptyBody"
         />
     @else
-        {{-- D-06 power-surface fallback: wrap in overflow-x:auto at phone width.
+        {{-- Power-surface fallback: wrap in overflow-x:auto at phone width.
              The multi-action row (Approve/Reject/Snooze/Edit-name) cannot be
              cleanly mapped to a card at <768px without significant redesign —
              the overflow-x scroller ensures all columns remain reachable. --}}

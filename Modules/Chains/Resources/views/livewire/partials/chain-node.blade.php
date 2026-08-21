@@ -1,6 +1,6 @@
-{{-- Chain-node leg card (D-90 / D-91 / D-92 / D-93, UI-02).
+{{-- Chain-node leg card.
 
-     Issue #13 fix: explicit @props declaration. Both $node and
+     Explicit @props declaration. Both $node and
      $fanoutPage are required props — the parent passes them via
      `@include('chains::livewire.partials.chain-node', ['node' => ...,
      'fanoutPage' => ...])`. This makes the contract obvious at both
@@ -95,7 +95,7 @@
     @endif
 
     @if ($childTotal > 0)
-        {{-- ICS bulk-settle fan-out (D-93). Renders the N covered ICS
+        {{-- ICS bulk-settle fan-out. Renders the N covered ICS
              charges paginated at 10 per click. Pagination is forward-
              only — clicking the "Show 10 more · X of N" button
              increments the drawer's $fanoutPage cursor. --}}
@@ -129,7 +129,7 @@
             @endif
         </div>
     @elseif ($node->kind === \Modules\Chains\Public\Enums\ChainLinkKind::IcsBulkSettle->value)
-        {{-- Empty fan-out edge case (D-93 discretion) — a refund-only
+        {{-- Empty fan-out edge case — a refund-only
              month leaves a bulk-settle node covering zero ICS charges. --}}
         <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3 dark:bg-slate-900 dark:border-slate-700">
             <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('chains::drawer.no_ics_charges') }}</p>

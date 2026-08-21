@@ -1,11 +1,11 @@
 {{--
-    Dashboard "Budgets" glance card (Req 12, D-21) — mirrors goals-summary-card
+    Dashboard "Budgets" glance card — mirrors goals-summary-card
     / tax-summary-card chrome exactly: rounded-lg border card, "Budgets"
     eyebrow + "See all →" link, and a single large "Ready to assign" figure
     (emerald ≥ 0 / rose < 0, tabular-nums) sourced from CarryoverQuery.
 
     Renders nothing at all when the user has zero expense categories
-    ($collapse === true) — envelopes are implicit per D-12a, so there is no
+    ($collapse === true) — envelopes are implicit, so there is no
     intermediate "no envelopes yet" chrome state, only "no categories yet."
 --}}
 

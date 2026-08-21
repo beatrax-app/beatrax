@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the doctor panel
+{{-- UI-SPEC §19: overflow-x-auto wrapper ensures the doctor panel
      probe rows scroll horizontally at phone width. --}}
 <div class="p-6 space-y-6 overflow-x-auto" data-testid="doctor-panel-page">
     <header class="flex items-center justify-between gap-4">

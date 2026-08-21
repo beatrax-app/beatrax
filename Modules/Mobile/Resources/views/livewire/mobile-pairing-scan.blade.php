@@ -1,7 +1,7 @@
 {{--
-    Camera-first mobile pairing entry (D-01/D-02, MOBILE-01, 15-UI-SPEC.md
-    §1). Extends the Phase 12 pairing-flow-modal.blade.php step chrome (Step
-    N of 3 counters, min-h-[44px] buttons, JetBrains Mono word-code input,
+    Camera-first mobile pairing entry (15-UI-SPEC.md §1). Extends the
+    pairing-flow-modal.blade.php step chrome (Step N of 3 counters,
+    min-h-[44px] buttons, JetBrains Mono word-code input,
     calm-slate) as a standalone page rather than a nested modal step — the
     confirm/success step markup below is duplicated from
     pairing-flow-modal.blade.php's own confirm/success steps (a cross-module
@@ -31,7 +31,7 @@
      wire:key="pairing-step-{{ $step }}">
 <div class="max-w-lg mx-auto px-6 py-8 space-y-4">
 
-    {{-- ===== Step: camera scan (default landing, D-01) ===== --}}
+    {{-- ===== Step: camera scan (default landing) ===== --}}
     @if ($step === 'scan')
         <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.scan_heading') }}</h1>
         <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::pairing.scan_subtitle') }}</p>
@@ -124,7 +124,7 @@
         </div>
     @endif
 
-    {{-- ===== Step: enter a code (D-02 fallback — camera unavailable/denied or user choice) ===== --}}
+    {{-- ===== Step: enter a code (fallback — camera unavailable/denied or user choice) ===== --}}
     @if ($step === 'enter_code')
         <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.enter_heading') }}</h1>
 
@@ -191,7 +191,7 @@
         </div>
     @endif
 
-    {{-- ===== Step: confirm safety numbers (the trust gate, D-07/D-08) ===== --}}
+    {{-- ===== Step: confirm safety numbers (the trust gate) ===== --}}
     @if ($step === 'confirm')
         <div wire:poll.3s="checkPairingState">
             <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.confirm_heading') }}</h1>

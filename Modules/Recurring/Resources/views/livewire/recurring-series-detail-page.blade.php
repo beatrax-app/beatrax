@@ -25,7 +25,7 @@
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
-    {{-- Mobile top bar (D-05): back affordance targeting /recurring parent list.
+    {{-- Mobile top bar: back affordance targeting /recurring parent list.
          Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
          The page title is the series display name, truncated to one line.
          Must live INSIDE the root div — Livewire allows only one root element. --}}
@@ -89,7 +89,7 @@
                     @endforeach
                 </div>
             </div>
-            {{-- Back link: visible at desktop (mobile top bar handles phone D-05) --}}
+            {{-- Back link: visible at desktop (the mobile top bar handles phone) --}}
             <a
                 href="{{ route('recurring.index') }}"
                 class="hidden md:inline text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
@@ -125,7 +125,7 @@
                  viewport and the outer element is what scrolls. Put the floor on
                  the scroller itself and there is nothing left to scroll.
                  scroll="false" for the frame for the same reason — the scrolling
-                 already happened one level up (D-06). --}}
+                 already happened one level up. --}}
             <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 <div style="min-width: 360px;">
                     <x-core::data-table :scroll="false">

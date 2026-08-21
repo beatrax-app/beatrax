@@ -20,7 +20,7 @@
 @endphp
 
 {{--
-    Phone responsive pass (D-06, D-10, UI-SPEC §8/§9).
+    Phone responsive pass (UI-SPEC §8/§9).
 
     At <768px:
     - Goals list renders as .card-list-item rows (name .primary, progress/target .secondary)
@@ -61,7 +61,7 @@
             }
         </style>
 
-        {{-- Phone: .card-list-item rows (D-06) --}}
+        {{-- Phone: .card-list-item rows --}}
         <ul class="goals-phone-list space-y-0 rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden">
             @foreach ($rows as $row)
                 @php
@@ -80,7 +80,7 @@
                         </p>
                     </div>
                     <span class="amount">{{ $pct }}%</span>
-                    {{-- Row actions — always visible on phone (D-12). Drawn
+                    {{-- Row actions — always visible on phone. Drawn
                          as icons rather than the text characters they were:
                          a pencil, a tick and a box each carry their own
                          metrics, so none of them sat centred. --}}
@@ -292,7 +292,7 @@
     @endif
 
     {{-- ------------------------------------------------------------------- --}}
-    {{-- Phone bottom sheet (D-10, Pitfall 6)                                --}}
+    {{-- Phone bottom sheet                                                  --}}
     {{-- At <768px: slides up as a sheet. At >=768px: hidden (flux modal     --}}
     {{-- handles desktop). Same Livewire wire: bindings as the flux modal.   --}}
     {{-- ------------------------------------------------------------------- --}}

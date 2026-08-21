@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures dense tables scroll
+{{-- UI-SPEC §19: overflow-x-auto wrapper ensures dense tables scroll
      horizontally at phone width without breaking the page layout. --}}
 <div class="p-8 space-y-6 overflow-x-auto" data-testid="queue-inspector-page">
     <header class="space-y-1">

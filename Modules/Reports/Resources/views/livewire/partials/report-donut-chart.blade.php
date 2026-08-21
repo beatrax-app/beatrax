@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Report builder `donut` viz partial (Req 8) — the only viz using the
+    Report builder `donut` viz partial — the only viz using the
     flat `series: [n1, n2, ...]` + top-level `labels: [...]` ApexCharts
     shape (bar/line use the `{name, data}` series shape). Clones the Alpine
     x-init + data-options mount block verbatim from
@@ -8,8 +8,8 @@
 
     Variables in scope:
       $chartElementId : string
-      $rows           : list<Modules\Reports\Public\Dto\ReportResultRow>
-      $drilldownUrls  : list<string>  — parallel to $rows, one URL per segment (Req 12)
+      $rows           : list<Modules\Reports\Internal\Dto\ReportResultRow>
+      $drilldownUrls  : list<string>  — parallel to $rows, one URL per segment
       $metricLabel    : string
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
@@ -65,7 +65,7 @@
 @endphp
 
 {{--
-    CR-03: `buildOptions()` re-reads `data-options` (and re-attaches the
+    `buildOptions()` re-reads `data-options` (and re-attaches the
     dataPointSelection drilldown handler off the FRESH `beatraxDrilldownUrls`
     array) every time it's called — used both at `x-init` mount and again on
     every `report-updated` browser event (dispatched by

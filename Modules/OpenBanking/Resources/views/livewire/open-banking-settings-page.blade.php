@@ -42,7 +42,7 @@
         </div>
     </x-core::card>
 
-    {{-- ===== WR-07: re-confirm CTA — the SCA dance completed but the
+    {{-- ===== Re-confirm CTA — the SCA dance completed but the
          acknowledgement TTL lapsed before mount() could finalize the
          enable. Surface a visible re-confirm instead of a silent no-op. ===== --}}
     @if ($needsReconfirm)
@@ -62,14 +62,14 @@
         </x-core::alert>
     @endif
 
-    {{-- ===== B5: consent-expiry banner (Req 7/8) — rendered above the
+    {{-- ===== B5: consent-expiry banner — rendered above the
          transparency panel when consent has expired ===== --}}
     @include('openbanking::partials.open-banking-consent-banner')
 
-    {{-- ===== B4: transparency panel (Req 6) ===== --}}
+    {{-- ===== B4: transparency panel ===== --}}
     @include('openbanking::partials.open-banking-transparency-panel')
 
-    {{-- ===== B6: scheduled auto-sync + manual sync (Req 9) — only ever
+    {{-- ===== B6: scheduled auto-sync + manual sync — only ever
          rendered while OB is enabled; hidden entirely when off, per
          UI-SPEC's Copywriting Contract ("Sync-now disabled caption (OB
          off) | (button hidden entirely)") ===== --}}
@@ -129,7 +129,7 @@
         </div>
     @endif
 
-    {{-- ===== B7: guided ICS file-import affordance (Req 13) — always
+    {{-- ===== B7: guided ICS file-import affordance — always
          visible regardless of OB state, visually separated from the OB
          cards above by its own section label ===== --}}
     @include('openbanking::partials.open-banking-ics-import-card')

@@ -49,7 +49,7 @@
     @include('tax::components.tax-tag-popover')
 
     {{-- ============================================================
-         SEARCH TOOLBAR (Phase 8 — always visible on /transactions)
+         SEARCH TOOLBAR (always visible on /transactions)
          ============================================================ --}}
     @include('ledger::livewire.partials.search-toolbar')
 
@@ -84,7 +84,7 @@
     </header>
 
     @if ($isSearchMode && count($page->rows) === 0 && $searchTotalCount === 0)
-        {{-- No-results state (D-21) --}}
+        {{-- No-results state --}}
         @include('ledger::livewire.partials.search-no-results')
     @elseif (! $isSearchMode && count($page->rows) === 0)
         <p class="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500 dark:bg-slate-950 dark:text-slate-400 dark:border-slate-700">
@@ -94,13 +94,13 @@
         {{-- ============================================================
              PHONE card-list (visible only at <768px)
              CSS hides this div at >=768px via `display:none`.
-             Each card links to the transaction detail page (D-08).
+             Each card links to the transaction detail page.
              Iterates $accumulatedRows (the serialised scalar projection
              that TransactionsList accumulates across loadMore calls)
              rather than $page->rows so rows APPEND on scroll instead
              of replacing the visible page. Money is reconstructed from
              the minor+currency pair via the $rowMoney helper above.
-             In search mode: snippet rendered as a second line (D-30).
+             In search mode: snippet rendered as a second line.
              ============================================================ --}}
         <div class="md:hidden">
             <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
@@ -130,7 +130,7 @@
                                 <div class="min-w-0 flex-1">
                                     {{-- Primary: counterparty name (2-line truncate) --}}
                                     <p class="primary line-clamp-2">{{ $row['counterpartyName'] ?? '—' }}</p>
-                                    {{-- Search snippet second line (D-30 — phone two-line snippet rows) --}}
+                                    {{-- Search snippet second line (phone two-line snippet rows) --}}
                                     @if ($isSearchMode && isset($searchRows[$row['id']]))
                                         @php $sRow = $searchRows[$row['id']]; @endphp
                                         @if ($sRow->snippet !== null)
@@ -179,11 +179,11 @@
                                         </svg>
                                     </button>
                                 @endif
-                                {{-- Tax badge: always-visible at phone width (D-21). Parent-row
+                                {{-- Tax badge: always-visible at phone width. Parent-row
                                      badge unaffected by split state (UI-SPEC discretion — see the
                                      per-leg read-only badges in the expanded list below). --}}
                                 <x-tax::tax-badge :transaction="$row" :showAlways="true" />
-                                {{-- Cleared/uncleared/reconciled badge (SC-1, D-11). Always visible
+                                {{-- Cleared/uncleared/reconciled badge. Always visible
                                      at phone width, same as the tax badge. --}}
                                 <x-ledger::cleared-badge :transaction="['id' => $row['id'], 'status' => $row['status'] ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
                             </div>
@@ -234,7 +234,7 @@
                 @endforeach
             </div>
 
-            {{-- Infinite-scroll sentinel (D-09 / Pitfall 5).
+            {{-- Infinite-scroll sentinel.
                  Rendered inside this phone-only wrapper so the
                  IntersectionObserver never fires at desktop width.
                  wire:intersect fires loadMore when this element enters
@@ -268,7 +268,7 @@
              DESKTOP table (visible only at >=768px)
              CSS hides this div at <768px via `display:none`.
              In search mode: counterparty cell uses {!! !!} for server-
-             built FTS highlight markup (T-08-09 security boundary).
+             built FTS highlight markup — a security boundary.
              Snippet rendered as a second line beneath counterparty.
              ============================================================ --}}
         <div class="hidden md:block">
@@ -309,7 +309,7 @@
                         </td>
                         <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
                             {{-- In search mode: use {!! !!} ONLY for server-built FTS
-                                 highlight() markup — never for raw user input (T-08-09). --}}
+                                 highlight() markup — never for raw user input. --}}
                             @if ($isSearchRow && $sRow !== null && $sRow->highlightedCounterparty !== null)
                                 @if ($row->counterpartySlug !== null)
                                     <a
@@ -352,7 +352,7 @@
                         <td class="px-4 py-2 text-slate-500 dark:text-slate-400">
                             @if ($isSplitRow)
                                 {{-- Split badge REPLACES the InlineCategoryPicker for split
-                                     parents (D-01/D-11, UI-SPEC §5.1). No Livewire round
+                                     parents (UI-SPEC §5.1). No Livewire round
                                      trip — legs are already server-rendered below;
                                      visibility is a pure Alpine toggle. --}}
                                 <button
@@ -377,14 +377,14 @@
                                 )
                             @endif
                         </td>
-                        {{-- Tax badge: hover-reveal on desktop (D-19/D-20). Unchanged on
+                        {{-- Tax badge: hover-reveal on desktop. Unchanged on
                              search rows AND on split parents (UI-SPEC discretion — see
                              the per-leg read-only badges in the expanded sub-rows). --}}
                         <td class="px-4 py-2">
                             <x-tax::tax-badge :transaction="$rowArr" :showAlways="false" />
                         </td>
-                        {{-- Cleared/uncleared/reconciled badge (SC-1, D-11). Batch-loaded
-                             via $clearedState — no N+1 (Pitfall 1). --}}
+                        {{-- Cleared/uncleared/reconciled badge. Batch-loaded
+                             via $clearedState — no N+1. --}}
                         <td class="px-4 py-2">
                             <x-ledger::cleared-badge :transaction="['id' => $row->id, 'status' => $clearedState[$row->id] ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
                         </td>

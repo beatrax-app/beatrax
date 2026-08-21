@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    /budgets — the rebuilt zero-based envelope grid (Req 3/5/6/7/8/12).
+    /budgets — the rebuilt zero-based envelope grid.
 
     Assign-every-euro grid sourced from CarryoverQuery's genesis-to-target
     fold: per-envelope assigned (inline-editable) / spent / available, a
@@ -19,7 +19,7 @@
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
-    {{-- Header row: title + subtitle, month nav on the right (D-20) --}}
+    {{-- Header row: title + subtitle, month nav on the right --}}
     <header class="mb-6 flex items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('budgets::messages.page.title') }}</h1>
@@ -46,7 +46,7 @@
         </div>
     </header>
 
-    {{-- Sticky to-budget header (D-23) --}}
+    {{-- Sticky to-budget header --}}
     @php
         $toBudgetColour = $toBudgetMinor >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
     @endphp
@@ -62,7 +62,7 @@
         @endif
     </div>
 
-    {{-- Empty-state / copy-last-month banner (Req 6) --}}
+    {{-- Empty-state / copy-last-month banner --}}
     @if (! ($rows !== [] && collect($rows)->contains(static fn ($row): bool => $row->assignedMinor > 0 || $row->spentMinor > 0)))
         <div class="mb-6 rounded-lg border p-4 {{ $showCopyBanner ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20' : 'border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700' }}">
             <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('budgets::messages.empty.nothing_assigned_heading') }}</h2>
@@ -301,7 +301,7 @@
     @endif
 
     {{-- ------------------------------------------------------------------- --}}
-    {{-- Move-money modal (Req 5, D-19) — structural clone of Pots' pot-move --}}
+    {{-- Move-money modal — structural clone of Pots' pot-move --}}
     {{-- ------------------------------------------------------------------- --}}
     <flux:modal name="envelope-move" dismissible>
         <div class="pt-[44px]" style="max-width: 480px;">

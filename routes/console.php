@@ -78,7 +78,7 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
     }
 })->name('email-scan.incremental')->hourly()->withoutOverlapping(30);
 
-// Desktop-shell timer-based email auto-scan (D-06). The shipped
+// Desktop-shell timer-based email auto-scan. The shipped
 // NativePHP bundle has no always-on IMAP-idle daemon (that stays a
 // dev-box launchd concern); instead the scheduler — which runs
 // automatically inside a NativePHP app per the bundle scheduler
@@ -150,7 +150,7 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
     }
 })->name('receipts.process-fetched-inbox-messages')->hourly()->withoutOverlapping(30);
 
-// Hourly ICS "statement ready" nudge detector (Req 14, D-14/D-15):
+// Hourly ICS "statement ready" nudge detector:
 // dispatches DetectIcsStatementReadyJob per user. The job reads ONLY
 // inbox_messages.sender_email/.subject (metadata-only, never the .eml
 // body) and dispatches Modules\EmailScan\Public\Events\IcsStatementReady
@@ -243,7 +243,7 @@ Schedule::call(function (Dispatcher $bus): void {
 // Hourly anomaly safety-net sweep: fans out one SafetyNetAnomalySweepJob
 // per user, each re-evaluating that user's recently-imported-but-unalerted
 // transactions through the shared AnomalyEvaluator path — catching any
-// charge the reactive TransactionImported listener missed (D-12 safety
+// charge the reactive TransactionImported listener missed (a safety
 // net). The job's ShouldBeUniqueUntilProcessing lock keyed on userId
 // collapses a same-hour re-dispatch into a single queued sweep; the
 // withoutOverlapping(30) guard prevents this closure from racing a prior
@@ -259,15 +259,14 @@ Schedule::call(function (Dispatcher $bus): void {
 
 // Daily forecast projection sweep: fans out one baseline
 // ProjectForecastJob dispatch per horizon in
-// ProjectForecastJob::HORIZON_DAYS per user (the Phase 6 extension
+// ProjectForecastJob::HORIZON_DAYS per user (a later extension
 // added two long horizons, so sizing queue load from a hardcoded
 // horizon list here would undercount). The job's
 // ShouldBeUniqueUntilProcessing lock keyed on
 // (userId, 'baseline', horizonDays) collapses any same-day duplicate
 // trigger into a single queued run; the withoutOverlapping(30) guard
 // here prevents this scheduler closure from racing with a previous
-// tick. Wave 4 (Plan 10-05) extends the inner loop to also dispatch
-// per saved scenario.
+// tick. The inner loop also dispatches per saved scenario.
 // Closure DI mirrors the email-scan + receipts + recurring entries
 // above — Bus Dispatcher resolved through the container; no facade
 // reaches into module code. Method order .name() BEFORE
@@ -299,7 +298,7 @@ Schedule::call(function (Dispatcher $bus, ScenarioQuery $scenarioQuery): void {
 
 // Daily FX rate refresh: fans out one FetchFxRatesJob per user who has
 // explicitly opted into online rate fetching (fx_online_enabled = true).
-// Rate providers are ECB → Frankfurter → bundled snapshot (D-04/D-05).
+// Rate providers are ECB → Frankfurter → bundled snapshot.
 // Only opted-in users trigger outbound HTTP requests; local-only users
 // never see external network calls from this entry (local-only ethos).
 //
@@ -393,9 +392,9 @@ Schedule::call(function (Dispatcher $bus): void {
     ->timezone('Europe/Amsterdam')
     ->withoutOverlapping(30);
 
-// D-14 — the five Phase 18 notifications-and-reminders schedule entries:
-// four proactive triggers (payment reminders, position digest, budget
-// nudges, savings prompts) plus the D-18/D-37 retention sweep. All five
+// The five notifications-and-reminders schedule entries: four proactive
+// triggers (payment reminders, position digest, budget nudges, savings
+// prompts) plus the notification-inbox retention sweep. All five
 // fan out one job per user via ->lazyById(100), mirroring every per-user
 // entry above.
 //
@@ -406,19 +405,18 @@ Schedule::call(function (Dispatcher $bus): void {
 // `EmitPaymentRemindersJob` takes `$leadDays` and `EmitPositionDigestJob`
 // takes `$cadence` as constructor parameters rather than reading
 // `NotificationPreferenceQuery` themselves: reading it from inside
-// `Modules\Recurring` / `Modules\Position` would violate D-38 invariant 1
-// ("no trigger module may import `Modules\Notifications`"). Bridging here
-// keeps both of those modules wholly ignorant of notification delivery
-// concerns (see 18-14's `<planner_decisions>`).
+// `Modules\Recurring` / `Modules\Position` would break the invariant that
+// no trigger module may import `Modules\Notifications`. Bridging here
+// keeps both of those modules wholly ignorant of notification delivery.
 //
 // Trigger toggles (reminders/budget-nudges/savings-prompts enabled,
 // digest-cadence) are DELIBERATELY not consulted here to decide whether to
 // dispatch — `SuppressionEvaluator::shouldDeliver()` is the ONE place
-// delivery suppression is decided (D-38 invariant 4), and it always stores
+// delivery suppression is decided, and it always stores
 // the row even when a trigger is toggled off; only the OS/mobile push is
 // suppressed. Gating dispatch on a toggle here would silently stop rows
 // from ever being written for that trigger, which no other suppression
-// path assumes and Req 9's inbox-first contract would then be violated for
+// path assumes, and the inbox-first contract would then be violated for
 // a disabled trigger's own history.
 Schedule::call(function (Dispatcher $bus, NotificationPreferenceQuery $prefs): void {
     User::query()->lazyById(100)->each(function (User $user) use ($bus, $prefs): void {
@@ -444,7 +442,7 @@ Schedule::call(function (Dispatcher $bus, NotificationPreferenceQuery $prefs): v
 })->name('notifications.digest')->dailyAt($notificationsDailyTime)->withoutOverlapping(30);
 
 // Hourly (not daily) so "you're at 90%" arrives near the spend that
-// actually crossed the threshold rather than up to a day later. D-06's
+// actually crossed the threshold rather than up to a day later. The
 // per-period occurrence key already prevents the same crossing from
 // re-firing on the next tick within the same budget period.
 Schedule::call(function (Dispatcher $bus): void {
@@ -461,11 +459,11 @@ Schedule::call(function (Dispatcher $bus): void {
     });
 })->name('notifications.savings-prompts')->dailyAt($notificationsDailyTime)->withoutOverlapping(30);
 
-// 04:30 — the D-18/D-37 notification-inbox retention sweep. 04:30
+// 04:30 — the notification-inbox retention sweep. 04:30
 // deliberately sits between the two other daily-maintenance windows
 // already claimed above — `db:backup` at 03:00 and `counterparties.gc` at
 // 04:00 — so the prune never contends with either for the SQLite
-// single-writer lock. `PruneNotificationsJob` itself needs no KEK (D-37):
+// single-writer lock. `PruneNotificationsJob` itself needs no KEK:
 // its predicate keys solely on the always-plaintext `created_at` column,
 // never `title`/`body`/`params`/`trigger_type`, so the sweep stays bounded
 // even on a usually-locked or headless device.
@@ -475,10 +473,10 @@ Schedule::call(function (Dispatcher $bus): void {
     });
 })->name('notifications.prune')->dailyAt('04:30')->withoutOverlapping(30);
 
-// Daily open-banking auto-sync (D-13/Req 9): fans out one
+// Daily open-banking auto-sync: fans out one
 // SyncOpenBankingAccountJob per connection that is BOTH enabled AND has a
 // non-expired consent — the "no-op when OB is off or consent has expired"
-// requirement (Req 9 acceptance) is enforced HERE, at this enumeration
+// requirement is enforced HERE, at this enumeration
 // query's WHERE clause, not solely inside the job. `SyncOpenBankingAccountJob::
 // handle()` additionally re-checks both conditions defensively on pickup
 // (mirrors `IncrementalScanJob`'s "Early exit #1" needs_reauth check) for the
@@ -506,7 +504,7 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
         ->table('open_banking_connections')
         ->where('enabled', true)
         ->whereNotNull('consent_expires_at')
-        ->where('consent_expires_at', '>', now())   // no-op when expired, per Req 9
+        ->where('consent_expires_at', '>', now())   // no-op when consent has expired
         ->pluck('id');
     foreach ($connectionIds as $id) {
         $bus->dispatch(new SyncOpenBankingAccountJob((int) $id));

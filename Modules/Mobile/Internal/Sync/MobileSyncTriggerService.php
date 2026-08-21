@@ -54,7 +54,7 @@ final class MobileSyncTriggerService
         // pause-on-cellular is ON and the link is confirmed expensive.
         $skip = match (true) {
             $identity === null => 'no usable device identity',
-            ! $this->networkPolicy->shouldSyncNow() => 'D-10 pause-on-cellular gate',
+            ! $this->networkPolicy->shouldSyncNow() => 'pause-on-cellular gate',
             default => null,
         };
 

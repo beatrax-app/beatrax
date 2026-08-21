@@ -5,7 +5,7 @@
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-md mx-auto px-6 space-y-6 text-center">
         <div class="flex justify-center">
-            {{-- Brand mark — matches the welcome / login layout (D-18). --}}
+            {{-- Brand mark — matches the welcome / login layout. --}}
             <img
                 src="{{ asset('icon.png') }}"
                 alt="Beatrax"
@@ -15,7 +15,7 @@
 
         @if ($isPending)
             {{--
-                In-flight state (D-21). No CTA — the tick APPLIES the
+                In-flight state. No CTA — the tick APPLIES the
                 migrations rather than waiting for them, because the only
                 other caller runs before the window opens; polling alone
                 waited on a state nothing could change.

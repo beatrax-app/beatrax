@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Settings "Anomaly detection" section (D-11/D-18). Three sub-sections:
+    Settings "Anomaly detection" section. Three sub-sections:
     Sensitivity, Minimum charge amount, and the user-visible + removable
     Suppression rules list — nothing is muted invisibly.
 
@@ -66,7 +66,7 @@
         @endif
     </form>
 
-    {{-- Suppression rules (D-18) — collapsible, visible, removable. --}}
+    {{-- Suppression rules — collapsible, visible, removable. --}}
     <details class="mt-2" data-testid="suppression-rules">
         <summary class="cursor-pointer text-sm font-medium text-slate-900 dark:text-slate-100">
             {{ Lang::get('anomaly::settings.suppression.summary') }}

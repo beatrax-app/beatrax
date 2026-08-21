@@ -48,7 +48,7 @@
             :body="Lang::get('chains::hints.empty_body')"
         />
     @else
-        {{-- overflow-x: auto wrapper so dense hint rows scroll horizontally at phone width (D-06 power split) --}}
+        {{-- overflow-x: auto wrapper so dense hint rows scroll horizontally at phone width --}}
         <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
         <ul class="space-y-4" data-testid="chain-hints-list" style="min-width: 480px;">
             @foreach ($hints as $hint)

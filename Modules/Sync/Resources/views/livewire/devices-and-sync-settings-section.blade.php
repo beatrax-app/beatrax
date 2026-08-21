@@ -1,35 +1,35 @@
 {{--
-    Devices & Sync settings section — UI-SPEC Surface A (Phase 12, D-02/D-09/D-10/D-11/D-12)
-    + Phase 13 D-06 sync-status surface + D-01 relay endpoint URL field
-    + Phase 14 (14-UI-SPEC Surfaces A-D): encryption status row + enable-encryption
-      modal + per-row device remove/revoke.
+    Devices & Sync settings section — UI-SPEC Surface A. Owns the
+    enable-sync toggle, the paired-device list, the per-peer sync-status
+    surface, the relay endpoint URL field, and the at-rest encryption
+    status row with its enable and device-revocation modals.
 
     Mounted into the Core settings page via @livewire('sync.devices-and-sync-settings-section').
 
     Decisions enforced here:
-      - D-02: enable-sync is gated on an app-lock being configured. With no
+      - Enable-sync is gated on an app-lock being configured. With no
         app-lock the toggle is dimmed/disabled and an info notice with a
         "Go to App lock" link (-> #app-lock) is shown.
-      - D-09 (Phase 12): each device row shows an inline-renamable name (hover-reveal pencil).
-      - D-11 (Phase 12): "Pair a new device" opens the pairing-flow modal.
-      - D-12: identity is generated only on enable-sync; until then no device list.
-      - D-06 (Phase 13): per-peer sync status + overall "up to date · synced Nm ago"
+      - Each device row shows an inline-renamable name (hover-reveal pencil).
+      - "Pair a new device" opens the pairing-flow modal.
+      - Identity is generated only on enable-sync; until then no device list.
+      - Per-peer sync status + overall "up to date · synced Nm ago" is
         rendered via @livewire('sync.sync-status-section') when sync is on.
-      - D-01 (Phase 13): relay endpoint URL field (default none = LAN-direct);
-        non-HTTPS URL shows an insecure-connection warning (T-13-08 / Pitfall 6).
-        Writes are gated on app-lock (T-13-18).
-      - Phase 14 D-07 (mandatory-when-synced / optional single-device): the
-        encryption status row shows the blue decline-able offer ONLY when sync
+      - Relay endpoint URL field (default none = LAN-direct); a non-HTTPS
+        URL shows an insecure-connection warning. Writes are gated on
+        app-lock.
+      - Encryption is mandatory once synced and optional on a single
+        device: the status row shows the decline-able offer ONLY when sync
         is off; a synced-but-not-yet-encrypted device shows the transient
         "Securing your data…" auto-activation state with NO CTA and NO decline.
-      - Phase 14 D-02a/D-02c (honest messaging): the enable-encryption confirm
-        step discloses that amounts stay plaintext/aggregatable and the search
-        index keeps a plaintext shadow copy.
-      - Phase 14 D-06 (per-row remove): each non-self row gets a "Remove"
-        action opening the honest revocation modal (rotation stops future
-        updates; cannot erase data already on that device).
-      - Phase 14 (absent-copy rule): no "remote wipe" / "the other device's
-        data is deleted" / "your data is now safe from that device" language
+      - Honest messaging: the enable-encryption confirm step discloses that
+        amounts stay plaintext/aggregatable and the search index keeps a
+        plaintext shadow copy.
+      - Per-row remove: each non-self row gets a "Remove" action opening
+        the honest revocation modal (rotation stops future updates; it
+        cannot erase data already on that device).
+      - Absent-copy rule: no "remote wipe" / "the other device's data is
+        deleted" / "your data is now safe from that device" language
         anywhere in this file.
 
     Copywriting + tokens follow UI-SPEC; calm-slate (sketch-findings-beatrax),
@@ -45,7 +45,7 @@
         <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
     @endif
 
-    {{-- ===== Enable-sync toggle row (D-02 gate) ===== --}}
+    {{-- ===== Enable-sync toggle row (app-lock gate) ===== --}}
     <x-core::setting-row
         :label="Lang::get('sync::devices.enable_sync')"
         :description="Lang::get('sync::devices.enable_sync_help')"
@@ -75,8 +75,8 @@
         </div>
     @endif
 
-    {{-- ===== Phase 14 Surface A: encryption status row (14-UI-SPEC) =====
-         Shown alongside the sync controls regardless of sync state (D-07):
+    {{-- ===== Surface A: encryption status row =====
+         Shown alongside the sync controls regardless of sync state:
          single-device sync-off users see the optional decline-able offer;
          a synced-but-not-yet-encrypted device sees the mandatory transient
          "Securing your data…" state (no CTA, no decline); once ON, the
@@ -93,7 +93,7 @@
                     </span>
                 </x-core::setting-row>
             @elseif ($syncEnabled)
-                {{-- D-07 mandatory-when-synced: transient auto-activation. NO CTA, NO decline. --}}
+                {{-- Mandatory once synced: transient auto-activation. NO CTA, NO decline. --}}
                 <x-core::alert
                     tone="warning"
                     data-testid="encryption-securing-notice"
@@ -107,7 +107,7 @@
                     <p class="mt-1 text-xs">{{ Lang::get('sync::devices.do_not_close') }}</p>
                 </x-core::alert>
             @else
-                {{-- Single-device (sync off) optional offer — D-07 second bullet. --}}
+                {{-- Single-device (sync off) optional offer. --}}
                 <div
                     class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300"
                     role="note"
@@ -136,7 +136,7 @@
                     <li class="py-4" wire:key="device-{{ $device['id'] }}">
                         <div class="flex items-start justify-between gap-4">
                             <div class="min-w-0 flex-1 space-y-2">
-                                {{-- Name + inline rename (D-09) --}}
+                                {{-- Name + inline rename --}}
                                 @if ($renamingDeviceId === $device['id'])
                                     <div
                                         class="flex items-center gap-2"
@@ -184,7 +184,7 @@
                                             </span>
                                         @endif
 
-                                        {{-- Phase 14 Surface C: "Removed" replaces Confirmed/Awaiting (D-06). --}}
+                                        {{-- Surface C: "Removed" replaces Confirmed/Awaiting. --}}
                                         @if ($device['removed'] ?? false)
                                             <span
                                                 class="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-1 text-xs text-rose-700 dark:bg-rose-950 dark:text-rose-300"
@@ -204,7 +204,7 @@
                                     </div>
                                 @endif
 
-                                {{-- Word safety-number (D-08): 6 words, two rows of 3, mono uppercase --}}
+                                {{-- Word safety-number: 6 words, two rows of 3, mono uppercase --}}
                                 @if ($device['safety_number_words'] !== '')
                                     @php
                                         $words = preg_split('/\s+/', trim((string) $device['safety_number_words'])) ?: [];
@@ -237,7 +237,7 @@
                                 @endif
                             </div>
 
-                            {{-- Phase 14 Surface C: per-row Remove action (D-06/CRYPT-02).
+                            {{-- Surface C: per-row Remove action.
                                  Non-self, not-already-removed rows only. --}}
                             @if (! ($device['is_self'] ?? false) && ! ($device['removed'] ?? false))
                                 <button
@@ -257,7 +257,7 @@
                 @endforeach
             </ul>
 
-            {{-- Pair a new device (D-11) — dispatch a Livewire event the modal
+            {{-- Pair a new device — dispatch a Livewire event the modal
                  component listens for; it owns its own open state so the hosting
                  <flux:modal> sees a real false→true transition. --}}
             <x-core::neutral-button
@@ -268,13 +268,13 @@
                 {{ Lang::get('sync::devices.pair_new_device') }}
             </x-core::neutral-button>
 
-            {{-- The per-peer status surface (D-06) used to render here as well
+            {{-- The per-peer status surface used to render here as well
                  as at the top of the Data & Devices page, so that page carried
                  two identical status banners and two peer lists. This section
                  is only ever mounted there, so the copy above it is the one
                  that survives — status at the top, management here. --}}
 
-            {{-- ===== D-01 (Phase 13): relay endpoint URL (default none) ===== --}}
+            {{-- ===== Relay endpoint URL (default none) ===== --}}
             <div class="space-y-3 pt-2">
                 <div>
                     <label
@@ -311,7 +311,7 @@
                     </x-core::neutral-button>
                 </div>
 
-                {{-- Non-HTTPS warning (T-13-08 / Pitfall 6) --}}
+                {{-- Non-HTTPS warning --}}
                 @if ($relayIsInsecure)
                     <x-core::alert
                         tone="warning"
@@ -338,8 +338,8 @@
         </div>
     @endif
 
-    {{-- ===== Phase 14 Surface B: enable-encryption modal (single-device
-         optional-offer path only — 14-UI-SPEC). Confirm / progress / done /
+    {{-- ===== Surface B: enable-encryption modal (single-device
+         optional-offer path only). Confirm / progress / done /
          error inner states share one flux:modal keyed on $encryptionStep. ===== --}}
     @if ($showEncryptionModal)
         <flux:modal wire:model="showEncryptionModal" class="md:max-w-sm" data-testid="enable-encryption-modal">
@@ -438,7 +438,7 @@
         </flux:modal>
     @endif
 
-    {{-- ===== Phase 14 Surface D: device revocation modal (D-06/CRYPT-02).
+    {{-- ===== Surface D: device revocation modal.
          Honest warning: rotation stops FUTURE updates only; it cannot erase
          data already on the removed device. No "remote wipe" language. ===== --}}
     @if ($showRemoveModal && $removingDeviceId !== null)
@@ -487,7 +487,7 @@
         </flux:modal>
     @endif
 
-    {{-- ===== Pairing-flow modal (D-11) — the component owns its own flux:modal.
+    {{-- ===== Pairing-flow modal — the component owns its own flux:modal.
          Rendered unconditionally so the modal's wire:model="open" sees a real
          false→true transition when "Pair a new device" dispatches
          open-pairing-modal (a fresh already-true mount never triggers Flux). ===== --}}

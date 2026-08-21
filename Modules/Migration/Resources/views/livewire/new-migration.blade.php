@@ -13,7 +13,7 @@
 
     @if ($uploadError !== null)
         {{--
-            Req 1 inline error banner — populated by submit() when
+            Inline error banner — populated by submit() when
             ZipExtractor/StartMigrationRun/CheckForUpdates raises (corrupt
             file, unrecognized format, zip-bomb/zip-slip guard). The
             matching stack trace is also written to the Laravel log.

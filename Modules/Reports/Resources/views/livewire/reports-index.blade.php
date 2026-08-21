@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    `/reports/library` saved-report index (Req 9) — Cards|List CRUD:
+    `/reports/library` saved-report index — Cards|List CRUD:
     list/open/edit/delete + pin toggle. Cards-default grid mirroring
     `/counterparties` (999.6-PATTERNS.md "ReportsIndex.php" /
     999.6-UI-SPEC.md Component Inventory item 3).

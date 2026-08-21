@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the dense log pane
+{{-- UI-SPEC §19: overflow-x-auto wrapper ensures the dense log pane
      scrolls horizontally at phone width without breaking the page layout. --}}
 <div class="p-8 space-y-4 overflow-x-auto" data-testid="log-tailer-page">
     <header class="flex items-start justify-between gap-4">

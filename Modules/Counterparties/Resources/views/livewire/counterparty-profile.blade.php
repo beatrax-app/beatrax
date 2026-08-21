@@ -24,7 +24,7 @@
 <div style="padding: var(--space-6) var(--space-4); max-width: 980px; margin: 0 auto;" class="space-y-6">
     {{-- Tax tag picker — rendered once per profile (not per row). --}}
     @include('tax::components.tax-tag-popover')
-    {{-- Mobile top bar back affordance (D-05): shown at <1024px with ← to /counterparties.
+    {{-- Mobile top bar back affordance: shown at <1024px with ← to /counterparties.
          Must live INSIDE the root div — Livewire allows only one root element. --}}
     <x-core::mobile-top-bar
         :backUrl="route('counterparties.index')"
@@ -45,7 +45,7 @@
             </span>
         </header>
 
-        {{-- Hero stats strip: single-column at phone width (D-05), auto-fit at >=768px --}}
+        {{-- Hero stats strip: single-column at phone width, auto-fit at >=768px --}}
         <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-4);"
                  class="cp-profile-hero-stats">
             <div class="frame frame-tight">

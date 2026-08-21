@@ -1,8 +1,8 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Settings "Notifications" section (D-36). Two internal groups —
+    Settings "Notifications" section. Two internal groups —
     "What to notify me about" (4 toggles + lead time + cadence) then
-    "When and how" (quiet hours + hide details) — plus the D-35 read-only
+    "When and how" (quiet hours + hide details) — plus the read-only
     "Other devices" panel.
 
     Variables in scope:
@@ -144,7 +144,7 @@
         @endif
     </form>
 
-    {{-- Other devices (D-35) — visible, not editable. --}}
+    {{-- Other devices — visible, not editable. --}}
     <details class="mt-2" data-testid="other-device-preferences">
         <summary class="cursor-pointer text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.other_devices.summary') }}</summary>
         @if (count($otherDevices) === 0)

@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Search toolbar — always visible on /transactions once Phase 8 ships.
+    Search toolbar — always visible on /transactions.
 
     Contains:
     - Search input (wire:model.live.debounce.250ms="searchQuery")

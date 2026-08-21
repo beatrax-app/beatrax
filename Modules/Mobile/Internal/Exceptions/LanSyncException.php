@@ -16,7 +16,7 @@ final class LanSyncException extends RuntimeException
 
     public static function peerFailedConfirmedDeviceGate(): self
     {
-        return new self('LanSyncClient: desktop peer failed the confirmed-device auth gate (T-13-13).');
+        return new self('LanSyncClient: desktop peer failed the confirmed-device auth gate.');
     }
 
     // The peer told us, over its authenticated Noise session, that it no

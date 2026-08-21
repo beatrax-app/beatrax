@@ -8,8 +8,8 @@
 
     $dayDto: CalendarDayDto
 
-    Renders: SOD balance, entry rows with series + counterparty drill links (CAL-03),
-    approximate note (D-15), paid/missed state, EOD balance.
+    Renders: SOD balance, entry rows with series + counterparty drill links,
+    approximate note, paid/missed state, EOD balance.
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 <div class="cal-panel-header">
@@ -24,9 +24,9 @@
     >✖️</x-core::emoji-action>
 </div>
 
-{{-- SOD balance — "—" when computing OR when no honest SoD exists (WR-08:
+{{-- SOD balance — "—" when computing OR when no honest SoD exists:
      null sodBalanceMinor means the prior day carried no computed balance;
-     rendering €0,00 there would state a fake figure) --}}
+     rendering €0,00 there would state a fake figure --}}
 <div class="cal-panel-bal-row">
     <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">{{ Lang::get('calendar::messages.panel.start_of_day') }}</span>
     <span class="tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: var(--color-text);">
@@ -73,7 +73,7 @@
                                 {{ Lang::get('calendar::messages.panel.date_approximate') }}
                             </div>
                         @endif
-                        {{-- Drill-through links (CAL-03). route(), not a path
+                        {{-- Drill-through links. route(), not a path
                              built by hand: it encodes the slug, which arrived
                              here as stored data. --}}
                         <div class="mt-1 flex flex-wrap gap-2 text-xs" style="color: var(--color-text-muted);">

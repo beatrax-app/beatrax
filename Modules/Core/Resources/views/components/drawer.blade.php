@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Slide-over drawer (D-01/D-03, UI-SPEC §6.2, Pitfall 1).
+    Slide-over drawer (UI-SPEC §6.2).
 
     The drawer wraps the SINGLE @livewire('core.app-sidebar') mount for the
     entire app. At >=1024px (desktop) the .drawer-container is position:static;
@@ -8,10 +8,9 @@
     At <1024px (phone/tablet) it slides in from the left when the hamburger is
     tapped; the scrim closes it on outside tap; Escape also closes.
 
-    Pitfall 1 mitigation: exactly ONE sidebar mount lives here. The outer layout
-    must NOT contain a second @livewire('core.app-sidebar') call.
+    Exactly ONE sidebar mount lives here. The outer layout must NOT
+    contain a second @livewire('core.app-sidebar') call.
 
-    T-04-03-01: one mount only (verified by the acceptance test grep -c).
     Alpine's x-trap is deliberately absent. `x-trap.inert` on this overlay
     crashed the WebView renderer outright on Android: the tap registered, the
     renderer died, and every subsequent interaction did nothing while the page
@@ -20,10 +19,9 @@
     a keyboard dead end, but focus is no longer trapped inside it; restoring a
     trap needs one that does not walk the document marking siblings inert.
 
-    D-05 (Phase 15 Plan 10): the Data & Devices entry
-    (route('data-devices.index')) lives INSIDE the embedded core.app-sidebar
-    component below, not as separate markup here — this drawer has exactly one
-    content source (Pitfall 1 above), so any nav row or section added to
+    The Data & Devices entry (route('data-devices.index')) lives INSIDE the
+    embedded core.app-sidebar component below, not as separate markup here —
+    this drawer has exactly one content source, so any nav row or section added to
     app-sidebar.blade.php automatically surfaces in both the desktop static
     sidebar and this phone/tablet slide-over drawer without touching this
     file's structure.
@@ -68,6 +66,6 @@
     @keydown.escape="$store.mobileNav.close()"
     style="width: var(--drawer-w); position: fixed; top: 0; left: 0; height: 100dvh; z-index: 50;"
 >
-    {{-- Single mount of the sidebar Livewire component (Pitfall 1 — exactly one) --}}
+    {{-- Single mount of the sidebar Livewire component — exactly one --}}
     @livewire('core.app-sidebar')
 </div>

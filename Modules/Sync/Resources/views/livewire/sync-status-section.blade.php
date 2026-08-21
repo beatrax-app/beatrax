@@ -1,5 +1,5 @@
 {{--
-    Sync-status surface — D-06 (Phase 13).
+    Sync-status surface.
     Mounted inside the "Devices & Sync" settings section via
     @livewire('sync.sync-status-section') in devices-and-sync-settings-section.blade.php.
 

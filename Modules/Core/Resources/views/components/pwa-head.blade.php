@@ -1,5 +1,5 @@
 {{--
-    PWA head block (D-14/D-18/D-21, PWA-01/02). Shared by the main app and
+    PWA head block. Shared by the main app and
     lock shells; the dev-console and wizard shells omit it.
     - Manifest link: tells browsers/OS install affordance where to find
       the app name, icons, and display mode (standalone).

@@ -6,10 +6,10 @@
     on one screen.
 
     Security decisions enforced here:
-      - Enable flow collects the account password (D-21 recovery wrap requirement).
-      - Disable and change-PIN use Flux modals for PIN-confirmation (D-23).
-      - Idle timeout persists instantly without a modal (D-23 exemption).
-      - Biometric row is a slot placeholder only (05-05 wires enrollment).
+      - Enable flow collects the account password: the recovery wrap needs it.
+      - Disable and change-PIN use Flux modals for PIN-confirmation.
+      - Idle timeout persists instantly without a modal.
+      - Biometric row is a slot placeholder only; enrollment is wired elsewhere.
 
     Copywriting contract (UI-SPEC Copywriting section):
       - Section heading: "App lock"
@@ -120,7 +120,7 @@
             </x-core::secondary-button>
         </div>
 
-        {{-- Phase 14 D-10: re-secured-encryption note appended to the Change-PIN
+        {{-- Re-secured-encryption note appended to the Change-PIN
              success flash — shown only when an encrypted keyring exists for
              this user (changePin() gates the message itself). --}}
         @if ($changePinSuccessMessage !== '')
@@ -129,7 +129,7 @@
             </p>
         @endif
 
-        {{-- 3b': Forgot PIN recovery (D-11/D-21) — account password sets a new PIN --}}
+        {{-- 3b': Forgot PIN recovery — account password sets a new PIN --}}
         <div class="py-1">
             <button
                 type="button"
@@ -142,9 +142,9 @@
             </button>
         </div>
 
-        {{-- 3c: Biometric enrollment row (05-05)
+        {{-- 3c: Biometric enrollment row
 
-             Detects browser WebAuthn capability and tells the server (D-13).
+             Detects browser WebAuthn capability and tells the server.
 
              The comment lives HERE, not inside x-init: Alpine compiles an
              attribute as an expression, so a leading `//` pushes the real code
@@ -195,7 +195,7 @@
             @endif
         </div>
 
-        {{-- De-enroll confirmation modal (D-23) --}}
+        {{-- De-enroll confirmation modal --}}
         @if ($confirmingDeenroll)
             <flux:modal wire:model="confirmingDeenroll" class="md:max-w-sm">
                 <div class="space-y-4 p-6">
@@ -256,7 +256,7 @@
         </select>
     </div>
 
-    {{-- ===== 3e: Disable lock modal (D-23 confirmation) ===== --}}
+    {{-- ===== 3e: Disable lock modal (PIN confirmation) ===== --}}
     @if ($confirmingDisable)
         <flux:modal wire:model="confirmingDisable" class="md:max-w-sm">
             <div class="space-y-4 p-6">
@@ -294,7 +294,7 @@
         </flux:modal>
     @endif
 
-    {{-- ===== 3e': Forgot PIN recovery modal (D-11/D-21) ===== --}}
+    {{-- ===== 3e': Forgot PIN recovery modal ===== --}}
     @if ($confirmingForgotPin)
         <flux:modal wire:model="confirmingForgotPin" class="md:max-w-sm">
             <div class="space-y-4 p-6">
@@ -358,7 +358,7 @@
         </flux:modal>
     @endif
 
-    {{-- ===== 3e: Change PIN modal (D-23 confirmation) ===== --}}
+    {{-- ===== 3e: Change PIN modal (PIN confirmation) ===== --}}
     @if ($confirmingChangePin)
         <flux:modal wire:model="confirmingChangePin" class="md:max-w-sm">
             <div class="space-y-4 p-6">

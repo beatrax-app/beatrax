@@ -1,6 +1,6 @@
 {{--
-    Blocking, resumable, full-screen initial-sync setup gate (D-03/D-04,
-    15-UI-SPEC.md §2). Naked full-screen safe-area chrome (no top-bar, no
+    Blocking, resumable, full-screen initial-sync setup gate
+    (15-UI-SPEC.md §2). Naked full-screen safe-area chrome (no top-bar, no
     drawer) reused verbatim from Modules/Auth/Resources/views/livewire/
     lock-screen.blade.php lines 1-5; the 48x48 /icon.png app-mark block is
     the same reuse.
@@ -11,7 +11,7 @@
     aria-live="polite" sits on the HEADING only — never on the ticking
     N-of-M number — to avoid AT spam (UI-SPEC Copywriting).
 
-    This screen is genuinely blocking (D-03): it offers exactly one path
+    This screen is genuinely blocking: it offers exactly one path
     forward — waiting for parity — and no other interactive control.
 --}}
 @use('Modules\Core\Public\Support\Lang')
@@ -36,7 +36,7 @@
             />
         </div>
 
-        {{-- Headline (D-03/D-04) — resume copy, never re-shows the
+        {{-- Headline — resume copy, never re-shows the
              fresh-start line once this render already reflects progress. --}}
         <p aria-live="polite" class="text-lg font-semibold text-slate-900 dark:text-slate-100">
             @if ($isResuming)

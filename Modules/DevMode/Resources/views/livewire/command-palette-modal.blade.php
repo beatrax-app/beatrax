@@ -101,7 +101,7 @@
                             autocomplete="off"
                         />
 
-                        {{-- Token autocomplete overlay (D-26, UI-SPEC #7) --}}
+                        {{-- Token autocomplete overlay (UI-SPEC #7) --}}
                         <template x-if="tokenSuggestVisible && tokenSuggestions.length > 0">
                             <div
                                 class="srch-token-suggest"
@@ -146,11 +146,11 @@
                     </aside>
 
                     <main class="palette-results flex-1 p-2 overflow-y-auto">
-                        {{-- Server-backed sections — only rendered when Search module is wired and query >= 2 chars (D-01) --}}
+                        {{-- Server-backed sections — only rendered when Search module is wired and query >= 2 chars --}}
                         @if($searchAvailable)
                         <template x-if="query.length >= 2">
                             <div>
-                                {{-- Section 1: Transactions (D-01, D-19, UI-SPEC #6) --}}
+                                {{-- Section 1: Transactions (UI-SPEC #6) --}}
                                 <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
                                     {{ Lang::get('dev::palette.section_transactions') }}
                                 </div>
@@ -164,7 +164,7 @@
                                             >
                                                 <span class="ic w-5 text-center text-slate-400 dark:text-slate-500 mt-0.5 shrink-0" aria-hidden="true">≡</span>
                                                 <div class="palette-txn-row-text flex-1 min-w-0">
-                                                    {{-- Line 1: counterparty name + amount (D-19) --}}
+                                                    {{-- Line 1: counterparty name + amount --}}
                                                     <div class="flex items-baseline gap-2">
                                                         {{-- x-text, NOT x-html: counterpartyName is raw user input
                                                              (the palette does not highlight the name). Binding it with
@@ -178,7 +178,7 @@
                                                             x-text="hit.amount"
                                                         ></span>
                                                     </div>
-                                                    {{-- Line 2: matched snippet (D-19) --}}
+                                                    {{-- Line 2: matched snippet --}}
                                                     <template x-if="hit.snippet">
                                                         <div
                                                             class="text-xs text-slate-500 dark:text-slate-400 truncate"
@@ -190,7 +190,7 @@
                                             </div>
                                         </template>
 
-                                        {{-- "See all N results →" row (D-01) --}}
+                                        {{-- "See all N results →" row --}}
                                         <div
                                             class="palette-row palette-see-all flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                                             x-on:click="seeAllResults()"
@@ -207,7 +207,7 @@
                                     </div>
                                 </template>
 
-                                {{-- Section 2: Counterparties (D-28) --}}
+                                {{-- Section 2: Counterparties --}}
                                 <template x-if="serverEntityHits.filter(e => e.type === 'counterparty').length > 0">
                                     <div>
                                         <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
@@ -226,7 +226,7 @@
                                     </div>
                                 </template>
 
-                                {{-- Section 3: Categories (D-28) --}}
+                                {{-- Section 3: Categories --}}
                                 <template x-if="serverEntityHits.filter(e => e.type === 'category').length > 0">
                                     <div>
                                         <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
@@ -245,7 +245,7 @@
                                     </div>
                                 </template>
 
-                                {{-- Section 4: Goals / Pots / Recurring (D-28) --}}
+                                {{-- Section 4: Goals / Pots / Recurring --}}
                                 <template x-if="serverEntityHits.filter(e => ['goal','pot','recurring'].includes(e.type)).length > 0">
                                     <div>
                                         <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
@@ -270,7 +270,7 @@
                         </template>
                         @endif
 
-                        {{-- Section 5: Existing Fuse.js commands/views/actions results (D-01 ordering) --}}
+                        {{-- Section 5: existing Fuse.js command/view/action results, ordered last --}}
                         <template x-for="(hit, i) in results.slice(0, 50)" :key="hit.item.id">
                             <div
                                 class="palette-row flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer"

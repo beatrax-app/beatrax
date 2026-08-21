@@ -2,7 +2,7 @@
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-md mx-auto px-6 space-y-6 text-center">
         <div class="flex justify-center">
-            {{-- Brand mark — same surface the welcome / login screens use (D-18). --}}
+            {{-- Brand mark — same surface the welcome / login screens use. --}}
             <img
                 src="{{ asset('icon.png') }}"
                 alt="Beatrax"

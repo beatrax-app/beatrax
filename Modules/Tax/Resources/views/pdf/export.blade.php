@@ -167,7 +167,7 @@
         @endphp
 
         <div @class(['no-cat-section' => $isNoCategory])>
-            {{-- {{ }} already escapes — an extra e() double-encodes & < ' (WR-10). --}}
+            {{-- {{ }} already escapes — an extra e() double-encodes & < '. --}}
             <h2>{{ $isNoCategory ? Lang::get('tax::pdf.uncategorised') : $catName }}</h2>
 
             <table class="tx-table">

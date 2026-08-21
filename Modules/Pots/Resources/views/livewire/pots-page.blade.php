@@ -1,9 +1,9 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
     /pots page — savings pots grouped by account with per-account reconciliation
-    headers (real · allocated · unallocated, D-15), negative-unallocated amber
-    warning (D-02), Flux modals for create/edit/fund/move/withdraw (D-17),
-    inline movement history expansion per card (D-17), archive/restore micro-
+    headers (real · allocated · unallocated), negative-unallocated amber
+    warning, Flux modals for create/edit/fund/move/withdraw,
+    inline movement history expansion per card, archive/restore micro-
     confirm, and an "Archived pots" disclosure.
 
     Calm-slate direction: emerald goal links, amber negative-unallocated warning,
@@ -31,12 +31,12 @@
 @endphp
 
 {{--
-    Phone responsive pass (D-06, D-10, D-12, UI-SPEC §8).
+    Phone responsive pass (UI-SPEC §8).
 
     At <768px:
     - Pots render as .card-list-item rows (pot name .primary, balance .amount, account .secondary)
     - Fund/Move/Create/Edit modals become bottom sheets (x-core::bottom-sheet)
-    - Row actions (Fund, Move, Edit) are always visible on phone (D-12)
+    - Row actions (Fund, Move, Edit) are always visible on phone
     At >=768px: existing card grid + Flux modals unchanged.
 --}}
 {{-- Inside the single root, not beside it. Livewire binds wire:id to the
@@ -83,7 +83,7 @@
             @endif
         </x-core::empty-state>
     @else
-        {{-- Phone: flat .card-list-item list across all accounts (D-06) --}}
+        {{-- Phone: flat .card-list-item list across all accounts --}}
         <div class="pots-phone-list rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden">
             @foreach ($groups as $accountId => $pots)
                 @foreach ($pots as $pot)
@@ -97,7 +97,7 @@
                              the amount left the name 6px wide on a 375pt
                              screen, so the row said which pot it was not. --}}
                         <div class="flex w-full items-center justify-end gap-1">
-                        {{-- Row actions always visible on phone (D-12) --}}
+                        {{-- Row actions always visible on phone --}}
                         <x-core::emoji-action
                             :label="Lang::get('pots::messages.actions.fund')"
                             x-on:click=" $wire.set('operationPotId', {{ $pot->id }}); $wire.set('operationKind', 'fund'); $dispatch('open-sheet', { name: 'pot-fund' }); "
@@ -127,7 +127,7 @@
             @endforeach
         </div>
 
-        {{-- Desktop: Account groups (D-14): grouped by account, ordered by account name --}}
+        {{-- Desktop: Account groups: grouped by account, ordered by account name --}}
         <div class="pots-desktop-list space-y-8">
             @foreach ($groups as $accountId => $pots)
                 @php
@@ -146,7 +146,7 @@
                         >{{ Lang::get('pots::messages.add_pot') }}</x-core::secondary-button>
                     </div>
 
-                    {{-- Negative-unallocated amber warning banner (D-02) --}}
+                    {{-- Negative-unallocated amber warning banner --}}
                     @if ($rec !== null && $rec->isOverAllocated)
                         <x-core::alert tone="warning" class="mb-2" role="alert">
                             <span class="mr-1" aria-hidden="true">
@@ -156,7 +156,7 @@
                         </x-core::alert>
                     @endif
 
-                    {{-- Reconciliation line (D-15) --}}
+                    {{-- Reconciliation line --}}
                     @if ($rec !== null)
                         <p class="mb-4 text-xs text-slate-500 dark:text-slate-400" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                             {{ Lang::get('pots::messages.recon.real_balance') }} {{ $fmt($rec->realBalanceMinor, $rec->currency) }}
@@ -196,7 +196,7 @@
                                     {{ $fmt($pot->balanceMinor, $pot->currency) }}
                                 </p>
 
-                                {{-- Coverage insight (D-12): category-linked only --}}
+                                {{-- Coverage insight: category-linked only --}}
                                 @if ($pot->categoryId !== null && $pot->categorySpentMinor !== null)
                                     <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                                         {{ $pot->categoryName }}: {{ $fmt($pot->categorySpentMinor, $pot->currency) }} {{ Lang::get('pots::messages.coverage.spent') }} · {{ $fmt($pot->balanceMinor, $pot->currency) }} {{ Lang::get('pots::messages.coverage.in_pot') }}
@@ -297,7 +297,7 @@
                                     </div>
                                 @endif
 
-                                {{-- Inline movement history (D-17) — Alpine x-show / x-collapse --}}
+                                {{-- Inline movement history — Alpine x-show / x-collapse --}}
                                 @if (count($pot->recentMovements) > 0)
                                     <div
                                         x-data="{ open: false }"
@@ -407,7 +407,7 @@
     @endif
 
     {{-- ------------------------------------------------------------------- --}}
-    {{-- Phone bottom sheet: Create / Edit pot (D-10, Pitfall 6)             --}}
+    {{-- Phone bottom sheet: Create / Edit pot                                --}}
     {{-- At <768px: slides up as a sheet. At >=768px: flux modal handles it. --}}
     {{-- ------------------------------------------------------------------- --}}
     <x-core::bottom-sheet name="pot-form" title="{{ $editPotId ? Lang::get('pots::messages.form.edit_title') : Lang::get('pots::messages.form.create_title') }}">
@@ -470,7 +470,7 @@
     </x-core::bottom-sheet>
 
     {{-- ------------------------------------------------------------------- --}}
-    {{-- Phone bottom sheet: Fund pot (D-10)                                  --}}
+    {{-- Phone bottom sheet: Fund pot                                         --}}
     {{-- ------------------------------------------------------------------- --}}
     <x-core::bottom-sheet name="pot-fund" title="{{ Lang::get('pots::messages.fund.title') }}">
         <form wire:submit="fundPot" class="space-y-4">
@@ -509,7 +509,7 @@
     </x-core::bottom-sheet>
 
     {{-- ------------------------------------------------------------------- --}}
-    {{-- Phone bottom sheet: Move pot (D-10)                                  --}}
+    {{-- Phone bottom sheet: Move pot                                         --}}
     {{-- ------------------------------------------------------------------- --}}
     {{-- Withdraw sheet. The phone row's ↑ dispatches open-sheet for this
          name; without a sheet listening, the only thing that answered was a
@@ -655,7 +655,7 @@
                     @endforeach
                 </x-core::form-field>
 
-                {{-- Initial amount (create only, D-08) --}}
+                {{-- Initial amount (create only) --}}
                 @if (! $editPotId)
                     <div>
                         <x-core::form-field
@@ -676,7 +676,7 @@
                     </div>
                 @endif
 
-                {{-- Link to (D-15): Goal | None — category-linking is retired --}}
+                {{-- Link to: Goal | None — category-linking is retired --}}
                 {{-- "Link to" was a <label> with no `for` and nothing inside it,
                      which labels exactly nothing. wire:model emits no name=, so
                      the two radios were not one group to the browser either. --}}

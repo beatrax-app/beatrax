@@ -67,7 +67,7 @@
                                  form control, so there is nothing for a label to
                                  associate with. --}}
                             <p class="block text-xs font-medium text-slate-500 mt-3 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.redirect_uri_label') }}</p>
-                            {{-- IN-04: the redirect URI is carried on a
+                            {{-- The redirect URI is carried on a
                                  data-* attribute (HTML-escaped by Blade) and
                                  read via $el.dataset — never string-baked into
                                  the inline JS handler. --}}
@@ -184,7 +184,7 @@
                         wire:click="continueToConsent"
                     >{{ Lang::get('openbanking::messages.wizard.continue') }}</x-core::neutral-button>
                 @elseif ($step === 5)
-                    {{-- WR-10: same-tab redirect (no target="_blank") so the
+                    {{-- Same-tab redirect (no target="_blank") so the
                          callback re-mounts THIS page and the return-flash
                          enable fires. The href fallback (middle/cmd-click or
                          no-JS) carries institution_id, which the connect

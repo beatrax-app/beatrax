@@ -42,7 +42,7 @@
         </p>
     </header>
 
-    {{-- Toolbar: phone collapse (D-07) vs. full desktop toolbar --------- --}}
+    {{-- Toolbar: phone collapse vs. full desktop toolbar --------- --}}
     {{-- Phone (<768px): filter-sheet-trigger row only (search + Filters badge) --}}
     <div class="phone-only">
         <x-core::filter-sheet-trigger :activeCount="0" searchModel="" />

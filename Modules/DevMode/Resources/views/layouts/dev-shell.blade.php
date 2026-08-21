@@ -140,7 +140,7 @@
         {{-- Search palette endpoint — provides server-backed transaction + entity
              hits to the ⌘K palette via $wire.search(q). Mounted in the dev-shell
              as well as the main app layout so ⌘K palette search works inside
-             /dev/* pages (Plan 08-05, SRCH-02). --}}
+             /dev/* pages. --}}
         @livewire('search.palette-search-endpoint')
 
         {{-- Arg-prompt modal for SAFE-tier commands with args.

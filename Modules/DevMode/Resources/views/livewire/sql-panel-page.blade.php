@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the SQL panel and
+{{-- UI-SPEC §19: overflow-x-auto wrapper ensures the SQL panel and
      schema viewer scroll horizontally at phone width without breaking the layout. --}}
 <div class="flex min-h-full overflow-x-auto" data-testid="sql-panel-page">
     {{-- Inner sidebar: Schema viewer (lives inside /dev/sql, not a separate route). --}}

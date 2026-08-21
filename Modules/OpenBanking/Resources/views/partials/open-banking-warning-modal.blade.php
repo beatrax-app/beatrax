@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- Loud third-party-data warning gate (Surface B2, Req 4, D-12).
+{{-- Loud third-party-data warning gate (Surface B2).
      The ONE deliberate visual break from the calm-slate room: 2px rose
      border, tinted body — this must read as a genuine speed bump, not a
      dismissible notice. `role="alertdialog"` (stronger than Flux's default

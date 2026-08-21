@@ -43,11 +43,11 @@
             @endphp
             @foreach ($stepKeys as $index => $stepKey)
                 @php
-                    $status = $progress[$stepKey]['status'] ?? \Modules\Onboarding\Public\Enums\WizardStepStatus::Pending->value;
+                    $status = $progress[$stepKey]['status'] ?? \Modules\Onboarding\Internal\Enums\WizardStepStatus::Pending->value;
                     $isCurrent = $stepKey === $currentStepKey;
                     $dotClass = match (true) {
                         $isCurrent => 'wiz-dot now',
-                        $status === \Modules\Onboarding\Public\Enums\WizardStepStatus::Done->value, $status === \Modules\Onboarding\Public\Enums\WizardStepStatus::Skipped->value => 'wiz-dot done',
+                        $status === \Modules\Onboarding\Internal\Enums\WizardStepStatus::Done->value, $status === \Modules\Onboarding\Internal\Enums\WizardStepStatus::Skipped->value => 'wiz-dot done',
                         default => 'wiz-dot',
                     };
                 @endphp

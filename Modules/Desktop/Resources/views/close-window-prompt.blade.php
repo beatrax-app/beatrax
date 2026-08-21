@@ -48,7 +48,7 @@
                 {{--
                     "Keep running in the tray" — primary action,
                     emerald-600, default-focused (autofocus). Keeps
-                    the D-05 worker + D-06 scheduler alive so the
+                    the worker + scheduler alive so the
                     partner's background work continues uninterrupted.
                 --}}
                 <button

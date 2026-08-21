@@ -1,13 +1,13 @@
-{{-- /chains/review page (D-86 / D-87, CHN-03).
+{{-- /chains/review page.
 
      Renders the user's open `state='candidate'` chain_links as a calm
      list of rows, sorted by confidence DESC then id DESC. Each row
      shows the from / to counterparties, the kind label ("PayPal
      funding" / "Bulk iDEAL settlement"), and Confirm + Reject buttons
      that delegate to the same Public action classes the chain drawer
-     uses (D-86 dual-surface).
+     uses.
 
-     Auto-promotion hint (D-87): the "One more confirm…" inline copy
+     Auto-promotion hint: the "One more confirm…" inline copy
      renders only on rows where `confirmsRemaining === 1` — the only
      proactive nudge about the learning loop.
 
@@ -16,7 +16,7 @@
      anywhere.
 
      Copy is locked verbatim against 05-UI-SPEC.md § Copywriting
-     Contract → "/chains/review page (D-86 / D-87)". --}}
+     Contract → "/chains/review page". --}}
 
 @use('Modules\Core\Public\Support\Lang')
 @php
@@ -69,7 +69,7 @@
             :body="Lang::get('chains::review.empty_body')"
         />
     @else
-        {{-- overflow-x: auto wrapper so dense chain rows scroll horizontally at phone width (D-06 power split) --}}
+        {{-- overflow-x: auto wrapper so dense chain rows scroll horizontally at phone width --}}
         <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
         <ul class="space-y-4" style="min-width: 480px;">
             @foreach ($candidates as $row)

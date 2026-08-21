@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    /tax year cockpit — TAX-02 / D-09.
+    /tax year cockpit.
 
     $data:           TaxYearData|null  — grouped categories + totals for the selected year
     $availableYears: array<int>        — years with tags (for year switcher options)
@@ -138,7 +138,7 @@
         @if ($data !== null)
 
         {{-- ────────────────────────────────────────────────────────────────── --}}
-        {{-- Year-totals strip (D-11/D-12)                                      --}}
+        {{-- Year-totals strip                                                  --}}
         {{-- ────────────────────────────────────────────────────────────────── --}}
 
             <div class="tax-totals-strip mb-6">
@@ -202,7 +202,7 @@
             @else
 
                 {{-- ──────────────────────────────────────────────────────────── --}}
-                {{-- Category sections (D-11 — one per category + "No cat" last) --}}
+                {{-- Category sections — one per category + "No cat" last --}}
                 {{-- ──────────────────────────────────────────────────────────── --}}
 
                 <div class="space-y-4">
@@ -329,7 +329,7 @@
                                     </tbody>
                                 </table>
 
-                                {{-- Phone: card-per-row (Section 17 — D-21 card-per-row pattern) --}}
+                                {{-- Phone: card-per-row (Section 17) --}}
                                 <ul class="divide-y sm:hidden" style="border-color: var(--color-border);">
                                     @foreach ($rows as $row)
                                         @php

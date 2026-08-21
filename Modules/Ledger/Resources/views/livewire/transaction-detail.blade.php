@@ -18,7 +18,7 @@
     {{-- Tax tag picker — rendered once per page (not per row). --}}
     @include('tax::components.tax-tag-popover')
 
-    {{-- Mobile top bar (D-05): back affordance targeting /transactions parent list.
+    {{-- Mobile top bar: back affordance targeting /transactions parent list.
          Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
          The page title is "Transaction" + the posted date for context. --}}
     <x-core::mobile-top-bar
@@ -31,7 +31,7 @@
             <header class="space-y-1">
                 <div class="flex items-center gap-3">
                     <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::detail.heading') }}</h1>
-                    {{-- Cleared/uncleared/reconciled badge + toggle (SC-1, D-11). --}}
+                    {{-- Cleared/uncleared/reconciled badge + toggle. --}}
                     <x-ledger::cleared-badge :transaction="['id' => $transaction->id, 'status' => $clearedStatus ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
                 </div>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -81,8 +81,8 @@
                 @endif
             </div>
 
-            {{-- Split editor (Phase 13.1 Plan 05, UI-SPEC §7): inline, gated to
-                 non-transfer types (Req 6, D-07/D-08). Placed between the
+            {{-- Split editor (UI-SPEC §7): inline, gated to
+                 non-transfer types. Placed between the
                  money dl and Reclassify per §7.1 — category is the most
                  fundamental fact about a transaction after its amount. --}}
             @if ($isSplittable ?? false)
@@ -121,7 +121,7 @@
                                 {{ Lang::get('ledger::detail.split.total', ['amount' => $fmt(Money::ofMinor($transaction->settled_amount_minor, $transaction->settled_currency))]) }}
                             </p>
                             @if ($hasPersistedSplit)
-                                {{-- D-06: tax ownership moves to legs once a split is persisted. --}}
+                                {{-- Tax ownership moves to legs once a split is persisted. --}}
                                 <p class="text-xs text-slate-400 dark:text-slate-500" data-testid="split-tax-ownership-note">
                                     {{ Lang::get('ledger::detail.split.tax_per_category') }}
                                 </p>
@@ -343,8 +343,8 @@
                 </section>
             @endif
 
-            {{-- Tax badge: sits next to the reclassify section per D-01.
-                 Suppressed once the transaction is split (D-06) — tax
+            {{-- Tax badge: sits next to the reclassify section.
+                 Suppressed once the transaction is split — tax
                  ownership moves to the legs (see the Split section above). --}}
             @if (isset($txTaxRow) && ! ($hasPersistedSplit ?? false))
                 <section
@@ -413,7 +413,7 @@
                 </div>
             </section>
 
-            {{-- Categorization provenance panel (D-712).
+            {{-- Categorization provenance panel.
 
                  Renders inline between the Reclassify section and the
                  View chain section. Three variants per UI-SPEC:
@@ -639,8 +639,8 @@
             </section>
 
             @if (($chainAvailable ?? false) === true)
-                {{-- UI-02 / CHN-04: "View chain" trigger opens the chain
-                     drill-down drawer (D-90, first Flux flyout in the
+                {{-- "View chain" trigger opens the chain
+                     drill-down drawer (the first Flux flyout in the
                      project). Text-link styling per UI-SPEC § Chain
                      drill-down drawer — visually subordinate to the
                      Reclassify save button so the page focal hierarchy
