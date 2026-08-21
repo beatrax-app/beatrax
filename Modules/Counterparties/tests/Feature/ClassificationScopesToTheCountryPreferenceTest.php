@@ -88,14 +88,41 @@ it('withholds that Belgian rule from a reader whose country is the Netherlands',
     expect($resolved?->type)->not->toBe(CounterpartyType::Government->value);
 });
 
-// Unset stays meaningful: every region loads, which is what a reader who never
-// named a country had before the scoping existed.
-it('falls back to every region while no country is chosen', function (): void {
+// No country is the state a fresh install is in, not an edge case, and it is
+// the one where naming a national institution is a guess: only Belgium's file
+// defines ZORGPREMIE, which is also the ordinary Dutch word for a health
+// premium. The two national tiers stay silent rather than assert a country.
+it('withholds the national tiers entirely while no country is chosen', function (): void {
     expect(app(UserCountry::class)->current($this->user->id))->toBe('');
 
     $resolved = resolveDescription($this->user, $this->account, 'ZORGPREMIE MAART');
 
-    expect($resolved?->type)->toBe(CounterpartyType::Government->value);
+    expect($resolved?->type)->toBe(CounterpartyType::Unknown->value);
+});
+
+// The silence is the national tiers' alone. A shop is a shop wherever it
+// trades, so the corpus still widens to every region for a reader who named no
+// country — withholding merchants too would empty the counterparty list on the
+// default install path, which is where most readers stay.
+it('still names a merchant from another region while no country is chosen', function (): void {
+    DB::table('community_merchant_mappings')->insert([
+        'user_id' => null,
+        'pattern' => 'COLRUYT 4471 HALLE',
+        'generalized_pattern' => null,
+        'name' => 'Colruyt',
+        'category' => null,
+        'region' => 'BE',
+        'contributor' => 'fixture',
+        'created_at' => now()->toDateTimeString(),
+        'updated_at' => now()->toDateTimeString(),
+    ]);
+
+    expect(app(UserCountry::class)->current($this->user->id))->toBe('');
+
+    $resolved = resolveDescription($this->user, $this->account, 'COLRUYT 4471 HALLE');
+
+    expect($resolved?->type)->toBe(CounterpartyType::Merchant->value);
+    expect($resolved?->displayName)->toBe('Colruyt');
 });
 
 // The column, not the seam: a resolver still reading users.tax_country_code
