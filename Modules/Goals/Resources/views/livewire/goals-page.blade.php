@@ -66,6 +66,8 @@
             @foreach ($rows as $row)
                 @php
                     $pct = $row->percentComplete();
+                    $phoneBarWidth = $pct === 0 ? 0 : max(2, $pct);
+                    $phoneCompleted = $row->status === \Modules\Goals\Public\Enums\GoalStatus::Completed->value;
                 @endphp
                 <li class="card-list-item">
                     <div class="flex-1 min-w-0">
@@ -76,6 +78,33 @@
                                 · <span class="text-amber-600 dark:text-amber-400">{{ Lang::get('goals::messages.status.overdue') }}</span>
                             @elseif ($row->progressState === 'reached')
                                 · <span class="text-emerald-600 dark:text-emerald-400">{{ Lang::get('goals::messages.status.reached') }}</span>
+                            @endif
+                        </p>
+
+                        {{-- A bar and a date are one line each and fit at 375pt.
+                             Dropping them left the phone with a bare percentage
+                             and no sign of the target date the form insisted on. --}}
+                        @unless ($phoneCompleted)
+                            <div class="mt-2">
+                                <x-core::progress-bar
+                                    :value="$phoneBarWidth"
+                                    :tone="$row->progressState === 'overdue' ? 'warning' : 'positive'"
+                                    :label="Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct])"
+                                />
+                            </div>
+                        @endunless
+
+                        <p class="secondary mt-1 text-xs">
+                            @if ($phoneCompleted || $row->progressState === 'reached')
+                                {{ Lang::get('goals::messages.projection.target_reached') }}
+                            @elseif ($row->projectedFinishDate === null && $row->contributedMinor <= 0)
+                                {{ Lang::get('goals::messages.projection.add_contributions') }}
+                            @elseif ($row->projectedFinishDate === null)
+                                {{ Lang::get('goals::messages.projection.not_enough_history') }}
+                            @elseif ($row->projectionBeyondHorizon)
+                                {{ Lang::get('goals::messages.projection.est', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
+                            @else
+                                {{ Lang::get('goals::messages.projection.projected', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
                             @endif
                         </p>
                     </div>

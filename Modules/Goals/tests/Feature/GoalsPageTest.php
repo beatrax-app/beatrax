@@ -444,3 +444,45 @@ it('tells a goal with no measurable rate that history is short, not that work is
         ->assertSee(Lang::get('goals::messages.projection.not_enough_history'))
         ->assertDontSee('Building a projection');
 });
+
+// The page splits at 768px into a phone list and a desktop list. The phone
+// branch carried a bare percentage: no bar, and no sign of the target date the
+// create form refuses to submit without.
+it('gives the phone list the same progress bar the desktop list has', function (): void {
+    Goal::create([
+        'user_id' => $this->user->id,
+        'name' => 'Noodfonds',
+        'target_minor' => 500000,
+        'currency' => 'EUR',
+        'start_date' => CarbonImmutable::now()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addMonths(4)->toDateString(),
+        'status' => 'active',
+    ]);
+
+    $html = (string) Livewire::test(GoalsPage::class)->html();
+    // Both class names also appear in the media query at the top, so slice on
+    // the LAST occurrence — the markup, not the stylesheet.
+    $phone = substr($html, (int) strrpos($html, 'goals-phone-list'), (int) strrpos($html, 'goals-desktop-list') - (int) strrpos($html, 'goals-phone-list'));
+
+    expect($phone)->toContain('role="progressbar"');
+});
+
+it('tells the phone what it says about the finish date, not only a percentage', function (): void {
+    Goal::create([
+        'user_id' => $this->user->id,
+        'name' => 'Noodfonds',
+        'target_minor' => 500000,
+        'currency' => 'EUR',
+        'start_date' => CarbonImmutable::now()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addMonths(4)->toDateString(),
+        'status' => 'active',
+    ]);
+
+    $html = (string) Livewire::test(GoalsPage::class)->html();
+    // Both class names also appear in the media query at the top, so slice on
+    // the LAST occurrence — the markup, not the stylesheet.
+    $phone = substr($html, (int) strrpos($html, 'goals-phone-list'), (int) strrpos($html, 'goals-desktop-list') - (int) strrpos($html, 'goals-phone-list'));
+
+    // Nothing contributed yet, so the honest line is the one asking for some.
+    expect($phone)->toContain(Lang::get('goals::messages.projection.add_contributions'));
+});
