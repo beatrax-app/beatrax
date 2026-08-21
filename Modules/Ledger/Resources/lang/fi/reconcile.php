@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Ei mitään lukittavaa tälle tiliotepäivälle.',
-        'complete' => 'Täsmäytys valmis — :count riviä lukittu.',
+        'complete' => 'Täsmäytys valmis — :count rivi lukittu.|Täsmäytys valmis — :count riviä lukittu.',
     ],
 ];

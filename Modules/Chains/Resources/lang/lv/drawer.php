@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Aiz šī posma finansējuma ķēde nav atrasta.',
 
-    'covers_charges' => 'Segtie ICS maksājumi: :count',
+    'covers_charges' => 'Sedz :count ICS maksājumu|Sedz :count ICS maksājumu|Sedz :count ICS maksājumus',
     'no_ics_charges' => 'Šajā norēķinā nav ICS maksājumu',
     'show_more_fanout' => 'Rādīt vēl :count · :shown no :total',
 

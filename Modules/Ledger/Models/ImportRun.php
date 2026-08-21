@@ -22,6 +22,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property int $duplicate_count
  * @property int $enriched_count
  * @property int $error_count
+ * @property array<array-key, mixed>|null $row_issues
  * @property string $status
  */
 final class ImportRun extends Model
@@ -40,6 +41,7 @@ final class ImportRun extends Model
         'duplicate_count',
         'enriched_count',
         'error_count',
+        'row_issues',
         'status',
     ];
 
@@ -53,6 +55,7 @@ final class ImportRun extends Model
             'duplicate_count' => 'integer',
             'enriched_count' => 'integer',
             'error_count' => 'integer',
+            'row_issues' => 'array',
         ];
     }
 }

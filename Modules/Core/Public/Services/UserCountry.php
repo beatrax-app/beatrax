@@ -8,6 +8,7 @@ use Collator;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Database\DatabaseManager;
+use Error;
 use IntlException;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Enums\Country;
@@ -39,15 +40,20 @@ final class UserCountry
         return is_string($code) ? $code : '';
     }
 
+    // Seeded before it is written, and both inside one transaction: a corpus
+    // that throws half way must not leave the country set with nothing behind
+    // it, which every empty state reads as an install that needs no help.
     public function store(int $userId, string $countryCode): void
     {
         if (Country::tryFrom($countryCode) === null) {
             return;
         }
 
-        ($this->writeUserPreference)($userId, ['country_code' => $countryCode]);
+        $this->db->connection()->transaction(function () use ($userId, $countryCode): void {
+            $this->events->dispatch(new UserCountryChanged($userId, $countryCode));
 
-        $this->events->dispatch(new UserCountryChanged($userId, $countryCode));
+            ($this->writeUserPreference)($userId, ['country_code' => $countryCode]);
+        });
     }
 
     /**
@@ -88,12 +94,13 @@ final class UserCountry
 
     // The mobile build's ext-intl carries English-only ICU data, so asking for
     // any other locale throws on device — the same constraint Fmt::number
-    // works around. A null here is that case, not an error.
+    // works around. Error, not ValueError (which extends it), because a build
+    // without ext-intl at all raises `Class "Collator" not found`.
     private function collator(): ?Collator
     {
         try {
             return Collator::create($this->translator->getLocale());
-        } catch (IntlException|\ValueError|\Error) {
+        } catch (IntlException|Error) {
             return null;
         }
     }

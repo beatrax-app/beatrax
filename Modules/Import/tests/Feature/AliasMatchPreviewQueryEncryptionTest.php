@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Services\AliasMatchPreviewQuery;
+use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -133,7 +134,14 @@ it('hands back decrypted sample rows, never the stored ciphertext', function ():
     expect($row->counterparty_name)->toBe('Shell Nederland');
 })->group('AliasMatchPreviewQueryEncryption');
 
-it('matches on the decrypted counterparty_name when the description is null', function (): void {
+// This used to assert 1, on the reasoning that a row with no description
+// should still be matchable by who it was with. It cannot be: every caller of
+// MerchantNameResolver::resolve() hands it transactions.description alone, and
+// all four skip a row whose description is empty before they ask. Counting the
+// row here promised a rename the alias would never perform — and the preview's
+// whole job is to predict the alias. Decryption still runs on both columns, so
+// the sample row can show who it was with.
+it('does not match on counterparty_name when the description is null, because the alias will not either', function (): void {
     $user = ampeUser();
     $session = $this->enablesEncryptionForUser($user);
     $account = ampeAccount($user);
@@ -144,10 +152,12 @@ it('matches on the decrypted counterparty_name when the description is null', fu
 
     ampeSeed($user, $account, $run, $codec, $session, 0, null, 'Shell Nederland');
 
+    expect(app(MerchantNameResolver::class)->resolve('', $user->id))->toBeNull();
+
     $result = app(AliasMatchPreviewQuery::class)->preview('shell', $user->id);
 
-    expect($result->total)->toBe(1);
-    expect($result->first5[0]->counterparty_name)->toBe('Shell Nederland');
+    expect($result->total)->toBe(0);
+    expect($result->first5)->toBe([]);
 })->group('AliasMatchPreviewQueryEncryption');
 
 // `decrypted: false` covers two states and only one of them is unreadable. An

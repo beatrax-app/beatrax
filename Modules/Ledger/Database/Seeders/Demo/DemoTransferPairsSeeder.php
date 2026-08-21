@@ -144,7 +144,6 @@ final class DemoTransferPairsSeeder
         Transaction::query()->insertOrIgnore($attrs);
     }
 
-    // A second invocation on an already-linked pair is a no-op write.
     private function linkPair(User $user, CarbonImmutable $pairDate): void
     {
         $out = Transaction::query()

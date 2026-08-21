@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Importimiseks avage rakendus: kaupmehe võtit ei saa lukustatuna arvutada.',
+        'file_unreadable' => 'Seda faili ei õnnestunud lugeda.',
         'iban_not_in_preview' => 'See IBAN ei kuulu praegusesse eelvaatesse.',
+        'row_unreadable' => 'Seda rida ei õnnestunud lugeda.',
+        'unknown_account' => 'See rida kuulub kontole, millele sa pole veel nime andnud.',
+    ],
+
+    'failed' => [
+        'heading' => 'Seda faili ei õnnestunud lugeda',
+        'no_rows' => 'Sellest failist ei leitud tehinguid, seega pole midagi importida.',
+        'nothing_read' => 'Midagi selles failis ei õnnestunud tehinguna lugeda, seega pole midagi importida.',
+        'every_row' => 'Ühtegi rida sellest failist ei õnnestunud lugeda, seega pole midagi importida. Iga rida on allpool koos põhjusega.',
+        'likely_cause' => 'Tavaliselt ei sobi päiserida valitud allikaga. Kontrolli panka ja vormingut üleslaadimise ekraanil või laadi väljavõte pangast uuesti alla.',
+        'truncated_heading' => 'Sellest failist õnnestus lugeda ainult osa',
+        'truncated' => 'Lugemine peatus keset faili. Kõik pärast seda punkti jäi lugemata ja seda ei impordita.',
+        'some_rows' => 'Mõningaid ridu ei õnnestunud lugeda. Need on allpool märgitud ja jäetakse vahele; kinnitamine impordib ülejäänu.',
+        'detail_label' => 'Mida parser teatas:',
+        'rows_read_label' => 'Loetud read',
+        'rows_skipped_label' => 'Vahele jäetud read',
     ],
 ];

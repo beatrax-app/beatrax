@@ -12,7 +12,6 @@ use Modules\Ledger\Public\Enums\AccountKind;
 // transactions seeded in a prior run still point at the same account_id.
 final class DemoAccountsSeeder
 {
-    // Keyed by username, matching the map DemoUsersSeeder returns.
     /** @var array<string, list<array{name: string, slug: string, kind: string, iban: string, default_currency: string, starting_balance_minor: int}>> */
     private const ACCOUNTS = [
         'demo-1@beatrax.local' => [
@@ -63,7 +62,6 @@ final class DemoAccountsSeeder
         ],
     ];
 
-    // Keyed username then slug, so downstream seeders need no re-query.
     /**
      * @param  array<string, User>  $users
      * @return array<string, array<string, Account>>

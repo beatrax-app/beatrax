@@ -12,7 +12,6 @@ use stdClass;
 
 final class MerchantNameResolver
 {
-    // Keeps the PHP-side scan bounded whatever the dataset does.
     private const GENERALIZED_SCAN_LIMIT = 500;
 
     /** @var array<int, string> */

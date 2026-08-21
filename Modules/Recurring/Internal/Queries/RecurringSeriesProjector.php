@@ -12,7 +12,6 @@ use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use stdClass;
 
-// Split out of RecurringSeriesQuery to keep it under the method-count ceiling.
 final readonly class RecurringSeriesProjector
 {
     use CoercesScalars;

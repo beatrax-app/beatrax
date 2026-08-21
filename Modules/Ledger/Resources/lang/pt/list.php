@@ -23,7 +23,7 @@ return [
     'load_more' => 'Carregar mais',
 
     'split_badge' => 'Divisão · :count',
-    'split_expand_aria' => 'Dividida por :count categorias — expande para veres',
+    'split_expand_aria' => 'Dividida por :count categoria — expande para veres|Dividida por :count categorias — expande para veres',
 
     'chain_badge' => 'cadeia',
     'chain_title' => 'Faz parte de uma cadeia — abre esta linha para veres',

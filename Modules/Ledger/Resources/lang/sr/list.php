@@ -23,7 +23,7 @@ return [
     'load_more' => 'Učitaj još',
 
     'split_badge' => 'Podela · :count',
-    'split_expand_aria' => 'Podeljeno na :count kategorija — proširi za prikaz',
+    'split_expand_aria' => 'Podeljeno na :count kategoriju — proširi za prikaz|Podeljeno na :count kategorije — proširi za prikaz|Podeljeno na :count kategorija — proširi za prikaz',
 
     'chain_badge' => 'lanac',
     'chain_title' => 'Deo lanca — otvori ovaj red za prikaz',

@@ -17,7 +17,7 @@ return [
     'securing' => 'Deine Daten werden geschützt…',
     'do_not_close' => 'Schließe dieses Fenster nicht.',
     'encryption_progress_aria' => 'Fortschritt der Verschlüsselung',
-    'not_encrypted_offer' => 'Deine Daten sind im Ruhezustand nicht verschlüsselt. Richte Verschlüsselung ein, um sie zu schützen, falls dieses Gerät verloren geht oder gestohlen wird.',
+    'not_encrypted_offer' => 'Ihre Daten sind nicht verschlüsselt gespeichert. Verschlüsselung verbirgt, wen Sie bezahlen, falls dieses Gerät verloren geht oder gestohlen wird — Beträge, Daten und der Suchindex bleiben lesbar.',
     'enable_encryption' => 'Verschlüsselung aktivieren',
 
     'your_devices' => 'Deine Geräte',

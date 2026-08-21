@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => "Non c'è nulla da bloccare per questa data di estratto conto.",
-        'complete' => 'Riconciliazione completata — :count righe bloccate.',
+        'complete' => 'Riconciliazione completata — :count riga bloccata.|Riconciliazione completata — :count righe bloccate.',
     ],
 ];

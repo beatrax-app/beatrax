@@ -43,7 +43,6 @@ final readonly class RecurringSeriesQuery
         return $this->projector->scoped($user, [RecurringSeriesState::Pending->value], $cursorId, $limit, 'id');
     }
 
-    // Mirrors pendingForUser: cadence_changed has its own queue, not folded in here.
     public function pendingCountForUser(User $user): int
     {
         return $this->db->connection()->table('recurring_series')

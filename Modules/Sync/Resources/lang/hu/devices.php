@@ -17,7 +17,7 @@ return [
     'securing' => 'Az adataid védelme…',
     'do_not_close' => 'Ne zárd be ezt az ablakot.',
     'encryption_progress_aria' => 'Titkosítás folyamata',
-    'not_encrypted_offer' => 'Az adataid nyugalmi állapotban nincsenek titkosítva. Állítsd be a titkosítást, hogy védve legyenek, ha ez az eszköz elvész vagy ellopják.',
+    'not_encrypted_offer' => 'Az adatai nincsenek titkosítva nyugalmi állapotban. A titkosítás elrejti, kinek fizet, ha az eszköz elveszik vagy ellopják — az összegek, dátumok és a keresési index olvashatók maradnak.',
     'enable_encryption' => 'Titkosítás bekapcsolása',
 
     'your_devices' => 'Az eszközeid',

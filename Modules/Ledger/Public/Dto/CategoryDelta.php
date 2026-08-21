@@ -6,7 +6,8 @@ namespace Modules\Ledger\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// deltaMinor = current − previous, so positive means spent more.
+// deltaMinor is current − previous, never the reverse: a positive delta
+// means more was spent this period than last.
 final class CategoryDelta extends Data
 {
     public function __construct(

@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Trifft auf',
     'matches_suffix' => 'Transaktionen in deinem jüngeren Verlauf zu.',
 
-    'merge_modal_title' => ':count Aliase zusammenführen',
+    'merge_modal_title' => ':count Alias zusammenführen|:count Aliase zusammenführen',
 
     'merge_modal_help_html' => 'Die verbleibende Zeile behält ihre Rohbeschreibung; die aufgenommenen Zeilen bleiben in <code class="font-mono text-xs">merged_from</code> erhalten.',
     'friendly_name_label' => 'Verständlicher Name',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Alias aktualisiert.',
         'deleted' => 'Alias gelöscht.',
         'merged' => 'Aliase zusammengeführt.',
-        'imported' => ':count Aliase importiert.',
+        'imported' => ':count Alias importiert.|:count Aliase importiert.',
         'nothing' => 'Nichts zu importieren.',
     ],
 

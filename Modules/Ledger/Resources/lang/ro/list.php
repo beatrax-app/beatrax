@@ -23,7 +23,7 @@ return [
     'load_more' => 'Încarcă mai multe',
 
     'split_badge' => 'Împărțită · :count',
-    'split_expand_aria' => 'Împărțită pe :count categorii — extinde pentru a vedea',
+    'split_expand_aria' => 'Împărțită pe :count categorie — extinde pentru a vedea|Împărțită pe :count categorii — extinde pentru a vedea|Împărțită pe :count de categorii — extinde pentru a vedea',
 
     'chain_badge' => 'lanț',
     'chain_title' => 'Face parte dintr-un lanț — deschide acest rând pentru a vedea',

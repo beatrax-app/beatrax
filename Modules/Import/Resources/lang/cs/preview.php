@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Odemkněte aplikaci pro import: klíč obchodníka nelze vypočítat, dokud je zamčená.',
+        'file_unreadable' => 'Tento soubor se nepodařilo načíst.',
         'iban_not_in_preview' => 'Tento IBAN není součástí aktuálního náhledu.',
+        'row_unreadable' => 'Tento řádek se nepodařilo načíst.',
+        'unknown_account' => 'Tento řádek patří k účtu, kterému jsi ještě nedal jméno.',
+    ],
+
+    'failed' => [
+        'heading' => 'Tento soubor se nepodařilo načíst',
+        'no_rows' => 'V tomto souboru nebyly nalezeny žádné transakce, takže není co importovat.',
+        'nothing_read' => 'Nic v tomto souboru se nepodařilo načíst jako transakci, takže není co importovat.',
+        'every_row' => 'Žádný řádek tohoto souboru se nepodařilo načíst, takže není co importovat. Každý řádek je níže i s důvodem.',
+        'likely_cause' => 'Obvykle hlavičkový řádek neodpovídá zdroji, který jsi vybral. Zkontroluj banku a formát na obrazovce nahrávání, nebo si výpis z banky stáhni znovu.',
+        'truncated_heading' => 'Z tohoto souboru se podařilo načíst jen část',
+        'truncated' => 'Čtení se zastavilo uprostřed souboru. Vše za tímto místem nebylo načteno a nebude importováno.',
+        'some_rows' => 'Některé řádky se nepodařilo načíst. Jsou níže označeny a budou přeskočeny; potvrzením se naimportuje zbytek.',
+        'detail_label' => 'Co ohlásil parser:',
+        'rows_read_label' => 'Načtené řádky',
+        'rows_skipped_label' => 'Přeskočené řádky',
     ],
 ];

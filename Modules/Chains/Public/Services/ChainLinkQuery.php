@@ -10,7 +10,6 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Chains\Internal\ChainTreeWalker;
 use Modules\Chains\Internal\Presentation\HintEvidenceSummary;
-use Modules\Chains\Public\Actions\DismissChainLinkHint;
 use Modules\Chains\Public\Dto\ChainLinkHintRow;
 use Modules\Chains\Public\Dto\ChainLinkRow;
 use Modules\Chains\Public\Dto\ChainTree;
@@ -30,10 +29,10 @@ final class ChainLinkQuery
 
     private const COUNTERPARTY_SLUG = 'counterparties.slug as counterparty_slug';
 
-    // Sentinel for a missing posted_at: sorts first instead of throwing.
-    private const EPOCH_DATE = '1970-01-01';
+    private const MISSING_POSTED_AT_SENTINEL = '1970-01-01';
 
-    // Mirrored in ConfirmChainLink — the two have to move together.
+    // ConfirmChainLink holds this same threshold and does the promoting; if the
+    // two drift, the countdown shown to the user stops matching when it fires.
     private const AUTO_PROMOTE_THRESHOLD = 3;
 
     public function __construct(
@@ -189,7 +188,6 @@ final class ChainLinkQuery
         return $result;
     }
 
-    // DismissChainLinkHint is the only way to clear one of these.
     /**
      * @return list<ChainLinkHintRow>
      */
@@ -212,7 +210,6 @@ final class ChainLinkQuery
         return $result;
     }
 
-    // Separate from hintsForReview() so a badge skips the per-row lookup.
     public function hintCount(User $user): int
     {
         return $this->db->connection()->table('chain_links')
@@ -290,7 +287,7 @@ final class ChainLinkQuery
      */
     private function transactionSummary(mixed $transactionId, User $user): array
     {
-        $default = ['counterparty' => '', 'amountMinor' => 0, 'currency' => $this->baseCurrency->code(), 'postedAt' => self::EPOCH_DATE, 'slug' => null];
+        $default = ['counterparty' => '', 'amountMinor' => 0, 'currency' => $this->baseCurrency->code(), 'postedAt' => self::MISSING_POSTED_AT_SENTINEL, 'slug' => null];
         if ($transactionId === null) {
             return $default;
         }
@@ -318,7 +315,7 @@ final class ChainLinkQuery
             'counterparty' => $this->decryptCounterpartyName(self::toString($row->counterparty_name ?? null), $user->id),
             'amountMinor' => self::toInt($row->settled_amount_minor ?? null),
             'currency' => $currency !== '' ? $currency : $this->baseCurrency->code(),
-            'postedAt' => $postedAt !== '' ? $postedAt : self::EPOCH_DATE,
+            'postedAt' => $postedAt !== '' ? $postedAt : self::MISSING_POSTED_AT_SENTINEL,
             'slug' => self::extractCounterpartySlug($row),
         ];
     }
@@ -346,7 +343,7 @@ final class ChainLinkQuery
         $fromCounterparty = '';
         $fromAmountMinor = 0;
         $fromCurrency = $this->baseCurrency->code();
-        $fromPostedAt = self::EPOCH_DATE;
+        $fromPostedAt = self::MISSING_POSTED_AT_SENTINEL;
         $fromAccountId = 0;
         $fromCounterpartySlug = null;
         $fromRow = $this->db->connection()->table('transactions')
@@ -370,7 +367,7 @@ final class ChainLinkQuery
             $fromCurrency = $cur !== '' ? $cur : $this->baseCurrency->code();
             $fromPostedAt = self::toString($fromRow->posted_at ?? null);
             if ($fromPostedAt === '') {
-                $fromPostedAt = self::EPOCH_DATE;
+                $fromPostedAt = self::MISSING_POSTED_AT_SENTINEL;
             }
             $fromCounterpartySlug = self::extractCounterpartySlug($fromRow);
         }

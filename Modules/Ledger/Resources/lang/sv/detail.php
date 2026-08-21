@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Det gick inte att spara — delposternas summa måste stämma exakt med transaktionens totalbelopp.',
         'not_found' => 'Transaktionen hittades inte.',
-        'amount_zero' => 'Beloppet kan inte vara €0,00',
+        'amount_zero' => 'Beloppet kan inte vara :amount',
         'choose_category' => 'Välj en kategori.',
         'choose_before_removing' => 'Välj en kategori innan du tar bort.',
         'choose_before_unsplitting' => 'Välj en kategori innan du tar bort uppdelningen.',

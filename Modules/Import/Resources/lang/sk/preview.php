@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Odomknite aplikáciu na import: kľúč obchodníka sa nedá vypočítať, kým je zamknutá.',
+        'file_unreadable' => 'Tento súbor sa nepodarilo načítať.',
         'iban_not_in_preview' => 'Tento IBAN nie je súčasťou aktuálneho náhľadu.',
+        'row_unreadable' => 'Tento riadok sa nepodarilo načítať.',
+        'unknown_account' => 'Tento riadok patrí k účtu, ktorému si ešte nedal názov.',
+    ],
+
+    'failed' => [
+        'heading' => 'Tento súbor sa nepodarilo načítať',
+        'no_rows' => 'V tomto súbore sa nenašli žiadne transakcie, takže nie je čo importovať.',
+        'nothing_read' => 'Nič v tomto súbore sa nepodarilo načítať ako transakciu, takže nie je čo importovať.',
+        'every_row' => 'Žiadny riadok tohto súboru sa nepodarilo načítať, takže nie je čo importovať. Každý riadok je nižšie aj s dôvodom.',
+        'likely_cause' => 'Zvyčajne hlavičkový riadok nezodpovedá zdroju, ktorý si vybral. Skontroluj banku a formát na obrazovke nahrávania, alebo si výpis z banky stiahni znova.',
+        'truncated_heading' => 'Z tohto súboru sa podarilo načítať len časť',
+        'truncated' => 'Čítanie sa zastavilo uprostred súboru. Všetko za týmto miestom nebolo načítané a nebude importované.',
+        'some_rows' => 'Niektoré riadky sa nepodarilo načítať. Sú nižšie označené a budú preskočené; potvrdením sa naimportuje zvyšok.',
+        'detail_label' => 'Čo ohlásil parser:',
+        'rows_read_label' => 'Načítané riadky',
+        'rows_skipped_label' => 'Preskočené riadky',
     ],
 ];

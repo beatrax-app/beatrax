@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Nie znaleziono łańcucha finansowania poza tym odcinkiem.',
 
-    'covers_charges' => 'Pokrywa obciążenia ICS: :count',
+    'covers_charges' => 'Pokrywa :count obciążenie ICS|Pokrywa :count obciążenia ICS|Pokrywa :count obciążeń ICS',
     'no_ics_charges' => 'Brak obciążeń ICS w tym rozliczeniu',
     'show_more_fanout' => 'Pokaż więcej: :count · :shown z :total',
 

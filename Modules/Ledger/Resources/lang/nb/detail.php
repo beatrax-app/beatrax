@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Kunne ikke lagre — summen av delpostene må stemme nøyaktig med transaksjonens totalbeløp.',
         'not_found' => 'Transaksjonen ble ikke funnet.',
-        'amount_zero' => 'Beløpet kan ikke være €0,00',
+        'amount_zero' => 'Beløpet kan ikke være :amount',
         'choose_category' => 'Velg en kategori.',
         'choose_before_removing' => 'Velg en kategori før du fjerner.',
         'choose_before_unsplitting' => 'Velg en kategori før du opphever oppdelingen.',

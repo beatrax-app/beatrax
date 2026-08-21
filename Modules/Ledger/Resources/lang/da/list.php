@@ -23,7 +23,7 @@ return [
     'load_more' => 'Indlæs flere',
 
     'split_badge' => 'Opdelt · :count',
-    'split_expand_aria' => 'Opdelt på :count kategorier — fold ud for at se',
+    'split_expand_aria' => 'Opdelt på :count kategori — fold ud for at se|Opdelt på :count kategorier — fold ud for at se',
 
     'chain_badge' => 'kæde',
     'chain_title' => 'Del af en kæde — åbn denne række for at se',

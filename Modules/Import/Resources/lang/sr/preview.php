@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Откључајте апликацију за увоз: кључ трговца се не може израчунати док је закључана.',
+        'file_unreadable' => 'Ovaj fajl nije bilo moguće pročitati.',
         'iban_not_in_preview' => 'Ovaj IBAN nije deo trenutnog pregleda.',
+        'row_unreadable' => 'Ovaj red nije bilo moguće pročitati.',
+        'unknown_account' => 'Ovaj red pripada računu kojem još nisi dao naziv.',
+    ],
+
+    'failed' => [
+        'heading' => 'Ovaj fajl nije bilo moguće pročitati',
+        'no_rows' => 'U ovom fajlu nisu pronađene transakcije, pa nema šta da se uveze.',
+        'nothing_read' => 'Ništa u ovom fajlu nije bilo moguće pročitati kao transakciju, pa nema šta da se uveze.',
+        'every_row' => 'Nijedan red ovog fajla nije bilo moguće pročitati, pa nema šta da se uveze. Svaki red je naveden ispod sa razlogom.',
+        'likely_cause' => 'Najčešće zaglavlje ne odgovara izvoru koji si izabrao. Proveri banku i format na ekranu za otpremanje ili ponovo preuzmi izvod iz svoje banke.',
+        'truncated_heading' => 'Iz ovog fajla bilo je moguće pročitati samo deo',
+        'truncated' => 'Čitanje je stalo na pola fajla. Sve posle te tačke nije pročitano i neće biti uvezeno.',
+        'some_rows' => 'Neke redove nije bilo moguće pročitati. Označeni su ispod i biće preskočeni; potvrdom se uvozi ostatak.',
+        'detail_label' => 'Šta je parser prijavio:',
+        'rows_read_label' => 'Pročitani redovi',
+        'rows_skipped_label' => 'Preskočeni redovi',
     ],
 ];

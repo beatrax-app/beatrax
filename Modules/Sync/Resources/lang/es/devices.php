@@ -17,7 +17,7 @@ return [
     'securing' => 'Protegiendo tus datos…',
     'do_not_close' => 'No cierres esta ventana.',
     'encryption_progress_aria' => 'Progreso del cifrado',
-    'not_encrypted_offer' => 'Tus datos no están cifrados en reposo. Configura el cifrado para protegerlos si pierdes este dispositivo o te lo roban.',
+    'not_encrypted_offer' => 'Tus datos no están cifrados en reposo. El cifrado oculta a quién pagas si pierdes o te roban este dispositivo: los importes, las fechas y el índice de búsqueda siguen siendo legibles.',
     'enable_encryption' => 'Activar el cifrado',
 
     'your_devices' => 'Tus dispositivos',

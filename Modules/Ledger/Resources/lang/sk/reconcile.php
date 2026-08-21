@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'K tomuto dátumu výpisu nie je čo zamknúť.',
-        'complete' => 'Odsúhlasenie dokončené — zamknuté riadky: :count.',
+        'complete' => 'Odsúhlasenie dokončené — zamknutý :count riadok.|Odsúhlasenie dokončené — zamknuté :count riadky.|Odsúhlasenie dokončené — zamknutých :count riadkov.',
     ],
 ];

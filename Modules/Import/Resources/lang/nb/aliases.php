@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Treffer',
     'matches_suffix' => 'transaksjoner i den nyeste historikken din.',
 
-    'merge_modal_title' => 'Slå sammen :count aliaser',
+    'merge_modal_title' => 'Slå sammen :count alias|Slå sammen :count aliaser',
 
     'merge_modal_help_html' => 'Raden som blir igjen, beholder sin rå beskrivelse; radene som slukes, bevares i <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Forståelig navn',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Aliaset er oppdatert.',
         'deleted' => 'Aliaset er slettet.',
         'merged' => 'Aliasene er slått sammen.',
-        'imported' => ':count aliaser er importert.',
+        'imported' => ':count alias er importert.|:count aliaser er importert.',
         'nothing' => 'Ingenting å importere.',
     ],
 

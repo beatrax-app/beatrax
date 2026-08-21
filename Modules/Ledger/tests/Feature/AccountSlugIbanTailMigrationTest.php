@@ -103,6 +103,17 @@ it('leaves slugs alone whose suffix is not a tail of that row own IBAN', functio
     expect(asitSlug($demo))->toBe('asn-demo-1');
 });
 
+// `accounts.name` is lww-synced and `slug` is not, so a name can change under
+// a slug. Anchoring the match to the name skipped those rows and left the IBAN
+// tail sitting in the plaintext column this migration exists to clear.
+it('strips the tail from an account renamed since its slug was written', function (): void {
+    [$id] = asitSeedAccount($this->owner->id, 'Spaargeld', 'asn-betaalrekening-23456789', 'NL57ASNB0123456789');
+
+    accountSlugIbanTailMigration()->up();
+
+    expect(asitSlug($id))->toBe('spaargeld');
+});
+
 it('scopes the walk per user, so two users keep the same clean slug', function (): void {
     $other = User::query()->create([
         'username' => 'asit-other',

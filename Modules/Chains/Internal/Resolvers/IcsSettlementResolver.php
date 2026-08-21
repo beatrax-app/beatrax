@@ -35,7 +35,6 @@ final class IcsSettlementResolver
 {
     use CoercesScalars;
 
-    // The tolerance is the larger of the two arms, not both applied.
     public const AMOUNT_TOLERANCE_MINOR = 500;
 
     public const AMOUNT_TOLERANCE_PERCENT = 2;
@@ -95,7 +94,6 @@ final class IcsSettlementResolver
                 : $this->codec->decryptValue('transactions', 'counterparty_iban', $storedCounterpartyIban, $user->id, ($this->session)())['value'];
             $aliasAccount = $this->aliasResolver->resolveAccount($counterpartyIban, $user->id);
             if ($aliasAccount === null || $aliasAccount->kind !== AccountKind::IcsCard->value) {
-                // Other transfer_out shapes have their own resolvers.
                 continue;
             }
             $this->resolveOne($transfer, $aliasAccount, $user);
@@ -127,7 +125,6 @@ final class IcsSettlementResolver
 
         $statement = $this->findCandidateStatement($accountId, $postedAt, $user);
         if ($statement === null) {
-            // The statement may roll in on a later import; the next pass retries.
             return;
         }
 
@@ -348,7 +345,8 @@ final class IcsSettlementResolver
     {
         $connection = $this->db->connection();
 
-        // Computed in PHP, not SQLite date() arithmetic, to stay driver-portable.
+        // The window is computed in PHP rather than with SQLite date() arithmetic,
+        // so the query stays portable across every driver the app can run on.
         $posted = CarbonImmutable::parse($postedAt);
         $windowStart = $posted->subDays(self::PERIOD_WINDOW_DAYS)->startOfDay()->toDateTimeString();
         $windowEnd = $posted->addDays(self::PERIOD_WINDOW_DAYS)->endOfDay()->toDateTimeString();
@@ -462,7 +460,6 @@ final class IcsSettlementResolver
         return max(self::EXCEEDED_CONFIDENCE_FLOOR, min(self::EXCEEDED_CONFIDENCE_CEILING, $raw));
     }
 
-    // Matches the chain_links.confidence decimal(4,3) column shape.
     private function formatConfidence(float $value): string
     {
         return number_format($value, 3, '.', '');

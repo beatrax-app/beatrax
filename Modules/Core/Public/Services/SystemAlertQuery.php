@@ -10,10 +10,16 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use stdClass;
 
 final readonly class SystemAlertQuery
 {
+    // The severity spellings arrive as bindings, not spliced into the statement:
+    // the sort the reader actually sees then follows the enum wherever a case
+    // value goes, and orderByRaw still receives a literal it can check.
+    private const SEVERITY_RANK_SQL = 'CASE severity WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END';
+
     public function __construct(
         private DatabaseManager $db,
     ) {}
@@ -26,7 +32,10 @@ final readonly class SystemAlertQuery
     public function active(?User $user): Collection
     {
         $rows = $this->scopedActiveQuery($user)
-            ->orderByRaw("CASE severity WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END")
+            ->orderByRaw(self::SEVERITY_RANK_SQL, [
+                SystemAlertSeverity::Critical->value,
+                SystemAlertSeverity::Warning->value,
+            ])
             ->orderBy('created_at', 'asc')
             ->select(['id', 'user_id', 'kind', 'severity', 'message', 'metadata', 'created_at', 'acknowledged_at'])
             ->get();

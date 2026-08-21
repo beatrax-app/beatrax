@@ -196,7 +196,7 @@ final class ConfirmImport implements ConfirmsImports
                     kind: ImportIssueKind::RowError,
                     rowIndex: $row->rowIndex,
                     reason: $row->errorReason === null ? null : ImportFailureReason::tryFrom($row->errorReason),
-                    detail: $row->error,
+                    detail: null,
                 );
                 $errorsKept++;
             }

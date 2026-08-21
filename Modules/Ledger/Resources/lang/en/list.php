@@ -23,7 +23,7 @@ return [
     'load_more' => 'Load more',
 
     'split_badge' => 'Split · :count',
-    'split_expand_aria' => 'Split across :count categories — expand to view',
+    'split_expand_aria' => 'Split across :count category — expand to view|Split across :count categories — expand to view',
 
     'chain_badge' => 'chain',
     'chain_title' => 'Part of a chain — open this row to view',

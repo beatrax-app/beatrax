@@ -122,7 +122,7 @@ return [
     'errors' => [
         'totals_must_match' => "Couldn't save — leg totals must match the transaction total exactly.",
         'not_found' => 'Transaction not found.',
-        'amount_zero' => "Amount can't be €0,00",
+        'amount_zero' => "Amount can't be :amount",
         'choose_category' => 'Choose a category.',
         'choose_before_removing' => 'Choose a category before removing.',
         'choose_before_unsplitting' => 'Choose a category before unsplitting.',

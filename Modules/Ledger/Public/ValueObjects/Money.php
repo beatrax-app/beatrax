@@ -93,7 +93,6 @@ final class Money implements Stringable
     // transactions list. The currency is what is rendered, never how.
     public function format(): string
     {
-        // formatToLocale(), not formatTo(): the latter was removed in 0.14.
         try {
             return $this->inner->formatToLocale($this->language()->value);
         } catch (IntlException|ValueError) {

@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Δεν βρέθηκε αλυσίδα χρηματοδότησης πέρα από αυτό το σκέλος.',
 
-    'covers_charges' => 'Καλύπτει :count χρεώσεις ICS',
+    'covers_charges' => 'Καλύπτει :count χρέωση ICS|Καλύπτει :count χρεώσεις ICS',
     'no_ics_charges' => 'Καμία χρέωση ICS σε αυτόν τον διακανονισμό',
     'show_more_fanout' => 'Εμφάνιση :count ακόμη · :shown από :total',
 

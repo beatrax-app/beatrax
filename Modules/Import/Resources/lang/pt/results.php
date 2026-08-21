@@ -6,9 +6,10 @@ return [
     'page_title' => 'Importação concluída',
     'heading' => 'Importação concluída',
 
-    'summary' => ':inserted transações importadas · :duplicates duplicados ignorados',
+    'summary' => ':count transação importada|:count transações importadas',
+    'summary_duplicates' => ' · :count duplicado ignorado| · :count duplicados ignorados',
     'summary_enriched' => ' · :count enriquecidas',
-    'summary_errors' => ' · :count erros',
+    'summary_errors' => ' · :count erro| · :count erros',
 
     'show_duplicates' => 'Mostrar os duplicados ignorados (:count)',
     'duplicates_help' => 'Os duplicados são linhas já presentes no teu livro-razão — são ignoradas em silêncio ao reimportar.',
@@ -16,4 +17,12 @@ return [
     'errors_help' => 'Os erros são linhas que não foi possível interpretar; não foram adicionadas ao teu livro-razão.',
 
     'upload_another' => 'Carregar outro extrato',
+
+    'issues' => [
+        'row' => 'Linha :row: :reason',
+        'file' => 'O ficheiro não pôde ser lido por completo: :reason',
+        'duplicate' => 'A linha :row já estava no teu livro-razão.',
+        'more' => '+ :count não listadas',
+        'unknown_reason' => 'Não foi registado nenhum motivo.',
+    ],
 ];

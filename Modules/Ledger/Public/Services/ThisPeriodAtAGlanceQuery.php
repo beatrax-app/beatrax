@@ -15,6 +15,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Dto\EmailScanHealthTile;
 use Modules\EmailScan\Public\Dto\InboxHealthLine;
+use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Dto\Period;
@@ -281,7 +282,7 @@ final class ThisPeriodAtAGlanceQuery
     // the figure cannot be trusted either way.
     private static function lineStatusFor(string $status, ?DateTimeImmutable $lastScanAt, int $nowEpoch): string
     {
-        if ($status === 'needs_reauth') {
+        if ($status === InboxScanStatus::NeedsReauth->value) {
             return 'reauth';
         }
 

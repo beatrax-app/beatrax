@@ -6,7 +6,8 @@ return [
     'page_title' => 'İçe aktarma tamamlandı',
     'heading' => 'İçe aktarma tamamlandı',
 
-    'summary' => ':inserted işlem içe aktarıldı · :duplicates yinelenen atlandı',
+    'summary' => ':count işlem içe aktarıldı',
+    'summary_duplicates' => ' · :count yinelenen atlandı',
     'summary_enriched' => ' · :count zenginleştirildi',
     'summary_errors' => ' · :count hata',
 
@@ -16,4 +17,12 @@ return [
     'errors_help' => 'Hatalar ayrıştırılamayan satırlardır; defterine eklenmediler.',
 
     'upload_another' => 'Başka bir hesap ekstresi yükle',
+
+    'issues' => [
+        'row' => 'Satır :row: :reason',
+        'file' => 'Dosya tamamen okunamadı: :reason',
+        'duplicate' => 'Satır :row zaten defterindeydi.',
+        'more' => '+ :count listelenmedi',
+        'unknown_reason' => 'Herhangi bir neden kaydedilmedi.',
+    ],
 ];

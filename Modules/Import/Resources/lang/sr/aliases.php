@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Odgovara',
     'matches_suffix' => 'transakcija u tvojoj skorašnjoj istoriji.',
 
-    'merge_modal_title' => 'Spoji :count alijasa',
+    'merge_modal_title' => 'Spoji :count alijas|Spoji :count alijasa|Spoji :count alijasa',
 
     'merge_modal_help_html' => 'Preostali red zadržava svoj izvorni opis; apsorbovani redovi čuvaju se u <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Razumljiv naziv',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Alijas ažuriran.',
         'deleted' => 'Alijas obrisan.',
         'merged' => 'Alijasi spojeni.',
-        'imported' => 'Uvezeno :count alijasa.',
+        'imported' => 'Uvezen :count alijas.|Uvezena :count alijasa.|Uvezeno :count alijasa.',
         'nothing' => 'Nema ništa za uvoz.',
     ],
 

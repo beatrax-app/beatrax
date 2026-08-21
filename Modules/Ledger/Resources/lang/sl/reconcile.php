@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Za ta datum izpiska ni ničesar za zakleniti.',
-        'complete' => 'Uskladitev končana — zaklenjenih :count vrstic.',
+        'complete' => 'Uskladitev končana — zaklenjena :count vrstica.|Uskladitev končana — zaklenjeni :count vrstici.|Uskladitev končana — zaklenjene :count vrstice.|Uskladitev končana — zaklenjenih :count vrstic.',
     ],
 ];

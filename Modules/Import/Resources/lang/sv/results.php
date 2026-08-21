@@ -6,9 +6,10 @@ return [
     'page_title' => 'Importen är klar',
     'heading' => 'Importen är klar',
 
-    'summary' => 'Importerade :inserted transaktioner · hoppade över :duplicates dubbletter',
+    'summary' => 'Importerade :count transaktion|Importerade :count transaktioner',
+    'summary_duplicates' => ' · hoppade över :count dubblett| · hoppade över :count dubbletter',
     'summary_enriched' => ' · :count berikade',
-    'summary_errors' => ' · :count fel',
+    'summary_errors' => ' · :count fel| · :count fel',
 
     'show_duplicates' => 'Visa överhoppade dubbletter (:count)',
     'duplicates_help' => 'Dubbletter är rader som redan finns bland dina transaktioner — de hoppas över tyst vid ny import.',
@@ -16,4 +17,12 @@ return [
     'errors_help' => 'Fel är rader som inte kunde läsas in; de lades inte till bland dina transaktioner.',
 
     'upload_another' => 'Ladda upp ett kontoutdrag till',
+
+    'issues' => [
+        'row' => 'Rad :row: :reason',
+        'file' => 'Filen gick inte att läsa i sin helhet: :reason',
+        'duplicate' => 'Rad :row fanns redan bland dina transaktioner.',
+        'more' => '+ :count listas inte',
+        'unknown_reason' => 'Ingen orsak registrerades.',
+    ],
 ];

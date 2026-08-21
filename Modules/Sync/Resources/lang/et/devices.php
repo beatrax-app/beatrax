@@ -17,7 +17,7 @@ return [
     'securing' => 'Kaitsen sinu andmeid…',
     'do_not_close' => 'Ära sulge seda akent.',
     'encryption_progress_aria' => 'Krüpteerimise edenemine',
-    'not_encrypted_offer' => 'Sinu andmed ei ole kettal krüpteeritud. Seadista krüpteerimine, et kaitsta neid seadme kadumise või varguse korral.',
+    'not_encrypted_offer' => 'Teie andmed ei ole puhkeolekus krüpteeritud. Krüpteerimine varjab, kellele maksate, kui see seade kaob või varastatakse — summad, kuupäevad ja otsinguindeks jäävad loetavaks.',
     'enable_encryption' => 'Luba krüpteerimine',
 
     'your_devices' => 'Sinu seadmed',

@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Sobib',
     'matches_suffix' => 'tehinguga sinu hiljutises ajaloos.',
 
-    'merge_modal_title' => 'Ühenda :count aliast',
+    'merge_modal_title' => 'Ühenda :count alias|Ühenda :count aliast',
 
     'merge_modal_help_html' => 'Alles jääv rida säilitab oma toorkirjelduse; ülevõetud read säilitatakse väljal <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Arusaadav nimi',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Alias on uuendatud.',
         'deleted' => 'Alias on kustutatud.',
         'merged' => 'Aliased on ühendatud.',
-        'imported' => 'Imporditud :count aliast.',
+        'imported' => 'Imporditud :count alias.|Imporditud :count aliast.',
         'nothing' => 'Pole midagi importida.',
     ],
 

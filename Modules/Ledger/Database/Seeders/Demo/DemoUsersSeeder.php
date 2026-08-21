@@ -26,7 +26,6 @@ final class DemoUsersSeeder
         ],
     ];
 
-    // Keyed by username, so downstream seeders need no second query.
     /** @return array<string, User> */
     public function run(): array
     {

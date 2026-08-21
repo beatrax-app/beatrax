@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Fant ingen finansieringskjede utover dette leddet.',
 
-    'covers_charges' => 'Dekker :count ICS-belastninger',
+    'covers_charges' => 'Dekker :count ICS-belastning|Dekker :count ICS-belastninger',
     'no_ics_charges' => 'Ingen ICS-belastninger i dette oppgjøret',
     'show_more_fanout' => 'Vis :count til · :shown av :total',
 

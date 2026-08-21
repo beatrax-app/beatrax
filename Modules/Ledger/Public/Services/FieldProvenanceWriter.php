@@ -60,7 +60,6 @@ final class FieldProvenanceWriter
         return is_string($raw) && $raw !== '' ? self::decodeProvenance($raw) : [];
     }
 
-    // [] for corrupt JSON or a non-object payload.
     /**
      * @return array<string, string>
      */

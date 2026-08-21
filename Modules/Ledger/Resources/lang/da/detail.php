@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Kunne ikke gemme — delposternes sum skal passe præcist med transaktionens samlede beløb.',
         'not_found' => 'Transaktionen blev ikke fundet.',
-        'amount_zero' => 'Beløbet kan ikke være €0,00',
+        'amount_zero' => 'Beløbet kan ikke være :amount',
         'choose_category' => 'Vælg en kategori.',
         'choose_before_removing' => 'Vælg en kategori, før du fjerner.',
         'choose_before_unsplitting' => 'Vælg en kategori, før du ophæver opdelingen.',

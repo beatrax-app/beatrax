@@ -17,7 +17,7 @@ return [
     'securing' => 'Verilerin güvenceye alınıyor…',
     'do_not_close' => 'Bu pencereyi kapatma.',
     'encryption_progress_aria' => 'Şifreleme ilerlemesi',
-    'not_encrypted_offer' => 'Verilerin durağan halde şifreli değil. Bu cihaz kaybolur ya da çalınırsa verilerini korumak için şifrelemeyi kur.',
+    'not_encrypted_offer' => 'Verileriniz beklemede şifrelenmiyor. Şifreleme, bu cihaz kaybolursa veya çalınırsa kime ödeme yaptığınızı gizler — tutarlar, tarihler ve arama dizini okunabilir kalır.',
     'enable_encryption' => 'Şifrelemeyi etkinleştir',
 
     'your_devices' => 'Cihazların',

@@ -68,6 +68,11 @@ Notable per-table quirks:
 
 ## At-rest encryption (Group Data Key)
 
+Which columns are encrypted, which are knowingly left plaintext, and what an attacker with
+the database file can still read: [Which columns are encrypted at
+rest](sensitive-columns-at-rest.md).
+
+
 ### GDK epoch keyring (`Internal\Crypto\GdkEpoch`, `GdkKeyring`)
 
 `GdkEpoch` is an immutable `{epochId, keyHex}` pair — one entry in a user's

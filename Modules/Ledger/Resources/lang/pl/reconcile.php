@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Nie ma czego zablokować dla tej daty wyciągu.',
-        'complete' => 'Uzgadnianie zakończone — zablokowane wiersze: :count.',
+        'complete' => 'Uzgadnianie zakończone — zablokowano :count wiersz.|Uzgadnianie zakończone — zablokowano :count wiersze.|Uzgadnianie zakończone — zablokowano :count wierszy.',
     ],
 ];

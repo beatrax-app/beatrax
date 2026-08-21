@@ -30,7 +30,6 @@ enum SeriesCadence: string
         return array_map(static fn (self $case): string => $case->value, self::cases());
     }
 
-    // What callers actually mean: can this series be projected forward?
     public function isRegular(): bool
     {
         return $this !== self::Irregular;

@@ -75,7 +75,6 @@ final class CreateChainLinkFromHint
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
         if ($encoded === false) {
-            // Loud, rather than writing the empty string into a NOT NULL column.
             throw new EvidenceEncodingFailedException('hint event');
         }
 

@@ -17,7 +17,7 @@ return [
     'securing' => 'Se securizează datele tale…',
     'do_not_close' => 'Nu închide această fereastră.',
     'encryption_progress_aria' => 'Progresul criptării',
-    'not_encrypted_offer' => 'Datele tale nu sunt criptate în repaus. Configurează criptarea pentru a le proteja dacă acest dispozitiv este pierdut sau furat.',
+    'not_encrypted_offer' => 'Datele dvs. nu sunt criptate în repaus. Criptarea ascunde cui plătiți dacă acest dispozitiv este pierdut sau furat — sumele, datele și indexul de căutare rămân lizibile.',
     'enable_encryption' => 'Activează criptarea',
 
     'your_devices' => 'Dispozitivele tale',

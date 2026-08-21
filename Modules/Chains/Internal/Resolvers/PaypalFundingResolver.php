@@ -370,6 +370,14 @@ final class PaypalFundingResolver
         // the stored key, which is what earlier evidence was hashed from.
         $storedMerchantKey = self::toString($row->counterparty_normalized ?? null);
         $readableMerchant = $this->readableMerchant($row, $user);
+        if ($readableMerchant === null) {
+            // Half the fuzzy score is the merchant term. Without a readable
+            // name there is no merchant comparison to make, and scoring the
+            // absence would assert a funding relationship on an amount and a
+            // date alone.
+            return null;
+        }
+
         $postedAt = CarbonImmutable::parse($postedAtRaw);
 
         $amountBand = (int) round($settledMinor * (self::AMOUNT_BAND_PERCENT / 100));
@@ -408,6 +416,10 @@ final class PaypalFundingResolver
         foreach ($candidates as $candidate) {
             /** @var stdClass $candidate */
             $candidateMerchant = $this->readableMerchant($candidate, $user);
+            if ($candidateMerchant === null) {
+                continue;
+            }
+
             $merchantSim = $this->levenshteinSimilarity($readableMerchant, $candidateMerchant);
 
             $candidateMinor = abs(self::toInt($candidate->settled_amount_minor ?? null));
@@ -545,14 +557,14 @@ final class PaypalFundingResolver
     }
 
     // The bank's own spelling, normalised, so the similarity compares names
-    // rather than digests. Empty when the row has no name or this process
-    // holds no key, which scores zero — the honest answer for a comparison
-    // that could not be made.
-    private function readableMerchant(stdClass $row, User $user): string
+    // rather than digests. NULL — never '' — when the row carries no name or
+    // this process holds no key for it: an empty string is a value, and
+    // levenshteinSimilarity('', '') is a perfect 1.0 rather than no answer.
+    private function readableMerchant(stdClass $row, User $user): ?string
     {
         $stored = self::toString($row->counterparty_name ?? null);
         if ($stored === '') {
-            return '';
+            return null;
         }
 
         $plain = $this->codec->decryptValue(
@@ -563,7 +575,9 @@ final class PaypalFundingResolver
             ($this->session)(),
         )['value'];
 
-        return $this->fingerprints->normalize($plain);
+        $normalised = $this->fingerprints->normalize($plain);
+
+        return $normalised === '' ? null : $normalised;
     }
 
     private function levenshteinSimilarity(string $a, string $b): float
@@ -584,7 +598,6 @@ final class PaypalFundingResolver
         return hash('sha256', $normalisedMerchant.'|'.$fundingIban);
     }
 
-    // Matches the chain_links.confidence decimal(4,3) column shape.
     private function formatConfidence(float $value): string
     {
         return number_format($value, 3, '.', '');

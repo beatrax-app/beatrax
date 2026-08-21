@@ -23,7 +23,7 @@ return [
     'load_more' => 'Lataa lisää',
 
     'split_badge' => 'Jaettu · :count',
-    'split_expand_aria' => 'Jaettu :count kategoriaan — laajenna nähdäksesi',
+    'split_expand_aria' => 'Jaettu :count kategoriaan — laajenna nähdäksesi|Jaettu :count kategoriaan — laajenna nähdäksesi',
 
     'chain_badge' => 'ketju',
     'chain_title' => 'Osa ketjua — avaa tämä rivi nähdäksesi',

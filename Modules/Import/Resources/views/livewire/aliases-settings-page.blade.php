@@ -267,7 +267,7 @@
             data-testid="merge-aliases-modal"
         >
             <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-900 space-y-4">
-                <h2 id="merge-aliases-title" class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('import::aliases.merge_modal_title', ['count' => count($selectedIds)]) }}</h2>
+                <h2 id="merge-aliases-title" class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::choice('import::aliases.merge_modal_title', count($selectedIds)) }}</h2>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {!! Lang::get('import::aliases.merge_modal_help_html') !!}
                 </p>

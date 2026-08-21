@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'No funding chain found beyond this leg.',
 
-    'covers_charges' => 'Covers :count ICS charges',
+    'covers_charges' => 'Covers :count ICS charge|Covers :count ICS charges',
     'no_ics_charges' => 'No ICS charges in this settlement',
     'show_more_fanout' => 'Show :count more · :shown of :total',
 

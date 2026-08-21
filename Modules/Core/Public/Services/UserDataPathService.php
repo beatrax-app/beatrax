@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Services;
 
 use InvalidArgumentException;
+use Modules\Core\Public\Enums\MobilePlatform;
 use Modules\Core\Public\Services\Concerns\ProvidesInstancePathAccessors;
 
 /**
@@ -73,7 +74,7 @@ final class UserDataPathService
     // All three sources are read because NativePHP injects this as a server/env
     // const, not through putenv() — a bare getenv() returns false on a real
     // device and silently disables every gate that depends on it.
-    public static function platform(): ?string
+    private static function platformSignal(): ?string
     {
         $platform = $_SERVER['NATIVEPHP_PLATFORM']
             ?? $_ENV['NATIVEPHP_PLATFORM']
@@ -82,12 +83,18 @@ final class UserDataPathService
         return is_string($platform) && $platform !== '' ? $platform : null;
     }
 
-    // platform() reads back null at per-request config-load in NativePHP's
-    // persistent runtime, so the structural fallback carries it: the sibling
-    // persisted_data directory never exists on desktop or host.
+    public static function platform(): ?MobilePlatform
+    {
+        return MobilePlatform::tryFrom(self::platformSignal() ?? '');
+    }
+
+    // The raw signal, not platform(): a shell NativePHP names but MobilePlatform
+    // does not model is still a mobile runtime, and answering false would send
+    // its durable user data back into the wiped-and-reshipped bundle. The signal
+    // also reads back null at per-request config-load, hence the fallback below.
     public static function isMobileRuntime(): bool
     {
-        if (self::platform() !== null) {
+        if (self::platformSignal() !== null) {
             return true;
         }
 

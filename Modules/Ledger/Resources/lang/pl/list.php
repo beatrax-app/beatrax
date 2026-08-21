@@ -23,7 +23,7 @@ return [
     'load_more' => 'Wczytaj więcej',
 
     'split_badge' => 'Podział · :count',
-    'split_expand_aria' => 'Podzielona na kategorie (:count) — rozwiń, aby zobaczyć',
+    'split_expand_aria' => 'Podzielona na :count kategorię — rozwiń, aby zobaczyć|Podzielona na :count kategorie — rozwiń, aby zobaczyć|Podzielona na :count kategorii — rozwiń, aby zobaczyć',
 
     'chain_badge' => 'łańcuch',
     'chain_title' => 'Część łańcucha — otwórz ten wiersz, aby zobaczyć',

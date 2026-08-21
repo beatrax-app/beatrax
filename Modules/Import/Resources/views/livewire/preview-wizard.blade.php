@@ -237,6 +237,13 @@
                             @else
                                 —
                             @endif
+                            {{-- A row the reader has to go and find in their own file needs the
+                                 text their file actually carries. The fallback chain above shows
+                                 whichever identifier came out highest, so on a failed row the raw
+                                 description is added rather than hidden behind a resolved name. --}}
+                            @if ($row->status === PreviewRowStatus::Error->value && $row->description !== null)
+                                <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $row->description }}</div>
+                            @endif
                         </td>
                         <td class="px-4 py-2 text-right text-sm text-slate-900 dark:text-slate-100">
                             @if ($row->amountMinor !== null && $row->currency !== null)

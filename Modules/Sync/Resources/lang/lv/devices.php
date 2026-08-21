@@ -17,7 +17,7 @@ return [
     'securing' => 'Aizsargā jūsu datus…',
     'do_not_close' => 'Neaizveriet šo logu.',
     'encryption_progress_aria' => 'Šifrēšanas gaita',
-    'not_encrypted_offer' => 'Jūsu dati glabāšanā nav šifrēti. Iestatiet šifrēšanu, lai tos pasargātu, ja šī ierīce pazūd vai tiek nozagta.',
+    'not_encrypted_offer' => 'Jūsu dati nav šifrēti miera stāvoklī. Šifrēšana slēpj, kam maksājat, ja šī ierīce tiek pazaudēta vai nozagta — summas, datumi un meklēšanas indekss paliek lasāmi.',
     'enable_encryption' => 'Ieslēgt šifrēšanu',
 
     'your_devices' => 'Jūsu ierīces',

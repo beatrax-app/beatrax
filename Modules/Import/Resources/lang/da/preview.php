@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Lås appen op for at importere: forhandlernøglen kan ikke beregnes, mens den er låst.',
+        'file_unreadable' => 'Denne fil kunne ikke læses.',
         'iban_not_in_preview' => 'Dette IBAN indgår ikke i den aktuelle forhåndsvisning.',
+        'row_unreadable' => 'Denne række kunne ikke læses.',
+        'unknown_account' => 'Denne række hører til en konto, du endnu ikke har navngivet.',
+    ],
+
+    'failed' => [
+        'heading' => 'Filen kunne ikke læses',
+        'no_rows' => 'Der blev ikke fundet nogen transaktioner i filen, så der er intet at importere.',
+        'nothing_read' => 'Intet i filen kunne læses som en transaktion, så der er intet at importere.',
+        'every_row' => 'Ingen række i filen kunne læses, så der er intet at importere. Hver række er vist nedenfor med årsagen.',
+        'likely_cause' => 'Som regel passer overskriftsrækken ikke til den kilde, du valgte. Tjek bank og format på upload-skærmen, eller hent kontoudtoget fra din bank igen.',
+        'truncated_heading' => 'Kun en del af filen kunne læses',
+        'truncated' => 'Læsningen stoppede midt i filen. Alt efter det punkt blev ikke læst og bliver ikke importeret.',
+        'some_rows' => 'Nogle rækker kunne ikke læses. De er markeret nedenfor og springes over; bekræfter du, importeres resten.',
+        'detail_label' => 'Hvad parseren meldte:',
+        'rows_read_label' => 'Læste rækker',
+        'rows_skipped_label' => 'Oversprungne rækker',
     ],
 ];

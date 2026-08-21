@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Não foi encontrada nenhuma cadeia de financiamento para além deste troço.',
 
-    'covers_charges' => 'Cobre :count cobranças ICS',
+    'covers_charges' => 'Cobre :count cobrança ICS|Cobre :count cobranças ICS',
     'no_ics_charges' => 'Não há cobranças ICS nesta liquidação',
     'show_more_fanout' => 'Mostrar mais :count · :shown de :total',
 

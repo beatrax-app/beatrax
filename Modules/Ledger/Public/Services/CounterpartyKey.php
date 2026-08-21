@@ -16,14 +16,20 @@ use Modules\Sync\Public\Services\BlindIndexCodec;
  */
 final class CounterpartyKey
 {
-    // Named where the key is minted rather than where the import pipeline
-    // happens to sit: three modules produce this column and the sentinel has
-    // to mean the same thing in all of them.
-    public const string NONE = '_no_counterparty';
+    // Aliased, not redeclared: the guards that read a blind-index column back
+    // resolve the sentinel from the registry, and two spellings of it would
+    // make an unkeyed value look like a defect on one side and a decision on
+    // the other.
+    public const string NONE = BlindIndexCodec::SENTINEL;
 
     // The logical key, not a table.column: `merchants.normalized_name` is
     // compared against this value, so the two must derive under one domain.
     public const string DOMAIN = 'counterparty-normalized';
+
+    // A separate domain because an IBAN is not a name: the income detector
+    // clusters on whichever it has, and one domain would let a merchant whose
+    // normalised name happened to equal an IBAN string match that payer.
+    public const string DOMAIN_IBAN = 'counterparty-iban';
 
     public function __construct(
         private readonly FingerprintComposer $fingerprints,
@@ -50,5 +56,17 @@ final class CounterpartyKey
         }
 
         return $this->blindIndex->derive(self::DOMAIN, $normalized, $userId, ($this->session)());
+    }
+
+    // The income detector's clustering key when the payer has an IBAN. It is
+    // decrypted from `transactions.counterparty_iban` to be computed, so
+    // storing it verbatim put back the identifier the AEAD column protects.
+    public function forIban(string $iban, int $userId): string
+    {
+        $trimmed = trim($iban);
+
+        return $trimmed === ''
+            ? self::NONE
+            : $this->blindIndex->derive(self::DOMAIN_IBAN, mb_strtoupper($trimmed), $userId, ($this->session)());
     }
 }

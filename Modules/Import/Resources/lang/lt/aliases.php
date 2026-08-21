@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Atitinka',
     'matches_suffix' => 'operacijų tavo naujausioje istorijoje.',
 
-    'merge_modal_title' => 'Sujungti alternatyvius pavadinimus (:count)',
+    'merge_modal_title' => 'Sujungti :count alternatyvų pavadinimą|Sujungti :count alternatyvius pavadinimus|Sujungti :count alternatyvių pavadinimų',
 
     'merge_modal_help_html' => 'Likusi eilutė išlaiko savo pirminį aprašymą; sujungtos eilutės išsaugomos lauke <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Suprantamas pavadinimas',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Alternatyvus pavadinimas atnaujintas.',
         'deleted' => 'Alternatyvus pavadinimas ištrintas.',
         'merged' => 'Alternatyvūs pavadinimai sujungti.',
-        'imported' => 'Importuota alternatyvių pavadinimų: :count.',
+        'imported' => 'Importuotas :count alternatyvus pavadinimas.|Importuoti :count alternatyvūs pavadinimai.|Importuota :count alternatyvių pavadinimų.',
         'nothing' => 'Nėra ko importuoti.',
     ],
 

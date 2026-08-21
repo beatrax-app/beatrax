@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Rien à verrouiller pour cette date de relevé.',
-        'complete' => 'Rapprochement terminé — :count lignes verrouillées.',
+        'complete' => 'Rapprochement terminé — :count ligne verrouillée.|Rapprochement terminé — :count lignes verrouillées.',
     ],
 ];

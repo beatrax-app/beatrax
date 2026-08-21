@@ -23,7 +23,7 @@ return [
     'load_more' => 'Įkelti daugiau',
 
     'split_badge' => 'Padalyta · :count',
-    'split_expand_aria' => 'Padalyta tarp :count kategorijų — išskleisk, kad pamatytum',
+    'split_expand_aria' => 'Padalyta tarp :count kategorijos — išskleisk, kad pamatytum|Padalyta tarp :count kategorijų — išskleisk, kad pamatytum|Padalyta tarp :count kategorijų — išskleisk, kad pamatytum',
 
     'chain_badge' => 'grandinė',
     'chain_title' => 'Grandinės dalis — atverk šią eilutę, kad pamatytum',

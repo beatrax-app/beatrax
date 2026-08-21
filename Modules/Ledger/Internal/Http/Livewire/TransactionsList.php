@@ -23,6 +23,7 @@ use Modules\Search\Public\Services\SearchQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
+use stdClass;
 
 final class TransactionsList extends Component
 {
@@ -99,7 +100,6 @@ final class TransactionsList extends Component
         }
     }
 
-    // Search mode searches all history regardless of the $fullHistory toggle.
     public function isSearchActive(): bool
     {
         return $this->searchQuery !== ''
@@ -458,7 +458,7 @@ final class TransactionsList extends Component
             ->get(['id', 'name', 'slug', 'name_is_default'])
             ->all();
 
-        $options = array_values(array_map(static function (object $row): array {
+        $options = array_values(array_map(static function (stdClass $row): array {
             return [
                 'id' => is_numeric($row->id) ? (int) $row->id : 0,
                 'name' => CategoryDisplayName::fromRow($row) ?? '',
@@ -467,7 +467,7 @@ final class TransactionsList extends Component
 
         // Sorted on what the reader sees; the stored English orders a
         // translated picker by a word that is not on screen.
-        usort($options, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']));
+        usort($options, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']) ?: $a['id'] <=> $b['id']);
 
         return $options;
     }
@@ -493,7 +493,6 @@ final class TransactionsList extends Component
         ];
     }
 
-    // highlightedCounterparty and snippet are excluded: snapshot bloat.
     /** @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>} */
     private static function searchRowToArray(SearchRowDto $row): array
     {

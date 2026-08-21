@@ -33,7 +33,6 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
-use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
@@ -147,7 +146,6 @@ final class TransactionDetail extends Component
             $tx->save();
 
             if ($breaksPair) {
-                // Reclassify breaks the pair; it never re-types the partner.
                 Transaction::query()
                     ->where('user_id', $user->id)
                     ->where('id', $partnerId)
@@ -267,7 +265,6 @@ final class TransactionDetail extends Component
                 dirtyFields: ['note' => $value],
             ));
 
-            // The sole user-driven note write path, so it owns the stamp.
             $provenance->stamp($user->id, $this->transactionId, ['note' => 'manual']);
         }
 
@@ -324,7 +321,6 @@ final class TransactionDetail extends Component
         $affected = ($reassign)($this->transactionId, $newCounterpartyId, $user);
 
         if ($affected === 0) {
-            // Cross-user or unknown counterparty, or an unchanged value.
             return;
         }
 
@@ -335,7 +331,6 @@ final class TransactionDetail extends Component
             dirtyFields: ['counterparty_id' => $newCounterpartyId],
         ));
 
-        // The sole user-driven counterparty_id write path, so it owns the stamp.
         $provenance->stamp($user->id, $this->transactionId, ['counterparty_id' => 'manual']);
 
         $this->toast(Lang::get('ledger::detail.toast.counterparty_updated'));
@@ -434,7 +429,6 @@ final class TransactionDetail extends Component
         }
     }
 
-    // A Livewire <select> binding delivers this as a string, or as ''.
     /**
      * @param  array{id: ?int, categoryId: int|string|null, amount: string, note: string, tax: bool}  $leg
      */
@@ -453,15 +447,6 @@ final class TransactionDetail extends Component
     private static function parseAmount(string $value): ?int
     {
         return MoneyInput::tryToPositiveMinor($value);
-    }
-
-    // intdiv/modulo, never float division — the no-float-money rule.
-    private static function formatAbsAmount(int $absMinor): string
-    {
-        $whole = intdiv($absMinor, Money::MINOR_UNITS_PER_MAJOR);
-        $frac = $absMinor % Money::MINOR_UNITS_PER_MAJOR;
-
-        return number_format($whole, 0, '', '.').','.str_pad((string) $frac, 2, '0', STR_PAD_LEFT);
     }
 
     public function render(
@@ -485,7 +470,8 @@ final class TransactionDetail extends Component
             ->where('user_id', $userId)
             ->firstOrFail();
 
-        // Assigned onto the in-memory attribute only, never re-saved.
+        // Decrypted onto the in-memory attribute only: nothing on the render
+        // path saves this model, so the plaintext never reaches the column.
         if (is_string($transaction->counterparty_name)) {
             $transaction->counterparty_name = $codec->decryptValue(
                 'transactions',

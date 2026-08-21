@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Ingenting å låse for denne datoen på kontoutskriften.',
-        'complete' => 'Avstemmingen er fullført — :count rader er låst.',
+        'complete' => 'Avstemmingen er fullført — :count rad er låst.|Avstemmingen er fullført — :count rader er låst.',
     ],
 ];

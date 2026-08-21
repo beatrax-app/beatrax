@@ -17,7 +17,7 @@ return [
     'securing' => 'Beskytter dine data…',
     'do_not_close' => 'Luk ikke dette vindue.',
     'encryption_progress_aria' => 'Fremdrift for krypteringen',
-    'not_encrypted_offer' => 'Dine data er ikke krypteret i hvile. Sæt kryptering op for at beskytte dem, hvis denne enhed bliver væk eller stjålet.',
+    'not_encrypted_offer' => 'Dine data er ikke krypteret i hvile. Kryptering skjuler, hvem du betaler, hvis denne enhed mistes eller stjæles — beløb, datoer og søgeindekset forbliver læsbare.',
     'enable_encryption' => 'Aktivér kryptering',
 
     'your_devices' => 'Dine enheder',

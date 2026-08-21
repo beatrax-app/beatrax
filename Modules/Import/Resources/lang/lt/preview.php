@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Atrakinkite programėlę, kad importuotumėte: pardavėjo rakto negalima apskaičiuoti, kol ji užrakinta.',
+        'file_unreadable' => 'Šio failo nepavyko perskaityti.',
         'iban_not_in_preview' => 'Šis IBAN nėra dabartinės peržiūros dalis.',
+        'row_unreadable' => 'Šios eilutės nepavyko perskaityti.',
+        'unknown_account' => 'Ši eilutė priklauso sąskaitai, kuriai dar nesuteikei pavadinimo.',
+    ],
+
+    'failed' => [
+        'heading' => 'Nepavyko perskaityti šio failo',
+        'no_rows' => 'Šiame faile operacijų nerasta, todėl nėra ką importuoti.',
+        'nothing_read' => 'Nieko šiame faile nepavyko perskaityti kaip operacijos, todėl nėra ką importuoti.',
+        'every_row' => 'Nepavyko perskaityti nė vienos šio failo eilutės, todėl nėra ką importuoti. Kiekviena eilutė su priežastimi nurodyta žemiau.',
+        'likely_cause' => 'Dažniausiai antraštės eilutė neatitinka pasirinkto šaltinio. Patikrink banką ir formatą įkėlimo ekrane arba iš naujo atsisiųsk išrašą iš savo banko.',
+        'truncated_heading' => 'Iš šio failo pavyko perskaityti tik dalį',
+        'truncated' => 'Skaitymas sustojo failo viduryje. Viskas po to nebuvo perskaityta ir nebus importuota.',
+        'some_rows' => 'Kai kurių eilučių nepavyko perskaityti. Jos pažymėtos žemiau ir bus praleistos; patvirtinus importuojama kita dalis.',
+        'detail_label' => 'Ką pranešė analizatorius:',
+        'rows_read_label' => 'Perskaitytos eilutės',
+        'rows_skipped_label' => 'Praleistos eilutės',
     ],
 ];

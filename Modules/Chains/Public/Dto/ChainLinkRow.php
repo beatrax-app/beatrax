@@ -8,7 +8,6 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-// confirmsRemaining counts down to the auto-promotion threshold.
 final class ChainLinkRow extends Data
 {
     public function __construct(

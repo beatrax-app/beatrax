@@ -100,7 +100,7 @@
              only — clicking the "Show 10 more · X of N" button
              increments the drawer's $fanoutPage cursor. --}}
         <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2 dark:bg-slate-900 dark:border-slate-700">
-            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('chains::drawer.covers_charges', ['count' => $childTotal]) }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::choice('chains::drawer.covers_charges', $childTotal) }}</p>
             @foreach ($visibleChildren as $child)
                 <div class="flex items-center justify-between">
                     <p class="text-sm text-slate-900 dark:text-slate-100">

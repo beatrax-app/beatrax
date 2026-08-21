@@ -23,7 +23,7 @@ return [
     'load_more' => 'Načíst další',
 
     'split_badge' => 'Rozdělení · :count',
-    'split_expand_aria' => 'Rozděleno mezi kategorie (:count) — rozbal pro zobrazení',
+    'split_expand_aria' => 'Rozděleno mezi :count kategorii — rozbal pro zobrazení|Rozděleno mezi :count kategorie — rozbal pro zobrazení|Rozděleno mezi :count kategorií — rozbal pro zobrazení',
 
     'chain_badge' => 'řetězec',
     'chain_title' => 'Součást řetězce — otevři tento řádek a uvidíš ho',

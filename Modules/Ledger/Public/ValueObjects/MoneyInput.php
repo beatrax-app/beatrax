@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\ValueObjects;
 
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Translation\Translator;
+use Modules\Core\Public\Enums\Locale;
+
 // The string parsing Money refuses, confined to the input boundary. Accepts
 // "12.50", "1.234,56" and "12,50"; the rightmost of '.' or ',' is the decimal.
 final class MoneyInput
@@ -12,6 +16,11 @@ final class MoneyInput
     // already past every one of them — a tenth is a slipped finger far more
     // often than a payment.
     public const int MAX_MINOR = 99_999_999_999;
+
+    // Every group mark a shipped locale uses, so a figure this class wrote
+    // parses back through tryToMinor(): a plain space, the non-breaking one
+    // twelve locales group with, and French's narrow no-break space.
+    private const array GROUP_MARKS = [' ', "\u{00A0}", "\u{202F}"];
 
     // Null — never a guess — for anything that is not a well-formed amount of
     // at most two decimals, or whose magnitude is past MAX_MINOR. A leading
@@ -36,7 +45,7 @@ final class MoneyInput
     // inside a 64-bit int; past that there is nothing to weigh up.
     private static function parseAnyMagnitude(string $value): ?int
     {
-        $trimmed = str_replace([' ', "\u{00A0}"], '', trim($value));
+        $trimmed = str_replace(self::GROUP_MARKS, '', trim($value));
         if ($trimmed === '') {
             return null;
         }
@@ -73,23 +82,45 @@ final class MoneyInput
         return $minor !== null && $minor > 0 ? $minor : null;
     }
 
-    // -123456 -> "-1.234,56": symbol-free, so a value shown then submitted
-    // untouched parses back to the same minor units via tryToMinor().
+    // -123456 -> "-1.234,56" for a Dutch reader and "-1,234.56" for an English
+    // one: symbol-free, so a value shown then submitted untouched parses back
+    // to the same minor units via tryToMinor().
     public static function formatMinor(int $minor): string
     {
         return ($minor < 0 ? '-' : '').self::formatAbsMinor($minor);
     }
 
-    // 123456 or -123456 -> "1.234,56", for inputs that carry their sign
-    // separately. Grouped because a five-figure balance in an input is read
-    // before it is edited, and tryToMinor() takes the group mark back out.
+    // 123456 -> "1.234,56", for inputs that carry their sign separately.
+    // Grouped because a five-figure balance in an input is read before it is
+    // edited, and the marks are the reader's own, so the editable figure and
+    // the read-only one beside it are written the same way.
     public static function formatAbsMinor(int $minor): string
     {
+        $locale = self::language();
         $abs = abs($minor);
-        $whole = (string) intdiv($abs, Money::MINOR_UNITS_PER_MAJOR);
-        $grouped = strrev(implode('.', str_split(strrev($whole), 3)));
+        $cents = str_pad((string) ($abs % Money::MINOR_UNITS_PER_MAJOR), 2, '0', STR_PAD_LEFT);
 
-        return $grouped.','.str_pad((string) ($abs % Money::MINOR_UNITS_PER_MAJOR), 2, '0', STR_PAD_LEFT);
+        return self::group((string) intdiv($abs, Money::MINOR_UNITS_PER_MAJOR), $locale)
+            .$locale->decimalMark()
+            .$cents;
+    }
+
+    // Each chunk is reversed back before the mark goes in: reversing the
+    // assembled string would split the two bytes of a non-breaking space,
+    // which is the group mark in twelve of the shipped locales.
+    private static function group(string $whole, Locale $locale): string
+    {
+        $chunks = array_map(strrev(...), str_split(strrev($whole), 3));
+
+        return implode($locale->groupMark(), array_reverse($chunks));
+    }
+
+    // The reader's active language, which is what decides the two marks. An
+    // unrecognised code reads as English rather than throwing mid-render, the
+    // same fallback Money::format() takes.
+    private static function language(): Locale
+    {
+        return Locale::tryFrom(Container::getInstance()->make(Translator::class)->getLocale()) ?? Locale::En;
     }
 
     // The machine-readable form: "1234.56", no symbol and no group mark, for a

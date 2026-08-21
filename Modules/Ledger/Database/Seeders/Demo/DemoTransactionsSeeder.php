@@ -22,7 +22,6 @@ final class DemoTransactionsSeeder
 {
     private const AH_COUNTERPARTY = 'Albert Heijn';
 
-    // With the day-offset series this yields the documented ~166-row set.
     private const MONTH_SPAN = 3;
 
     // A plausible rate, not a real provider's: the point is that the
@@ -48,10 +47,8 @@ final class DemoTransactionsSeeder
         $today = CarbonImmutable::today();
         $windowStart = $today->subMonthsNoOverflow(self::MONTH_SPAN - 1)->startOfMonth();
 
-        // End of month, not `today`, or a mid-month run seeds fewer rows.
         $this->windowEnd = $today->endOfMonth();
 
-        // The power-user persona: three accounts, ~120 transactions.
         if (isset($users['demo-1@beatrax.local'], $accounts['demo-1@beatrax.local'])) {
             $user = $users['demo-1@beatrax.local'];
             $perUserAccounts = $accounts['demo-1@beatrax.local'];
@@ -317,7 +314,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Two rows, so the `fee` type and the `Fee` chip each have data.
         foreach ([29, 73] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
             if ($date->greaterThan($this->windowEnd)) {
@@ -461,7 +457,6 @@ final class DemoTransactionsSeeder
         }
     }
 
-    // A Saturday grocery run plus a Wednesday top-up (three days back).
     private function seedUser1AhWeekly(
         User $user,
         Account $asn,
@@ -507,7 +502,6 @@ final class DemoTransactionsSeeder
         return $inserted;
     }
 
-    // Tuesday/Thursday commute, one amount per trip until the table runs out.
     private function seedUser1NsTransit(
         User $user,
         Account $asn,

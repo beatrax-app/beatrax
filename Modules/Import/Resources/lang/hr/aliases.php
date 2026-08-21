@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Odgovara',
     'matches_suffix' => 'transakcija u tvojoj nedavnoj povijesti.',
 
-    'merge_modal_title' => 'Spoji :count aliasa',
+    'merge_modal_title' => 'Spoji :count alias|Spoji :count aliasa|Spoji :count aliasa',
 
     'merge_modal_help_html' => 'Preostali redak zadržava svoj izvorni opis; apsorbirani retci čuvaju se u <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Razumljiv naziv',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Alias ažuriran.',
         'deleted' => 'Alias izbrisan.',
         'merged' => 'Aliasi spojeni.',
-        'imported' => 'Uvezeno :count aliasa.',
+        'imported' => 'Uvezen :count alias.|Uvezena :count aliasa.|Uvezeno :count aliasa.',
         'nothing' => 'Nema ništa za uvoz.',
     ],
 

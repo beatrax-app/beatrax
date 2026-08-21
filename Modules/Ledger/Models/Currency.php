@@ -6,7 +6,6 @@ namespace Modules\Ledger\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-// Global reference data, so deliberately no BelongsToUser trait.
 /**
  * @property string $code
  * @property string $name

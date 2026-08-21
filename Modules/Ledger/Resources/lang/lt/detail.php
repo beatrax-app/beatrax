@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Nepavyko išsaugoti — dalių sumos turi tiksliai sutapti su visa operacijos suma.',
         'not_found' => 'Operacija nerasta.',
-        'amount_zero' => 'Suma negali būti 0,00 €',
+        'amount_zero' => 'Suma negali būti :amount',
         'choose_category' => 'Pasirink kategoriją.',
         'choose_before_removing' => 'Prieš pašalindamas pasirink kategoriją.',
         'choose_before_unsplitting' => 'Prieš panaikindamas padalijimą pasirink kategoriją.',

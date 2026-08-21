@@ -56,7 +56,7 @@ return [
     'matches_prefix' => 'Matcht',
     'matches_suffix' => 'transacties in je recente geschiedenis.',
 
-    'merge_modal_title' => ':count aliassen samenvoegen',
+    'merge_modal_title' => ':count alias samenvoegen|:count aliassen samenvoegen',
     'merge_modal_help_html' => 'De overblijvende rij behoudt zijn ruwe omschrijving; de opgenomen rijen worden bewaard in <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Herkenbare naam',
     'generalized_pattern_label' => 'Gegeneraliseerd patroon',
@@ -67,7 +67,7 @@ return [
         'updated' => 'Alias bijgewerkt.',
         'deleted' => 'Alias verwijderd.',
         'merged' => 'Aliassen samengevoegd.',
-        'imported' => ':count aliassen geïmporteerd.',
+        'imported' => ':count alias geïmporteerd.|:count aliassen geïmporteerd.',
         'nothing' => 'Niets te importeren.',
     ],
 

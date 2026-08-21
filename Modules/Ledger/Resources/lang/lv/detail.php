@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Neizdevās saglabāt — daļu kopsummai precīzi jāsakrīt ar darījuma kopsummu.',
         'not_found' => 'Darījums nav atrasts.',
-        'amount_zero' => 'Summa nevar būt €0,00',
+        'amount_zero' => 'Summa nevar būt :amount',
         'choose_category' => 'Izvēlieties kategoriju.',
         'choose_before_removing' => 'Pirms noņemšanas izvēlieties kategoriju.',
         'choose_before_unsplitting' => 'Pirms sadalījuma atcelšanas izvēlieties kategoriju.',

@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Deblocați aplicația pentru a importa: cheia comerciantului nu poate fi calculată cât timp este blocată.',
+        'file_unreadable' => 'Acest fișier nu a putut fi citit.',
         'iban_not_in_preview' => 'Acest IBAN nu face parte din previzualizarea curentă.',
+        'row_unreadable' => 'Acest rând nu a putut fi citit.',
+        'unknown_account' => 'Acest rând aparține unui cont căruia nu i-ai dat încă un nume.',
+    ],
+
+    'failed' => [
+        'heading' => 'Acest fișier nu a putut fi citit',
+        'no_rows' => 'Nu au fost găsite tranzacții în acest fișier, deci nu este nimic de importat.',
+        'nothing_read' => 'Nimic din acest fișier nu a putut fi citit ca tranzacție, deci nu este nimic de importat.',
+        'every_row' => 'Niciun rând din acest fișier nu a putut fi citit, deci nu este nimic de importat. Fiecare rând este listat mai jos cu motivul.',
+        'likely_cause' => 'De obicei rândul de antet nu corespunde sursei alese. Verifică banca și formatul pe ecranul de încărcare sau descarcă din nou extrasul de la banca ta.',
+        'truncated_heading' => 'Din acest fișier a putut fi citită doar o parte',
+        'truncated' => 'Citirea s-a oprit la jumătatea fișierului. Tot ce urmează nu a fost citit și nu va fi importat.',
+        'some_rows' => 'Unele rânduri nu au putut fi citite. Sunt marcate mai jos și vor fi sărite; confirmarea importă restul.',
+        'detail_label' => 'Ce a raportat analizorul:',
+        'rows_read_label' => 'Rânduri citite',
+        'rows_skipped_label' => 'Rânduri sărite',
     ],
 ];

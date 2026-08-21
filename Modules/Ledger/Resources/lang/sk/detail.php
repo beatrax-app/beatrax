@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Nepodarilo sa uložiť — súčet častí musí presne zodpovedať celkovej sume transakcie.',
         'not_found' => 'Transakcia sa nenašla.',
-        'amount_zero' => 'Suma nemôže byť 0,00 €',
+        'amount_zero' => 'Suma nemôže byť :amount',
         'choose_category' => 'Vyber kategóriu.',
         'choose_before_removing' => 'Pred odstránením vyber kategóriu.',
         'choose_before_unsplitting' => 'Pred zrušením rozdelenia vyber kategóriu.',

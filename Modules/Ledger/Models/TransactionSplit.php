@@ -41,7 +41,6 @@ final class TransactionSplit extends Model
         return [
             'settled_amount_minor' => 'integer',
             'sort_order' => 'integer',
-            // `settled_amount` is not a column; the cast bridges it to the pair.
             'settled_amount' => MoneyMinorCast::class.':settled_amount_minor,settled_currency',
         ];
     }

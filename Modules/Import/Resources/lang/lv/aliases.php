@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Atbilst',
     'matches_suffix' => 'darījumiem jūsu nesenajā vēsturē.',
 
-    'merge_modal_title' => 'Aizstājvārdu apvienošana: :count',
+    'merge_modal_title' => 'Apvienot :count aizstājvārdu|Apvienot :count aizstājvārdu|Apvienot :count aizstājvārdus',
 
     'merge_modal_help_html' => 'Atlikušajā rindā paliek tās sākotnējais apraksts; uzņemtās rindas tiek saglabātas laukā <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Saprotamais nosaukums',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Aizstājvārds atjaunināts.',
         'deleted' => 'Aizstājvārds dzēsts.',
         'merged' => 'Aizstājvārdi apvienoti.',
-        'imported' => 'Importēti aizstājvārdi: :count.',
+        'imported' => 'Importēti :count aizstājvārdu.|Importēts :count aizstājvārds.|Importēti :count aizstājvārdi.',
         'nothing' => 'Nav ko importēt.',
     ],
 

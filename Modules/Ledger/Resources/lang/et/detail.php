@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Ei õnnestunud salvestada — osade summad peavad tehingu kogusummaga täpselt kokku langema.',
         'not_found' => 'Tehingut ei leitud.',
-        'amount_zero' => 'Summa ei saa olla 0,00 €',
+        'amount_zero' => 'Summa ei saa olla :amount',
         'choose_category' => 'Vali kategooria.',
         'choose_before_removing' => 'Vali enne eemaldamist kategooria.',
         'choose_before_unsplitting' => 'Vali enne jaotuse tühistamist kategooria.',

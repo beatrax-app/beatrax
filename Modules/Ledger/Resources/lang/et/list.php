@@ -23,7 +23,7 @@ return [
     'load_more' => 'Laadi veel',
 
     'split_badge' => 'Jaotatud · :count',
-    'split_expand_aria' => 'Jaotatud :count kategooria vahel — vaatamiseks laienda',
+    'split_expand_aria' => 'Jaotatud :count kategooria vahel — vaatamiseks laienda|Jaotatud :count kategooria vahel — vaatamiseks laienda',
 
     'chain_badge' => 'ahel',
     'chain_title' => 'Osa ahelast — vaatamiseks ava see rida',

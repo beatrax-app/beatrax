@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Illeszkedik',
     'matches_suffix' => 'tranzakcióra a legutóbbi előzményedben.',
 
-    'merge_modal_title' => ':count álnév egyesítése',
+    'merge_modal_title' => ':count álnév egyesítése|:count álnév egyesítése',
 
     'merge_modal_help_html' => 'A megmaradó sor megtartja a nyers leírását; a beolvasztott sorok a <code class="font-mono text-xs">merged_from</code> mezőben maradnak meg.',
     'friendly_name_label' => 'Beszédes név',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Álnév frissítve.',
         'deleted' => 'Álnév törölve.',
         'merged' => 'Álnevek egyesítve.',
-        'imported' => ':count álnév importálva.',
+        'imported' => ':count álnév importálva.|:count álnév importálva.',
         'nothing' => 'Nincs mit importálni.',
     ],
 

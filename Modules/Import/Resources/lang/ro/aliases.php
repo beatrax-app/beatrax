@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Se potrivește cu',
     'matches_suffix' => 'tranzacții din istoricul tău recent.',
 
-    'merge_modal_title' => 'Îmbină :count aliasuri',
+    'merge_modal_title' => 'Îmbină :count alias|Îmbină :count aliasuri|Îmbină :count de aliasuri',
 
     'merge_modal_help_html' => 'Rândul rămas își păstrează descrierea brută; rândurile absorbite sunt păstrate în <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Nume prietenos',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Alias actualizat.',
         'deleted' => 'Alias șters.',
         'merged' => 'Aliasuri îmbinate.',
-        'imported' => ':count aliasuri importate.',
+        'imported' => ':count alias importat.|:count aliasuri importate.|:count de aliasuri importate.',
         'nothing' => 'Nimic de importat.',
     ],
 

@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Nepodařilo se uložit — součet položek musí přesně odpovídat celkové částce transakce.',
         'not_found' => 'Transakce nenalezena.',
-        'amount_zero' => 'Částka nemůže být 0,00 €',
+        'amount_zero' => 'Částka nemůže být :amount',
         'choose_category' => 'Vyber kategorii.',
         'choose_before_removing' => 'Před odebráním vyber kategorii.',
         'choose_before_unsplitting' => 'Před zrušením rozdělení vyber kategorii.',

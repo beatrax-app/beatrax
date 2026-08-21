@@ -7,7 +7,7 @@
     </header>
 
     <p class="text-sm text-slate-900 dark:text-slate-100">
-        {{ Lang::get('import::results.summary', ['inserted' => $importRun->inserted_count, 'duplicates' => $importRun->duplicate_count]) }}{{ $importRun->enriched_count > 0 ? Lang::get('import::results.summary_enriched', ['count' => $importRun->enriched_count]) : '' }}{{ $importRun->error_count > 0 ? Lang::get('import::results.summary_errors', ['count' => $importRun->error_count]) : '' }}.
+        {{ Lang::choice('import::results.summary', $importRun->inserted_count) }}{{ Lang::choice('import::results.summary_duplicates', $importRun->duplicate_count) }}{{ $importRun->enriched_count > 0 ? Lang::get('import::results.summary_enriched', ['count' => $importRun->enriched_count]) : '' }}{{ $importRun->error_count > 0 ? Lang::choice('import::results.summary_errors', $importRun->error_count) : '' }}.
     </p>
 
     @if ($importRun->duplicate_count > 0)

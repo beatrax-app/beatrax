@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Tämän osuuden jälkeen ei löytynyt rahoitusketjua.',
 
-    'covers_charges' => 'Kattaa :count ICS-veloitusta',
+    'covers_charges' => 'Kattaa :count ICS-veloituksen|Kattaa :count ICS-veloitusta',
     'no_ics_charges' => 'Tässä tilityksessä ei ole ICS-veloituksia',
     'show_more_fanout' => 'Näytä :count lisää · :shown / :total',
 

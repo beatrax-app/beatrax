@@ -17,7 +17,7 @@ return [
     'securing' => 'Securing your data…',
     'do_not_close' => 'Do not close this window.',
     'encryption_progress_aria' => 'Encryption progress',
-    'not_encrypted_offer' => 'Your data is not encrypted at rest. Set up encryption to protect it if this device is lost or stolen.',
+    'not_encrypted_offer' => 'Your data is not encrypted at rest. Encryption hides who you pay if this device is lost or stolen — amounts, dates and the search index stay readable.',
     'enable_encryption' => 'Enable encryption',
 
     'your_devices' => 'Your devices',

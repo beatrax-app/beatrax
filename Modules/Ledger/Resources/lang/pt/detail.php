@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Não foi possível guardar — o total das parcelas tem de corresponder exatamente ao total da transação.',
         'not_found' => 'Transação não encontrada.',
-        'amount_zero' => 'O montante não pode ser €0,00',
+        'amount_zero' => 'O montante não pode ser :amount',
         'choose_category' => 'Escolhe uma categoria.',
         'choose_before_removing' => 'Escolhe uma categoria antes de remover.',
         'choose_before_unsplitting' => 'Escolhe uma categoria antes de anular a divisão.',

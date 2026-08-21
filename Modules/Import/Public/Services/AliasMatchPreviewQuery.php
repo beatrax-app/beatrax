@@ -14,7 +14,9 @@ use stdClass;
 
 final class AliasMatchPreviewQuery
 {
-    private const MIN_PATTERN_LENGTH = 3;
+    // Shared with the save path: a pattern the preview refuses to test is a
+    // pattern nobody has seen the effect of, and it used to be savable anyway.
+    public const MIN_PATTERN_LENGTH = 3;
 
     private const SCAN_LIMIT = 500;
 
@@ -111,15 +113,14 @@ final class AliasMatchPreviewQuery
         return ! $field['decrypted'] && $field['value'] === '';
     }
 
-    // The same matcher MerchantNameResolver's generalized tier runs, because
-    // this preview exists to predict that tier: a substring test here would
-    // promise matches the alias will never make.
+    // The same matcher MerchantNameResolver's generalized tier runs, over the
+    // same column: resolve() is only ever handed transactions.description, so
+    // falling back to counterparty_name here counted matches the alias itself
+    // can never make.
     private static function rowContains(stdClass $row, string $needle): bool
     {
         $description = isset($row->description) && is_string($row->description) ? $row->description : '';
-        $counterparty = isset($row->counterparty_name) && is_string($row->counterparty_name) ? $row->counterparty_name : '';
-        $haystack = mb_strtolower($description !== '' ? $description : $counterparty);
 
-        return CorpusPatternMatcher::containsToken($haystack, $needle);
+        return CorpusPatternMatcher::containsToken(mb_strtolower($description), $needle);
     }
 }

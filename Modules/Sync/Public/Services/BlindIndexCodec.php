@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use LogicException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
 use RuntimeException;
 use SodiumException;
@@ -26,6 +27,16 @@ final class BlindIndexCodec
     // The stored form is 64 lowercase hex characters, which is what makes it
     // fit `transactions.counterparty_normalized`'s varchar(80) unchanged.
     public const int DIGEST_LENGTH = 64;
+
+    // The one value a blind-index column holds in the clear: it records the
+    // ABSENCE of a counterparty rather than naming one. Defined here, on the
+    // public surface, because three modules compare a stored value against it.
+    public const string SENTINEL = '_no_counterparty';
+
+    // A digest-length value that is not hex is a merchant name of exactly that
+    // length, which is improbable but not impossible. Reading a handful means
+    // one such name cannot answer for a table that really is keyed.
+    private const int DERIVED_PROBE_ROWS = 25;
 
     public function __construct(
         private readonly GdkKeyringService $keyringService,
@@ -101,10 +112,10 @@ final class BlindIndexCodec
         }
     }
 
-    // Whether this device has already rewritten its stored matching keys under
-    // the key it holds. Once true, adopting a peer's different key would leave
-    // every stored digest unmatchable by the value a re-import computes.
-    public function hasDerived(int $userId): bool
+    // Whether the one-time conversion sweep has run on this device. Answers
+    // only that: a sweep over an empty ledger converts nothing and still counts,
+    // which is what stops it rescanning three tables on every screen mount.
+    public function hasSweptCounterpartyKeys(int $userId): bool
     {
         $row = $this->db->connection()
             ->table('sync_encryption_state')
@@ -114,12 +125,51 @@ final class BlindIndexCodec
         return $row !== null && ($row->counterparty_key_backfilled_at ?? null) !== null;
     }
 
-    public function markDerived(int $userId): void
+    public function markCounterpartyKeysSwept(int $userId): void
     {
         $this->db->connection()
             ->table('sync_encryption_state')
             ->where('user_id', $userId)
             ->update(['counterparty_key_backfilled_at' => $this->clock->now()]);
+    }
+
+    // Whether this device holds rows keyed under the blind-index key it has.
+    // Asked of the DATA, never of the sweep marker: a device that enrolled with
+    // an empty ledger and imported afterwards swept nothing, yet every row it
+    // then wrote is keyed, and adopting a peer's key would orphan all of them.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
+     */
+    public function holdsDerivedRows(int $userId): bool
+    {
+        // transactions alone is sufficient and necessary: merchants and
+        // recurring_series keys are only ever derived from a transaction, so
+        // neither can hold one this table does not.
+        $candidates = $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $userId)
+            ->whereRaw('length(counterparty_normalized) = ?', [self::DIGEST_LENGTH])
+            ->limit(self::DERIVED_PROBE_ROWS)
+            ->pluck('counterparty_normalized');
+
+        foreach ($candidates as $value) {
+            if (is_string($value) && self::looksDerived($value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // The blind-index columns, on the public surface for the guards outside
+    // Sync that have to know which columns these are. SensitiveFieldRegistry
+    // owns the list; this is the door, not a second copy.
+    /**
+     * @return array<string, string> {table}.{column} => the domain it derives under
+     */
+    public static function indexedColumns(): array
+    {
+        return SensitiveFieldRegistry::blindIndexColumns();
     }
 
     // Shape, not proof: a merchant name of exactly this length and alphabet is

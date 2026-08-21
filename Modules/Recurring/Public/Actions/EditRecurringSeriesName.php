@@ -17,7 +17,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class EditRecurringSeriesName
 {
-    // Well under the column's VARCHAR(255), so this cap always binds first.
     private const MAX_LENGTH = 120;
 
     public function __construct(

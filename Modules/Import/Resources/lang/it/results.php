@@ -6,9 +6,10 @@ return [
     'page_title' => 'Importazione completata',
     'heading' => 'Importazione completata',
 
-    'summary' => 'Importate :inserted transazioni · saltati :duplicates duplicati',
+    'summary' => 'Importata :count transazione|Importate :count transazioni',
+    'summary_duplicates' => ' · saltato :count duplicato| · saltati :count duplicati',
     'summary_enriched' => ' · :count arricchite',
-    'summary_errors' => ' · :count errori',
+    'summary_errors' => ' · :count errore| · :count errori',
 
     'show_duplicates' => 'Mostra i duplicati saltati (:count)',
     'duplicates_help' => 'I duplicati sono righe già presenti nel tuo registro — vengono saltate senza avviso quando reimporti.',
@@ -16,4 +17,12 @@ return [
     'errors_help' => 'Gli errori sono righe che non è stato possibile analizzare; non sono state aggiunte al tuo registro.',
 
     'upload_another' => 'Carica un altro estratto conto',
+
+    'issues' => [
+        'row' => 'Riga :row: :reason',
+        'file' => 'Non è stato possibile leggere il file per intero: :reason',
+        'duplicate' => 'La riga :row era già nel tuo registro.',
+        'more' => '+ :count non elencate',
+        'unknown_reason' => 'Non è stato registrato alcun motivo.',
+    ],
 ];

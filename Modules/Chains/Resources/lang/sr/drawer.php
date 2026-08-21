@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Iza ove deonice nije pronađen lanac finansiranja.',
 
-    'covers_charges' => 'Pokriva :count ICS zaduženja',
+    'covers_charges' => 'Pokriva :count ICS zaduženje|Pokriva :count ICS zaduženja|Pokriva :count ICS zaduženja',
     'no_ics_charges' => 'U ovom poravnanju nema ICS zaduženja',
     'show_more_fanout' => 'Prikaži još :count · :shown od :total',
 

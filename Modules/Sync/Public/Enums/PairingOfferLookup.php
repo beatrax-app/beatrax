@@ -18,4 +18,9 @@ enum PairingOfferLookup
     // refused the connection or timed out. This is the only outcome for which
     // "check that both devices are on the same network" is true.
     case NoPeerReached;
+
+    // A peer answered 429. Distinct from CodeNotAccepted because the advice
+    // differs: "ask for a new code" cannot work here, and following it burns a
+    // fresh code into the same bucket and makes the limit worse.
+    case RateLimited;
 }
