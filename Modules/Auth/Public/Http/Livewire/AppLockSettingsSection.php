@@ -164,6 +164,10 @@ final class AppLockSettingsSection extends Component
         // A browser event, not a PHP one: sibling sections refresh their
         // lock-gated UI live without a cross-module dependency.
         $this->dispatch(AppLockEvents::CONFIGURED);
+
+        // Every other write on this screen confirms itself; this one blanked
+        // its three inputs and said nothing, which reads as "it did not take".
+        $this->toast(Lang::get('core::settings.saved'));
     }
 
     public function setIdleTimeout(CurrentUser $currentUser, DatabaseManager $db, Clock $clock, Session $session): void
@@ -299,6 +303,10 @@ final class AppLockSettingsSection extends Component
 
         $this->confirmingForgotPin = false;
         $this->flashMessage = '';
+
+        // Nothing else marks this one: the lock was already on and stays on, so
+        // without a word the screen looks identical to a reset that failed.
+        $this->toast(Lang::get('core::settings.saved'));
     }
 
     // Half of a browser round trip: lock.js answers 'beatrax:webauthn-create'
