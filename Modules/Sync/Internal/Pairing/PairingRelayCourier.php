@@ -106,15 +106,22 @@ final class PairingRelayCourier
             return '';
         }
 
-        if (is_string($row->initiator_device_id) && hash_equals($row->initiator_device_id, $peerDid)) {
-            return is_string($row->initiator_x25519_pub_hex) ? $row->initiator_x25519_pub_hex : '';
+        return $this->sideX25519($row->initiator_device_id, $row->initiator_x25519_pub_hex, $peerDid)
+            ?? $this->sideX25519($row->responder_device_id, $row->responder_x25519_pub_hex, $peerDid)
+            ?? '';
+    }
+
+    // The sealing key bound to ONE side of the row, or null when that side is
+    // not the peer being asked about. Null and '' differ here: '' means this
+    // side IS the peer but holds no key, which must stop the search rather
+    // than fall through and answer with the other side's key.
+    private function sideX25519(mixed $sideDeviceId, mixed $sideX25519Hex, string $peerDid): ?string
+    {
+        if (! is_string($sideDeviceId) || ! hash_equals($sideDeviceId, $peerDid)) {
+            return null;
         }
 
-        if (is_string($row->responder_device_id) && hash_equals($row->responder_device_id, $peerDid)) {
-            return is_string($row->responder_x25519_pub_hex) ? $row->responder_x25519_pub_hex : '';
-        }
-
-        return '';
+        return is_string($sideX25519Hex) ? $sideX25519Hex : '';
     }
 
     // Drains this device's own relay mailbox and dispatches every pending

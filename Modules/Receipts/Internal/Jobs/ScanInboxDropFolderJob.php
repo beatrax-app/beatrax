@@ -18,11 +18,11 @@ use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Receipts\Internal\Exceptions\InboxDropScanException;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Pipeline\MboxIterator;
 use Modules\Receipts\Public\Support\UploadLimits;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 use Throwable;
 
 // Per-user 5-minute scanner for storage/app/inbox-drop/{userId}/.
@@ -115,7 +115,7 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
     {
         $size = @filesize($path);
         if ($size !== false && $size > UploadLimits::MAX_MESSAGE_BYTES) {
-            throw new RuntimeException('inbox-drop .eml exceeds the size cap: '.basename($path));
+            throw InboxDropScanException::emlTooLarge(basename($path));
         }
 
         ($recordReceipt)($files->get($path), $user, basename($path));

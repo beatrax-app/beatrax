@@ -7,7 +7,7 @@ namespace Modules\Auth\Internal\Account;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\QueryException;
-use RuntimeException;
+use Modules\Auth\Internal\Exceptions\AccountPurgeException;
 
 // The table list is discovered from the live schema, not written down: a
 // hand-kept list goes stale the first time a module adds a table, and it fails
@@ -86,9 +86,7 @@ final readonly class UserScopedDataPurge
             }
 
             if (count($blocked) === count($pending)) {
-                throw new RuntimeException(
-                    'UserScopedDataPurge: could not clear '.implode(', ', $blocked).' for user '.$userId.'.',
-                );
+                throw AccountPurgeException::tablesBlocked($blocked, $userId);
             }
 
             $pending = $blocked;
@@ -147,9 +145,7 @@ final readonly class UserScopedDataPurge
         }
 
         if ($survivors !== []) {
-            throw new RuntimeException(
-                'UserScopedDataPurge: data survived the purge of user '.$userId.': '.implode(', ', $survivors).'.',
-            );
+            throw AccountPurgeException::dataSurvived($survivors, $userId);
         }
     }
 }

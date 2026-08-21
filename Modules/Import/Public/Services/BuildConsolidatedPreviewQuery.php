@@ -190,13 +190,21 @@ final readonly class BuildConsolidatedPreviewQuery
         // A failed parse contributes a single error row, which counts as
         // neither committable nor duplicate. Without this the section reads
         // 'ready' with a total of zero and offers a commit button.
+        return $this->everyRowFailed($allRows) ? 'error' : 'ready';
+    }
+
+    /**
+     * @param  list<PreviewRowDto>  $allRows
+     */
+    private function everyRowFailed(array $allRows): bool
+    {
         foreach ($allRows as $row) {
             if ($row->status !== 'error') {
-                return 'ready';
+                return false;
             }
         }
 
-        return 'error';
+        return true;
     }
 
     // The parser's own reason — which format it expected, what to

@@ -94,6 +94,9 @@ final class RenameCounterpartyPopover extends Component
                     actions: [['type' => 'category', 'payload' => ['category_id' => $this->categoryHint]]],
                 ));
             } catch (ValidationException) {
+                // CreateCategorizationRule reports failures against 'value',
+                // a field this popover does not render, so one reaching the
+                // error bag would strand the user on a form already saved.
             } catch (InvalidArgumentException) {
                 // A duplicate rule, or a stale/tampered categoryHint failing
                 // assertCategoryVisible(). Either way the alias itself already

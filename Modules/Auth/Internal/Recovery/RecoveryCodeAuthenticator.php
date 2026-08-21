@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Recovery;
 
 use Illuminate\Contracts\Hashing\Hasher;
+use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SystemAlertWriter;
+use stdClass;
 
 final class RecoveryCodeAuthenticator
 {
@@ -36,34 +38,11 @@ final class RecoveryCodeAuthenticator
             $connection = $this->db->connection();
             $username = strtolower(trim($usernameInput));
 
+            /** @var User|null $user */
             $user = User::query()->where('username', $username)->first();
             $candidate = $this->reformat($this->normalizer->normalize($codeInput));
 
-            // Row-locked, so a matched code is consumed atomically here.
-            $unused = $user instanceof User
-                ? $connection->table('user_recovery_codes')
-                    ->where('user_id', $user->id)
-                    ->whereNull('used_at')
-                    ->lockForUpdate()
-                    ->get(['id', 'code_hash'])
-                    ->all()
-                : [];
-
-            // A fixed comparison count whatever the account state, so neither
-            // timing nor match position leaks it. The padding uses make(),
-            // which costs the same as check().
-            $matchedId = null;
-            $iterations = max(self::HASH_OPS, count($unused));
-            for ($i = 0; $i < $iterations; $i++) {
-                $row = $unused[$i] ?? null;
-                if ($row !== null && is_string($row->code_hash)) {
-                    if ($this->hasher->check($candidate, $row->code_hash) && $matchedId === null) {
-                        $matchedId = $row->id;
-                    }
-                } else {
-                    $this->hasher->make($candidate);
-                }
-            }
+            $matchedId = $this->matchingCodeId($candidate, $this->unusedCodes($connection, $user));
 
             if ($user instanceof User && $matchedId !== null) {
                 $connection->table('user_recovery_codes')
@@ -91,6 +70,45 @@ final class RecoveryCodeAuthenticator
         }
 
         return $result;
+    }
+
+    // Row-locked, so a matched code is consumed atomically by the caller.
+    /** @return array<int, stdClass> */
+    private function unusedCodes(Connection $connection, ?User $user): array
+    {
+        if (! $user instanceof User) {
+            return [];
+        }
+
+        return $connection->table('user_recovery_codes')
+            ->where('user_id', $user->id)
+            ->whereNull('used_at')
+            ->lockForUpdate()
+            ->get(['id', 'code_hash'])
+            ->all();
+    }
+
+    // A fixed comparison count whatever the account state, so neither timing
+    // nor match position leaks it. The padding uses make(), which costs the
+    // same as check().
+    /** @param array<int, stdClass> $unused */
+    private function matchingCodeId(string $candidate, array $unused): mixed
+    {
+        $matchedId = null;
+        $iterations = max(self::HASH_OPS, count($unused));
+
+        for ($i = 0; $i < $iterations; $i++) {
+            $row = $unused[$i] ?? null;
+            if ($row !== null && is_string($row->code_hash)) {
+                if ($this->hasher->check($candidate, $row->code_hash) && $matchedId === null) {
+                    $matchedId = $row->id;
+                }
+            } else {
+                $this->hasher->make($candidate);
+            }
+        }
+
+        return $matchedId;
     }
 
     // The bare code is hashed in hyphenated shape, so restore it before check.

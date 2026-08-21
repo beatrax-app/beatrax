@@ -61,6 +61,11 @@ final class PackageAndroidCommand extends Command
             );
         }
 
+        return $this->prepareAndPackage($buildType, $appId);
+    }
+
+    private function prepareAndPackage(string $buildType, string $appId): int
+    {
         $failure = $this->appIdPinFailure($appId)
             ?? $this->versionCodeFailure()
             ?? $this->androidProjectFailure();
@@ -140,7 +145,19 @@ final class PackageAndroidCommand extends Command
 
         $gradle = new Process([$wrapper, $task, '--stacktrace', '--no-daemon'], $project);
         $gradle->setTimeout(self::GRADLE_TIMEOUT_SECONDS);
-        $gradle->run(function (string $type, string $buffer): void {
+
+        // Gradle's own split between the two streams is kept rather than
+        // flattened: `2>` is how an operator lifts the failure out of half an
+        // hour of build chatter, and that only works if it stayed on stderr.
+        $errors = $this->output->getErrorStyle();
+
+        $gradle->run(function (string $type, string $buffer) use ($errors): void {
+            if ($type === Process::ERR) {
+                $errors->write($buffer);
+
+                return;
+            }
+
             $this->output->write($buffer);
         });
     }
@@ -201,6 +218,11 @@ final class PackageAndroidCommand extends Command
             return null;
         }
 
+        return $this->derivedVersionCodeFailure();
+    }
+
+    private function derivedVersionCodeFailure(): ?string
+    {
         $version = $this->config->get('nativephp.version');
 
         if (! is_string($version)) {

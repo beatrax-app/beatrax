@@ -187,30 +187,31 @@ final class RowOwnership
         }
 
         foreach ($this->ownedReferences($table) as $column => $referencedTable) {
-            $referenced = $payload[$column] ?? null;
-
-            // A null reference is the column being unset rather than a bad
-            // id, so it is not something to refuse the whole row over.
-            if ($referenced === null) {
-                continue;
-            }
-
-            if (! is_int($referenced) && ! is_string($referenced)) {
-                return false;
-            }
-
-            // Only a row that EXISTS and belongs to someone else is refused.
-            // An absent parent is an ordering problem, not a cross-user one —
-            // children legitimately arrive before their parent — and the
-            // deferral and foreign-key paths already handle that case.
-            $owner = $this->ownerOf($referencedTable, $referenced);
-
-            if ($owner !== null && $owner !== $userId) {
+            if (! $this->referenceAdmits($referencedTable, $payload[$column] ?? null, $userId)) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    // A null reference is the column being unset rather than a bad id, so it is
+    // not something to refuse the whole row over. Only a row that EXISTS and
+    // belongs to someone else is refused: an absent parent is an ordering
+    // problem — children legitimately arrive before their parent.
+    private function referenceAdmits(string $referencedTable, mixed $referenced, int $userId): bool
+    {
+        if ($referenced === null) {
+            return true;
+        }
+
+        if (! is_int($referenced) && ! is_string($referenced)) {
+            return false;
+        }
+
+        $owner = $this->ownerOf($referencedTable, $referenced);
+
+        return $owner === null || $owner === $userId;
     }
 
     // Resolves the target table from its sibling type column, then asks the
@@ -236,13 +237,7 @@ final class RowOwnership
             $type = $payload[$typeColumn] ?? $this->siblingValue($table, $pk, $typeColumn);
             $referencedTable = is_string($type) ? (self::POLYMORPHIC_TABLES[$type] ?? null) : null;
 
-            if ($referencedTable === null) {
-                return false;
-            }
-
-            $owner = $this->ownerOf($referencedTable, $referenced);
-
-            if ($owner !== null && $owner !== $userId) {
+            if ($referencedTable === null || ! $this->referenceAdmits($referencedTable, $referenced, $userId)) {
                 return false;
             }
         }

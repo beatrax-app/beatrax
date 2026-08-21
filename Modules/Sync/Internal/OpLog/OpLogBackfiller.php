@@ -11,8 +11,8 @@ use Illuminate\Support\Collection;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
+use Modules\Sync\Internal\Exceptions\UnreadableColumnException;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
-use RuntimeException;
 
 // Writes the rows that already existed when sync was switched on into the op
 // log as CREATE_ROW ops. Capture is event-driven, so a device that was used
@@ -230,9 +230,7 @@ final readonly class OpLogBackfiller
             // ordinary pre-encryption row; the codec blanking it instead means
             // it held ciphertext no epoch in the keyring opens.
             if (! $read['decrypted'] && $read['value'] !== $value) {
-                throw new RuntimeException(
-                    "OpLogBackfiller: cannot read {$table}.{$field} for user {$userId} — refusing to capture an unreadable value.",
-                );
+                throw UnreadableColumnException::duringBackfill($table, $field, $userId);
             }
 
             $fields[$field] = $read['value'];

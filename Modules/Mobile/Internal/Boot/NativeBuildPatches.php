@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Boot;
 
+use Modules\Mobile\Internal\Exceptions\NativeBuildPatchException;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -92,10 +92,7 @@ final readonly class NativeBuildPatches
             }
 
             if (in_array($script, self::REQUIRED_SCRIPTS, true)) {
-                throw new RuntimeException(
-                    "NativeBuildPatches: {$script} failed, and the artefact it writes is required for App Store "
-                    ."submission. Refusing to build without it.\n{$failure}",
-                );
+                throw NativeBuildPatchException::requiredScriptFailed($script, $failure);
             }
 
             $this->log->warning('NativeBuildPatches: patch script failed.', [
