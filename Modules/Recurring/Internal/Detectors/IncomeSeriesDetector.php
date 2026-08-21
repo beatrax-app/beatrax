@@ -102,7 +102,7 @@ final class IncomeSeriesDetector implements SeriesDetector
             // a decrypted IBAN written verbatim put the salary payer, the
             // benefits agency and the pension provider back in the clear.
             $counterpartyKey = $iban !== ''
-                ? $this->counterpartyKey->forIban($iban, (int) $user->id)
+                ? $this->counterpartyKey->forIban($iban, $user->id)
                 : $counterparty;
 
             if ($counterpartyKey === '' || $counterpartyKey === CounterpartyKey::NONE) {

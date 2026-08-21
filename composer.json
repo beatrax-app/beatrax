@@ -12,6 +12,7 @@
         "php": "^8.5",
         "ext-ctype": "*",
         "ext-curl": "*",
+        "ext-dom": "*",
         "ext-filter": "*",
         "ext-iconv": "*",
         "ext-intl": "*",

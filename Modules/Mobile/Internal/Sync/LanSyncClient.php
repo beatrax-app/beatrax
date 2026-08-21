@@ -387,7 +387,7 @@ final class LanSyncClient
 
         $deviceIds = array_keys($confirmed);
 
-        return $deviceIds === [] ? '' : (string) $deviceIds[0];
+        return $deviceIds === [] ? '' : $deviceIds[0];
     }
 
     // The phase runs before catch-up, so its end cannot be inferred from a

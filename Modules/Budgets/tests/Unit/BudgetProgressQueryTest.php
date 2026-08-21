@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Budgets\Models\CategoryBudget;
+use Modules\Budgets\Public\Enums\BudgetProgressStatus;
 use Modules\Budgets\Public\Services\BudgetProgressQuery;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
@@ -92,7 +93,7 @@ it('computes spent against budget and buckets the status as under', function ():
     expect($rows[0]->budgetMinor)->toBe(40000);
     expect($rows[0]->spentMinor)->toBe(20000);
     expect($rows[0]->fractionUsed)->toBe(0.5);
-    expect($rows[0]->status)->toBe('under');
+    expect($rows[0]->status)->toBe(BudgetProgressStatus::Under);
     expect($rows[0]->remainingMinor())->toBe(20000);
 });
 
@@ -101,11 +102,11 @@ it('flags near at 80% and over above 100%', function (): void {
     budgetTx($this->user->id, $this->account->id, $this->run->id, -9000, $this->groceries->id);
 
     $near = app(BudgetProgressQuery::class)->forCurrentPeriod($this->user);
-    expect($near[0]->status)->toBe('near');
+    expect($near[0]->status)->toBe(BudgetProgressStatus::Near);
 
     budgetTx($this->user->id, $this->account->id, $this->run->id, -5000, $this->groceries->id);
     $over = app(BudgetProgressQuery::class)->forCurrentPeriod($this->user);
-    expect($over[0]->status)->toBe('over');
+    expect($over[0]->status)->toBe(BudgetProgressStatus::Over);
     expect($over[0]->remainingMinor())->toBe(-4000);
 });
 

@@ -432,10 +432,7 @@ final class BudgetsPage extends Component
             return $minor;
         }
 
-        $normalised = str_replace([' ', "\u{00A0}"], '', $raw);
-        $normalised = str_replace(',', '.', $normalised);
-
-        return is_numeric($normalised) && (float) $normalised === 0.0 ? 0 : null;
+        return MoneyInput::tryToMinor($raw) === 0 ? 0 : null;
     }
 
     // A dot here put "50.00" next to "€ 50,00" in one row; the shared formatter

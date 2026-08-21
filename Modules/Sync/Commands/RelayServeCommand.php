@@ -12,10 +12,10 @@ use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
 use Amp\Socket\BindContext;
 use Amp\Socket\Certificate;
-use Amp\Socket\InternetAddress;
 use Amp\Socket\ServerTlsContext;
 use Illuminate\Console\Command;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Sync\Internal\Transport\Concerns\AnswersInJson;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
@@ -31,7 +31,7 @@ use Psr\Log\LoggerInterface;
  */
 final class RelayServeCommand extends Command
 {
-    private const JSON_CONTENT_TYPE = 'application/json';
+    use AnswersInJson;
 
     /** @var string */
     protected $signature = 'relay:serve {--port= : Relay HTTP listen port; defaults to SYNC_RELAY_PORT}';
@@ -137,14 +137,14 @@ final class RelayServeCommand extends Command
         // authorization check, so an unauthenticated request cost a query;
         // only deliver was throttled, and it is the one needing it least.
         if (! $this->rateLimiter->allow($this->clientKey($request))) {
-            return $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'rate_limited');
+            return $this->rateLimited();
         }
 
         return match (true) {
             $method === 'POST' && $path === '/relay/deliver' => $this->handleDeliver($request),
             $method === 'GET' && $path === '/relay/drain' => $this->handleDrain($request),
             $confirmId !== null => $this->handleConfirm($request, $confirmId),
-            default => new Response(HttpStatus::NOT_FOUND, ['content-type' => self::JSON_CONTENT_TYPE], '{"error":"not_found"}'),
+            default => $this->notFound(),
         };
     }
 
@@ -194,7 +194,7 @@ final class RelayServeCommand extends Command
         }
 
         return $stored
-            ? new Response(HttpStatus::ACCEPTED, ['content-type' => self::JSON_CONTENT_TYPE], '{"status":"accepted"}')
+            ? $this->json(HttpStatus::ACCEPTED, '{"status":"accepted"}')
             : $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'mailbox_full');
     }
 
@@ -236,15 +236,7 @@ final class RelayServeCommand extends Command
     {
         // Authorization is bound to $did, so it must be resolved before the auth
         // check runs.
-        $query = $request->getUri()->getQuery();
-
-        // parse_str() can build nested arrays from `did[]=x` syntax; the
-        // is_string() guard below degrades those to '' (safe), and the explicit
-        // init + @var annotation below keeps this PHPStan-strict clean.
-        /** @var array<string, mixed> $params */
-        $params = [];
-        parse_str($query, $params);
-        $did = isset($params['did']) && is_string($params['did']) ? $params['did'] : '';
+        $did = self::stringParam($this->queryParams($request), 'did');
 
         $rejection = $this->drainRejection($request, $did);
         if ($rejection !== null) {
@@ -274,7 +266,7 @@ final class RelayServeCommand extends Command
 
         $json = json_encode(['blobs' => $payload], JSON_THROW_ON_ERROR);
 
-        return new Response(HttpStatus::OK, ['content-type' => self::JSON_CONTENT_TYPE], $json);
+        return $this->json(HttpStatus::OK, $json);
     }
 
     // A drain is refused for one of two reasons, and the order matters: an
@@ -316,7 +308,7 @@ final class RelayServeCommand extends Command
             return $this->jsonError(HttpStatus::INTERNAL_SERVER_ERROR, 'confirm_failed');
         }
 
-        return new Response(HttpStatus::OK, ['content-type' => self::JSON_CONTENT_TYPE], '{"status":"confirmed"}');
+        return $this->json(HttpStatus::OK, '{"status":"confirmed"}');
     }
 
     // Authorization is bound to the specific device whose mailbox is being
@@ -340,16 +332,6 @@ final class RelayServeCommand extends Command
         return $this->drainRegistry->authorizes($did, substr($authHeader, strlen('Bearer ')));
     }
 
-    // The source IP the deliver rate-limit buckets on. amphp always hands a
-    // real remote address here; InternetAddress drops the ephemeral port so
-    // every connection from one host shares one bucket.
-    private function clientKey(Request $request): string
-    {
-        $address = $request->getClient()->getRemoteAddress();
-
-        return $address instanceof InternetAddress ? $address->getAddress() : $address->toString();
-    }
-
     private function isValidDid(string $did): bool
     {
         return preg_match(self::DID_PATTERN, $did) === 1;
@@ -357,9 +339,7 @@ final class RelayServeCommand extends Command
 
     private function jsonError(int $status, string $errorCode): Response
     {
-        $body = json_encode(['error' => $errorCode], JSON_THROW_ON_ERROR);
-
-        return new Response($status, ['content-type' => self::JSON_CONTENT_TYPE], $body);
+        return $this->json($status, json_encode(['error' => $errorCode], JSON_THROW_ON_ERROR));
     }
 
     // ext-pcntl is absent from the bundled desktop PHP, so the SIGTERM and

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Budgets\Public\Dto;
 
+use Modules\Budgets\Public\Enums\BudgetProgressStatus;
 use Spatie\LaravelData\Data;
 
 // status buckets fractionUsed for the bar colour: under (< 80%),
@@ -17,7 +18,7 @@ final class BudgetProgressRow extends Data
         public readonly int $spentMinor,
         public readonly string $currency,
         public readonly float $fractionUsed,
-        public readonly string $status,
+        public readonly BudgetProgressStatus $status,
     ) {}
 
     public function remainingMinor(): int

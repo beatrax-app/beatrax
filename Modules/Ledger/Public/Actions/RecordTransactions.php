@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\RowChunk;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
@@ -23,7 +24,7 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 final class RecordTransactions implements RecordsTransactions
 {
-    private const CHUNK_SIZE = 500;
+    private const CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -98,6 +99,7 @@ final class RecordTransactions implements RecordsTransactions
 
         $this->db->connection()->transaction(function () use ($chunk, &$inserted, &$duplicates, &$sourceFormats, &$insertedIds, &$persistedRows): void {
             $now = $this->clock->now()->toDateTimeString();
+            $written = [];
             foreach ($chunk as $row) {
                 if ($row->userId === null) {
                     throw new InvalidArgumentException('CanonicalTransaction.userId must not be null when recording transactions.');
@@ -126,18 +128,18 @@ final class RecordTransactions implements RecordsTransactions
                 if ($effected === 1) {
                     $inserted++;
                     $sourceFormats[] = $row->sourceFormat;
-
-                    /** @var Transaction $persisted */
-                    $persisted = Transaction::query()
-                        ->where('user_id', $row->userId)
-                        ->where('fingerprint', $fingerprint)
-                        ->firstOrFail();
-
-                    $insertedIds[] = $persisted->id;
-                    $persistedRows[] = $persisted;
+                    $written[] = ['userId' => $row->userId, 'fingerprint' => $fingerprint];
                 } else {
                     $duplicates++;
                 }
+            }
+
+            // One read for the chunk rather than one per row, and still inside
+            // the transaction that wrote them: uncommitted rows are visible to
+            // this connection alone.
+            foreach ($this->readBack($written) as $persisted) {
+                $insertedIds[] = $persisted->id;
+                $persistedRows[] = $persisted;
             }
         });
 
@@ -150,5 +152,52 @@ final class RecordTransactions implements RecordsTransactions
                 user: $user,
             ));
         }
+    }
+
+    // A fingerprint is unique per user and never globally, so the read is
+    // grouped by the owner of the row that was written. The result keeps the
+    // order the chunk wrote in, because the listeners downstream run in it.
+    /**
+     * @param  list<array{userId: int, fingerprint: string}>  $written
+     * @return list<Transaction>
+     */
+    private function readBack(array $written): array
+    {
+        if ($written === []) {
+            return [];
+        }
+
+        $fingerprintsByUser = [];
+        foreach ($written as $key) {
+            $fingerprintsByUser[$key['userId']] ??= [];
+            $fingerprintsByUser[$key['userId']][] = $key['fingerprint'];
+        }
+
+        $found = [];
+        foreach ($fingerprintsByUser as $userId => $fingerprints) {
+            $ids = $this->db->connection()->table('transactions')
+                ->where('user_id', $userId)
+                ->whereIn('fingerprint', $fingerprints)
+                ->pluck('id')
+                ->all();
+
+            foreach (Transaction::query()->findMany($ids) as $persisted) {
+                $found[$userId.'|'.$persisted->fingerprint] = $persisted;
+            }
+        }
+
+        $ordered = [];
+        foreach ($written as $key) {
+            // A row the insert reported as written and this read cannot find is
+            // the failure firstOrFail() raised here before, not a row to drop
+            // out of the batch quietly.
+            $ordered[] = $found[$key['userId'].'|'.$key['fingerprint']]
+                ?? Transaction::query()
+                    ->where('user_id', $key['userId'])
+                    ->where('fingerprint', $key['fingerprint'])
+                    ->firstOrFail();
+        }
+
+        return $ordered;
     }
 }

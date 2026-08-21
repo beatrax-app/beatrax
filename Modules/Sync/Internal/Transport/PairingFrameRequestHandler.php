@@ -8,11 +8,11 @@ use Amp\Http\HttpStatus;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\Response;
-use Amp\Socket\InternetAddress;
 use JsonException;
 use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Pairing\PairingFrameOutcome;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
+use Modules\Sync\Internal\Transport\Concerns\AnswersInJson;
 
 // Carries a responder's frames to the device that listens. The WebSocket cannot:
 // its Noise session authenticates against the confirmed-device registry, and a
@@ -22,25 +22,19 @@ use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
  */
 final readonly class PairingFrameRequestHandler implements RequestHandler
 {
-    public const string FRAME_PATH = '/pair/frame';
+    use AnswersInJson;
 
-    private const string JSON_CONTENT_TYPE = 'application/json';
+    public const string FRAME_PATH = '/pair/frame';
 
     // A frame is small. Anything larger is not one, and reading it would be
     // the cheapest denial-of-service on this listener.
     private const int MAX_BODY_BYTES = 8192;
 
-    // Sized for the caller this route actually has: a phone re-emitting on a
-    // three-second poll spends twenty a minute by itself, so the offer route's
-    // human-sized allowance would throttle an honest handshake within half a
-    // minute — and report it as a code that did not work.
+    // Sized for the caller both polled routes actually have: a phone
+    // re-emitting on a three-second poll spends twenty a minute by itself, so
+    // the offer route's human-sized allowance would throttle an honest
+    // handshake within half a minute and report it as a code that did not work.
     public const int MAX_PER_WINDOW = 60;
-
-    // The same single refusal the offer route uses, for the same reason: an
-    // unknown token, an expired one, a malformed frame and one belonging to
-    // another user must be indistinguishable, so probing this endpoint tells
-    // an attacker nothing about which pairings are in flight.
-    private const string NOT_FOUND_BODY = '{"error":"not_found"}';
 
     public function __construct(
         private RequestHandler $next,
@@ -58,7 +52,7 @@ final readonly class PairingFrameRequestHandler implements RequestHandler
         // Throttled before the body is read, so a flood costs this listener a
         // map lookup rather than a buffer and a database round trip.
         if (! $this->rateLimiter->allow($this->clientKey($request))) {
-            return $this->json(HttpStatus::TOO_MANY_REQUESTS, '{"error":"rate_limited"}');
+            return $this->rateLimited();
         }
 
         $frame = $this->decodeBody($request);
@@ -71,7 +65,7 @@ final readonly class PairingFrameRequestHandler implements RequestHandler
             : $this->applier->apply($this->userId, $frame);
 
         if ($outcome === PairingFrameOutcome::Refused) {
-            return $this->json(HttpStatus::NOT_FOUND, self::NOT_FOUND_BODY);
+            return $this->notFound();
         }
 
         // A deferred frame is held, not done: the local human has not compared
@@ -106,19 +100,5 @@ final readonly class PairingFrameRequestHandler implements RequestHandler
 
         /** @var array<string, mixed>|null */
         return is_array($decoded) ? $decoded : null;
-    }
-
-    // Bucketed per host, not per connection: dropping the ephemeral port makes
-    // every attempt from one machine share one budget.
-    private function clientKey(Request $request): string
-    {
-        $address = $request->getClient()->getRemoteAddress();
-
-        return $address instanceof InternetAddress ? $address->getAddress() : $address->toString();
-    }
-
-    private function json(int $status, string $body): Response
-    {
-        return new Response($status, ['content-type' => self::JSON_CONTENT_TYPE], $body);
     }
 }
