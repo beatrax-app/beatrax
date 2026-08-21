@@ -14,6 +14,7 @@ use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
+use Modules\Mobile\Internal\Http\Middleware\ForgetGuardsBetweenRequests;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureImportCompleted;
 use Modules\Mobile\Internal\Http\Middleware\RestoreFrameworkRedirector;
@@ -96,6 +97,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Outermost, because it repairs a container binding every later
         // middleware depends on: see the class for what leaves it broken.
+        // Before anything reads the authenticated user: this runtime keeps one
+        // container for the life of the process, so the guard still holds the
+        // User model resolved at sign-in and every preference on it is stale.
+        $middleware->prepend(ForgetGuardsBetweenRequests::class);
         $middleware->prepend(RestoreFrameworkRedirector::class);
         $middleware->prepend(LoopbackOnly::class);
         // Paired with LoopbackOnly (mirrors the desktop root): LoopbackOnly
