@@ -24,6 +24,7 @@ return [
     'source_txn' => 'txn',
     'source_counterparty' => 'motpart',
     'source_category' => 'kategori',
+    'results_aria' => 'Resultat',
     'no_results' => 'Inga resultat.',
     'foot_navigate' => 'navigera',
     'foot_select' => 'välj',

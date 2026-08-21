@@ -125,11 +125,16 @@
             style="border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;"
             role="tablist"
             aria-label="{{ Lang::get('counterparties::profile.tablist_aria') }}"
+            x-data="tabStrip()"
+            x-on:keydown="onKey($event)"
         >
             @foreach ($tabs as $tab)
                 <x-core::tab
                     :active="$activeTab === $tab['key']"
                     class="shrink-0 whitespace-nowrap"
+                    id="counterparty-tab-{{ $tab['key'] }}"
+                    aria-controls="counterparty-tab-panel"
+                    tabindex="{{ $activeTab === $tab['key'] ? '0' : '-1' }}"
                     wire:click="switchTab('{{ $tab['key'] }}')"
                 >{{ $tab['label'] }}</x-core::tab>
             @endforeach
@@ -140,8 +145,9 @@
             @endif
         </nav>
 
-        {{-- Per-type body partial ----------------------------------- --}}
-        <div>
+        {{-- Per-type body partial. One panel for every tab: only the selected
+             tab's partial is included, so the panel is named by that tab. --}}
+        <div id="counterparty-tab-panel" role="tabpanel" aria-labelledby="counterparty-tab-{{ $activeTab }}">
             @include($partial, [
                 'profile' => $profile,
                 'recentActivity' => $recentActivity,

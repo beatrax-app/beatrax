@@ -24,6 +24,7 @@ return [
     'source_txn' => 'işlem',
     'source_counterparty' => 'karşı taraf',
     'source_category' => 'kategori',
+    'results_aria' => 'Sonuçlar',
     'no_results' => 'Sonuç yok.',
     'foot_navigate' => 'gezin',
     'foot_select' => 'seç',

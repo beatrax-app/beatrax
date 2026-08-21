@@ -34,6 +34,7 @@ import ApexCharts from 'apexcharts';
 import { palette } from './palette.js';
 import { datePicker } from './date-picker.js';
 import { timePicker } from './time-picker.js';
+import { tabStrip } from './tab-strip.js';
 import './lock.js';
 import './mobile-upload.js';
 
@@ -254,10 +255,6 @@ window.beatraxApplyChartTheme = function (options) {
 // CommandPaletteModal Blade view resolves through this
 // registration. Wraps Fuse.js with the configured weights +
 // threshold + ignoreLocation.
-//
-// Phase 4 additions inside the same alpine:init handler:
-//   - mobileNav store: drawer open/close/toggle for the mobile shell (D-01)
-//   - platform store: detects macOS for ⌘K vs Ctrl+K kbd labels (D-04)
 /**
  * In-page QR scanner for the mobile pairing screen.
  *
@@ -549,8 +546,9 @@ document.addEventListener('alpine:init', () => {
         window.Alpine.data('beatraxInlineScanner', beatraxInlineScanner);
         window.Alpine.data('beatraxDatePicker', datePicker);
         window.Alpine.data('beatraxTimePicker', timePicker);
+        window.Alpine.data('tabStrip', tabStrip);
 
-        // Mobile navigation drawer state (Phase 4, D-01)
+        // Mobile navigation drawer state
         window.Alpine.store('mobileNav', {
             drawerOpen: false,
             open() { this.drawerOpen = true; },
@@ -566,7 +564,7 @@ document.addEventListener('alpine:init', () => {
             window.Alpine.store('mobileNav').close();
         });
 
-        // Platform detection for ⌘K vs Ctrl+K labels (Phase 4, D-04).
+        // Platform detection for ⌘K vs Ctrl+K labels.
         // Uses the modern userAgentData API first (Chromium 90+), falls back
         // to the legacy navigator.platform string for Safari + Firefox.
         window.Alpine.store('platform', {

@@ -24,6 +24,7 @@ return [
     'source_txn' => 'txn',
     'source_counterparty' => 'protistrana',
     'source_category' => 'kategorie',
+    'results_aria' => 'Výsledky',
     'no_results' => 'Žádné výsledky.',
     'foot_navigate' => 'pohyb',
     'foot_select' => 'výběr',

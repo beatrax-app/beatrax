@@ -24,6 +24,7 @@ return [
     'source_txn' => 'txn',
     'source_counterparty' => 'tegenpartij',
     'source_category' => 'categorie',
+    'results_aria' => 'Resultaten',
     'no_results' => 'Geen resultaten.',
     'foot_navigate' => 'navigeren',
     'foot_select' => 'selecteren',

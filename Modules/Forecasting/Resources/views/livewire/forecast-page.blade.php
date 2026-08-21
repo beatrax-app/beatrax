@@ -61,11 +61,18 @@
         </section>
     @else
         @if (count($accounts) > 0)
-            <nav class="mb-6 flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="{{ Lang::get('forecasting::forecast.account_tablist') }}">
+            <nav
+                class="mb-6 flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-700"
+                role="tablist"
+                aria-label="{{ Lang::get('forecasting::forecast.account_tablist') }}"
+                x-data="tabStrip()"
+                x-on:keydown="onKey($event)"
+            >
                 <x-core::tab
                     :active="$isAllAccountsView"
                     id="forecast-account-tab-all"
                     aria-controls="forecast-account-panel"
+                    tabindex="{{ $isAllAccountsView ? '0' : '-1' }}"
                     wire:click="setAccount('all')"
                 >{{ Lang::get('forecasting::forecast.all_accounts') }}</x-core::tab>
                 @foreach ($accounts as $account)
@@ -73,6 +80,7 @@
                         :active="$selectedAccountId === $account['id']"
                         id="forecast-account-tab-{{ $account['id'] }}"
                         aria-controls="forecast-account-panel"
+                        tabindex="{{ $selectedAccountId === $account['id'] ? '0' : '-1' }}"
                         wire:click="setAccount('{{ $account['id'] }}')"
                     >{{ $account['name'] }}</x-core::tab>
                 @endforeach

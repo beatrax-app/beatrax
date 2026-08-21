@@ -51,12 +51,27 @@
 
     {{-- Single-level lifecycle tabs. The strip and its label are this page's;
          the buttons are the shared x-core::tab the copy here used to duplicate. --}}
-    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="{{ Lang::get('notifications::inbox.tablist_aria') }}">
+    <nav
+        class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700"
+        role="tablist"
+        aria-label="{{ Lang::get('notifications::inbox.tablist_aria') }}"
+        x-data="tabStrip()"
+        x-on:keydown="onKey($event)"
+    >
         @foreach ($tabs as $key => $label)
-            <x-core::tab :active="$tab === $key" wire:click="setTab('{{ $key }}')">{{ $label }}</x-core::tab>
+            <x-core::tab
+                :active="$tab === $key"
+                id="notifications-tab-{{ $key }}"
+                aria-controls="notifications-tab-panel"
+                tabindex="{{ $tab === $key ? '0' : '-1' }}"
+                wire:click="setTab('{{ $key }}')"
+            >{{ $label }}</x-core::tab>
         @endforeach
     </nav>
 
+    {{-- One panel for every tab: only the selected tab's rows are rendered,
+         so the panel takes its name from whichever tab is selected. --}}
+    <div id="notifications-tab-panel" role="tabpanel" aria-labelledby="notifications-tab-{{ $tab }}">
     @if (count($rows) === 0)
         @php [$emptyHeading, $emptyBody] = $emptyStates[$tab] ?? $emptyStates['unread']; @endphp
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
@@ -85,4 +100,5 @@
             </div>
         @endif
     @endif
+    </div>
 </div>

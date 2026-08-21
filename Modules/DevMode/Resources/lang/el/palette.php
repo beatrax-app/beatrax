@@ -24,6 +24,7 @@ return [
     'source_txn' => 'txn',
     'source_counterparty' => 'αντισυμβαλλόμενος',
     'source_category' => 'κατηγορία',
+    'results_aria' => 'Αποτελέσματα',
     'no_results' => 'Χωρίς αποτελέσματα.',
     'foot_navigate' => 'πλοήγηση',
     'foot_select' => 'επιλογή',

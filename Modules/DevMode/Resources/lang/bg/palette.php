@@ -24,6 +24,7 @@ return [
     'source_txn' => 'txn',
     'source_counterparty' => 'контрагент',
     'source_category' => 'категория',
+    'results_aria' => 'Резултати',
     'no_results' => 'Няма резултати.',
     'foot_navigate' => 'навигация',
     'foot_select' => 'избор',

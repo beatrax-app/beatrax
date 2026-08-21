@@ -28,7 +28,13 @@
     {{-- Tab nav row. The three tabs are sub-routes backing the
          same component. Each tab is a real URL so back-button +
          bookmarks behave. --}}
-    <nav class="flex items-center gap-1" role="tablist" aria-label="{{ Lang::get('dev::queue.tab_aria') }}">
+    <nav
+        class="flex items-center gap-1"
+        role="tablist"
+        aria-label="{{ Lang::get('dev::queue.tab_aria') }}"
+        x-data="tabStrip()"
+        x-on:keydown="onKey($event)"
+    >
         @foreach (\Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage::TABS as $tabSlug)
             @php
                 $tabLabel = Lang::get('dev::queue.tab.'.$tabSlug);
@@ -37,8 +43,11 @@
             @endphp
             <a
                 href="{{ $href }}"
+                id="queue-tab-{{ $tabSlug }}"
                 role="tab"
                 aria-selected="{{ $isActive ? 'true' : 'false' }}"
+                aria-controls="queue-tab-panel"
+                tabindex="{{ $isActive ? '0' : '-1' }}"
                 class="inline-flex items-center rounded border px-3 py-1 text-xs font-medium {{ $isActive ? 'border-slate-900 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800' }}"
             >{{ $tabLabel }}</a>
         @endforeach
@@ -72,7 +81,12 @@
          padding, tabular-nums, hover surface-2. Per-tab columns vary
          but the chrome (head, row hover, action column) stays the
          same. --}}
-    <div class="card overflow-hidden">
+    <div
+        class="card overflow-hidden"
+        id="queue-tab-panel"
+        role="tabpanel"
+        aria-labelledby="queue-tab-{{ $tab }}"
+    >
         @if (empty($rows))
             <div class="p-4">
                 @if ($tab === 'pending')

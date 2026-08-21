@@ -24,6 +24,7 @@ return [
     'source_txn' => 'darījums',
     'source_counterparty' => 'partneris',
     'source_category' => 'kategorija',
+    'results_aria' => 'Rezultāti',
     'no_results' => 'Nav rezultātu.',
     'foot_navigate' => 'pārvietoties',
     'foot_select' => 'izvēlēties',

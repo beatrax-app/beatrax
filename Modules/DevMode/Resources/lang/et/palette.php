@@ -24,6 +24,7 @@ return [
     'source_txn' => 'tehing',
     'source_counterparty' => 'vastaspool',
     'source_category' => 'kategooria',
+    'results_aria' => 'Tulemused',
     'no_results' => 'Tulemusi pole.',
     'foot_navigate' => 'liigu',
     'foot_select' => 'vali',

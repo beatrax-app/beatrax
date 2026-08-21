@@ -24,6 +24,7 @@ return [
     'source_txn' => 'tapahtuma',
     'source_counterparty' => 'vastapuoli',
     'source_category' => 'kategoria',
+    'results_aria' => 'Tulokset',
     'no_results' => 'Ei tuloksia.',
     'foot_navigate' => 'siirry',
     'foot_select' => 'valitse',

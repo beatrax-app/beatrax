@@ -24,6 +24,7 @@ return [
     'source_txn' => 'transakcija',
     'source_counterparty' => 'protustranka',
     'source_category' => 'kategorija',
+    'results_aria' => 'Rezultati',
     'no_results' => 'Nema rezultata.',
     'foot_navigate' => 'kretanje',
     'foot_select' => 'odabir',

@@ -24,6 +24,7 @@ return [
     'source_txn' => 'txn',
     'source_counterparty' => 'motpart',
     'source_category' => 'kategori',
+    'results_aria' => 'Resultater',
     'no_results' => 'Ingen resultater.',
     'foot_navigate' => 'naviger',
     'foot_select' => 'velg',

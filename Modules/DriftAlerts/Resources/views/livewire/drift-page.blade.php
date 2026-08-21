@@ -97,12 +97,21 @@
 
     {{-- Level 1 — type switch. Segmented button group; "type
          first, lifecycle second". Stacks full-width on phone. --}}
-    <div class="mb-6 flex w-full gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800 sm:w-auto sm:inline-flex" role="tablist" aria-label="{{ Lang::get('drift-alerts::alerts.type_aria') }}">
+    <div
+        class="mb-6 flex w-full gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800 sm:w-auto sm:inline-flex"
+        role="tablist"
+        aria-label="{{ Lang::get('drift-alerts::alerts.type_aria') }}"
+        x-data="tabStrip()"
+        x-on:keydown="onKey($event)"
+    >
         @foreach (['drift' => Lang::get('drift-alerts::alerts.type.drift'), 'anomaly' => Lang::get('drift-alerts::alerts.type.anomaly')] as $typeKey => $typeLabel)
             <button
                 type="button"
+                id="drift-type-tab-{{ $typeKey }}"
                 role="tab"
                 aria-selected="{{ $type === $typeKey ? 'true' : 'false' }}"
+                aria-controls="drift-lifecycle-panel"
+                tabindex="{{ $type === $typeKey ? '0' : '-1' }}"
                 wire:click="setType('{{ $typeKey }}')"
                 @class([
                     'flex-1 rounded-md px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 sm:flex-none',
@@ -114,21 +123,33 @@
     </div>
 
     {{-- Level 2 — lifecycle tabs (shared between types). --}}
-    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="{{ Lang::get('drift-alerts::alerts.lifecycle_aria') }}">
+    <nav
+        class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700"
+        role="tablist"
+        aria-label="{{ Lang::get('drift-alerts::alerts.lifecycle_aria') }}"
+        x-data="tabStrip()"
+        x-on:keydown="onKey($event)"
+    >
         @foreach ($tabs as $key => $label)
             <x-core::tab
                 :active="$tab === $key"
                 id="drift-lifecycle-tab-{{ $key }}"
                 aria-controls="drift-lifecycle-panel"
+                tabindex="{{ $tab === $key ? '0' : '-1' }}"
                 wire:click="setTab('{{ $key }}')"
             >{{ $label }}</x-core::tab>
         @endforeach
     </nav>
 
     {{-- One panel, not three: only the selected tab's rows are ever in the
-         DOM, so every tab points aria-controls at this one element and the
-         panel takes its name from whichever tab is selected. --}}
-    <div id="drift-lifecycle-panel" role="tabpanel" aria-labelledby="drift-lifecycle-tab-{{ $tab }}">
+         DOM, so every tab points aria-controls at this one element. Both
+         strips point at it, so both selected tabs name it — the type first,
+         because that is the order the page reads. --}}
+    <div
+        id="drift-lifecycle-panel"
+        role="tabpanel"
+        aria-labelledby="drift-type-tab-{{ $type }} drift-lifecycle-tab-{{ $tab }}"
+    >
         @if ($type === 'anomaly')
             @php
                 $anomalyFmt = static fn (Money $money): string => $money->format();
