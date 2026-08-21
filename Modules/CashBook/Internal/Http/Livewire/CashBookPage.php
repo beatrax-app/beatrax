@@ -6,6 +6,7 @@ namespace Modules\CashBook\Internal\Http\Livewire;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -14,6 +15,7 @@ use Livewire\Component;
 use Modules\CashBook\Internal\Actions\RecordManualTransaction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
@@ -29,6 +31,11 @@ final class CashBookPage extends Component
 {
     use DispatchesToast;
     use HandlesTaxTagging;
+
+    // €1250,00 in minor units. Four figures so the worked example also shows
+    // the group mark left out, which is the way past the reading that refused
+    // the input.
+    private const int AMOUNT_EXAMPLE_MINOR = 125_000;
 
     public string $direction = 'expense';
 
@@ -53,15 +60,17 @@ final class CashBookPage extends Component
         $this->date = $clock->now()->toDateString();
     }
 
-    public function add(CurrentUser $currentUser, RecordManualTransaction $record, DatabaseManager $db): void
-    {
+    public function add(
+        CurrentUser $currentUser,
+        RecordManualTransaction $record,
+        DatabaseManager $db,
+        Translator $translator,
+    ): void {
         $this->error = '';
 
         $amountMinor = MoneyInput::tryToPositiveMinor($this->amount);
         if ($amountMinor === null) {
-            $this->error = MoneyInput::exceedsMax($this->amount)
-                ? Lang::get('cashbook::cash-book.errors.amount_too_large')
-                : Lang::get('cashbook::cash-book.errors.amount_positive');
+            $this->error = $this->amountError($translator->getLocale());
 
             return;
         }
@@ -179,6 +188,38 @@ final class CashBookPage extends Component
         $view->extends('layouts.app', ['title' => Lang::get('cashbook::cash-book.page_title').' · Beatrax']);
 
         return $view;
+    }
+
+    // An amount the parser could not read is not an amount that is too small.
+    // "1.250" is refused because it is ambiguous — grouped thousands or a
+    // decimal, a thousand-fold difference — and calling that not-greater-than-
+    // zero sends the reader to fix a figure that was never the problem.
+    private function amountError(string $locale): string
+    {
+        if (MoneyInput::exceedsMax($this->amount)) {
+            return Lang::get('cashbook::cash-book.errors.amount_too_large');
+        }
+
+        // A blank field is genuinely an amount not yet given, so it keeps the
+        // prompt rather than being reported as unreadable.
+        if (trim($this->amount) === '' || MoneyInput::tryToMinor($this->amount) !== null) {
+            return Lang::get('cashbook::cash-book.errors.amount_positive');
+        }
+
+        return Lang::get('cashbook::cash-book.errors.amount_unreadable', [
+            'example' => self::amountExample($locale),
+        ]);
+    }
+
+    // The reader's own decimal mark: telling a Dutch reader to write "1250.00"
+    // hands back the very punctuation that started the misreading. Built off
+    // the machine-readable form, so the example is always something the parser
+    // accepts.
+    private static function amountExample(string $locale): string
+    {
+        $mark = (Locale::tryFrom($locale) ?? Locale::En)->decimalMark();
+
+        return str_replace('.', $mark, MoneyInput::toDecimalString(self::AMOUNT_EXAMPLE_MINOR));
     }
 
     private function ownedCategoryId(DatabaseManager $db, int $userId): ?int

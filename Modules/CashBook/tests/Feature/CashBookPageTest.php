@@ -171,3 +171,52 @@ it('keeps blaming the digits when the amount is not one', function (): void {
         ->call('add')
         ->assertSet('error', 'Enter an amount greater than zero.');
 });
+
+it('says a grouped thousands amount could not be read, not that it is smaller than zero', function (): void {
+    // "1.250" is what this page prints for €1.250,00 two lines further down, so
+    // a reader has every reason to type it back. It stays refused — it reads as
+    // 1250 or as 1.25 — but the message has to say which problem it is.
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '1.250')
+        ->set('counterparty', 'Bakery')
+        ->set('date', '2026-06-05')
+        ->call('add')
+        ->assertSet('error', 'That amount could not be read. Enter it without a thousands separator and with at most two decimals, for example 1250.00.');
+
+    expect(DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->count())->toBe(0);
+});
+
+it('writes the example with the reader\'s own decimal mark', function (): void {
+    // A Dutch reader handed "1250.00" has been shown the very punctuation that
+    // caused the misreading.
+    app()->setLocale('nl');
+
+    $error = Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '1.250')
+        ->call('add')
+        ->get('error');
+
+    expect($error)->toBeString()
+        ->toContain('1250,00')
+        ->not->toContain('1250.00');
+});
+
+it('keeps the positivity message for an amount that was read and is not positive', function (): void {
+    $component = Livewire::actingAs($this->user)->test(CashBookPage::class);
+
+    foreach (['', '  ', '0', '0,00', '-5,00'] as $amount) {
+        $component->set('amount', $amount)
+            ->call('add')
+            ->assertSet('error', 'Enter an amount greater than zero.');
+    }
+});
+
+it('keeps the too-large message for an amount that was read and is too big', function (): void {
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '1000000000,00')
+        ->call('add')
+        ->assertSet('error', 'That amount is too large. Check the digits.');
+});

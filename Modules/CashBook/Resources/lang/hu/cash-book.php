@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Adj meg nullánál nagyobb összeget.',
         'amount_too_large' => 'Ez az összeg túl nagy. Ellenőrizd a számjegyeket.',
+        'amount_unreadable' => 'Ezt az összeget nem sikerült beolvasni. Adja meg ezreselválasztó nélkül, legfeljebb két tizedesjeggyel, például :example.',
         'invalid_date' => 'Adj meg érvényes dátumot.',
     ],
 

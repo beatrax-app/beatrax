@@ -165,3 +165,64 @@ it('fails loudly when the anchor it writes against has gone', function (): void 
     expect($process->isSuccessful())->toBeFalse();
     expect($process->getErrorOutput())->toContain('INTERNET anchor not found');
 });
+
+// What native:install actually writes, which is where composer's post-update
+// hook runs this script. CAMERA, USE_BIOMETRIC and POST_NOTIFICATIONS are
+// absent because they come from the plugin manifests at Gradle's merge.
+function stripPermissionsFreshInstallManifest(): string
+{
+    return <<<'XML'
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:tools="http://schemas.android.com/tools">
+
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+            <!-- Device.* core built-in (migrated from nativephp/mobile-device) -->
+            <uses-permission android:name="android.permission.VIBRATE" />
+            <uses-permission android:name="android.permission.FLASHLIGHT" />
+
+            <application android:allowBackup="true" android:label="Beatrax" tools:targetApi="31">
+            </application>
+        </manifest>
+        XML;
+}
+
+it('succeeds on the manifest native:install writes, before the plugin compiler has run', function (): void {
+    // It exited 1 here on every build off a fresh scaffold, looking for three
+    // permissions the merge had not contributed yet. A step that always fails
+    // is a step whose red exit code nobody reads the day it means something.
+    [$root, $manifest] = stripPermissionsScaffold(stripPermissionsFreshInstallManifest());
+
+    $process = runStripPermissions($root);
+
+    expect($process->isSuccessful())->toBeTrue($process->getErrorOutput());
+
+    $merged = (string) preg_replace('/<!--.*?-->/s', '', (string) file_get_contents($manifest));
+
+    foreach ([
+        'android.permission.INTERNET',
+        'android.permission.ACCESS_NETWORK_STATE',
+        'android.permission.VIBRATE',
+    ] as $kept) {
+        expect($merged)->toContain('<uses-permission android:name="'.$kept.'" />');
+    }
+});
+
+it('fails loudly when a permission the merge contributes is pinned out here', function (): void {
+    // The one way this script could keep the camera out of the built APK, and
+    // nothing downstream reports it — the QR scanner just throws on a phone.
+    $sabotaged = str_replace(
+        '    <uses-permission android:name="android.permission.CAMERA" />',
+        '    <uses-permission tools:node="remove" android:name="android.permission.CAMERA" />',
+        stripPermissionsFixtureManifest(),
+    );
+
+    [$root] = stripPermissionsScaffold($sabotaged);
+
+    $process = runStripPermissions($root);
+
+    expect($process->isSuccessful())->toBeFalse();
+    expect($process->getErrorOutput())->toContain('android.permission.CAMERA is pinned out');
+});

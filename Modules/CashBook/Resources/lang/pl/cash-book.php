@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Podaj kwotę większą od zera.',
         'amount_too_large' => 'Ta kwota jest za duża. Sprawdź cyfry.',
+        'amount_unreadable' => 'Nie udało się odczytać tej kwoty. Wpisz ją bez separatora tysięcy i z najwyżej dwoma miejscami po przecinku, na przykład :example.',
         'invalid_date' => 'Podaj prawidłową datę.',
     ],
 

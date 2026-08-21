@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Anna nollaa suurempi summa.',
         'amount_too_large' => 'Summa on liian suuri. Tarkista numerot.',
+        'amount_unreadable' => 'Summaa ei voitu lukea. Syötä se ilman tuhaterotinta ja enintään kahdella desimaalilla, esimerkiksi :example.',
         'invalid_date' => 'Anna kelvollinen päivämäärä.',
     ],
 

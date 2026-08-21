@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Vnesi znesek, večji od nič.',
         'amount_too_large' => 'Ta znesek je prevelik. Preveri števke.',
+        'amount_unreadable' => 'Tega zneska ni bilo mogoče prebrati. Vnesite ga brez ločila tisočic in z največ dvema decimalkama, na primer :example.',
         'invalid_date' => 'Vnesi veljaven datum.',
     ],
 

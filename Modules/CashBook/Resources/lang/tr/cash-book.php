@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Sıfırdan büyük bir tutar gir.',
         'amount_too_large' => 'Bu tutar çok büyük. Rakamları kontrol et.',
+        'amount_unreadable' => 'Bu tutar okunamadı. Binlik ayırıcı kullanmadan ve en fazla iki ondalık basamakla girin, örneğin :example.',
         'invalid_date' => 'Geçerli bir tarih gir.',
     ],
 

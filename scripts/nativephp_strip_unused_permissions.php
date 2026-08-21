@@ -52,6 +52,31 @@ libxml_use_internal_errors(true);
  *
  * Same discipline as its siblings: idempotent, marker-guarded, and a missing
  * anchor is a hard failure rather than a silent skip.
+ *
+ * What the read-back at the bottom can and cannot prove
+ * ----------------------------------------------------
+ * This script runs on the app manifest, and it runs BEFORE Gradle merges the
+ * plugin manifests into it. So there are two different questions about a
+ * permission that has to survive, and only one of them is answerable here.
+ *
+ * KEEP_IN_SOURCE are written by native:install into the app manifest itself.
+ * Whether they are still declared is a fact about this file, this script is
+ * the only thing that edits it, and a missing one is this script's own bug —
+ * so it is checked by presence.
+ *
+ * KEEP_THROUGH_MERGE (camera for QR pairing, biometric unlock, notifications)
+ * arrive from a plugin's own manifest at merge time. Right after native:install
+ * they are simply not in this file, and they are in it later only because the
+ * plugin compiler happened to have run first. Asking "is it declared here" of
+ * those three answered no on every fresh scaffold and exited 1 on every build
+ * off one — a build step that always fails teaches everyone to ignore its exit
+ * code, which is worse than not checking at all.
+ *
+ * What IS answerable about them is the only way this script could keep them
+ * out of the merged manifest: a tools:node="remove" written here deletes the
+ * plugin's contribution at merge, and nothing downstream would report it. So
+ * they are checked negatively — never pinned out — and the merged result is
+ * verified where it can actually be read, on the device.
  */
 
 // The source-declared ones, deleted from the file outright. They are also
@@ -69,6 +94,23 @@ const REMOVE_FROM_SOURCE = [
 const REMOVE_FROM_MERGE = [
     'android.permission.FOREGROUND_SERVICE',
     'android.permission.USE_FINGERPRINT',
+];
+
+// Declared in the app manifest native:install writes, so their presence after
+// this script's edits is a fact it can read back.
+const KEEP_IN_SOURCE = [
+    'android.permission.INTERNET',
+    'android.permission.ACCESS_NETWORK_STATE',
+    'android.permission.VIBRATE',
+];
+
+// Contributed by a plugin's own manifest at Gradle's merge, which is after this
+// script runs — see the header. Checked for what this script could do to them,
+// not for a presence it has no way to know.
+const KEEP_THROUGH_MERGE = [
+    'android.permission.CAMERA',
+    'android.permission.USE_BIOMETRIC',
+    'android.permission.POST_NOTIFICATIONS',
 ];
 
 const MARKER = 'scripts/nativephp_strip_unused_permissions.php';
@@ -222,9 +264,22 @@ foreach (array_merge(REMOVE_FROM_SOURCE, REMOVE_FROM_MERGE) as $permission) {
     }
 }
 
-foreach (['android.permission.INTERNET', 'android.permission.CAMERA', 'android.permission.VIBRATE', 'android.permission.USE_BIOMETRIC', 'android.permission.POST_NOTIFICATIONS'] as $keep) {
+foreach (KEEP_IN_SOURCE as $keep) {
     if (! str_contains($verified, 'android:name="'.$keep.'" />')) {
         fwrite(STDERR, "nativephp_strip_unused_permissions: {$keep} is used and no longer declared in {$manifest}.\n");
+        exit(1);
+    }
+}
+
+// Attribute order is not fixed by anything, and the removal pass above only
+// normalises the one order it writes — so the element is matched as a whole
+// rather than name-first, or a hand-edited manifest slips past.
+foreach (KEEP_THROUGH_MERGE as $keep) {
+    $pattern = '#<uses-permission\s(?=[^>]*android:name="'.preg_quote($keep, '#').'")[^>]*tools:node="remove"[^>]*/>#';
+
+    if (preg_match($pattern, $verified) === 1) {
+        fwrite(STDERR, "nativephp_strip_unused_permissions: {$keep} is pinned out in {$manifest}.\n");
+        fwrite(STDERR, "It is contributed by a plugin manifest, and tools:node=\"remove\" deletes that contribution at merge.\n");
         exit(1);
     }
 }

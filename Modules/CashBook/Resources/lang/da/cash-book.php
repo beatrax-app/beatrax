@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Indtast et beløb større end nul.',
         'amount_too_large' => 'Beløbet er for stort. Tjek cifrene.',
+        'amount_unreadable' => 'Beløbet kunne ikke læses. Indtast det uden tusindtalsseparator og med højst to decimaler, for eksempel :example.',
         'invalid_date' => 'Indtast en gyldig dato.',
     ],
 

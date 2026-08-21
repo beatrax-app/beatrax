@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Ange ett belopp större än noll.',
         'amount_too_large' => 'Beloppet är för stort. Kontrollera siffrorna.',
+        'amount_unreadable' => 'Beloppet kunde inte läsas. Ange det utan tusentalsavgränsare och med högst två decimaler, till exempel :example.',
         'invalid_date' => 'Ange ett giltigt datum.',
     ],
 
