@@ -299,6 +299,17 @@ final class PairingGateway
         );
     }
 
+    // Asked before anything that restarts the listener daemon: a handshake is
+    // served by the process holding the socket, so replacing it mid-ceremony
+    // drops the very connection the ceremony is waiting on (see @link).
+    /**
+     * @link ../../../../.docs/features/sync/pairing-handshake.md#opening-the-pairing-screen-must-not-restart-the-listener
+     */
+    public function hasLiveHandshake(int $userId): bool
+    {
+        return $this->rows->hasLiveHandshake($userId);
+    }
+
     // Screens hold their step in component state, which a reload wipes while the row
     // carries on, so callers resume from here rather than restarting the ceremony.
     /**

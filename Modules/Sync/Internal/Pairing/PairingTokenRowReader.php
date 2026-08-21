@@ -58,6 +58,18 @@ final readonly class PairingTokenRowReader
         ];
     }
 
+    // A ceremony underway, which `pending` counts toward and inFlight() does
+    // not: a code has been shown and the peer may be dialling it right now,
+    // even though nothing has bound itself to the row yet.
+    public function hasLiveHandshake(int $userId): bool
+    {
+        return $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->whereIn('state', [PairingState::Pending->value, PairingState::AwaitingConfirm->value])
+            ->where('expires_at', '>', PairingExpiry::stamp($this->clock->now()))
+            ->exists();
+    }
+
     // The live ceremony for this user, newest first.
     /**
      * @return array{id: int, state: string, safety_words: list<string>, token_hash: string, peer_device_id: string, initiator_device_id: string|null, responder_device_id: string|null}|null
@@ -67,7 +79,7 @@ final readonly class PairingTokenRowReader
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->whereIn('state', [PairingState::AwaitingConfirm->value, PairingState::Confirmed->value])
-            ->where('expires_at', '>', $this->clock->now()->toIso8601String())
+            ->where('expires_at', '>', PairingExpiry::stamp($this->clock->now()))
             ->orderByDesc('id')
             ->first(['id', 'state', 'token_hash', 'initiator_device_id', 'responder_device_id']);
 

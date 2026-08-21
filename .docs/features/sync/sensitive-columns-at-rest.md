@@ -121,6 +121,116 @@ safe. Three reasons are legitimate:
 Anything else is the bug the guard exists to find, and the fix is the query, not the list.
 Write the reason so the next reader can re-derive the judgement without opening the file.
 
+## The identity columns that are still plaintext, and what it would take to fix them
+
+An audit of a live desktop database found that `accounts.iban`, `accounts.name`,
+`accounts.slug`, `counterparties.slug` and `transactions.counterparty_normalized` are all
+readable with no key while the UI reports encryption **On**. `counterparty_normalized` is the
+worst of them: sixteen cleartext merchant names sitting beside sixteen ciphertext
+`counterparty_name` values that say the same thing, joined to plaintext amounts and dates.
+
+Every one of those columns is a **matching key**, and that is why none of them can take the
+AEAD treatment the rest of the list gets. Random-nonce ciphertext is different bytes every
+time it is written, so an equality predicate against it returns no rows, a UNIQUE index over
+it never collides, and a route parameter built from it resolves to nothing.
+
+- **`accounts.iban`** backs eleven production equality predicates, including
+  `EloquentAccountResolver` (the import-time statement-to-account match), `TransferPairer`,
+  `ClassifyTransactionType`, `CounterpartyResolverService::resolveSelfAccount()`, and four
+  separate duplicate-account existence checks. It also carries `unique(user_id, iban)` and
+  feeds two `sha256` chain signatures. Encrypting it turns every import into "unknown IBAN",
+  turns every own-transfer into a merchant, and makes the duplicate-account guard a no-op.
+  The column is also `string(34)`, too narrow for `base64(nonce || ciphertext)`.
+- **`counterparties.slug`** is the URL segment of `/counterparties/{slug}` and the key
+  `CounterpartySlugResolver`'s collision walk predicates on. Encrypt it and every candidate
+  reads "free", every counterparty takes the base slug, and the UNIQUE index that would have
+  caught it never fires.
+- **`categories.slug`** additionally has global rows with `user_id IS NULL`, and the codec
+  keys on a user. There is no key to encrypt them under.
+- **`accounts.name`** is the only one of the five with no equality predicate. It is
+  encryptable, at the cost of ten `ORDER BY` sites that would silently sort by ciphertext
+  bytes, roughly fifteen display sites, a three-way merge that compares against a plaintext
+  baseline, and a `PROJECTION_COLUMNS` entry. The pattern to follow is
+  `CounterpartyIndexQuery`, which orders by `id` in SQL and `usort()`s after decrypting.
+
+### Why a keyed blind index is not a drop-in for `counterparty_normalized`
+
+Replacing the plaintext with an HMAC under the group data key preserves equality and
+uniqueness in principle. It does not survive contact with this keyring:
+
+- **There is no rotation-stable key.** `GdkRotationService::rotateAndRevoke()` appends a new
+  epoch and re-keys nothing already stored; reads stay correct only because decryption tries
+  every epoch. An HMAC has no such fallback — the same merchant would hash to different bytes
+  either side of a rotation. Epoch ids are random, and a joining device receives epoch wraps
+  one at a time in arrival order, so there is no locally derivable "anchor epoch" either.
+- **The key is not held at every write.** `SensitiveColumnCodec` passes values through
+  unchanged when the app-lock is locked or the keyring is absent, and
+  `OpLogValueProjector::reencryptForProjection()` does the same on replay — which is the
+  ordinary state of the sync daemon. For an AEAD column a mixed plaintext/ciphertext column is
+  tolerable. For a column inside a uniqueness index it means the same statement stores two
+  different values under two different lock states.
+- **The fingerprint is re-derived from the stored column.**
+  `FingerprintRederiveService::buildCanonicalFromRow()` and
+  `Migration\Internal\Pipeline\EntityChangeApplier` both read
+  `transactions.counterparty_normalized` back out and recompute
+  `FingerprintComposer::compose()` over it. An HMAC is one-way, so either the fingerprint has
+  to be computed over the HMAC everywhere — dragging the keyring into a console command that
+  has no session — or the plaintext has to be recovered by re-normalising the decrypted
+  `counterparty_name`, which needs the same key. Getting this wrong does not fail loudly: it
+  changes the fingerprint, and re-importing a statement doubles the ledger.
+- **Some consumers need the plaintext, not equality.**
+  `PaypalFundingResolver::fuzzyMatch()` runs a Levenshtein similarity over two normalised
+  merchant names. No keyed hash can preserve that; the merchant term of the chain score would
+  collapse to zero for every pair. `ExpenseSeriesDetector` and `IncomeSeriesDetector` fall
+  back to writing `counterparty_normalized` into `recurring_series.detected_name`, which is
+  rendered on the recurring review screen — a hex digest would go on the screen.
+- **The blast radius is cross-table.** `merchants.normalized_name` carries
+  `unique(user_id, normalized_name)` and is joined to this column by `RuleEvaluator` on the
+  import hot path, comparing a stored value against a freshly computed plaintext one.
+  `recurring_series.cluster_counterparty_key` holds a verbatim copy, and
+  `SeriesEntryPlacer` matches that copy against `counterparties.slug`. All of them would have
+  to move together, under one key, in one migration.
+
+A blind index remains the right answer. It needs a dedicated per-user key minted at enable
+time, stored in the keyring file alongside the epochs, never rotated, and fanned out on
+pairing exactly as an epoch is — plus a decision about what a write does when that key is not
+held, since passing plaintext through is what breaks dedup.
+
+### One thing that did not need encryption
+
+`accounts.slug` used to end with the last six or eight characters of the IBAN, appended so two
+accounts under one user could not land on the same `unique(user_id, slug)` row. That is the
+rule `counterparties` already keeps — its migration says the slug is the kebab-cased display
+name "and nothing else" because it reaches a URL — and `PrivacyDefaultsTest` enforces it there.
+`AccountSlugResolver` now derives an account slug from the account name alone and separates
+collisions with a numeric suffix, and
+`2026_08_21_000002_strip_the_iban_tail_from_account_slugs` re-slugs the rows the old
+generators wrote. It matches only the exact shape they produced — the name slug, a hyphen, and
+a run that really is the tail of that row's own structurally valid IBAN — so `-ics-card`,
+`-paypal`, `cash-7` and a plain `-2` are left alone. `accounts.name`, `.slug` and `.iban` are
+all plaintext, so the migration needs no key and runs on a locked device.
+
+### The re-key that a schema migration must never attempt
+
+Adding a column to `SensitiveFieldRegistry` covers new writes and covers a user who has not
+enabled encryption yet, because `EncryptionMigrationService::migrate()` sweeps
+`PreMigrationSnapshot::PROJECTION_COLUMNS` at enable time. It does **not** cover a user who
+already has `current_epoch` set: that method returns early, so their existing rows keep the
+plaintext. Re-keying them needs the app-lock KEK, and a Laravel migration never holds one.
+The safe shape is the one `migrate()` already uses — when the KEK is unavailable, return and
+leave the data untouched, to be retried on the next unlock; never write over a value that
+could not be read first.
+
+### The allowlist entry that would quietly become a lie
+
+`sensitive-column-guard-allowlist.php` exempts six files on the stated grounds that their
+`where('iban', ...)` targets `accounts.iban`, "a plaintext column SensitiveFieldRegistry never
+lists". The guard skips allowlisted files *before* scanning. The moment `accounts.iban` is
+added to the registry, those six exemptions silently cover the six most dangerous predicates
+in the codebase, and the allowlist honesty check cannot detect it — it only greps reasons for
+`broken`/`TODO`/`FIXME`. Any change that lists `accounts.iban` must delete those six entries
+in the same commit.
+
 ## See also
 
 - [Removing a device: revoke, rotate, fan out](device-removal-and-epoch-rotation.md) — where
