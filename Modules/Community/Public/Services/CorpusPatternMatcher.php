@@ -37,20 +37,10 @@ final class CorpusPatternMatcher
         return self::containsToken($haystack, $pattern);
     }
 
-    /**
-     * Whether $needle appears in $haystack as a whole token rather than inside
-     * a longer word.
-     *
-     * A bare substring search made a phone bill's "Europese incasso internet en
-     * mobiel" match the corpus token OBI — inside "m-OBI-el" — and typed an
-     * employer as government by finding RDW inside "n-ORDW-ind". Merchant
-     * tokens are short by nature, so unanchored matching is not an edge case
-     * here; it is the common one.
-     *
-     * The edges are tested rather than \b, because a pattern may legitimately
-     * begin or end with punctuation, and \b next to a non-word character means
-     * the opposite of what is wanted.
-     */
+    // Whole token, not any substring: merchant tokens are short, so an
+    // unanchored search matched OBI inside "mobiel" and RDW inside "Nordwind".
+    // Edges are tested rather than \b, which means the opposite of what is
+    // wanted beside a pattern that begins or ends with punctuation.
     public static function containsToken(string $haystack, string $needle): bool
     {
         if ($needle === '' || $haystack === '') {

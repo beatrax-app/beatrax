@@ -70,3 +70,15 @@ it('rejects a javascript: URL', function (): void {
         ->toThrow(InvalidArgumentException::class);
     expect($this->shell->openExternalCalls)->toBe([]);
 });
+
+it('logs the opened page without the query string, which carries the statement description', function (): void {
+    /** @var OpenExternalUrlAction $action */
+    $action = $this->app->make(OpenExternalUrlAction::class);
+
+    $body = rawurlencode("entries:\n  - pattern: \"BCK*ONBEKENDE WINKEL *4471\"\n");
+    $action('https://github.com/beatrax-app/beatrax/compare/main...suggest-abc?expand=1&body='.$body);
+
+    expect($this->logger->records)->toHaveCount(1);
+    expect($this->logger->records[0]['context']['url'])
+        ->toBe('https://github.com/beatrax-app/beatrax/compare/main...suggest-abc');
+});

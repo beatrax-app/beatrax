@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Community\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -12,6 +13,7 @@ use Modules\Community\Public\Services\CommunityCorpusQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Import\Public\Services\MerchantNameResolver;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 final class MysteryMerchantsPage extends Component
@@ -26,6 +28,8 @@ final class MysteryMerchantsPage extends Component
         CurrentUser $currentUser,
         CommunityCorpusQuery $corpus,
         MerchantNameResolver $resolver,
+        SensitiveColumnCodec $codec,
+        Session $session,
     ): View {
         $user = $currentUser->user();
 
@@ -42,7 +46,7 @@ final class MysteryMerchantsPage extends Component
                 'payment_type',
             ]);
 
-        $scan = $this->scanMysteryRows($rows, $resolver, $user->id);
+        $scan = $this->scanMysteryRows($rows, $resolver, $codec, $session, $user->id);
         $grouped = $scan['grouped'];
 
         uasort($grouped, static function (array $a, array $b): int {
@@ -74,14 +78,26 @@ final class MysteryMerchantsPage extends Component
      * @param  iterable<stdClass>  $rows
      * @return array{grouped: array<string, array{description: string, count: int, lastSeen: ?string, paymentType: ?PaymentType}>, totalScanned: int, resolvedScanned: int}
      */
-    private function scanMysteryRows(iterable $rows, MerchantNameResolver $resolver, int $userId): array
-    {
+    private function scanMysteryRows(
+        iterable $rows,
+        MerchantNameResolver $resolver,
+        SensitiveColumnCodec $codec,
+        Session $session,
+        int $userId,
+    ): array {
         $grouped = [];
         $totalScanned = 0;
         $resolvedScanned = 0;
         foreach ($rows as $row) {
             $totalScanned++;
             $description = is_string($row->description) ? trim($row->description) : '';
+            // transactions.description is a SensitiveFieldRegistry column and
+            // the raw builder applies no cast. Undecrypted it never matches the
+            // corpus, and the card's suggest button would offer the ciphertext
+            // for publication to the shared list.
+            if ($description !== '') {
+                $description = trim($codec->decryptValue('transactions', 'description', $description, $userId, $session)['value']);
+            }
             if ($description === '' || $resolver->resolve($description, $userId) !== null) {
                 $resolvedScanned++;
 
