@@ -24,8 +24,8 @@
 
     CSS classes `.help-locations`, `.path-row`, `.path-mono`,
     `.copy-path-btn` live in resources/css/app.css's @layer
-    components block (added in Plan 17-06a) so the styling is
-    centralised and theme-token-driven.
+    components block, so the styling is centralised and
+    theme-token-driven.
 
     The copy-to-clipboard buttons live as a per-row Alpine island so
     no round-trip is needed; the `window.beatraxCopy()`

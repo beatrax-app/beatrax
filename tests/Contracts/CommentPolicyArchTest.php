@@ -246,13 +246,12 @@ it('has no banned deferral or provenance tokens in comments (M5)', function () u
     expect($hits)->toBe([], "Comments must carry no TODO/ticket/phase provenance. Offenders:\n  ".implode("\n  ", $hits));
 });
 
-// Held back, not exempt: these five are mid-move to another module, so their
+// Held back, not exempt: these four are mid-move to another module, so their
 // identifiers come out with the move rather than against it. The list only
-// ever shrinks — a sixth file cannot be added without this line changing.
+// ever shrinks — a fifth file cannot be added without this line changing.
 const COMMENT_POLICY_BLADE_HELD_FOR_MOVE = [
     'Modules/Core/Resources/views/livewire/app-sidebar.blade.php',
     'Modules/Core/Resources/views/livewire/dashboard.blade.php',
-    'Modules/Core/Resources/views/livewire/help/data-locations.blade.php',
     'Modules/Core/Resources/views/livewire/net-worth-card.blade.php',
     'Modules/Core/Resources/views/livewire/settings-page.blade.php',
 ];
