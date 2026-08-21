@@ -328,7 +328,7 @@
                                 </button>
                             </template>
                         </div>
-                        <template x-if="results.length === 0 && serverTransactionHits.length === 0">
+                        <template x-if="results.length === 0 && serverTransactionHits.length === 0 && serverEntityHits.length === 0">
                             <div class="p-4 text-center text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('dev::palette.no_results') }}</div>
                         </template>
                     </main>
