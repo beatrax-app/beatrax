@@ -10,6 +10,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
+use Modules\Tax\Internal\Support\FilingSeason;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Services\TaxCategoryWriter;
@@ -323,8 +324,6 @@ trait HandlesTaxTagging
 
     private function resolveCurrentTaxYear(Clock $c): int
     {
-        $now = $c->now();
-
-        return $now->month <= 4 ? $now->year - 1 : $now->year;
+        return FilingSeason::defaultYear($c->now());
     }
 }

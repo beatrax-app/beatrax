@@ -13,6 +13,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Tax\Internal\Support\FilingSeason;
 use Modules\Tax\Public\Services\TaxCsvExporter;
 use Modules\Tax\Public\Services\TaxPdfRenderer;
 use Modules\Tax\Public\Services\TaxYearQuery;
@@ -32,10 +33,7 @@ final class TaxPage extends Component
         }
 
         if ($this->year === 0) {
-            $now = $clock->now();
-            $this->year = $now->month <= 4
-                ? $now->year - 1
-                : $now->year;
+            $this->year = FilingSeason::defaultYear($clock->now());
         }
     }
 
