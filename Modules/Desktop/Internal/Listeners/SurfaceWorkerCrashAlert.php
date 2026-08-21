@@ -34,9 +34,8 @@ final class SurfaceWorkerCrashAlert
 
     public const OS_NOTIFICATION_TITLE = 'Background work stopped';
 
-    // Unix timestamps of every exit inside the window, pruned on each record.
     /** @var array<string, list<int>> */
-    private array $exits = [];
+    private array $exitTimestampsByAlias = [];
 
     public function __construct(
         private readonly Clock $clock,
@@ -66,17 +65,17 @@ final class SurfaceWorkerCrashAlert
         $cutoff = $now - self::CRASH_LOOP_WINDOW_SECONDS;
 
         $alias = $event->alias;
-        $bucket = $this->exits[$alias] ?? [];
+        $bucket = $this->exitTimestampsByAlias[$alias] ?? [];
         $bucket = array_values(array_filter($bucket, static fn (int $t): bool => $t > $cutoff));
         $bucket[] = $now;
-        $this->exits[$alias] = $bucket;
+        $this->exitTimestampsByAlias[$alias] = $bucket;
     }
 
     public function isCrashLoop(string $alias): bool
     {
         $now = $this->clock->now()->getTimestamp();
         $cutoff = $now - self::CRASH_LOOP_WINDOW_SECONDS;
-        $bucket = $this->exits[$alias] ?? [];
+        $bucket = $this->exitTimestampsByAlias[$alias] ?? [];
         $bucket = array_filter($bucket, static fn (int $t): bool => $t > $cutoff);
 
         return count($bucket) >= self::CRASH_LOOP_THRESHOLD;

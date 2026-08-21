@@ -13,6 +13,8 @@ use Throwable;
 
 class OAuthScrubSet
 {
+    private const NOTHING_TO_SCRUB = '';
+
     /** @var list<string>|null */
     protected ?array $set = null;
 
@@ -48,16 +50,15 @@ class OAuthScrubSet
         return $this->set;
     }
 
-    // null means "nothing to scrub", so callers skip preg_replace entirely.
     public function compiledPattern(): ?string
     {
         if ($this->compiled !== null) {
-            return $this->compiled === '' ? null : $this->compiled;
+            return $this->compiled === self::NOTHING_TO_SCRUB ? null : $this->compiled;
         }
 
         $secrets = $this->all();
         if ($secrets === []) {
-            $this->compiled = '';
+            $this->compiled = self::NOTHING_TO_SCRUB;
 
             return null;
         }

@@ -175,19 +175,16 @@ final class UserDataPathService
             : $base.DIRECTORY_SEPARATOR.ltrim($sub, '/\\');
     }
 
-    // Project-rooted: module code ships inside the bundle, not user data.
     public static function modulesPath(): string
     {
         return self::projectRoot().DIRECTORY_SEPARATOR.'Modules';
     }
 
-    // Project-rooted: migrations are code, not user data.
     public static function migrationsPath(): string
     {
         return self::projectRoot().DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'migrations';
     }
 
-    // Project-rooted: `public/` serves bundle-shipped assets, not user data.
     public static function publicPath(string $relative = ''): string
     {
         $base = self::projectRoot().DIRECTORY_SEPARATOR.'public';
@@ -197,7 +194,6 @@ final class UserDataPathService
             : $base.DIRECTORY_SEPARATOR.ltrim($relative, '/\\');
     }
 
-    // Project-rooted catch-all for code and config paths with no own accessor.
     public static function projectPath(string $relative = ''): string
     {
         $base = self::projectRoot();

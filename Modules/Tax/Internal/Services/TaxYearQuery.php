@@ -59,7 +59,6 @@ final class TaxYearQuery
             ->leftJoin('tax_deduction_categories AS cat', 'cat.id', '=', 'tag.deduction_category_id')
             ->leftJoin('accounts AS a', 'a.id', '=', 't.account_id')
             ->leftJoin('counterparties AS cp', 'cp.id', '=', 't.counterparty_id')
-            // Structural ownership guard: first filter, never omitted.
             ->where('tag.user_id', $userId)
             ->whereRaw(
                 'COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) = ?',
@@ -120,22 +119,22 @@ final class TaxYearQuery
         $incomeTotal = 0;
 
         foreach ($rawRows as $row) {
-            $minor = self::toInt($row->settled_amount_minor);
+            $signedMinor = self::toInt($row->settled_amount_minor);
+            $magnitudeMinor = abs($signedMinor);
             $isIncome = self::toString($row->transaction_type) === TransactionType::Income->value;
 
-            // Stored amounts are signed; the cockpit totals are "you spent X".
             if ($isIncome) {
-                $incomeTotal += abs($minor);
+                $incomeTotal += $magnitudeMinor;
             } else {
-                $deductionsTotal += abs($minor);
+                $deductionsTotal += $magnitudeMinor;
             }
 
-            $rowData = $this->mapRow($row, $userId, $minor);
+            $rowData = $this->mapRow($row, $userId, $signedMinor);
 
             if ($row->category_id === null) {
-                $noCategory = $this->accumulateNoCategory($noCategory, $rowData, $minor);
+                $noCategory = $this->accumulateNoCategory($noCategory, $rowData, $magnitudeMinor);
             } else {
-                $groups = $this->accumulateCategory($groups, $row, $rowData, $minor);
+                $groups = $this->accumulateCategory($groups, $row, $rowData, $magnitudeMinor);
             }
         }
 
@@ -156,7 +155,7 @@ final class TaxYearQuery
     /**
      * @return array<string, mixed>
      */
-    private function mapRow(\stdClass $row, int $userId, int $minor): array
+    private function mapRow(\stdClass $row, int $userId, int $signedMinor): array
     {
         // description, display_name, iban and note are ciphertext at rest once
         // encryption is on, so every read-side surface decrypts here.
@@ -169,7 +168,7 @@ final class TaxYearQuery
             'counterpartyIban' => $this->decryptOrNull('counterparties', 'iban', $row->counterparty_iban, $userId),
             'description' => $this->decryptOrNull('transactions', 'description', $row->description, $userId),
             'note' => $this->decryptOrNull('tax_transaction_tags', 'note', $row->note, $userId),
-            'settledAmountMinor' => $minor,
+            'settledAmountMinor' => $signedMinor,
             'settledCurrency' => self::toString($row->settled_currency),
             'amountMinor' => self::toInt($row->amount_minor),
             'currency' => self::toString($row->currency),
@@ -189,9 +188,8 @@ final class TaxYearQuery
      * @param  array<string, mixed>  $rowData
      * @return array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>}
      */
-    private function accumulateNoCategory(?array $noCategory, array $rowData, int $minor): array
+    private function accumulateNoCategory(?array $noCategory, array $rowData, int $magnitudeMinor): array
     {
-        // Lazy, so an all-categorised year emits no empty trailing group.
         $noCategory ??= [
             'id' => null,
             'name' => null,
@@ -200,7 +198,7 @@ final class TaxYearQuery
             'rows' => [],
         ];
 
-        $noCategory['subtotalMinor'] += abs($minor);
+        $noCategory['subtotalMinor'] += $magnitudeMinor;
         $noCategory['rows'][] = $rowData;
 
         return $noCategory;
@@ -211,7 +209,7 @@ final class TaxYearQuery
      * @param  array<string, mixed>  $rowData
      * @return array<int|string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>}>
      */
-    private function accumulateCategory(array $groups, \stdClass $row, array $rowData, int $minor): array
+    private function accumulateCategory(array $groups, \stdClass $row, array $rowData, int $magnitudeMinor): array
     {
         $catKey = (string) self::toInt($row->category_id);
         if (! array_key_exists($catKey, $groups)) {
@@ -224,7 +222,7 @@ final class TaxYearQuery
             ];
         }
 
-        $groups[$catKey]['subtotalMinor'] += abs($minor);
+        $groups[$catKey]['subtotalMinor'] += $magnitudeMinor;
         $groups[$catKey]['rows'][] = $rowData;
 
         return $groups;
@@ -255,7 +253,6 @@ final class TaxYearQuery
         return $years;
     }
 
-    // Never throws, and a pass-through no-op when encryption is not enabled.
     private function decryptOrNull(string $table, string $field, mixed $value, int $userId): ?string
     {
         if (! is_string($value) || $value === '') {
