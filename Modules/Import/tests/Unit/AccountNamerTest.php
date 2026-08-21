@@ -19,7 +19,7 @@ beforeEach(function (): void {
 });
 
 it('creates an account scoped to the user with the supplied name + IBAN', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
     $iban = 'NL42TEST1234567890';
 
     $accountId = $namer($iban, 'My ASN Savings', $this->user);
@@ -37,7 +37,7 @@ it('creates an account scoped to the user with the supplied name + IBAN', functi
 });
 
 it('trims whitespace from the user-supplied name', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
 
     $accountId = $namer('NL42TEST1234567890', '  Trimmed Account  ', $this->user);
 
@@ -46,39 +46,57 @@ it('trims whitespace from the user-supplied name', function (): void {
     expect($account->name)->toBe('Trimmed Account');
 });
 
-it('generates a slug containing the last 4 IBAN characters for uniqueness', function (): void {
-    $namer = new AccountNamer;
+it('derives the slug from the account name alone, never from the IBAN', function (): void {
+    $namer = app(AccountNamer::class);
 
     $accountId = $namer('NL47TEST9876543210', 'Another Account', $this->user);
 
     /** @var Account $account */
     $account = Account::query()->find($accountId);
-    expect($account->slug)->toContain('3210');
+    expect($account->slug)->toBe('another-account');
+    expect($account->slug)->not->toContain('3210');
+    expect($account->slug)->not->toContain('9876543210');
+});
+
+it('separates two accounts sharing a name with a numeric suffix, not the IBAN', function (): void {
+    $namer = app(AccountNamer::class);
+
+    $first = $namer('NL47TEST9876543210', 'Joint Account', $this->user);
+    $second = $namer('NL42TEST1234567890', 'Joint Account', $this->user);
+
+    /** @var Account $one */
+    $one = Account::query()->find($first);
+    /** @var Account $two */
+    $two = Account::query()->find($second);
+
+    expect($one->slug)->toBe('joint-account');
+    expect($two->slug)->toBe('joint-account-2');
+    expect($two->slug)->not->toContain('7890');
 });
 
 it('rejects names that contain no alphanumeric characters (emoji only)', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
 
     expect(fn () => $namer('NL49TEST1111111111', '🎉🎉', $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
 
 it('rejects names that contain only punctuation', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
 
     expect(fn () => $namer('NL02TEST2222222222', '====', $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
 
 it('rejects names below the minimum length bound', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
 
     expect(fn () => $namer('NL52TEST3333333333', '   ', $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
 
 it('rejects names above the maximum length bound', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
     $tooLong = str_repeat('a', AccountNamer::NAME_MAX_LENGTH + 1);
 
     expect(fn () => $namer('NL05TEST4444444444', $tooLong, $this->user))
@@ -86,21 +104,21 @@ it('rejects names above the maximum length bound', function (): void {
 });
 
 it('rejects an empty IBAN', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
 
     expect(fn () => $namer('', 'Friendly Name', $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
 
 it('rejects an IBAN shorter than 15 characters', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
 
     expect(fn () => $namer('NL01ABC', 'Friendly Name', $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
 
 it('rejects an IBAN longer than 34 characters', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
     $tooLong = 'NL'.str_repeat('1', 33);
 
     expect(fn () => $namer($tooLong, 'Friendly Name', $this->user))
@@ -108,14 +126,14 @@ it('rejects an IBAN longer than 34 characters', function (): void {
 });
 
 it('rejects an IBAN containing lowercase letters', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
 
     expect(fn () => $namer('nl01test1234567890', 'Friendly Name', $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
 
 it('rejects an IBAN containing whitespace or punctuation', function (): void {
-    $namer = new AccountNamer;
+    $namer = app(AccountNamer::class);
 
     expect(fn () => $namer('NL01 TEST 1234 5678 90', 'Friendly Name', $this->user))
         ->toThrow(InvalidAccountNameException::class);

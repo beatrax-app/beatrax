@@ -11,6 +11,7 @@ use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Services\AccountSlugResolver;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
@@ -27,9 +28,11 @@ final class AccountNamer implements NamesAccounts
 
     private const IBAN_MAX_LENGTH = 34;
 
+    public function __construct(private readonly AccountSlugResolver $slugs) {}
+
     public function __invoke(string $iban, string $userSuppliedName, User $user): int
     {
-        [$trimmed, $slugBody] = self::validateName($userSuppliedName);
+        [$trimmed] = self::validateName($userSuppliedName);
 
         // Structural only. Mod-97 is deliberately not enforced: counterparty
         // IBANs from MT940 and CAMT extracts arrive truncated, and rejecting
@@ -46,12 +49,10 @@ final class AccountNamer implements NamesAccounts
             ]));
         }
 
-        $tail = substr($iban, -8);
-
         $account = Account::create([
             'user_id' => $user->id,
             'name' => $trimmed,
-            'slug' => $slugBody.'-'.strtolower($tail),
+            'slug' => $this->slugs->resolveUnique($user->id, $trimmed),
             'kind' => AccountKind::Bank->value,
             'iban' => $iban,
             'default_currency' => 'EUR',

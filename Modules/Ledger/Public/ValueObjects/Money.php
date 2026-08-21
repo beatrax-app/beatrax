@@ -7,9 +7,10 @@ namespace Modules\Ledger\Public\ValueObjects;
 use Brick\Math\RoundingMode;
 use Brick\Money\Exception\UnknownCurrencyException;
 use Brick\Money\Money as BrickMoney;
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Translation\Translator;
 use IntlException;
 use Modules\Core\Public\Enums\Locale;
-use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Exceptions\CurrencyMismatchException;
 use Stringable;
 use ValueError;
@@ -87,17 +88,17 @@ final class Money implements Stringable
         return $this->inner->isNegative();
     }
 
-    // No locale argument: the currency decides. Passing the one you happen to
-    // have renders a dollar amount in Dutch separators, which is how "US$
-    // -1.245,67" reached the transactions list.
+    // No locale argument: the reader's active one decides, and a call site
+    // passing the one it happens to have is how "US$ -1.245,67" reached the
+    // transactions list. The currency is what is rendered, never how.
     public function format(): string
     {
         // formatToLocale(), not formatTo(): the latter was removed in 0.14.
         try {
-            return $this->inner->formatToLocale($this->language() === Locale::Nl ? 'nl_NL' : 'en_US');
+            return $this->inner->formatToLocale($this->language()->value);
         } catch (IntlException|ValueError) {
             // The mobile build's ICU carries English-only locale data, so
-            // nl_NL throws here on every amount. Not fixable by bundling more.
+            // every other language throws. Not fixable by bundling more.
             return $this->formatWithoutIcu();
         }
     }
@@ -129,29 +130,43 @@ final class Money implements Stringable
         return $this->assemble($this->group(ltrim($rounded, '-')), str_starts_with($rounded, '-'));
     }
 
+    // Chunked from the right by reversing the digits, then turned back before
+    // the mark goes in: strrev() over the assembled string would split the two
+    // bytes of a non-breaking space, which is the group mark in eleven locales.
     private function group(string $whole): string
     {
-        return strrev(implode($this->language()->groupMark(), str_split(strrev($whole), 3)));
+        $chunks = array_map(strrev(...), str_split(strrev($whole), 3));
+
+        return implode($this->language()->groupMark(), array_reverse($chunks));
     }
 
-    // Dutch writes the symbol first and the sign against the digits
-    // (€ -1.234,50); US English signs the whole amount (-$1,234.50).
     private function assemble(string $digits, bool $negative): string
     {
-        $symbol = self::SYMBOLS[$this->currency()] ?? $this->currency()."\u{00A0}";
+        $locale = $this->language();
+        $known = self::SYMBOLS[$this->currency()] ?? null;
+        $symbol = $known ?? $this->currency();
         $sign = $negative ? '-' : '';
 
-        return $this->language() === Locale::Nl
-            ? $symbol."\u{00A0}".$sign.$digits
-            : $sign.$symbol.$digits;
+        // ICU spaces an alphabetic symbol off the digits whatever the locale's
+        // own pattern says, which is how a currency it has no sign for reads
+        // "CHF 3,850.00" in English.
+        $gap = $known === null ? "\u{00A0}" : $locale->symbolGap();
+
+        if (! $locale->symbolBeforeAmount()) {
+            return $sign.$digits.$gap.$symbol;
+        }
+
+        return $locale->signPrecedesSymbol()
+            ? $sign.$symbol.$gap.$digits
+            : $symbol.$gap.$sign.$digits;
     }
 
-    // EUR reads in the Dutch convention, every other currency the way a card
-    // statement does. Nothing else about the app's 26 locales enters here: an
-    // amount is read against its own currency, not the reader's language.
+    // The reader's locale, which is what decides separators and symbol
+    // position; the currency decides only which symbol is placed. Anything
+    // unrecognised reads as English rather than throwing mid-render.
     private function language(): Locale
     {
-        return $this->currency() === Currency::Eur->value ? Locale::Nl : Locale::En;
+        return Locale::tryFrom(Container::getInstance()->make(Translator::class)->getLocale()) ?? Locale::En;
     }
 
     public function __toString(): string
