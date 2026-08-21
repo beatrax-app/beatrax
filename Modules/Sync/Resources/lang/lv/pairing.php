@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Rādīt manu kodu',
     'show_my_code_help' => 'Parāda šīs ierīces QR kodu un vārdu kodu otrai ierīcei.',
     'enter_a_code' => 'Ievadīt kodu',
-    'enter_a_code_help' => 'Ierakstiet vai noskenējiet kodu, kas redzams otrā ierīcē.',
+    'enter_a_code_help' => 'Ierakstiet kodu, kas redzams otrā ierīcē.',
 
     'show_this_code' => 'Rādīt šo kodu',
     'enter_on_other' => 'Ievadiet šo kodu otrā ierīcē vai ļaujiet tai noskenēt QR kodu.',

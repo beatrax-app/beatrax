@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'A kódom megjelenítése',
     'show_my_code_help' => 'Megjeleníti ennek az eszköznek a QR- és szókódját a másik eszköz számára.',
     'enter_a_code' => 'Kód megadása',
-    'enter_a_code_help' => 'Írd be vagy olvasd be a másik eszközön megjelenő kódot.',
+    'enter_a_code_help' => 'Írd be a másik eszközön megjelenő kódot.',
 
     'show_this_code' => 'Ennek a kódnak a megjelenítése',
     'enter_on_other' => 'Add meg ezt a kódot a másik eszközön, vagy hagyd, hogy beolvassa a QR-kódot.',

@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Mostrar mi código',
     'show_my_code_help' => 'Muestra el QR y el código de palabras de este dispositivo para el otro.',
     'enter_a_code' => 'Introducir un código',
-    'enter_a_code_help' => 'Escribe o escanea el código que aparece en el otro dispositivo.',
+    'enter_a_code_help' => 'Escribe el código que aparece en el otro dispositivo.',
 
     'show_this_code' => 'Mostrar este código',
     'enter_on_other' => 'Introduce este código en el otro dispositivo, o deja que escanee el QR.',

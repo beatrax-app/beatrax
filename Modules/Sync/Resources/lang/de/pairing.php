@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Meinen Code anzeigen',
     'show_my_code_help' => 'Zeigt den QR- und Wortcode dieses Geräts für das andere Gerät an.',
     'enter_a_code' => 'Code eingeben',
-    'enter_a_code_help' => 'Tippe den Code vom anderen Gerät ein oder scanne ihn.',
+    'enter_a_code_help' => 'Tippe den Code vom anderen Gerät ein.',
 
     'show_this_code' => 'Diesen Code anzeigen',
     'enter_on_other' => 'Gib diesen Code auf dem anderen Gerät ein oder lass es den QR scannen.',

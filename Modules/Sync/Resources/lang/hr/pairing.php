@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Prikaži moj kod',
     'show_my_code_help' => 'Prikaži QR kod i kod od riječi ovog uređaja drugom uređaju.',
     'enter_a_code' => 'Unesi kod',
-    'enter_a_code_help' => 'Upiši ili skeniraj kod prikazan na drugom uređaju.',
+    'enter_a_code_help' => 'Upiši kod prikazan na drugom uređaju.',
 
     'show_this_code' => 'Prikaži ovaj kod',
     'enter_on_other' => 'Unesi ovaj kod na drugom uređaju ili mu dopusti da skenira QR kod.',

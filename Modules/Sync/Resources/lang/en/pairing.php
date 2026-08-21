@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Show my code',
     'show_my_code_help' => "Display this device's QR and word-code for the other device.",
     'enter_a_code' => 'Enter a code',
-    'enter_a_code_help' => 'Type or scan the code shown on the other device.',
+    'enter_a_code_help' => 'Type the code shown on the other device.',
 
     'show_this_code' => 'Show this code',
     'enter_on_other' => 'Enter this code on the other device, or let it scan the QR.',

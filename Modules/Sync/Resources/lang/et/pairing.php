@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Näita minu koodi',
     'show_my_code_help' => 'Kuva selle seadme QR- ja sõnakood teise seadme jaoks.',
     'enter_a_code' => 'Sisesta kood',
-    'enter_a_code_help' => 'Sisesta või skanni teises seadmes kuvatav kood.',
+    'enter_a_code_help' => 'Sisesta teises seadmes kuvatav kood.',
 
     'show_this_code' => 'Näita seda koodi',
     'enter_on_other' => 'Sisesta see kood teises seadmes või lase sellel QR-kood skannida.',

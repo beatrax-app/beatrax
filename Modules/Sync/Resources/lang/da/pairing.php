@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Vis min kode',
     'show_my_code_help' => 'Vis denne enheds QR-kode og ordkode for den anden enhed.',
     'enter_a_code' => 'Indtast en kode',
-    'enter_a_code_help' => 'Skriv eller scan koden, der vises på den anden enhed.',
+    'enter_a_code_help' => 'Skriv koden, der vises på den anden enhed.',
 
     'show_this_code' => 'Vis denne kode',
     'enter_on_other' => 'Indtast denne kode på den anden enhed, eller lad den scanne QR-koden.',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
@@ -18,6 +19,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsPairingTokenRow;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
 use Modules\Sync\Internal\Pairing\PairingFrameCourier;
@@ -245,8 +247,17 @@ final class PairingFlowModal extends Component
         $this->step = 'show_code';
     }
 
-    public function enterACode(): void
+    // On a phone this hands off to the camera-first pairing screen instead of
+    // opening a text field: that surface has a scanner, and this modal has
+    // never had one, so the offer to scan was only ever true over there.
+    public function enterACode(UrlGenerator $urls): void
     {
+        if (UserDataPathService::isMobileRuntime()) {
+            $this->redirect($urls->route('mobile.pair'), navigate: false);
+
+            return;
+        }
+
         $this->step = 'enter_code';
         $this->wordCode = '';
         $this->flashMessage = '';

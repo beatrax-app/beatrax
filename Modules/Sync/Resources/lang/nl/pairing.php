@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Mijn code tonen',
     'show_my_code_help' => 'Toon de QR-code en woordcode van dit apparaat aan het andere apparaat.',
     'enter_a_code' => 'Een code invoeren',
-    'enter_a_code_help' => 'Typ of scan de code die op het andere apparaat wordt getoond.',
+    'enter_a_code_help' => 'Typ de code die op het andere apparaat wordt getoond.',
 
     'show_this_code' => 'Toon deze code',
     'enter_on_other' => 'Voer deze code in op het andere apparaat, of laat het de QR-code scannen.',
