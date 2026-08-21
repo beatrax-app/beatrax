@@ -16,12 +16,14 @@ to the source that last wrote it:
 
     {"category_id": "manual", "note": "rule"}
 
-The three sources in use are:
+The two sources in use are:
 
-- `manual` — a person set this field directly on the transaction detail
-  screen.
-- `rule` — a categorisation rule set it.
-- `user` — used by the tax-tagging path for a person-initiated tag.
+- `manual` — a person set this field directly. `AssignCategory`,
+  `TransactionDetail` and the default argument of `TagTransaction::execute()`
+  all stamp this.
+- `rule` — a categorisation rule set it. `RuleApplier` stamps it for the
+  `category_id`, `counterparty_id` and `note` actions, and passes it
+  explicitly to `TagTransaction::execute()` for the `tax_tag` action.
 
 A field absent from the map has never been stamped. A row that has never
 been stamped at all stores NULL rather than `{}`.

@@ -151,12 +151,11 @@ Being honest about its reach matters as much as having it:
   joining the mutations table on — is not caught by this pattern.
 - It is a source grep. Raw SQL assembled in a string, or a table name
   built from a variable, passes through.
-- It says nothing about writes. That is the separate
-  `noTransactionWritesFromForecasting` invariant, which scans
-  `Modules/Forecasting` for mutating verbs against the substrate
-  tables and for the Eloquent class-level write methods on
-  `Transaction`, `RecurringSeries`, `CardStatement`, `ChainLink` and
-  `DriftAlert`.
+- It says nothing about writes. That is the separate repo-wide
+  `crossModuleRawTableWrites` invariant, which pins every raw-table or
+  raw-SQL write a module makes against a table it does not own.
+  `Modules/Forecasting` has two, both against `accounts`. Writes made
+  through an Eloquent model class are outside its scope.
 - It proves nothing about runtime. That is
   `tests/Contracts/ScenarioIsolationContractTest.php`, which seeds a
   real substrate, runs every scenario lifecycle Action plus a full

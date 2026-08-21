@@ -18,9 +18,7 @@ Modules/DevMode/
 │   │   ├── CommandSpec.php
 │   │   └── NavigationEntry.php
 │   └── Models/
-│       ├── FailedJob.php
-│       ├── Job.php
-│       └── JobBatch.php
+│       └── Job.php
 ├── Internal/
 │   ├── CommandRegistry.php
 │   ├── Process/
@@ -101,8 +99,8 @@ Modules/DevMode/
     keywords)`.
 - **Models/**
   - `Job` — read-only model over the framework's `jobs` table.
-  - `FailedJob` — read-only model over `failed_jobs`.
-  - `JobBatch` — read-only model over `job_batches`.
+    `failed_jobs` and `job_batches` are read through the query
+    builder; the typed models over them went unused and were removed.
 
 ## Internal services
 

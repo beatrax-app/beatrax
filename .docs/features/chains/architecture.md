@@ -27,10 +27,10 @@ this page describes the module's surface.
 
 What the module explicitly does NOT do:
 
-- It never mutates `transactions` directly. The `transactions` table is
-  the canonical store; chain rows reference it via FKs but the resolver
-  is read-mostly over `transactions`. (The arch invariant
-  `noResolverWritesTransactions` is the standing guard.)
+- It is read-mostly over `transactions`. The `transactions` table is
+  the canonical store; chain rows reference it via FKs. The one write
+  Chains makes — `RetypeByAliasResolver` retyping `transactions.type` —
+  is pinned by file and line by `crossModuleRawTableWrites`.
 - It never decides the same chain twice. Every resolver run is keyed
   on the deterministic `signature_hash` of the evidence; a re-run
   observes the existing chain_link row and skips it.

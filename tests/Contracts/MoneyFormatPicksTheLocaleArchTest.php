@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-locale-argument-passed-to-moneyformat
@@ -97,7 +98,7 @@ it('hands format() no locale to override the one the currency implies', function
 });
 
 it('gives Money::format() no locale parameter to pass in the first place', function (): void {
-    $signature = new ReflectionMethod(Modules\Ledger\Public\ValueObjects\Money::class, 'format');
+    $signature = new ReflectionMethod(Money::class, 'format');
 
     expect($signature->getNumberOfParameters())->toBe(
         0,

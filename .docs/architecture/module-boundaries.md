@@ -99,23 +99,29 @@ directly.
 
 ## The arch invariants that hold the line
 
-`tests/Contracts/BoundaryArchTest.php` ships twenty-nine arch invariants
-specifically guarding the module-boundary contract. Selected examples:
+`tests/Contracts/BoundaryArchTest.php` ships the arch invariants that guard the
+module-boundary contract. Selected examples:
 
-- **`noResolverWritesTransactions`** — files under
-  `Modules/Chains/Internal/Resolvers/` cannot write the `transactions` table.
-  Chain resolution operates over read-only `transactions` queries and writes
-  only to its own `chain_links` ledger.
-- **`noTransactionWritesFromEmailScan`** — `Modules/EmailScan/` cannot write
-  the `transactions` table. Email scanning produces inbox-message rows;
-  promotion to transactions happens through the explicit `Receipts` →
-  `Ingestion` → `Ledger` path.
-- **`noTransactionWritesFromRecurring`** — `Modules/Recurring/` only reads
-  `transactions`. The detector emits suggestion rows on its own table.
-- **`noTransactionWritesFromForecasting`** — `Modules/Forecasting/` only
-  reads `transactions`, `recurring_series`, `card_statements`,
-  `chain_links`, and `drift_alerts`. Forecast runs write only to their own
-  `forecast_runs` + `forecast_scenario_mutations` tables.
+- **`pinnedCrossModuleInternalImports`** — the import half of the boundary. It
+  scans `Modules/`, `tests/` and `app/` textually for a `use` of another
+  module's `Internal\`, and asserts the result equals two pinned literal lists:
+  a production list holding exactly the `Mobile` → `Sync` protocol crossings,
+  and a test list holding every crossing the suite makes today. A third
+  assertion bans naming a cross-module `Internal` symbol inline instead of
+  importing it, which is the form `BoundaryRule` cannot see.
+- **`pinnedCrossModuleLivewireMounts`** — the half no import declares. A Blade
+  view mounts a Livewire component by registered string alias, so a
+  cross-module mount creates a real dependency with nothing to statically
+  analyse. Every such pair is pinned, and every alias must be registered by
+  exactly one module provider.
+- **`crossModuleRawTableWrites`** — a module writing a table another module
+  created must be on a pinned allow-list naming the file, the table, and how
+  many such writes it makes. The table-to-module map is derived from the
+  migrations at test time, never hand-maintained; reads stay unrestricted. See
+  [Table ownership](table-ownership.md).
+- **`crossModuleSchemaAlterations`** — the same pin for a module adding columns
+  to a table it does not own. Fourteen such pairs exist and they are accepted
+  by design; the invariant makes a fifteenth a decision rather than a diff.
 - **`noOtherInboxScanStateMutator`** — `inbox_scan_state` mutations go
   through `InboxScanStateMachine` only. Same shape applies to
   `recurring_series.state`, `drift_alerts.state`, and `card_statements.state`.
@@ -155,7 +161,9 @@ specifically guarding the module-boundary contract. Selected examples:
 
 A violation of any invariant fails the Pest run, which fails the PR gate.
 The full list lives in `tests/Contracts/BoundaryArchTest.php`; the file is
-the load-bearing safety net for the entire module structure.
+the load-bearing safety net for the entire module structure. The import half
+is only half the boundary — [Table ownership](table-ownership.md) covers the
+half the modules cross through the database.
 
 ### The static-analysis half: `app/PhpStan/Rules/BoundaryRule.php`
 
@@ -169,7 +177,16 @@ else under `Modules\Y\` (`Internal`, `Database`, `Providers`,
 currently hold no PHP classes, so a future module cannot silently gain
 a public surface. Files outside `Modules\` are not governed by this
 rule; facade/helper bans are enforced separately by
-`canvural/larastan-strict-rules`. The importer module is detected via
+`canvural/larastan-strict-rules`.
+
+It is the stricter of the two guards where it runs, and the narrower in
+where it runs. `phpstan.neon` excludes `Modules/*/Database/Migrations`,
+`Modules/*/Database/Seeders`, `Modules/*/Routes` and every `tests/`
+directory from analysis, and the rule returns early for any file that is
+not inside a module at all — so a migration, a seeder, a test, or an
+`App\` class may import another module's `Internal\` and PHPStan will
+never say so. `pinnedCrossModuleInternalImports` covers exactly that
+gap, which is why the two are not redundant. The importer module is detected via
 the declared namespace first (so the deliberate violation fixtures
 under `app/PhpStan/Rules/Fixtures/` exercise the rule without needing
 to live inside `Modules/`), falling back to the filesystem path when
@@ -206,5 +223,8 @@ change.
   outside its own `chain_links` table.
 - [Categorization](categorization.md) — the categorizer's two-pass shape
   (rule-based + per-user memory) plus the ≥40% confidence gate.
+- [Table ownership](table-ownership.md) — which module owns which table, how
+  that map is derived from the migrations, and the pinned cross-module writes
+  and schema alterations.
 - [Data model](https://github.com/beatrax-app/spec/blob/main/20-architecture/data-model.md) — the table-level ERD that the modules
   collectively own.

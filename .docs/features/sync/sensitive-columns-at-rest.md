@@ -83,6 +83,44 @@ the op-log backfiller distinguishes the two cases — a value handed back untouc
 ordinary pre-encryption row, whereas the codec *blanking* it means it held ciphertext no
 epoch in the keyring opens, and capturing that would put an unreadable value on the wire.
 
+## The guard that catches a query written against ciphertext
+
+A `WHERE counterparty_iban = ?` against an encrypted column does not fail. It returns no
+rows, silently and forever, because the stored bytes are a fresh random-nonce ciphertext and
+the predicate is plaintext. The same is true of an `ORDER BY` that sorts by ciphertext, a
+join on one, or a raw `update()` that writes plaintext straight into an encrypted column.
+None of these raise; they just quietly stop being right.
+
+`SensitiveColumnPredicateGuardTest` is a source scan standing in for the type system that
+would otherwise have caught it. It walks every production file under `Modules/` — skipping
+`tests/`, `Database/` and `Resources/` — and looks for each bare column name from
+`SensitiveFieldRegistry::columns()` appearing in one of the shapes that only makes sense
+against plaintext: a `where`/`whereIn`, an `orderBy`/`groupBy`, a join `->on(...)`, a
+`whereRaw(... LIKE ...)`, a raw `json_decode(...)`, or a `'column' =>` key inside an
+`update()`/`insert()` array. A file that mentions any codec marker — `SensitiveColumnCodec`,
+`decryptValue`, `encryptValue`, `encryptAttrs` — is assumed to be routing through the codec
+and is skipped wholesale.
+
+It is a substring scan, so it is coarse in both directions. It matches a *bare* column name,
+which means `accounts.iban` trips on the registry's `counterparties.iban` entry even though
+`accounts.iban` is plaintext and always has been. And the codec-marker check is per file, so
+one decrypting read in a file exempts every other query in it. An AST rule modelled on
+`app/PhpStan/Rules/BoundaryRule.php`, matching a `MethodCall` node with a sensitive string
+literal argument, would be precise where this is not; it has not been built.
+
+### Adding an allowlist entry
+
+`sensitive-column-guard-allowlist.php` maps a repo-relative path to the reason that file is
+safe. Three reasons are legitimate:
+
+- a **different table** happens to share the bare column name, as with `accounts.iban`;
+- the predicate is a `whereNull`/`whereNotNull` presence check, which works on ciphertext
+  because it never compares the value;
+- the file already decrypts by a route the marker list does not recognise.
+
+Anything else is the bug the guard exists to find, and the fix is the query, not the list.
+Write the reason so the next reader can re-derive the judgement without opening the file.
+
 ## See also
 
 - [Removing a device: revoke, rotate, fan out](device-removal-and-epoch-rotation.md) — where

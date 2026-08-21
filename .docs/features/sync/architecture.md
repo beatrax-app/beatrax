@@ -757,12 +757,11 @@ advertises/browses `_beatrax-sync._tcp` with a `did={deviceId}` TXT record;
 Level 2 falls back to manually-configured host:port entries; Level 3 (no
 peer found either way) signals the caller to fall back to the ZK relay.
 
-Security: `MdnsBrowser::browse()` only returns peers whose `did=` TXT record
-matches a confirmed entry in `DeviceRegistryService::deviceKeys($userId)` —
-unknown advertisers are dropped BEFORE any TCP connection attempt. This is
-an optimization, not a trust boundary: the Noise handshake is the real auth
-gate, and the pre-filter only avoids wasted handshakes against rogue
-advertisers.
+Security: an advertiser whose `did=` TXT record matches no confirmed entry in
+`DeviceRegistryService::deviceKeys($userId)` is dropped BEFORE any TCP
+connection attempt. That is an optimization, not a trust boundary: the Noise
+handshake is the real auth gate, and the pre-filter only avoids wasted
+handshakes against rogue advertisers.
 
 `DiscoveredPeer` intentionally emits plaintext `ws://` (not `wss://`) —
 transport TLS is deliberately absent on the LAN-direct path since the Noise
@@ -773,11 +772,11 @@ filters out peers with an unresolved host/port (dns-sd browse without a `-L`
 resolve step yields these).
 
 `LocatesSystemBinary` is a shared trait for locating a system binary in
-standard paths, extracted from the duplicated `findBinary()` implementations
-in `MdnsAdvertiser` and `MdnsBrowser`.
+standard paths, used by `MdnsAdvertiser` to find `dns-sd` or
+`avahi-publish-service`.
 
-No `sharkydog/mdns` dependency — both classes shell out via Symfony Process,
-already in the dependency tree.
+No `sharkydog/mdns` dependency — advertising shells out via Symfony Process,
+already in the dependency tree, and browsing speaks the wire format directly.
 
 `MulticastMdnsQuery` speaks mDNS on the wire instead of shelling out, because
 a phone has neither `dns-sd` nor `avahi`. It sends one PTR question to

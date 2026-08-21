@@ -4,19 +4,8 @@ declare(strict_types=1);
 
 use Symfony\Component\Finder\Finder;
 
-/*
- * FluxBooleanAttributeArchTest — an unbound "false" is a string, and Flux
- * compares strictly.
- *
- * flux/modal reads `if ($dismissible === false)` before merging
- * disable-click-outside, and the same for `$escapable` / disable-escape.
- * Written without the colon, Blade hands it the STRING "false", which is not
- * identical to false, so the guard is skipped in silence: the modal renders,
- * looks right, and dismisses on an outside click anyway.
- *
- * Three modals shipped that way — the desktop's save-before-quit prompt and
- * the two credential wizards — so a stray click discarded work the modal
- * existed to protect. Nothing failed, because nothing was checking.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#an-unbound-false-is-the-string-false
  */
 
 // The attributes Flux resolves with ===, so a string never matches.

@@ -51,9 +51,6 @@ function fpctMapFixtureKindToDbKind(string $fixtureKind): string
 }
 
 /**
- * Seeds a fixture into the DB for the given user and returns the
- * fixtureAccountId → dbAccountId map.
- *
  * @return array{accountIdMap: array<int, int>, fixture: array<string, mixed>}
  */
 function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): array

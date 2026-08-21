@@ -4,16 +4,9 @@ declare(strict_types=1);
 
 use Symfony\Component\Process\Process;
 
-/*
- * Spawning PHPStan via Symfony Process inherits the parent's
- * `memory_limit` ini setting on the child (PHP's default is 128M).
- * PHPStan's `--memory-limit=1G` CLI flag is parsed by PHPStan AFTER
- * the PHP runtime has already bounded the heap at 128M, so the
- * `Modules` walk OOMs on parallel CI runs before PHPStan can raise
- * the bound. Prepending `php -d memory_limit=2G` lifts the child's
- * heap budget at the runtime layer, eliminating the intermittent
- * OOM seen during Plan 17-08 baseline.
- */
+// `-d memory_limit=2G` on the child, not just PHPStan's own
+// `--memory-limit=1G`: the runtime bounds the heap at the inherited 128M
+// before PHPStan ever parses its flag, so the Modules walk OOMs first.
 it('emits a BoundaryRule error on the bad fixture', function (): void {
     $process = new Process([
         PHP_BINARY,
@@ -27,11 +20,9 @@ it('emits a BoundaryRule error on the bad fixture', function (): void {
         '--no-ansi',
         '--memory-limit=1G',
     ], base_path());
-    // Symfony's Process defaults to 60 seconds, which assumes this analysis has
-    // the machine to itself. It does not: under pcov everything is slower, and
-    // now the suite runs in parallel, so PHPStan walking Modules/ competes with
-    // the worker processes for the same cores. Both make it fail on the clock
-    // rather than on the rule it exists to pin.
+    // Symfony's 60-second default assumes this analysis has the machine to
+    // itself; under pcov and parallel workers it fails on the clock instead of
+    // on the rule it exists to pin.
     $process->setTimeout(600);
     $process->run();
 
@@ -52,11 +43,9 @@ it('emits zero errors on the good fixture', function (): void {
         '--no-ansi',
         '--memory-limit=1G',
     ], base_path());
-    // Symfony's Process defaults to 60 seconds, which assumes this analysis has
-    // the machine to itself. It does not: under pcov everything is slower, and
-    // now the suite runs in parallel, so PHPStan walking Modules/ competes with
-    // the worker processes for the same cores. Both make it fail on the clock
-    // rather than on the rule it exists to pin.
+    // Symfony's 60-second default assumes this analysis has the machine to
+    // itself; under pcov and parallel workers it fails on the clock instead of
+    // on the rule it exists to pin.
     $process->setTimeout(600);
     $process->run();
 
@@ -76,11 +65,9 @@ it('passes against empty module skeletons at level max', function (): void {
         '--no-ansi',
         '--memory-limit=1G',
     ], base_path());
-    // Symfony's Process defaults to 60 seconds, which assumes this analysis has
-    // the machine to itself. It does not: under pcov everything is slower, and
-    // now the suite runs in parallel, so PHPStan walking Modules/ competes with
-    // the worker processes for the same cores. Both make it fail on the clock
-    // rather than on the rule it exists to pin.
+    // Symfony's 60-second default assumes this analysis has the machine to
+    // itself; under pcov and parallel workers it fails on the clock instead of
+    // on the rule it exists to pin.
     $process->setTimeout(600);
     $process->run();
 

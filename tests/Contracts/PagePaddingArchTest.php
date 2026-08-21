@@ -2,13 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * Page shells agree on their phone-width padding. Most use px-4; three had
- * px-8, which at 411px spends 64px of a 411px screen on empty margin instead
- * of 32px, and reads as cramped next to every other page.
- *
- * Wider padding above the sm breakpoint is fine and encouraged — the rule is
- * only that a page may not start wider than px-4 on a phone.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#px-8-page-padding-on-a-phone
  */
 
 /** @return list<string> */

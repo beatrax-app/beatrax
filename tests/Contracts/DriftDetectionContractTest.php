@@ -119,9 +119,9 @@ function ddctSeedFixture(DatabaseManager $db, User $user, Account $account, Impo
         $seriesRow['drift_threshold_percent'] = (int) $expected['series_drift_threshold_percent'];
     }
     if (isset($expected['series_snoozed']) && $expected['series_snoozed'] === true) {
-            // A series with snoozed_until in the future is in state='snoozed' by
-            // construction, and the evaluator filters on state — so the corpus's
-            // "excludes snoozed series" intent needs both columns set.
+        // A series with snoozed_until in the future is in state='snoozed' by
+        // construction, and the evaluator filters on state — so the corpus's
+        // "excludes snoozed series" intent needs both columns set.
         $seriesRow['state'] = 'snoozed';
         $seriesRow['snoozed_until'] = '2099-01-01 00:00:00';
     }

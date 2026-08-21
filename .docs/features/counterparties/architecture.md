@@ -101,8 +101,8 @@ must carry its own explicit filter regardless of the trait.
   `CounterpartyProfile` (`/counterparties/{slug}`),
   `CounterpartyTriage` (`/counterparties/triage`).
 
-The per-module arch invariant `noReachIntoCounterpartiesInternal`
-forbids any other module from importing
+`App\PhpStan\Rules\BoundaryRule` and the `pinnedCrossModuleInternalImports`
+arch invariant forbid any other module from importing
 `Modules\Counterparties\Internal\*`.
 
 `CounterpartiesServiceProvider` binds both Public contracts as

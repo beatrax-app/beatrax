@@ -59,8 +59,6 @@ What the module explicitly does NOT do:
   - `MatchOutcomeDto` — `(matched, parsedReceipt, enrichments,
     chainHints, statementSummary)`.
   - `ParsedReceiptDto` — the matcher's structured output.
-  - `FileImportDto` — read-model row for the file-imports
-    list.
   - `ChainHintPayload/FundedByCardPayload`,
     `ChainHintPayload/RefundOfPayload` — typed chain-hint
     payloads.
@@ -77,7 +75,6 @@ What the module explicitly does NOT do:
     pre-parse layer.
   - `ParsedMimeMessage` — typed MIME parse result.
 - **Services/**
-  - `FileImportQuery::list($user)` — the file-imports list.
   - `ReceiptConflictQuery::pending($user)` — pending
     conflicts.
 
@@ -97,8 +94,6 @@ What the module explicitly does NOT do:
   attached chain hints from the canonical row's
   `auto_category_provenance` or similar; dispatches one
   `ChainHintDetected` per hint.
-- **Internal/Http/Livewire/WizardEmailFileStep** — the
-  drop-an-.eml step in the upload wizard.
 - **Internal/Http/Livewire/ReceiptConflictToast** — the
   first-conflict toast surfacing
   `ReceiptConflictDetected`.
@@ -148,7 +143,8 @@ User drops .eml onto the app
   → Receipts::HandleFileOpenedFromOs (extension filter)
   → Desktop::PendingFileIntent::remember($path)
   → user logs in (if needed) → /desktop/file-staging
-  → user clicks "Start import" → WizardEmailFileStep
+  → user clicks "Start import" → Desktop::FileStagingPage
+     redirects to the import wizard
        → FileDropEmlBlobStore::store($path)
             → ReceiptSourceAdapter parses bytes
             → call RecordReceipt

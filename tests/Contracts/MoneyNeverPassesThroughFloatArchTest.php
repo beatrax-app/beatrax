@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#money-formatted-through-a-float
@@ -257,9 +258,9 @@ it('keeps MoneyInput a round trip', function (int $minor): void {
     // formatMinor() groups thousands, so this is the assertion that stops the
     // group mark and the decimal mark being chosen independently: whatever
     // formatMinor() writes, tryToMinor() must read back.
-    $formatted = Modules\Ledger\Public\ValueObjects\MoneyInput::formatMinor($minor);
+    $formatted = MoneyInput::formatMinor($minor);
 
-    expect(Modules\Ledger\Public\ValueObjects\MoneyInput::tryToMinor($formatted))->toBe(
+    expect(MoneyInput::tryToMinor($formatted))->toBe(
         $minor,
         'MoneyInput::formatMinor('.$minor.') produced "'.$formatted.'", which '.
         'tryToMinor() does not read back. A value shown in an input and '.

@@ -2,14 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * iOS zooms the page in when a focused form control renders below 16px and
- * does not zoom back out. app.css carries a coarse-pointer floor for exactly
- * this, but an inline style beats any stylesheet rule — so a control that sets
- * its own font-size below 16px defeats the floor silently.
- *
- * Measured on an iPhone after the floor landed: the tax-tag note textarea
- * still computed 15px, because its size is written inline on the element.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#an-inline-font-size-below-16px
  */
 
 /** @return list<string> every blade a phone can render */

@@ -10,7 +10,7 @@ use Illuminate\Database\Schema\Blueprint;
 // for two of them to ship an amount with no currency beside it at all.
 /**
  * @return array<string, array{minor: list<string>, currency: list<string>}>
- *                                                                          every table the migrated schema declares that carries a *_minor column
+ *                                                                           every table the migrated schema declares that carries a *_minor column
  */
 function moneyColumnsByTable(): array
 {

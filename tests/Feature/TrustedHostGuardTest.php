@@ -38,16 +38,8 @@ it('allows ::1 (IPv6 loopback)', function (): void {
     expect($response->status())->not->toBe(404);
 });
 
-/*
- * The Android shell forwards no Host header at all. Its bridge sends Cookie,
- * Accept, User-Agent, Referer and the sec-ch-ua set — captured from a device
- * — and nothing else, so Request::getHost() returns ''. Rejecting that took
- * the entire app down: every route 404'd, including Laravel's own /up, while
- * the runtime booted cleanly in 469ms and rendered the app's styled 404.
- *
- * Rebinding works by NAMING a domain, and a browser always sends Host on
- * HTTP/1.1, so an empty one cannot carry the attack this gate exists to stop.
- * LoopbackOnly still gates the interface the request arrived on.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#the-android-shell-forwards-no-host-header
  */
 it('allows a request with no Host header, as the Android shell sends', function (): void {
     $guard = app(TrustedHostGuard::class);

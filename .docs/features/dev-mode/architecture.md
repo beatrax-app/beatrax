@@ -56,9 +56,8 @@ layout to render the ⌘K palette and the sidebar nav-list:
   - `AuditWriter::write($action, $context)` — the single sanctioned
     write path for `dev_mode_audit` rows.
 - **DTOs/** — `CommandSpec`, `ArgSpec`, `NavigationEntry`, `AppAction`.
-- **Models/** — `Job`, `FailedJob`, `JobBatch` (typed read-only
-  models over the framework's queue tables; the queue inspector
-  consumes them).
+- **Models/** — `Job` (a typed read-only model over the framework's
+  `jobs` table).
 
 `Internal/` houses the implementation:
 
@@ -260,8 +259,8 @@ The queue-inspector flow:
 
 ```
 /dev/queue
-  → QueueInspectorPage reads framework Job + FailedJob + JobBatch
-       (typed Public models)
+  → QueueInspectorPage reads the `jobs`, `failed_jobs` and
+       `job_batches` tables through the query builder
   → recent JobProcessed / JobFailed events visible via /dev/logs
        (LogQueueLifecycle wrote them to the laravel log when they fired)
 ```

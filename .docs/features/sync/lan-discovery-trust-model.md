@@ -13,27 +13,19 @@ Noise handshake. The handshake is the gate. The registry pre-filter that drops
 advertisements whose `did=` is not a confirmed device is an optimisation — it
 avoids burning handshakes on rogue advertisers — not a security control.
 
-## Two implementations, because phones have no `dns-sd`
+## One implementation, because phones have no `dns-sd`
 
-`MdnsBrowser` shells out to the platform's own responder: `dns-sd -B` on macOS,
-`avahi-browse -p -r` on Linux. Both stream forever, so each invocation is
-time-boxed and whatever it printed before the box expired *is* the answer — a
-`ProcessTimedOutException` is the normal exit, not a failure. Browse is boxed at
-3 seconds; the follow-up `dns-sd -L` resolve at 2, since it only has to catch
-the first "can be reached at" line.
+`MulticastMdnsQuery` speaks mDNS on the wire rather than shelling out to the
+platform responder, because a phone has neither `dns-sd` nor `avahi`. Without
+it a fresh device could only ever learn where the desktop is from a scanned QR,
+which is why the typed-code arm of the import flow could not succeed at all.
 
-That second step is not optional on macOS. `dns-sd -B` reports an instance name
-and nothing else, so a browse alone yields a peer with `host=''` and `port=0`.
-Those are dropped as unconnectable — which, before the resolve step existed,
-meant mDNS discovery returned nothing on macOS no matter how many peers were
-advertising.
+There was a second implementation, `MdnsBrowser`, which drove `dns-sd -B` on
+macOS and `avahi-browse` on Linux. Nothing resolved it — the desktop browses
+through `MulticastMdnsQuery` like the phone does — so it was removed rather
+than kept as a platform-specific path no build exercised.
 
-`MulticastMdnsQuery` speaks mDNS on the wire instead, because a phone has
-neither binary. Without it, a fresh device could only ever learn where the
-desktop is from a scanned QR, which is why the typed-code arm of the import
-flow could not succeed at all.
-
-Two details of that implementation are non-obvious:
+Two details of the surviving implementation are non-obvious:
 
 - It binds an **ephemeral** UDP port rather than 5353 and sets the
   unicast-response bit (RFC 6762 §5.4) on its question, asking responders to

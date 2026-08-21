@@ -199,8 +199,8 @@ The behavioural contract for the `Community` module.
     `CommunityCorpusQuery` per row to suggest a friendly name for an
     unknown merchant.
   - [`Categorization`](../categorization/how-to-test.md) — the triage row
-    surfaces the `HelpOthersTriageButton` Livewire component when a
-    mystery merchant appears in the triage queue.
+    surfaces the "Help others identify this" CTA, gated on the
+    `offerToContribute` toggle this module owns.
 
 ## Configuration + feature flags
 

@@ -7,143 +7,12 @@ use Symfony\Component\Yaml\Yaml;
 /**
  * @link ../../.docs/conventions/arch-invariants.md
  * @link ../../.docs/architecture/module-boundaries.md
+ * @link ../../.docs/architecture/table-ownership.md
  */
 
-arch('Modules\\Ledger\\Internal is only used inside Modules\\Ledger')
-    ->expect('Modules\\Ledger\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Ledger');
-
-arch('Modules\\Core\\Internal is only used inside Modules\\Core')
-    ->expect('Modules\\Core\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Core');
-
-arch('Modules\\Ingestion\\Internal is only used inside Modules\\Ingestion')
-    ->expect('Modules\\Ingestion\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Ingestion');
-
-arch('Modules\\Import\\Internal is only used inside Modules\\Import')
-    ->expect('Modules\\Import\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Import');
-
-arch('Modules\\Categorization\\Internal is only used inside Modules\\Categorization')
-    ->expect('Modules\\Categorization\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Categorization');
-
-arch('Modules\\Transfers\\Internal is only used inside Modules\\Transfers')
-    ->expect('Modules\\Transfers\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Transfers');
-
-arch('Modules\\Chains\\Internal is only used inside Modules\\Chains')
-    ->expect('Modules\\Chains\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Chains');
-
-arch('Modules\\EmailScan\\Internal is only used inside Modules\\EmailScan')
-    ->expect('Modules\\EmailScan\\Internal')
-    ->toOnlyBeUsedIn('Modules\\EmailScan');
-
-arch('Modules\\Receipts\\Internal is only used inside Modules\\Receipts')
-    ->expect('Modules\\Receipts\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Receipts');
-
-arch('Modules\\Recurring\\Internal is only used inside Modules\\Recurring')
-    ->expect('Modules\\Recurring\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Recurring');
-
-arch('Modules\\DriftAlerts\\Internal is only used inside Modules\\DriftAlerts')
-    ->expect('Modules\\DriftAlerts\\Internal')
-    ->toOnlyBeUsedIn('Modules\\DriftAlerts');
-
-arch('Modules\\Anomaly\\Internal is only used inside Modules\\Anomaly')
-    ->expect('Modules\\Anomaly\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Anomaly');
-
-arch('Modules\\Desktop\\Internal is only used inside Modules\\Desktop')
-    ->expect('Modules\\Desktop\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Desktop');
-
-arch('Modules\\Mobile\\Internal is only used inside Modules\\Mobile')
-    ->expect('Modules\\Mobile\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Mobile');
-
-arch('Modules\\Onboarding\\Internal is only used inside Modules\\Onboarding')
-    ->expect('Modules\\Onboarding\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Onboarding');
-
-arch('Modules\\Community\\Internal is only used inside Modules\\Community')
-    ->expect('Modules\\Community\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Community');
-
-arch('Modules\\Counterparties\\Internal is only used inside Modules\\Counterparties')
-    ->expect('Modules\\Counterparties\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Counterparties');
-
-// Mobile is Sync's co-designed peer: Modules\Mobile\Internal\Sync\* is the
-// second half of the device-to-device protocol and imports Sync\Internal
-// transport and identity primitives (DeviceIdentityLoader, TransportFramer,
-// PeerCatchUpExchanger) directly rather than through Sync\Public.
-arch('Modules\\Sync\\Internal is only used inside Modules\\Sync (Mobile peer allow-listed)')
-    ->expect('Modules\\Sync\\Internal')
-    ->toOnlyBeUsedIn(['Modules\\Sync', 'Modules\\Mobile']);
-
-// There is deliberately no Public unlock seam — AppLockKeyService exposes only
-// release()/withhold() — so Sync's two test-infrastructure base classes call
-// LockStateManager->unlock() directly to exercise real crypto. Scoped to those
-// two classes so production Sync code reaching into Auth\Internal still fails.
-arch('Modules\\Auth\\Internal is only used inside Modules\\Auth')
-    ->expect('Modules\\Auth\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Auth')
-    ->ignoring([
-        'Modules\\Sync\\Tests\\TestCase',
-        'Modules\\Sync\\Tests\\Support\\EnablesEncryptionForUser',
-    ]);
-
-arch('Modules\\DevMode\\Internal is only used inside Modules\\DevMode')
-    ->expect('Modules\\DevMode\\Internal')
-    ->toOnlyBeUsedIn('Modules\\DevMode');
-
-arch('Modules\\Budgets\\Internal is only used inside Modules\\Budgets')
-    ->expect('Modules\\Budgets\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Budgets');
-
-arch('Modules\\Calendar\\Internal is only used inside Modules\\Calendar')
-    ->expect('Modules\\Calendar\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Calendar');
-
-arch('Modules\\CashBook\\Internal is only used inside Modules\\CashBook')
-    ->expect('Modules\\CashBook\\Internal')
-    ->toOnlyBeUsedIn('Modules\\CashBook');
-
-arch('Modules\\FX\\Internal is only used inside Modules\\FX')
-    ->expect('Modules\\FX\\Internal')
-    ->toOnlyBeUsedIn('Modules\\FX');
-
-arch('Modules\\Goals\\Internal is only used inside Modules\\Goals')
-    ->expect('Modules\\Goals\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Goals');
-
-arch('Modules\\Migration\\Internal is only used inside Modules\\Migration')
-    ->expect('Modules\\Migration\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Migration');
-
-arch('Modules\\Notifications\\Internal is only used inside Modules\\Notifications')
-    ->expect('Modules\\Notifications\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Notifications');
-
-arch('Modules\\OpenBanking\\Internal is only used inside Modules\\OpenBanking')
-    ->expect('Modules\\OpenBanking\\Internal')
-    ->toOnlyBeUsedIn('Modules\\OpenBanking');
-
-arch('Modules\\Position\\Internal is only used inside Modules\\Position')
-    ->expect('Modules\\Position\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Position');
-
-arch('Modules\\Pots\\Internal is only used inside Modules\\Pots')
-    ->expect('Modules\\Pots\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Pots');
-
-arch('Modules\\Tax\\Internal is only used inside Modules\\Tax')
-    ->expect('Modules\\Tax\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Tax');
+// There is deliberately no per-module `Modules\<X>\Internal is only used inside
+// Modules\<X>` rule here any more: pest-arch could not see most of this tree.
+// pinnedCrossModuleInternalImports at the bottom of this file replaced all 34.
 
 // Module Routes/web.php files are closures under Modules\<Name>\Routes, not
 // classes, so pest-arch's file walk never classifies them and the Route facade
@@ -158,17 +27,6 @@ arch('no Laravel facade usage in module code')
         // repository is unreachable from a uniqueVia() body. Every one of them
         // returns LockStore::forUniqueJobs(), confining the crossing to this file.
         'Modules\\Core\\Public\\Support\\LockStore',
-        // NativePHP's window, app-menu, OS-theme and notification APIs are only
-        // reachable through its facades, which NativePHP invokes outside the
-        // container lifecycle — there is no constructor-injection seam. Every
-        // other collaborator in these classes still arrives through DI.
-        'Modules\\Desktop\\Internal\\NativeAppServiceProvider',
-        'Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
-        'Modules\\Desktop\\Internal\\Native\\OsThemeProbe',
-        'Modules\\Desktop\\Internal\\Listeners\\DispatchOsNotification',
-        'Modules\\Desktop\\Internal\\Listeners\\SurfaceWorkerCrashAlert',
-        'Modules\\Desktop\\Internal\\Listeners\\NavigateOnNotificationDeepLink',
-        'Modules\\Desktop\\Internal\\Listeners\\ApplyCloseWindowChoice',
     ]);
 
 arch('Money\\Money types stay inside the bank-statement adapter folder')
@@ -197,44 +55,6 @@ arch('SeriesDetector implementors are never imported by Modules\\Recurring\\Inte
         'Modules\\Recurring\\Internal\\Http',
         'Modules\\Recurring\\Resources',
     ]);
-
-it('does not allow any file under Modules/Chains/Internal/Resolvers/ to mutate the transactions table (noResolverWritesTransactions)', function (): void {
-    $hits = [];
-    $resolversDir = base_path('Modules/Chains/Internal/Resolvers');
-    if (! is_dir($resolversDir)) {
-        expect(true)->toBeTrue();
-
-        return;
-    }
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator(
-            $resolversDir,
-            RecursiveDirectoryIterator::SKIP_DOTS,
-        ),
-    );
-    /** @var SplFileInfo $file */
-    foreach ($iterator as $file) {
-        if (! $file->isFile()) {
-            continue;
-        }
-        $path = $file->getPathname();
-        if (preg_match('/\.php$/', $path) !== 1) {
-            continue;
-        }
-        $contents = (string) file_get_contents($path);
-        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
-        if (
-            preg_match('/Transaction::query|Transaction::where/', $stripped) === 1
-            || preg_match("/->table\(['\"]transactions['\"]\)[^;]*->(update|insert|delete)\\s*\\(/", $stripped) === 1
-        ) {
-            $hits[] = $path;
-        }
-    }
-    expect($hits)->toBe(
-        [],
-        "Resolver files must not mutate the transactions table. Offenders:\n  ".implode("\n  ", $hits),
-    );
-});
 
 it('does not allow any file other than CardStatementStateMachine to mutate card_statements.state (noOtherCardStatementStateMutator)', function (): void {
     $hits = [];
@@ -317,50 +137,6 @@ it('does not allow a paypal-api route or class to exist (noPaypalApiRoute)', fun
     expect($hits)->toBe(
         [],
         "No paypal-api route or class should exist. Found in:\n  ".implode("\n  ", $hits)
-    );
-});
-
-it('does not allow any file under Modules/EmailScan/ to mutate the transactions table (noTransactionWritesFromEmailScan)', function (): void {
-    // EmailScan owns the fetch + persist-.eml + index pipeline only. Transitions
-    // out of inbox_messages.status='fetched' and every write against the
-    // transactions table belong to the Receipts matcher.
-    $hits = [];
-    $emailScanDir = base_path('Modules/EmailScan');
-    if (! is_dir($emailScanDir)) {
-        expect(true)->toBeTrue();
-
-        return;
-    }
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator(
-            $emailScanDir,
-            RecursiveDirectoryIterator::SKIP_DOTS,
-        ),
-    );
-    /** @var SplFileInfo $file */
-    foreach ($iterator as $file) {
-        if (! $file->isFile()) {
-            continue;
-        }
-        $path = $file->getPathname();
-        if (preg_match('/\.php$/', $path) !== 1) {
-            continue;
-        }
-        if (str_contains($path, '/tests/')) {
-            continue;
-        }
-        $contents = (string) file_get_contents($path);
-        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
-        if (
-            preg_match('/Transaction::query|Transaction::where|Transaction::create/', $stripped) === 1
-            || preg_match("/->table\(['\"]transactions['\"]\)[^;]*->(update|insert|delete)\\s*\\(/", $stripped) === 1
-        ) {
-            $hits[] = $path;
-        }
-    }
-    expect($hits)->toBe(
-        [],
-        "Modules/EmailScan/ must not mutate the transactions table. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
 
@@ -546,49 +322,6 @@ it('does not allow any Modules/EmailScan migration to declare an OAuth-secret co
     expect($hits)->toBe(
         [],
         "No EmailScan migration may declare an OAuth-secret column. Offenders:\n  ".implode("\n  ", $hits),
-    );
-});
-
-it('does not allow any file under Modules/Recurring/ to mutate the transactions table (noTransactionWritesFromRecurring)', function (): void {
-    // Recurring is analytical-only: transaction-type ownership stays with the
-    // Ledger income detector.
-    $hits = [];
-    $recurringDir = base_path('Modules/Recurring');
-    if (! is_dir($recurringDir)) {
-        expect(true)->toBeTrue();
-
-        return;
-    }
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator(
-            $recurringDir,
-            RecursiveDirectoryIterator::SKIP_DOTS,
-        ),
-    );
-    /** @var SplFileInfo $file */
-    foreach ($iterator as $file) {
-        if (! $file->isFile()) {
-            continue;
-        }
-        $path = $file->getPathname();
-        if (preg_match('/\.php$/', $path) !== 1) {
-            continue;
-        }
-        if (str_contains($path, '/tests/')) {
-            continue;
-        }
-        $contents = (string) file_get_contents($path);
-        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
-        if (
-            preg_match('/Transaction::query|Transaction::where|Transaction::create/', $stripped) === 1
-            || preg_match("/->table\(['\"]transactions['\"]\)[^;]*->(update|insert|delete)\\s*\\(/", $stripped) === 1
-        ) {
-            $hits[] = $path;
-        }
-    }
-    expect($hits)->toBe(
-        [],
-        "Modules/Recurring/ must not mutate the transactions table. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
 
@@ -802,102 +535,12 @@ it('does not allow any file other than AnomalyAlertStateMachine to mutate anomal
     );
 });
 
-it('does not allow any file under Modules/Anomaly/ to mutate the transactions table (noTransactionWritesFromAnomaly)', function (): void {
-    $hits = [];
-    $anomalyDir = base_path('Modules/Anomaly');
-    if (! is_dir($anomalyDir)) {
-        expect(true)->toBeTrue();
-
-        return;
-    }
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator(
-            $anomalyDir,
-            RecursiveDirectoryIterator::SKIP_DOTS,
-        ),
-    );
-    /** @var SplFileInfo $file */
-    foreach ($iterator as $file) {
-        if (! $file->isFile()) {
-            continue;
-        }
-        $path = $file->getPathname();
-        if (preg_match('/\.php$/', $path) !== 1) {
-            continue;
-        }
-        if (str_contains($path, '/tests/')) {
-            continue;
-        }
-        $contents = (string) file_get_contents($path);
-        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
-        if (
-            preg_match("/->table\(['\"]transactions['\"]\)[^;]*->(update|insert|delete)\\s*\\(/", $stripped) === 1
-            || preg_match('/Transaction::create\s*\(/', $stripped) === 1
-        ) {
-            $hits[] = $path;
-        }
-    }
-    expect($hits)->toBe(
-        [],
-        "Modules/Anomaly/ must not mutate the transactions table. Offenders:\n  ".implode("\n  ", $hits),
-    );
-});
-
-arch('Modules\\Forecasting\\Internal is only used inside Modules\\Forecasting (crossModuleAccessGoesThroughPublic)')
-    ->expect('Modules\\Forecasting\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Forecasting');
-
-arch('Modules\\Search\\Internal is only used inside Modules\\Search')
-    ->expect('Modules\\Search\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Search');
-
 arch('ProjectionPipeline is never imported by Modules\\Forecasting\\Internal\\Http (noSynchronousForecastingInRequestLifecycle)')
     ->expect('Modules\\Forecasting\\Internal\\Pipeline\\ProjectionPipeline')
     ->not->toBeUsedIn([
         'Modules\\Forecasting\\Internal\\Http',
         'Modules\\Forecasting\\Resources',
     ]);
-
-it('does not allow any file under Modules/Forecasting/ to mutate transactions / recurring_series / card_statements / chain_links / drift_alerts tables (noTransactionWritesFromForecasting)', function (): void {
-    $hits = [];
-    $forecastingDir = base_path('Modules/Forecasting');
-    if (! is_dir($forecastingDir)) {
-        expect(true)->toBeTrue();
-
-        return;
-    }
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator(
-            $forecastingDir,
-            RecursiveDirectoryIterator::SKIP_DOTS,
-        ),
-    );
-    /** @var SplFileInfo $file */
-    foreach ($iterator as $file) {
-        if (! $file->isFile()) {
-            continue;
-        }
-        $path = $file->getPathname();
-        if (preg_match('/\.php$/', $path) !== 1) {
-            continue;
-        }
-        if (str_contains($path, '/tests/') || str_contains($path, '/Database/Migrations/')) {
-            continue;
-        }
-        $contents = (string) file_get_contents($path);
-        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
-        if (
-            preg_match('/Transaction::query|Transaction::where|Transaction::create|RecurringSeries::query|RecurringSeries::create|RecurringSeries::firstOrCreate|RecurringSeries::updateOrCreate|CardStatement::query|CardStatement::create|ChainLink::query|ChainLink::create|DriftAlert::query|DriftAlert::create/', $stripped) === 1
-            || preg_match("/->table\\(['\"](transactions|recurring_series|card_statements|chain_links|drift_alerts)['\"]\\)[^;]*->(update|insert|delete|truncate)\\s*\\(/", $stripped) === 1
-        ) {
-            $hits[] = $path;
-        }
-    }
-    expect($hits)->toBe(
-        [],
-        "Modules/Forecasting must not write to transactions / recurring_series / card_statements / chain_links / drift_alerts. Offenders:\n  ".implode("\n  ", $hits),
-    );
-});
 
 it('does not allow any file to JOIN forecast_scenario_mutations onto transactions / recurring_series_occurrences / chain_links / card_statements (noScenarioMutationsJoinedToTransactionQueries)', function (): void {
     // forecast_scenario_mutations rows are hypothetical what-if changes a user
@@ -1681,10 +1324,6 @@ it('every raw merchant_aliases query in production code carries an explicit user
     );
 });
 
-arch('Modules\\Reports\\Internal is only used inside Modules\\Reports')
-    ->expect('Modules\\Reports\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Reports');
-
 it('does not allow Recurring/Budgets/DriftAlerts/Position/Ledger to import Modules\\Notifications (noTriggerModuleImportsNotifications)', function (): void {
     // Trigger modules stay wholly ignorant of Modules\Notifications: each emits a
     // readonly Public event and one of Notifications' Persist* listeners
@@ -1738,10 +1377,10 @@ it('does not allow Recurring/Budgets/DriftAlerts/Position/Ledger to import Modul
 });
 
 it('does not allow the Desktop NativePHP facade allow-list to grow beyond the pinned set (pinnedDesktopFacadeAllowList)', function (): void {
-    // Two DIFFERENT lists are pinned here, and they legitimately differ in length
-    // and membership: phpstan.neon's ignoreErrors entry covers
-    // Native\Desktop\Facades\*, while this file's own ->ignoring([...]) covers
-    // Illuminate\Support\Facades\* — NativePHP's facades are not that namespace.
+    // NativePHP's facades live under Native\Desktop\Facades\*, so the only
+    // list that can constrain them is phpstan.neon's ignoreErrors entry; this
+    // file's own facade rule matches Illuminate\Support\Facades\* and never
+    // saw these classes at all.
     $pinnedPhpstanDesktopPaths = [
         'Modules/Desktop/Internal/NativeAppServiceProvider.php',
         'Modules/Desktop/Internal/Native/AppMenuBuilder.php',
@@ -1759,17 +1398,7 @@ it('does not allow the Desktop NativePHP facade allow-list to grow beyond the pi
         'Modules/Desktop/Internal/Listeners/ApplyCloseWindowChoice.php',
     ];
 
-    $pinnedIgnoringDesktopEntries = [
-        'Modules\\Desktop\\Internal\\NativeAppServiceProvider',
-        'Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
-        'Modules\\Desktop\\Internal\\Native\\OsThemeProbe',
-        'Modules\\Desktop\\Internal\\Listeners\\DispatchOsNotification',
-        'Modules\\Desktop\\Internal\\Listeners\\SurfaceWorkerCrashAlert',
-        'Modules\\Desktop\\Internal\\Listeners\\NavigateOnNotificationDeepLink',
-        'Modules\\Desktop\\Internal\\Listeners\\ApplyCloseWindowChoice',
-    ];
-
-    // --- 1. phpstan.neon's Native\Desktop\Facades\* ignoreErrors entry ---
+    // phpstan.neon's Native\Desktop\Facades\* ignoreErrors entry.
     // Scoped to Desktop: the sibling Native\Mobile\Facades\* path list
     // legitimately grew for the mobile local-notifications plugin.
     $neon = Yaml::parseFile(base_path('phpstan.neon'));
@@ -1809,35 +1438,6 @@ it('does not allow the Desktop NativePHP facade allow-list to grow beyond the pi
         .'set. A NEW Desktop file touching a NativePHP facade is exactly what D-31 promises never to '
         .'permit silently — route new native-chrome logic through the existing DispatchOsNotification '
         ."with plain constructor-DI collaborators instead. Actual:\n  ".implode("\n  ", $actualPaths),
-    );
-
-    // --- 2. This file's own "no Laravel facade usage in module code" ->ignoring([...]) list ---
-    $selfContents = (string) file_get_contents(__FILE__);
-    if (preg_match(
-        "/no Laravel facade usage in module code'\\)[\\s\\S]*?->ignoring\\(\\[([\\s\\S]*?)\\]\\)/",
-        $selfContents,
-        $m,
-    ) !== 1) {
-        throw new RuntimeException(
-            'Could not locate the "no Laravel facade usage in module code" ->ignoring([...]) list in '
-            .'this file — has the test been renamed or restructured?',
-        );
-    }
-
-    $strippedList = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $m[1]) ?? $m[1];
-    preg_match_all("/'([^']*)'/", $strippedList, $entryMatches);
-    $ignoringDesktopEntries = array_values(array_filter(
-        array_map(
-            static fn (string $raw): string => str_replace('\\\\', '\\', $raw),
-            $entryMatches[1],
-        ),
-        static fn (string $s): bool => str_starts_with($s, 'Modules\\Desktop\\'),
-    ));
-
-    expect($ignoringDesktopEntries)->toEqualCanonicalizing(
-        $pinnedIgnoringDesktopEntries,
-        "This file's own facade-usage ->ignoring([...]) list's Desktop-only entries have changed from "
-        ."the pinned set. Actual:\n  ".implode("\n  ", $ignoringDesktopEntries),
     );
 });
 
@@ -2037,55 +1637,784 @@ it('evaluates notification-delivery suppression (quiet hours + per-trigger toggl
     );
 });
 
-it('requires every module with an Internal namespace to carry a boundary arch rule (everyInternalNamespaceHasABoundaryRule)', function (): void {
-    // The per-module boundary rules above are hand-maintained, and the list
-    // silently drifted once: eleven modules shipped an Internal/ namespace with
-    // no rule at all. The needle is the exact top-level `'Modules\<X>\Internal'`
-    // target, so a rule naming a deeper symbol does not falsely satisfy it.
-    $selfContents = (string) file_get_contents(__FILE__);
+/** @return string the source with every comment blanked out, line offsets intact */
+function boundaryBlankComments(string $source): string
+{
+    return (string) preg_replace_callback(
+        '#/\*.*?\*/|//[^\n]*#s',
+        static function (array $match): string {
+            $newlines = substr_count($match[0], "\n");
 
-    $modulesDir = base_path('Modules');
-    $missing = [];
+            return str_repeat(' ', strlen($match[0]) - $newlines).str_repeat("\n", $newlines);
+        },
+        $source,
+    );
+}
 
-    /** @var SplFileInfo $entry */
-    foreach (new DirectoryIterator($modulesDir) as $entry) {
-        if (! $entry->isDir() || $entry->isDot()) {
-            continue;
-        }
-        $module = $entry->getFilename();
-        $internalDir = $modulesDir.DIRECTORY_SEPARATOR.$module.DIRECTORY_SEPARATOR.'Internal';
-        if (! is_dir($internalDir)) {
-            continue;
-        }
+/**
+ * @return array{owner: array<string, string>, creators: array<string, list<string>>, altered: array<string, list<string>>}
+ */
+function boundaryTableOwnership(): array
+{
+    // Three spellings create a table here: the Schema facade, ModuleMigration's
+    // injected schema(), and raw CREATE TABLE (the FTS5 virtual tables and
+    // hlc_clock_state, which a Blueprint cannot express).
+    $createdBy = [
+        '/(?:Schema::|schema\(\)->|\$schema->)create\(\s*[\'"]([a-z0-9_]+)[\'"]/',
+        '/CREATE\s+(?:VIRTUAL\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"]?([a-z0-9_]+)/i',
+    ];
+    $alteredBy = '/(?:Schema::|schema\(\)->|\$schema->)table\(\s*[\'"]([a-z0-9_]+)[\'"]/';
 
-        // An empty Internal/ skeleton is trivially safe; only populated ones count.
-        $hasInternalClass = false;
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($internalDir, RecursiveDirectoryIterator::SKIP_DOTS),
-        );
-        /** @var SplFileInfo $file */
-        foreach ($iterator as $file) {
-            if ($file->isFile() && preg_match('/\.php$/', $file->getPathname()) === 1) {
-                $hasInternalClass = true;
-                break;
+    $migrations = array_merge(
+        glob(base_path('Modules/*/Database/Migrations/*.php')) ?: [],
+        glob(base_path('database/migrations/*.php')) ?: [],
+    );
+    sort($migrations);
+
+    $creators = [];
+    $altered = [];
+    foreach ($migrations as $path) {
+        $relative = substr($path, strlen(base_path()) + 1);
+        $module = preg_match('#^Modules/([^/]+)/#', $relative, $m) === 1 ? $m[1] : '@root';
+        $source = boundaryBlankComments((string) file_get_contents($path));
+
+        foreach ($createdBy as $pattern) {
+            if (preg_match_all($pattern, $source, $found) === 0) {
+                continue;
+            }
+            foreach ($found[1] as $table) {
+                $table = strtolower($table);
+                if (! in_array($module, $creators[$table] ?? [], true)) {
+                    $creators[$table][] = $module;
+                }
             }
         }
-        if (! $hasInternalClass) {
-            continue;
-        }
 
-        $needle = "'Modules\\\\{$module}\\\\Internal'";
-        if (! str_contains($selfContents, $needle)) {
-            $missing[] = $module;
+        if (preg_match_all($alteredBy, $source, $found) > 0) {
+            foreach ($found[1] as $table) {
+                if (! in_array($module, $altered[$table] ?? [], true)) {
+                    $altered[$table][] = $module;
+                }
+            }
         }
     }
 
-    sort($missing);
+    ksort($creators);
+    ksort($altered);
 
-    expect($missing)->toBe(
+    $owner = [];
+    foreach ($creators as $table => $modules) {
+        $owner[$table] = $modules[0];
+    }
+
+    return ['owner' => $owner, 'creators' => $creators, 'altered' => $altered];
+}
+
+/**
+ * @return list<string> the methods invoked at the top level of the fluent chain
+ *                      starting at $offset, up to the end of the statement
+ */
+function boundaryChainMethods(string $source, int $offset): array
+{
+    $length = strlen($source);
+    $depth = 0;
+    $names = [];
+
+    for ($i = $offset; $i < $length; $i++) {
+        $char = $source[$i];
+        if ($char === "'" || $char === '"') {
+            $quote = $char;
+            for ($i++; $i < $length; $i++) {
+                if ($source[$i] === '\\') {
+                    $i++;
+
+                    continue;
+                }
+                if ($source[$i] === $quote) {
+                    break;
+                }
+            }
+
+            continue;
+        }
+        if ($char === '(' || $char === '[' || $char === '{') {
+            $depth++;
+
+            continue;
+        }
+        if ($char === ')' || $char === ']' || $char === '}') {
+            if (--$depth < 0) {
+                break;
+            }
+
+            continue;
+        }
+        if ($depth !== 0) {
+            continue;
+        }
+        if ($char === ';') {
+            break;
+        }
+        // Depth zero is what separates the chain's own terminal call from an
+        // ->update() belonging to a closure handed to ->chunkById().
+        if ($char === '-' && preg_match('/^->\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(/', substr($source, $i, 64), $m) === 1) {
+            $names[] = $m[1];
+        }
+    }
+
+    return $names;
+}
+
+/**
+ * @param  array<string, string>  $owner
+ * @return array<string, list<int>> "path table" => the lines that write it, ascending
+ */
+function boundaryCrossModuleTableWrites(array $owner): array
+{
+    $writeMethods = [
+        'update', 'updateOrInsert', 'insert', 'insertGetId', 'insertOrIgnore', 'insertUsing',
+        'upsert', 'delete', 'forceDelete', 'truncate', 'increment', 'decrement',
+        'incrementEach', 'decrementEach',
+    ];
+    $tableReference = '/(?:DB::table|->table|->from|->fromSub|->join|->joinSub|->joinLateral'
+        .'|->leftJoin|->leftJoinSub|->rightJoin|->rightJoinSub|->crossJoin|->crossJoinSub)'
+        .'\(\s*[\'"]([a-z0-9_]+)[\'"]/';
+    // The builder is not the only raw seam. `$connection->update('UPDATE transactions …')`
+    // names its table inside a string, which every table-name grep here used to miss.
+    $rawStatement = '/\b(?:INSERT\s+(?:OR\s+[A-Z]+\s+)?INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM'
+        .'|TRUNCATE(?:\s+TABLE)?)\s+[`"]?([a-z0-9_]+)[`"]?/i';
+
+    $modulesDir = base_path('Modules');
+    if (! is_dir($modulesDir)) {
+        return [];
+    }
+
+    $hits = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($modulesDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        $path = $file->getPathname();
+        if (! $file->isFile() || ! str_ends_with($path, '.php')) {
+            continue;
+        }
+        $relative = substr($path, strlen(base_path()) + 1);
+        if (preg_match('#^Modules/([^/]+)/#', $relative, $m) !== 1) {
+            continue;
+        }
+        $module = $m[1];
+        if (str_contains($relative, '/tests/') || str_contains($relative, '/Database/')) {
+            continue;
+        }
+
+        $source = boundaryBlankComments((string) file_get_contents($path));
+
+        if (preg_match_all($tableReference, $source, $found, PREG_OFFSET_CAPTURE) > 0) {
+            foreach ($found[0] as $index => [, $offset]) {
+                $table = $found[1][$index][0];
+                if (($owner[$table] ?? $module) === $module) {
+                    continue;
+                }
+                if (array_intersect(boundaryChainMethods($source, $offset), $writeMethods) === []) {
+                    continue;
+                }
+                $hits[] = [$relative, substr_count($source, "\n", 0, $offset) + 1, $table];
+            }
+        }
+
+        if (preg_match_all($rawStatement, $source, $found, PREG_OFFSET_CAPTURE) > 0) {
+            foreach ($found[1] as $index => [$table]) {
+                $table = strtolower($table);
+                if (($owner[$table] ?? $module) === $module) {
+                    continue;
+                }
+                $hits[] = [$relative, substr_count($source, "\n", 0, $found[0][$index][1]) + 1, $table];
+            }
+        }
+    }
+
+    // Grouped by file and table, not by line: the builder and the raw-SQL pass
+    // can both land on one line, so the line is what de-duplicates them.
+    $byKey = [];
+    foreach ($hits as [$path, $line, $table]) {
+        $key = "{$path} {$table}";
+        if (! in_array($line, $byKey[$key] ?? [], true)) {
+            $byKey[$key][] = $line;
+        }
+    }
+    ksort($byKey);
+
+    return array_map(static function (array $lines): array {
+        sort($lines);
+
+        return $lines;
+    }, $byKey);
+}
+
+it('pins every cross-module raw-table write to the allow-list (crossModuleRawTableWrites)', function (): void {
+    // Reads stay unrestricted on purpose: most cross-module raw-table references
+    // are legitimate joins and narrowing them is a separate argument. A write is
+    // where one module changes another module's state, which is the coupling.
+    $pinned = [
+        'Modules/Anomaly/Internal/Jobs/BackfillAnomaliesJob.php users 1',
+        'Modules/Auth/Internal/Account/UserScopedDataPurge.php relay_mailbox 1',
+        'Modules/Auth/Internal/Account/UserScopedDataPurge.php users 1',
+        'Modules/Auth/Internal/Console/ResetPasswordCommand.php users 1',
+        'Modules/Auth/Internal/Http/Livewire/ChangePasswordPage.php sessions 1',
+        'Modules/Auth/Internal/Http/Livewire/ChangePasswordPage.php users 1',
+        'Modules/Auth/Internal/Http/Livewire/ManageUserPage.php users 1',
+        'Modules/Auth/Public/Actions/DeleteAccountAction.php transaction_search_fts 1',
+        'Modules/Auth/Public/Actions/DeleteAccountAction.php users 1',
+        'Modules/Auth/Public/Actions/ResetPasswordAction.php sessions 1',
+        'Modules/Auth/Public/Actions/ResetPasswordAction.php users 1',
+        'Modules/Auth/Public/Actions/SignupAction.php users 1',
+        'Modules/Budgets/Public/Services/EnvelopeActivationService.php users 2',
+        'Modules/CashBook/Internal/Http/Livewire/CashBookPage.php transactions 1',
+        'Modules/Categorization/Internal/Listeners/MerchantMemoryWriter.php merchant_memories 2',
+        'Modules/Chains/Internal/Resolvers/RetypeByAliasResolver.php transactions 1',
+        'Modules/Core/Internal/Console/FailedJobsCommand.php failed_jobs 1',
+        'Modules/Core/Internal/Encryption/PreMigrationSnapshot.php op_log_entries 1',
+        'Modules/Core/Public/Services/EncryptionMigrationService.php op_log_entries 1',
+        'Modules/Core/Public/Services/EncryptionMigrationService.php sync_encryption_state 4',
+        'Modules/Counterparties/Internal/Jobs/CounterpartyGarbageCollectorJob.php transactions 1',
+        'Modules/DevMode/Internal/Queue/QueueActions.php jobs 3',
+        'Modules/Forecasting/Public/Actions/SetAccountForecastBuffer.php accounts 1',
+        'Modules/Forecasting/Public/Actions/SetAccountOpeningBalance.php accounts 1',
+        'Modules/Import/Public/Actions/ApplyEnrichments.php pending_enrichment_conflicts 1',
+        'Modules/Import/Public/Actions/ApplyEnrichments.php transactions 1',
+        'Modules/Migration/Internal/Pipeline/EntityChangeApplier.php transactions 1',
+        'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php import_runs 1',
+        'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php transactions 1',
+        'Modules/Mobile/Internal/Sync/LanSyncClient.php device_registry 1',
+        'Modules/Onboarding/Internal/Http/Livewire/Steps/FirstImportStep.php accounts 1',
+        'Modules/Receipts/Internal/Jobs/ProcessFetchedInboxMessagesJob.php inbox_messages 2',
+        'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php pending_enrichment_conflicts 1',
+        'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php transactions 1',
+        'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php users 1',
+        'Modules/Sync/Internal/Merge/TransferPairCascade.php transactions 1',
+        'Modules/Transfers/Internal/Services/TransferPairer.php transactions 2',
+    ];
+
+    $ownership = boundaryTableOwnership();
+
+    // Ownership only means something while exactly one module creates a table:
+    // with two the map silently picks one, so fail on the ambiguity instead.
+    $contested = array_keys(array_filter($ownership['creators'], static fn (array $m): bool => count($m) > 1));
+    expect($contested)->toBe([], 'A table must be created by exactly one module. Contested:'
+        ."\n  ".implode("\n  ", array_map(
+            static fn (string $table): string => $table.': '.implode(', ', $ownership['creators'][$table]),
+            $contested,
+        )));
+
+    $found = boundaryCrossModuleTableWrites($ownership['owner']);
+
+    $actual = [];
+    foreach ($found as $key => $lines) {
+        $actual[] = $key.' '.count($lines);
+    }
+    sort($actual);
+
+    // The line number stays out of the key and goes in the message instead. A
+    // line-keyed pin fails on any edit above a write, which in a tree this busy
+    // trains people to re-pin without reading.
+    $describe = static function (string $entry) use ($found): string {
+        $lines = $found[(string) preg_replace('/ \d+$/', '', $entry)] ?? [];
+
+        return $entry.($lines === [] ? '' : ' (now at line '.implode(', ', $lines).')');
+    };
+
+    $added = array_map($describe, array_values(array_diff($actual, $pinned)));
+    $gone = array_map($describe, array_values(array_diff($pinned, $actual)));
+
+    expect($actual)->toBe($pinned, "Cross-module raw-table writes are pinned per file and table, so a new one is a decision.\n"
+        .'Not on the list (pin it, or route the write through the owning module):'
+        ."\n  ".implode("\n  ", $added === [] ? ['-'] : $added)
+        ."\nPinned but not matching (the count changed, or the write went away):"
+        ."\n  ".implode("\n  ", $gone === [] ? ['-'] : $gone));
+});
+
+it('pins every cross-module schema alteration to the allow-list (crossModuleSchemaAlterations)', function (): void {
+    // Accepted by design, not forbidden: Modules/Core/Models/User.php carries
+    // columns seven other modules added. The pin makes an eighth deliberate.
+    $pinned = [
+        'Anomaly -> users (owner: Core)',
+        'Auth -> users (owner: Core)',
+        'Budgets -> users (owner: Core)',
+        'Calendar -> user_preferences (owner: Core)',
+        'Categorization -> transactions (owner: Ledger)',
+        'Categorization -> users (owner: Core)',
+        'Counterparties -> transactions (owner: Ledger)',
+        'FX -> users (owner: Core)',
+        'Forecasting -> accounts (owner: Ledger)',
+        'Import -> transactions (owner: Ledger)',
+        'Receipts -> inbox_messages (owner: EmailScan)',
+        'Recurring -> users (owner: Core)',
+        'Reports -> user_preferences (owner: Core)',
+        'Tax -> users (owner: Core)',
+    ];
+
+    $ownership = boundaryTableOwnership();
+    $actual = [];
+    foreach ($ownership['altered'] as $table => $modules) {
+        foreach ($modules as $module) {
+            $owner = $ownership['owner'][$table] ?? $module;
+            if ($owner !== $module) {
+                $actual[] = "{$module} -> {$table} (owner: {$owner})";
+            }
+        }
+    }
+    sort($actual);
+
+    expect($actual)->toBe($pinned, "A module adding columns to a table another module created is pinned here.\n"
+        .'Not on the list: '.implode(', ', array_diff($actual, $pinned) === [] ? ['-'] : array_diff($actual, $pinned))
+        ."\nPinned but no longer in the migrations: "
+        .implode(', ', array_diff($pinned, $actual) === [] ? ['-'] : array_diff($pinned, $actual)));
+});
+
+it('does not allow a cross-module Internal import outside the pinned production and test sets (pinnedCrossModuleInternalImports)', function (): void {
+    // This replaced 34 per-module pest-arch rules that saw only files declaring a
+    // namespaced class — a minority of this tree, since functional Pest files
+    // declare none, module migrations are anonymous classes, and a helper declared
+    // inside a Pest file lands in the global namespace. The scan here is textual.
+
+    // A production crossing is a boundary decision, not a list edit. The only one
+    // is Mobile\Internal\Sync, Sync's co-designed protocol peer, pinned by symbol
+    // name in phpstan.neon as well.
+    $pinnedProductionCrossings = [
+        'Modules/Mobile/Internal/Sync/InitialSyncPuller.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityLoader',
+        'Modules/Mobile/Internal/Sync/InitialSyncPuller.php -> Modules\\Sync\\Internal\\Transport\\Frame\\TransportFramer',
+        'Modules/Mobile/Internal/Sync/InitialSyncPuller.php -> Modules\\Sync\\Internal\\Transport\\PeerCatchUpExchanger',
+        'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityDto',
+        'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Merge\\OpLogReplayer',
+        'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Signing\\DeviceKeySigner',
+        'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Transport\\Frame\\TransportFramer',
+        'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Transport\\Noise\\NoiseHandshakeState',
+        'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Transport\\Noise\\NoiseSession',
+        'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Transport\\PeerCatchUpExchanger',
+        'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Transport\\SyncSession',
+        'Modules/Mobile/Internal/Sync/MobileSyncTriggerService.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityDto',
+        'Modules/Mobile/Internal/Sync/MobileSyncTriggerService.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityLoader',
+        'Modules/Mobile/Internal/Sync/MobileSyncTriggerService.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayClient',
+        'Modules/Mobile/Internal/Sync/MobileSyncTriggerService.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
+    ];
+
+    // Test code reaching into a neighbour's Internal is tolerated, never free: it
+    // welds the test to a private shape its owner is entitled to change. Each line
+    // is one import somebody chose to write.
+    $pinnedTestCrossings = [
+        'Modules/Anomaly/tests/Feature/AnomalyAlertPaginationTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
+        'Modules/Anomaly/tests/Feature/AnomalyAlertsHomeTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
+        'Modules/Auth/tests/Feature/AppLockProvisionerGdkRewrapTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Auth/tests/Feature/CrossUserIsolationTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\AliasesSettingsPage',
+        'Modules/Auth/tests/Feature/SignupReturnsPersistedDefaultsTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\AppSidebar',
+        'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\DevMode\\Internal\\Navigation\\NavigationRegistryImpl',
+        'Modules/Categorization/tests/Feature/FieldProvenanceStampingTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
+        'Modules/Categorization/tests/Feature/RuleApplierSyncCaptureTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogWriter',
+        'Modules/Categorization/tests/Feature/RuleSchemaMigrationTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'Modules/Chains/tests/Feature/WizardChainResolutionStatusTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\PreviewWizard',
+        'Modules/Chains/tests/Unit/FixtureParseSmokeTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Banking\\Camt053Adapter',
+        'Modules/Chains/tests/Unit/FixtureParseSmokeTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
+        'Modules/Chains/tests/Unit/FixtureParseSmokeTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Paypal\\PaypalCsvAdapter',
+        'Modules/Core/tests/Feature/Bootstrap/AppKeyRegenerationTest.php -> Modules\\Desktop\\Internal\\Native\\FirstLaunchBootstrap',
+        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
+        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\DetectDriftAlertsJob',
+        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\BackfillInboxJob',
+        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\DiscoveryScanJob',
+        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\IncrementalScanJob',
+        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
+        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Receipts\\Internal\\Jobs\\ProcessFetchedInboxMessagesJob',
+        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Receipts\\Internal\\Jobs\\ScanInboxDropFolderJob',
+        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
+        'Modules/Counterparties/tests/Feature/CounterpartyEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Counterparties/tests/Feature/ResolveCounterpartyStageTest.php -> Modules\\Import\\Internal\\Pipeline\\ImportPipeline',
+        'Modules/Desktop/tests/Feature/AutoUpdate/UpdateFeedSmokeTest.php -> Modules\\Core\\Internal\\AutoUpdate\\HttpPublisherManifestFetcher',
+        'Modules/Desktop/tests/Feature/RelayProvisionsBeforeSpawnTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
+        'Modules/Desktop/tests/Feature/RelayProvisionsBeforeSpawnTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayTlsMaterial',
+        'Modules/Desktop/tests/Unit/DesktopColdStartVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockKeyWrap',
+        'Modules/Desktop/tests/Unit/DispatchOsNotificationTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
+        'Modules/DevMode/tests/Feature/AppMenuDeveloperSubmenuTest.php -> Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
+        'Modules/DriftAlerts/tests/Feature/GlobalDriftThresholdSettingTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/EmailScan/tests/Feature/EmailScanHealthTileTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\Dashboard',
+        'Modules/EmailScan/tests/Feature/InvalidGrantToastTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\Dashboard',
+        'Modules/FX/tests/Feature/BaseCurrencySettingTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/FX/tests/Feature/FxOnlineToggleTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
+        'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
+        'Modules/Import/tests/Feature/PreviewWizardTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
+        'Modules/Import/tests/Feature/PreviewWizardTest.php -> Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
+        'Modules/Ingestion/tests/Feature/PaypalFundingLegTypingTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\ClassifyTransactionType',
+        'Modules/Ledger/tests/Feature/AmountsRemainAggregatableTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Ledger/tests/Feature/DirectWriteDecryptSurvivesRotationTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkEpoch',
+        'Modules/Ledger/tests/Feature/DirectWriteDecryptSurvivesRotationTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Ledger/tests/Feature/RecordTransactionsEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Migration/tests/Contracts/MigrationImportBaselineRegistryColumnsTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'Modules/Migration/tests/Contracts/MigrationSourceMapRegistryColumnsTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkRotationService',
+        'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Merge\\OpLogReplayer',
+        'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Signing\\DeviceKeySigner',
+        'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Transport\\Frame\\TransportFramer',
+        'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Transport\\Noise\\NoiseHandshakeState',
+        'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Transport\\Noise\\NoiseSession',
+        'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Transport\\SyncSession',
+        'Modules/Mobile/tests/Feature/MobileBackgroundPullTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/MobileBackgroundPullTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
+        'Modules/Mobile/tests/Feature/MobileBidirectionalMergeTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/MobileBidirectionalMergeTest.php -> Modules\\Sync\\Internal\\Merge\\OpLogReplayer',
+        'Modules/Mobile/tests/Feature/MobileBidirectionalMergeTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogEntry',
+        'Modules/Mobile/tests/Feature/MobileBidirectionalMergeTest.php -> Modules\\Sync\\Internal\\OpLog\\OpType',
+        'Modules/Mobile/tests/Feature/MobileBidirectionalMergeTest.php -> Modules\\Sync\\Internal\\Signing\\DeviceKeySigner',
+        'Modules/Mobile/tests/Feature/MobileBiometricUnlockTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
+        'Modules/Mobile/tests/Feature/MobileBiometricUnlockTest.php -> Modules\\Auth\\Internal\\Lock\\BiometricDeviceStore',
+        'Modules/Mobile/tests/Feature/MobileColdStartEnrollmentTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
+        'Modules/Mobile/tests/Feature/MobileColdStartSettingsTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
+        'Modules/Mobile/tests/Feature/MobileColdStartUnlockTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
+        'Modules/Mobile/tests/Feature/MobileColdStartVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
+        'Modules/Mobile/tests/Feature/MobileEncryptedCopyTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Mobile/tests/Feature/MobileFirstLaunchWelcomeGateTest.php -> Modules\\Desktop\\Internal\\Http\\Middleware\\EnsureDatabaseReady',
+        'Modules/Mobile/tests/Feature/MobileImportBootstrapTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
+        'Modules/Mobile/tests/Feature/MobileImportBootstrapTest.php -> Modules\\Desktop\\Internal\\Http\\Middleware\\EnsureDatabaseReady',
+        'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkRotationService',
+        'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\Crypto\\OpLogFieldCrypto',
+        'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\Merge\\OpLogReplayer',
+        'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogEntry',
+        'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogRebuilder',
+        'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\OpLog\\OpType',
+        'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\Signing\\DeviceKeySigner',
+        'Modules/Mobile/tests/Feature/MobilePairingResumeOwnershipTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkEpochControlHandler',
+        'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkRotationService',
+        'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Pairing\\PairingState',
+        'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Pairing\\PairingTokenService',
+        'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Pairing\\QrPayloadBuilder',
+        'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Pairing\\RelayBootstrap',
+        'Modules/Mobile/tests/Feature/MobilePairingScanTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Mobile/tests/Feature/MobilePairingScanTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/MobilePairingScanTest.php -> Modules\\Sync\\Internal\\Pairing\\PairingTokenService',
+        'Modules/Mobile/tests/Feature/MobilePairingScanTest.php -> Modules\\Sync\\Internal\\Pairing\\QrPayloadBuilder',
+        'Modules/Mobile/tests/Feature/MobilePairingScanTest.php -> Modules\\Sync\\Internal\\Pairing\\WordCodeEncoder',
+        'Modules/Mobile/tests/Feature/MobilePairingWithoutIdentityTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
+        'Modules/Mobile/tests/Feature/MobilePairingWithoutIdentityTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/MobilePairingWithoutIdentityTest.php -> Modules\\Sync\\Internal\\Pairing\\PairingTokenService',
+        'Modules/Mobile/tests/Feature/MobilePairingWithoutIdentityTest.php -> Modules\\Sync\\Internal\\Pairing\\QrPayloadBuilder',
+        'Modules/Mobile/tests/Feature/MobilePairingWithoutIdentityTest.php -> Modules\\Sync\\Internal\\Pairing\\RelayBootstrap',
+        'Modules/Mobile/tests/Feature/MobileResumableInitialSyncTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkEpoch',
+        'Modules/Mobile/tests/Feature/MobileResumableInitialSyncTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Mobile/tests/Feature/MobileResumableInitialSyncTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkRotationService',
+        'Modules/Mobile/tests/Feature/MobileResumableInitialSyncTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/MobileResumableInitialSyncTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
+        'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Pairing\\WordCodeEncoder',
+        'Modules/Mobile/tests/Unit/DispatchMobileNotificationTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
+        'Modules/Mobile/tests/Unit/Identity/BiometricKeyVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockKeyWrap',
+        'Modules/Mobile/tests/Unit/PeerLanAddressTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
+        'Modules/Notifications/tests/Feature/BudgetNudgeTriggerTest.php -> Modules\\Budgets\\Internal\\Jobs\\EmitBudgetNudgesJob',
+        'Modules/Notifications/tests/Feature/PaymentReminderTriggerTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
+        'Modules/Notifications/tests/Feature/PerTriggerToggleTest.php -> Modules\\Budgets\\Internal\\Jobs\\EmitBudgetNudgesJob',
+        'Modules/Notifications/tests/Feature/PerTriggerToggleTest.php -> Modules\\Desktop\\Internal\\Listeners\\DispatchOsNotification',
+        'Modules/Notifications/tests/Feature/PerTriggerToggleTest.php -> Modules\\Desktop\\Internal\\Native\\WindowFocusState',
+        'Modules/Notifications/tests/Feature/PerTriggerToggleTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\EmitSavingsPromptsJob',
+        'Modules/Notifications/tests/Feature/PerTriggerToggleTest.php -> Modules\\Position\\Internal\\Jobs\\EmitPositionDigestJob',
+        'Modules/Notifications/tests/Feature/PerTriggerToggleTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
+        'Modules/Notifications/tests/Feature/PositionDigestCadenceTest.php -> Modules\\Position\\Internal\\Jobs\\EmitPositionDigestJob',
+        'Modules/Notifications/tests/Feature/QuietHoursDeferTest.php -> Modules\\Desktop\\Internal\\Listeners\\DispatchOsNotification',
+        'Modules/Notifications/tests/Feature/QuietHoursDeferTest.php -> Modules\\Desktop\\Internal\\Native\\WindowFocusState',
+        'Modules/Notifications/tests/Feature/ReminderSelfInvalidationTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
+        'Modules/Notifications/tests/Feature/SavingsPromptTriggerTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\EmitSavingsPromptsJob',
+        'Modules/Onboarding/tests/Feature/ConnectPaypalStepCacheContentsTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
+        'Modules/Onboarding/tests/Feature/ConnectPaypalStepReuseExistingAccountTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
+        'Modules/Onboarding/tests/Feature/ConsolidatedPreviewLoadTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
+        'Modules/Onboarding/tests/Feature/FirstImportStepCommitEverythingTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
+        'Modules/Onboarding/tests/Feature/FirstImportStepCommitRollbackTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
+        'Modules/Onboarding/tests/Feature/FirstImportStepLoadMoreTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
+        'Modules/Onboarding/tests/Feature/FirstImportStepStaleIdFilterTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
+        'Modules/Onboarding/tests/Feature/SignupRoutesToSetupTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\RecoveryCodesDisplay',
+        'Modules/Onboarding/tests/Feature/SignupRoutesToSetupTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\SignupPage',
+        'Modules/Receipts/tests/Contracts/FingerprintParityTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
+        'Modules/Receipts/tests/Contracts/FingerprintParityTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Paypal\\PaypalCsvAdapter',
+        'Modules/Receipts/tests/Feature/ChainHintFromReceiptTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
+        'Modules/Receipts/tests/Feature/ChainHintFromReceiptTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\ParseStage',
+        'Modules/Receipts/tests/Feature/EmlFileDropTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
+        'Modules/Receipts/tests/Feature/MboxFileDropTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
+        'Modules/Receipts/tests/Feature/RawPayloadDecryptChainHintListenerTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
+        'Modules/Search/tests/Feature/CounterpartyFilterTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
+        'Modules/Search/tests/Feature/FtsSurvivesEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Search/tests/Feature/SearchEncryptionFallbackTest.php -> Modules\\Counterparties\\Internal\\Resolver\\CounterpartyResolverService',
+        'Modules/Sync/tests/Feature/DuplicateReminderConvergenceTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
+        'Modules/Sync/tests/Feature/ManualEntryReachesOtherDevicesTest.php -> Modules\\CashBook\\Internal\\Actions\\RecordManualTransaction',
+        'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
+        'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\PinVerificationService',
+        'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Recovery\\RecoveryCodeAuthenticator',
+        'Modules/Tax/tests/Feature/LegScopedBadgeVisibilityTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
+        'Modules/Tax/tests/Feature/ReconciledLockTaxTagTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
+        'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\CashBook\\Internal\\Http\\Livewire\\CashBookPage',
+        'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\Counterparties\\Internal\\Http\\Livewire\\CounterpartyProfile',
+        'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
+        'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
+        'Modules/Transfers/tests/Feature/PairTransferCandidatesAliasBridgeTest.php -> Modules\\Import\\Internal\\Services\\KnownCounterpartyIbanResolver',
+        'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\DriftEvaluator',
+        'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\RevivedExpiredDriftSnoozesJob',
+        'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\StateMachines\\DriftAlertStateMachine',
+        'tests/Contracts/ForecastingProjectionContractTest.php -> Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
+        'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\Detectors\\ExpenseSeriesDetector',
+        'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\Detectors\\IncomeSeriesDetector',
+        'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
+        'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\StateMachines\\RecurringSeriesStateMachine',
+        'tests/Contracts/ScenarioIsolationContractTest.php -> Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
+        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\AddUserPage',
+        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\AppLockSettingsSection',
+        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\ChangePasswordPage',
+        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\DeleteAccountSection',
+        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\LoginPage',
+        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\ManageUserPage',
+        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\ResetPasswordPage',
+        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\SignupPage',
+        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\EmailScan\\Internal\\Http\\Livewire\\OAuthClientWizardModal',
+        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Mobile\\Internal\\Http\\Livewire\\MobileImportBootstrap',
+        'tests/Contracts/SelectOnlyValidatorContractTest.php -> Modules\\DevMode\\Internal\\Sql\\SelectOnlyValidator',
+        'tests/Feature/AnonymisedFixtureSweepTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
+        'tests/Feature/InstallLaunchdCommandTest.php -> Modules\\Core\\Internal\\Console\\InstallCommand',
+        'tests/Feature/TrustedHostGuardTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\TrustedHostGuard',
+        'tests/Snapshot/SidebarTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\AppSidebar',
+    ];
+
+    // BoundaryRule hooks UseItem nodes, so a fully-qualified reference written
+    // inline crosses the boundary without an import and neither guard sees it.
+    // Nothing does this today; the pin is empty so the first one has to argue.
+    $inlineReferences = [];
+
+    // app/ is scanned as well: an App\ class sits in no module, so BoundaryRule's
+    // importer lookup returns null there and the rule never fires. Composition
+    // roots that legitimately wire modules together — bootstrap/, config/,
+    // routes/ — are out of scope; they are the app assembling itself.
+    $scanned = ['production' => [], 'test' => []];
+    foreach (['Modules', 'tests', 'app'] as $dir) {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator(base_path($dir), RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            $name = $file->getFilename();
+            if (! $file->isFile() || ! str_ends_with($name, '.php') || str_ends_with($name, '.blade.php')) {
+                continue;
+            }
+            $relative = str_replace(base_path().'/', '', $file->getPathname());
+            // The BoundaryRule fixtures exist in order to BE a violation, which is
+            // why phpstan.neon excludes them from its own analysis too.
+            if (str_starts_with($relative, 'app/PhpStan/Rules/Fixtures/')) {
+                continue;
+            }
+            $owner = preg_match('#^Modules/([^/]+)/#', $relative, $ownerMatch) === 1 ? $ownerMatch[1] : null;
+            $bucket = str_starts_with($relative, 'tests/') || str_contains($relative, '/tests/')
+                ? 'test'
+                : 'production';
+
+            $contents = (string) file_get_contents($file->getPathname());
+            if (! str_contains($contents, '\\Internal\\')) {
+                continue;
+            }
+
+            preg_match_all(
+                '/^use\s+(?:function\s+)?(Modules\\\\([A-Za-z0-9_]+)\\\\Internal\\\\[A-Za-z0-9_\\\\]+)/m',
+                $contents,
+                $imports,
+                PREG_SET_ORDER,
+            );
+            foreach ($imports as $import) {
+                if ($import[2] === $owner) {
+                    continue;
+                }
+                $scanned[$bucket][] = $relative.' -> '.$import[1];
+            }
+
+            $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+            $stripped = preg_replace('/^use\s+[^\n]*$/m', '', $stripped) ?? $stripped;
+            preg_match_all(
+                '/Modules\\\\([A-Za-z0-9_]+)\\\\Internal\\\\[A-Za-z0-9_\\\\]+/',
+                $stripped,
+                $inline,
+                PREG_SET_ORDER,
+            );
+            foreach ($inline as $reference) {
+                if ($reference[1] !== $owner) {
+                    $inlineReferences[] = $relative.' -> '.$reference[0];
+                }
+            }
+        }
+    }
+    sort($scanned['production']);
+    sort($scanned['test']);
+    sort($inlineReferences);
+
+    $drift = static function (array $actual, array $pinned): string {
+        $added = array_values(array_diff($actual, $pinned));
+        $removed = array_values(array_diff($pinned, $actual));
+
+        return ($added === [] ? '' : "\n  NEW, not pinned:\n    ".implode("\n    ", $added))
+            .($removed === [] ? '' : "\n  PINNED but no longer present, delete the line:\n    ".implode("\n    ", $removed));
+    };
+
+    expect($scanned['production'])->toBe(
+        $pinnedProductionCrossings,
+        'The set of PRODUCTION cross-module Internal imports has changed. Modules\\Mobile\\Internal\\Sync '
+        .'is the one allow-listed crossing in the tree, because Mobile and Sync co-own a single wire '
+        .'protocol; every other module reaches its neighbours through Public\\ and Models\\. If you need a '
+        .'symbol from another module, add a Public contract. Do not append a line here — that widens the '
+        .'boundary by one exception in a place nobody is looking.'
+        .$drift($scanned['production'], $pinnedProductionCrossings),
+    );
+
+    expect($scanned['test'])->toBe(
+        $pinnedTestCrossings,
+        'The set of TEST cross-module Internal imports has changed. Prefer the neighbouring module\'s '
+        .'Public seam; where the test genuinely needs the internal (there is no Public unlock seam, for '
+        .'instance), add the line below so review sees the crossing being made rather than discovering it '
+        .'later as a broken test in someone else\'s module.'
+        .$drift($scanned['test'], $pinnedTestCrossings),
+    );
+
+    expect($inlineReferences)->toBe(
         [],
-        'Every module with a populated Internal/ namespace must carry a top-level boundary arch rule in '
-        ."this file (arch('Modules\\\\<X>\\\\Internal ...')->expect('Modules\\\\<X>\\\\Internal')). Missing "
-        ."for:\n  ".implode("\n  ", $missing),
+        'A cross-module Internal symbol is being named inline rather than imported. BoundaryRule hooks '
+        .'UseItem nodes and so misses that form entirely, which is why it is banned outright here rather '
+        ."than pinned. Offenders:\n  "
+        .implode("\n  ", $inlineReferences),
+    );
+});
+
+it('does not allow a cross-module Livewire mount outside the pinned set (pinnedCrossModuleLivewireMounts)', function (): void {
+    // A Blade mount names a registered string alias, so no file imports the
+    // component class and neither BoundaryRule nor a static import scan can see
+    // the edge. Ownership comes from whichever provider registers the alias: the
+    // prefix is not reliably the module name (dev.* is DevMode).
+    $pinnedCrossModuleMounts = [
+        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Anomaly (anomaly.dashboard-anomaly-badge)',
+        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Budgets (budgets.envelope-glance-card)',
+        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> DriftAlerts (drift-alerts.dashboard-drift-badge)',
+        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> DriftAlerts (drift-alerts.savings-insights-card)',
+        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Forecasting (forecasting.forecast-highlights-tile)',
+        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Goals (goals.summary-card)',
+        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Recurring (recurring.fixed-payments-card)',
+        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Reports (reports.pinned-reports-row)',
+        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Tax (tax.summary-card)',
+        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Anomaly (anomaly.settings-section)',
+        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Auth (auth.delete-account-section)',
+        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Auth (auth.recovery-codes-section)',
+        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Forecasting (forecasting.opening-balance-editor)',
+        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Notifications (notifications.settings-section)',
+        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Tax (tax.settings-section)',
+        'Modules/DevMode/Resources/views/layouts/dev-shell.blade.php -> Core (core.system-alerts-banner)',
+        'Modules/DevMode/Resources/views/layouts/dev-shell.blade.php -> Search (search.palette-search-endpoint)',
+        'Modules/DevMode/Resources/views/livewire/dev-overview-page.blade.php -> Auth (auth.app-lock-key-probe)',
+        'Modules/Ledger/Resources/views/livewire/transaction-detail.blade.php -> Categorization (categorization.categorization-provenance-panel)',
+        'Modules/Ledger/Resources/views/livewire/transaction-detail.blade.php -> Chains (chains.chain-drawer)',
+        'Modules/Ledger/Resources/views/livewire/transactions-list.blade.php -> Categorization (categorization.inline-category-picker)',
+        'Modules/Mobile/Resources/views/livewire/sync-screen.blade.php -> Auth (auth.app-lock-settings-section)',
+        'Modules/Mobile/Resources/views/livewire/sync-screen.blade.php -> Core (core.auto-import-settings-section)',
+        'Modules/Mobile/Resources/views/livewire/sync-screen.blade.php -> Core (core.encrypted-backup-download)',
+        'Modules/Mobile/Resources/views/livewire/sync-screen.blade.php -> Core (core.encrypted-backup-restore)',
+        'Modules/Mobile/Resources/views/livewire/sync-screen.blade.php -> OpenBanking (openbanking.open-banking-status-row)',
+        'Modules/Mobile/Resources/views/livewire/sync-screen.blade.php -> Sync (sync.devices-and-sync-settings-section)',
+        'Modules/Mobile/Resources/views/livewire/sync-screen.blade.php -> Sync (sync.sync-status-section)',
+        'Modules/Onboarding/Resources/views/layouts/app-wizard.blade.php -> EmailScan (email-scan.oauth-client-wizard-modal)',
+        'Modules/Recurring/Resources/views/livewire/recurring-series-detail-page.blade.php -> DriftAlerts (drift-alerts.drift-threshold-editor)',
+        'Modules/Recurring/Resources/views/livewire/recurring-series-detail-page.blade.php -> Forecasting (forecasting.model-what-if-dropdown)',
+    ];
+
+    $providers = [];
+    foreach (glob(base_path('Modules/*/Providers/*.php')) ?: [] as $providerPath) {
+        preg_match('#^Modules/([^/]+)/#', str_replace(base_path().'/', '', $providerPath), $providerModule);
+        $providers[] = [$providerModule[1], (string) file_get_contents($providerPath)];
+    }
+
+    $mounts = [];
+    $unregistered = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(base_path('Modules'), RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || ! str_ends_with($file->getFilename(), '.blade.php')) {
+            continue;
+        }
+        $relative = str_replace(base_path().'/', '', $file->getPathname());
+        if (! str_contains($relative, '/Resources/')) {
+            continue;
+        }
+        preg_match('#^Modules/([^/]+)/#', $relative, $ownerMatch);
+        $owner = $ownerMatch[1];
+        $contents = (string) file_get_contents($file->getPathname());
+
+        // Three spellings mount a component: the alias through @livewire() — which
+        // wraps onto its own line whenever it carries arguments — the alias through
+        // the <livewire:...> tag, and the class itself for full-page components.
+        $aliases = [];
+        preg_match_all('/@livewire\s*\(\s*[\'"]([A-Za-z0-9._-]+)[\'"]/', $contents, $found);
+        $aliases = array_merge($aliases, $found[1]);
+        preg_match_all('/<livewire:([A-Za-z0-9._-]+)/', $contents, $found);
+        $aliases = array_merge($aliases, $found[1]);
+
+        $targets = [];
+        preg_match_all(
+            '/@livewire\s*\(\s*\\\\?Modules\\\\([A-Za-z0-9_]+)\\\\([A-Za-z0-9_\\\\]+)::class/',
+            $contents,
+            $classMounts,
+            PREG_SET_ORDER,
+        );
+        foreach ($classMounts as $classMount) {
+            $targets[] = [$classMount[1], $classMount[1].'\\'.$classMount[2]];
+        }
+
+        foreach (array_unique($aliases) as $alias) {
+            $claimants = [];
+            foreach ($providers as [$providerOwner, $providerSource]) {
+                if (str_contains($providerSource, "'".$alias."'") || str_contains($providerSource, '"'.$alias.'"')) {
+                    $claimants[$providerOwner] = true;
+                }
+            }
+            if (count($claimants) !== 1) {
+                $unregistered[] = $relative.' -> '.$alias.' (claimed by: '
+                    .($claimants === [] ? 'nobody' : implode(', ', array_keys($claimants))).')';
+
+                continue;
+            }
+            $targets[] = [(string) array_key_first($claimants), $alias];
+        }
+
+        foreach ($targets as [$target, $label]) {
+            if ($target !== $owner) {
+                $mounts[] = $relative.' -> '.$target.' ('.$label.')';
+            }
+        }
+    }
+    sort($mounts);
+    sort($unregistered);
+
+    expect($unregistered)->toBe(
+        [],
+        'Every Livewire alias mounted from a module view must be registered by exactly one module '
+        ."provider — an alias nobody registers is a runtime failure no test covers. Offenders:\n  "
+        .implode("\n  ", $unregistered),
+    );
+
+    $added = array_values(array_diff($mounts, $pinnedCrossModuleMounts));
+    $removed = array_values(array_diff($pinnedCrossModuleMounts, $mounts));
+
+    expect($mounts)->toBe(
+        $pinnedCrossModuleMounts,
+        'The set of cross-module Livewire mounts has changed. These are real dependencies that no import '
+        .'declares, which makes them the one boundary crossing that costs nothing to add and nothing '
+        .'catches: a view reaches for a neighbour\'s component and the module graph quietly grows an edge. '
+        .'Adding one is allowed; adding it without a line here is not. The app shell under resources/views '
+        .'is application wiring rather than a module, and is deliberately out of scope.'
+        .($added === [] ? '' : "\n  NEW, not pinned:\n    ".implode("\n    ", $added))
+        .($removed === [] ? '' : "\n  PINNED but no longer present, delete the line:\n    ".implode("\n    ", $removed)),
     );
 });

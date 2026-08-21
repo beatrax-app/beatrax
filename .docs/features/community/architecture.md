@@ -105,8 +105,7 @@ NativePHP shell fallback:
   Logs the would-be URL and does nothing.
 - **Internal/Http/Livewire/** — `MysteryMerchantsPage` (the triage
   list), `SuggestMappingModal` (the suggest flow), `SharedListSettingsPanel`
-  (the corpus opt-in toggles), `HelpOthersTriageButton` (the call-to-
-  action surfaced from `/triage`).
+  (the corpus opt-in toggles).
 
 ## Key services + events
 
@@ -293,14 +292,15 @@ mechanism itself waits on a future app update. Toggle state lives in the
 `users.community_settings` JSON column, read/written directly rather than
 through a separate settings model.
 
-`HelpOthersTriageButton` is gated SERVER-SIDE on the same
-`offerToContribute` toggle — when off, `render()` returns an empty view so
-the CTA is structurally absent from the DOM, not merely CSS-hidden. Structural
-absence is the mitigation for the unauthorized-contribution threat: a
-client-side-hidden control would still be DOM-reachable and dispatchable.
-Clicking it dispatches `suggest-mapping:open` with the row's verbatim raw
-description so the single globally-mounted `SuggestMappingModal` opens
-prefilled.
+The per-row "Help others identify this" CTA lives in Categorization's
+triage view and is gated SERVER-SIDE on the same `offerToContribute` toggle:
+`TriageInbox::render()` resolves it and the Blade wraps the button in an
+`@if`, so with the toggle off the control is structurally absent from the DOM,
+not merely CSS-hidden. Structural absence is the mitigation for the
+unauthorized-contribution threat: a client-side-hidden control would still be
+DOM-reachable and dispatchable. Clicking it dispatches `suggest-mapping:open`
+with the row's verbatim raw description so the single globally-mounted
+`SuggestMappingModal` opens prefilled.
 
 `SuggestMappingModal` is mounted once at the layout level so `suggest-mapping:open`
 can open it from anywhere (the triage CTA, a mystery card, the Settings

@@ -2,19 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * WCAG 2.5.3 "Label in Name": when a control shows text and also carries an
- * aria-label, the announced name must contain the visible words. Speech
- * input matches on what the user can read, so a button reading "Install on
- * next launch" that announces "Mark system alert #3 as resolved" is visible
- * and unusable by voice.
- *
- * This replaces Web:S7927, which is switched off for Blade in
- * sonar-project.properties. That rule reads the raw template, so it cannot
- * evaluate {{ }} and reported every interpolated name as a mismatch — 28 of
- * its 32 residual findings were unevaluable rather than wrong. This check
- * looks only at the cases that can actually be decided: a static aria-label
- * on an element whose visible text is also static.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#an-aria-label-that-hides-the-visible-label
  */
 
 /**
@@ -41,10 +30,8 @@ function labelInNameBladeFiles(): array
     return $files;
 }
 
-/**
- * Strips the pieces that carry no announced text: nested elements, Blade
- * comments, and anything the reader is told to ignore.
- */
+// Strips the pieces that carry no announced text: nested elements, Blade
+// comments, and anything the reader is told to ignore.
 function labelInNameVisibleText(string $inner): string
 {
     $inner = preg_replace('~<span[^>]*aria-hidden="true"[^>]*>.*?</span>~s', '', $inner) ?? $inner;

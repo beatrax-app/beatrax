@@ -16,28 +16,39 @@ re-explain them and a contributor adding one knows the house style.
 the namespace they declare and assert on the import graph:
 
 ```php
-arch('Modules\\Ledger\\Internal is only used inside Modules\\Ledger')
-    ->expect('Modules\\Ledger\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Ledger');
+arch('DriftEvaluator is never imported by Modules\\DriftAlerts\\Internal\\Http')
+    ->expect('Modules\\DriftAlerts\\Internal\\DriftEvaluator')
+    ->not->toBeUsedIn(['Modules\\DriftAlerts\\Internal\\Http', 'Modules\\DriftAlerts\\Resources']);
 ```
 
-They are the right tool when the rule is about *who imports what*. Two limits
-matter. First, the walk only sees files that resolve to a class in a namespace:
-a module's `Routes/web.php` is a set of closures, so the `Route` facade it uses
-is invisible to the facade rule. Second, an import written as an inline
-fully-qualified `\Modules\X\Internal\...` reference rather than a `use`
-statement is not always visible.
+They are the right tool for a *named symbol* whose importers all declare
+classes. They are the wrong tool for a whole-tree rule, and this is not a
+matter of degree — read `ObjectDescriptionBase::make()`: a file is dropped from
+the graph unless it declares a class, trait, interface or enum with a resolvable
+`namespacedName` **and** that name autoloads. Three large categories of this
+repository fail that test: functional Pest files (which declare nothing), module
+migrations (`return new class extends Migration`, anonymous), and helper classes
+declared inside a Pest file (global namespace). A rule of the
+`->toOnlyBeUsedIn('Modules\X')` shape therefore passes while those files import
+`Modules\X\Internal\` freely, and reads as a guarantee it never gave. Thirty-four
+such rules were deleted for that reason; `pinnedCrossModuleInternalImports`
+replaced them with a textual scan.
 
 **Filesystem greps** — an `it(...)` block that walks a directory with
 `RecursiveDirectoryIterator` and matches a regular expression — cover the rest:
 raw query-builder calls, string literals, column names inside an `update()`
-payload, and the paths the static analyser is configured to skip.
+payload, cross-module imports, Blade Livewire mounts, and the paths the static
+analyser is configured to skip.
 
 The custom PHPStan rule `App\PhpStan\Rules\BoundaryRule` enforces the
-import half of the same invariant at `phpstan analyse` time, one layer earlier.
-The arch rules add the coverage it cannot reach: inline fully-qualified
-`\Modules\<X>\Internal\...` references, and imports from paths excluded from
-analysis (`Modules/*/Database/Seeders`, `Modules/*/Routes`).
+import half of the same invariant at `phpstan analyse` time, one layer earlier
+and, on the paths it does analyse, more strictly: its allow-list is `Public` and
+`Models` only, so a cross-module `Database\`, `Providers\`, `Routes\`, `Http\`
+or `Commands\` import fails it too. What it cannot reach is inline
+fully-qualified `\Modules\<X>\Internal\...` references (it hooks `UseItem`
+nodes), every path in `phpstan.neon`'s `excludePaths` (migrations, seeders,
+routes, all tests), and any file outside `Modules\` — the rule returns early
+when it cannot resolve an importing module.
 
 ## The shared conventions of a grep-style invariant
 
@@ -59,11 +70,15 @@ in scope.
 **`tests/` is excluded.** These are production-code rules. Test factories
 populate `transactions` rows directly, harnesses call `actingAs()`, and doubles
 name the forbidden symbols on purpose — all legitimate, none of it shipped.
+`pinnedCrossModuleInternalImports` is the exception: it scans tests too, into a
+second pinned list, because a test reaching into a neighbour's `Internal\` welds
+itself to a private shape that neighbour is entitled to change.
 
 **`Database/Migrations/` is excluded** from the sole-mutator rules. A migration
 seeds initial rows and declares the schema itself, including the columns whose
-later mutation the rule restricts. Migrations are anonymous classes, outside the
-namespace-based rules entirely.
+later mutation the rule restricts. Being anonymous classes, migrations are also
+invisible to every namespace-based rule — which is why the boundary invariants
+that must cover them are greps.
 
 **A missing directory satisfies the rule.** Several invariants open with:
 
@@ -106,22 +121,24 @@ equivalent static-analysis rule; the two lists are kept in step by hand.
 to a literal expected set, so the lists cannot grow at all without the test
 being edited in the same commit.
 
-## The self-policing guard
+## Prefer an exhaustive scan to a per-module list
 
-`everyInternalNamespaceHasABoundaryRule` reads
-`BoundaryArchTest.php`'s own source and asserts that every module directory with
-a populated `Internal/` namespace appears as a top-level `expect()` target in it.
+`BoundaryArchTest.php` used to carry one boundary rule per module plus a
+meta-test, `everyInternalNamespaceHasABoundaryRule`, that read the file's own
+source and failed when a module with a populated `Internal/` had no rule. The
+meta-test existed because the hand-maintained list had already drifted once:
+eleven modules shipped an `Internal/` namespace with no rule at all.
 
-This exists because the hand-maintained list drifted once already: eleven modules
-shipped an `Internal/` namespace with no boundary rule, so a cross-module reach
-into their internals would have passed the build unnoticed. The guard turns
-"every `Internal` namespace is guarded" from something a reviewer has to
-remember into something the build proves.
+Both are gone. A guard that needs a second guard to check it has been enumerated
+one module at a time, and enumeration is the defect — a module added tomorrow
+either appears in the list or does not. `pinnedCrossModuleInternalImports` walks
+the tree instead, so a new module is in scope the moment its first file exists,
+and there is nothing for a meta-test to police.
 
-Its needle is the exact single-quoted top-level target — `'Modules\X\Internal'`,
-closing quote immediately after `Internal` — so a rule naming only a deeper
-symbol (`'Modules\Ledger\Internal\Console\RederiveFingerprintsCommand'`) does not
-falsely satisfy it.
+What *is* pinned is the far smaller set of accepted crossings, and that list is
+compared with `toBe()` in both directions: a crossing that disappears fails the
+test as loudly as one that appears, so the pin cannot rot into a stale
+allow-list. Pin outcomes, not coverage.
 
 ## Where a rule's rationale lives
 
@@ -134,6 +151,9 @@ alternative, a magic number, a surprising exemption — is the one worth writing
 
 ## Related
 
+- [Invariants written after a shipped failure](invariants-from-shipped-failures.md)
+  — the field history behind the rules in `tests/Contracts/`: what each one cost
+  and why nothing else caught it
 - [Module boundaries](../architecture/module-boundaries.md) — the rules these
   invariants enforce, and the `Public`/`Internal`/`Models` split behind them
 - [Comment policy](00-index.md) — what belongs in a comment at all

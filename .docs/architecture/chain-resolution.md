@@ -190,12 +190,12 @@ The column is set only by:
 - The chain resolver, for chain links.
 - The transfer-detection job, for self-transfers.
 
-Direct writes from anywhere else are caught by the
-`noResolverWritesTransactions` arch invariant for the Chains module —
-which actually permits writing `pair_transaction_id` specifically,
-because that's the column the resolver is allowed to touch. The
-invariant forbids writes to the rest of the row (amount, currency,
-description, etc.), which is what the read-mostly contract is about.
+Direct writes from anywhere else are caught by the repo-wide
+`crossModuleRawTableWrites` invariant: every write a module makes to a
+table another module owns is pinned to an allow-list by file, line, and
+table, so a new one is a decision rather than a diff. Within the
+resolver, `pair_transaction_id` is the only column of the row it may
+touch — amount, currency, and description belong to the ledger.
 
 ## RetypeByAliasResolver — the wizard-order healing pass
 
@@ -234,12 +234,12 @@ a large first-run history sweep never holds every row in memory; then
 decrypt each surviving candidate's IBAN once and look it up in the
 in-PHP alias map. Matches are queued and applied via batched raw
 `UPDATE ... WHERE id IN (...)` statements. This resolver is the one
-documented exception to the read-mostly contract's
-`noResolverWritesTransactions` invariant — it retypes
+documented exception to the read-mostly contract — it retypes
 `transactions.type`, unlike every other Chains resolver, which writes
-only `chain_links`/`card_statements`. It stays on raw SQL rather than
-the fluent query builder specifically so that exception is textually
-distinct from the forbidden shape the arch test greps for.
+only `chain_links`/`card_statements`. The raw-SQL spelling once put the
+write outside what the boundary grep could see;
+`crossModuleRawTableWrites` reads SQL strings too, and pins this line
+alongside every other cross-module write.
 
 ## The known-counterparty-IBAN alias bridge
 
@@ -308,10 +308,11 @@ The chain resolver is the largest read-mostly subsystem in the
 codebase. The arch invariants enforce its read-only posture against
 the canonical ledger:
 
-- **`noResolverWritesTransactions`** — files under
-  `Modules/Chains/Internal/Resolvers/` cannot write the `transactions`
-  table, except for the explicit `pair_transaction_id` carve-out the
-  resolver job applies.
+- **`crossModuleRawTableWrites`** — every write `Modules/Chains/`
+  makes to a table it does not own is pinned by file, line, and table.
+  Today that is the single `RetypeByAliasResolver` retype of
+  `transactions.type`; the resolver job's `pair_transaction_id` write
+  goes through the Ledger model.
 - The Chains module writes only to its own tables:
   `chain_links`, `chain_resolution_runs`,
   `known_counterparty_ibans`, `community_merchant_mappings` (when

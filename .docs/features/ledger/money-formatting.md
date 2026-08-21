@@ -66,12 +66,15 @@ property of money.
 
 ## `format()` picks the locale from the currency
 
-`Money::format(?string $locale = null)` renders an amount for display.
-With no argument it chooses the locale from the currency: EUR renders
-in `nl_NL` and everything else in `en_US`, so a foreign amount reads
-the way it would on a card statement while EUR stays in the Dutch
-convention the rest of the UI uses. An explicit `$locale` argument
-overrides that choice, and is what the tests use to force a path.
+`Money::format()` renders an amount for display and takes no
+argument: the currency decides the locale. EUR renders in `nl_NL` and
+everything else in `en_US`, so a foreign amount reads the way it would
+on a card statement while EUR stays in the Dutch convention the rest
+of the UI uses. The locale parameter this method used to accept is
+gone — an amount is read against its own currency, not against the
+reader's language, and `nl_NL` turns a dollar amount into
+`US$ -1.245,67`, which is not how a card statement reads in any of the
+26 languages the app ships.
 
 Internally this calls `brick/money`'s `formatToLocale()`, **not**
 `formatTo()`. The two do the same thing — `formatTo()` forwards to
@@ -126,15 +129,18 @@ does.
 that are easy to break:
 
 - The fallback output is **byte for byte** what ICU produces, asserted
-  by formatting the same amount twice on a host that does have full
-  ICU data — once through a locale ICU accepts, once through a
-  deliberately invalid one. Mobile must not read differently from
-  desktop, and if the ICU data ever does arrive, nothing about the
-  rendering changes.
+  by running the same amount through both `format()` and
+  `formatWithoutIcu()` on a host that does have full ICU data.
+  `formatWithoutIcu()` is public for exactly that reason: the device
+  condition cannot be reproduced where the locale data is present, and
+  a rendering nothing can reach is a rendering nothing checks. Mobile
+  must not read differently from desktop, and if the ICU data ever
+  does arrive, nothing about the rendering changes.
 - The `catch` must not widen into a silent swallow of formatting that
-  works. `format('de_DE')` is asserted to produce `1.234,50 €` —
-  symbol last, which the fallback cannot produce — so a catch that
-  started eating successful cases would fail the test.
+  works. The two paths agree on every currency the product deals in,
+  so the proof needs one they cannot: `format()` on an INR amount is
+  asserted to produce `₹1,234.56`, the rupee sign ICU knows and the
+  transcribed symbol table does not carry.
 - Negatives never render in parentheses, in either convention.
 
 ## Related

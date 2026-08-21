@@ -2,25 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * Every shared Core middleware the desktop root registers must also be
- * registered by the mobile root.
- *
- * The sibling-root topology gives `mobile-app/` its own `bootstrap/app.php`
- * — a real file, never a symlink, because `dirname(__DIR__)` has to resolve
- * to the mobile root. Nothing keeps the two middleware stacks in step, and a
- * middleware added to one root is invisible in the other.
- *
- * It fails silently. `SetLocale` was never registered on mobile, so the
- * translator stayed on `config('app.locale')`: the pre-auth switcher wrote
- * `session('locale')` on every tap and nothing ever read it back. The route,
- * the negotiator and the session all worked, every test passed, and the
- * control was simply dead on device.
- *
- * Module-owned gates are deliberately NOT compared — `EnsureDatabaseReady`
- * and `MobileEnsureDatabaseReady` are different middleware for different
- * first-launch surfaces. Only `Modules\Core\Internal\Http\Middleware` is
- * shared surface, so only that namespace is held in common.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-middleware-registered-on-one-root-only
  */
 
 /** @return list<string> */

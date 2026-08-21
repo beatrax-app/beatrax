@@ -123,7 +123,8 @@ Sets the `payment_type` enum (`ideal`, `direct_debit`, `card_payment`,
 `transfer`, `paypal`, ...) using the per-adapter `*Hinter` classes registered
 in `Modules/Import/Internal/Parsers/` (see
 [Payment-type hinters](../features/import/architecture.md#payment-type-hinters)
-for the per-source lexeme/code tables). The
+for the per-source lexeme/code tables).
+
 The `paymentTypeHinterContract` arch invariant requires every `*Hinter`
 class under `Modules/Import/Internal/Parsers/` to implement the
 `PaymentTypeHinter` contract, which is what makes this stage's plug-in
@@ -281,13 +282,20 @@ the day after the first import:
    fingerprints already exist.
 4. The `canonical` list is empty; nothing inserts.
 
-The same logic applies across formats: importing an ASN CAMT.053 file
-after an ASN CSV import of the same period classifies the CAMT rows as
-ENRICHED (the v3 fingerprint matches; the CAMT source_ref is stronger);
-the enrichment path updates the existing rows in place. The
-`enriched_from` JSON column captures the provenance trail so the
-"this row was originally imported as CSV on 2026-04-12, then enriched
-by CAMT on 2026-05-01" history survives.
+Across formats the answer depends on what kind of file arrives. Two
+*statements* colliding — an ASN CAMT.053 over the same period as an ASN
+CSV — classify as DUPLICATE and never enrich: `FingerprintStage` requires
+a receipt format on one side before it will accept a `source_ref`
+upgrade, so re-uploading one period in two statement formats cannot add a
+second `source_format` to the audit chain. `CrossFormatDedupTest` locks
+that in both directions.
+
+ENRICHED is the receipt path. When one side is a receipt and the incoming
+`source_ref` both exists and outranks the stored one, the enrichment path
+updates the existing row in place and the `enriched_from` JSON column
+captures the provenance trail, so the "this row was originally imported
+as CSV on 2026-04-12, then enriched by the PayPal receipt on 2026-05-01"
+history survives.
 
 This is the "Idempotency" project constraint (see PROJECT.md): same
 source plus same transaction never duplicates. The fingerprint stage

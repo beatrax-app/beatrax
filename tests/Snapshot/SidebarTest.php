@@ -6,20 +6,6 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Models\User;
 
-/*
- * AppSidebar HTML structure snapshot.
- *
- * Catches accidental drift in the sidebar HTML structure. Locks
- * the rendered shape (section labels + side-item order + dev-block
- * presence + account row composition).
- *
- * The raw Livewire-mounted HTML carries dynamic attributes —
- * wire:id, wire:snapshot, wire:effects, wire:key — that fluctuate
- * per render. We strip those before snapshot-matching so the
- * snapshot is deterministic across runs while still capturing
- * every meaningful structural change.
- */
-
 it('matches the rendered sidebar HTML for a developer (snapshot lock)', function (): void {
     $user = User::query()->create([
         'username' => 'snap-dev',
@@ -33,10 +19,8 @@ it('matches the rendered sidebar HTML for a developer (snapshot lock)', function
 
     $html = (string) $component->html();
 
-    // Strip Livewire's dynamic wire:* attributes + the CSRF token so
-    // the snapshot stays stable across runs. The structural shape
-    // (sections, side-items, side-dev-block, account row) is what we
-    // care about.
+    // wire:id, wire:snapshot, wire:effects and the CSRF token fluctuate per
+    // render, so a snapshot that kept them would never match twice.
 
     // Vite's content hash goes with them: it is not structure, and leaving it
     // in meant editing any brand asset failed this sidebar test for a reason
