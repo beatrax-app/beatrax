@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Le nom du scénario ne peut pas être vide.',
-        'name_too_long' => 'Le nom du scénario ne doit pas dépasser :max caractères.',
+        'name_too_long' => 'Le nom du scénario ne doit pas dépasser :max caractère.|Le nom du scénario ne doit pas dépasser :max caractères.',
         'name_taken' => 'Un scénario portant ce nom existe déjà.',
         'pick_kind_first' => 'Choisis d\'abord un type de modification.',
         'amount_positive' => 'Le montant doit être un nombre positif.',

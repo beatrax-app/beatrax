@@ -31,7 +31,7 @@ return [
     'file' => [
         'choose' => 'Fájl kiválasztása',
         'none' => 'Nincs kiválasztott fájl',
-        'count' => ':count fájl kiválasztva',
+        'count' => 'Kiválasztott fájlok: :count',
     ],
 
     'amount_placeholder' => '0,00',

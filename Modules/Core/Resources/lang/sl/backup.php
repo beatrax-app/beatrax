@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Uporabi geslo z vsaj :min znaki.',
+        'passphrase_min' => 'Uporabi geslo z vsaj :min znakom.|Uporabi geslo z vsaj :min znakoma.|Uporabi geslo z vsaj :min znaki.|Uporabi geslo z vsaj :min znaki.',
         'passphrase_mismatch' => 'Gesli se ne ujemata.',
         'download_sqlite_only' => 'Šifriran prenos je na voljo samo v različici SQLite.',
         'create_failed' => 'Varnostne kopije ni bilo mogoče ustvariti: :message',

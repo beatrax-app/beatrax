@@ -763,6 +763,47 @@ It catches the invented-ahead-of-the-code page only where that page links what
 it invented, which is the common case and not the whole of it. Prose naming a
 class without linking it still passes.
 
+## A count beside a noun that never declared itself plural
+
+`tests/Contracts/CountedNounDeclaresItsPluralArchTest.php`
+
+An import finished on a phone and reported "**1 errors**". The key behind it was
+`' · :count errors'` — a number interpolated straight against a bare plural, with
+no `|` to select on. A sweep of the English lang files found 56 more of the same
+shape, three of them with the branch moved out of the lang file and into PHP:
+`count($missing) === 1 ? Lang::get('…arg_singular') : Lang::get('…arg_plural')`.
+
+The English defect is the small half. These strings ship in 26 locales. English
+selects between two forms; Polish, Czech, Slovak, Croatian, Serbian, Ukrainian
+and Lithuanian select between three, Slovenian between four, and several of them
+choose on the final digit rather than the magnitude — Croatian's first form
+covers 21 as well as 1. A line with no `|` hands the translator a sentence with
+nowhere to put their own grammar, so those translations are wrong by
+construction rather than by mistake. A PHP ternary is worse again: it pins the
+choice to English's two forms somewhere no locale rule can reach.
+
+`TranslationParityArchTest` already checks that a pluralised line carries as many
+segments as its locale selects between — but it can only see a line that
+declares itself plural with a `|`. All 57 bypassed it by never being pluralised
+at all, which is why a rule that had been running for months over these exact
+files reported nothing.
+
+The rule reads a count-shaped placeholder followed within three words by a word
+that reads as a plural noun. Both halves are lists in the test: the count words
+are its vocabulary, and the not-a-plural words are its only exception —
+`:name dips to`, `:version fixes :summary` and `:username takes that` are
+third-person verbs, and every one of them was a live false positive. A
+`:min..:max` range is excluded by shape rather than by key: a range is never one
+of anything. There is no per-key allow-list; a flagged string is either
+pluralised or reworded so the count stops governing the noun, and both are
+cheap. A count that cannot be one today is still worth pluralising, because the
+constant behind it moves and 22 takes a different Polish form from 8.
+
+Two companion arms close the ways the fix comes undone. Reading a pluralised
+line with `Lang::get()` renders `1 transaction|1 transactions` verbatim at the
+reader and throws nothing, because the line is a valid string. And the ternary
+shape returns the moment someone needs a noun in the middle of a sentence.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

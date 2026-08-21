@@ -31,7 +31,7 @@ return [
     'file' => [
         'choose' => 'Vælg fil',
         'none' => 'Ingen fil valgt',
-        'count' => ':count filer valgt',
+        'count' => 'Filer valgt: :count',
     ],
 
     'amount_placeholder' => '0,00',

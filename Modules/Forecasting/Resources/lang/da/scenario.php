@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Scenarienavnet må ikke være tomt.',
-        'name_too_long' => 'Scenarienavnet må højst være på :max tegn.',
+        'name_too_long' => 'Scenarienavnet må højst være på :max tegn.|Scenarienavnet må højst være på :max tegn.',
         'name_taken' => 'Der findes allerede et scenarie med det navn.',
         'pick_kind_first' => 'Vælg først en type ændring.',
         'amount_positive' => 'Beløbet skal være et positivt tal.',

@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Svi računi',
 
     'horizon_label' => 'Horizont prognoze',
-    'n_days' => ':days dana',
+    'n_days' => ':days dan|:days dana|:days dana',
 
     'view_by_funder' => 'Prikaži po platiocu',
     'view_by_funder_hint' => 'Sažmi serije razrešene lancem na račun koji ih zapravo plaća.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Napravi scenario',
     'cancel' => 'Otkaži',
 
-    'aggregate_subtitle' => 'Ukupno stanje svih računa, projektovano za narednih :days dana.',
+    'aggregate_subtitle' => 'Ukupno stanje svih računa, projektovano za naredni :days dan.|Ukupno stanje svih računa, projektovano za naredna :days dana.|Ukupno stanje svih računa, projektovano za narednih :days dana.',
 
     'today' => 'danas',
     'on_day' => 'na dan',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'na dan :day',
 
     'updating' => 'Ažuriranje',
-    'chart_noscript' => 'Grafikon zahteva JavaScript. Raspon obuhvata :days dana.',
+    'chart_noscript' => 'Grafikon zahteva JavaScript. Raspon obuhvata :days dan.|Grafikon zahteva JavaScript. Raspon obuhvata :days dana.|Grafikon zahteva JavaScript. Raspon obuhvata :days dana.',
     'total_balance' => 'Ukupno stanje',
 
     'per_month_suffix' => '/mes.',
     'confidence_chip_aria' => ':name, pouzdanost :confidence — raspon prognoze je :percent procenata tačkaste procene',
 
     'highlights_title' => 'Izdvojeno iz prognoze',
-    'highlights_shortfall_aria' => ':count aktivnih perioda manjka u narednih 30 dana',
+    'highlights_shortfall_aria' => ':count aktivan period manjka u narednih :days dana|:count aktivna perioda manjka u narednih :days dana|:count aktivnih perioda manjka u narednih :days dana',
     'dips_to' => ':name pada na :amount',
     'on_date_suffix' => ' na dan :date',
     'shortfall_window' => ':count aktivan period manjka|:count aktivna perioda manjka|:count aktivnih perioda manjka',

@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Всички сметки',
 
     'horizon_label' => 'Хоризонт на прогнозата',
-    'n_days' => ':days дни',
+    'n_days' => ':days ден|:days дни',
 
     'view_by_funder' => 'Изглед по финансираща сметка',
     'view_by_funder_hint' => 'Групира поредиците, разрешени чрез верига, към сметката, която действително ги плаща.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Създай сценарий',
     'cancel' => 'Отказ',
 
-    'aggregate_subtitle' => 'Общото салдо по всички сметки, прогнозирано за следващите :days дни.',
+    'aggregate_subtitle' => 'Общото салдо по всички сметки, прогнозирано за следващия :days ден.|Общото салдо по всички сметки, прогнозирано за следващите :days дни.',
 
     'today' => 'днес',
     'on_day' => 'на ден',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'на ден :day',
 
     'updating' => 'Обновяване',
-    'chart_noscript' => 'Графиката изисква JavaScript. Обхватът покрива :days дни.',
+    'chart_noscript' => 'Графиката изисква JavaScript. Обхватът покрива :days ден.|Графиката изисква JavaScript. Обхватът покрива :days дни.',
     'total_balance' => 'Общо салдо',
 
     'per_month_suffix' => '/мес.',
     'confidence_chip_aria' => ':name, увереност :confidence — прогнозният интервал е :percent процента от точковата оценка',
 
     'highlights_title' => 'Акценти от прогнозата',
-    'highlights_shortfall_aria' => ':count активни периода с недостиг през следващите 30 дни',
+    'highlights_shortfall_aria' => ':count активен период с недостиг през следващите :days дни|:count активни периода с недостиг през следващите :days дни',
     'dips_to' => ':name спада до :amount',
     'on_date_suffix' => ' на :date',
     'shortfall_window' => '{0} няма активни периоди с недостиг|[1,1] 1 активен период с недостиг|[2,*] :count активни периода с недостиг',

@@ -226,16 +226,28 @@ final class CounterpartyResolverService implements CounterpartyResolver
             && $this->looksLikePersonalName($name);
     }
 
-    // Empty when the reader has named no country, which loads every region as
-    // before rather than classifying nothing. Read once per transaction, since
-    // the two rule tiers below both ask.
+    // Empty when the reader has named no country. Read once per transaction,
+    // since the two rule tiers below both ask.
     private function regionFor(int $userId): string
     {
         return $this->region ??= $this->countries->current($userId);
     }
 
+    // A merchant can be international; a government body and a bank's fee
+    // cannot. Naming one without a country asserted a Flemish agency at a Dutch
+    // reader, because ZORGPREMIE is the ordinary Dutch word for a health
+    // premium and only Belgium's file defines it. Unknown is the honest answer.
+    private function namesANationalInstitution(int $userId): bool
+    {
+        return $this->regionFor($userId) !== '';
+    }
+
     private function resolveGovernment(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
     {
+        if (! $this->namesANationalInstitution($userId)) {
+            return null;
+        }
+
         return $this->resolveByRules(
             $tx,
             $userId,
@@ -250,6 +262,10 @@ final class CounterpartyResolverService implements CounterpartyResolver
 
     private function resolveBankFee(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
     {
+        if (! $this->namesANationalInstitution($userId)) {
+            return null;
+        }
+
         return $this->resolveByRules(
             $tx,
             $userId,

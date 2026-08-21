@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Der Szenarioname darf nicht leer sein.',
-        'name_too_long' => 'Der Szenarioname darf höchstens :max Zeichen lang sein.',
+        'name_too_long' => 'Der Szenarioname darf höchstens :max Zeichen lang sein.|Der Szenarioname darf höchstens :max Zeichen lang sein.',
         'name_taken' => 'Ein Szenario mit diesem Namen gibt es bereits.',
         'pick_kind_first' => 'Wähle zuerst eine Art von Anpassung.',
         'amount_positive' => 'Der Betrag muss eine positive Zahl sein.',

@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Todas las cuentas',
 
     'horizon_label' => 'Horizonte de la previsión',
-    'n_days' => ':days días',
+    'n_days' => ':days día|:days días',
 
     'view_by_funder' => 'Ver por financiador',
     'view_by_funder_hint' => 'Agrupa las series resueltas por cadena en la cuenta que las paga realmente.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Crear escenario',
     'cancel' => 'Cancelar',
 
-    'aggregate_subtitle' => 'Saldo combinado de todas las cuentas, proyectado en los próximos :days días.',
+    'aggregate_subtitle' => 'Saldo combinado de todas las cuentas, proyectado en el próximo :days día.|Saldo combinado de todas las cuentas, proyectado en los próximos :days días.',
 
     'today' => 'hoy',
     'on_day' => 'en el día',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'en el día :day',
 
     'updating' => 'Actualizando',
-    'chart_noscript' => 'El gráfico requiere JavaScript. El rango abarca :days días.',
+    'chart_noscript' => 'El gráfico requiere JavaScript. El rango abarca :days día.|El gráfico requiere JavaScript. El rango abarca :days días.',
     'total_balance' => 'Saldo total',
 
     'per_month_suffix' => '/mes',
     'confidence_chip_aria' => ':name, confianza :confidence — el rango de proyección es el :percent por ciento de la estimación puntual',
 
     'highlights_title' => 'Puntos clave de la previsión',
-    'highlights_shortfall_aria' => ':count ventanas de déficit activas en los próximos 30 días',
+    'highlights_shortfall_aria' => ':count ventana de déficit activa en los próximos :days días|:count ventanas de déficit activas en los próximos :days días',
     'dips_to' => ':name baja a :amount',
     'on_date_suffix' => ' el :date',
     'shortfall_window' => '1 ventana de déficit activa|:count ventanas de déficit activas',

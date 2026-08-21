@@ -30,7 +30,7 @@ return [
     'file' => [
         'choose' => 'Bestand kiezen',
         'none' => 'Geen bestand gekozen',
-        'count' => ':count bestanden gekozen',
+        'count' => 'Bestanden gekozen: :count',
     ],
 
     'amount_placeholder' => '0,00',

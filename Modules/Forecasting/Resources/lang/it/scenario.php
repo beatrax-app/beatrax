@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Il nome dello scenario non può essere vuoto.',
-        'name_too_long' => 'Il nome dello scenario deve avere al massimo :max caratteri.',
+        'name_too_long' => 'Il nome dello scenario deve avere al massimo :max carattere.|Il nome dello scenario deve avere al massimo :max caratteri.',
         'name_taken' => 'Esiste già uno scenario con questo nome.',
         'pick_kind_first' => 'Scegli prima un tipo di variazione.',
         'amount_positive' => "L'importo deve essere un numero positivo.",

@@ -90,6 +90,8 @@ pass for a clean one.
 
 ## Related
 
+- [Copy that carries a count](counted-nouns-in-copy.md) — how a number and a
+  noun are written together across 26 locales
 - [Architecture](../architecture/00-index.md) — the system's shape
 - [40-quality/code-standards.md](https://github.com/beatrax-app/spec/blob/main/40-quality/code-standards.md)
 - [50-governance/ai-contributors.md](https://github.com/beatrax-app/spec/blob/main/50-governance/ai-contributors.md) — the judgment rules bind AI contributions identically

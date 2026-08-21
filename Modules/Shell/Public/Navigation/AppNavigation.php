@@ -44,7 +44,6 @@ final class AppNavigation
         return $destinations;
     }
 
-    // Absolute, the way route() renders an href.
     public static function url(Destination $destination): string
     {
         $row = self::row($destination);

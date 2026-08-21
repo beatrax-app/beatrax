@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Kasuta vähemalt :min märgi pikkust paroolifraasi.',
+        'passphrase_min' => 'Kasuta vähemalt :min märgi pikkust paroolifraasi.|Kasuta vähemalt :min märgi pikkust paroolifraasi.',
         'passphrase_mismatch' => 'Kaks paroolifraasi ei kattu.',
         'download_sqlite_only' => 'Krüpteeritud allalaadimine on saadaval ainult SQLite-versioonis.',
         'create_failed' => 'Varukoopiat ei õnnestunud luua: :message',

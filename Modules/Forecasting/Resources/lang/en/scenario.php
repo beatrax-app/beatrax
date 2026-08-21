@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Scenario name cannot be empty.',
-        'name_too_long' => 'Scenario name must be :max characters or fewer.',
+        'name_too_long' => 'Scenario name must be :max character or fewer.|Scenario name must be :max characters or fewer.',
         'name_taken' => 'A scenario with that name already exists.',
         'pick_kind_first' => 'Pick a mutation kind first.',
         'amount_positive' => 'Amount must be a positive number.',

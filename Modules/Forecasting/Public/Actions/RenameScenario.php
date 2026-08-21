@@ -32,7 +32,7 @@ final class RenameScenario
             throw new InvalidArgumentException(Lang::get('forecasting::scenario.errors.name_empty'));
         }
         if (mb_strlen($trimmed) > ForecastScenario::MAX_NAME_LENGTH) {
-            throw new InvalidArgumentException(Lang::get('forecasting::scenario.errors.name_too_long', ['max' => ForecastScenario::MAX_NAME_LENGTH]));
+            throw new InvalidArgumentException(Lang::choice('forecasting::scenario.errors.name_too_long', ForecastScenario::MAX_NAME_LENGTH, ['max' => ForecastScenario::MAX_NAME_LENGTH]));
         }
 
         $owns = $this->db->connection()->table('forecast_scenarios')

@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Använd en lösenfras med minst :min tecken.',
+        'passphrase_min' => 'Använd en lösenfras med minst :min tecken.|Använd en lösenfras med minst :min tecken.',
         'passphrase_mismatch' => 'De två lösenfraserna stämmer inte överens.',
         'download_sqlite_only' => 'Krypterad nedladdning är bara tillgänglig i SQLite-versionen.',
         'create_failed' => 'Kunde inte skapa säkerhetskopian: :message',

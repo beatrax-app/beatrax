@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Usa una frase de contraseña de al menos :min caracteres.',
+        'passphrase_min' => 'Usa una frase de contraseña de al menos :min carácter.|Usa una frase de contraseña de al menos :min caracteres.',
         'passphrase_mismatch' => 'Las dos frases de contraseña no coinciden.',
         'download_sqlite_only' => 'La descarga cifrada solo está disponible en la versión SQLite.',
         'create_failed' => 'No se pudo crear la copia de seguridad: :message',

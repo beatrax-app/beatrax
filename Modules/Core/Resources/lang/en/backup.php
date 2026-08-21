@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Use a passphrase of at least :min characters.',
+        'passphrase_min' => 'Use a passphrase of at least :min character.|Use a passphrase of at least :min characters.',
         'passphrase_mismatch' => 'The two passphrases do not match.',
         'download_sqlite_only' => 'Encrypted download is only available on the SQLite build.',
         'create_failed' => 'Could not create the backup: :message',

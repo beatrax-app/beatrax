@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Alle rekeningen',
 
     'horizon_label' => 'Prognosehorizon',
-    'n_days' => ':days dagen',
+    'n_days' => ':days dag|:days dagen',
 
     'view_by_funder' => 'Weergeven per financier',
     'view_by_funder_hint' => 'Voeg keten-herleide reeksen samen op de rekening die ze daadwerkelijk betaalt.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Scenario aanmaken',
     'cancel' => 'Annuleren',
 
-    'aggregate_subtitle' => 'Gecombineerd saldo over al je rekeningen, geprojecteerd over de komende :days dagen.',
+    'aggregate_subtitle' => 'Gecombineerd saldo over al je rekeningen, geprojecteerd over de komende :days dag.|Gecombineerd saldo over al je rekeningen, geprojecteerd over de komende :days dagen.',
 
     'today' => 'vandaag',
     'on_day' => 'op dag',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'op dag :day',
 
     'updating' => 'Bijwerken',
-    'chart_noscript' => 'Grafiek vereist JavaScript. Bereik beslaat :days dagen.',
+    'chart_noscript' => 'Grafiek vereist JavaScript. Bereik beslaat :days dag.|Grafiek vereist JavaScript. Bereik beslaat :days dagen.',
     'total_balance' => 'Totaalsaldo',
 
     'per_month_suffix' => '/mnd',
     'confidence_chip_aria' => ':name, betrouwbaarheid :confidence — projectiebereik is :percent procent van de puntschatting',
 
     'highlights_title' => 'Prognose-highlights',
-    'highlights_shortfall_aria' => ':count actieve tekortvensters in de komende 30 dagen',
+    'highlights_shortfall_aria' => ':count actief tekortvenster in de komende :days dagen|:count actieve tekortvensters in de komende :days dagen',
     'dips_to' => ':name zakt naar :amount',
     'on_date_suffix' => ' op :date',
     'shortfall_window' => '1 actief tekortvenster|:count actieve tekortvensters',

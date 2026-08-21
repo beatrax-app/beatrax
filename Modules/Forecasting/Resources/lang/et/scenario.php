@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Stsenaariumi nimi ei saa olla tühi.',
-        'name_too_long' => 'Stsenaariumi nimi tohib olla kuni :max märki.',
+        'name_too_long' => 'Stsenaariumi nimi tohib olla kuni :max märk.|Stsenaariumi nimi tohib olla kuni :max märki.',
         'name_taken' => 'Sellise nimega stsenaarium on juba olemas.',
         'pick_kind_first' => 'Vali kõigepealt muudatuse liik.',
         'amount_positive' => 'Summa peab olema positiivne arv.',

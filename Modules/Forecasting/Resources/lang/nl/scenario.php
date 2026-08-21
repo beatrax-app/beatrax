@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Scenarionaam mag niet leeg zijn.',
-        'name_too_long' => 'Scenarionaam mag maximaal :max tekens bevatten.',
+        'name_too_long' => 'Scenarionaam mag maximaal :max teken bevatten.|Scenarionaam mag maximaal :max tekens bevatten.',
         'name_taken' => 'Er bestaat al een scenario met die naam.',
         'pick_kind_first' => 'Kies eerst een soort mutatie.',
         'amount_positive' => 'Bedrag moet een positief getal zijn.',

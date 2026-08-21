@@ -13,7 +13,7 @@ use stdClass;
 
 final readonly class ForecastHighlightsQuery
 {
-    private const int HORIZON_DAYS = 30;
+    public const int HORIZON_DAYS = 30;
 
     public function __construct(
         private DatabaseManager $db,

@@ -31,7 +31,7 @@ return [
     'file' => [
         'choose' => 'Elegir archivo',
         'none' => 'Ningún archivo seleccionado',
-        'count' => ':count archivos seleccionados',
+        'count' => 'Archivos seleccionados: :count',
     ],
 
     'amount_placeholder' => '0,00',

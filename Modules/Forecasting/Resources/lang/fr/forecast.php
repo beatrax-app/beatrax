@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Tous les comptes',
 
     'horizon_label' => 'Horizon de prévision',
-    'n_days' => ':days jours',
+    'n_days' => ':days jour|:days jours',
 
     'view_by_funder' => 'Afficher par financeur',
     'view_by_funder_hint' => 'Regroupe les séries résolues par chaîne sur le compte qui les paie réellement.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Créer le scénario',
     'cancel' => 'Annuler',
 
-    'aggregate_subtitle' => 'Solde combiné de tous les comptes, projeté sur les :days prochains jours.',
+    'aggregate_subtitle' => 'Solde combiné de tous les comptes, projeté sur le :days prochain jour.|Solde combiné de tous les comptes, projeté sur les :days prochains jours.',
 
     'today' => 'aujourd\'hui',
     'on_day' => 'au jour',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'au jour :day',
 
     'updating' => 'Mise à jour',
-    'chart_noscript' => 'Le graphique nécessite JavaScript. La plage couvre :days jours.',
+    'chart_noscript' => 'Le graphique nécessite JavaScript. La plage couvre :days jour.|Le graphique nécessite JavaScript. La plage couvre :days jours.',
     'total_balance' => 'Solde total',
 
     'per_month_suffix' => '/mois',
     'confidence_chip_aria' => ':name, confiance :confidence — la plage de projection représente :percent pour cent de l\'estimation ponctuelle',
 
     'highlights_title' => 'Points clés de la prévision',
-    'highlights_shortfall_aria' => ':count fenêtres de déficit actives dans les 30 prochains jours',
+    'highlights_shortfall_aria' => ':count fenêtre de déficit active dans les :days prochains jours|:count fenêtres de déficit actives dans les :days prochains jours',
     'dips_to' => ':name descend à :amount',
     'on_date_suffix' => ' le :date',
     'shortfall_window' => '1 fenêtre de déficit active|:count fenêtres de déficit actives',

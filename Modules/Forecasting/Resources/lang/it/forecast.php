@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Tutti i conti',
 
     'horizon_label' => 'Orizzonte di previsione',
-    'n_days' => ':days giorni',
+    'n_days' => ':days giorno|:days giorni',
 
     'view_by_funder' => 'Visualizza per finanziatore',
     'view_by_funder_hint' => 'Raggruppa le serie risolte tramite catena sul conto che le paga davvero.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Crea scenario',
     'cancel' => 'Annulla',
 
-    'aggregate_subtitle' => 'Saldo combinato di tutti i conti, proiettato nei prossimi :days giorni.',
+    'aggregate_subtitle' => 'Saldo combinato di tutti i conti, proiettato nel prossimo :days giorno.|Saldo combinato di tutti i conti, proiettato nei prossimi :days giorni.',
 
     'today' => 'oggi',
     'on_day' => 'al giorno',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'al giorno :day',
 
     'updating' => 'Aggiornamento',
-    'chart_noscript' => "Il grafico richiede JavaScript. L'intervallo copre :days giorni.",
+    'chart_noscript' => "Il grafico richiede JavaScript. L'intervallo copre :days giorno.|Il grafico richiede JavaScript. L'intervallo copre :days giorni.",
     'total_balance' => 'Saldo totale',
 
     'per_month_suffix' => '/mese',
     'confidence_chip_aria' => ":name, affidabilità :confidence — l'intervallo di proiezione è il :percent per cento della stima puntuale",
 
     'highlights_title' => 'Punti salienti della previsione',
-    'highlights_shortfall_aria' => ':count finestre di scoperto attive nei prossimi 30 giorni',
+    'highlights_shortfall_aria' => ':count finestra di scoperto attiva nei prossimi :days giorni|:count finestre di scoperto attive nei prossimi :days giorni',
     'dips_to' => ':name scende a :amount',
     'on_date_suffix' => ' il :date',
     'shortfall_window' => '1 finestra di scoperto attiva|:count finestre di scoperto attive',

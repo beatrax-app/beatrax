@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Visi konti',
 
     'horizon_label' => 'Prognozes horizonts',
-    'n_days' => ':days dienas',
+    'n_days' => ':days dienu|:days diena|:days dienas',
 
     'view_by_funder' => 'Skatīt pēc finansētāja',
     'view_by_funder_hint' => 'Apvienot ķēdēs atrisinātās sērijas uz to kontu, kas tās patiesībā apmaksā.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Izveidot scenāriju',
     'cancel' => 'Atcelt',
 
-    'aggregate_subtitle' => 'Kopējais atlikums visos kontos, prognozēts nākamajām :days dienām.',
+    'aggregate_subtitle' => 'Kopējais atlikums visos kontos, prognozēts nākamajām :days dienām.|Kopējais atlikums visos kontos, prognozēts nākamajai :days dienai.|Kopējais atlikums visos kontos, prognozēts nākamajām :days dienām.',
 
     'today' => 'šodien',
     'on_day' => 'dienā',
@@ -59,14 +59,14 @@ return [
     'at_day' => ':day. dienā',
 
     'updating' => 'Atjaunina',
-    'chart_noscript' => 'Diagrammai nepieciešams JavaScript. Diapazons aptver :days dienas.',
+    'chart_noscript' => 'Diagrammai nepieciešams JavaScript. Diapazons aptver :days dienu.|Diagrammai nepieciešams JavaScript. Diapazons aptver :days dienu.|Diagrammai nepieciešams JavaScript. Diapazons aptver :days dienas.',
     'total_balance' => 'Kopējais atlikums',
 
     'per_month_suffix' => '/mēn.',
     'confidence_chip_aria' => ':name, ticamība :confidence — prognozes diapazons ir :percent procenti no punkta novērtējuma',
 
     'highlights_title' => 'Prognozes svarīgākais',
-    'highlights_shortfall_aria' => 'Aktīvi iztrūkuma periodi nākamajās 30 dienās: :count',
+    'highlights_shortfall_aria' => ':count aktīvu iztrūkuma periodu nākamajās :days dienās|:count aktīvs iztrūkuma periods nākamajās :days dienās|:count aktīvi iztrūkuma periodi nākamajās :days dienās',
     'dips_to' => ':name nokrītas līdz :amount',
     'on_date_suffix' => ' — :date',
     'shortfall_window' => ':count aktīvu iztrūkuma periodu|:count aktīvs iztrūkuma periods|:count aktīvi iztrūkuma periodi',

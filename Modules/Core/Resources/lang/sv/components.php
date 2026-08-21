@@ -31,7 +31,7 @@ return [
     'file' => [
         'choose' => 'Välj fil',
         'none' => 'Ingen fil vald',
-        'count' => ':count filer valda',
+        'count' => 'Valda filer: :count',
     ],
 
     'amount_placeholder' => '0,00',

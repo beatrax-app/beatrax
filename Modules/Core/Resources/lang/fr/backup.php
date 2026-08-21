@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Utilise une phrase secrète d\'au moins :min caractères.',
+        'passphrase_min' => 'Utilise une phrase secrète d\'au moins :min caractère.|Utilise une phrase secrète d\'au moins :min caractères.',
         'passphrase_mismatch' => 'Les deux phrases secrètes ne correspondent pas.',
         'download_sqlite_only' => 'Le téléchargement chiffré n\'est disponible que sur la version SQLite.',
         'create_failed' => 'Impossible de créer la sauvegarde : :message',

@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Alle Konten',
 
     'horizon_label' => 'Prognosehorizont',
-    'n_days' => ':days Tage',
+    'n_days' => ':days Tag|:days Tage',
 
     'view_by_funder' => 'Nach Zahler anzeigen',
     'view_by_funder_hint' => 'Fasse kettenaufgelöste Reihen auf dem Konto zusammen, das sie tatsächlich bezahlt.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Szenario anlegen',
     'cancel' => 'Abbrechen',
 
-    'aggregate_subtitle' => 'Kombinierter Saldo über alle Konten, projiziert über die nächsten :days Tage.',
+    'aggregate_subtitle' => 'Kombinierter Saldo über alle Konten, projiziert über den nächsten :days Tag.|Kombinierter Saldo über alle Konten, projiziert über die nächsten :days Tage.',
 
     'today' => 'heute',
     'on_day' => 'an Tag',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'an Tag :day',
 
     'updating' => 'Wird aktualisiert',
-    'chart_noscript' => 'Das Diagramm benötigt JavaScript. Der Bereich umfasst :days Tage.',
+    'chart_noscript' => 'Das Diagramm benötigt JavaScript. Der Bereich umfasst :days Tag.|Das Diagramm benötigt JavaScript. Der Bereich umfasst :days Tage.',
     'total_balance' => 'Gesamtsaldo',
 
     'per_month_suffix' => '/Mon.',
     'confidence_chip_aria' => ':name, Konfidenz :confidence — der Projektionsbereich beträgt :percent Prozent der Punktschätzung',
 
     'highlights_title' => 'Prognose-Highlights',
-    'highlights_shortfall_aria' => ':count aktive Unterdeckungsfenster in den nächsten 30 Tagen',
+    'highlights_shortfall_aria' => ':count aktives Unterdeckungsfenster in den nächsten :days Tagen|:count aktive Unterdeckungsfenster in den nächsten :days Tagen',
     'dips_to' => ':name fällt auf :amount',
     'on_date_suffix' => ' am :date',
     'shortfall_window' => '1 aktives Unterdeckungsfenster|:count aktive Unterdeckungsfenster',

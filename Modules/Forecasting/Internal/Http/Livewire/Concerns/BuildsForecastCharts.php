@@ -11,7 +11,6 @@ use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use stdClass;
 
-// Split out of ForecastPage to keep it under the method-count ceiling.
 trait BuildsForecastCharts
 {
     private const NEUTRAL_INK = '#0F172A';

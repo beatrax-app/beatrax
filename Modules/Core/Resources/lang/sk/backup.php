@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Použi prístupovú frázu s dĺžkou aspoň :min znakov.',
+        'passphrase_min' => 'Použi prístupovú frázu s dĺžkou aspoň :min znak.|Použi prístupovú frázu s dĺžkou aspoň :min znaky.|Použi prístupovú frázu s dĺžkou aspoň :min znakov.',
         'passphrase_mismatch' => 'Zadané prístupové frázy sa nezhodujú.',
         'download_sqlite_only' => 'Šifrované sťahovanie je dostupné len vo verzii so SQLite.',
         'create_failed' => 'Zálohu sa nepodarilo vytvoriť: :message',

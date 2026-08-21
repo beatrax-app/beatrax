@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Forecasting\Internal\Http\Livewire\ForecastPage')
 {{--
     /forecast page — the cash-flow projection surface: a baseline
     balance range, a horizon control, and side-by-side scenario
@@ -73,7 +74,7 @@
                     id="forecast-account-tab-all"
                     aria-controls="forecast-account-panel"
                     tabindex="{{ $isAllAccountsView ? '0' : '-1' }}"
-                    wire:click="setAccount('all')"
+                    wire:click="setAccount('{{ ForecastPage::ALL_ACCOUNTS }}')"
                 >{{ Lang::get('forecasting::forecast.all_accounts') }}</x-core::tab>
                 @foreach ($accounts as $account)
                     <x-core::tab
@@ -110,7 +111,7 @@
                                 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900' => $horizon === $option,
                                 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100' => $horizon !== $option,
                             ])
-                        >{{ Lang::get('forecasting::forecast.n_days', ['days' => $option]) }}</button>
+                        >{{ Lang::choice('forecasting::forecast.n_days', $option, ['days' => $option]) }}</button>
                     @endforeach
                 </div>
 
@@ -209,7 +210,7 @@
                     <header class="mb-3">
                         <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.all_accounts') }} · {{ Lang::get('forecasting::forecast.baseline') }}</h2>
                         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            {{ Lang::get('forecasting::forecast.aggregate_subtitle', ['days' => $horizon]) }}
+                            {{ Lang::choice('forecasting::forecast.aggregate_subtitle', $horizon, ['days' => $horizon]) }}
                         </p>
                     </header>
 

@@ -294,7 +294,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Tax/Public/Dto/TaxTagData.php',
         'Modules/Tax/Public/Dto/TaxYearData.php',
         'Modules/Tax/Public/Dto/TaxYearSummary.php',
-        'Modules/Tax/Public/Enums/TaxCountry.php',
         'Modules/Tax/Public/Events/TransactionTagged.php',
         'Modules/Tax/Public/Events/TransactionUntagged.php',
         'Modules/Tax/Public/Services/TaxCsvExporter.php',

@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Alle konti',
 
     'horizon_label' => 'Prognosehorisont',
-    'n_days' => ':days dage',
+    'n_days' => ':days dag|:days dage',
 
     'view_by_funder' => 'Vis pr. betalende konto',
     'view_by_funder_hint' => 'Saml serier, der er løst via kæder, på den konto, der reelt betaler dem.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Opret scenarie',
     'cancel' => 'Annullér',
 
-    'aggregate_subtitle' => 'Samlet saldo på tværs af alle konti, fremskrevet over de næste :days dage.',
+    'aggregate_subtitle' => 'Samlet saldo på tværs af alle konti, fremskrevet over den næste :days dag.|Samlet saldo på tværs af alle konti, fremskrevet over de næste :days dage.',
 
     'today' => 'i dag',
     'on_day' => 'på dag',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'på dag :day',
 
     'updating' => 'Opdaterer',
-    'chart_noscript' => 'Diagrammet kræver JavaScript. Intervallet dækker :days dage.',
+    'chart_noscript' => 'Diagrammet kræver JavaScript. Intervallet dækker :days dag.|Diagrammet kræver JavaScript. Intervallet dækker :days dage.',
     'total_balance' => 'Samlet saldo',
 
     'per_month_suffix' => '/md.',
     'confidence_chip_aria' => ':name, pålidelighed :confidence — prognoseintervallet er :percent procent af punktestimatet',
 
     'highlights_title' => 'Prognosen kort fortalt',
-    'highlights_shortfall_aria' => ':count aktive underskudsperioder i de næste 30 dage',
+    'highlights_shortfall_aria' => ':count aktiv underskudsperiode i de næste :days dage|:count aktive underskudsperioder i de næste :days dage',
     'dips_to' => ':name falder til :amount',
     'on_date_suffix' => ' den :date',
     'shortfall_window' => '1 aktiv underskudsperiode|:count aktive underskudsperioder',

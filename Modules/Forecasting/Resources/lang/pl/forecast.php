@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Wszystkie konta',
 
     'horizon_label' => 'Horyzont prognozy',
-    'n_days' => ':days dni',
+    'n_days' => ':days dzień|:days dni|:days dni',
 
     'view_by_funder' => 'Pokaż według płatnika',
     'view_by_funder_hint' => 'Zwiń serie rozwiązane łańcuchowo na konto, które faktycznie za nie płaci.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Utwórz scenariusz',
     'cancel' => 'Anuluj',
 
-    'aggregate_subtitle' => 'Łączne saldo wszystkich kont, prognozowane na najbliższe :days dni.',
+    'aggregate_subtitle' => 'Łączne saldo wszystkich kont, prognozowane na najbliższy :days dzień.|Łączne saldo wszystkich kont, prognozowane na najbliższe :days dni.|Łączne saldo wszystkich kont, prognozowane na najbliższe :days dni.',
 
     'today' => 'dziś',
     'on_day' => 'w dniu',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'w dniu :day',
 
     'updating' => 'Aktualizowanie',
-    'chart_noscript' => 'Wykres wymaga JavaScriptu. Zakres obejmuje :days dni.',
+    'chart_noscript' => 'Wykres wymaga JavaScriptu. Zakres obejmuje :days dzień.|Wykres wymaga JavaScriptu. Zakres obejmuje :days dni.|Wykres wymaga JavaScriptu. Zakres obejmuje :days dni.',
     'total_balance' => 'Saldo łączne',
 
     'per_month_suffix' => '/mies.',
     'confidence_chip_aria' => ':name, pewność :confidence — zakres prognozy to :percent procent estymacji punktowej',
 
     'highlights_title' => 'Najważniejsze z prognozy',
-    'highlights_shortfall_aria' => 'Aktywne okna niedoboru w ciągu najbliższych 30 dni: :count',
+    'highlights_shortfall_aria' => ':count aktywne okno niedoboru w ciągu najbliższych :days dni|:count aktywne okna niedoboru w ciągu najbliższych :days dni|:count aktywnych okien niedoboru w ciągu najbliższych :days dni',
     'dips_to' => ':name spada do :amount',
     'on_date_suffix' => ' dnia :date',
     'shortfall_window' => '1 aktywne okno niedoboru|:count aktywne okna niedoboru|:count aktywnych okien niedoboru',

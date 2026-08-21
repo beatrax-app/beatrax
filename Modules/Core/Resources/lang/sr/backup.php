@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Koristi pristupnu frazu od najmanje :min znakova.',
+        'passphrase_min' => 'Koristi pristupnu frazu od najmanje :min znak.|Koristi pristupnu frazu od najmanje :min znaka.|Koristi pristupnu frazu od najmanje :min znakova.',
         'passphrase_mismatch' => 'Dve pristupne fraze se ne poklapaju.',
         'download_sqlite_only' => 'Šifrovano preuzimanje dostupno je samo u SQLite verziji.',
         'create_failed' => 'Rezervna kopija nije mogla da se napravi: :message',

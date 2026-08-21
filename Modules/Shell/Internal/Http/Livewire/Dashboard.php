@@ -22,7 +22,6 @@ final class Dashboard extends Component
 
     public bool $failedChainResolutionExists = false;
 
-    // Mirrors session key reauth_toast_dismissed_at; synchronised at render time.
     public bool $reauthToastDismissed = false;
 
     public function previousPeriod(PeriodQuery $periods): void
@@ -85,7 +84,6 @@ final class Dashboard extends Component
         $summary = $positionSummary->summary;
         $tiles = $positionSummary->tilesByCurrency;
 
-        // Null hides the tile entirely — no connected inboxes.
         $emailScanHealth = $positionSummary->emailScanHealth;
 
         $reauthInboxCount = $db->connection()
@@ -110,7 +108,6 @@ final class Dashboard extends Component
             'emailScanHealth' => $emailScanHealth,
             'reauthInboxCount' => $reauthInboxCount,
             'reauthToastDismissed' => $this->reauthToastDismissed,
-            // Non-developers get queue messaging via SystemAlertsBanner instead.
             'isDeveloper' => $user->is_developer === true,
         ]);
     }

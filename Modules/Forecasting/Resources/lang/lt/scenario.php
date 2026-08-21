@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Scenarijaus pavadinimas negali būti tuščias.',
-        'name_too_long' => 'Scenarijaus pavadinimas turi būti ne ilgesnis nei :max simbolių.',
+        'name_too_long' => 'Scenarijaus pavadinimas turi būti ne ilgesnis nei :max simbolis.|Scenarijaus pavadinimas turi būti ne ilgesnis nei :max simboliai.|Scenarijaus pavadinimas turi būti ne ilgesnis nei :max simbolių.',
         'name_taken' => 'Scenarijus tokiu pavadinimu jau yra.',
         'pick_kind_first' => 'Pirmiausia pasirink pakeitimo tipą.',
         'amount_positive' => 'Suma turi būti teigiamas skaičius.',

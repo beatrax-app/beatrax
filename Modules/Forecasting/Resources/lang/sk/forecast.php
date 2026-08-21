@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Všetky účty',
 
     'horizon_label' => 'Horizont prognózy',
-    'n_days' => ':days dní',
+    'n_days' => ':days deň|:days dni|:days dní',
 
     'view_by_funder' => 'Zobraziť podľa platiteľa',
     'view_by_funder_hint' => 'Zlúči série rozpoznané v reťazcoch na účet, ktorý ich naozaj platí.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Vytvoriť scenár',
     'cancel' => 'Zrušiť',
 
-    'aggregate_subtitle' => 'Súhrnný zostatok všetkých účtov, prognóza na najbližších :days dní.',
+    'aggregate_subtitle' => 'Súhrnný zostatok všetkých účtov, prognóza na najbližší :days deň.|Súhrnný zostatok všetkých účtov, prognóza na najbližšie :days dni.|Súhrnný zostatok všetkých účtov, prognóza na najbližších :days dní.',
 
     'today' => 'dnes',
     'on_day' => 'v deň',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'v deň :day',
 
     'updating' => 'Aktualizuje sa',
-    'chart_noscript' => 'Graf vyžaduje JavaScript. Rozsah pokrýva :days dní.',
+    'chart_noscript' => 'Graf vyžaduje JavaScript. Rozsah pokrýva :days deň.|Graf vyžaduje JavaScript. Rozsah pokrýva :days dni.|Graf vyžaduje JavaScript. Rozsah pokrýva :days dní.',
     'total_balance' => 'Celkový zostatok',
 
     'per_month_suffix' => '/mes.',
     'confidence_chip_aria' => ':name, spoľahlivosť :confidence — rozsah prognózy je :percent percent bodového odhadu',
 
     'highlights_title' => 'Hlavné body prognózy',
-    'highlights_shortfall_aria' => 'Aktívne okná nedostatku v najbližších 30 dňoch: :count',
+    'highlights_shortfall_aria' => ':count aktívne okno nedostatku v najbližších :days dňoch|:count aktívne okná nedostatku v najbližších :days dňoch|:count aktívnych okien nedostatku v najbližších :days dňoch',
     'dips_to' => ':name klesá na :amount',
     'on_date_suffix' => ' dňa :date',
     'shortfall_window' => '1 aktívne okno nedostatku|:count aktívne okná nedostatku|:count aktívnych okien nedostatku',

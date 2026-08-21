@@ -15,6 +15,14 @@
 @source "../../vendor/livewire/flux/stubs/resources/views";
 
 /*
+ * `.docs/` is prose about this codebase, and v4's automatic detection scans
+ * it: a utility name written inside a sentence became a real declaration in
+ * the bundle, and `px-[…left]` shipped as `padding-inline:…left`. Documenting
+ * a class must not emit it.
+ */
+@source not "../../.docs";
+
+/*
  * Class-strategy dark variant (Tailwind v4 is CSS-first). The `dark`
  * class is toggled on `<html>` server-side from the user's `theme`
  * preference; `dark:` utilities apply to any element under it.

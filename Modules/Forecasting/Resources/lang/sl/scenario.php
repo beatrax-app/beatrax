@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Ime scenarija ne sme biti prazno.',
-        'name_too_long' => 'Ime scenarija sme imeti največ :max znakov.',
+        'name_too_long' => 'Ime scenarija sme imeti največ :max znak.|Ime scenarija sme imeti največ :max znaka.|Ime scenarija sme imeti največ :max znake.|Ime scenarija sme imeti največ :max znakov.',
         'name_taken' => 'Scenarij s tem imenom že obstaja.',
         'pick_kind_first' => 'Najprej izberi vrsto spremembe.',
         'amount_positive' => 'Znesek mora biti pozitivno število.',

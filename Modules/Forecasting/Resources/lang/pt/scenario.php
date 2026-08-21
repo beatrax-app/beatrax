@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'O nome do cenário não pode estar vazio.',
-        'name_too_long' => 'O nome do cenário não pode ter mais de :max caracteres.',
+        'name_too_long' => 'O nome do cenário não pode ter mais de :max carácter.|O nome do cenário não pode ter mais de :max caracteres.',
         'name_taken' => 'Já existe um cenário com esse nome.',
         'pick_kind_first' => 'Escolhe primeiro um tipo de modificação.',
         'amount_positive' => 'O montante tem de ser um número positivo.',

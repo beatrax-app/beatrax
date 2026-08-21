@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Scenārija nosaukums nevar būt tukšs.',
-        'name_too_long' => 'Scenārija nosaukumā jābūt ne vairāk kā :max rakstzīmēm.',
+        'name_too_long' => 'Scenārija nosaukumā jābūt ne vairāk kā :max rakstzīmju.|Scenārija nosaukumā jābūt ne vairāk kā :max rakstzīmei.|Scenārija nosaukumā jābūt ne vairāk kā :max rakstzīmēm.',
         'name_taken' => 'Scenārijs ar šādu nosaukumu jau pastāv.',
         'pick_kind_first' => 'Vispirms izvēlieties korekcijas veidu.',
         'amount_positive' => 'Summai jābūt pozitīvam skaitlim.',
