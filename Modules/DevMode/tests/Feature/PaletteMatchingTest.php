@@ -151,3 +151,17 @@ it('folds accents so a label can be found by typing it plainly', function (): vo
     expect($answers['rozpoc'][0] ?? '(nothing)')->toBe('Rozpočty');
     expect($answers['sporici'][0] ?? '(nothing)')->toBe('Spořicí obálky');
 })->skip(! paletteMatchIsRunnable(), 'node_modules is not installed, so the palette module cannot be run.');
+
+// The empty-state line counted navigation results and transaction hits but not
+// entity hits, so a query whose only match was a category — the common case for
+// a reader typing a category name — rendered "No results." directly beneath the
+// category it had just found.
+it('does not say there are no results while an entity result is on screen', function (): void {
+    $markup = (string) file_get_contents(
+        base_path('Modules/DevMode/Resources/views/livewire/command-palette-modal.blade.php'),
+    );
+
+    expect($markup)->toContain(
+        'results.length === 0 && serverTransactionHits.length === 0 && serverEntityHits.length === 0',
+    );
+});
