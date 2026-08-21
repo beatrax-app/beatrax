@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
-use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Public\Events\IcsStatementReady;
+use Modules\Notifications\Internal\Support\CopyLine;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
+use Modules\Notifications\Internal\Support\NotificationCopySpec;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Psr\Log\LoggerInterface;
@@ -32,13 +33,17 @@ final class PersistIcsStatementReady
         $deepLinkRoute = $this->resolveDeepLinkRoute();
 
         try {
-            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
+            $copy = NotificationCopySpec::of(
+                CopyLine::of('notifications::copy.title.ics_statement_ready'),
+                CopyLine::of('notifications::copy.body.ics_statement_ready'),
+            );
+
+            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => NotificationDraft::fromCopy(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_ICS_STATEMENT_READY,
                 subjectKey: 'ics-card',
                 occurrence: $event->internalDate->format('Y-m-d'),
-                title: Lang::get('notifications::copy.title.ics_statement_ready'),
-                body: Lang::get('notifications::copy.body.ics_statement_ready'),
+                copy: $copy,
                 params: ['target_kind' => 'ics-import'],
                 deepLinkRoute: $deepLinkRoute,
             ));

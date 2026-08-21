@@ -28,9 +28,13 @@ final class NotificationWriter
     {
         $id = $this->keys->derive($draft->userId, $draft->triggerType, $draft->subjectKey, $draft->occurrence);
         $now = $this->clock->now()->toDateTimeString();
-        $paramsJson = $draft->params !== null
-            ? json_encode($draft->params, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)
-            : null;
+        $params = $draft->params ?? [];
+        if ($draft->copy !== null) {
+            $params[NotificationCopySpec::PARAMS_KEY] = $draft->copy->toArray();
+        }
+        $paramsJson = $params === []
+            ? null
+            : json_encode($params, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 
         $attrs = [
             'id' => $id,

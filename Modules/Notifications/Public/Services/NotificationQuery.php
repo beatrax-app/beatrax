@@ -11,6 +11,7 @@ use Illuminate\Database\Query\Builder;
 use JsonException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Notifications\Internal\Support\NotificationCopySpec;
 use Modules\Notifications\Public\Dto\NotificationDto;
 use Modules\Notifications\Public\NotificationCopy;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -149,12 +150,18 @@ final readonly class NotificationQuery
         $decrypted = $this->codec->decryptRow('notifications', [
             'title' => self::toString($row->title ?? null),
             'body' => self::toString($row->body ?? null),
+            'params' => self::toString($row->params ?? null),
             'trigger_type' => self::toString($row->trigger_type ?? null),
         ], $user->id, $this->session);
 
-        $title = self::toString($decrypted['title'] ?? null);
-        $body = self::toString($decrypted['body'] ?? null);
         $triggerType = self::toString($decrypted['trigger_type'] ?? null);
+        $copy = self::copySpec($decrypted['params'] ?? null);
+
+        // Rows written before the copy spec existed kept only their rendered
+        // sentence, and the values it was rendered from are gone. They stay in
+        // the language they were written in until the 365-day sweep takes them.
+        $title = $copy?->title() ?? self::toString($decrypted['title'] ?? null);
+        $body = $copy?->body() ?? self::toString($decrypted['body'] ?? null);
 
         $chip = NotificationCopy::typeChip($triggerType);
 
@@ -173,6 +180,23 @@ final readonly class NotificationQuery
             glyph: $chip['glyph'],
             typeWord: $chip['word'],
         );
+    }
+
+    private static function copySpec(mixed $paramsJson): ?NotificationCopySpec
+    {
+        if (! is_string($paramsJson) || $paramsJson === '') {
+            return null;
+        }
+
+        try {
+            $params = json_decode($paramsJson, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
+
+        return is_array($params)
+            ? NotificationCopySpec::fromArray($params[NotificationCopySpec::PARAMS_KEY] ?? null)
+            : null;
     }
 
     private static function toCarbon(mixed $value): CarbonImmutable

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
-use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Notifications\Internal\Support\CopyLine;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
+use Modules\Notifications\Internal\Support\NotificationCopySpec;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Position\Public\Dto\PositionSummaryDto;
@@ -29,15 +30,19 @@ final class PersistPositionDigest
     public function handle(PositionDigestDue $event): void
     {
         try {
-            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
+            $copy = NotificationCopySpec::make(
+                CopyLine::of($event->cadence === 'daily'
+                    ? 'notifications::copy.title.position_digest_daily'
+                    : 'notifications::copy.title.position_digest_weekly'),
+                $this->composeBody($event->position),
+            );
+
+            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => NotificationDraft::fromCopy(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST,
                 subjectKey: 'position',
                 occurrence: $event->occurrence,
-                title: $event->cadence === 'daily'
-                    ? Lang::get('notifications::copy.title.position_digest_daily')
-                    : Lang::get('notifications::copy.title.position_digest_weekly'),
-                body: $this->composeBody($event->position),
+                copy: $copy,
                 params: ['target_kind' => 'dashboard'],
                 deepLinkRoute: $this->urls->route('dashboard'),
             ));
@@ -53,11 +58,14 @@ final class PersistPositionDigest
         }
     }
 
-    // One-line body summarising $position. Every amount is formatted
-    // through the Money value object, never a hand-formatted minor-unit
-    // value. When nothing is notable, the body says so plainly rather
-    // than emitting empty or generic filler.
-    private function composeBody(PositionSummaryDto $position): string
+    // One-line body summarising $position, as the sentences it is built from
+    // rather than the built sentence. Every amount is formatted through the
+    // Money value object, never a hand-formatted minor-unit value. When
+    // nothing is notable, the body says so plainly rather than emitting filler.
+    /**
+     * @return list<CopyLine>
+     */
+    private function composeBody(PositionSummaryDto $position): array
     {
         $summary = $position->summary;
 
@@ -67,10 +75,10 @@ final class PersistPositionDigest
             && ! $position->shortfallAhead;
 
         if ($nothingNotable) {
-            return Lang::get('notifications::copy.digest.nothing_notable');
+            return [CopyLine::of('notifications::copy.digest.nothing_notable')];
         }
 
-        $parts = [Lang::get('notifications::copy.digest.flow', [
+        $parts = [CopyLine::of('notifications::copy.digest.flow', [
             'in' => $summary->inflow->format(),
             'out' => $summary->outflow->format(),
             'net' => $summary->net->format(),
@@ -86,19 +94,18 @@ final class PersistPositionDigest
                 }
             }
             if ($overBudgetMinor > 0) {
-                $parts[] = Lang::get('notifications::copy.digest.over_budget', ['amount' => Money::ofMinor($overBudgetMinor, $currency)->format()]);
+                $parts[] = CopyLine::of('notifications::copy.digest.over_budget', ['amount' => Money::ofMinor($overBudgetMinor, $currency)->format()]);
             }
         }
 
         if ($position->upcoming !== []) {
-            $count = count($position->upcoming);
-            $parts[] = Lang::choice('notifications::copy.digest.payments_due', $count, ['count' => $count]);
+            $parts[] = CopyLine::plural('notifications::copy.digest.payments_due', count($position->upcoming));
         }
 
         if ($position->shortfallAhead) {
-            $parts[] = Lang::get('notifications::copy.digest.shortfall');
+            $parts[] = CopyLine::of('notifications::copy.digest.shortfall');
         }
 
-        return implode(' ', $parts);
+        return $parts;
     }
 }

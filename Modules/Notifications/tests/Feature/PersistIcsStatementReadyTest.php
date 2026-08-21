@@ -68,12 +68,15 @@ it('deep-links to the guided ICS import anchor and carries no transaction data i
 
     expect($row)->not->toBeNull();
     $params = json_decode((string) $row->params, true);
-    expect($params)->toBe(['target_kind' => 'ics-import']);
+    expect($params['target_kind'] ?? null)->toBe('ics-import');
 
     // The nudge pipeline is metadata-only end to end, so no amount or currency
-    // should ever have reached the stored body.
+    // should ever have reached the stored body — nor the copy spec beside it,
+    // which now carries every value the body is re-rendered from.
     expect((string) $row->body)->not->toContain('EUR');
     expect((string) $row->body)->not->toContain('€');
+    expect((string) $row->params)->not->toContain('EUR');
+    expect((string) $row->params)->not->toContain('€');
 });
 
 it('dedups a same-DAY re-dispatch but fires a second nudge for a different-day statement in the same month', function (): void {
