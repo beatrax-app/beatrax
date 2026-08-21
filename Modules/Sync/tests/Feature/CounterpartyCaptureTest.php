@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Community\Public\Services\ClassificationRuleProvider;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Ledger\Models\Account;
@@ -137,9 +138,14 @@ it('sends the metadata a rule match produced, where website and logo_url live', 
         'default_currency' => 'EUR',
     ]);
 
+    // The government tier stays silent until the reader names a country, so
+    // without this the rule below is never consulted and the op carries the
+    // empty metadata of an unresolved counterparty.
+    app(UserCountry::class)->store((int) $user->id, 'nl');
+
     // A government rule match is the path that produces metadata; the merchant
     // path passes [] and would prove nothing.
-    $rules = app(ClassificationRuleProvider::class)->governmentRules();
+    $rules = app(ClassificationRuleProvider::class)->governmentRules('nl');
     $plain = null;
     foreach ($rules as $rule) {
         if (! str_starts_with($rule->pattern, 'regex:')) {
