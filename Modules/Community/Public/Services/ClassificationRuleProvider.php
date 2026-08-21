@@ -25,33 +25,50 @@ final class ClassificationRuleProvider
     /**
      * @return list<ClassificationRule>
      */
-    public function governmentRules(): array
+    public function governmentRules(?string $region = null): array
     {
-        return $this->rulesForType(self::TYPE_GOVERNMENT);
+        return $this->rulesForType(self::TYPE_GOVERNMENT, $region);
     }
 
     /**
      * @return list<ClassificationRule>
      */
-    public function bankFeeRules(): array
+    public function bankFeeRules(?string $region = null): array
     {
-        return $this->rulesForType(self::TYPE_BANK_FEES);
+        return $this->rulesForType(self::TYPE_BANK_FEES, $region);
     }
 
     /**
      * @return list<ClassificationRule>
      */
-    private function rulesForType(string $type): array
+    // A rule outside the reader's own country classified a Dutch health insurer
+    // as a Belgian agency, because ZORGPREMIE is the ordinary Dutch word for a
+    // health-insurance premium and every region's file was loaded at once. A
+    // null region keeps that behaviour, for a reader who has named no country.
+    /**
+     * @return list<ClassificationRule>
+     */
+    private function rulesForType(string $type, ?string $region = null): array
     {
-        if (isset($this->cache[$type])) {
-            return $this->cache[$type];
+        $wanted = $region === null || $region === '' ? null : strtoupper($region);
+        $key = $type.'|'.($wanted ?? '*');
+
+        if (isset($this->cache[$key])) {
+            return $this->cache[$key];
+        }
+
+        if ($wanted !== null) {
+            return $this->cache[$key] = array_values(array_filter(
+                $this->rulesForType($type),
+                static fn (ClassificationRule $rule): bool => $rule->region === $wanted,
+            ));
         }
 
         $dir = $this->reader->resolve('community.corpus.root', 'resources/corpus').'/'.$type;
         if (! is_dir($dir)) {
             $this->logger->warning('ClassificationRuleProvider: corpus directory is missing.', ['dir' => $dir]);
 
-            return $this->cache[$type] = [];
+            return $this->cache[$key] = [];
         }
 
         $files = glob($dir.'/*.yaml');
@@ -66,7 +83,7 @@ final class ClassificationRuleProvider
             }
         }
 
-        return $this->cache[$type] = $rules;
+        return $this->cache[$key] = $rules;
     }
 
     /**
