@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Za týmto úsekom sa nenašiel žiadny finančný reťazec.',
 
-    'covers_charges' => 'Pokrýva platby ICS: :count',
+    'covers_charges' => 'Pokrýva :count platbu ICS|Pokrýva :count platby ICS|Pokrýva :count platieb ICS',
     'no_ics_charges' => 'V tomto zúčtovaní nie sú žiadne platby ICS',
     'show_more_fanout' => 'Zobraziť ďalšie: :count · :shown z :total',
 

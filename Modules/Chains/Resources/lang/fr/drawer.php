@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Aucune chaîne de financement trouvée au-delà de ce maillon.',
 
-    'covers_charges' => 'Couvre :count débits ICS',
+    'covers_charges' => 'Couvre :count débit ICS|Couvre :count débits ICS',
     'no_ics_charges' => 'Aucun débit ICS dans ce règlement',
     'show_more_fanout' => 'Afficher :count de plus · :shown sur :total',
 

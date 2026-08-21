@@ -6,9 +6,10 @@ return [
     'page_title' => 'Import on lõpetatud',
     'heading' => 'Import on lõpetatud',
 
-    'summary' => 'Imporditud :inserted tehingut · vahele jäetud :duplicates duplikaati',
+    'summary' => 'Imporditud :count tehing|Imporditud :count tehingut',
+    'summary_duplicates' => ' · vahele jäetud :count duplikaat| · vahele jäetud :count duplikaati',
     'summary_enriched' => ' · :count täiendatud',
-    'summary_errors' => ' · :count viga',
+    'summary_errors' => ' · :count viga| · :count viga',
 
     'show_duplicates' => 'Näita vahele jäetud duplikaate (:count)',
     'duplicates_help' => 'Duplikaadid on read, mis on sinu pearaamatus juba olemas — need jäetakse uuesti importimisel vaikselt vahele.',
@@ -16,4 +17,12 @@ return [
     'errors_help' => 'Vead on read, mida ei õnnestunud töödelda; neid ei lisatud sinu pearaamatusse.',
 
     'upload_another' => 'Laadi üles järgmine väljavõte',
+
+    'issues' => [
+        'row' => 'Rida :row: :reason',
+        'file' => 'Faili ei õnnestunud tervikuna lugeda: :reason',
+        'duplicate' => 'Rida :row oli juba sinu pearaamatus.',
+        'more' => '+ :count pole loetletud',
+        'unknown_reason' => 'Põhjust ei salvestatud.',
+    ],
 ];

@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Der er intet at låse for denne kontoudtogsdato.',
-        'complete' => 'Afstemningen er færdig — :count rækker er låst.',
+        'complete' => 'Afstemningen er færdig — :count række er låst.|Afstemningen er færdig — :count rækker er låst.',
     ],
 ];

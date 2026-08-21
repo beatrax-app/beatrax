@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Odblokuj aplikację, aby zaimportować: klucza sprzedawcy nie można obliczyć, gdy jest zablokowana.',
+        'file_unreadable' => 'Nie udało się odczytać tego pliku.',
         'iban_not_in_preview' => 'Ten IBAN nie należy do bieżącego podglądu.',
+        'row_unreadable' => 'Nie udało się odczytać tego wiersza.',
+        'unknown_account' => 'Ten wiersz należy do konta, któremu nie nadano jeszcze nazwy.',
+    ],
+
+    'failed' => [
+        'heading' => 'Nie udało się odczytać tego pliku',
+        'no_rows' => 'W tym pliku nie znaleziono transakcji, więc nie ma czego importować.',
+        'nothing_read' => 'Niczego w tym pliku nie udało się odczytać jako transakcji, więc nie ma czego importować.',
+        'every_row' => 'Żadnego wiersza w tym pliku nie udało się odczytać, więc nie ma czego importować. Każdy wiersz jest poniżej wraz z powodem.',
+        'likely_cause' => 'Najczęściej wiersz nagłówka nie pasuje do wybranego źródła. Sprawdź bank i format na ekranie wysyłania albo pobierz wyciąg z banku ponownie.',
+        'truncated_heading' => 'Udało się odczytać tylko część tego pliku',
+        'truncated' => 'Odczyt zatrzymał się w połowie pliku. Wszystko po tym miejscu nie zostało odczytane i nie zostanie zaimportowane.',
+        'some_rows' => 'Niektórych wierszy nie udało się odczytać. Są oznaczone poniżej i zostaną pominięte; potwierdzenie zaimportuje resztę.',
+        'detail_label' => 'Co zgłosił analizator:',
+        'rows_read_label' => 'Odczytane wiersze',
+        'rows_skipped_label' => 'Pominięte wiersze',
     ],
 ];

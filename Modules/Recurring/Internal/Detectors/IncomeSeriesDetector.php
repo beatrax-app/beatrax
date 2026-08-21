@@ -12,6 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Models\RecurringSeries;
@@ -46,6 +47,7 @@ final class IncomeSeriesDetector implements SeriesDetector
         private readonly OccurrenceWriter $occurrences,
         private readonly SeriesRefresher $refresher,
         private readonly MerchantDisplayName $merchantNames,
+        private readonly CounterpartyKey $counterpartyKey,
     ) {}
 
     public function detectForUser(User $user, ?Session $session = null): void
@@ -96,10 +98,14 @@ final class IncomeSeriesDetector implements SeriesDetector
             }
 
             // IBAN first: banks rewrite the free-form description, the SEPA
-            // IBAN is constant. The class docblock's page covers what deriving
-            // a grouping key from plaintext costs.
-            $counterpartyKey = $iban !== '' ? $iban : $counterparty;
-            if ($counterpartyKey === '') {
+            // IBAN is constant. Keyed before it becomes a stored grouping key —
+            // a decrypted IBAN written verbatim put the salary payer, the
+            // benefits agency and the pension provider back in the clear.
+            $counterpartyKey = $iban !== ''
+                ? $this->counterpartyKey->forIban($iban, (int) $user->id)
+                : $counterparty;
+
+            if ($counterpartyKey === '' || $counterpartyKey === CounterpartyKey::NONE) {
                 continue;
             }
 

@@ -108,7 +108,6 @@ final class ChainTreeWalker
         $fromId = self::toInt($link->from_transaction_id);
         $toId = self::toInt($link->to_transaction_id);
 
-        // The partner is whichever side is not already on the frontier.
         return isset($visited[$fromId]) ? $toId : $fromId;
     }
 

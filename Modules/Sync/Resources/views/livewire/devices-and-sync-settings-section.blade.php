@@ -86,7 +86,7 @@
             @if ($encryptionOn)
                 <x-core::setting-row
                     :label="Lang::get('sync::devices.encrypted_at_rest')"
-                    :description="Lang::get('sync::devices.encrypted_at_rest_help')"
+                    :description="Lang::get('sync::devices.encrypted_at_rest_scope')"
                 >
                     <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                         {{ Lang::get('sync::devices.on') }}

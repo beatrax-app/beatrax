@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Desbloquea la aplicación para importar: la clave de comercio no se puede calcular mientras está bloqueada.',
+        'file_unreadable' => 'No se ha podido leer este archivo.',
         'iban_not_in_preview' => 'Este IBAN no forma parte de la vista previa actual.',
+        'row_unreadable' => 'No se ha podido leer esta fila.',
+        'unknown_account' => 'Esta fila pertenece a una cuenta a la que aún no has puesto nombre.',
+    ],
+
+    'failed' => [
+        'heading' => 'No se ha podido leer este archivo',
+        'no_rows' => 'No se han encontrado transacciones en este archivo, así que no hay nada que importar.',
+        'nothing_read' => 'Nada de este archivo se ha podido leer como transacción, así que no hay nada que importar.',
+        'every_row' => 'Ninguna fila de este archivo se ha podido leer, así que no hay nada que importar. Cada una aparece abajo con su motivo.',
+        'likely_cause' => 'Lo habitual es que la fila de cabecera no coincida con el origen que elegiste. Revisa el banco y el formato en la pantalla de subida, o vuelve a descargar el extracto de tu banco.',
+        'truncated_heading' => 'Solo se ha podido leer parte de este archivo',
+        'truncated' => 'La lectura se detuvo a mitad del archivo. Todo lo posterior no se ha leído y no se importará.',
+        'some_rows' => 'Algunas filas no se han podido leer. Están marcadas abajo y se omitirán; al confirmar se importa el resto.',
+        'detail_label' => 'Lo que informó el analizador:',
+        'rows_read_label' => 'Filas leídas',
+        'rows_skipped_label' => 'Filas omitidas',
     ],
 ];

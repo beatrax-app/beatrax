@@ -118,7 +118,7 @@ final class AliasesSettingsPage extends Component
     public function updatedEditingPattern(AliasMatchPreviewQuery $previewQuery, CurrentUser $currentUser): void
     {
         $value = trim($this->editingPattern);
-        if (mb_strlen($value) < 3) {
+        if (mb_strlen($value) < AliasMatchPreviewQuery::MIN_PATTERN_LENGTH) {
             $this->previewResult = [
                 'total' => 0,
                 'first5' => [],
@@ -150,6 +150,16 @@ final class AliasesSettingsPage extends Component
         $value = trim($this->editingPattern);
         if ($value === '') {
             $this->flashMessage = Lang::get('import::aliases.errors.pattern_empty');
+
+            return;
+        }
+
+        // The same floor the preview enforces. Below it the reader is shown
+        // "too short to test" and could still save, so the one pattern nobody
+        // has ever seen the effect of was the only one that could be saved
+        // blind.
+        if (mb_strlen($value) < AliasMatchPreviewQuery::MIN_PATTERN_LENGTH) {
+            $this->flashMessage = Lang::get('import::aliases.errors.too_short');
 
             return;
         }
@@ -405,7 +415,7 @@ final class AliasesSettingsPage extends Component
         );
 
         $changed = $importer->apply($currentUser->user(), $entries, $this->conflictResolutions);
-        $this->flashMessage = Lang::get('import::aliases.flash.imported', ['count' => $changed]);
+        $this->flashMessage = Lang::choice('import::aliases.flash.imported', $changed);
         $this->resetImportState();
     }
 

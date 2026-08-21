@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Desbloqueie a aplicação para importar: a chave do comerciante não pode ser calculada enquanto estiver bloqueada.',
+        'file_unreadable' => 'Não foi possível ler este ficheiro.',
         'iban_not_in_preview' => 'Este IBAN não faz parte da pré-visualização atual.',
+        'row_unreadable' => 'Não foi possível ler esta linha.',
+        'unknown_account' => 'Esta linha pertence a uma conta a que ainda não deste nome.',
+    ],
+
+    'failed' => [
+        'heading' => 'Não foi possível ler este ficheiro',
+        'no_rows' => 'Não foram encontradas transações neste ficheiro, por isso não há nada para importar.',
+        'nothing_read' => 'Nada neste ficheiro pôde ser lido como transação, por isso não há nada para importar.',
+        'every_row' => 'Nenhuma linha deste ficheiro pôde ser lida, por isso não há nada para importar. Cada uma está listada abaixo com o motivo.',
+        'likely_cause' => 'Normalmente a linha de cabeçalho não corresponde à origem que escolheste. Verifica o banco e o formato no ecrã de envio, ou transfere o extrato do teu banco outra vez.',
+        'truncated_heading' => 'Só foi possível ler parte deste ficheiro',
+        'truncated' => 'A leitura parou a meio do ficheiro. Tudo o que vem depois não foi lido e não será importado.',
+        'some_rows' => 'Algumas linhas não puderam ser lidas. Estão marcadas abaixo e serão ignoradas; confirmar importa as restantes.',
+        'detail_label' => 'O que o analisador reportou:',
+        'rows_read_label' => 'Linhas lidas',
+        'rows_skipped_label' => 'Linhas ignoradas',
     ],
 ];

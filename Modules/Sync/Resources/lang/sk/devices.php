@@ -17,7 +17,7 @@ return [
     'securing' => 'Zabezpečujú sa tvoje údaje…',
     'do_not_close' => 'Nezatváraj toto okno.',
     'encryption_progress_aria' => 'Priebeh šifrovania',
-    'not_encrypted_offer' => 'Tvoje údaje nie sú šifrované v pokoji. Nastav šifrovanie, aby boli chránené, ak sa toto zariadenie stratí alebo ho niekto ukradne.',
+    'not_encrypted_offer' => 'Vaše údaje nie sú šifrované v pokoji. Šifrovanie skryje, komu platíte, ak toto zariadenie stratíte alebo vám ho ukradnú — sumy, dátumy a index vyhľadávania zostávajú čitateľné.',
     'enable_encryption' => 'Zapnúť šifrovanie',
 
     'your_devices' => 'Tvoje zariadenia',

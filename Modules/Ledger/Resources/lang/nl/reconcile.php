@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Niets om vast te zetten voor deze afschriftdatum.',
-        'complete' => 'Afstemming voltooid — :count regels vastgezet.',
+        'complete' => 'Afstemming voltooid — :count regel vastgezet.|Afstemming voltooid — :count regels vastgezet.',
     ],
 ];

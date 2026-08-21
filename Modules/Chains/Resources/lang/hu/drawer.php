@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Ezen a szakaszon túl nem található fedezeti lánc.',
 
-    'covers_charges' => ':count ICS-terhelést fedez',
+    'covers_charges' => ':count ICS-terhelést fedez|:count ICS-terhelést fedez',
     'no_ics_charges' => 'Ebben az elszámolásban nincs ICS-terhelés',
     'show_more_fanout' => 'További :count megjelenítése · :shown / :total',
 

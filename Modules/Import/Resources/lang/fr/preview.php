@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Déverrouillez l\'application pour importer : la clé de commerçant ne peut pas être calculée tant qu\'elle est verrouillée.',
+        'file_unreadable' => 'Ce fichier n\'a pas pu être lu.',
         'iban_not_in_preview' => 'Cet IBAN ne fait pas partie de l\'aperçu actuel.',
+        'row_unreadable' => 'Cette ligne n\'a pas pu être lue.',
+        'unknown_account' => 'Cette ligne appartient à un compte auquel tu n\'as pas encore donné de nom.',
+    ],
+
+    'failed' => [
+        'heading' => 'Ce fichier n\'a pas pu être lu',
+        'no_rows' => 'Aucune transaction n\'a été trouvée dans ce fichier, il n\'y a donc rien à importer.',
+        'nothing_read' => 'Rien dans ce fichier n\'a pu être lu comme une transaction, il n\'y a donc rien à importer.',
+        'every_row' => 'Aucune ligne de ce fichier n\'a pu être lue, il n\'y a donc rien à importer. Chacune est listée ci-dessous avec sa raison.',
+        'likely_cause' => 'Le plus souvent, la ligne d\'en-tête ne correspond pas à la source choisie. Vérifie la banque et le format sur l\'écran de téléversement, ou télécharge à nouveau le relevé auprès de ta banque.',
+        'truncated_heading' => 'Seule une partie de ce fichier a pu être lue',
+        'truncated' => 'La lecture s\'est arrêtée au milieu du fichier. Tout ce qui suit n\'a pas été lu et ne sera pas importé.',
+        'some_rows' => 'Certaines lignes n\'ont pas pu être lues. Elles sont signalées ci-dessous et seront ignorées ; confirmer importe les autres.',
+        'detail_label' => 'Ce que l\'analyseur a signalé :',
+        'rows_read_label' => 'Lignes lues',
+        'rows_skipped_label' => 'Lignes ignorées',
     ],
 ];

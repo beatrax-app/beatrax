@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Nessuna catena di finanziamento trovata oltre questo passaggio.',
 
-    'covers_charges' => 'Copre :count addebiti ICS',
+    'covers_charges' => 'Copre :count addebito ICS|Copre :count addebiti ICS',
     'no_ics_charges' => 'Nessun addebito ICS in questo regolamento',
     'show_more_fanout' => 'Mostra altri :count · :shown di :total',
 

@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Ehhez a kivonatdátumhoz nincs mit lezárni.',
-        'complete' => 'Egyeztetés kész — :count sor lezárva.',
+        'complete' => 'Egyeztetés kész — :count sor lezárva.|Egyeztetés kész — :count sor lezárva.',
     ],
 ];

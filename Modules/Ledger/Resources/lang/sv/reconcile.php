@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Inget att låsa för det här kontoutdragsdatumet.',
-        'complete' => 'Avstämningen är klar — :count rader låsta.',
+        'complete' => 'Avstämningen är klar — :count rad låst.|Avstämningen är klar — :count rader låsta.',
     ],
 ];

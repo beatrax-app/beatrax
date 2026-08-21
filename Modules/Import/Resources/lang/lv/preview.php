@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Atbloķējiet lietotni, lai importētu: tirgotāja atslēgu nevar aprēķināt, kamēr tā ir bloķēta.',
+        'file_unreadable' => 'Šo failu neizdevās nolasīt.',
         'iban_not_in_preview' => 'Šis IBAN nav daļa no pašreizējā priekšskatījuma.',
+        'row_unreadable' => 'Šo rindu neizdevās nolasīt.',
+        'unknown_account' => 'Šī rinda pieder kontam, kuram vēl neesi devis nosaukumu.',
+    ],
+
+    'failed' => [
+        'heading' => 'Šo failu neizdevās nolasīt',
+        'no_rows' => 'Šajā failā netika atrasti darījumi, tāpēc nav ko importēt.',
+        'nothing_read' => 'Neko šajā failā neizdevās nolasīt kā darījumu, tāpēc nav ko importēt.',
+        'every_row' => 'Nevienu šā faila rindu neizdevās nolasīt, tāpēc nav ko importēt. Katra rinda ar iemeslu ir uzskaitīta zemāk.',
+        'likely_cause' => 'Parasti galvenes rinda neatbilst izvēlētajam avotam. Pārbaudi banku un formātu augšupielādes ekrānā vai lejupielādē konta pārskatu no savas bankas vēlreiz.',
+        'truncated_heading' => 'No šā faila izdevās nolasīt tikai daļu',
+        'truncated' => 'Lasīšana apstājās faila vidū. Viss pēc tā netika nolasīts un netiks importēts.',
+        'some_rows' => 'Dažas rindas neizdevās nolasīt. Tās ir atzīmētas zemāk un tiks izlaistas; apstiprinot tiek importēts pārējais.',
+        'detail_label' => 'Ko ziņoja parsers:',
+        'rows_read_label' => 'Nolasītās rindas',
+        'rows_skipped_label' => 'Izlaistās rindas',
     ],
 ];

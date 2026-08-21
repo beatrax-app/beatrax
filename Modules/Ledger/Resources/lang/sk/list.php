@@ -23,7 +23,7 @@ return [
     'load_more' => 'Načítať ďalšie',
 
     'split_badge' => 'Rozdelenie · :count',
-    'split_expand_aria' => 'Rozdelené medzi kategórie (:count) — rozbaľ a pozri sa',
+    'split_expand_aria' => 'Rozdelené medzi :count kategóriu — rozbaľ a pozri sa|Rozdelené medzi :count kategórie — rozbaľ a pozri sa|Rozdelené medzi :count kategórií — rozbaľ a pozri sa',
 
     'chain_badge' => 'reťazec',
     'chain_title' => 'Súčasť reťazca — otvor tento riadok a pozri sa',

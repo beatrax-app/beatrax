@@ -15,9 +15,10 @@ use Illuminate\Support\Str;
 // no key and runs on a locked device.
 return new class extends Migration
 {
-    // Anything shorter is too easy to hit by accident: a name ending in the
-    // same three characters the IBAN does is a rename, not a leak.
-    private const int MIN_TAIL = 4;
+    // The shorter of the two runs the leaky generators wrote (6 and 8).
+    // Below that a name segment could end in the IBAN's own last characters
+    // by coincidence, and the rewrite would be a rename rather than a fix.
+    private const int MIN_TAIL = 6;
 
     // The same structural bound AccountNamer enforced before it ever wrote a
     // tailed slug. Without it the synthetic own-account IBANs match their own
@@ -67,13 +68,12 @@ return new class extends Migration
         }
 
         foreach ($rows as $row) {
-            $base = self::baseSlug($row['name']);
-            if (! self::carriesIbanTail($row['slug'], $base, $row['iban'])) {
+            if (! self::carriesIbanTail($row['slug'], $row['iban'])) {
                 continue;
             }
 
             unset($taken[$row['slug']]);
-            $replacement = self::firstFree($base, $taken);
+            $replacement = self::firstFree(self::baseSlug($row['name']), $taken);
             $taken[$replacement] = true;
 
             DB::table('accounts')->where('id', $row['id'])->update(['slug' => $replacement]);
@@ -105,17 +105,18 @@ return new class extends Migration
         return $rows;
     }
 
-    // Only the exact shape the two leaky generators produced: the name slug,
-    // a hyphen, then a run that really is the end of this row's own IBAN.
-    // `-ics-card`, `-paypal`, `cash-7` and a plain `-2` all fall through.
-    private static function carriesIbanTail(string $slug, string $base, string $iban): bool
+    // Deliberately blind to the name: `accounts.name` is lww-synced and `slug`
+    // is not, so a rename leaves a slug the name no longer prefixes — and an
+    // anchored test skipped exactly those rows, silently keeping the tail. The
+    // final segment being this row's own IBAN ending is proof enough on its own.
+    private static function carriesIbanTail(string $slug, string $iban): bool
     {
-        $prefix = $base.'-';
-        if (preg_match(self::REAL_IBAN, $iban) !== 1 || ! str_starts_with($slug, $prefix)) {
+        $lastHyphen = strrpos($slug, '-');
+        if ($lastHyphen === false || preg_match(self::REAL_IBAN, $iban) !== 1) {
             return false;
         }
 
-        $tail = substr($slug, strlen($prefix));
+        $tail = substr($slug, $lastHyphen + 1);
 
         return strlen($tail) >= self::MIN_TAIL
             && preg_match('/^[a-z0-9]+$/', $tail) === 1

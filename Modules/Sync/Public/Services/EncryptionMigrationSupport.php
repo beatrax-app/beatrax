@@ -70,7 +70,6 @@ final class EncryptionMigrationSupport
         return $this->cachedBlindIndexKeyHex;
     }
 
-    // The user's blind-index key, minting one when the keyring predates it.
     /**
      * @throws LogicException when the app-lock KEK is unavailable.
      */

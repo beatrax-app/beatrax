@@ -149,7 +149,7 @@ final class ImportPipeline
                         categoryName: null,
                         amountMinor: $source->amountMinor,
                         currency: $source->currency,
-                        error: null,
+                        error: ImportFailureReason::UnknownAccount->label(),
                         errorReason: ImportFailureReason::UnknownAccount->value,
                     );
 
@@ -169,15 +169,14 @@ final class ImportPipeline
                     // Before the fingerprint stage, so counterparty_id rides
                     // the canonical row into RecordTransactions.
                     $normalized = $this->resolveCounterparty->run($normalized, $user);
-                } catch (Throwable $e) {
-                    // The preview row's message is short and loses the call
-                    // site, so the trace goes to the log instead.
-                    $this->logger->warning('ImportPipeline: row failed.', [
+                } catch (BlindIndexKeyUnavailableException $e) {
+                    // Its message names a class and the user's own id. Correct
+                    // for a log, wrong for a preview row, and it would repeat
+                    // once per row of the statement.
+                    $this->logger->warning('ImportPipeline: row refused — the app-lock key is not held.', [
                         'source_format' => $sourceFormat,
                         'import_run_id' => $importRunId,
-                        'row_index' => $source->sourceRowIndex,
                         ...SafeExceptionContext::describe($e),
-                        'exception_trace' => SafeTrace::cap($e, $this->app->basePath()),
                     ]);
                     $preview[] = new PreviewRowDto(
                         rowIndex: $source->sourceRowIndex,
@@ -190,8 +189,35 @@ final class ImportPipeline
                         categoryName: null,
                         amountMinor: $source->amountMinor,
                         currency: $source->currency,
-                        error: self::safeDetail($e),
-                        errorReason: self::reasonFor($e, ImportFailureReason::RowUnreadable)->value,
+                        error: ImportFailureReason::AppLocked->label(),
+                        errorReason: ImportFailureReason::AppLocked->value,
+                    );
+
+                    continue;
+                } catch (Throwable $e) {
+                    // The preview row's message is short and loses the call
+                    // site, so the trace goes to the log instead.
+                    $this->logger->warning('ImportPipeline: row failed.', [
+                        'source_format' => $sourceFormat,
+                        'import_run_id' => $importRunId,
+                        'row_index' => $source->sourceRowIndex,
+                        ...SafeExceptionContext::describe($e),
+                        'exception_trace' => SafeTrace::cap($e, $this->app->basePath()),
+                    ]);
+                    $rowReason = self::reasonFor($e, ImportFailureReason::RowUnreadable);
+                    $preview[] = new PreviewRowDto(
+                        rowIndex: $source->sourceRowIndex,
+                        status: PreviewRowStatus::Error->value,
+                        accountId: $accountId,
+                        bookedAt: Fmt::shortDate($source->bookedAt),
+                        counterpartyName: $source->counterpartyName,
+                        counterpartyIban: $source->counterpartyIban,
+                        description: $rowDescription,
+                        categoryName: null,
+                        amountMinor: $source->amountMinor,
+                        currency: $source->currency,
+                        error: $rowReason->label(),
+                        errorReason: $rowReason->value,
                     );
 
                     continue;
@@ -303,8 +329,9 @@ final class ImportPipeline
     }
 
     // The same seam the log path uses, applied one step earlier: a message that
-    // has not declared itself free of user data never enters the preview at all,
-    // so no later render can leak it.
+    // has not declared itself free of user data never enters the preview at all.
+    // The sniffer's own "this CSV is missing column X" is the one worth keeping,
+    // and it is declared safe.
     private static function safeDetail(Throwable $e): ?string
     {
         if (! $e instanceof MessageNamesNoUserData) {

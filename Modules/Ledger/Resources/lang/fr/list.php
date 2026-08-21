@@ -23,7 +23,7 @@ return [
     'load_more' => 'Afficher plus',
 
     'split_badge' => 'Ventilée · :count',
-    'split_expand_aria' => 'Ventilée sur :count catégories — déplie pour voir',
+    'split_expand_aria' => 'Ventilée sur :count catégorie — déplie pour voir|Ventilée sur :count catégories — déplie pour voir',
 
     'chain_badge' => 'chaîne',
     'chain_title' => 'Fait partie d\'une chaîne — ouvre cette ligne pour voir',

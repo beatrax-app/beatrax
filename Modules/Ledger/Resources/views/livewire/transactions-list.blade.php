@@ -169,7 +169,7 @@
                                         @click="open = !open"
                                         :aria-expanded="open"
                                         aria-controls="split-legs-phone-{{ $row['id'] }}"
-                                        aria-label="{{ Lang::get('ledger::list.split_expand_aria', ['count' => count($rowLegs)]) }}"
+                                        aria-label="{{ Lang::choice('ledger::list.split_expand_aria', count($rowLegs)) }}"
                                         data-testid="split-badge-phone-{{ $row['id'] }}"
                                     >
                                         {{ Lang::get('ledger::list.split_badge', ['count' => count($rowLegs)]) }}
@@ -360,7 +360,7 @@
                                     @click="splitOpen[{{ $row->id }}] = !splitOpen[{{ $row->id }}]"
                                     :aria-expanded="!!splitOpen[{{ $row->id }}]"
                                     aria-controls="split-legs-{{ $row->id }}"
-                                    aria-label="{{ Lang::get('ledger::list.split_expand_aria', ['count' => count($rowLegs)]) }}"
+                                    aria-label="{{ Lang::choice('ledger::list.split_expand_aria', count($rowLegs)) }}"
                                     data-testid="split-badge-{{ $row->id }}"
                                 >
                                     {{ Lang::get('ledger::list.split_badge', ['count' => count($rowLegs)]) }}

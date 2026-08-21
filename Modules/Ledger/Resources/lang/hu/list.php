@@ -23,7 +23,7 @@ return [
     'load_more' => 'Továbbiak betöltése',
 
     'split_badge' => 'Felosztás · :count',
-    'split_expand_aria' => ':count kategória között felosztva — nyisd ki a megtekintéshez',
+    'split_expand_aria' => ':count kategória között felosztva — nyisd ki a megtekintéshez|:count kategória között felosztva — nyisd ki a megtekintéshez',
 
     'chain_badge' => 'lánc',
     'chain_title' => 'Egy lánc része — nyisd meg ezt a sort a megtekintéshez',

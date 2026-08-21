@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Niciun lanț de finanțare dincolo de acest segment.',
 
-    'covers_charges' => 'Acoperă :count plăți ICS',
+    'covers_charges' => 'Acoperă :count plată ICS|Acoperă :count plăți ICS|Acoperă :count de plăți ICS',
     'no_ics_charges' => 'Nicio plată ICS în această decontare',
     'show_more_fanout' => 'Arată încă :count · :shown din :total',
 

@@ -17,7 +17,7 @@ return [
     'securing' => 'Suojataan tietojasi…',
     'do_not_close' => 'Älä sulje tätä ikkunaa.',
     'encryption_progress_aria' => 'Salauksen edistyminen',
-    'not_encrypted_offer' => 'Tietojasi ei ole salattu levylle. Ota salaus käyttöön, niin ne ovat suojassa, jos tämä laite katoaa tai varastetaan.',
+    'not_encrypted_offer' => 'Tietojasi ei ole salattu levossa. Salaus piilottaa kenelle maksat, jos laite katoaa tai varastetaan — summat, päivämäärät ja hakuindeksi pysyvät luettavina.',
     'enable_encryption' => 'Ota salaus käyttöön',
 
     'your_devices' => 'Laitteesi',

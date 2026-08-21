@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Speichern fehlgeschlagen — die Summe der Positionen muss exakt der Transaktionssumme entsprechen.',
         'not_found' => 'Transaktion nicht gefunden.',
-        'amount_zero' => 'Der Betrag darf nicht €0,00 sein',
+        'amount_zero' => 'Der Betrag darf nicht :amount sein',
         'choose_category' => 'Wähle eine Kategorie.',
         'choose_before_removing' => 'Wähle eine Kategorie, bevor du entfernst.',
         'choose_before_unsplitting' => 'Wähle eine Kategorie, bevor du die Aufteilung aufhebst.',

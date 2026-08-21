@@ -23,7 +23,7 @@ return [
     'load_more' => 'Naloži več',
 
     'split_badge' => 'Razdelitev · :count',
-    'split_expand_aria' => 'Razdeljeno na :count kategorij — razširi za prikaz',
+    'split_expand_aria' => 'Razdeljeno na :count kategorijo — razširi za prikaz|Razdeljeno na :count kategoriji — razširi za prikaz|Razdeljeno na :count kategorije — razširi za prikaz|Razdeljeno na :count kategorij — razširi za prikaz',
 
     'chain_badge' => 'veriga',
     'chain_title' => 'Del verige — odpri to vrstico za prikaz',

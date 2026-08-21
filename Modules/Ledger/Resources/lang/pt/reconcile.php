@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Não há nada para fixar nesta data de extrato.',
-        'complete' => 'Reconciliação concluída — :count linhas fixadas.',
+        'complete' => 'Reconciliação concluída — :count linha fixada.|Reconciliação concluída — :count linhas fixadas.',
     ],
 ];

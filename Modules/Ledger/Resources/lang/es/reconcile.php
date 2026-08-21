@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'No hay nada que bloquear para esta fecha de extracto.',
-        'complete' => 'Conciliación completada — :count filas bloqueadas.',
+        'complete' => 'Conciliación completada — :count fila bloqueada.|Conciliación completada — :count filas bloqueadas.',
     ],
 ];

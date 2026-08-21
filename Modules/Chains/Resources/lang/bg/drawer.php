@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Няма верига на финансиране след този участък.',
 
-    'covers_charges' => 'Покрива :count плащания по ICS',
+    'covers_charges' => 'Покрива :count плащане по ICS|Покрива :count плащания по ICS',
     'no_ics_charges' => 'Няма плащания по ICS в това уреждане',
     'show_more_fanout' => 'Покажи още :count · :shown от :total',
 

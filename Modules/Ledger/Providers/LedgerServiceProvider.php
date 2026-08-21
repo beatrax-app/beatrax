@@ -47,7 +47,6 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(UpdatesTransactionCategory::class, UpdateTransactionCategory::class);
         $this->app->bind(RecordsStatementSummary::class, StatementSummaryWriter::class);
         $this->app->bind(SavesTransactionSplit::class, SaveTransactionSplit::class);
-        // Contract-bound so these fields are only ever written through one seam.
         $this->app->bind(ReassignsCounterparty::class, ReassignCounterparty::class);
         $this->app->bind(SetsTransactionNote::class, SetTransactionNote::class);
         $this->app->singleton(FingerprintComposer::class);
@@ -55,7 +54,6 @@ final class LedgerServiceProvider extends ServiceProvider
         // Transient, not singleton: it resolves the per-request CurrentUser, and
         // a singleton would freeze the first request's user in a long-lived worker.
         $this->app->bind(PeriodQuery::class);
-        // Transient too — it depends on PeriodQuery.
         $this->app->bind(CategorySpendTrendQuery::class);
         $this->app->singleton(ThisPeriodAtAGlanceQuery::class);
         $this->app->singleton(TopCategoriesByPeriodQuery::class);

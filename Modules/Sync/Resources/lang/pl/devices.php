@@ -17,7 +17,7 @@ return [
     'securing' => 'Zabezpieczanie Twoich danych…',
     'do_not_close' => 'Nie zamykaj tego okna.',
     'encryption_progress_aria' => 'Postęp szyfrowania',
-    'not_encrypted_offer' => 'Twoje dane nie są szyfrowane w spoczynku. Skonfiguruj szyfrowanie, aby je chronić na wypadek zgubienia lub kradzieży tego urządzenia.',
+    'not_encrypted_offer' => 'Twoje dane nie są szyfrowane w spoczynku. Szyfrowanie ukrywa, komu płacisz, jeśli to urządzenie zostanie zgubione lub skradzione — kwoty, daty i indeks wyszukiwania pozostają czytelne.',
     'enable_encryption' => 'Włącz szyfrowanie',
 
     'your_devices' => 'Twoje urządzenia',

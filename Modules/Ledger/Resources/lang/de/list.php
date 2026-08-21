@@ -23,7 +23,7 @@ return [
     'load_more' => 'Mehr laden',
 
     'split_badge' => 'Aufteilung · :count',
-    'split_expand_aria' => 'Auf :count Kategorien aufgeteilt — zum Ansehen aufklappen',
+    'split_expand_aria' => 'Auf :count Kategorie aufgeteilt — zum Ansehen aufklappen|Auf :count Kategorien aufgeteilt — zum Ansehen aufklappen',
 
     'chain_badge' => 'Kette',
     'chain_title' => 'Teil einer Kette — öffne diese Zeile zum Ansehen',

@@ -101,7 +101,6 @@ final readonly class ElectronUpdateChannel
         try {
             $publicKey = sodium_hex2bin($publicKeyHex);
 
-            // An empty key verifies nothing; refuse it before libsodium sees it.
             return $publicKey !== '' && sodium_crypto_sign_verify_detached(
                 $detachedSignature,
                 $manifestBody,
@@ -130,7 +129,6 @@ final readonly class ElectronUpdateChannel
         return $publicKeyHex;
     }
 
-    // hash_equals so a partial-byte match cannot leak via timing.
     /**
      * @param  string  $binaryPath  Absolute path to the downloaded binary.
      * @param  string  $expectedSha512Hex  128-hex-char SHA512 from the verified manifest.
@@ -153,7 +151,6 @@ final readonly class ElectronUpdateChannel
         return hash_equals($expectedSha512Hex, $actualHex);
     }
 
-    // False when already on the latest version — no stale banner after updating.
     public function isStale(string $currentVersion, string $latestVersion, CarbonImmutable $latestPublishedAt): bool
     {
         if ($currentVersion === $latestVersion) {

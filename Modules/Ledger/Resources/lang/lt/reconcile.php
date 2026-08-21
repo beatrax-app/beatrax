@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Šiai išrašo datai nėra ko užrakinti.',
-        'complete' => 'Suderinimas baigtas — užrakinta eilučių: :count.',
+        'complete' => 'Suderinimas baigtas — užrakinta :count eilutė.|Suderinimas baigtas — užrakintos :count eilutės.|Suderinimas baigtas — užrakinta :count eilučių.',
     ],
 ];

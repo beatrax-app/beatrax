@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'İçe aktarmak için uygulamanın kilidini açın: kilitliyken satıcı anahtarı hesaplanamaz.',
+        'file_unreadable' => 'Bu dosya okunamadı.',
         'iban_not_in_preview' => 'Bu IBAN geçerli önizlemenin bir parçası değil.',
+        'row_unreadable' => 'Bu satır okunamadı.',
+        'unknown_account' => 'Bu satır henüz ad vermediğin bir hesaba ait.',
+    ],
+
+    'failed' => [
+        'heading' => 'Bu dosya okunamadı',
+        'no_rows' => 'Bu dosyada işlem bulunamadı, bu yüzden içe aktarılacak bir şey yok.',
+        'nothing_read' => 'Bu dosyadaki hiçbir şey işlem olarak okunamadı, bu yüzden içe aktarılacak bir şey yok.',
+        'every_row' => 'Bu dosyadaki hiçbir satır okunamadı, bu yüzden içe aktarılacak bir şey yok. Her satır nedeniyle birlikte aşağıda listeleniyor.',
+        'likely_cause' => 'Genellikle başlık satırı seçtiğin kaynakla eşleşmez. Yükleme ekranındaki bankayı ve biçimi kontrol et ya da hesap özetini bankandan yeniden indir.',
+        'truncated_heading' => 'Bu dosyanın yalnızca bir kısmı okunabildi',
+        'truncated' => 'Okuma dosyanın ortasında durdu. O noktadan sonrası okunmadı ve içe aktarılmayacak.',
+        'some_rows' => 'Bazı satırlar okunamadı. Aşağıda işaretlendi ve atlanacak; onaylamak geri kalanını içe aktarır.',
+        'detail_label' => 'Ayrıştırıcının bildirdiği:',
+        'rows_read_label' => 'Okunan satırlar',
+        'rows_skipped_label' => 'Atlanan satırlar',
     ],
 ];

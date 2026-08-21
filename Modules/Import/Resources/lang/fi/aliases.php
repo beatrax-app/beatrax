@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Täsmää',
     'matches_suffix' => 'tapahtumaan viimeaikaisessa historiassasi.',
 
-    'merge_modal_title' => 'Yhdistä :count aliasta',
+    'merge_modal_title' => 'Yhdistä :count alias|Yhdistä :count aliasta',
 
     'merge_modal_help_html' => 'Jäljelle jäävä rivi säilyttää raakakuvauksensa; sulautetut rivit säilytetään kentässä <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Selkeä nimi',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Alias päivitetty.',
         'deleted' => 'Alias poistettu.',
         'merged' => 'Aliakset yhdistetty.',
-        'imported' => 'Tuotiin :count aliasta.',
+        'imported' => 'Tuotiin :count alias.|Tuotiin :count aliasta.',
         'nothing' => 'Ei mitään tuotavaa.',
     ],
 

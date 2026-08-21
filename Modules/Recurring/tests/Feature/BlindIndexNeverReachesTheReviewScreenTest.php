@@ -154,6 +154,68 @@ it('defers a series rather than writing a digest when no source knows the name',
     expect(binrDetect($user))->toBeNull();
 });
 
+// Reached the real way: three un-named expenses cluster under the sentinel,
+// and the detector used to write that literal into a column the screen renders.
+// The sentinel is legible, so no ciphertext scan would ever have caught it.
+it('never writes the no-counterparty sentinel into the displayed name', function (): void {
+    $user = binrUser();
+    $this->enablesEncryptionForUser($user);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $account = Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'binr sentinel account',
+        'slug' => 'binr-s-'.bin2hex(random_bytes(4)),
+        'kind' => 'bank',
+        'iban' => 'NL00BINS'.str_pad((string) $user->id, 10, '0', STR_PAD_LEFT),
+        'default_currency' => 'EUR',
+    ]);
+
+    $run = ImportRun::query()->create([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/binr-s.csv',
+        'sha256' => str_pad('s'.$user->id, 64, 'b', STR_PAD_LEFT),
+        'uploaded_at' => CarbonImmutable::parse('2026-05-17 00:00:00'),
+        'status' => 'previewed',
+    ]);
+
+    // No counterparty name at all, which is what NormalizeStage turns into the
+    // sentinel — the same value the detector then clusters on.
+    $key = app(CounterpartyKey::class)->forName(null, (int) $user->id);
+    expect($key)->toBe(BlindIndexCodec::SENTINEL);
+    expect(BlindIndexCodec::looksDerived($key))->toBeFalse();
+
+    foreach (['2026-06-04', '2026-07-04', '2026-08-04'] as $i => $postedAt) {
+        $db->connection()->table('transactions')->insert([
+            'user_id' => $user->id,
+            'account_id' => $account->id,
+            'type' => 'expense',
+            'posted_at' => $postedAt,
+            'booked_at' => $postedAt.' 12:00:00',
+            'value_date' => $postedAt,
+            'amount_minor' => -2599,
+            'currency' => 'EUR',
+            'settled_amount_minor' => -2599,
+            'settled_currency' => 'EUR',
+            'counterparty_name' => null,
+            'counterparty_normalized' => $key,
+            'normalization_version' => 3,
+            'source_format' => 'asn-csv',
+            'import_run_id' => $run->id,
+            'source_row_index' => $i,
+            'fingerprint' => str_pad('binrs'.$user->id.$i, 64, 'e', STR_PAD_LEFT),
+            'fingerprint_version' => 3,
+            'created_at' => '2026-05-17 12:00:00',
+            'updated_at' => '2026-05-17 12:00:00',
+        ]);
+    }
+
+    expect(binrDetect($user))->toBeNull();
+});
+
 it('still falls back to the readable key for a user without at-rest encryption', function (): void {
     $user = binrUser();
 

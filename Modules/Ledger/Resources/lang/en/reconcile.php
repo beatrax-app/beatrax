@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Nothing to lock for this statement date.',
-        'complete' => 'Reconcile complete — :count rows locked.',
+        'complete' => 'Reconcile complete — :count row locked.|Reconcile complete — :count rows locked.',
     ],
 ];

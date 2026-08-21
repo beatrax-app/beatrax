@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\App;
+use Modules\Core\Public\Enums\Locale;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 it('parses a plain dot-decimal amount to minor units', function (): void {
@@ -43,19 +45,50 @@ it('returns null for a non-numeric or over-precise amount', function (string $ba
 })->with(['abc', '12.345', '1.2.3', '12,50,00', '--5', '10-']);
 
 it('formats signed minor units to the plain editable form', function (): void {
+    App::setLocale('nl');
+
     expect(MoneyInput::formatMinor(-5000))->toBe('-50,00');
     expect(MoneyInput::formatMinor(1250))->toBe('12,50');
     expect(MoneyInput::formatMinor(5))->toBe('0,05');
 });
 
 it('formats the magnitude only, dropping the sign', function (): void {
+    App::setLocale('nl');
+
     expect(MoneyInput::formatAbsMinor(-5000))->toBe('50,00');
     expect(MoneyInput::formatAbsMinor(0))->toBe('0,00');
 });
 
+// The marks are the reader's, not one locale's: an English reader typing into
+// a box pre-filled "50,00" is reading a figure their own screen writes "50.00".
+it('writes the editable figure with the reader’s own marks', function (string $locale, string $expected): void {
+    App::setLocale($locale);
+
+    expect(MoneyInput::formatMinor(1234567))->toBe($expected);
+})->with([
+    ['en', '12,345.67'],
+    ['nl', '12.345,67'],
+    ['de', '12.345,67'],
+    ['fi', "12\u{00A0}345,67"],
+    ['fr', "12\u{202F}345,67"],
+]);
+
 it('round-trips format then parse back to the same minor units', function (int $minor): void {
     expect(MoneyInput::tryToMinor(MoneyInput::formatMinor($minor)))->toBe($minor);
 })->with([0, 5, 1250, -5000, 123456, -1]);
+
+// A group mark this class writes and cannot read back is a box the reader
+// cannot submit without editing it first.
+it('round-trips in every shipped locale', function (): void {
+    foreach (Locale::cases() as $locale) {
+        App::setLocale($locale->value);
+
+        foreach ([0, 5, 1250, -5000, 1234567, -98765432] as $minor) {
+            expect(MoneyInput::tryToMinor(MoneyInput::formatMinor($minor)))
+                ->toBe($minor, $locale->value.' did not round-trip '.$minor);
+        }
+    }
+});
 
 it('tryToPositiveMinor accepts a positive amount', function (): void {
     expect(MoneyInput::tryToPositiveMinor('12,50'))->toBe(1250);

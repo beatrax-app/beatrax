@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Odpovídá',
     'matches_suffix' => 'transakcím v tvé nedávné historii.',
 
-    'merge_modal_title' => 'Sloučení aliasů (:count)',
+    'merge_modal_title' => 'Sloučit :count alias|Sloučit :count aliasy|Sloučit :count aliasů',
 
     'merge_modal_help_html' => 'Zbývající řádek si ponechá svůj surový popis; pohlcené řádky se zachovají v <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Srozumitelný název',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Alias upraven.',
         'deleted' => 'Alias smazán.',
         'merged' => 'Aliasy sloučeny.',
-        'imported' => 'Naimportované aliasy: :count.',
+        'imported' => 'Naimportován :count alias.|Naimportovány :count aliasy.|Naimportováno :count aliasů.',
         'nothing' => 'Není co importovat.',
     ],
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Categorization\Public\Enums\NoteMode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Models\Transaction;
@@ -46,7 +47,7 @@ final class SetTransactionNote implements SetsTransactionNote
             : null;
         $trimmed = $text === null ? '' : trim($text);
 
-        if ($mode === 'append') {
+        if ($mode === NoteMode::Append->value) {
             $target = self::appended($currentNote, $trimmed);
         } else {
             $target = $trimmed === '' ? null : $trimmed;

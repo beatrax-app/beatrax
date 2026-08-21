@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Sblocca l\'app per importare: la chiave dell\'esercente non può essere calcolata mentre è bloccata.',
+        'file_unreadable' => 'Non è stato possibile leggere questo file.',
         'iban_not_in_preview' => "Questo IBAN non fa parte dell'anteprima attuale.",
+        'row_unreadable' => 'Non è stato possibile leggere questa riga.',
+        'unknown_account' => 'Questa riga appartiene a un conto a cui non hai ancora dato un nome.',
+    ],
+
+    'failed' => [
+        'heading' => 'Non è stato possibile leggere questo file',
+        'no_rows' => 'In questo file non sono state trovate transazioni, quindi non c\'è nulla da importare.',
+        'nothing_read' => 'Nulla in questo file è stato leggibile come transazione, quindi non c\'è nulla da importare.',
+        'every_row' => 'Nessuna riga di questo file è stata leggibile, quindi non c\'è nulla da importare. Ognuna è elencata sotto con il motivo.',
+        'likely_cause' => 'Di solito la riga di intestazione non corrisponde all\'origine che hai scelto. Controlla la banca e il formato nella schermata di caricamento, oppure scarica di nuovo l\'estratto conto dalla tua banca.',
+        'truncated_heading' => 'È stato possibile leggere solo una parte di questo file',
+        'truncated' => 'La lettura si è fermata a metà file. Tutto ciò che segue non è stato letto e non verrà importato.',
+        'some_rows' => 'Alcune righe non sono state leggibili. Sono segnalate sotto e verranno saltate; confermando si importano le altre.',
+        'detail_label' => 'Cosa ha segnalato il parser:',
+        'rows_read_label' => 'Righe lette',
+        'rows_skipped_label' => 'Righe saltate',
     ],
 ];

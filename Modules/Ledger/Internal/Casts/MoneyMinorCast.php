@@ -10,7 +10,6 @@ use InvalidArgumentException;
 use Modules\Ledger\Internal\Exceptions\MoneyColumnMissingException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-// Cast arguments override the default (amount_minor, currency) column pair.
 /**
  * @implements CastsAttributes<Money, Money>
  */

@@ -23,14 +23,29 @@ things that matter:
 
 | Field | Purpose |
 | --- | --- |
-| `epoch_id` | Which epoch these bytes are the key for. `0` when the wrap is not an epoch. |
+| `epoch_id` | Which epoch these bytes are the key for. A placeholder `0` when the wrap is not an epoch — **never read it to decide what a wrap is**. |
 | `wrapped_key_b64` | The raw key sealed to the recipient's X25519 public key. |
 | `recipient_device_id` | Who it is addressed to. |
 | `sender_device_id` + `sig_hex` | Ed25519 detached signature over the signed message. |
-| `key_role` | What the sealed bytes are. Absent means `epoch`. |
+| `key_role` | What the sealed bytes are. Absent means `epoch`. This is the discriminator. |
+| `sender_holds_keyed_rows` | Blind-index wraps only: whether the sender already has rows under this key. |
 
 The signature is what turns an anonymous sealed box into an authenticated one. It is the
 answer to the second failed approach above.
+
+### A wrap on this channel may not be an epoch
+
+Read `key_role`, never `epoch_id`. `GdkEpochWrapSignature::carriesEpoch()` is the predicate; a
+blind-index wrap sends `epoch_id: 0` only because the field is required by the shape and bound
+into the signature. Anything that counts or iterates wraps and reasons about *epochs* must
+filter on the role first — two tests asserting "exactly one epoch was fanned out" started
+counting two the day the blind-index key began riding this channel.
+
+Production reads it correctly today, and the distinction is worth stating because it is not
+obvious: the `count` in the `GDK_EPOCH_PUSH` header is a **frame** count, not an epoch count.
+Including the blind-index wrap in it is right — the receiver has to read that many frames.
+`isEpochWrap()` likewise filters on the envelope `type`, which both roles share, so both are
+forwarded and drained, which is also right.
 
 ### Why one message type carries two kinds of key
 
@@ -85,11 +100,56 @@ contract:
    to verify against and is rejected on the lookup alone.
 4. **Open.** Only now is the sealed box opened with this device's X25519 secret key.
 
+`handle()` returns a `GdkWrapOutcome` — `Applied`, `Refused`, or `Deferred` — and the caller
+that owns a mailbox row confirms only the first two. `Deferred` means the sealed box was never
+opened because this process holds no app-lock key, which is the **permanent** state of the
+`sync:serve` daemon: it resolves a `Session` no middleware ever started, so
+`AppLockKeyService::release()` returns null unconditionally. It is an outcome rather than an
+exception because this class is contractually forbidden from throwing — the `catch (Throwable)`
+that used to gate the confirm could never fire, so every wrap the daemon could not open was
+confirmed away. `RelayMailbox` has no re-send and `fanOutAllEpochsToDevice()` fires once, at
+pairing, so that deleted the only copy of the key.
+
+The same drain now also skips a blob that is not a wrap at all, instead of handing it to the
+handler and confirming the `Refused` away. Two protocols share this mailbox, and
+`pendingWrapsForPeer()` already applied that guard in the outbound direction.
+
 The consequence worth remembering: a wrap can fail for exactly one reason at a time, and
 which reason depends on where it falls in that list. Tampering with the sealed bytes is
 caught by the signature check at step 3, not by an AEAD failure at step 4.
 
+## Which epoch the recipient treats as current
+
+`appendEpoch()` advances `current_epoch` to whatever it applied last, and **nothing on the wire
+says which epoch is current**. Epoch ids are random, so there is no order to fall back on, and
+`RelayMailbox::drain()` returns rows by `created_at` — which a whole fan-out shares, because it
+is enqueued inside one transaction.
+
+Two things make arrival order agree with the sender's own answer:
+
+- `fanOutAllEpochsToDevice()` delivers every other epoch first and the **current one last**.
+- `drain()` orders by `(created_at, id)`, so a tie is broken by insert order rather than by
+  whatever the database happened to return.
+
+Without both, a device pairing after a revoke-and-rotate could settle on the retired epoch and
+encrypt under the key the revoked device still holds. Signature verification cannot catch that:
+the retired epoch's wrap is genuine.
+
+**The residual, stated plainly.** This makes one sender's batch deterministic. It does not order
+wraps from two different senders racing over an untrusted relay. Closing that needs an
+authenticated "this is current" marker on the wrap, and the reason there is not one is
+compatibility: any term appended to an epoch wrap's signing message makes a peer that predates
+the term reject the wrap, which for a historical epoch means losing a key it needs to read its
+own history. The blind-index role can afford that trade because rejection there is fail-safe;
+for epochs it is not.
+
 ## Idempotence and epoch-id collisions
+
+Epoch ids are minted by `GdkEpochId::mint()` as `random_int(1, 2^53 - 1)`, not as a local
+counter starting at 1, precisely so two devices that each self-mint before hearing from the
+other do not both call their key "epoch 1". Collisions are therefore vanishingly unlikely and
+`reconcileCollision()` is close to dead code; it is kept because the cost of being wrong is a
+key that decrypts history going away.
 
 The same wrap can arrive twice — pushed on connect and again from a drained mailbox. Handling
 an epoch that is already present must not duplicate it and must never move `current_epoch`

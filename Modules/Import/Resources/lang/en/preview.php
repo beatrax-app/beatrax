@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Unlock the app to import: the merchant key cannot be computed while it is locked.',
+        'file_unreadable' => 'This file could not be read.',
         'iban_not_in_preview' => 'This IBAN is not part of the current preview.',
+        'row_unreadable' => 'This row could not be read.',
+        'unknown_account' => 'This row belongs to an account you have not named yet.',
+    ],
+
+    'failed' => [
+        'heading' => 'This file could not be read',
+        'no_rows' => 'No transactions were found in this file, so there is nothing to import.',
+        'nothing_read' => 'Nothing in this file could be read as a transaction, so there is nothing to import.',
+        'every_row' => 'Every row in this file failed to read, so there is nothing to import. Each one is listed below with the reason.',
+        'likely_cause' => 'The usual cause is a header row that does not match the source you chose. Check the bank and the format on the upload screen, or download the statement from your bank again.',
+        'truncated_heading' => 'Only part of this file could be read',
+        'truncated' => 'Reading stopped part-way through the file. Anything after that point was not read and will not be imported.',
+        'some_rows' => 'Some rows could not be read. They are marked below and will be skipped; confirming imports the rest.',
+        'detail_label' => 'What the parser reported:',
+        'rows_read_label' => 'Rows read',
+        'rows_skipped_label' => 'Rows skipped',
     ],
 ];

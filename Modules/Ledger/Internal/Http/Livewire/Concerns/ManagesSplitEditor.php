@@ -14,7 +14,9 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
@@ -75,8 +77,8 @@ trait ManagesSplitEditor
         $absMinor = abs(is_numeric($parent->settled_amount_minor) ? (int) $parent->settled_amount_minor : 0);
 
         $this->legs = [
-            ['id' => null, 'categoryId' => $categoryId, 'amount' => self::formatAbsAmount($absMinor), 'note' => '', 'tax' => false],
-            ['id' => null, 'categoryId' => null, 'amount' => self::formatAbsAmount(0), 'note' => '', 'tax' => false],
+            ['id' => null, 'categoryId' => $categoryId, 'amount' => MoneyInput::formatAbsMinor($absMinor), 'note' => '', 'tax' => false],
+            ['id' => null, 'categoryId' => null, 'amount' => MoneyInput::formatAbsMinor(0), 'note' => '', 'tax' => false],
         ];
         $this->editingSplit = true;
         $this->splitError = null;
@@ -86,7 +88,7 @@ trait ManagesSplitEditor
 
     public function addLeg(): void
     {
-        $this->legs[] = ['id' => null, 'categoryId' => null, 'amount' => self::formatAbsAmount(0), 'note' => '', 'tax' => false];
+        $this->legs[] = ['id' => null, 'categoryId' => null, 'amount' => MoneyInput::formatAbsMinor(0), 'note' => '', 'tax' => false];
     }
 
     // Removing the second-to-last leg would collapse the split to a single
@@ -264,7 +266,12 @@ trait ManagesSplitEditor
         foreach ($this->legs as $leg) {
             $abs = self::parseAmount($leg['amount']);
             if ($abs === null) {
-                $this->splitError = Lang::get('ledger::detail.errors.amount_zero');
+                // The zero rides as a parameter rather than sitting in the
+                // sentence: written into the copy it was one locale's zero in
+                // twenty-six languages.
+                $this->splitError = Lang::get('ledger::detail.errors.amount_zero', [
+                    'amount' => Money::ofMinor(0, BaseCurrency::value())->format(),
+                ]);
 
                 return null;
             }
@@ -362,7 +369,7 @@ trait ManagesSplitEditor
             $legs[] = [
                 'id' => $legId,
                 'categoryId' => is_numeric($row->category_id) ? (int) $row->category_id : null,
-                'amount' => self::formatAbsAmount(is_numeric($row->settled_amount_minor) ? abs((int) $row->settled_amount_minor) : 0),
+                'amount' => MoneyInput::formatAbsMinor(is_numeric($row->settled_amount_minor) ? abs((int) $row->settled_amount_minor) : 0),
                 'note' => $legNote,
                 'tax' => isset($taxStates[$key]),
             ];

@@ -224,20 +224,25 @@ The render guard reads both accessors and pins that they stay disjoint, which fa
 blind-index column is ever added to the registry — the change that would put AEAD over a column
 the database matches on, and leave the ledger silently failing to deduplicate.
 
-### What the enable-time sweep does not reach
+### What the enable-time sweep reaches, and how it came to miss a table
 
-`notifications` is in `SensitiveFieldRegistry` and is **not** in
-`PreMigrationSnapshot::PROJECTION_COLUMNS`. `EncryptionMigrationService` calls
-`encryptProjectionTable()` for `transactions`, `counterparties`, `tax_transaction_tags` and
-`transaction_splits`, and for nothing else, so a user who already had notification rows when
-they turned encryption on keeps those rows in plaintext on disk indefinitely, while the UI
-reports encryption **On**. New notifications are fine — `NotificationWriter` encrypts on write
-— and the op-log arm of the sweep covers `op_log_entries` for every registered field. It is
-only the existing projection rows for that table that are never rewritten.
+`notifications` was in `SensitiveFieldRegistry` and **not** in
+`PreMigrationSnapshot::PROJECTION_COLUMNS`, and `EncryptionMigrationService` named its four
+tables in a literal list of its own. So a user who already had notification rows when they
+turned encryption on kept those rows in plaintext on disk indefinitely, while the UI reported
+encryption **On**. New notifications were fine — `NotificationWriter` encrypts on write — and
+the op-log arm covered `op_log_entries` for every registered field. Only the existing projection
+rows for that table were never rewritten, which is why nothing ever looked wrong.
 
-This also narrows a claim made further down this page: adding a column to the registry covers a
-not-yet-enabled user *only when that column's table is already in `PROJECTION_COLUMNS`*. A new
-table needs an entry there in the same change, or its history is left in the clear.
+`notifications` is now in `PROJECTION_COLUMNS`, and — more to the point — the sweep, the
+pre-migration snapshot and the rollback restore all iterate `array_keys(PROJECTION_COLUMNS)`
+instead of each carrying its own copy of the table list. Three lists that had to agree, and did
+not, are now one. `EncryptionSweepCoversEveryRegisteredColumnTest` seeds a plaintext
+notification before `migrate()` and asserts it comes out sealed.
+
+The narrower claim still stands and is worth keeping: adding a column to the registry covers a
+not-yet-enabled user *only when that column's table is in `PROJECTION_COLUMNS`*. A new table
+needs an entry there in the same change, or its history is left in the clear.
 
 ## The identity columns that are still plaintext, and what it would take to fix them
 
@@ -323,9 +328,10 @@ whole difference from AEAD: two rows for one merchant must produce identical byt
 index that dedups them stops working.
 
 `BlindIndexCodec` is the keyed primitive. `CounterpartyKey` is the only thing that produces a
-value for this column, and it is what the three producers call —
+value for this column. Six sites call it: three production —
 `Import\Public\Pipeline\NormalizeStage`, `CashBook`'s `RecordManualTransaction`, and
-`Migration`'s `PromoteStagingToDomain`. A user who has never enabled encryption gets the
+`Migration`'s `PromoteStagingToDomain` — and three demo seeders, which matter for the guard's
+scope even though they are not on any user's path. A user who has never enabled encryption gets the
 plaintext normalised name back unchanged, because every other column of theirs is plaintext
 too and keying only this one would buy nothing.
 
@@ -348,9 +354,10 @@ first epoch and never rotated. `GdkRotationService::rotateAndRevoke()` appends e
 not touch it. The consequence is stated plainly below.
 
 **The key is not held at every write.** This dissolved once the writes were separated into the
-ones that *compute* the value and the ones that only *copy* it. Only three sites compute, and
-every one of them is an authenticated Livewire request behind `AppLockMiddleware`: the import
-wizard, the cash book, and the migration importer. There is no headless import path. Op-log
+ones that *compute* the value and the ones that only *copy* it. Only three production sites
+compute, and every one of them is an authenticated Livewire request behind `AppLockMiddleware`:
+the import wizard, the cash book, and the migration importer. There is no headless import path.
+(Three demo seeders also compute; they run from dev mode, which is a request too.) Op-log
 replay never computes — `OpLogValueProjector::reencryptForProjection()` passes a non-sensitive
 column through unchanged, so the digest the originating device computed is what the peer
 stores, and the sync daemon needs no key at all. That is also why this column is deliberately
@@ -417,25 +424,66 @@ wrap rides the same session.
 
 #### What happens when two devices hold different keys
 
-`GdkEpochControlHandler` adopts an inbound blind-index key when this device holds none, or holds
-one it has not yet keyed anything under. Once
-`sync_encryption_state.counterparty_key_backfilled_at` is set it **keeps the local key and logs
-an error**. Adopting at that point would leave every stored digest unmatchable by the value a
-re-import computes, which is how a ledger doubles; the cost of keeping it is that merchant
-identity does not match across the two devices, which is loud and recoverable. It mirrors the
-rule `reconcileCollision()` already applies to an epoch id that local rows depend on.
+Two facts decide it, and both sides have both: whether **this** device holds rows keyed under
+the key it has, and whether the **sender** does. The second travels on the wrap as
+`sender_holds_keyed_rows`, bound into the Ed25519 signature, so flipping it in transit breaks
+verification rather than changing which key the recipient keeps.
 
-The marker is set by `CounterpartyKeyBackfill` **only when the sweep actually converted a row**,
-and that distinction is load bearing. A phone enables encryption during pairing, which mints it
-a blind-index key of its own and sweeps a database with nothing in it. Marking that as "this
-device has derived keys" would make it refuse the desktop's key seconds later, and the two would
-never agree on a merchant again. `BlindIndexKeyDeliveryTest` pins it.
+| local keyed | sender keyed | outcome |
+| --- | --- | --- |
+| — (no local key at all) | either | adopt |
+| yes | yes | **refuse, log an error** — neither can give way without orphaning its own digests |
+| yes | no | keep local; the peer is running this same branch inverted and adopts |
+| no | yes | adopt; the side with rows is the side with something to lose |
+| no | no | lowest key hex wins — an order both sides compute identically |
 
-The residual case the rule does not cover: a device that enabled encryption on an empty
-database, imported under its own key, and only then paired with a peer that had independently
-enabled encryption. Both hold keyed rows, so the joining side refuses and logs. Recovering means
-re-deriving one side's rows from the decrypted `counterparty_name`, which nothing does
-automatically.
+Every row converges after one exchange, whichever wrap lands first. The last row is why a
+tie-break is needed at all: two devices that both enrol before either has imported would
+otherwise **swap** keys and stay diverged, because each builds its wrap from its own keyring
+before the other's arrives.
+
+The keyed question is asked of the **data**, not of a marker.
+`BlindIndexCodec::holdsDerivedRows()` probes `transactions` for a value of digest length and
+confirms the shape in PHP. A marker cannot answer it: a device that enables sync on an empty
+ledger and imports afterwards sweeps **zero** rows — every row it then writes is keyed at write
+time and so was never convertible — yet its whole ledger is under its own key. Reading a
+"sweep ran" marker as "device holds keyed keys" left that device silently handing its key away
+to any peer that later paired with it. `BlindIndexKeyDeliveryTest` walks that exact sequence:
+enable sync empty, import, pair.
+
+`sync_encryption_state.counterparty_key_backfilled_at` still exists and is still set
+unconditionally, but it now answers only one question — has the one-time sweep run — which is
+what stops it rescanning three tables on every screen mount.
+
+The genuine residual is the `yes | yes` row: two devices that each enrolled, each imported, and
+only then paired. Both keep their own key and both log an error. Nothing re-derives one side
+automatically; the recovery is to re-derive from the decrypted `counterparty_name`, which
+`MerchantDisplayName::fromTransactions()` shows is readable.
+
+#### What else the sweep had to move, and what it deliberately does not
+
+Three columns beyond the obvious one, each because something compares against it:
+
+- **`merchants.normalized_name`**, joined directly to `transactions.counterparty_normalized`.
+- **`recurring_series.cluster_counterparty_key`**, in **both** directions. An expense series
+  stores the counterparty matching key; an **income** series stores a *decrypted IBAN*, which
+  the detector reads back out of the AEAD-sealed `transactions.counterparty_iban` to compute.
+  Written verbatim, that put the salary payer, the benefits agency and the pension provider
+  back in the clear one table over from the ciphertext protecting them. It now derives under a
+  second domain, `counterparty-iban`, kept separate so a merchant whose normalised name
+  happened to equal an IBAN string could not match that payer. The sweep tells the two apart by
+  shape, which is safe because `FingerprintComposer::normalize()` lower-cases: a matching key
+  never carries an IBAN's upper-case country-and-check-digit head.
+- **`chain_links.evidence->signature_hash`**, which is `sha256(matching key|funding IBAN)` and
+  is what `ConfirmChainLink` counts confirmed links on. Left alone, every link confirmed before
+  encryption stopped matching what the resolver computes after it, and the three-link
+  auto-promotion counter silently reset. The IBAN half is not on every arm's evidence, so it is
+  recovered by trying the user's own account IBANs against the stored digest; a hash none of
+  them reproduces was not built this way and is left alone. This pass runs **first**, while the
+  transactions it reads still hold plaintext.
+
+`recurring_series.detected_name` is deliberately **not** swept. It is a display column, and the
+name it already holds is readable and correct.
 
 #### The sweep that converts existing rows
 
@@ -450,9 +498,15 @@ and `FingerprintStage` would classify the statement as new. The date fields go b
 `CarbonImmutable` before reaching the tuple so the result is byte-identical to what a fresh
 import composes. `CounterpartyBlindIndexTest` pins both halves and fails on either alone.
 
-Income series are skipped on purpose: `cluster_counterparty_key` holds a decrypted IBAN on that
-path, recomputed from the transaction each sweep and never keyed, so converting it would leave
-the lookup matching nothing.
+Every pass is chunked by id. The sweep runs inside the enable-time transaction, so a whole-table
+load would hold one SQLite writer lock across a ledger the size of a life — on a single-threaded
+desktop server that wedges every other request, and one `max_execution_time` rolls the enable
+back. `E4-R12` requires bounded batches inside one outer transaction; the batches are bounded,
+the transaction stays outer, and resumability across a crash remains all-or-nothing by design.
+
+The tables the sweep visits come from `PreMigrationSnapshot::PROJECTION_COLUMNS`, as do the
+snapshot and the rollback restore — see [what the sweep
+reaches](#what-the-enable-time-sweep-reaches-and-how-it-came-to-miss-a-table).
 
 #### The guard that keeps one producer
 
@@ -467,6 +521,33 @@ It exists because a second producer fails silently. Nothing raises; the column s
 forms of one merchant inside `transactions_fingerprint_uq`, and the statement that produced the
 first re-imports as a second ledger.
 
+#### Where the key lives on a phone, and the one condition that argument rests on
+
+The custody argument above holds only while the app-lock KEK is reachable through the passphrase
+alone. On the desktop it is: `SecretShield` binds to `SafeStorageSecretShield`, so the biometric
+wrap blob is machine-bound in the OS keychain. **Everywhere else it binds to
+`PassthroughSecretShield`, which is the identity function**, and
+`user_biometric_credentials.biometric_wrap_secret` stores the unwrapping key concatenated with
+the wrapped key, in the same SQLite file as the ledger. A row of that shape on a phone would
+hand a disk-image attacker the KEK, then the keyring, then this blind-index key, and the
+low-entropy dictionary attack this design exists to prevent.
+
+No such row should exist on a phone. Mobile biometrics are the **secure enclave**, not WebAuthn
+— the spec's platform matrix says so — and `AppLockSettingsSection::startEnroll()` is
+double-gated: it enrols against `ColdStartVault` when the mobile vault plugin is present, and
+refuses outright when `nativephp-internal.running` is true. Neither gate ever reaches
+`dispatch('beatrax:webauthn-create')` on a correctly built device.
+
+Both gates are **behavioural, not structural**. The three `/lock/biometric/*` routes are
+registered unconditionally, the JS listener ships in the mobile bundle, and the Auth settings
+component renders on the phone's sync screen. A build without the vault plugin and without
+`NATIVEPHP_RUNNING` would fall straight through. That gap is already carried in the spec as
+`F3-R33` (operating-system key custody registered but not wired) and `E4-R23` (unwired OS key
+custody must be documented as outstanding rather than implied to work) — this paragraph is that
+documentation. The symmetric fix is a mobile `SecretShield` over
+`Native\Mobile\Facades\SecureStorage`, the seam `SecureStorageKeyCustodian` already uses for
+the session data key.
+
 #### What this does not fix
 
 - **The full-text search index still holds the merchant name in the clear.**
@@ -476,9 +557,18 @@ first re-imports as a second ledger.
   meant to hide. [ADR-0018](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0018-amounts-plaintext-at-rest.md) records that shadow as knowingly accepted and
   names an encrypted-search design as the revisit; until that exists, this change removes one
   of two plaintext copies, not the leak. **The UI copy must not claim otherwise.**
-- `merchants.name`, `recurring_series.detected_name` and `counterparties.slug` are readable
-  names and stay readable. The first two are display columns by definition; the third is a URL
-  segment.
+- **`merchants.name` is a readable merchant name, and the join hands it to every transaction.**
+  `SELECT t.id, m.name FROM transactions t JOIN merchants m ON m.normalized_name =
+  t.counterparty_normalized AND m.user_id = t.user_id` recovers the merchant for every row the
+  user has ever categorised, with no key — which is most of what the AEAD on
+  `counterparty_name` was protecting. `MerchantDisplayName::fromMerchants()` performs exactly
+  that join by design, so it is not hypothetical. It is **not** registered, and the reason is
+  the same one that keeps `normalized_name` out of the registry: the two columns are one row,
+  and the name is what the recurring review screen and the triage list render. Encrypting it is
+  possible — it has no equality predicate — at the cost of every display site decrypting, and
+  it is the single highest-value remaining column. Recorded here as accepted, not overlooked.
+  `recurring_series.detected_name` is the same shape and the same decision.
+- `counterparties.slug` stays readable because it is a URL segment.
 - `ClusterKeyComposer` truncates each part to 60 characters, so `cluster_key` carries 240 bits
   of the digest rather than 256. Collision-free in practice, but a `cluster_key` can no longer
   be read back to the digest that produced it.

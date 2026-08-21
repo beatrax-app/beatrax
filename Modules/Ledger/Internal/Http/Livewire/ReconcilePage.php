@@ -112,7 +112,7 @@ final class ReconcilePage extends Component
         // rows in the statement-date window locks nothing — don't claim it did.
         $message = $lockedCount === 0
             ? Lang::get('ledger::reconcile.toast.nothing_to_lock')
-            : Lang::get('ledger::reconcile.toast.complete', ['count' => $lockedCount]);
+            : Lang::choice('ledger::reconcile.toast.complete', $lockedCount);
 
         $this->toast($message);
     }

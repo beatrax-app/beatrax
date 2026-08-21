@@ -23,7 +23,7 @@ return [
     'load_more' => 'Meer laden',
 
     'split_badge' => 'Splitsing · :count',
-    'split_expand_aria' => 'Gesplitst over :count categorieën — klap uit om te bekijken',
+    'split_expand_aria' => 'Gesplitst over :count categorie — klap uit om te bekijken|Gesplitst over :count categorieën — klap uit om te bekijken',
 
     'chain_badge' => 'reeks',
     'chain_title' => 'Onderdeel van een reeks — open deze regel om te bekijken',

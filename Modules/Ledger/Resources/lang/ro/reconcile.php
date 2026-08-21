@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Nu există nimic de blocat pentru această dată a extrasului.',
-        'complete' => 'Reconciliere finalizată — :count rânduri blocate.',
+        'complete' => 'Reconciliere finalizată — :count rând blocat.|Reconciliere finalizată — :count rânduri blocate.|Reconciliere finalizată — :count de rânduri blocate.',
     ],
 ];

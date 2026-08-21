@@ -39,7 +39,9 @@ final class RetypeByAliasResolver
         $connection = $this->db->connection();
         $now = $this->clock->now()->toDateTimeString();
 
-        // Returning here is what keeps the no-alias case from decrypting a row.
+        // The early return is load-bearing, not an optimisation: with no aliases
+        // there is nothing to match, and the pass below would decrypt every
+        // counterparty IBAN for nothing.
         $aliasKindByIban = $this->loadAliasMap($connection, $user);
         if ($aliasKindByIban === []) {
             return 0;

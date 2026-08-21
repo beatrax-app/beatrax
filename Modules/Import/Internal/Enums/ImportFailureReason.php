@@ -22,6 +22,6 @@ enum ImportFailureReason: string
 
     public function label(): string
     {
-        return Lang::get('import::preview.failure_reason.'.$this->value);
+        return Lang::get('import::preview.errors.'.$this->value);
     }
 }

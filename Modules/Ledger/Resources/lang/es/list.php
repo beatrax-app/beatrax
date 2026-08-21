@@ -23,7 +23,7 @@ return [
     'load_more' => 'Cargar más',
 
     'split_badge' => 'Desglose · :count',
-    'split_expand_aria' => 'Desglosada en :count categorías — despliega para verlas',
+    'split_expand_aria' => 'Desglosada en :count categoría — despliega para verlas|Desglosada en :count categorías — despliega para verlas',
 
     'chain_badge' => 'cadena',
     'chain_title' => 'Forma parte de una cadena — abre esta fila para verla',

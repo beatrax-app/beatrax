@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Šim konta izraksta datumam nav ko fiksēt.',
-        'complete' => 'Saskaņošana pabeigta — nofiksētas rindas: :count.',
+        'complete' => 'Saskaņošana pabeigta — nofiksētas :count rindu.|Saskaņošana pabeigta — nofiksēta :count rinda.|Saskaņošana pabeigta — nofiksētas :count rindas.',
     ],
 ];

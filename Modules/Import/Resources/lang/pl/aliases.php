@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Pasuje do',
     'matches_suffix' => 'transakcji w Twojej ostatniej historii.',
 
-    'merge_modal_title' => 'Scalanie aliasów (:count)',
+    'merge_modal_title' => 'Scal :count alias|Scal :count aliasy|Scal :count aliasów',
 
     'merge_modal_help_html' => 'Pozostający wiersz zachowuje swój surowy opis; wchłonięte wiersze zostają zapisane w <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Czytelna nazwa',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Alias zaktualizowany.',
         'deleted' => 'Alias usunięty.',
         'merged' => 'Aliasy scalone.',
-        'imported' => 'Zaimportowane aliasy: :count.',
+        'imported' => 'Zaimportowano :count alias.|Zaimportowano :count aliasy.|Zaimportowano :count aliasów.',
         'nothing' => 'Nie ma czego importować.',
     ],
 

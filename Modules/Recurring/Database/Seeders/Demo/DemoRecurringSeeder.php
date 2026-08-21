@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
@@ -77,7 +78,6 @@ final class DemoRecurringSeeder
         ],
     ];
 
-    // Keyed on cluster_key so the seeder never depends on autoincrement ids.
     /** @var list<array{clusterKey: string, fromState: string, toState: string, reason: string, actor: string, ageDays: int, notes: ?string}> */
     private const TRANSITIONS = [
         [
@@ -111,6 +111,7 @@ final class DemoRecurringSeeder
 
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly CounterpartyKey $counterpartyKey,
     ) {}
 
     /**
@@ -208,7 +209,10 @@ final class DemoRecurringSeeder
                 'snoozed_until' => $snoozedUntil,
                 'next_expected_at' => $nextExpected,
                 'next_expected_confidence_low' => false,
-                'cluster_counterparty_key' => $row['detectedName'],
+                // Keyed through the same producer the detector uses, or the
+                // next sweep finds no existing series and inserts a duplicate
+                // beside every seeded one.
+                'cluster_counterparty_key' => $this->counterpartyKey->forName($row['detectedName'], (int) $user->id),
             ],
         );
     }

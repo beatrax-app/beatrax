@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Lås upp appen för att importera: handlarnyckeln kan inte beräknas medan den är låst.',
+        'file_unreadable' => 'Filen gick inte att läsa.',
         'iban_not_in_preview' => 'Det här IBAN-numret ingår inte i den aktuella förhandsgranskningen.',
+        'row_unreadable' => 'Raden gick inte att läsa.',
+        'unknown_account' => 'Raden hör till ett konto som du ännu inte har namngett.',
+    ],
+
+    'failed' => [
+        'heading' => 'Filen gick inte att läsa',
+        'no_rows' => 'Inga transaktioner hittades i filen, så det finns inget att importera.',
+        'nothing_read' => 'Ingenting i filen gick att läsa som en transaktion, så det finns inget att importera.',
+        'every_row' => 'Ingen rad i filen gick att läsa, så det finns inget att importera. Varje rad listas nedan med orsaken.',
+        'likely_cause' => 'Oftast beror det på att rubrikraden inte stämmer med källan du valde. Kontrollera bank och format på uppladdningssidan, eller ladda ner kontoutdraget från banken igen.',
+        'truncated_heading' => 'Bara en del av filen gick att läsa',
+        'truncated' => 'Inläsningen stannade mitt i filen. Allt efter den punkten lästes inte och kommer inte att importeras.',
+        'some_rows' => 'Vissa rader gick inte att läsa. De är markerade nedan och hoppas över; bekräftar du importeras resten.',
+        'detail_label' => 'Vad tolken rapporterade:',
+        'rows_read_label' => 'Lästa rader',
+        'rows_skipped_label' => 'Överhoppade rader',
     ],
 ];

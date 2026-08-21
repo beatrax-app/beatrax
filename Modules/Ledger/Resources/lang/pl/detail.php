@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Nie udało się zapisać — sumy pozycji muszą dokładnie odpowiadać sumie transakcji.',
         'not_found' => 'Nie znaleziono transakcji.',
-        'amount_zero' => 'Kwota nie może wynosić €0,00',
+        'amount_zero' => 'Kwota nie może wynosić :amount',
         'choose_category' => 'Wybierz kategorię.',
         'choose_before_removing' => 'Wybierz kategorię przed usunięciem.',
         'choose_before_unsplitting' => 'Wybierz kategorię przed cofnięciem podziału.',

@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Nema ništa za zaključavanje za ovaj datum izvoda.',
-        'complete' => 'Usklađivanje dovršeno — zaključano :count redaka.',
+        'complete' => 'Usklađivanje dovršeno — zaključan :count redak.|Usklađivanje dovršeno — zaključana :count retka.|Usklađivanje dovršeno — zaključano :count redaka.',
     ],
 ];

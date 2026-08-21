@@ -6,11 +6,10 @@ namespace Modules\Chains\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// $nodes is the waterfall ordered root -> funder.
 final class ChainTree extends Data
 {
     /**
-     * @param  array<ChainTreeNode>  $nodes
+     * @param  array<ChainTreeNode>  $nodes  the waterfall, ordered root to funder
      */
     public function __construct(
         public readonly int $rootTransactionId,

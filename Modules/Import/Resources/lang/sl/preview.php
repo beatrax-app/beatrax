@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Odklenite aplikacijo za uvoz: ključa trgovca ni mogoče izračunati, dokler je zaklenjena.',
+        'file_unreadable' => 'Te datoteke ni bilo mogoče prebrati.',
         'iban_not_in_preview' => 'Ta IBAN ni del trenutnega predogleda.',
+        'row_unreadable' => 'Te vrstice ni bilo mogoče prebrati.',
+        'unknown_account' => 'Ta vrstica pripada računu, ki ga še nisi poimenoval.',
+    ],
+
+    'failed' => [
+        'heading' => 'Te datoteke ni bilo mogoče prebrati',
+        'no_rows' => 'V tej datoteki ni bilo najdenih transakcij, zato ni kaj uvoziti.',
+        'nothing_read' => 'Ničesar v tej datoteki ni bilo mogoče prebrati kot transakcijo, zato ni kaj uvoziti.',
+        'every_row' => 'Nobene vrstice v tej datoteki ni bilo mogoče prebrati, zato ni kaj uvoziti. Vsaka vrstica je spodaj skupaj z razlogom.',
+        'likely_cause' => 'Običajno glava ne ustreza viru, ki si ga izbral. Preveri banko in obliko na zaslonu za nalaganje ali izpisek pri banki prenesi znova.',
+        'truncated_heading' => 'Iz te datoteke je bilo mogoče prebrati le del',
+        'truncated' => 'Branje se je ustavilo sredi datoteke. Vse za to točko ni bilo prebrano in ne bo uvoženo.',
+        'some_rows' => 'Nekaterih vrstic ni bilo mogoče prebrati. Spodaj so označene in bodo preskočene; s potrditvijo se uvozi ostalo.',
+        'detail_label' => 'Kaj je sporočil razčlenjevalnik:',
+        'rows_read_label' => 'Prebrane vrstice',
+        'rows_skipped_label' => 'Preskočene vrstice',
     ],
 ];

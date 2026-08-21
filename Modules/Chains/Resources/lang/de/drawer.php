@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Über dieses Glied hinaus wurde keine Finanzierungskette gefunden.',
 
-    'covers_charges' => 'Deckt :count ICS-Abbuchungen ab',
+    'covers_charges' => 'Deckt :count ICS-Abbuchung ab|Deckt :count ICS-Abbuchungen ab',
     'no_ics_charges' => 'Keine ICS-Abbuchungen in dieser Abrechnung',
     'show_more_fanout' => ':count weitere anzeigen · :shown von :total',
 

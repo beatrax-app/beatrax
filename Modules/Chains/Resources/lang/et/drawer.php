@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Sellest lülist edasi rahastusahelat ei leitud.',
 
-    'covers_charges' => 'Katab :count ICS makset',
+    'covers_charges' => 'Katab :count ICS makse|Katab :count ICS makset',
     'no_ics_charges' => 'Selles arvelduses ICS makseid pole',
     'show_more_fanout' => 'Näita veel :count · :shown / :total',
 

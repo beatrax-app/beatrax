@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ledger\Public\Services\CounterpartyKey;
+use Modules\Sync\Public\Services\BlindIndexCodec;
 
 // `transactions.counterparty_normalized` and `merchants.normalized_name` are
 // compared against each other and sit inside `transactions_fingerprint_uq`. A
@@ -33,7 +34,37 @@ function counterpartyKeyPassThroughs(): array
         'Modules/Recurring/Internal/Detectors/IncomeSeriesDetector.php' => 'Keys an in-memory grouping array by the stored value; writes no column.',
         'Modules/Migration/Internal/Pipeline/StagingWriter.php' => 'migration_staging_payees.normalized_name is a different column holding the raw payee name.',
         'Modules/Sync/Internal/Config/MergeRulesRegistry.php' => 'Names the column in a merge rule; supplies no value.',
+        'Modules/Recurring/Internal/Detectors/SeriesRefresher.php' => 'Writes back the cluster key its caller produced; never derives one.',
     ];
+}
+
+// Derived from the registry rather than spelled out here, so a fourth
+// blind-index column is guarded the moment it is declared.
+/**
+ * @return list<string>
+ */
+function counterpartyKeyWriteMarkers(): array
+{
+    $markers = [];
+
+    foreach (array_keys(BlindIndexCodec::indexedColumns()) as $qualified) {
+        $column = substr($qualified, (int) strrpos($qualified, '.') + 1);
+        $markers[] = "'".$column."' =>";
+        $markers[] = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $column)))).':';
+    }
+
+    return $markers;
+}
+
+function counterpartyKeyIsWritten(string $source): bool
+{
+    foreach (counterpartyKeyWriteMarkers() as $marker) {
+        if (str_contains($source, $marker)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -72,11 +103,7 @@ it('routes every production write of a counterparty matching key through Counter
     foreach (counterpartyKeyProductionFiles() as $relative) {
         $source = (string) file_get_contents($root.'/'.$relative);
 
-        $writes = str_contains($source, 'counterpartyNormalized:')
-            || str_contains($source, "'counterparty_normalized' =>")
-            || str_contains($source, "'normalized_name' =>");
-
-        if (! $writes || str_contains($source, 'CounterpartyKey')) {
+        if (! counterpartyKeyIsWritten($source) || str_contains($source, 'CounterpartyKey')) {
             continue;
         }
 
@@ -108,12 +135,7 @@ it('keeps the pass-through list honest: every pinned file still exists and still
             continue;
         }
 
-        $source = (string) file_get_contents($path);
-        $writes = str_contains($source, 'counterpartyNormalized:')
-            || str_contains($source, "'counterparty_normalized' =>")
-            || str_contains($source, "'normalized_name' =>");
-
-        if (! $writes) {
+        if (! counterpartyKeyIsWritten((string) file_get_contents($path))) {
             $stale[] = $relative.' (no longer writes a matching key)';
         }
 
@@ -124,3 +146,76 @@ it('keeps the pass-through list honest: every pinned file still exists and still
 
     expect($stale)->toBe([], "A pinned pass-through no longer describes reality. The list only shrinks.\n  ".implode("\n  ", $stale));
 });
+
+// A blind-index column compares and groups exactly as the plaintext did, so an
+// equality predicate on one is correct and is the point. What silently stops
+// working is anything that reads INSIDE the value: a LIKE, a substring, an
+// alphabetical sort. None of those fail — they just return nothing, or order
+// rows by a digest, forever.
+//
+// The registry's own list drives this, so a fourth column is covered the day
+// it is declared.
+/**
+ * @return array<string, string> repo-relative path => why it may read inside one
+ */
+function counterpartyKeyOpaqueReadExemptions(): array
+{
+    return [
+        'Modules/Sync/Public/Services/BlindIndexCodec.php' =>
+            'Probes length() to ask whether any row is keyed at all; never reads the value.',
+        'Modules/Ledger/Public/Services/CounterpartyKeyBackfill.php' =>
+            'The sweep that converts these columns, which by definition reads the value it is replacing.',
+    ];
+}
+
+it('never reads inside a blind-index column, because there is nothing in there to read', function (): void {
+    $root = dirname((string) realpath(base_path('Modules')));
+    $exempt = counterpartyKeyOpaqueReadExemptions();
+
+    $columns = [];
+    foreach (array_keys(BlindIndexCodec::indexedColumns()) as $qualified) {
+        $columns[] = substr($qualified, (int) strrpos($qualified, '.') + 1);
+    }
+
+    $hits = [];
+    foreach (counterpartyKeyProductionFiles() as $relative) {
+        if (array_key_exists($relative, $exempt)) {
+            continue;
+        }
+
+        $source = (string) file_get_contents($root.'/'.$relative);
+
+        foreach ($columns as $column) {
+            foreach (counterpartyKeyOpaqueReadShapes($column) as $label => $pattern) {
+                if (preg_match($pattern, $source) === 1) {
+                    $hits[] = $relative.' — '.$label.' on '.$column;
+                }
+            }
+        }
+    }
+
+    sort($hits);
+
+    expect($hits)->toBe(
+        [],
+        "A blind-index column holds a keyed one-way digest. Reading inside it does not fail loudly; "
+        ."it returns nothing, or sorts by hex. Compare it whole, or read the plaintext from the "
+        ."column that still has it.\n  ".implode("\n  ", $hits),
+    );
+});
+
+/**
+ * @return array<string, string> label => pattern
+ */
+function counterpartyKeyOpaqueReadShapes(string $column): array
+{
+    $quoted = preg_quote($column, '/');
+
+    return [
+        'LIKE' => '/[\'"]'.$quoted.'[\'"]\s*,\s*[\'"]like[\'"]/i',
+        'raw LIKE' => '/whereRaw\([^)]*'.$quoted.'[^)]*\bLIKE\b/i',
+        'orderBy' => '/->orderBy(?:Desc)?\(\s*[\'"](?:[a-z_]+\.)?'.$quoted.'[\'"]/i',
+        'groupBy' => '/->groupBy\(\s*[\'"](?:[a-z_]+\.)?'.$quoted.'[\'"]/i',
+        'substring' => '/(?:substr|mb_substr|str_starts_with|str_contains)\([^)]*'.$quoted.'/i',
+    ];
+}

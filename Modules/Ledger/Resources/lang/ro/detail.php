@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Nu s-a putut salva — totalul pozițiilor trebuie să corespundă exact cu totalul tranzacției.',
         'not_found' => 'Tranzacția nu a fost găsită.',
-        'amount_zero' => 'Suma nu poate fi €0,00',
+        'amount_zero' => 'Suma nu poate fi :amount',
         'choose_category' => 'Alege o categorie.',
         'choose_before_removing' => 'Alege o categorie înainte de eliminare.',
         'choose_before_unsplitting' => 'Alege o categorie înainte de a anula împărțirea.',

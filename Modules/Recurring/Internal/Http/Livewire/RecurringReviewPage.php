@@ -24,7 +24,6 @@ final class RecurringReviewPage extends Component
 {
     use DispatchesToast;
 
-    // Previous page's tail recurring_series.id; null on the first page.
     public ?int $cursorId = null;
 
     /**

@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Avaa sovelluksen lukitus tuodaksesi: kauppiasavainta ei voi laskea lukittuna.',
+        'file_unreadable' => 'Tätä tiedostoa ei voitu lukea.',
         'iban_not_in_preview' => 'Tämä IBAN ei kuulu nykyiseen esikatseluun.',
+        'row_unreadable' => 'Tätä riviä ei voitu lukea.',
+        'unknown_account' => 'Tämä rivi kuuluu tilille, jolle et ole vielä antanut nimeä.',
+    ],
+
+    'failed' => [
+        'heading' => 'Tiedostoa ei voitu lukea',
+        'no_rows' => 'Tiedostosta ei löytynyt tapahtumia, joten tuotavaa ei ole.',
+        'nothing_read' => 'Mitään tiedostossa ei voitu lukea tapahtumana, joten tuotavaa ei ole.',
+        'every_row' => 'Yhtäkään tiedoston riviä ei voitu lukea, joten tuotavaa ei ole. Jokainen rivi on lueteltu alla syineen.',
+        'likely_cause' => 'Yleensä otsikkorivi ei vastaa valitsemaasi lähdettä. Tarkista pankki ja muoto latausnäytöllä tai lataa tiliote pankistasi uudelleen.',
+        'truncated_heading' => 'Tiedostosta voitiin lukea vain osa',
+        'truncated' => 'Luku pysähtyi kesken tiedoston. Sen jälkeistä ei luettu eikä tuoda.',
+        'some_rows' => 'Joitakin rivejä ei voitu lukea. Ne on merkitty alle ja ohitetaan; vahvistus tuo loput.',
+        'detail_label' => 'Mitä jäsennin ilmoitti:',
+        'rows_read_label' => 'Luetut rivit',
+        'rows_skipped_label' => 'Ohitetut rivit',
     ],
 ];

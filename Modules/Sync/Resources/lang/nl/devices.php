@@ -17,7 +17,7 @@ return [
     'securing' => 'Je gegevens worden beveiligd…',
     'do_not_close' => 'Sluit dit venster niet.',
     'encryption_progress_aria' => 'Voortgang versleuteling',
-    'not_encrypted_offer' => 'Je gegevens zijn niet versleuteld opgeslagen. Stel versleuteling in om ze te beschermen als dit apparaat verloren of gestolen raakt.',
+    'not_encrypted_offer' => 'Je gegevens zijn niet versleuteld opgeslagen. Versleuteling verbergt wie je betaalt als dit apparaat verloren of gestolen raakt — bedragen, datums en de zoekindex blijven leesbaar.',
     'enable_encryption' => 'Versleuteling inschakelen',
 
     'your_devices' => 'Je apparaten',

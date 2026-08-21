@@ -21,7 +21,6 @@ enum Direction: string
         };
     }
 
-    // Filters a merchant's history to same-direction rows.
     /** @return list<string> */
     public function transactionTypes(): array
     {

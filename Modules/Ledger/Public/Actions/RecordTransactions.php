@@ -63,7 +63,8 @@ final class RecordTransactions implements RecordsTransactions
             $this->persistChunk($chunk, $user, $inserted, $duplicates, $sourceFormats, $insertedIds);
         }
 
-        // Once per call, after every chunk transaction above has committed.
+        // Once per call, after every chunk transaction above has committed —
+        // a listener that queries these rows must not race the write.
         if ($inserted > 0) {
             $distinctFormats = array_values(array_unique($sourceFormats));
             sort($distinctFormats);
@@ -105,9 +106,10 @@ final class RecordTransactions implements RecordsTransactions
                     throw new InvalidArgumentException("Invalid transaction type: '{$row->type}'");
                 }
 
-                // Composed from the plaintext DTO, never the possibly-encrypted
-                // $attrs below: re-import idempotency must be identical whether
-                // or not encryption is enabled.
+                // Composed from the DTO, never the possibly-encrypted $attrs
+                // below. The counterparty key it hashes is already keyed and
+                // deterministic; the AEAD columns are not, and a fingerprint
+                // over those would differ on every write of the same row.
                 $fingerprint = $this->fingerprints->compose($row);
                 $attrs = $row->toAttributes() + [
                     'fingerprint' => $fingerprint,

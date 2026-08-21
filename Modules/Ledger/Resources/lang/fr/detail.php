@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Enregistrement impossible — le total des lignes doit correspondre exactement au total de la transaction.',
         'not_found' => 'Transaction introuvable.',
-        'amount_zero' => 'Le montant ne peut pas être 0,00 €',
+        'amount_zero' => 'Le montant ne peut pas être :amount',
         'choose_category' => 'Choisis une catégorie.',
         'choose_before_removing' => 'Choisis une catégorie avant de supprimer.',
         'choose_before_unsplitting' => 'Choisis une catégorie avant d\'annuler la ventilation.',

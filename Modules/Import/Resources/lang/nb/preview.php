@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Lås opp appen for å importere: forhandlernøkkelen kan ikke beregnes mens den er låst.',
+        'file_unreadable' => 'Denne filen kunne ikke leses.',
         'iban_not_in_preview' => 'Dette IBAN-nummeret er ikke en del av den gjeldende forhåndsvisningen.',
+        'row_unreadable' => 'Denne raden kunne ikke leses.',
+        'unknown_account' => 'Denne raden hører til en konto du ikke har gitt navn ennå.',
+    ],
+
+    'failed' => [
+        'heading' => 'Filen kunne ikke leses',
+        'no_rows' => 'Det ble ikke funnet noen transaksjoner i filen, så det er ingenting å importere.',
+        'nothing_read' => 'Ingenting i filen kunne leses som en transaksjon, så det er ingenting å importere.',
+        'every_row' => 'Ingen rad i filen kunne leses, så det er ingenting å importere. Hver rad er listet nedenfor med årsaken.',
+        'likely_cause' => 'Som regel passer ikke overskriftsraden med kilden du valgte. Sjekk bank og format på opplastingsskjermen, eller last ned kontoutskriften fra banken på nytt.',
+        'truncated_heading' => 'Bare en del av filen kunne leses',
+        'truncated' => 'Innlesingen stoppet midt i filen. Alt etter det punktet ble ikke lest og blir ikke importert.',
+        'some_rows' => 'Noen rader kunne ikke leses. De er merket nedenfor og hoppes over; bekrefter du, importeres resten.',
+        'detail_label' => 'Hva parseren meldte:',
+        'rows_read_label' => 'Leste rader',
+        'rows_skipped_label' => 'Rader hoppet over',
     ],
 ];

@@ -120,7 +120,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Salvataggio non riuscito — il totale delle quote deve corrispondere esattamente al totale della transazione.',
         'not_found' => 'Transazione non trovata.',
-        'amount_zero' => "L'importo non può essere €0,00",
+        'amount_zero' => "L'importo non può essere :amount",
         'choose_category' => 'Scegli una categoria.',
         'choose_before_removing' => 'Scegli una categoria prima di rimuovere.',
         'choose_before_unsplitting' => 'Scegli una categoria prima di annullare la suddivisione.',

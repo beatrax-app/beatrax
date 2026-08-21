@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Toliau už šios atkarpos finansavimo grandinės nerasta.',
 
-    'covers_charges' => 'Padengia :count ICS mokėjimų',
+    'covers_charges' => 'Padengia :count ICS mokėjimą|Padengia :count ICS mokėjimus|Padengia :count ICS mokėjimų',
     'no_ics_charges' => 'Šiame atsiskaityme ICS mokėjimų nėra',
     'show_more_fanout' => 'Rodyti dar :count · :shown iš :total',
 

@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Ingen finansieringskedja hittades bortom det här ledet.',
 
-    'covers_charges' => 'Täcker :count ICS-debiteringar',
+    'covers_charges' => 'Täcker :count ICS-debitering|Täcker :count ICS-debiteringar',
     'no_ics_charges' => 'Inga ICS-debiteringar i den här avräkningen',
     'show_more_fanout' => 'Visa :count till · :shown av :total',
 

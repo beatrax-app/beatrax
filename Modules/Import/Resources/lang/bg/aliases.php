@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Съвпада с',
     'matches_suffix' => 'транзакции в скорошната ти история.',
 
-    'merge_modal_title' => 'Обедини :count псевдонима',
+    'merge_modal_title' => 'Обедини :count псевдоним|Обедини :count псевдонима',
 
     'merge_modal_help_html' => 'Оставащият ред запазва необработеното си описание; погълнатите редове се пазят в <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Разбираемо име',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Псевдонимът е обновен.',
         'deleted' => 'Псевдонимът е изтрит.',
         'merged' => 'Псевдонимите са обединени.',
-        'imported' => 'Импортирани са :count псевдонима.',
+        'imported' => 'Импортиран е :count псевдоним.|Импортирани са :count псевдонима.',
         'nothing' => 'Няма какво да се импортира.',
     ],
 

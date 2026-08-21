@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Entsperren Sie die App zum Importieren: Der Händlerschlüssel kann im gesperrten Zustand nicht berechnet werden.',
+        'file_unreadable' => 'Diese Datei konnte nicht gelesen werden.',
         'iban_not_in_preview' => 'Diese IBAN gehört nicht zur aktuellen Vorschau.',
+        'row_unreadable' => 'Diese Zeile konnte nicht gelesen werden.',
+        'unknown_account' => 'Diese Zeile gehört zu einem Konto, das du noch nicht benannt hast.',
+    ],
+
+    'failed' => [
+        'heading' => 'Diese Datei konnte nicht gelesen werden',
+        'no_rows' => 'In dieser Datei wurden keine Transaktionen gefunden, es gibt also nichts zu importieren.',
+        'nothing_read' => 'Nichts in dieser Datei konnte als Transaktion gelesen werden, es gibt also nichts zu importieren.',
+        'every_row' => 'Keine einzige Zeile dieser Datei konnte gelesen werden, es gibt also nichts zu importieren. Jede Zeile steht unten mit dem Grund.',
+        'likely_cause' => 'Meist passt die Kopfzeile nicht zur gewählten Quelle. Prüfe Bank und Format im Upload-Bildschirm oder lade den Kontoauszug erneut bei deiner Bank herunter.',
+        'truncated_heading' => 'Nur ein Teil dieser Datei konnte gelesen werden',
+        'truncated' => 'Das Einlesen wurde mitten in der Datei abgebrochen. Alles danach wurde nicht gelesen und wird nicht importiert.',
+        'some_rows' => 'Einige Zeilen konnten nicht gelesen werden. Sie sind unten markiert und werden übersprungen; das Bestätigen importiert die übrigen.',
+        'detail_label' => 'Meldung des Parsers:',
+        'rows_read_label' => 'Gelesene Zeilen',
+        'rows_skipped_label' => 'Übersprungene Zeilen',
     ],
 ];

@@ -53,7 +53,6 @@ final readonly class SeriesAccountResolver
             /** @var stdClass $row */
             $seriesId = self::toInt($row->series_id);
 
-            // First row per series wins: the ORDER BY puts the newest first.
             if ($seriesId > 0 && ! isset($map[$seriesId])) {
                 $map[$seriesId] = self::toInt($row->account_id);
             }

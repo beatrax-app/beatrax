@@ -14,7 +14,6 @@ use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 
-// Shared by both detectors; only the direction they report differs.
 final readonly class SeriesRefresher
 {
     public function __construct(

@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Coincide con',
     'matches_suffix' => 'transacciones de tu historial reciente.',
 
-    'merge_modal_title' => 'Fusionar :count alias',
+    'merge_modal_title' => 'Fusionar :count alias|Fusionar :count alias',
 
     'merge_modal_help_html' => 'La fila que queda conserva su descripción original; las filas absorbidas se guardan en <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Nombre legible',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Alias actualizado.',
         'deleted' => 'Alias eliminado.',
         'merged' => 'Alias fusionados.',
-        'imported' => 'Se han importado :count alias.',
+        'imported' => 'Se ha importado :count alias.|Se han importado :count alias.',
         'nothing' => 'No hay nada que importar.',
     ],
 

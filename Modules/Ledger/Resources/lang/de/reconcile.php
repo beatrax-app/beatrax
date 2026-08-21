@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Für dieses Kontoauszugsdatum gibt es nichts zu sperren.',
-        'complete' => 'Abgleich abgeschlossen — :count Zeilen gesperrt.',
+        'complete' => 'Abgleich abgeschlossen — :count Zeile gesperrt.|Abgleich abgeschlossen — :count Zeilen gesperrt.',
     ],
 ];

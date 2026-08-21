@@ -58,6 +58,24 @@ return [
     ],
 
     'errors' => [
+        'app_locked' => 'Oldja fel az alkalmazást az importáláshoz: a kereskedői kulcs zárolt állapotban nem számítható ki.',
+        'file_unreadable' => 'Ezt a fájlt nem sikerült beolvasni.',
         'iban_not_in_preview' => 'Ez az IBAN nem része az aktuális előnézetnek.',
+        'row_unreadable' => 'Ezt a sort nem sikerült beolvasni.',
+        'unknown_account' => 'Ez a sor olyan számlához tartozik, amelynek még nem adtál nevet.',
+    ],
+
+    'failed' => [
+        'heading' => 'Ezt a fájlt nem sikerült beolvasni',
+        'no_rows' => 'Ebben a fájlban nem található tranzakció, így nincs mit importálni.',
+        'nothing_read' => 'Semmit nem sikerült tranzakcióként beolvasni ebből a fájlból, így nincs mit importálni.',
+        'every_row' => 'A fájl egyetlen sorát sem sikerült beolvasni, így nincs mit importálni. Minden sor az okával együtt lent szerepel.',
+        'likely_cause' => 'Általában a fejlécsor nem egyezik a választott forrással. Ellenőrizd a bankot és a formátumot a feltöltési képernyőn, vagy töltsd le újra a kivonatot a bankodtól.',
+        'truncated_heading' => 'A fájlnak csak egy része volt beolvasható',
+        'truncated' => 'A beolvasás a fájl közepén megállt. Az azután következőket nem olvastuk be, és nem is importáljuk.',
+        'some_rows' => 'Néhány sort nem sikerült beolvasni. Lent meg vannak jelölve, és kimaradnak; a megerősítéssel a többi importálásra kerül.',
+        'detail_label' => 'Amit az elemző jelentett:',
+        'rows_read_label' => 'Beolvasott sorok',
+        'rows_skipped_label' => 'Kihagyott sorok',
     ],
 ];

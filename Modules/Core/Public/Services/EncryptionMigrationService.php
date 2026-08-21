@@ -15,6 +15,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
 use Modules\Ledger\Public\Services\CounterpartyKeyBackfill;
+use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
 use Throwable;
 
@@ -35,7 +36,8 @@ class EncryptionMigrationService
         private readonly CacheRepository $cache,
     ) {}
 
-    // Idempotent no-op once `current_epoch` is set.
+    // Idempotent once `current_epoch` is set: the enable-time pass is skipped,
+    // and what remains is the counterparty sweep, which has its own marker.
     public function migrate(User $user, Session $session): void
     {
         $userId = $user->id;
@@ -66,7 +68,7 @@ class EncryptionMigrationService
                         );
                     }
 
-                    $this->backfillCounterpartyKeysOnce($connection, $userId, $state, $support, $session);
+                    $this->backfillCounterpartyKeysOnce($connection, $userId, $support, $session);
                 }
 
                 return;
@@ -86,7 +88,8 @@ class EncryptionMigrationService
         }
     }
 
-    // Lets callers read the flag without reaching into Modules\Sync\Internal.
+    // Lets callers read the flag without reaching into Modules\Sync\Internal,
+    // which is where the epoch pointer this answers from actually lives.
     public function isEnabled(int $userId): bool
     {
         return $this->currentEpochId($this->loadState($this->db->connection(), $userId)) !== null;
@@ -132,10 +135,13 @@ class EncryptionMigrationService
                 $processed = 0;
 
                 $this->encryptOpLogEntries($connection, $userId, $support, $total, $processed);
-                $this->encryptProjectionTable($connection, $userId, 'transactions', $support, $total, $processed);
-                $this->encryptProjectionTable($connection, $userId, 'counterparties', $support, $total, $processed);
-                $this->encryptProjectionTable($connection, $userId, 'tax_transaction_tags', $support, $total, $processed);
-                $this->encryptProjectionTable($connection, $userId, 'transaction_splits', $support, $total, $processed);
+
+                // Every table PROJECTION_COLUMNS names, not a second literal
+                // list: a registered column whose table was missing from the
+                // sweep stayed readable on disk for the life of the install.
+                foreach (array_keys(PreMigrationSnapshot::PROJECTION_COLUMNS) as $table) {
+                    $this->encryptProjectionTable($connection, $userId, $table, $support, $total, $processed);
+                }
 
                 // Last, and inside the same transaction: it rewrites
                 // `fingerprint` alongside the key it is derived from, and a
@@ -212,7 +218,8 @@ class EncryptionMigrationService
                     }
 
                     if ($support->isSensitive($rawTable, $rawField)) {
-                        // `op_log_entries.pk` is VARCHAR — always a string on read.
+                        // `op_log_entries.pk` is VARCHAR, so it is a string on
+                        // read even for the tables whose own PK is an integer.
                         /** @var mixed $rawPk */
                         $rawPk = $row->pk;
                         $pk = is_string($rawPk) ? $rawPk : '';
@@ -302,12 +309,12 @@ class EncryptionMigrationService
             ->whereNotNull('value')
             ->count();
 
-        $transactions = $connection->table('transactions')->where('user_id', $userId)->count();
-        $counterparties = $connection->table('counterparties')->where('user_id', $userId)->count();
-        $taxTags = $connection->table('tax_transaction_tags')->where('user_id', $userId)->count();
-        $splits = $connection->table('transaction_splits')->where('user_id', $userId)->count();
+        $projection = 0;
+        foreach (array_keys(PreMigrationSnapshot::PROJECTION_COLUMNS) as $table) {
+            $projection += $connection->table($table)->where('user_id', $userId)->count();
+        }
 
-        return max(1, $opLog + $transactions + $counterparties + $taxTags + $splits);
+        return max(1, $opLog + $projection);
     }
 
     private function reportProgress(int $userId, int $processed, int $total): void
@@ -349,11 +356,12 @@ class EncryptionMigrationService
     private function backfillCounterpartyKeysOnce(
         ConnectionInterface $connection,
         int $userId,
-        ?\stdClass $state,
         EncryptionMigrationSupport $support,
         Session $session,
     ): void {
-        if ($state !== null && ($state->counterparty_key_backfilled_at ?? null) !== null) {
+        /** @var BlindIndexCodec $blindIndex */
+        $blindIndex = $this->container->make(BlindIndexCodec::class);
+        if ($blindIndex->hasSweptCounterpartyKeys($userId)) {
             return;
         }
 

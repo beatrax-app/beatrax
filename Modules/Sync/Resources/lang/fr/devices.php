@@ -17,7 +17,7 @@ return [
     'securing' => 'Sécurisation de tes données…',
     'do_not_close' => 'Ne ferme pas cette fenêtre.',
     'encryption_progress_aria' => 'Progression du chiffrement',
-    'not_encrypted_offer' => 'Tes données ne sont pas chiffrées au repos. Configure le chiffrement pour les protéger si cet appareil est perdu ou volé.',
+    'not_encrypted_offer' => 'Vos données ne sont pas chiffrées au repos. Le chiffrement masque qui vous payez si cet appareil est perdu ou volé — les montants, les dates et l\'index de recherche restent lisibles.',
     'enable_encryption' => 'Activer le chiffrement',
 
     'your_devices' => 'Tes appareils',

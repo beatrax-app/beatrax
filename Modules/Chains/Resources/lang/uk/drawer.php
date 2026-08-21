@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Далі за цією ланкою ланцюга фінансування не знайдено.',
 
-    'covers_charges' => 'Покриває списань ICS: :count',
+    'covers_charges' => 'Покриває :count списання ICS|Покриває :count списання ICS|Покриває :count списань ICS',
     'no_ics_charges' => 'У цьому розрахунку немає списань ICS',
     'show_more_fanout' => 'Показати ще :count · :shown з :total',
 

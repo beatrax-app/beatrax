@@ -23,7 +23,7 @@ return [
     'load_more' => 'Ielādēt vairāk',
 
     'split_badge' => 'Sadalīts · :count',
-    'split_expand_aria' => 'Sadalīts vairākās kategorijās (:count) — izvērsiet, lai skatītu',
+    'split_expand_aria' => 'Sadalīts :count kategorijā — izvērsiet, lai skatītu|Sadalīts :count kategorijā — izvērsiet, lai skatītu|Sadalīts :count kategorijās — izvērsiet, lai skatītu',
 
     'chain_badge' => 'ķēde',
     'chain_title' => 'Daļa no ķēdes — atveriet šo rindu, lai skatītu',

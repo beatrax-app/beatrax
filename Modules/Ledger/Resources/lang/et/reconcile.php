@@ -37,6 +37,6 @@ return [
 
     'toast' => [
         'nothing_to_lock' => 'Selle väljavõtte kuupäeva jaoks pole midagi lukustada.',
-        'complete' => 'Kooskõlastus on lõpetatud — lukustati :count rida.',
+        'complete' => 'Kooskõlastus on lõpetatud — lukustati :count rida.|Kooskõlastus on lõpetatud — lukustati :count rida.',
     ],
 ];

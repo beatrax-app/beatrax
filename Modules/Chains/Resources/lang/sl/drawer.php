@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Onkraj tega člena veriga financiranja ni bila najdena.',
 
-    'covers_charges' => 'Pokriva :count bremenitev ICS',
+    'covers_charges' => 'Pokriva :count bremenitev ICS|Pokriva :count bremenitvi ICS|Pokriva :count bremenitve ICS|Pokriva :count bremenitev ICS',
     'no_ics_charges' => 'V tej poravnavi ni bremenitev ICS',
     'show_more_fanout' => 'Prikaži še :count · :shown od :total',
 

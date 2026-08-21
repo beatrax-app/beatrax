@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Geen financieringsketen gevonden voorbij deze schakel.',
 
-    'covers_charges' => 'Dekt :count ICS-afschrijvingen',
+    'covers_charges' => 'Dekt :count ICS-afschrijving|Dekt :count ICS-afschrijvingen',
     'no_ics_charges' => 'Geen ICS-afschrijvingen in deze afwikkeling',
     'show_more_fanout' => ':count meer tonen · :shown van :total',
 

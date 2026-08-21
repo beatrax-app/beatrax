@@ -57,7 +57,7 @@ return [
     'matches_prefix' => 'Rammer',
     'matches_suffix' => 'transaktioner i din seneste historik.',
 
-    'merge_modal_title' => 'Flet :count aliasser',
+    'merge_modal_title' => 'Flet :count alias|Flet :count aliasser',
 
     'merge_modal_help_html' => 'Den tilbageværende række beholder sin rå beskrivelse; de optagne rækker bevares i <code class="font-mono text-xs">merged_from</code>.',
     'friendly_name_label' => 'Forståeligt navn',
@@ -69,7 +69,7 @@ return [
         'updated' => 'Aliasset er opdateret.',
         'deleted' => 'Aliasset er slettet.',
         'merged' => 'Aliasserne er flettet.',
-        'imported' => ':count aliasser er importeret.',
+        'imported' => ':count alias er importeret.|:count aliasser er importeret.',
         'nothing' => 'Intet at importere.',
     ],
 

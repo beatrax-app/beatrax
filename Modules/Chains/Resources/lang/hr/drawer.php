@@ -14,7 +14,7 @@ return [
 
     'none_beyond_leg' => 'Iza ove dionice nije pronađen lanac financiranja.',
 
-    'covers_charges' => 'Pokriva :count ICS terećenja',
+    'covers_charges' => 'Pokriva :count ICS terećenje|Pokriva :count ICS terećenja|Pokriva :count ICS terećenja',
     'no_ics_charges' => 'U ovoj namiri nema ICS terećenja',
     'show_more_fanout' => 'Prikaži još :count · :shown od :total',
 

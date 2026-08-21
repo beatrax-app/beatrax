@@ -91,7 +91,6 @@ final class CardStatementUpserter implements UpsertsCardStatements
             $closing = self::intProp($row, 'closing_balance_minor');
             $importRunId = self::intProp($row, 'import_run_id');
 
-            // insertOrIgnore returns 0 or 1 per row, so the sum is the count.
             $inserted += $connection->table('card_statements')->insertOrIgnore([
                 'user_id' => $user->id,
                 'account_id' => self::intProp($row, 'account_id'),

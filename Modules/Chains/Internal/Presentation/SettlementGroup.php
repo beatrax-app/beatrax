@@ -28,7 +28,8 @@ final class SettlementGroup
         public readonly Money $legTotal,
     ) {}
 
-    // Insertion order is preserved, so the newest settlement still leads the page.
+    // Grouping keys by settlement id and PHP preserves insertion order, so the
+    // query's newest-first ordering survives into the returned groups.
     /**
      * @param  list<ChainLinkRow>  $rows
      * @return list<self>

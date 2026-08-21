@@ -82,6 +82,7 @@ function seedPaypalExpense(
     string $counterpartyNormalized,
     string $postedAt = '2026-05-15',
     string $fingerprintSeed = 'pfe1',
+    string $counterpartyName = 'Some merchant',
 ): Transaction {
     return Transaction::query()->create([
         'user_id' => $user->id,
@@ -95,8 +96,9 @@ function seedPaypalExpense(
         'settled_amount_minor' => -$amountMinor,
         'settled_currency' => 'EUR',
         // The fuzzy arm scores the readable name, because the normalised
-        // column is a keyed digest once at-rest encryption is on.
-        'counterparty_name' => $counterpartyNormalized,
+        // column is a keyed digest once at-rest encryption is on. Kept as the
+        // bank's own spelling, which is the shape production stores.
+        'counterparty_name' => $counterpartyName,
         'counterparty_normalized' => $counterpartyNormalized,
         'normalization_version' => 3,
         'source_format' => 'paypal-csv',
@@ -115,6 +117,7 @@ function seedAsnTransferIn(
     string $counterpartyNormalized = 'paypal',
     string $postedAt = '2026-05-15',
     string $fingerprintSeed = 'asn1',
+    string $counterpartyName = 'PayPal',
 ): Transaction {
     return Transaction::query()->create([
         'user_id' => $user->id,
@@ -127,7 +130,7 @@ function seedAsnTransferIn(
         'currency' => 'EUR',
         'settled_amount_minor' => $amountMinor,
         'settled_currency' => 'EUR',
-        'counterparty_name' => $counterpartyNormalized,
+        'counterparty_name' => $counterpartyName,
         'counterparty_normalized' => $counterpartyNormalized,
         'normalization_version' => 3,
         'source_format' => 'asn-csv',
@@ -208,8 +211,8 @@ it('fuzzy match: PayPal expense without rawPayload yields candidate in [0.6, 0.9
     // An exact merchant match would score 1.0 on every component; the slight
     // variation keeps the weighted score inside the candidate band instead of
     // looking deterministic.
-    $expense = seedPaypalExpense($this->user, $this->paypal, $this->run, 1999, 'spotify ab');
-    seedAsnTransferIn($this->user, $this->asn, $this->run, 1999, 'spotyfi ab', '2026-05-16');
+    $expense = seedPaypalExpense($this->user, $this->paypal, $this->run, 1999, 'spotify ab', counterpartyName: 'Spotify AB');
+    seedAsnTransferIn($this->user, $this->asn, $this->run, 1999, 'spotyfi ab', '2026-05-16', counterpartyName: 'Spotyfi AB');
 
     $this->resolver->resolveForUser($this->user);
 
@@ -432,4 +435,26 @@ it('handles PayPal rows with null raw_payload (no events) gracefully', function 
     seedAsnTransferIn($this->user, $this->asn, $this->run, 1000, 'zzzzzzzzzz');
 
     expect(fn () => $this->resolver->resolveForUser($this->user))->not->toThrow(Throwable::class);
+});
+
+// levenshteinSimilarity('', '') is 1.0 — two empty strings really are
+// identical. Feeding it a value that means "unknown" made two rows whose
+// merchant nobody could read score a PERFECT match, and the resolver preferred
+// them: a readable candidate scores 0.0 against an unreadable source.
+it('writes no fuzzy link when neither side has a readable merchant name', function (): void {
+    seedPaypalExpense($this->user, $this->paypal, $this->run, 1999, 'spotify ab', counterpartyName: '');
+    seedAsnTransferIn($this->user, $this->asn, $this->run, 1999, 'spotyfi ab', '2026-05-16', counterpartyName: '');
+
+    $this->resolver->resolveForUser($this->user);
+
+    expect(ChainLink::query()->where('user_id', $this->user->id)->count())->toBe(0);
+});
+
+it('writes no fuzzy link when only the candidate is unreadable', function (): void {
+    seedPaypalExpense($this->user, $this->paypal, $this->run, 1999, 'spotify ab', counterpartyName: 'Spotify AB');
+    seedAsnTransferIn($this->user, $this->asn, $this->run, 1999, 'spotyfi ab', '2026-05-16', counterpartyName: '');
+
+    $this->resolver->resolveForUser($this->user);
+
+    expect(ChainLink::query()->where('user_id', $this->user->id)->count())->toBe(0);
 });

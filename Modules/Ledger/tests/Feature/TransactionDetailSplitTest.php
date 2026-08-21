@@ -89,9 +89,11 @@ it('opensEditorSeedingTwoLegsWithNoDbRows', function (): void {
         ->call('openSplitEditor')
         ->assertSet('editingSplit', true)
         ->assertSet('legs.0.categoryId', $this->groceries->id)
-        ->assertSet('legs.0.amount', '80,00')
+        // English marks: the suite reads English, and a leg box is written
+        // the way the amount above it is. A comma is still accepted on input.
+        ->assertSet('legs.0.amount', '80.00')
         ->assertSet('legs.1.categoryId', null)
-        ->assertSet('legs.1.amount', '0,00')
+        ->assertSet('legs.1.amount', '0.00')
         ->assertSet('remainingMinor', 0);
 
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
@@ -145,7 +147,7 @@ it('rejectsAZeroAmountLeg', function (): void {
         ->set('legs.1.amount', '0,00')
         ->set('legs.1.categoryId', $this->household->id)
         ->call('saveSplit')
-        ->assertSet('splitError', "Amount can't be €0,00");
+        ->assertSet('splitError', "Amount can't be €0.00");
 
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
 })->group('phase-13.1');

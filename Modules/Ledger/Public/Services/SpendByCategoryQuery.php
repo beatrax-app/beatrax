@@ -82,7 +82,6 @@ final class SpendByCategoryQuery
         $connection = $this->db->connection();
         $map = [];
 
-        // As in forUserAndPeriod: parents roll up whenever legs don't sum.
         $unsplit = $connection->table(self::TRANSACTIONS_ALIAS)
             ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
@@ -104,7 +103,6 @@ final class SpendByCategoryQuery
             ->where('ts.settled_amount_minor', '<', 0)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
-            // Consistent splits only; broken ones fell to the parent above.
             ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
             ->groupBy('ts.category_id', 'ts.settled_currency')
             ->get(['ts.category_id', 'ts.settled_currency', $connection->raw('SUM(-ts.settled_amount_minor) AS spend_minor')]);

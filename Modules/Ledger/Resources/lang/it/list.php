@@ -23,7 +23,7 @@ return [
     'load_more' => 'Carica altre',
 
     'split_badge' => 'Suddivisa · :count',
-    'split_expand_aria' => 'Suddivisa in :count categorie — espandi per vedere',
+    'split_expand_aria' => 'Suddivisa in :count categoria — espandi per vedere|Suddivisa in :count categorie — espandi per vedere',
 
     'chain_badge' => 'catena',
     'chain_title' => 'Fa parte di una catena — apri questa riga per vedere',

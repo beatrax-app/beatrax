@@ -50,6 +50,13 @@ final readonly class MerchantDisplayName
             return $name;
         }
 
+        // The sentinel is unreadable in the other direction: it is legible, but
+        // it names no merchant, so putting it on the review screen prints
+        // `_no_counterparty` at the user. Same answer as a digest.
+        if ($storedKey === BlindIndexCodec::SENTINEL) {
+            return null;
+        }
+
         return BlindIndexCodec::looksDerived($storedKey) ? null : $storedKey;
     }
 

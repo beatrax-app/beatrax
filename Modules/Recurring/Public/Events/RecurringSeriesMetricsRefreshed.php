@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Public\Events;
 
-// Fires once per refreshed series per detector sweep, not once per occurrence.
 final readonly class RecurringSeriesMetricsRefreshed
 {
     public function __construct(
