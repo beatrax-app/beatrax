@@ -52,8 +52,17 @@ final readonly class CounterpartyTriageQueue
             ->limit(self::SCAN_LIMIT)
             ->get();
 
+        // display_name, merchant_name and iban are SensitiveFieldRegistry
+        // columns; hydrate() applies no cast, so decrypt before hydrating.
+        // Doing it first also makes plaintext the models' original state, so a
+        // later save() never diffs re-encrypted values against ciphertext.
+        $decryptedRows = array_map(
+            fn (stdClass $row): stdClass => $this->decrypted($row, $user->id),
+            $rawRows->all(),
+        );
+
         /** @var list<Counterparty> $rows */
-        $rows = array_values(Counterparty::hydrate($rawRows->all())->all());
+        $rows = array_values(Counterparty::hydrate($decryptedRows)->all());
 
         if ($queueFirstId === null) {
             return $rows;
@@ -76,6 +85,21 @@ final readonly class CounterpartyTriageQueue
         }
 
         return array_merge([$head], $tail);
+    }
+
+    private function decrypted(stdClass $row, int $userId): stdClass
+    {
+        $decrypted = $this->codec->decryptRow('counterparties', [
+            'display_name' => $row->display_name ?? null,
+            'merchant_name' => $row->merchant_name ?? null,
+            'iban' => $row->iban ?? null,
+        ], $userId, $this->session);
+
+        $row->display_name = $decrypted['display_name'];
+        $row->merchant_name = $decrypted['merchant_name'];
+        $row->iban = $decrypted['iban'];
+
+        return $row;
     }
 
     // Null when no description resolves to a known merchant; the triage page
