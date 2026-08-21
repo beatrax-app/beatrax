@@ -139,7 +139,7 @@ it('renders past-day balance cells from actual transactions, not the computing e
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
-        ->assertSee("€\u{00A0}-15");
+        ->assertSee("-€15");
 });
 
 it('marks a past-day entry as missed when no occurrence exists for an expected date that has passed', function (): void {

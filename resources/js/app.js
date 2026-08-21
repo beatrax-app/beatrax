@@ -101,22 +101,6 @@ function closeOpenDialogs() {
 }
 
 /*
- * The locale money is formatted in, decided by the currency and not by the
- * interface language — the same rule Money::format() applies server-side,
- * which is why an English-language reader still sees "€ 1.727,38".
- *
- * Formatting the axis for <html lang> instead put "€4,928" on the chart and
- * "€ 1.727,38" in the tile beside it: one currency, two notations, chosen by
- * a language that has no say in how a euro is written. Keep this table in
- * step with Money::language().
- */
-const BEATRAX_MONEY_LOCALES = { EUR: 'nl-NL', DEFAULT: 'en-US' };
-
-function beatraxMoneyLocale(currency) {
-    return BEATRAX_MONEY_LOCALES[currency] || BEATRAX_MONEY_LOCALES.DEFAULT;
-}
-
-/*
  * ApexCharts ships English month names and prints raw numbers unless told
  * otherwise, so a Dutch page drew an axis reading "Oct 2026" and "3233.89"
  * beside money the rest of the page had rendered as "€ 3.233,89".
@@ -152,10 +136,12 @@ window.beatraxLocaliseChart = function (options) {
         }],
     });
 
-    // Axis numbers are money on every chart this app draws, and money is read
-    // against its own currency rather than the page language.
+    // Axis numbers are money on every chart this app draws. The currency is
+    // what is being drawn; `tag` — the same locale Money::format() reads —
+    // decides the separators and which side the symbol falls on, so the axis
+    // and the tile beside it cannot end up in two notations.
     const currency = document.documentElement.dataset.baseCurrency || 'EUR';
-    const money = new Intl.NumberFormat(beatraxMoneyLocale(currency), {
+    const money = new Intl.NumberFormat(tag, {
         style: 'currency',
         currency,
         maximumFractionDigits: 0,
