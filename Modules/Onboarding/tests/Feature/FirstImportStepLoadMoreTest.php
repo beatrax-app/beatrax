@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\FirstImportStep;
@@ -69,7 +70,7 @@ function seedLoadMoreRunWithRows(int $userId, string $sourceFormat, int $newRowC
     for ($i = 0; $i < $newRowCount; $i++) {
         $rows[] = new PreviewRowDto(
             rowIndex: $i,
-            status: 'new',
+            status: PreviewRowStatus::NewRow,
             accountId: 1,
             bookedAt: '2026-05-10',
             counterpartyName: 'Fixture '.$i,

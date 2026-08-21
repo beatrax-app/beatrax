@@ -164,10 +164,21 @@ it('refuses an amount no cash entry could be and says why', function (): void {
     expect(DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->count())->toBe(0);
 });
 
+// The prompt to enter something greater than zero is for a field left empty,
+// which is an amount not yet given. A field holding characters that are not
+// digits at all is the unreadable case, and it was the one this asserted.
 it('keeps blaming the digits when the amount is not one', function (): void {
     Livewire::actingAs($this->user)
         ->test(CashBookPage::class)
         ->set('amount', '🎉')
+        ->call('add')
+        ->assertSet('error', 'That amount could not be read. Enter it without a thousands separator and with at most two decimals, for example 1250.00.');
+});
+
+it('still asks for a figure, rather than blaming one, when the field is empty', function (): void {
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '   ')
         ->call('add')
         ->assertSet('error', 'Enter an amount greater than zero.');
 });

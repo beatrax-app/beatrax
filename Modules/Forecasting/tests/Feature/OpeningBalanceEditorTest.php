@@ -98,7 +98,7 @@ it('mounts with stored opening balance + as-of-date pre-populated', function ():
         'currentAsOfDate' => '2026-05-01',
         'currency' => 'EUR',
     ])
-        ->assertSet('openingInput', '125,00')
+        ->assertSet('openingInput', '125.00')
         ->assertSet('asOfInput', '2026-05-01');
 });
 
@@ -174,7 +174,7 @@ it('populates input with beatraxs number when clicked', function (): void {
         ->set('showingDivergenceBanner', true)
         ->set('beatraxsNumberMinor', -2500)
         ->call('useBeatraxsNumber')
-        ->assertSet('openingInput', '-25,00')
+        ->assertSet('openingInput', '-25.00')
         ->assertSet('showingDivergenceBanner', false)
         ->assertSet('divergenceDiffMinor', null);
 });

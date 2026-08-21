@@ -109,3 +109,25 @@ it('preselects the stored tax country when the wizard is re-run', function (): v
     Livewire::test(CountryStep::class)
         ->assertSet('countryCode', 'de');
 });
+
+// The property alone is not the preselection: mount() loaded the stored country
+// and the select still drew "Choose a country…", so a re-run of the wizard told
+// the reader nothing was chosen while the note beside it said switching adds
+// categories.
+it('marks the stored country as the selected option, not just as the property', function (): void {
+    DB::table('users')->where('id', $this->user->id)->update(['country_code' => 'de']);
+
+    $html = Livewire::test(CountryStep::class)->html();
+
+    expect($html)->toContain('<option value="de" selected>');
+});
+
+// Skip and "continue with nothing chosen" are both real answers here, so the
+// empty option has to stay choosable — unlike the Settings one, whose writer
+// refuses the empty value.
+it('leaves the empty option choosable', function (): void {
+    $html = Livewire::test(CountryStep::class)->html();
+
+    expect($html)->toMatch('/<option value=""\s+selected>/')
+        ->not->toContain('<option value="" disabled');
+});

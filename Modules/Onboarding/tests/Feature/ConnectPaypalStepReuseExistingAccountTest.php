@@ -7,6 +7,8 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
+use Modules\Import\Public\Enums\PreviewRowStatus;
+use Modules\Import\Public\Enums\PreviewSectionStatus;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectPaypalStep;
@@ -74,10 +76,10 @@ it('caches `new`-status rows even when the PayPal account already exists at subm
     $newRowCount = 0;
     $errorRowCount = 0;
     foreach ($preview->rows as $previewRow) {
-        if ($previewRow->status === 'new') {
+        if ($previewRow->status === PreviewRowStatus::NewRow) {
             $newRowCount++;
         }
-        if ($previewRow->status === 'error') {
+        if ($previewRow->status === PreviewRowStatus::Error) {
             $errorRowCount++;
         }
     }
@@ -90,6 +92,6 @@ it('caches `new`-status rows even when the PayPal account already exists at subm
     $batch = $query->build([$stashed], $this->user);
 
     expect($batch->sections)->toHaveCount(1);
-    expect($batch->sections[0]->status)->toBe('ready');
+    expect($batch->sections[0]->status)->toBe(PreviewSectionStatus::Ready);
     expect($batch->sections[0]->totalRows)->toBeGreaterThan(0);
 });
