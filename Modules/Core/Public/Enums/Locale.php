@@ -159,6 +159,34 @@ enum Locale: string
         return $this === self::En ? '.' : ',';
     }
 
+    // Where the currency symbol sits relative to the digits, transcribed from
+    // each locale's ICU currency pattern for the same reason the marks above
+    // are: on device ICU can only answer for English.
+    public function symbolBeforeAmount(): bool
+    {
+        return match ($this) {
+            self::En, self::Nl, self::Pt, self::Tr => true,
+            self::Bg, self::Cs, self::Da, self::De, self::El, self::Es,
+            self::Et, self::Fi, self::Fr, self::Hr, self::Hu, self::It,
+            self::Lt, self::Lv, self::Nb, self::Pl, self::Ro, self::Sk,
+            self::Sl, self::Sr, self::Sv, self::Uk => false,
+        };
+    }
+
+    // English and Turkish write the symbol against the digits (€1,234.56);
+    // every other locale keeps a non-breaking space between the two.
+    public function symbolGap(): string
+    {
+        return $this === self::En || $this === self::Tr ? '' : "\u{00A0}";
+    }
+
+    // Dutch is the only shipped locale whose negative pattern keeps the symbol
+    // in front of the sign (€ -1.234,50); everywhere else the sign leads.
+    public function signPrecedesSymbol(): bool
+    {
+        return $this !== self::Nl;
+    }
+
     // The language codes, DEFAULT first, so Symfony's getPreferredLanguage()
     // falls back to English rather than to whichever case is declared first.
     /**

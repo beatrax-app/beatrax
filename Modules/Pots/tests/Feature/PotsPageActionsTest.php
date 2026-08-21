@@ -223,7 +223,7 @@ it('tells the user what the pot actually holds when a withdrawal is too large', 
         ->set('operationPotId', $pot->id)
         ->set('operationAmount', '40,00')
         ->call('withdrawPot')
-        ->assertSet('errorAmount', "Amount exceeds balance in Buffer (€\u{00A0}10,00 available).")
+        ->assertSet('errorAmount', "Amount exceeds balance in Buffer (€10.00 available).")
         ->assertNotDispatched('modal-close');
 });
 
@@ -264,7 +264,7 @@ it('reports the source balance when a move exceeds it', function (): void {
         ->set('transferTargetPotId', (string) $to->id)
         ->set('operationAmount', '40,00')
         ->call('movePot')
-        ->assertSet('errorAmount', "Amount exceeds balance in From (€\u{00A0}10,00 available).");
+        ->assertSet('errorAmount', "Amount exceeds balance in From (€10.00 available).");
 });
 
 it('turns an unchosen transfer target into an inline error rather than a crash', function (): void {

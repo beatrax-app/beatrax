@@ -66,7 +66,7 @@ function moneyFormatCalls(string $source): array
     return $calls;
 }
 
-it('hands format() no locale to override the one the currency implies', function (): void {
+it('hands format() no locale to override the reader\'s own', function (): void {
     $offenders = [];
 
     foreach (moneyFormatRenderingFiles() as $file) {
@@ -89,10 +89,10 @@ it('hands format() no locale to override the one the currency implies', function
 
     expect($offenders)->toBe(
         [],
-        "A hardcoded locale renders a foreign currency in someone else's\n".
-        "separators — nl_NL turns \$1,245.67 into US\$ -1.245,67. Drop the\n".
-        "argument: Money::format() already resolves nl_NL for EUR and en_US for\n".
-        "everything else, on every runtime. Offenders:\n  ".
+        "A hardcoded locale renders every amount in one language's separators\n".
+        "and symbol position, whoever is reading — nl_NL turns a German \n".
+        "\"1.234,56 \u{20AC}\" into \"\u{20AC} 1.234,56\". Drop the argument: Money::format()\n".
+        "already follows the active locale, on every runtime. Offenders:\n  ".
         implode("\n  ", $offenders),
     );
 });
@@ -102,8 +102,8 @@ it('gives Money::format() no locale parameter to pass in the first place', funct
 
     expect($signature->getNumberOfParameters())->toBe(
         0,
-        'Money::format() decides the locale from the currency. A parameter here '.
-        'is an invitation to override that per call site, which is exactly how '.
-        'thirty of them came to render USD with Dutch separators.',
+        'Money::format() takes the locale the reader is already on. A parameter '.
+        'here is an invitation to override that per call site, which is exactly '.
+        'how thirty of them came to render USD with Dutch separators.',
     );
 });

@@ -64,17 +64,28 @@ instead of reading a constant, at every one of the call sites above.
 Until that happens, treat 100 as an assumption the code makes, not a
 property of money.
 
-## `format()` picks the locale from the currency
+## `format()` picks the locale from the reader
 
-`Money::format()` renders an amount for display and takes no
-argument: the currency decides the locale. EUR renders in `nl_NL` and
-everything else in `en_US`, so a foreign amount reads the way it would
-on a card statement while EUR stays in the Dutch convention the rest
-of the UI uses. The locale parameter this method used to accept is
-gone — an amount is read against its own currency, not against the
-reader's language, and `nl_NL` turns a dollar amount into
-`US$ -1.245,67`, which is not how a card statement reads in any of the
-26 languages the app ships.
+`Money::format()` renders an amount for display and takes no argument:
+the **reader's active locale** decides how it is written, and the
+currency decides only which symbol appears. So the same €1,234.56 reads
+`€ 1.234,56` for a Dutch reader, `1.234,56 €` for a German one and
+`€1,234.56` in English — separators, grouping and symbol position all
+following the language the interface is in.
+
+It did not always. The rule used to be currency-anchored: EUR rendered
+in `nl_NL` and everything else in `en_US`, on the reasoning that an
+amount should read against its own currency rather than the reader's
+language. That is defensible for the symbol, and wrong for everything
+else — it gave a German or Spanish reader Dutch symbol placement on
+every euro amount, and the requirement is that amounts are formatted
+for the user's locale *including symbol position*.
+
+Three seams on `Locale` carry what ICU knows, transcribed so the
+no-ICU path below can reach the same answer: `symbolBeforeAmount()`,
+`symbolGap()` (a non-breaking space in most languages, nothing in
+English and Turkish) and `signPrecedesSymbol()` — false only in Dutch,
+which writes `€ -1.234,50`.
 
 Internally this calls `brick/money`'s `formatToLocale()`, **not**
 `formatTo()`. The two do the same thing — `formatTo()` forwards to
@@ -96,22 +107,29 @@ data goes missing, and why it cannot simply be added back, is in
 [the mobile architecture page](../mobile/architecture.md) under
 "`--with-icu` ships ICU code, not ICU locale data".
 
-Because `format()` is currency-anchored, this fails asymmetrically and
-confusingly: on device, USD and GBP amounts formatted fine while every
-EUR amount — the overwhelming majority — threw. Every rendered amount
-in the product funnels through this method, so an uncaught throw is a
-500 on any page that shows money.
+Because `format()` follows the reader, this fails for everyone not
+reading in English — twenty-five of the twenty-six shipped languages.
+Every rendered amount in the product funnels through this method, so an
+uncaught throw is a 500 on any page that shows money.
 
 `format()` therefore catches both exception types and falls through to
-`formatWithoutIcu()`, which reproduces the two conventions this class
-anchors on from group and decimal marks the repo carries itself
-(`Locale::groupMark()` and `Locale::decimalMark()`):
+`formatWithoutIcu()`, which rebuilds the reader's convention from marks
+the repo carries itself — `Locale::groupMark()`, `decimalMark()`,
+`symbolBeforeAmount()`, `symbolGap()` and `signPrecedesSymbol()`:
 
-- **Dutch (EUR).** Symbol first, separated by a non-breaking space,
-  and the sign sits against the digits rather than in front of the
-  symbol: `€ 1.234,56`, and `€ -1.234,50` when negative.
-- **US English (everything else).** The sign leads the whole amount,
-  symbol included: `-$74.43`.
+- **English.** Symbol first, no gap, sign leading the whole amount:
+  `€1,234.56` and `-$74.43`.
+- **Dutch.** Symbol first with a non-breaking space, and the sign
+  against the digits rather than in front of the symbol: `€ 1.234,56`,
+  `€ -1.234,50`.
+- **Most others.** Symbol last, after a non-breaking space:
+  `1.234,56 €`.
+
+Grouping is assembled by walking the digits rather than reversing the
+string: a non-breaking group mark is two bytes, and `strrev()` split it
+in half, which produced mojibake in every language whose mark is not a
+plain space. That was invisible while only Dutch and English drove the
+formatter and became reachable the moment the locale did.
 
 Any locale that is neither Dutch nor English resolves to one of those
 two by currency, so the fallback never has to invent a convention it
