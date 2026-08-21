@@ -10,6 +10,7 @@ use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -183,10 +184,15 @@ it('GET /chains/review for userA renders only userA candidates — never any of 
 // The whole badge element. ">3<" would match any three on the page, and the
 // leak this guards against — a count query that drops its user_id predicate —
 // shows up as the wrong number inside this exact span, not as a missing one.
+// The label is asked for rather than spelled out: this hard-coded the plural
+// arm, so the badge this test looked for at a count of one read "1 chain links
+// awaiting review". What is under test here is cross-user isolation, and the
+// copy is pinned where the copy lives.
 function cucBadge(int $count): string
 {
-    return '<span role="img" class="side-badge" aria-label="'
-        .$count.' chain links awaiting review">'.$count.'</span>';
+    $aria = Lang::choice('core::sidebar.badge.chains', $count, ['count' => $count]);
+
+    return '<span role="img" class="side-badge" aria-label="'.$aria.'">'.$count.'</span>';
 }
 
 it('sidebar Chains badge for userA shows userA\'s open-candidate count (3) — not userB\'s', function (): void {

@@ -5,10 +5,14 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 
 // The composer must resolve ViewFactoryContract through the container, never
 // the global view() helper — the repo-wide DI-only invariant.
 
+// The label is asked for rather than spelled out: this hard-coded the plural
+// arm, so at a count of one the badge claimed the plural of its own noun.
+// What is under test is the badge markup; the copy is pinned where it lives.
 function tnbcUser(string $username): User
 {
     return User::query()->create([
@@ -77,8 +81,9 @@ function tnbcSeedDiscoveredCandidates(User $owner, int $inboxId, int $count): vo
 // would match the label without proving the number reached the badge.
 function tnbcBadge(int $count): string
 {
-    return '<span role="img" class="side-badge" aria-label="'
-        .$count.' inbox items need attention">'.$count.'</span>';
+    $aria = Lang::choice('core::sidebar.badge.inboxes', $count, ['count' => $count]);
+
+    return '<span role="img" class="side-badge" aria-label="'.$aria.'">'.$count.'</span>';
 }
 
 it('renders the Inboxes link without a badge when count is zero', function (): void {

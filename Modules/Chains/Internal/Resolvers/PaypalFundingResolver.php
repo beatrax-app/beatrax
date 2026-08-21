@@ -14,8 +14,10 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Transfers\Public\Services\PairLookup;
 use stdClass;
 
 /**
@@ -62,6 +64,7 @@ final class PaypalFundingResolver
         private readonly ChainLinkInsertHelper $inserter,
         private readonly SensitiveColumnCodec $codec,
         private readonly SessionFactory $session,
+        private readonly PairLookup $pairs,
     ) {}
 
     public function resolveForUser(User $user): void
@@ -94,6 +97,14 @@ final class PaypalFundingResolver
                 'transactions.raw_payload as raw_payload',
             ]);
 
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        // The registered aliases belong to the reader, not to the row, so the
+        // ASN-direct arm below is handed them rather than asking per payment.
+        $aliasSet = $this->paypalAliasSet($user);
+
         foreach ($rows as $row) {
             /** @var stdClass $row */
             $link = $this->deterministicMatch($row, $user);
@@ -103,7 +114,7 @@ final class PaypalFundingResolver
                 continue;
             }
 
-            $link = $this->asnDirectMatch($row, $user);
+            $link = $this->asnDirectMatch($row, $aliasSet, $user);
             if ($link !== null) {
                 $this->inserter->insertIfNotExists($link, $user);
 
@@ -178,7 +189,14 @@ final class PaypalFundingResolver
 
         $iban = $this->extractIbanFromEventRow($parsed['row']);
         $accountId = $iban === null ? null : $this->accountIdForIban($iban, $user);
-        $partnerId = $accountId === null ? null : $this->findPartnerOnAccount($accountId, -$amountMinor, $bookedAt, $user);
+        $partnerId = $accountId === null ? null : $this->pairs->counterLegOnAccount(
+            $accountId,
+            -$amountMinor,
+            TransactionType::TransferIn,
+            CarbonImmutable::parse($bookedAt),
+            self::DATE_WINDOW_DAYS,
+            $user,
+        );
         if ($iban === null || $partnerId === null) {
             return null;
         }
@@ -202,18 +220,14 @@ final class PaypalFundingResolver
     }
 
     /**
+     * @param  array<string, bool>  $aliasSet
      * @return ?array<string, mixed>
      */
-    private function asnDirectMatch(stdClass $row, User $user): ?array
+    private function asnDirectMatch(stdClass $row, array $aliasSet, User $user): ?array
     {
         $settledMinor = self::toInt($row->settled_amount_minor ?? null);
         $bookedAtRaw = self::toString($row->booked_at ?? null);
-        if ($settledMinor === 0 || $bookedAtRaw === '') {
-            return null;
-        }
-
-        $aliasSet = $this->paypalAliasSet($user);
-        if ($aliasSet === []) {
+        if ($settledMinor === 0 || $bookedAtRaw === '' || $aliasSet === []) {
             return null;
         }
 
@@ -270,7 +284,11 @@ final class PaypalFundingResolver
             ->where('tx.settled_amount_minor', $settledMinor)
             ->whereBetween('tx.booked_at', [$windowStart, $windowEnd])
             ->whereNull('existing.id')
-            ->orderByRaw('ABS(julianday(tx.booked_at) - julianday(?))', [$center->toDateTimeString()])
+            // Two legs can sit the same distance either side of the expense —
+            // a morning transfer and one the evening before. Distance alone
+            // leaves which of them is chosen to SQLite, so the row this arm
+            // links, and the one a re-run links, need not be the same row.
+            ->orderByRaw('ABS(julianday(tx.booked_at) - julianday(?)), tx.id', [$center->toDateTimeString()])
             ->limit(self::ASN_DIRECT_CANDIDATE_SCAN_LIMIT)
             ->get([
                 'tx.id as candidate_id',
@@ -499,29 +517,6 @@ final class PaypalFundingResolver
             ->table('accounts')
             ->where('user_id', $user->id)
             ->where('iban', $iban)
-            ->first(['id']);
-
-        if ($row === null) {
-            return null;
-        }
-
-        return self::toInt($row->id);
-    }
-
-    private function findPartnerOnAccount(int $accountId, int $expectedAmountMinor, string $bookedAt, User $user): ?int
-    {
-        $center = CarbonImmutable::parse($bookedAt);
-        $windowStart = $center->subDays(self::DATE_WINDOW_DAYS)->startOfDay()->toDateTimeString();
-        $windowEnd = $center->addDays(self::DATE_WINDOW_DAYS)->endOfDay()->toDateTimeString();
-
-        $row = $this->db->connection()
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('account_id', $accountId)
-            ->where('type', 'transfer_in')
-            ->where('amount_minor', $expectedAmountMinor)
-            ->whereBetween('booked_at', [$windowStart, $windowEnd])
-            ->orderByRaw('ABS(julianday(booked_at) - julianday(?))', [$center->toDateTimeString()])
             ->first(['id']);
 
         if ($row === null) {

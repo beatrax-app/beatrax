@@ -6,11 +6,15 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\Recurring\Models\RecurringSeries;
 
 uses(RefreshDatabase::class);
 
+// The label is asked for rather than spelled out: this hard-coded the plural
+// arm, so at a count of one the badge claimed the plural of its own noun.
+// What is under test is the badge markup; the copy is pinned where it lives.
 function tdbUser(string $username): User
 {
     return User::query()->create([
@@ -127,14 +131,16 @@ function tdbAlert(User $user, array $overrides = []): DriftAlert
 // landing on the wrong row cannot pass.
 function tdbDriftBadge(int $count): string
 {
-    return '<span role="img" class="side-badge alert" aria-label="'
-        .$count.' open drift alerts">'.$count.'</span>';
+    $aria = Lang::choice('core::sidebar.badge.drift', $count, ['count' => $count]);
+
+    return '<span role="img" class="side-badge alert" aria-label="'.$aria.'">'.$count.'</span>';
 }
 
 function tdbRecurringBadge(int $count): string
 {
-    return '<span role="img" class="side-badge muted" aria-label="'
-        .$count.' recurring series">'.$count.'</span>';
+    $aria = Lang::choice('core::sidebar.badge.recurring', $count, ['count' => $count]);
+
+    return '<span role="img" class="side-badge muted" aria-label="'.$aria.'">'.$count.'</span>';
 }
 
 // One sidebar anchor, from its href to the closing tag.

@@ -149,10 +149,10 @@ it('pairs a PayPal expense with the single matching ASN transfer_out → confirm
 it('marks state=candidate when ≥2 ASN candidates fall inside the date window (closest-by-date wins)', function (): void {
     $f = asnDirectFixture('beta-direct');
     $expense = paypalExpenseRow($f['user'], $f['paypal'], $f['run']->id, 999, '2026-04-30 00:00:00');
-    // Both ASN rows match on amount, alias and window; the closer booked_at
-    // wins but the link stays candidate for review.
+    // The nearer leg is written SECOND, so a resolver that had quietly fallen
+    // back to insertion order would pick the other one and this would fail.
+    asnTransferOutToPaypal($f['user'], $f['bank'], $f['run']->id, 999, '2026-04-28 12:00:00');
     $closer = asnTransferOutToPaypal($f['user'], $f['bank'], $f['run']->id, 999, '2026-04-30 12:00:00');
-    asnTransferOutToPaypal($f['user'], $f['bank'], $f['run']->id, 999, '2026-04-29 12:00:00');
 
     $resolver = $this->app->make(PaypalFundingResolver::class);
     $resolver->resolveForUser($f['user']);
@@ -162,6 +162,25 @@ it('marks state=candidate when ≥2 ASN candidates fall inside the date window (
     expect($link->state)->toBe('candidate');
     expect((float) $link->confidence)->toBe(0.9);
     expect((int) $link->to_transaction_id)->toBe($closer->id);
+});
+
+// A morning transfer and one the evening before are equally far from an
+// expense at midnight, and distance alone does not choose between them. This
+// used to be left to SQLite, which is free to answer differently on a re-run,
+// on another build of the engine, or once the table has been vacuumed — so the
+// leg the reader sees linked was not a decision anybody had made.
+it('links the same leg every time when two ASN candidates are equally close', function (): void {
+    $f = asnDirectFixture('beta-tie');
+    paypalExpenseRow($f['user'], $f['paypal'], $f['run']->id, 999, '2026-04-30 00:00:00');
+    $first = asnTransferOutToPaypal($f['user'], $f['bank'], $f['run']->id, 999, '2026-04-30 12:00:00');
+    asnTransferOutToPaypal($f['user'], $f['bank'], $f['run']->id, 999, '2026-04-29 12:00:00');
+
+    $resolver = $this->app->make(PaypalFundingResolver::class);
+    $resolver->resolveForUser($f['user']);
+
+    $link = ChainLink::query()->where('user_id', $f['user']->id)->first();
+    expect($link)->not->toBeNull();
+    expect((int) $link->to_transaction_id)->toBe($first->id);
 });
 
 it('does NOT pair when no ASN row matches the amount', function (): void {
