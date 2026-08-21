@@ -162,3 +162,104 @@ it('it_rejects_expired_token', function (): void {
     $result = $service->accept($token, (int) $user->id, 'device-resp', str_repeat('c', 64), str_repeat('d', 64));
     expect($result)->toBeFalse();
 });
+
+// First-binding-wins used to be absolute. Anyone on the same network could
+// answer an mDNS browse, harvest the token hash the responder sends in the
+// clear, and race an accept in first — after which the real phone could never
+// bind, however many times it tried. A binding nobody has confirmed is not yet
+// a decision, so it can be replaced; the moment either side confirms, it is.
+
+function acceptedToken(PairingTokenService $service, User $user, string $responderDeviceId): string
+{
+    $token = $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
+    $hash = hash('sha256', $token);
+
+    $service->applyResponderAccept(
+        (int) $user->id,
+        $hash,
+        $responderDeviceId,
+        str_repeat('c', 64),
+        str_repeat('d', 64),
+        'Squatter',
+    );
+
+    return $hash;
+}
+
+it('lets a later responder replace a binding nobody has confirmed', function (): void {
+    $user = tokenUser('rebind-user');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+    $hash = acceptedToken($service, $user, '11111111-2222-4333-8444-555555555555');
+
+    $honest = '99999999-8888-4777-8666-555555555555';
+
+    expect($service->applyResponderAccept(
+        (int) $user->id,
+        $hash,
+        $honest,
+        str_repeat('e', 64),
+        str_repeat('f', 64),
+        'Real phone',
+    ))->not->toBeFalse();
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    expect($row->responder_device_id)->toBe($honest);
+});
+
+it('refuses a different responder once a side has confirmed', function (): void {
+    $user = tokenUser('rebind-confirmed-user');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+    $bound = '11111111-2222-4333-8444-555555555555';
+    $hash = acceptedToken($service, $user, $bound);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $db->connection()->table('pairing_tokens')
+        ->where('user_id', $user->id)
+        ->update(['initiator_confirmed_at' => CarbonImmutable::now()->toIso8601String()]);
+
+    expect($service->applyResponderAccept(
+        (int) $user->id,
+        $hash,
+        '99999999-8888-4777-8666-555555555555',
+        str_repeat('e', 64),
+        str_repeat('f', 64),
+        'Too late',
+    ))->toBeFalse();
+
+    $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    expect($row->responder_device_id)->toBe($bound);
+});
+
+// Redelivery is the ordinary case — the same frame arriving twice must not be
+// treated as a second responder trying to take the slot.
+it('stays idempotent for a redelivery of the same responder', function (): void {
+    $user = tokenUser('rebind-idempotent-user');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+    $bound = '11111111-2222-4333-8444-555555555555';
+    $hash = acceptedToken($service, $user, $bound);
+
+    expect($service->applyResponderAccept(
+        (int) $user->id,
+        $hash,
+        $bound,
+        str_repeat('c', 64),
+        str_repeat('d', 64),
+        'Squatter',
+    ))->not->toBeFalse();
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    expect($db->connection()->table('pairing_tokens')->where('user_id', $user->id)->count())->toBe(1);
+});

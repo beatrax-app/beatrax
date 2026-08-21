@@ -266,9 +266,18 @@ final class PairingTokenService
         $state = is_string($row->state) ? $row->state : '';
 
         return match ($state) {
-            // Already advanced: only a redelivery of the SAME responder is
-            // idempotent here. A different responder loses — first binding wins.
-            PairingState::AwaitingConfirm->value => $this->rowIfResponderAlreadyBound($row, $responderDeviceId),
+            // Already advanced. A redelivery of the SAME responder is
+            // idempotent; a different one may still take the slot, but only
+            // while nobody has confirmed anything yet.
+            PairingState::AwaitingConfirm->value => $this->rebindOrIdempotent(
+                $row,
+                $userId,
+                $now,
+                $responderDeviceId,
+                $responderEd25519Hex,
+                $responderX25519Hex,
+                $responderName,
+            ),
             PairingState::Pending->value => $this->bindResponderOntoRow(
                 $row,
                 $userId,
@@ -298,13 +307,50 @@ final class PairingTokenService
         return true;
     }
 
-    private function rowIfResponderAlreadyBound(\stdClass $row, string $responderDeviceId): object|false
-    {
+    // First-binding-wins used to be absolute, which handed anyone on the same
+    // network a permanent denial: answer an mDNS browse, harvest the token hash
+    // the responder sends in the clear, and race an accept in first — the real
+    // phone could then never bind, however many times it tried.
+    //
+    // A binding nobody has confirmed is not yet a decision, so a later accept
+    // may replace it. The moment either side confirms, it is one, and the
+    // binding is immutable — a squatter can delay a pairing, never capture one.
+    // The safety-number comparison was always the trust gate and still is; this
+    // is about not letting a stranger hold the slot.
+    private function rebindOrIdempotent(
+        \stdClass $row,
+        int $userId,
+        CarbonImmutable $now,
+        string $responderDeviceId,
+        string $responderEd25519Hex,
+        string $responderX25519Hex,
+        string $responderName,
+    ): object|false {
         $existingResponder = is_string($row->responder_device_id) ? $row->responder_device_id : null;
 
-        return $existingResponder !== null && hash_equals($existingResponder, $responderDeviceId)
-            ? $row
-            : false;
+        if ($existingResponder !== null && hash_equals($existingResponder, $responderDeviceId)) {
+            return $row;
+        }
+
+        if (self::eitherSideConfirmed($row)) {
+            return false;
+        }
+
+        return $this->bindResponderOntoRow(
+            $row,
+            $userId,
+            $now,
+            $responderDeviceId,
+            $responderEd25519Hex,
+            $responderX25519Hex,
+            $responderName,
+        );
+    }
+
+    private static function eitherSideConfirmed(\stdClass $row): bool
+    {
+        return is_string($row->initiator_confirmed_at ?? null)
+            || is_string($row->responder_confirmed_at ?? null);
     }
 
     // The PENDING -> AWAITING_CONFIRM transition: binds the responder identity

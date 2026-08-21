@@ -11,6 +11,7 @@ use Amp\Http\Server\Response;
 use Amp\Socket\InternetAddress;
 use JsonException;
 use Modules\Sync\Internal\Pairing\PairingFrameApplier;
+use Modules\Sync\Internal\Pairing\PairingFrameOutcome;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 
 // The second route in front of the WebSocket, and the counterpart of the first.
@@ -45,6 +46,12 @@ final readonly class PairingFrameRequestHandler implements RequestHandler
     // the cheapest denial-of-service on this listener.
     private const int MAX_BODY_BYTES = 8192;
 
+    // Sized for the caller this route actually has: a phone re-emitting on a
+    // three-second poll spends twenty a minute by itself, so the offer route's
+    // human-sized allowance would throttle an honest handshake within half a
+    // minute — and report it as a code that did not work.
+    public const int MAX_PER_WINDOW = 60;
+
     // The same single refusal the offer route uses, for the same reason: an
     // unknown token, an expired one, a malformed frame and one belonging to
     // another user must be indistinguishable, so probing this endpoint tells
@@ -72,7 +79,14 @@ final readonly class PairingFrameRequestHandler implements RequestHandler
 
         $frame = $this->decodeBody($request);
 
-        if ($frame === null || ! $this->applier->apply($this->userId, $frame)) {
+        // Compared against the case, never coerced: an enum instance is always
+        // truthy, so negating it silently answered "applied" to every body that
+        // merely parsed — refusals included.
+        $outcome = $frame === null
+            ? PairingFrameOutcome::Refused
+            : $this->applier->apply($this->userId, $frame);
+
+        if ($outcome === PairingFrameOutcome::Refused) {
             return $this->json(HttpStatus::NOT_FOUND, self::NOT_FOUND_BODY);
         }
 

@@ -13,9 +13,11 @@ use Illuminate\Console\Command;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
+use Modules\Sync\Internal\Pairing\PairingPeerOutbox;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
+use Modules\Sync\Internal\Transport\PairingFramePullHandler;
 use Modules\Sync\Internal\Transport\PairingFrameRequestHandler;
 use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
@@ -43,6 +45,7 @@ final class SyncServeCommand extends Command
         private readonly PairingOfferService $offers,
         private readonly PairingOfferRateLimiter $offerRateLimiter,
         private readonly PairingFrameApplier $frameApplier,
+        private readonly PairingPeerOutbox $peerOutbox,
     ) {
         parent::__construct();
     }
@@ -92,15 +95,25 @@ final class SyncServeCommand extends Command
             $frameHandler = new PairingFrameRequestHandler(
                 $wsServer,
                 $this->frameApplier,
-                $this->offerRateLimiter,
+                // Its own bucket: sharing the offer route's let a polling phone
+                // spend the allowance a human typing a code needs.
+                $this->offerRateLimiter->withLimit(PairingFrameRequestHandler::MAX_PER_WINDOW),
                 $handler->localUserId(),
+            );
+
+            // The return leg. Only this side listens — a phone runs no server —
+            // so frames addressed to a phone wait here until it collects them.
+            $pullHandler = new PairingFramePullHandler(
+                $frameHandler,
+                $this->peerOutbox,
+                $this->offerRateLimiter->withLimit(PairingFrameRequestHandler::MAX_PER_WINDOW),
             );
 
             // A device holding only a typed word-code has no way to learn this
             // device's public identity, and a fresh responder cannot accept a
             // token without it.
             $requestHandler = new PairingOfferRequestHandler(
-                $frameHandler,
+                $pullHandler,
                 $this->offers,
                 $this->offerRateLimiter,
                 $handler->localUserId(),

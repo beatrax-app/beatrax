@@ -41,6 +41,7 @@ use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\PairingFrameApplier;
+use Modules\Sync\Internal\Pairing\PairingPeerOutbox;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
@@ -225,6 +226,8 @@ final class SyncServiceProvider extends ServiceProvider
             // relay drain and the LAN route cannot drift apart.
             'PairingFrameApplier',
             'LanPairingFrameCourier',
+            'LanPairingFramePuller',
+            'PairingPeerOutbox',
             // Relay courier for the cross-device both-confirm handshake
             // (PairingFrame is static-only, no binding needed).
             'PairingFrameCourier',
@@ -416,6 +419,7 @@ final class SyncServiceProvider extends ServiceProvider
                 offers: $this->app->make(PairingOfferService::class),
                 offerRateLimiter: $this->app->make(PairingOfferRateLimiter::class),
                 frameApplier: $this->app->make(PairingFrameApplier::class),
+                peerOutbox: $this->app->make(PairingPeerOutbox::class),
             ));
         }
 

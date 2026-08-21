@@ -30,6 +30,7 @@ final class PairingFrameCourier
         private readonly PairingTokenService $tokenService,
         private readonly PairingFrameApplier $applier,
         private readonly LanPairingFrameCourier $lanCourier,
+        private readonly PairingPeerOutbox $outbox,
         private readonly DatabaseManager $db,
         private readonly ?LoggerInterface $logger = null,
     ) {}
@@ -108,7 +109,19 @@ final class PairingFrameCourier
             return;
         }
 
-        $this->relayClient->deliver($senderDid, $recipientDid, json_encode($frame, JSON_THROW_ON_ERROR));
+        try {
+            $this->relayClient->deliver($senderDid, $recipientDid, json_encode($frame, JSON_THROW_ON_ERROR));
+
+            return;
+        } catch (RuntimeException $e) {
+            // Neither road is open: the peer runs no listener to push to — a
+            // phone never does — and there is no relay. Hold the frame for the
+            // peer to collect, which is the case that used to end the handshake
+            // with a RelayRefusedException and a screen that waited forever.
+            if (! $this->outbox->queueFor($senderDid, $recipientDid, $frame)) {
+                throw $e;
+            }
+        }
     }
 
     // The peer's bound X25519 (sealing) key from THIS device's own pairing

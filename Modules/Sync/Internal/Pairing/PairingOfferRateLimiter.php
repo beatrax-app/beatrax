@@ -6,10 +6,15 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Modules\Core\Public\Contracts\Clock;
 
-// Per-source-IP fixed-window throttle for GET /pair/offer. The token is 128
-// bits, so guessing one is already infeasible; this bounds the guessing
-// anyway, and stops the endpoint being usable as a cheap probe for whether a
+// Per-source-IP fixed-window throttle for the two pairing routes. The token is
+// 128 bits, so guessing one is already infeasible; this bounds the guessing
+// anyway, and stops either endpoint being usable as a cheap probe for whether a
 // pairing is currently in flight. In-process — the daemon is long-lived.
+//
+// Each route holds its OWN instance, so neither can spend the other's budget:
+// the offer route is driven by a human typing a code, the frame route by a
+// phone polling on a timer, and one bucket for both let the timer starve the
+// human within half a minute.
 final class PairingOfferRateLimiter
 {
     // A human types one code, gets it wrong once or twice, and is done.
@@ -25,7 +30,17 @@ final class PairingOfferRateLimiter
     /** @var array<string, array{start: int, count: int}> */
     private array $windows = [];
 
-    public function __construct(private readonly Clock $clock) {}
+    public function __construct(
+        private readonly Clock $clock,
+        private readonly int $maxPerWindow = self::MAX_PER_WINDOW,
+    ) {}
+
+    // A sibling limiter on the same clock with its own window map, for a route
+    // whose legitimate caller is not a human hand.
+    public function withLimit(int $maxPerWindow): self
+    {
+        return new self($this->clock, $maxPerWindow);
+    }
 
     public function allow(string $sourceKey): bool
     {
@@ -42,7 +57,7 @@ final class PairingOfferRateLimiter
             return true;
         }
 
-        if ($window['count'] >= self::MAX_PER_WINDOW) {
+        if ($window['count'] >= $this->maxPerWindow) {
             return false;
         }
 
