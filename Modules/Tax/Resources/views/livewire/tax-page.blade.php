@@ -4,7 +4,7 @@
 
     $data:           TaxYearData|null  — grouped categories + totals for the selected year
     $availableYears: array<int>        — years with tags (for year switcher options)
-    $hasTaxCountry:  bool              — false = first-visit guided empty state
+    $hasCountry:  bool              — false = first-visit guided empty state
 
     Page structure (UI-SPEC Section 8):
       [Page header: H1 + year switcher + export buttons]
@@ -19,18 +19,10 @@
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 
 @php
-    /**
-     * Format a minor (cents) integer as EUR with nl_NL formatting.
-     * Uses integer-only arithmetic — no float division.
-     */
-    $fmtEur = static function (int $minor): string {
-        $negative = $minor < 0;
-        $abs = abs($minor);
-        $euros = intdiv($abs, Money::MINOR_UNITS_PER_MAJOR);
-        $cents = $abs % Money::MINOR_UNITS_PER_MAJOR;
-        $formatted = '€ ' . number_format($euros, 0, ',', '.') . ',' . str_pad((string) $cents, 2, '0', STR_PAD_LEFT);
-        return $negative ? '−' . $formatted : $formatted;
-    };
+    // Through Money, which writes the figure the way the reader's language
+    // does. The hand-rolled version this replaces was pinned to nl_NL, so an
+    // English reader met "€ 1.237,89" on a screen of "€1,237.89".
+    $fmtEur = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
 @endphp
 
 <div class="py-12">
@@ -116,7 +108,7 @@
              $data from the tagged items before it ever looks the country up.
              So the prompt sits above the figures it refines, and the figures
              stay on screen. --}}
-        @if (! $hasTaxCountry)
+        @if (! $hasCountry)
             {{-- A tinted band, not a second .card: stacked directly on the
                  totals strip it repeated the same white surface, border and
                  shadow, so the two read as one card drawn twice. --}}
@@ -125,10 +117,13 @@
                     {{ Lang::get('tax::page.country_prompt_heading') }}
                 </p>
                 <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0 0 var(--space-3);">
-                    {{ Lang::get('tax::page.country_prompt_body') }}
+                    {{ Lang::get('tax::page.country_prompt_body', ['section' => Lang::get('core::settings.country.heading')]) }}
                 </p>
+                {{-- The country moved out of the Tax section and in beside the
+                     language, so both the anchor and the word in the sentence
+                     name the control that still exists. --}}
                 <a
-                    href="{{ route('settings') }}#tax"
+                    href="{{ route('settings') }}#country"
                     class="pill-btn-primary"
                     style="display: inline-block; text-decoration: none;"
                 >{{ Lang::get('tax::page.country_prompt_cta') }}</a>
@@ -233,7 +228,7 @@
                                     <span
                                         role="img"
                                         style="display: inline-flex; align-items: center; padding: 1px 8px; border-radius: var(--radius-full); background: var(--color-surface); border: 1px solid var(--color-border); font-size: var(--text-xs); color: var(--color-text-muted);"
-                                        aria-label="{{ Lang::get('tax::page.items_count_aria', ['count' => $count]) }}"
+                                        aria-label="{{ Lang::choice('tax::page.items_count_aria', $count) }}"
                                     >{{ $count }}</span>
                                 </div>
                                 <span class="kpi-number" style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin-right: var(--space-3);">

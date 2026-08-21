@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\SystemAlertQuery;
 
 uses(RefreshDatabase::class);
@@ -271,4 +273,30 @@ it('active(null) returns ONLY system-wide rows when no user is supplied', functi
     $messages = $query->active(null)->pluck('message')->all();
 
     expect($messages)->toBe(['system-only']);
+});
+
+// The banner order used to name the severities as text inside the orderByRaw,
+// so renaming a case value would have left every row of that severity falling
+// through the ELSE arm — a critical row displayed under a warning, with nothing
+// failing. Sourcing them as bindings makes the SQL follow the enum by itself.
+it('sends the severity spellings to SQLite as bindings taken from the enum, never spliced into the ORDER BY text', function (): void {
+    $captured = [];
+    $this->db->connection()->listen(function (QueryExecuted $query) use (&$captured): void {
+        $captured[] = $query;
+    });
+
+    /** @var SystemAlertQuery $query */
+    $query = $this->app->make(SystemAlertQuery::class);
+    $query->active($this->userA);
+
+    $ordered = array_values(array_filter(
+        $captured,
+        static fn (QueryExecuted $executed): bool => str_contains($executed->sql, 'CASE severity'),
+    ));
+
+    expect($ordered)->not->toBeEmpty()
+        ->and($ordered[0]->sql)->not->toContain(SystemAlertSeverity::Critical->value)
+        ->and($ordered[0]->sql)->not->toContain(SystemAlertSeverity::Warning->value)
+        ->and($ordered[0]->bindings)->toContain(SystemAlertSeverity::Critical->value)
+        ->and($ordered[0]->bindings)->toContain(SystemAlertSeverity::Warning->value);
 });

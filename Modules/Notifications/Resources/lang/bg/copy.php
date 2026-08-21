@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — изразходвани :spent от :budget.',
         'receipts_matched' => ':count разписка е съпоставена от имейла ти.|:count разписки са съпоставени от имейла ти.',
         'import_finished' => ':count транзакция е импортирана.|:count транзакции са импортирани.',
-        'drift' => 'Повтарящо се плащане се промени :direction с :delta :currency.',
+        'drift' => 'Повтарящо се плащане се промени :direction с :amount.',
         'forecast' => 'Прогнозното ти салдо пада под нулата през следващите 30 дни.',
         'ics_statement_ready' => 'Изтегли го от портала на ICS и го пусни в Beatrax, за да са актуални разходите по тази карта.',
         'payment_reminder_hedged' => ':name — очаквано около :day, :amount.',

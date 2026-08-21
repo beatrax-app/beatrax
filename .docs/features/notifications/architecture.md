@@ -236,3 +236,9 @@ preferences form plus a read-only "Other devices" panel, bounds-checking
 every input before any write (mirroring the project's other settings
 sections' defense-in-depth discipline) even though the query layer
 re-validates as well.
+
+## Related
+
+- [Copy that follows the reader](reader-language-copy.md) — the copy
+  spec stored in `params`, how a removed translation key degrades, and
+  why money rides as a value rather than a formatted string.

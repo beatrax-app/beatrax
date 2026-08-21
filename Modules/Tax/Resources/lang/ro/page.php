@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Descarcă beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'În ce țară îți depui declarația fiscală?',
-    'country_prompt_body' => 'Poți schimba asta oricând din Setări → Fiscal.',
+    'country_prompt_body' => 'Poți schimba asta oricând din Setări → :section.',
     'country_prompt_cta' => 'Configurează categoriile fiscale',
 
     'total_deductions' => 'Total deduceri',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Mergi la Tranzacții ca să începi etichetarea →',
 
     'no_category' => 'Fără categorie',
-    'items_count_aria' => ':count elemente',
+    'items_count_aria' => ':count element|:count elemente|:count de elemente',
 
     'col_date' => 'Dată',
     'col_account' => 'Cont',

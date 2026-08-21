@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :spent af :budget brugt.',
         'receipts_matched' => ':count kvittering matchet fra din e-mail.|:count kvitteringer matchet fra din e-mail.',
         'import_finished' => ':count transaktion importeret.|:count transaktioner importeret.',
-        'drift' => 'En tilbagevendende postering gik :direction med :delta :currency.',
+        'drift' => 'En tilbagevendende postering gik :direction med :amount.',
         'forecast' => 'Din forventede saldo falder under nul inden for de næste 30 dage.',
         'ics_statement_ready' => 'Hent det fra ICS-portalen, og læg det ind i Beatrax for at holde kortets forbrug opdateret.',
         'payment_reminder_hedged' => ':name — forventet omkring :day, :amount.',

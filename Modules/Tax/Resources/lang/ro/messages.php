@@ -8,7 +8,7 @@ return [
     'tagged' => 'Etichetată drept deductibilă fiscal.',
     'untagged' => 'Eticheta fiscală a fost eliminată.',
     'batch_none_reconciled' => 'Nimic etichetat — acele tranzacții sunt reconciliate. Anulează reconcilierea lor pentru a face modificări.',
-    'batch_tagged' => 'Au fost etichetate încă :count tranzacții.',
+    'batch_tagged' => 'A fost etichetată încă :count tranzacție.|Au fost etichetate încă :count tranzacții.|Au fost etichetate încă :count de tranzacții.',
 
     'errors' => [
         'name_empty' => 'Numele categoriei nu poate fi gol.',

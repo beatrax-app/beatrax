@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'För många försök — försök igen om :wait.',
 
-    'error_incorrect_remaining' => 'Fel PIN-kod. :remaining försök återstår.',
+    'error_incorrect_remaining' => 'Fel PIN-kod. :count försök återstår.|Fel PIN-kod. :count försök återstår.',
     'error_incorrect' => 'Fel PIN-kod.',
 ];

@@ -30,7 +30,6 @@ final class SuppressionEvaluator
         private readonly LoggerInterface $logger,
     ) {}
 
-    // hideDetails reflects the stored preference whatever the outcome.
     public function shouldDeliver(int $userId, string $triggerType, CarbonImmutable $at): DeliveryDecision
     {
         /** @var User $user */

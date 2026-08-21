@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Liikaa yrityksiä — yritä uudelleen :wait kuluttua.',
 
-    'error_incorrect_remaining' => 'Väärä PIN-koodi. :remaining yritystä jäljellä.',
+    'error_incorrect_remaining' => 'Väärä PIN-koodi. :count yritys jäljellä.|Väärä PIN-koodi. :count yritystä jäljellä.',
     'error_incorrect' => 'Väärä PIN-koodi.',
 ];

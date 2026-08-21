@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Завантажити beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'У якій країні ти подаєш податкову декларацію?',
-    'country_prompt_body' => 'Це можна будь-коли змінити в Налаштування → Податки.',
+    'country_prompt_body' => 'Це можна будь-коли змінити в Налаштування → :section.',
     'country_prompt_cta' => 'Налаштувати податкові категорії',
 
     'total_deductions' => 'Разом відрахувань',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Перейти до транзакцій, щоб почати позначати →',
 
     'no_category' => 'Без категорії',
-    'items_count_aria' => 'позицій: :count',
+    'items_count_aria' => ':count позиція|:count позиції|:count позицій',
 
     'col_date' => 'Дата',
     'col_account' => 'Рахунок',

@@ -40,7 +40,6 @@ final class BackupRetentionPolicy
             }
         }
 
-        // Re-key in input order, not the DESC sort above, so output stays stable.
         ksort($kept);
 
         return array_values($kept);
@@ -59,7 +58,6 @@ final class BackupRetentionPolicy
 
         foreach ($candidateFilenames as $index => $name) {
             if (preg_match(self::FILENAME_PATTERN, $name, $m) !== 1) {
-                // .suspect, pre-restore-* and .meta.json are always preserved.
                 $kept[$index] = $name;
 
                 continue;
@@ -99,7 +97,6 @@ final class BackupRetentionPolicy
      */
     private function sundayKeepIndexes(array $matched): array
     {
-        // Read from the constant so a Carbon major that bumps the value still works.
         $sundayDow = CarbonImmutable::SUNDAY;
 
         $indexes = [];

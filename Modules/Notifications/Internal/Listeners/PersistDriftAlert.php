@@ -7,7 +7,6 @@ namespace Modules\Notifications\Internal\Listeners;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
-use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Notifications\Internal\Support\CopyLine;
 use Modules\Notifications\Internal\Support\CopyParam;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
@@ -31,15 +30,14 @@ final class PersistDriftAlert
     {
         try {
             $direction = $event->direction === 'up' ? 'up' : 'down';
-            $currency = $event->currency;
-            $delta = MoneyInput::formatAbsMinor($event->deltaMinor);
 
             $copy = NotificationCopySpec::of(
                 CopyLine::of('notifications::copy.title.drift'),
                 CopyLine::of('notifications::copy.body.drift', [
                     'direction' => CopyParam::line('notifications::copy.drift_direction.'.$direction),
-                    'delta' => $delta,
-                    'currency' => $currency,
+                    // Absolute: the direction word already carries the sign,
+                    // and "moved up by -12,50" is not a sentence.
+                    'amount' => CopyParam::money(abs($event->deltaMinor), $event->currency),
                 ]),
             );
 

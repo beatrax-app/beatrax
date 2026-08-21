@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Download beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'Which country do you file taxes in?',
-    'country_prompt_body' => 'You can change this in Settings → Tax at any time.',
+    'country_prompt_body' => 'You can change this in Settings → :section at any time.',
     'country_prompt_cta' => 'Set up tax categories',
 
     'total_deductions' => 'Total deductions',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Go to Transactions to start tagging →',
 
     'no_category' => 'No category',
-    'items_count_aria' => ':count items',
+    'items_count_aria' => ':count item|:count items',
 
     'col_date' => 'Date',
     'col_account' => 'Account',

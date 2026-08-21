@@ -40,6 +40,8 @@ return [
         'choose' => 'Vyber zemi…',
         'switch_note' => 'Změna přidá nové kategorie — stávající štítky se nikdy nemění.',
 
+        'wording_note' => 'Názvy daňových kategorií pocházejí z daňového přiznání používaného v :country, takže zůstávají ve slovech dané země ve všech jazycích aplikace.',
+
         'countries' => [
             'at' => 'Rakousko',
             'be' => 'Belgie',

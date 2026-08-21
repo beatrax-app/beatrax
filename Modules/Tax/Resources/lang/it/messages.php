@@ -8,7 +8,7 @@ return [
     'tagged' => 'Etichettata come detraibile.',
     'untagged' => 'Etichetta fiscale rimossa.',
     'batch_none_reconciled' => 'Nessuna etichetta applicata — quelle transazioni sono riconciliate. Annulla la riconciliazione per apportare modifiche.',
-    'batch_tagged' => 'Etichettate altre :count transazioni.',
+    'batch_tagged' => 'Etichettata altra :count transazione.|Etichettate altre :count transazioni.',
 
     'errors' => [
         'name_empty' => 'Il nome della categoria non può essere vuoto.',

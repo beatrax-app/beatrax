@@ -88,8 +88,14 @@ even if the user's base currency later diverges.
 3. A goal with fewer than 7 days of observation history is suppressed
    entirely (no projected date) — dividing a single early deposit by a
    1–2 day window would extrapolate a misleadingly-soon finish.
-4. A zero-or-negative daily rate (no history, or net outflow) also
-   suppresses the projection.
+4. A zero-or-negative daily rate past that threshold also suppresses the
+   projection, but it is a **different** state and the card says so:
+   `stalled: true`. The two reasons are not interchangeable. A goal
+   started six months ago with €500 contributed four months ago has
+   ninety days of observation and an empty trailing window — "Not enough
+   history" is a definite claim and a false one there, so that case reads
+   `projection.no_recent_contributions` and only the younger-than-7-days
+   case reads `projection.not_enough_history`.
 5. The projected date is `today + ceil(remaining / dailyRate)`; beyond 90 days
    it is reported as extrapolated / lower-confidence (`beyondHorizon: true`).
 

@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Твърде много опити — опитай отново след :wait.',
 
-    'error_incorrect_remaining' => 'Грешен ПИН код. Остават ти :remaining опита.',
+    'error_incorrect_remaining' => 'Грешен ПИН код. Остава ти :count опит.|Грешен ПИН код. Остават ти :count опита.',
     'error_incorrect' => 'Грешен ПИН код.',
 ];

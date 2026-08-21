@@ -39,6 +39,8 @@ return [
         'choose' => 'Kies een land…',
         'switch_note' => 'Wisselen voegt nieuwe categorieën toe — bestaande tags worden nooit gewijzigd.',
 
+        'wording_note' => 'Namen van belastingcategorieën komen uit de aangifte die in :country wordt gebruikt en blijven dus in de woorden van dat land, in elke apptaal.',
+
         'countries' => [
             'at' => 'Oostenrijk',
             'be' => 'België',

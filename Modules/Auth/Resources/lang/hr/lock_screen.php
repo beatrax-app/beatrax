@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Previše pokušaja — pokušaj ponovno za :wait.',
 
-    'error_incorrect_remaining' => 'Neispravan PIN. Preostalo pokušaja: :remaining.',
+    'error_incorrect_remaining' => 'Neispravan PIN. Preostaje :count pokušaj.|Neispravan PIN. Preostaju :count pokušaja.|Neispravan PIN. Preostaje :count pokušaja.',
     'error_incorrect' => 'Neispravan PIN.',
 ];

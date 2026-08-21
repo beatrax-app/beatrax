@@ -32,6 +32,14 @@ electron-updater manifest and a detached hex signature sibling:
 | macOS | `latest-mac.yml` | `latest-mac.yml.sig` |
 | Linux | `latest-linux.yml` | `latest-linux.yml.sig` |
 
+Those three rows are the cases of `Modules\Core\Internal\Enums\OsFamily`, and
+`updateManifestSuffix()` is the whole mapping — Windows' empty suffix is its own
+answer, not a fallback. `PHP_OS_FAMILY` also reports `BSD`, `Solaris` and
+`Unknown`; `HttpPublisherManifestFetcher` reads those through `tryFrom()`, gets
+`null`, logs, and fetches nothing. It must not fetch the suffix-less manifest
+for them: the Windows SHA-512 can never match a non-Windows binary, so the
+update would fail verification on every check, forever, on that OS alone.
+
 The `preview` channel uses `beta*.yml` instead of `latest*.yml`.
 `config/auto_update.php`'s `manifest_feed_url` (env
 `AUTO_UPDATE_FEED_URL`) is the base URL those sit under; the release

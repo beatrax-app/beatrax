@@ -163,10 +163,15 @@ The behavioural contract for the `Core` module.
   passes through.
 - **Every non-loopback request raises 404.** `LoopbackOnly` middleware
   inspects `SERVER_ADDR`; if a non-loopback IP is set, it throws
-  `NotFoundHttpException`. Requests with no `SERVER_ADDR` pass (CLI
-  - Pest fixtures). The detection covers IPv4 127.0.0.0/8, IPv6
-  `::1`, and the IPv4-mapped-IPv6 `::ffff:127.x.x.x` form on
-  binary-form (`inet_pton`) comparison.
+  `NotFoundHttpException`. A request carrying no `SERVER_ADDR` is
+  decided by the SAPI: the console context passes, `embed` (the mobile
+  shell, which has no listening socket) passes unconditionally,
+  `cli-server` passes only for a loopback `REMOTE_ADDR`, and every
+  other SAPI fails closed. The middleware takes the SAPI as a
+  constructor argument so all four branches are drivable from a test
+  (`Modules/Core/tests/Unit/LoopbackOnlySapiTest.php`). The detection
+  covers IPv4 127.0.0.0/8, IPv6 `::1`, and the IPv4-mapped-IPv6
+  `::ffff:127.x.x.x` form on binary-form (`inet_pton`) comparison.
 - **Every authenticated response carries `Cache-Control: no-store`.**
   `NoStoreFinancialData` is pushed onto the `auth` middleware group
   so the browser never caches a transaction list.

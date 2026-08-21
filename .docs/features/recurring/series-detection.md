@@ -252,12 +252,19 @@ that:
 `display_name_override` always wins at the read site and is never
 written by a sweep.
 
-`detected_name` is never the clustering key once at-rest encryption is on,
-because that key is then a one-way digest. `MerchantDisplayName::forStoredKey()`
-resolves it through the user's own `merchants.name` and then the decrypted
+`MerchantDisplayName::forStoredKey()` resolves the clustering key through the
+user's own `merchants.name` and then the decrypted
 `transactions.counterparty_name`, and answers null when neither knows a name —
 at which point the detector **defers the series to the next sweep** rather than
-writing a digest into a column the review screen renders. See
+writing an unreadable value into a column the review screen renders. It answers
+null for two shapes: a keyed digest, and the `_no_counterparty` sentinel, which
+is legible but names no merchant and used to print itself at the user.
+
+Two caveats. A series detected *before* encryption keeps whatever
+`detected_name` it already had — the sweep converts `cluster_counterparty_key`
+and deliberately not the display column — so `healed()`'s
+`$storedName === $normalized` test can no longer match on those rows, and a
+pre-encryption clustering key stays on screen until the user renames it. See
 [Which columns are encrypted at rest](../sync/sensitive-columns-at-rest.md).
 
 ## Who consumes the result

@@ -178,9 +178,13 @@ listener that watches the boot probes during the install ceremony.
   - **Mobile runtime detection**: NativePHP mobile does NOT set
     `NATIVEPHP_STORAGE_PATH` — it retargets `base_path()` itself into
     the app-sandbox container, so every accessor already resolves
-    inside the sandbox with no dedicated mobile branch. `platform()`
-    (`getenv('NATIVEPHP_PLATFORM')`) is the primary on-device signal,
-    but it is NOT reliably visible at per-request config-load in
+    inside the sandbox with no dedicated mobile branch. The private
+    `platformSignal()` (`NATIVEPHP_PLATFORM` via `$_SERVER`, `$_ENV`,
+    `getenv()`) is the primary on-device signal — the public
+    `platform()` narrows it to a `MobilePlatform` case for callers that
+    branch on *which* shell, while `isMobileRuntime()` keeps reading the
+    raw signal so an unmodelled shell still counts as mobile — but it
+    is NOT reliably visible at per-request config-load in
     NativePHP's persistent runtime — the env is present when the
     `->booted()` hook fires yet reads back null when `config/*.php` is
     re-evaluated per request. Since `config/database.php` resolves
@@ -599,12 +603,24 @@ Middleware (`LoopbackOnly`, `TrustedHostGuard`, `NoStoreFinancialData`):
 `LoopbackOnly` refuses any request whose `SERVER_ADDR` is not a
 loopback address, throwing a 404 `NotFoundHttpException` so the app
 never advertises its existence to non-loopback callers. A request with
-no `SERVER_ADDR` passes through only in the console context (CLI, queue
-worker, Pest fixtures); a real HTTP request that arrives without one
-fails closed rather than being assumed loopback, so a production
+no `SERVER_ADDR` at all is decided by the SAPI, not by the console
+check alone. The console context (CLI, queue worker, Pest fixtures)
+passes, and so does a SAPI that serves without publishing a bind
+address — `PhpSapi` names the two. `embed` is the mobile shell calling
+into PHP in-process: no listening socket exists, nothing off the device
+can reach it, and it passes unconditionally. `cli-server` publishes no
+address either but does bind a real socket, and `--host=0.0.0.0` binds
+every interface, so it has to answer for the peer it is talking to and
+passes only when `REMOTE_ADDR` is loopback. A real HTTP SAPI (php-fpm,
+mod_php) arriving without one still fails closed, so a production
 listener MUST set `SERVER_ADDR` (most web servers do by default; a
-custom php-fpm dispatcher may not, and there it now 404s until it
-does). Loopback detection accepts the IPv4 range 127.0.0.0/8, the IPv6
+custom php-fpm dispatcher may not, and there it 404s until it does).
+The SAPI is a constructor parameter rather than `PHP_SAPI` read inline,
+because `PHP_SAPI` is a compile-time constant and a gate no test can
+drive off its own SAPI is how this one shipped able to 404 an entire
+platform: on device the embed SAPI publishes no `SERVER_ADDR`, and
+`runningInConsole()` had already memoised its answer at boot.
+Loopback detection accepts the IPv4 range 127.0.0.0/8, the IPv6
 `::1`, and the IPv4-mapped-IPv6 form `::ffff:127.x.x.x` (common on
 dual-stack Linux listeners and Docker bridges); comparison runs on the
 binary form returned by `inet_pton` so textual representation variants
@@ -797,7 +813,9 @@ Layout renders
 `SystemAlertsBanner` sits at the top of every authenticated page via
 the `@livewire('core.system-alerts-banner')` slot in `layouts/app.blade.php`,
 stacking severity-first (critical → warning → info, chronological
-tie-break inside each tier — locked by `SystemAlertQuery::active`).
+tie-break inside each tier — locked by `SystemAlertQuery::active`, whose
+ordering CASE binds the spellings from `SystemAlertSeverity` rather than
+repeating them as SQL text).
 Suppression rule for the auto-update kinds: an `update.available` row
 whose `metadata.latestVersion` is already in the user's
 `user_preferences.skipped_update_versions` array is filtered out at

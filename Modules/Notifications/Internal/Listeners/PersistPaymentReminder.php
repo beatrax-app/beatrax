@@ -30,17 +30,18 @@ final class PersistPaymentReminder
     {
         try {
             $dayLabel = CopyParam::dayName($event->dueDate);
-            $amountText = $event->expectedAmount->format();
+            $amount = CopyParam::money($event->expectedAmount->toMinor(), $event->expectedAmount->currency());
 
-            // Low confidence hedges both halves: "expected around".
+            // Low confidence hedges BOTH halves: a firm title over a hedged
+            // body reads as a promise the next sentence takes back.
             $copy = $event->confidenceLow
                 ? NotificationCopySpec::of(
                     CopyLine::of('notifications::copy.title.payment_reminder_hedged', ['day' => $dayLabel]),
-                    CopyLine::of('notifications::copy.body.payment_reminder_hedged', ['name' => $event->displayName, 'day' => $dayLabel, 'amount' => $amountText]),
+                    CopyLine::of('notifications::copy.body.payment_reminder_hedged', ['name' => $event->displayName, 'day' => $dayLabel, 'amount' => $amount]),
                 )
                 : NotificationCopySpec::of(
                     CopyLine::of('notifications::copy.title.payment_reminder_confident', ['day' => $dayLabel]),
-                    CopyLine::of('notifications::copy.body.payment_reminder_confident', ['name' => $event->displayName, 'day' => $dayLabel, 'date' => CopyParam::shortDate($event->dueDate), 'amount' => $amountText]),
+                    CopyLine::of('notifications::copy.body.payment_reminder_confident', ['name' => $event->displayName, 'day' => $dayLabel, 'date' => CopyParam::shortDate($event->dueDate), 'amount' => $amount]),
                 );
 
             $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => NotificationDraft::fromCopy(

@@ -40,6 +40,8 @@ return [
         'choose' => 'Valitse maa…',
         'switch_note' => 'Vaihtaminen lisää uusia kategorioita — olemassa olevia merkintöjä ei muuteta.',
 
+        'wording_note' => 'Verokategorioiden nimet tulevat :country-maassa käytettävästä veroilmoituksesta, joten ne pysyvät sen maan sanoina kaikilla sovelluskielillä.',
+
         'countries' => [
             'at' => 'Itävalta',
             'be' => 'Belgia',

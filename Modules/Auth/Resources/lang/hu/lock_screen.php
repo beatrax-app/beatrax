@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Túl sok próbálkozás — próbáld újra ennyi múlva: :wait.',
 
-    'error_incorrect_remaining' => 'Hibás PIN-kód. Még :remaining próbálkozásod maradt.',
+    'error_incorrect_remaining' => 'Hibás PIN-kód. Még :count próbálkozásod maradt.|Hibás PIN-kód. Még :count próbálkozásod maradt.',
     'error_incorrect' => 'Hibás PIN-kód.',
 ];

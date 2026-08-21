@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Internal\Support;
 
-// The title and body of a notification as keys and values. It rides along in
-// the row's `params` column, which is already registered as sensitive and
-// already syncs, so re-renderable copy needs no new column.
+/**
+ * @link ../../../../.docs/features/notifications/reader-language-copy.md
+ */
 final readonly class NotificationCopySpec
 {
     public const PARAMS_KEY = 'copy';
@@ -32,19 +32,42 @@ final readonly class NotificationCopySpec
         return new self($title, [$body]);
     }
 
-    public function title(): string
+    public function title(): ?string
     {
         return $this->title->render();
     }
 
-    public function body(): string
+    // All or nothing: half a body in the reader's language and half missing is
+    // worse than the whole stored sentence the caller falls back to.
+    public function body(): ?string
     {
         $parts = [];
         foreach ($this->body as $line) {
-            $parts[] = $line->render();
+            $part = $line->render();
+            if ($part === null) {
+                return null;
+            }
+            $parts[] = $part;
         }
 
         return implode(' ', $parts);
+    }
+
+    // What the row's own title/body columns get: the OS push and any device on
+    // an older release read those, so they always hold something. A key that
+    // does not resolve at write time is a defect, and printing it is how it
+    // gets found rather than shipped as a blank notification.
+    public function storedTitle(): string
+    {
+        return $this->title() ?? $this->title->key;
+    }
+
+    public function storedBody(): string
+    {
+        return $this->body() ?? implode(' ', array_map(
+            static fn (CopyLine $line): string => $line->key,
+            $this->body,
+        ));
     }
 
     /**

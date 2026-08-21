@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-// In Core rather than per module so a pot and the goal it funds share one string.
-
 return [
     'goal_emergency_fund' => 'Emergency fund',
     'goal_japan_trip' => 'Japan trip',

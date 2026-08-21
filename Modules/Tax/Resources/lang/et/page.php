@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Laadi alla beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'Millises riigis sa makse deklareerid?',
-    'country_prompt_body' => 'Saad seda igal ajal muuta jaotises Seaded → Maksud.',
+    'country_prompt_body' => 'Saad seda igal ajal muuta jaotises Seaded → :section.',
     'country_prompt_cta' => 'Seadista maksukategooriad',
 
     'total_deductions' => 'Mahaarvamised kokku',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Ava tehingud, et märgistamist alustada →',
 
     'no_category' => 'Kategooriata',
-    'items_count_aria' => ':count kirjet',
+    'items_count_aria' => ':count kirje|:count kirjet',
 
     'col_date' => 'Kuupäev',
     'col_account' => 'Konto',

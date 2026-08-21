@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Lataa beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'Mihin maahan annat veroilmoituksesi?',
-    'country_prompt_body' => 'Voit muuttaa tämän milloin tahansa kohdassa Asetukset → Verot.',
+    'country_prompt_body' => 'Voit muuttaa tämän milloin tahansa kohdassa Asetukset → :section.',
     'country_prompt_cta' => 'Ota verokategoriat käyttöön',
 
     'total_deductions' => 'Vähennykset yhteensä',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Siirry Tapahtumiin ja aloita merkitseminen →',
 
     'no_category' => 'Ei kategoriaa',
-    'items_count_aria' => ':count kohdetta',
+    'items_count_aria' => ':count kohde|:count kohdetta',
 
     'col_date' => 'Päivä',
     'col_account' => 'Tili',

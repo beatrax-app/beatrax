@@ -96,3 +96,54 @@ it('is safe to run twice, because a second pass has nothing left to add', functi
     expect($row->name)->toBe('Supermarkt')
         ->and((int) $row->name_is_default)->toBe(0);
 });
+
+// The two states the backfill's "unknown provenance keeps its name" promise is
+// actually load-bearing for, neither of which the three cases above reach.
+
+// A slug an older TREE planted and a newer one dropped: it is a global row, so
+// whereNull('user_id') selects it, but there is no frozen English to give it.
+// It has to keep false and keep its stored wording — one mixed-language row in
+// a translated list is the cost of not knowing where its name came from.
+it('leaves a global row whose slug the frozen list does not know alone', function (): void {
+    categoryNameIsDefaultRewind('nl');
+
+    $strayId = DB::table('categories')->insertGetId([
+        'user_id' => null, 'name' => 'Huisdieren', 'slug' => 'legacy-pets',
+        'kind' => 'expense', 'display_order' => 98,
+        'created_at' => '2026-01-01 00:00:00', 'updated_at' => '2026-01-01 00:00:00',
+    ]);
+
+    categoryNameIsDefaultMigration()->up();
+
+    $stray = DB::table('categories')->where('id', $strayId)->first();
+    expect($stray?->name)->toBe('Huisdieren')
+        ->and((int) ($stray?->name_is_default ?? 1))->toBe(0);
+
+    // And it renders verbatim rather than as a raw translation key.
+    app()->setLocale('en');
+    expect(CategoryDisplayName::fromRow(categoryNameIsDefaultRow('legacy-pets')))->toBe('Huisdieren');
+});
+
+// A slug the backfill DID flag, read in a language whose category file has no
+// line for it. resolve() must fall back to the stored English — which is
+// exactly what the old seeder's own fallback wrote — and never surface
+// "categorization::categories.<slug>" on a budget screen.
+it('falls back to the stored English when the reader language has no line for the slug', function (): void {
+    categoryNameIsDefaultRewind('nl');
+    categoryNameIsDefaultMigration()->up();
+
+    $flaggedId = DB::table('categories')->insertGetId([
+        'user_id' => null, 'name' => 'Pet supplies', 'slug' => 'untranslated-pets',
+        'kind' => 'expense', 'display_order' => 97, 'name_is_default' => true,
+        'created_at' => '2026-01-01 00:00:00', 'updated_at' => '2026-01-01 00:00:00',
+    ]);
+
+    expect(trans('categorization::categories.untranslated-pets'))
+        ->toBe('categorization::categories.untranslated-pets');
+
+    app()->setLocale('nl');
+    $row = DB::table('categories')->where('id', $flaggedId)->first();
+
+    expect($row)->toBeInstanceOf(stdClass);
+    expect(CategoryDisplayName::fromRow($row))->toBe('Pet supplies');
+});

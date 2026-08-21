@@ -105,3 +105,35 @@ it('counts a category spent against with nothing assigned as overspent', functio
 
     expect($fold['overspentCount'])->toBe(1);
 });
+
+// The started branch is asserted not to fold non-EUR spend into a EUR figure;
+// this branch reads the same `"{id}|EUR"` key and had no case proving it. A CHF
+// row landing in availableMinor would put two currencies in one number.
+it('leaves non-EUR spend out of the EUR figures it reports', function (): void {
+    Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'expense',
+        'posted_at' => $this->period->start->toDateString(),
+        'booked_at' => $this->period->start->toDateString().' 13:00:00',
+        'value_date' => $this->period->start->toDateString(),
+        'amount_minor' => -9900,
+        'currency' => 'CHF',
+        'settled_amount_minor' => -9900,
+        'settled_currency' => 'CHF',
+        'counterparty_name' => 'Migros',
+        'counterparty_normalized' => 'migros',
+        'normalization_version' => 1,
+        'category_id' => $this->groceries->id,
+        'source_format' => 'camt053',
+        'import_run_id' => $this->run->id,
+        'source_row_index' => 2,
+        'fingerprint' => str_pad('pregenesis2', 64, '0', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+
+    $row = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $this->period)['rows'][$this->groceries->id];
+
+    expect($row->spentMinor)->toBe(25441)
+        ->and($row->availableMinor)->toBe(-25441);
+});

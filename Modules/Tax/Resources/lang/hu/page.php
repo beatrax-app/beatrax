@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'A beatrax-tax-:year.pdf letöltése',
 
     'country_prompt_heading' => 'Melyik országban adózol?',
-    'country_prompt_body' => 'Ezt bármikor módosíthatod a Beállítások → Adó menüpontban.',
+    'country_prompt_body' => 'Ezt bármikor módosíthatod a Beállítások → :section menüpontban.',
     'country_prompt_cta' => 'Adókategóriák beállítása',
 
     'total_deductions' => 'Összes levonás',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Ugrás a Tranzakciókhoz a megjelölés megkezdéséhez →',
 
     'no_category' => 'Nincs kategória',
-    'items_count_aria' => ':count tétel',
+    'items_count_aria' => ':count tétel|:count tétel',
 
     'col_date' => 'Dátum',
     'col_account' => 'Számla',

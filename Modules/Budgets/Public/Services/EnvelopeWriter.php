@@ -399,7 +399,8 @@ final class EnvelopeWriter
         return $ids['debitId'];
     }
 
-    // A foreign move id reads as a missing one: silent no-op, never a 404 oracle.
+    // A move id belonging to another user is treated exactly like a missing one:
+    // this returns silently rather than confirming that the id exists.
     public function undoMove(User $user, int $moveId): void
     {
         $connection = $this->db->connection();

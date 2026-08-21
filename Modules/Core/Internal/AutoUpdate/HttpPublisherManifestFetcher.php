@@ -7,6 +7,7 @@ namespace Modules\Core\Internal\AutoUpdate;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Http\Client\Factory as HttpClient;
+use Modules\Core\Internal\Enums\OsFamily;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
@@ -36,7 +37,16 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
             return null;
         }
 
-        $manifestUrl = rtrim($base, '/').'/'.$this->manifestName($channel);
+        $manifestName = $this->manifestName($channel);
+        if ($manifestName === null) {
+            $this->logger->warning('HttpPublisherManifestFetcher: no manifest is published for this OS family.', [
+                'platform_family' => $this->platformFamily,
+            ]);
+
+            return null;
+        }
+
+        $manifestUrl = rtrim($base, '/').'/'.$manifestName;
 
         try {
             return $this->fetchAndParse($manifestUrl);
@@ -50,18 +60,18 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
     }
 
     // Fetching another platform's manifest would check the binary against a
-    // different OS's digest, so a real update would never install.
-    private function manifestName(string $channel): string
+    // different OS's digest, so a real update would never install. An OS with
+    // no case of its own therefore gets no manifest name at all, rather than
+    // the one whose suffix happens to be empty.
+    private function manifestName(string $channel): ?string
     {
-        $base = $channel === 'stable' ? 'latest' : 'beta';
+        $family = OsFamily::tryFrom($this->platformFamily);
 
-        $suffix = match ($this->platformFamily) {
-            'Darwin' => '-mac',
-            'Linux' => '-linux',
-            default => '',
-        };
+        if ($family === null) {
+            return null;
+        }
 
-        return $base.$suffix.'.yml';
+        return ($channel === 'stable' ? 'latest' : 'beta').$family->updateManifestSuffix().'.yml';
     }
 
     /**

@@ -96,7 +96,7 @@ final class LockScreen extends Component
 
             $remaining = $this->remainingAttempts($user->id, $db);
             $this->flashMessage = $remaining !== null
-                ? Lang::get('auth::lock_screen.error_incorrect_remaining', ['remaining' => $remaining])
+                ? Lang::choice('auth::lock_screen.error_incorrect_remaining', $remaining)
                 : Lang::get('auth::lock_screen.error_incorrect');
 
             return;

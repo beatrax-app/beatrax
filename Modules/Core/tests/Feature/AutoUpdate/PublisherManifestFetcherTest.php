@@ -6,6 +6,7 @@ use Illuminate\Config\Repository;
 use Illuminate\Http\Client\Factory as HttpClient;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
+use Modules\Core\Internal\Enums\OsFamily;
 use Psr\Log\NullLogger;
 
 // The manifest carries the expectation verifyBinary() checks a downloaded
@@ -123,4 +124,50 @@ it('returns null when the decoded sha512 is not 64 bytes', function (): void {
     ]);
 
     expect(makeManifestFetcher('https://feed.test')->fetch('stable'))->toBeNull();
+});
+
+// PHP_OS_FAMILY also answers BSD, Solaris and Unknown. The old `default => ''`
+// arm turned every one of those into Windows' latest.yml, whose SHA-512 can
+// never match a non-Windows binary — an update that fails forever, silently,
+// on one OS only. Fetching nothing is the correct answer for an OS this app
+// publishes no build for.
+it('fetches NOTHING at all on an OS family the app publishes no manifest for, rather than falling through to the Windows manifest', function (string $family): void {
+    $digest = str_repeat("\x06", 64);
+    Http::fake([
+        'https://feed.test/latest.yml' => Http::response(manifestYaml('9.9.9', base64_encode($digest)), 200),
+        'https://feed.test/latest.yml.sig' => Http::response(str_repeat('ab', 64), 200),
+        'https://feed.test/*' => Http::response(manifestYaml('9.9.9', base64_encode($digest)), 200),
+    ]);
+
+    expect(makeManifestFetcher('https://feed.test', $family)->fetch('stable'))->toBeNull();
+
+    Http::assertNothingSent();
+})->with(['BSD', 'Solaris', 'Unknown', 'darwin', 'macOS', '']);
+
+it('gives every OS family it does model its own manifest name, so no family can ever be handed another one', function (): void {
+    $names = [];
+    foreach (OsFamily::cases() as $family) {
+        foreach (['stable', 'preview'] as $channel) {
+            $names[] = $family->updateManifestSuffix().'|'.$channel;
+        }
+    }
+
+    expect($names)->toHaveCount(count(array_unique($names)));
+});
+
+it('names the manifest for every modelled family and channel exactly as the release pipeline publishes it', function (): void {
+    $fetcher = new ReflectionMethod(HttpPublisherManifestFetcher::class, 'manifestName');
+
+    $name = static fn (string $family, string $channel): ?string => $fetcher->invoke(
+        makeManifestFetcher('https://feed.test', $family),
+        $channel,
+    );
+
+    expect($name('Windows', 'stable'))->toBe('latest.yml')
+        ->and($name('Darwin', 'stable'))->toBe('latest-mac.yml')
+        ->and($name('Linux', 'stable'))->toBe('latest-linux.yml')
+        ->and($name('Windows', 'preview'))->toBe('beta.yml')
+        ->and($name('Darwin', 'preview'))->toBe('beta-mac.yml')
+        ->and($name('Linux', 'preview'))->toBe('beta-linux.yml')
+        ->and($name('FreeBSD', 'stable'))->toBeNull();
 });

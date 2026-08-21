@@ -97,7 +97,7 @@ final class TaxPage extends Component
             $view = $views->make('tax::livewire.tax-page', [
                 'data' => null,
                 'availableYears' => [],
-                'hasTaxCountry' => false,
+                'hasCountry' => false,
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -110,12 +110,12 @@ final class TaxPage extends Component
         $data = $query->forUser($user->id, $this->year);
         $availableYears = $query->availableYears($user->id);
 
-        $hasTaxCountry = $countries->current($user->id) !== '';
+        $hasCountry = $countries->current($user->id) !== '';
 
         $view = $views->make('tax::livewire.tax-page', [
             'data' => $data,
             'availableYears' => $availableYears,
-            'hasTaxCountry' => $hasTaxCountry,
+            'hasCountry' => $hasCountry,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

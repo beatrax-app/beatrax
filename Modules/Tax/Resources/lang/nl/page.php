@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Download beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'In welk land doe je belastingaangifte?',
-    'country_prompt_body' => 'Je kunt dit altijd wijzigen bij Instellingen → Belasting.',
+    'country_prompt_body' => 'Je kunt dit altijd wijzigen bij Instellingen → :section.',
     'country_prompt_cta' => 'Belastingcategorieën instellen',
 
     'total_deductions' => 'Totale aftrekposten',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Ga naar Transacties om te beginnen met taggen →',
 
     'no_category' => 'Geen categorie',
-    'items_count_aria' => ':count items',
+    'items_count_aria' => ':count item|:count items',
 
     'col_date' => 'Datum',
     'col_account' => 'Rekening',

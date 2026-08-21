@@ -19,6 +19,7 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Actions\DismissNotification;
@@ -169,6 +170,8 @@ final class DemoNotificationsSeeder
                     userId: $user->id,
                     categoryId: $groceries['id'],
                     categoryName: $groceries['name'],
+                    categorySlug: $groceries['slug'],
+                    categoryNameIsDefault: $groceries['isDefault'],
                     period: $period,
                     thresholdPercent: 90,
                     spentMinor: 28700,
@@ -186,6 +189,8 @@ final class DemoNotificationsSeeder
                     userId: $user->id,
                     categoryId: $eatingOut['id'],
                     categoryName: $eatingOut['name'],
+                    categorySlug: $eatingOut['slug'],
+                    categoryNameIsDefault: $eatingOut['isDefault'],
                     period: $period,
                     thresholdPercent: 90,
                     spentMinor: 11500,
@@ -358,7 +363,6 @@ final class DemoNotificationsSeeder
         ($this->dismissAction)($id, $user);
     }
 
-    // Must stay in lock-step with PersistCoalescedImport's occurrence key.
     private function importOccurrence(CarbonImmutable $at, int $insertedCount): string
     {
         return $at->format('Y-m-d H:i:s').':'.$insertedCount;
@@ -406,7 +410,7 @@ final class DemoNotificationsSeeder
     }
 
     /**
-     * @return array{id: int, name: string}|null
+     * @return array{id: int, name: string, slug: string, isDefault: bool}|null
      */
     private function category(string $slug): ?array
     {
@@ -415,13 +419,18 @@ final class DemoNotificationsSeeder
             ->whereNull('user_id')
             ->where('kind', CategoryKind::Expense->value)
             ->where('slug', $slug)
-            ->first(['id', 'name']);
+            ->first(['id', 'name', 'slug', 'name_is_default']);
 
         if (! $row instanceof stdClass || ! is_numeric($row->id) || ! is_string($row->name)) {
             return null;
         }
 
-        return ['id' => (int) $row->id, 'name' => $row->name];
+        return [
+            'id' => (int) $row->id,
+            'name' => $row->name,
+            'slug' => $slug,
+            'isDefault' => CategoryDisplayName::isDefaultRow($row),
+        ];
     }
 
     private function accountId(User $user, string $slug): ?int

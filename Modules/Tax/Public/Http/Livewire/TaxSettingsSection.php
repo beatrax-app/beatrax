@@ -54,7 +54,6 @@ final class TaxSettingsSection extends Component
         try {
             $writer->rename($currentUser->user()->id, $categoryId, $name);
         } catch (NotFoundHttpException) {
-            // A cross-user id stays silent: reporting it confirms the row exists.
         } catch (\InvalidArgumentException|\RuntimeException $e) {
             $this->renameError = $e->getMessage();
         }
@@ -68,7 +67,6 @@ final class TaxSettingsSection extends Component
         try {
             $writer->archive($currentUser->user()->id, $categoryId);
         } catch (NotFoundHttpException) {
-            // A cross-user id stays silent: reporting it confirms the row exists.
         }
     }
 
@@ -80,7 +78,6 @@ final class TaxSettingsSection extends Component
         try {
             $writer->unarchive($currentUser->user()->id, $categoryId);
         } catch (NotFoundHttpException) {
-            // A cross-user id stays silent: reporting it confirms the row exists.
         }
     }
 

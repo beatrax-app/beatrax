@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Troppi tentativi — riprova tra :wait.',
 
-    'error_incorrect_remaining' => 'PIN errato. Restano :remaining tentativi.',
+    'error_incorrect_remaining' => 'PIN errato. Resta :count tentativo.|PIN errato. Restano :count tentativi.',
     'error_incorrect' => 'PIN errato.',
 ];

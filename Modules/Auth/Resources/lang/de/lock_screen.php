@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Zu viele Versuche — versuche es in :wait erneut.',
 
-    'error_incorrect_remaining' => 'Falsche PIN. Noch :remaining Versuche übrig.',
+    'error_incorrect_remaining' => 'Falsche PIN. Noch :count Versuch übrig.|Falsche PIN. Noch :count Versuche übrig.',
     'error_incorrect' => 'Falsche PIN.',
 ];

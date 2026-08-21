@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'For mange forsøk — prøv igjen om :wait.',
 
-    'error_incorrect_remaining' => 'Feil PIN-kode. :remaining forsøk igjen.',
+    'error_incorrect_remaining' => 'Feil PIN-kode. :count forsøk igjen.|Feil PIN-kode. :count forsøk igjen.',
     'error_incorrect' => 'Feil PIN-kode.',
 ];

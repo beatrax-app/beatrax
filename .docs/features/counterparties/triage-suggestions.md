@@ -60,6 +60,12 @@ Then, per description:
 
 - An empty description is skipped entirely and does **not** count
   towards the denominator.
+- A description that the codec **blanks** — ciphertext no epoch in this
+  device's keyring opens — is skipped for the same reason, and the test
+  for it runs *after* the decrypt, not before. It cannot resolve to
+  anything, so counting it would present a unanimous suggestion as a
+  weak one: ten readable rows all saying "Albert Heijn" plus ten
+  unreadable ones scored 50 %, i.e. `low`.
 - Everything else increments `$total` and goes through
   `MerchantNameResolver::resolve()`.
 - A resolved name increments that name's entry in the tally. A miss
@@ -115,6 +121,35 @@ user can see that it means 7 of 11, and decide accordingly.
 It is built with `Lang::get()` rather than `sprintf`. The banner above
 it is localised; an English format string here put two languages in one
 card.
+
+## The recent-transactions list, and why its amounts are signed
+
+Under the suggestion the card shows the last five transactions on this
+IBAN. Their amounts are rendered **signed**, and that is deliberate
+rather than incidental: this screen exists to make the reader answer
+*what is this?* about an IBAN they do not recognise, and direction is
+one of the strongest signals available for it. Money arriving monthly
+and money leaving monthly point at completely different answers — an
+employer versus a landlord, a refund versus a charge.
+
+An unconditional `abs()` here made a €52,60 charge and a €52,60 refund
+render identically, and put the screen at odds with `/transactions`,
+which shows the same row signed. A reader cross-checking one against
+the other got two different numbers for one transaction with no way to
+tell which was authoritative.
+
+The currency comes off the row too, not a hardcoded `EUR`.
+`Money::format()` already places the symbol and the sign per locale —
+Dutch puts the symbol first, `€ -23,45` — so nothing here needs its own
+formatting, only to stop discarding what the row already carries.
+
+`abs()` elsewhere in this module is **correct and must not be swept**:
+`counterparty-index.blade.php:135,220,260` and
+`counterparty-profile.blade.php:56` wrap 12-month totals and per-month
+averages, where "total spent with this counterparty" as a magnitude is
+the intended presentation, and `counterparty-index.blade.php:200` sizes
+a chart bar, which cannot be negative. The rule is the distinction: an
+aggregate may be shown as a magnitude, a single transaction may not.
 
 ## What the user does with it
 

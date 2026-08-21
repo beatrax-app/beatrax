@@ -50,12 +50,12 @@ final class TaxServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
-        // Without this the sidebar tax_tagged badge stays stale for the cache TTL.
         $events->listen(TransactionTagged::class, [InvalidateNavCounts::class, 'handle']);
         $events->listen(TransactionUntagged::class, [InvalidateNavCounts::class, 'handle']);
 
-        // Without this a country chosen anywhere but the tax screen leaves the
-        // deduction categories empty.
+        // The country is a user preference now, set from signup, Settings or the
+        // wizard — none of which knows Tax exists. Without this listener every
+        // one of those routes leaves the deduction categories empty.
         $events->listen(UserCountryChanged::class, [SeedDeductionCategoriesForCountry::class, 'handle']);
 
         $this->loadModuleResources('tax');

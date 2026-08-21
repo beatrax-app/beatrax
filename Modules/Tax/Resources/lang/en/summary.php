@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'card_aria' => 'Tax summary — :count items tagged for :year',
+    'card_aria' => 'Tax summary — :count item tagged for :year|Tax summary — :count items tagged for :year',
     'label' => 'Tax :year',
     'empty' => 'No items tagged yet for :period.',
     'this_year' => 'this year',

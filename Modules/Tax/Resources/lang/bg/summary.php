@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'card_aria' => 'Данъчна равносметка — :count маркирани записа за :year',
+    'card_aria' => 'Данъчна равносметка — :count маркиран запис за :year|Данъчна равносметка — :count маркирани записа за :year',
     'label' => 'Данъци :year',
     'empty' => 'Още няма маркирани записи за :period.',
     'this_year' => 'тази година',

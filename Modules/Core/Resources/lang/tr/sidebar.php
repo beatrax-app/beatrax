@@ -86,7 +86,7 @@ return [
         'subscriptions' => ':count abonelik',
         'imports' => ':count içe aktarma',
         'chains' => 'incelenmeyi bekleyen :count zincir bağlantısı',
-        'forecast' => 'Önümüzdeki 30 günde :count etkin açık dönemi',
+        'forecast' => 'Önümüzdeki :days günde :count etkin açık dönemi',
         'inboxes' => 'dikkat gerektiren :count gelen kutusu öğesi',
     ],
 

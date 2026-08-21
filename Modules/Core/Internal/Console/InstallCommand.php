@@ -10,6 +10,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Enums\OsFamily;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
 
@@ -230,7 +231,7 @@ class InstallCommand extends Command
 
     private function installLaunchdPlists(): int
     {
-        if (PHP_OS_FAMILY !== 'Darwin') {
+        if (OsFamily::current() !== OsFamily::Darwin) {
             $this->error('launchd plists are macOS-only; aborting.');
 
             return self::FAILURE;

@@ -49,7 +49,6 @@ final class TagTransaction
         ?int $transactionSplitId = null,
         string $provenanceSource = 'manual',
     ): void {
-        // 404-not-403: a 403 would confirm the transaction exists for someone.
         $txExists = $this->db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
@@ -77,7 +76,6 @@ final class TagTransaction
             }
         }
 
-        // Cross-user category is a 404, never a silent fallback to uncategorised.
         if ($deductionCategoryId !== null) {
             $catExists = $this->db->connection()
                 ->table('tax_deduction_categories')
@@ -150,11 +148,9 @@ final class TagTransaction
 
         $this->captureTag($userId, $transactionId, $transactionSplitId, $deductionCategoryId, $taxYearOverride);
 
-        // The index writer re-verifies ownership from the actor id.
         $this->searchIndex?->upsertForTransaction($transactionId, $userId);
     }
 
-    // The row's identity is composite, so the pk is read back, not derived.
     private function captureTag(
         int $userId,
         int $transactionId,

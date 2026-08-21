@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — išleista :spent iš :budget.',
         'receipts_matched' => 'Iš el. pašto susietas :count kvitas.|Iš el. pašto susieti :count kvitai.|Iš el. pašto susieta :count kvitų.',
         'import_finished' => 'Importuota :count operacija.|Importuotos :count operacijos.|Importuota :count operacijų.',
-        'drift' => 'Pasikartojantis mokėjimas :direction :delta :currency.',
+        'drift' => 'Pasikartojantis mokėjimas :direction :amount.',
         'forecast' => 'Prognozuojamas likutis per artimiausias 30 dienų nukris žemiau nulio.',
         'ics_statement_ready' => 'Atsisiųsk jį iš ICS portalo ir įkelk į Beatrax, kad šios kortelės išlaidos būtų atnaujintos.',
         'payment_reminder_hedged' => ':name — laukiama apie :day, :amount.',

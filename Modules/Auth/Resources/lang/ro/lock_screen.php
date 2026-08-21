@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Prea multe încercări — încearcă din nou peste :wait.',
 
-    'error_incorrect_remaining' => 'Cod PIN incorect. Ți-au mai rămas :remaining încercări.',
+    'error_incorrect_remaining' => 'Cod PIN incorect. Ți-a mai rămas :count încercare.|Cod PIN incorect. Ți-au mai rămas :count încercări.|Cod PIN incorect. Ți-au mai rămas :count de încercări.',
     'error_incorrect' => 'Cod PIN incorect.',
 ];

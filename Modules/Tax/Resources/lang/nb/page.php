@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Last ned beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'Hvilket land skatter du til?',
-    'country_prompt_body' => 'Du kan når som helst endre dette under Innstillinger → Skatt.',
+    'country_prompt_body' => 'Du kan når som helst endre dette under Innstillinger → :section.',
     'country_prompt_cta' => 'Sett opp fradragskategorier',
 
     'total_deductions' => 'Sum fradrag',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Gå til Transaksjoner for å begynne å merke →',
 
     'no_category' => 'Ingen kategori',
-    'items_count_aria' => ':count poster',
+    'items_count_aria' => ':count post|:count poster',
 
     'col_date' => 'Dato',
     'col_account' => 'Konto',

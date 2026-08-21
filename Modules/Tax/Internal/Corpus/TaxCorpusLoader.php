@@ -28,7 +28,6 @@ final class TaxCorpusLoader
         $code = strtolower(trim($countryCode));
 
         if (Country::tryFrom($code) === null) {
-            // Not an error: the caller may be probing whether a country exists.
             return [];
         }
 
@@ -68,7 +67,6 @@ final class TaxCorpusLoader
     private function extractEntries(mixed $parsed): array
     {
         if ($parsed === null) {
-            // readCorpusYaml already logged the failure; do not double-warn.
             return [];
         }
 

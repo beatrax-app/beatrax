@@ -79,11 +79,9 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
         $connection = $db->connection();
 
         do {
-            // notifications.id is a 64-char sha256 hex string, never an int.
             /** @var list<string> $ids */
             $ids = $connection->table('notifications')
                 ->where('notifications.user_id', $this->userId)
-                // The age cutoff is the sole predicate, and needs no key.
                 ->whereRaw("notifications.created_at < datetime('now', '-".self::RETENTION_DAYS." days')")
                 ->orderBy('notifications.id')
                 ->limit(self::CHUNK_SIZE)

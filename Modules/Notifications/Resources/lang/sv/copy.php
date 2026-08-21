@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :spent av :budget använt.',
         'receipts_matched' => ':count kvitto matchat från din e-post.|:count kvitton matchade från din e-post.',
         'import_finished' => ':count transaktion importerad.|:count transaktioner importerade.',
-        'drift' => 'En återkommande debitering gick :direction med :delta :currency.',
+        'drift' => 'En återkommande debitering gick :direction med :amount.',
         'forecast' => 'Ditt prognostiserade saldo sjunker under noll inom de närmaste 30 dagarna.',
         'ics_statement_ready' => 'Ladda ner det från ICS-portalen och lägg in det i Beatrax för att hålla kortets utgifter uppdaterade.',
         'payment_reminder_hedged' => ':name — väntas omkring :day, :amount.',

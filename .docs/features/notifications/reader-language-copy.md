@@ -32,9 +32,17 @@ because a language with more plural categories than the writer's would
 otherwise be stuck with the writer's pick.
 
 `CopyParam` covers the values a plain string cannot: a weekday name, a
-short date, a nested translation key, and money. Everything else — a
-category name, a merchant name, a user-authored message — is the same
-text in every language and rides verbatim.
+short date, a nested translation key, money, and a category name.
+Everything else — a merchant name, a user-authored message — is the
+user's own words, the same text in every language, and rides verbatim.
+
+A **category** is not the user's own words unless they renamed it: a
+default category stores canonical English and the screen shows the
+slug's translation ([category display names](../ledger/category-display-names.md)).
+So it rides as `CopyParam::category($storedName, $slug, $nameIsDefault)`
+— all three, resolved through `CategoryDisplayName::resolve()` at read
+time. `BudgetThresholdCrossed` carries the slug and the flag for exactly
+this reason; the emitting job is hourly and has no reader.
 
 ## Money is a value, not a string
 
@@ -57,15 +65,46 @@ Two consequences worth knowing:
 
 - **No listener may call `->format()` on its way into a spec.** If an
   amount is going into a notification, it goes in as
-  `CopyParam::money()`. There are four such listeners today
-  (`PersistBudgetNudge`, `PersistPaymentReminder`, `PersistSavingsPrompt`,
-  `PersistPositionDigest`).
-- **`PersistDriftAlert` is the one exception, and it is a deliberate
-  one to revisit.** It renders through `MoneyInput::formatAbsMinor()`,
-  which is fixed Dutch grouping with the currency code carried as a
-  separate `:currency` placeholder in the copy line. Making it follow
-  the reader means dropping that placeholder from the line in all
-  shipped locales, which is a copy change rather than a code change.
+  `CopyParam::money()`. Five listeners carry money today:
+  `PersistBudgetNudge`, `PersistPaymentReminder`, `PersistSavingsPrompt`,
+  `PersistPositionDigest` and `PersistDriftAlert`.
+- **`PersistDriftAlert` was the exception and is not one any more.** It
+  rendered through `MoneyInput::formatAbsMinor()` — fixed Dutch
+  grouping, with the currency code as a separate `:currency`
+  placeholder. The two placeholders were merged into one `:amount`
+  across all shipped locales, and the listener passes
+  `CopyParam::money(abs($deltaMinor), $currency)`: absolute, because
+  the direction word already carries the sign.
+
+## A category name is a value too
+
+The same trap, one field over. `categories.name` holds canonical
+English for a row nobody has renamed and the user's own words for a row
+they have, and
+[`CategoryDisplayName`](../ledger/category-display-names.md) is the one
+place that decides which. A budget nudge is emitted by
+`EmitBudgetNudgesJob`, an hourly `Schedule::call` with no request behind
+it, so everything it resolves is resolved in `config('app.locale')`.
+That put **"Je hebt 80% van je budget voor Groceries gebruikt"** in
+front of a Dutch reader whose screen says `Boodschappen` everywhere
+else.
+
+So the name rides as `CopyParam::category($storedName, $slug,
+$nameIsDefault)`, stored as `"<0|1>|<slug>|<stored name>"` — the name
+last, so one containing the separator still decodes — and resolved at
+read time through `CategoryDisplayName::resolve()`. Going through that
+seam rather than doing `Lang::get('categorization::categories.'.$slug)`
+inline is what keeps the fallback: a slug with no wording in the
+reader's language renders the stored English, never a raw translation
+key in a notification body.
+
+The provenance has to travel to get there.
+`BudgetProgressQuery::expenseCategoryNaming()` returns the resolved
+name alongside its slug and flag, `EnvelopeRow` and
+`BudgetThresholdCrossed` carry all three, and `PersistBudgetNudge`
+hands them to `CopyParam`. The resolved name is what goes in as the
+fallback string, which is equivalent: a renamed row resolves to itself,
+and an untouched default re-resolves from its slug.
 
 ## When a key no longer exists
 
@@ -116,8 +155,8 @@ match its sentence.
 
 ## Compatibility across versions
 
-`CopyParam::fromArray()` validates the money shape and returns `null`
-for a kind it does not know. That failure propagates:
+`CopyParam::fromArray()` validates the money and category shapes and
+returns `null` for a kind it does not know. That failure propagates:
 `CopyLine::fromArray()` → `NotificationCopySpec::fromArray()` → a null
 spec at `NotificationQuery`, which then reads the stored columns. So an
 older release handed a row carrying a `money` param degrades to the

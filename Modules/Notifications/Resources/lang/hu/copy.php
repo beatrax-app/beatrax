@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :spent elköltve ebből: :budget.',
         'receipts_matched' => ':count bizonylat párosítva az e-mailjeidből.|:count bizonylat párosítva az e-mailjeidből.',
         'import_finished' => ':count tranzakció importálva.|:count tranzakció importálva.',
-        'drift' => 'Egy ismétlődő terhelés :delta :currency összeggel :direction.',
+        'drift' => 'Egy ismétlődő terhelés :amount összeggel :direction.',
         'forecast' => 'Az előrejelzett egyenleged 30 napon belül nulla alá csökken.',
         'ics_statement_ready' => 'Töltsd le az ICS-portálról, és húzd be a Beatraxba, hogy naprakész maradjon ennek a kártyának a költése.',
         'payment_reminder_hedged' => ':name — várhatóan :day körül, :amount.',

@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Liiga palju katseid — proovi uuesti :wait pärast.',
 
-    'error_incorrect_remaining' => 'Vale PIN-kood. Jäänud on :remaining katset.',
+    'error_incorrect_remaining' => 'Vale PIN-kood. Jäänud on :count katse.|Vale PIN-kood. Jäänud on :count katset.',
     'error_incorrect' => 'Vale PIN-kood.',
 ];

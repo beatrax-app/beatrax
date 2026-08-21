@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — utraceno :spent z :budget.',
         'receipts_matched' => 'Z tvého e-mailu se spárovala :count účtenka.|Z tvého e-mailu se spárovaly :count účtenky.|Z tvého e-mailu se spárovalo :count účtenek.',
         'import_finished' => 'Naimportována :count transakce.|Naimportovány :count transakce.|Naimportováno :count transakcí.',
-        'drift' => 'Opakovaná platba šla :direction o :delta :currency.',
+        'drift' => 'Opakovaná platba šla :direction o :amount.',
         'forecast' => 'Tvůj předpokládaný zůstatek klesne během příštích 30 dní pod nulu.',
         'ics_statement_ready' => 'Stáhni si ho z portálu ICS a vlož do Beatraxu, ať máš útraty z této karty aktuální.',
         'payment_reminder_hedged' => ':name — očekáváno přibližně :day, :amount.',

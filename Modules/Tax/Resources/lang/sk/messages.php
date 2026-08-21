@@ -8,7 +8,7 @@ return [
     'tagged' => 'Označené ako daňovo odpočítateľné.',
     'untagged' => 'Daňové označenie odstránené.',
     'batch_none_reconciled' => 'Nič sa neoznačilo — tieto transakcie sú odsúhlasené. Ak chceš robiť zmeny, zruš ich odsúhlasenie.',
-    'batch_tagged' => 'Ďalšie označené transakcie: :count.',
+    'batch_tagged' => 'Označená ďalšia :count transakcia.|Označené ďalšie :count transakcie.|Označených ďalších :count transakcií.',
 
     'errors' => [
         'name_empty' => 'Názov kategórie nemôže byť prázdny.',

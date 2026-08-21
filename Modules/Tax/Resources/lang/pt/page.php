@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Transferir beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'Em que país entregas os impostos?',
-    'country_prompt_body' => 'Podes alterar isto em Definições → Impostos a qualquer momento.',
+    'country_prompt_body' => 'Podes alterar isto em Definições → :section a qualquer momento.',
     'country_prompt_cta' => 'Configurar as categorias fiscais',
 
     'total_deductions' => 'Total de deduções',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Ir para Transações para começar a etiquetar →',
 
     'no_category' => 'Sem categoria',
-    'items_count_aria' => ':count itens',
+    'items_count_aria' => ':count item|:count itens',
 
     'col_date' => 'Data',
     'col_account' => 'Conta',

@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Preveč poskusov — poskusi znova čez :wait.',
 
-    'error_incorrect_remaining' => 'Napačen PIN. Preostalo poskusov: :remaining.',
+    'error_incorrect_remaining' => 'Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.',
     'error_incorrect' => 'Napačen PIN.',
 ];

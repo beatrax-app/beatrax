@@ -29,7 +29,6 @@ trait HandlesTaxTagging
 
     public ?int $pickerCategoryId = null;
 
-    // null derives the tag's year from the transaction's booked_at.
     public ?int $pickerYearOverride = null;
 
     public ?int $pickerBookedYear = null;
@@ -40,7 +39,6 @@ trait HandlesTaxTagging
 
     public bool $pickerIsNewCatOpen = false;
 
-    // A plain string-keyed array, because Livewire cannot dehydrate the DTO.
     /**
      * @var array{counterpartyId: int, counterpartyName: string, untaggedCount: int, taxYear?: int, categoryId?: int|null, note?: string|null}|null
      */
@@ -53,7 +51,6 @@ trait HandlesTaxTagging
      */
     public array $pickerCategories = [];
 
-    // Dispatched by x-tax::tax-badge's ghost "Tag" button.
     #[On('tax-tag')]
     public function tagTransaction(
         int $id,
@@ -66,7 +63,6 @@ trait HandlesTaxTagging
     ): void {
         $user = $u->user();
 
-        // Ahead of both the write and the picker, so a locked row stays untouched.
         if ($status->isReconciled($user->id, $id)) {
             $this->toast(Lang::get('tax::messages.reconciled_lock'));
 
@@ -96,7 +92,6 @@ trait HandlesTaxTagging
         }
     }
 
-    // Dispatched by x-tax::tax-badge's emerald pill.
     #[On('tax-edit-tag')]
     public function editTaxTag(
         int $id,
@@ -143,7 +138,8 @@ trait HandlesTaxTagging
             $this->pickerYearOverride,
         );
 
-        // Snapshot the saved category and note before closePicker() wipes them.
+        // closePicker() below clears pickerCategoryId and pickerNote, so the
+        // batch banner's payload has to be captured before it runs.
         if ($this->batchSuggestion !== null) {
             $this->batchSuggestion['categoryId'] = $this->pickerCategoryId;
             $this->batchSuggestion['note'] = $this->pickerNote !== '' ? $this->pickerNote : null;
@@ -245,14 +241,13 @@ trait HandlesTaxTagging
         $this->batchSuggestion = null;
         $this->batchSuggestionDismissed = true;
 
-        // Every candidate reconciled: say so, not "Tagged 0 more transactions."
         if ($count === 0) {
             $this->toast(Lang::get('tax::messages.batch_none_reconciled'));
 
             return;
         }
 
-        $this->toast(Lang::get('tax::messages.batch_tagged', ['count' => $count]));
+        $this->toast(Lang::choice('tax::messages.batch_tagged', $count));
     }
 
     public function dismissBatch(): void
@@ -317,7 +312,6 @@ trait HandlesTaxTagging
 
         $this->pickerCategories = $writer->listForUser($u->user()->id);
 
-        // The blade renders the year-assignment row only when these two differ.
         $this->pickerTaxYear = $this->resolveCurrentTaxYear($c);
         $this->pickerBookedYear = $q->bookedYearFor($u->user()->id, $id);
     }

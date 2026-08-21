@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Per daug bandymų — bandyk dar kartą po :wait.',
 
-    'error_incorrect_remaining' => 'Neteisingas PIN kodas. Liko bandymų: :remaining.',
+    'error_incorrect_remaining' => 'Neteisingas PIN kodas. Liko :count bandymas.|Neteisingas PIN kodas. Liko :count bandymai.|Neteisingas PIN kodas. Liko :count bandymų.',
     'error_incorrect' => 'Neteisingas PIN kodas.',
 ];

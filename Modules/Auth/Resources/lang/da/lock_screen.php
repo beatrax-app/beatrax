@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'For mange forsøg — prøv igen om :wait.',
 
-    'error_incorrect_remaining' => 'Forkert PIN-kode. :remaining forsøg tilbage.',
+    'error_incorrect_remaining' => 'Forkert PIN-kode. :count forsøg tilbage.|Forkert PIN-kode. :count forsøg tilbage.',
     'error_incorrect' => 'Forkert PIN-kode.',
 ];

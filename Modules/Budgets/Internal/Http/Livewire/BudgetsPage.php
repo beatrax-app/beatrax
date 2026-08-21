@@ -161,11 +161,9 @@ final class BudgetsPage extends Component
             return;
         }
 
-        // A cleared threshold empties the field so the placeholder default shows.
         $this->thresholdInputs[$categoryId] = $threshold === null ? '' : (string) $threshold;
     }
 
-    // The select only ever offers the two valid modes; the server never trusts it.
     public function setOverspendMode(CurrentUser $currentUser, EnvelopeWriter $writer, int $categoryId, string $mode): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -243,7 +241,6 @@ final class BudgetsPage extends Component
         } catch (InvalidArgumentException $e) {
             $this->moveError = $e->getMessage();
         } catch (\RuntimeException) {
-            // A non-validation writer failure stays an inline error, not a 500.
             $this->moveError = Lang::get('budgets::messages.notices.move_failed');
         }
     }
@@ -326,7 +323,6 @@ final class BudgetsPage extends Component
             );
         }
 
-        // One query for every fold category, not one per envelope per render.
         $recentMoves = $balances->recentMovesForCategories($user->id, array_keys($rows), $selected);
 
         $view = $views->make('budgets::livewire.budgets-page', [

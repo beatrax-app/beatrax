@@ -8,7 +8,7 @@ return [
     'tagged' => 'Merket som fradragsberettiget.',
     'untagged' => 'Skattemerkingen er fjernet.',
     'batch_none_reconciled' => 'Ingenting ble merket — de transaksjonene er avstemt. Opphev avstemmingen for å gjøre endringer.',
-    'batch_tagged' => 'Merket :count transaksjoner til.',
+    'batch_tagged' => 'Merket :count transaksjon til.|Merket :count transaksjoner til.',
 
     'errors' => [
         'name_empty' => 'Kategorinavnet kan ikke være tomt.',

@@ -7,6 +7,7 @@ namespace Modules\Core\Public\Actions;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Dto\UpdateManifestDto;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Enums\UpdateAlertKind;
 
 final readonly class RecordUpdateAvailableAlert
@@ -25,7 +26,7 @@ final readonly class RecordUpdateAvailableAlert
         $this->db->connection()->table('system_alerts')->insert([
             'user_id' => null,
             'kind' => UpdateAlertKind::Available->value,
-            'severity' => 'info',
+            'severity' => SystemAlertSeverity::Info->value,
             'message' => 'A new release of Beatrax is available — '.$manifest->latestVersion.'.',
             'metadata' => json_encode([
                 'latestVersion' => $manifest->latestVersion,

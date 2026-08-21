@@ -224,9 +224,56 @@ committed), a separate duplicate count feeds the batch-level
 `alreadyImportedCount` reassurance line, and `sampleRows` caps at
 `SAMPLE_ROW_LIMIT` (5, overridable per section). A section's `status` is
 `error` when any contributing run's cache entry is missing (`null` —
-preview window elapsed), `empty` when every contributing run cached zero
-rows (legitimate: every row was already in the ledger), otherwise
-`ready`.
+preview window elapsed) or a contributing run reported a
+`fileFailureReason`, `empty` when every contributing run cached zero
+rows and none of them failed (legitimate: every row was already in the
+ledger), otherwise `ready`.
+
+`sampleRows` excludes ERROR rows. The sample stands for what committing
+would write and a failed row writes nothing, so among the others in a
+table with no status column it read as one more transaction. The
+section's `error` string is the file-level detail where there is one,
+otherwise the translated `ImportFailureReason` of the first failed row
+— never a caught exception's own message, which names internal classes
+and the reader's user id.
+
+
+## What the results screen can still say
+
+`/imports/{id}/results` renders after `ConfirmImport` has dropped the
+preview cache, so everything it can name about what was skipped has to
+be copied onto the `import_runs` row before that happens.
+`import_runs.row_issues` is that copy: a JSON list of
+`{kind, row, reason, detail}` written inside the same transaction that
+flips the run to `confirmed`.
+
+- `kind` is an `ImportIssueKind` — `file_error`, `row_error` or
+  `duplicate`.
+- `row` is the source row index, rendered one-based.
+- `reason` is an `ImportFailureReason` backing value, translated at
+  render time so the list reads in the reader's language whatever
+  language the import ran in.
+- `detail` is the parser's own wording, present only for `file_error`
+  and only when the exception declared it names no user data.
+
+What is deliberately **not** in the column: counterparty names,
+descriptions, and any caught exception message that has not declared
+itself free of user data. The list is diagnostic, not a second copy of
+the statement.
+
+Both counts are capped at `MAX_STORED_ISSUES_PER_KIND` (50) so an
+all-duplicate re-import of a year of statements cannot write thousands
+of entries into one column; past the cap the screen falls back to the
+run's own counters and says how many are not listed.
+
+The column is deliberately absent from the Sync merge rules. The
+counters replicate to a paired device; the diagnostic list stays on the
+machine that read the file, so no parse text has to travel the op log.
+
+Before this, expanding "Show errors (1)" produced one sentence defining
+the word "error" — a count in the control promising a list, and a
+glossary entry inside it. The help sentence is still there as a
+preamble; the list is the content.
 
 ## Merchant aliases
 
@@ -236,17 +283,28 @@ mutates `transactions.description`:
 
 1. The user's exact `merchant_aliases.pattern` match — the raw
    description as first seen.
-2. The user's `generalized_pattern` substring match (`mb_strpos`, never
-   SQL `LIKE`, mirroring the Categorization RuleEvaluator's defence
-   against user-authored patterns entering a SQL string), scanned over
+2. The user's `generalized_pattern` **whole-token** match, scanned over
    the user's most recent 500 aliases.
 3. The community corpus's exact `pattern` match (`user_id IS NULL` rows).
-4. The community corpus's generalized-pattern substring match.
+4. The community corpus's generalized-pattern whole-token match.
 5. `null` — the caller renders the raw, italic-muted description.
 
 Exact-then-generalized ordering is deliberate: if both an exact alias and
 a broader generalized alias match the same row, the exact one wins, so a
 broad rename can never silently override a more specific one.
+
+Both generalized tiers run `CorpusPatternMatcher::containsToken()` — never
+SQL `LIKE`, mirroring the Categorization RuleEvaluator's defence against
+user-authored patterns entering a SQL string, and never a bare `mb_strpos`,
+because merchant tokens are short enough that an unanchored search matches
+inside a longer word routinely (`OBI` inside "mobiel", `RDW` inside
+"Nordwind"). The user tier is consulted **first**, so leaving it unanchored
+meant the corpus was never even asked.
+
+`AliasMatchPreviewQuery` — the "N transactions match" line in the alias
+editor — runs the **same** matcher, because its whole job is to predict what
+tier 2 will do. Any change to one is a change to both, or the preview starts
+promising matches the alias will never make.
 
 `PatternGeneralizer::generalize()` produces the `generalized_pattern`
 fuzzy-match target by tokenizing on whitespace and dropping tokens that

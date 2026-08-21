@@ -62,11 +62,9 @@ final class CarryoverQuery
         $rows = [];
         $overspentCount = 0;
 
-        foreach ($this->budgetProgress->expenseCategories($user) as $categoryId => $categoryName) {
+        foreach ($this->budgetProgress->expenseCategoryNaming($user) as $categoryId => $naming) {
             $spent = $spentByKey["{$categoryId}|".self::CURRENCY] ?? 0;
-            $available = Money::ofMinor(0, self::CURRENCY)
-                ->minus(Money::ofMinor($spent, self::CURRENCY))
-                ->toMinor();
+            $available = -$spent;
 
             if ($available < 0) {
                 $overspentCount++;
@@ -74,7 +72,7 @@ final class CarryoverQuery
 
             $rows[$categoryId] = new EnvelopeRow(
                 categoryId: $categoryId,
-                categoryName: $categoryName,
+                categoryName: $naming['name'],
                 assignedMinor: 0,
                 spentMinor: $spent,
                 carriedInMinor: 0,
@@ -84,6 +82,8 @@ final class CarryoverQuery
                 currency: self::CURRENCY,
                 nonEurSpentMinor: $this->sumNonEurSpent($spentByKey, $categoryId),
                 notifyThresholdPercent: $settings['thresholds'][$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
+                categorySlug: $naming['slug'],
+                categoryNameIsDefault: $naming['isDefault'],
             );
         }
 
@@ -122,13 +122,12 @@ final class CarryoverQuery
             $targetBounded = $maxPeriod;
         }
         if ($targetBounded->start->lessThan($genesisPeriod->start)) {
-            // Back-navigation must never read pre-activation history.
             $targetBounded = $genesisPeriod;
         }
 
         $periodsWalk = $this->walkPeriods($genesisPeriod, $targetBounded);
 
-        $expenseCategories = $this->budgetProgress->expenseCategories($user);
+        $expenseCategories = $this->budgetProgress->expenseCategoryNaming($user);
 
         $assignedByPeriod = $this->batchAssignments($user, $genesisPeriod, $targetBounded);
         $movedByPeriod = $this->batchMoves($user, $genesisPeriod, $targetBounded);
@@ -204,7 +203,6 @@ final class CarryoverQuery
             ->where('id', $user->id)
             ->value('envelope_activated_at');
 
-        // An unreadable stamp must not read as "never started".
         return SafeDate::parseOrNull(self::toString($raw)) ?? $this->earliestAssignedPeriodFor($user);
     }
 
@@ -254,7 +252,7 @@ final class CarryoverQuery
         $rows = [];
         $overspentCount = 0;
 
-        foreach ($context->expenseCategories as $categoryId => $categoryName) {
+        foreach ($context->expenseCategories as $categoryId => $naming) {
             $assigned = $assignedByCategory[$categoryId] ?? 0;
             $moved = $movedByCategory[$categoryId] ?? 0;
             $spent = $spentByKey["{$categoryId}|".self::CURRENCY] ?? 0;
@@ -270,12 +268,13 @@ final class CarryoverQuery
             $mode = $context->overspendModeByCategory[$categoryId] ?? self::DEFAULT_OVERSPEND_MODE;
             $notifyThreshold = $context->notifyThresholdByCategory[$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
 
+            // The overspend modes differ in who absorbs a negative envelope:
+            // reduce_to_budget hands the shortfall to the shared pool once per
+            // period, carry_negative leaves it in the envelope and off the pool.
             if ($available < 0 && $mode === self::DEFAULT_OVERSPEND_MODE) {
-                // reduce_to_budget: the pool eats the shortfall once per period.
                 $shortfallMoney = $shortfallMoney->plus($availableMoney);
                 $nextCarriedIn[$categoryId] = 0;
             } else {
-                // carry_negative keeps the negative in the envelope, off the pool.
                 $nextCarriedIn[$categoryId] = $available;
             }
 
@@ -285,7 +284,7 @@ final class CarryoverQuery
 
             $rows[$categoryId] = new EnvelopeRow(
                 categoryId: $categoryId,
-                categoryName: $categoryName,
+                categoryName: $naming['name'],
                 assignedMinor: $assigned,
                 spentMinor: $spent,
                 carriedInMinor: $carriedInForCategory,
@@ -295,6 +294,8 @@ final class CarryoverQuery
                 currency: self::CURRENCY,
                 nonEurSpentMinor: $nonEurSpent,
                 notifyThresholdPercent: $notifyThreshold,
+                categorySlug: $naming['slug'],
+                categoryNameIsDefault: $naming['isDefault'],
             );
         }
 

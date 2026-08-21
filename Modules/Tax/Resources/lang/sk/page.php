@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Stiahnuť beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'V ktorej krajine podávaš daňové priznanie?',
-    'country_prompt_body' => 'Zmeniť to môžeš kedykoľvek v Nastavenia → Dane.',
+    'country_prompt_body' => 'Zmeniť to môžeš kedykoľvek v Nastavenia → :section.',
     'country_prompt_cta' => 'Nastaviť daňové kategórie',
 
     'total_deductions' => 'Odpočty spolu',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Prejdi na Transakcie a začni označovať →',
 
     'no_category' => 'Bez kategórie',
-    'items_count_aria' => 'Položky: :count',
+    'items_count_aria' => ':count položka|:count položky|:count položiek',
 
     'col_date' => 'Dátum',
     'col_account' => 'Účet',

@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Изтегли beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'В коя държава подаваш данъчна декларация?',
-    'country_prompt_body' => 'Можеш да промениш това по всяко време от Настройки → Данъци.',
+    'country_prompt_body' => 'Можеш да промениш това по всяко време от Настройки → :section.',
     'country_prompt_cta' => 'Настрой данъчните категории',
 
     'total_deductions' => 'Общо облекчения',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Отиди в Транзакции, за да започнеш маркирането →',
 
     'no_category' => 'Без категория',
-    'items_count_aria' => ':count записа',
+    'items_count_aria' => ':count запис|:count записа',
 
     'col_date' => 'Дата',
     'col_account' => 'Сметка',

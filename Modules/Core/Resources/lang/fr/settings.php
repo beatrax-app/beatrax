@@ -40,6 +40,8 @@ return [
         'choose' => 'Choisis un pays…',
         'switch_note' => 'Changer de pays ajoute de nouvelles catégories — les marquages existants ne sont jamais modifiés.',
 
+        'wording_note' => "Les noms des catégories fiscales viennent de la déclaration d'impôts utilisée en :country ; ils restent donc dans les mots de ce pays, quelle que soit la langue de l'app.",
+
         'countries' => [
             'at' => 'Autriche',
             'be' => 'Belgique',

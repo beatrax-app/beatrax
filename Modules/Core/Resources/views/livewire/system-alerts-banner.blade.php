@@ -31,6 +31,7 @@
     sentence over six lines.
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Enums\SystemAlertSeverity')
 <section
     aria-label="{{ Lang::get('core::alerts.banner_aria') }}"
     {{--
@@ -51,7 +52,7 @@
 >
     @foreach ($alerts as $alert)
         @switch ($alert->severity)
-            @case ('critical')
+            @case (SystemAlertSeverity::Critical->value)
                 <x-core::alert tone="danger" role="alert">
                     <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
                         <div class="min-w-0 flex-1">
@@ -68,7 +69,7 @@
                     </div>
                 </x-core::alert>
                 @break
-            @case ('warning')
+            @case (SystemAlertSeverity::Warning->value)
                 <x-core::alert tone="warning" aria-live="polite" aria-atomic="true">
                     <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
                         <div class="min-w-0 flex-1">

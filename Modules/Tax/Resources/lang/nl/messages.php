@@ -7,7 +7,7 @@ return [
     'tagged' => 'Getagd als fiscaal aftrekbaar.',
     'untagged' => 'Belastingtag verwijderd.',
     'batch_none_reconciled' => 'Niets getagd — die transacties zijn afgestemd. Hef de afstemming op om wijzigingen te maken.',
-    'batch_tagged' => ':count andere transacties getagd.',
+    'batch_tagged' => ':count andere transactie getagd.|:count andere transacties getagd.',
 
     'errors' => [
         'name_empty' => 'Categorienaam mag niet leeg zijn.',

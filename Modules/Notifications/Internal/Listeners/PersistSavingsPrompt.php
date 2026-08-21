@@ -7,8 +7,8 @@ namespace Modules\Notifications\Internal\Listeners;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
-use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\CopyLine;
+use Modules\Notifications\Internal\Support\CopyParam;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationCopySpec;
@@ -30,12 +30,12 @@ final class PersistSavingsPrompt
     public function handle(SavingsPromptDue $event): void
     {
         try {
-            $monthlyText = Money::ofMinor($event->monthlyMinor, $event->currency)
-                ->format();
-
             $copy = NotificationCopySpec::of(
                 CopyLine::of('notifications::copy.title.savings_prompt'),
-                CopyLine::of('notifications::copy.body.savings_prompt', ['message' => $event->message, 'monthly' => $monthlyText]),
+                CopyLine::of('notifications::copy.body.savings_prompt', [
+                    'message' => $event->message,
+                    'monthly' => CopyParam::money($event->monthlyMinor, $event->currency),
+                ]),
             );
 
             $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => NotificationDraft::fromCopy(

@@ -58,8 +58,17 @@ Every live expense category is iterated every period — via
 that happen to have an `envelope_assignments`/`envelope_settings` row, so
 an unassigned-but-spending category still surfaces as an overspent
 €0-assigned envelope instead of silently vanishing. When
-`envelope_activated_at` is null (pre-cutover), the fold short-circuits to
-an all-zero result rather than walking from account inception. The walk
+`envelope_activated_at` is null (pre-cutover) there is no genesis anchor
+to walk from, so the fold does not run — but what comes back is not
+zeroes. `unstartedRows()` reads this period's real spend per category, so
+a category already spending against nothing assigned returns a negative
+`availableMinor`, counts toward `overspentCount`, and carries the same
+`nonEurSpentMinor` split the fold applies; "Ready to assign" is the
+period's own income, because carry and assigned are both nought
+pre-genesis and income is all the fold would have had to add. An
+all-zero result told a reader with a month's pay banked that they had
+nothing to assign and nothing overspent, on a screen listing two dozen
+categories. The walk
 is bounded `genesis..min(target, current+12)` — it never walks further
 into the future than 12 periods past "now", closing an unbounded
 past/future-walk resource-exhaustion surface. Every read carries an
