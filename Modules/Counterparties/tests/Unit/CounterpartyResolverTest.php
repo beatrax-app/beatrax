@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Events\CounterpartyResolved;
@@ -94,9 +95,14 @@ function makeCpResolverTx(int $accountId, ?int $userId = null, array $overrides 
     );
 }
 
+// The government and bank-fee tiers only load a country's rules once a country
+// is named — no country means silence, not every country — so this fixture is a
+// Dutch reader. Test 6b names Germany instead, because the rule it exercises is
+// German.
 beforeEach(function (): void {
     $this->user = makeCpResolverUser('resolver-fixture');
     $this->bank = makeCpResolverAccount($this->user, 'bank', 'NL57ASNB0123456789');
+    app(UserCountry::class)->store($this->user->id, 'nl');
 });
 
 it('Test 1 — step 1 self_account: routes the users own IBAN to type=self_account without writing a counterparty row', function (): void {
@@ -231,6 +237,8 @@ it('Test 6 — step 6 bank fee: KOSTEN KASOPNAME in the description resolves to 
 });
 
 it('Test 6b — a regex government rule (DE Rundfunkbeitrag) resolves to type=government with the rule name', function (): void {
+    app(UserCountry::class)->store($this->user->id, 'de');
+
     $tx = makeCpResolverTx(
         accountId: $this->bank->id,
         userId: $this->user->id,

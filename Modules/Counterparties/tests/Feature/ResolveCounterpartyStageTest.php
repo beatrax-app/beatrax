@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Counterparties\Internal\Pipeline\ResolveCounterpartyStage;
 use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
@@ -104,6 +105,11 @@ beforeEach(function (): void {
 
     // Without this the PayPal LU IBAN on Row 3 has no bridge to resolve over.
     app(DefaultKnownCounterpartyIbansSeeder::class)->run($this->user);
+
+    // And without a country the Belastingdienst row resolves to unknown: the
+    // government and bank-fee tiers stay silent until a reader names one, and
+    // this fixture is an ASN export, so the reader is Dutch.
+    app(UserCountry::class)->store($this->user->id, 'nl');
 
     // And without this Row 1's description resolves to no friendly name.
     DB::table('merchant_aliases')->insert([
