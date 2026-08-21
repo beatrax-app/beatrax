@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'eyebrow' => 'Opcjonalnie',
-    'h1' => 'Wybierz kraj podatkowy',
+    'h1' => 'Wybierz swój kraj',
     'lede' => 'Określa, które kategorie odliczeń są dostępne, gdy oznaczasz transakcje jako odliczane od podatku. Wybierz kraj, w którym się rozliczasz — albo pomiń i ustaw to kiedykolwiek w Ustawieniach.',
 
-    'select_label' => 'Kraj podatkowy',
+    'select_label' => 'Twój kraj',
     'select_placeholder' => 'Wybierz kraj…',
     'additive_note' => 'Zmiana dodaje nowe kategorie — istniejące znaczniki nigdy się nie zmieniają.',
 

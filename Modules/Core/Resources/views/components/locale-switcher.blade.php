@@ -1,5 +1,12 @@
 @use('Modules\Core\Public\Enums\Locale')
+@use('Modules\Core\Public\Support\Lang')
 @inject('translator', 'translator')
+@props(['labelled' => false])
+@php
+    $wrapperClass = $labelled ? 'space-y-1' : '';
+    $formClass = $labelled ? 'flex gap-2' : 'locale-switcher';
+    $selectClass = $labelled ? 'locale-switcher-select w-full' : 'locale-switcher-select';
+@endphp
 {{--
     Pre-auth language switch for the welcome / signup / login surfaces.
 
@@ -24,20 +31,30 @@
     already takes — so submitting through it sidesteps both defects without
     changing the endpoint. Alpine absent, the native submit still runs: desktop
     keeps its no-JS guarantee, and the mobile WebView always has JS.
+
+    `labelled` is for a screen that also carries a COUNTRY picker. There the
+    two are a sentence apart and read alike, so the language one has to say in
+    visible copy what it changes — and, as pointedly, what it does not.
 --}}
+<div class="{{ $wrapperClass }}">
+@if ($labelled)
+    <label class="block text-sm text-slate-900 dark:text-slate-100" for="locale-switcher-select">{{ Lang::get('core::settings.language.label') }}</label>
+@endif
 <form
     method="POST"
     action="{{ route('locale.switch') }}"
-    class="locale-switcher"
+    class="{{ $formClass }}"
     x-data
     x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)"
 >
     @csrf
-    <label class="sr-only" for="locale-switcher-select">{{ Lang::get('core::settings.language.label') }}</label>
+    @unless ($labelled)
+        <label class="sr-only" for="locale-switcher-select">{{ Lang::get('core::settings.language.label') }}</label>
+    @endunless
     <select
         id="locale-switcher-select"
         name="code"
-        class="locale-switcher-select"
+        class="{{ $selectClass }}"
         x-on:change="$el.form.requestSubmit()"
     >
         @foreach (Locale::cases() as $locale)
@@ -45,7 +62,7 @@
                 value="{{ $locale->value }}"
                 lang="{{ $locale->value }}"
                 @selected($translator->getLocale() === $locale->value)
-            >{{ $locale->flag() }} {{ $locale->label() }}</option>
+            >{{ $locale->label() }}</option>
         @endforeach
     </select>
 
@@ -60,3 +77,7 @@
         x-show="false"
     >{{ Lang::get('core::settings.language.apply') }}</button>
 </form>
+@if ($labelled)
+    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.language.help') }}</p>
+@endif
+</div>

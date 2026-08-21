@@ -22,14 +22,13 @@ function taxPageUser(string $username = 'tax-page-user', bool $withCountry = tru
         'default_currency_view' => 'eur_only',
     ]);
 
-    // tax_country_code is not mass-assignable, so create() would silently drop
-    // it — which once masked a real blade bug. Write it the way
-    // TaxSettingsSection does.
+    // country_code is not mass-assignable, so create() would silently drop it —
+    // which once masked a real blade bug. Write it the way the preference does.
     if ($withCountry) {
         app(DatabaseManager::class)->connection()
             ->table('users')
             ->where('id', $user->id)
-            ->update(['tax_country_code' => 'nl']);
+            ->update(['country_code' => 'nl']);
     }
 
     return $user;

@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -214,12 +215,20 @@ final readonly class CounterpartyProfileQuery
             ->where('t.user_id', $cp->user_id)
             ->where('t.counterparty_id', $cp->id)
             ->where('t.posted_at', '>=', $cutoffDate)
-            ->selectRaw('t.category_id as category_id, c.name as category_name, COALESCE(SUM(t.amount_minor), 0) as total_minor')
-            ->groupBy('t.category_id', 'c.name')
+            ->selectRaw('t.category_id as category_id, c.name as category_name, c.slug as category_slug, c.name_is_default as category_name_is_default, COALESCE(SUM(t.amount_minor), 0) as total_minor')
+            ->groupBy('t.category_id', 'c.name', 'c.slug', 'c.name_is_default')
             ->orderByRaw('ABS(SUM(t.amount_minor)) DESC')
             ->get();
 
-        return new Collection($rows->all());
+        // The breakdown goes straight to Blade, so the row carries the display
+        // name rather than the stored one under the key the view already reads.
+        $resolved = $rows->map(static function (stdClass $row): stdClass {
+            $row->category_name = CategoryDisplayName::fromRow($row, 'category');
+
+            return $row;
+        });
+
+        return new Collection($resolved->all());
     }
 
     // Nothing writes metadata.funding_chain yet, so this returns null in

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Internal\Corpus;
 
-use Modules\Tax\Public\Enums\TaxCountry;
+use Modules\Core\Public\Enums\Country;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
@@ -27,7 +27,7 @@ final class TaxCorpusLoader
     {
         $code = strtolower(trim($countryCode));
 
-        if (TaxCountry::tryFrom($code) === null) {
+        if (Country::tryFrom($code) === null) {
             // Not an error: the caller may be probing whether a country exists.
             return [];
         }

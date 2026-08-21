@@ -7,18 +7,19 @@ namespace Modules\Tax\Providers;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Events\UserCountryChanged;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
 use Modules\Tax\Internal\Listeners\InvalidateNavCounts;
+use Modules\Tax\Internal\Listeners\SeedDeductionCategoriesForCountry;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Events\TransactionTagged;
 use Modules\Tax\Public\Events\TransactionUntagged;
 use Modules\Tax\Public\Http\Livewire\TaxSettingsSection;
 use Modules\Tax\Public\Http\Livewire\TaxSummaryCard;
-use Modules\Tax\Public\Services\TaxCountrySetup;
 use Modules\Tax\Public\Services\TaxCsvExporter;
 use Modules\Tax\Public\Services\TaxPdfRenderer;
 use Modules\Tax\Public\Services\TaxTagQuery;
@@ -45,8 +46,6 @@ final class TaxServiceProvider extends ServiceProvider
         // The Public writer, not the Internal one imported above: this is what
         // HandlesTaxTagging resolves inside other modules' components.
         $this->app->singleton(\Modules\Tax\Public\Services\TaxCategoryWriter::class);
-
-        $this->app->singleton(TaxCountrySetup::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
@@ -54,6 +53,10 @@ final class TaxServiceProvider extends ServiceProvider
         // Without this the sidebar tax_tagged badge stays stale for the cache TTL.
         $events->listen(TransactionTagged::class, [InvalidateNavCounts::class, 'handle']);
         $events->listen(TransactionUntagged::class, [InvalidateNavCounts::class, 'handle']);
+
+        // Without this a country chosen anywhere but the tax screen leaves the
+        // deduction categories empty.
+        $events->listen(UserCountryChanged::class, [SeedDeductionCategoriesForCountry::class, 'handle']);
 
         $this->loadModuleResources('tax');
 

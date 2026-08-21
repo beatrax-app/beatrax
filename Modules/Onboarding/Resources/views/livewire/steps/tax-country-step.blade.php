@@ -1,12 +1,13 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Tax country step (optional) — pick the country you file taxes in so the
-    per-country deduction categories are seeded before finishing setup.
+    Country step (optional) — the same preference the signup screen and
+    Settings offer, asked once more here so the per-country deduction
+    categories are seeded before setup finishes.
     Reuses the wizard chrome (wiz-eyebrow / wiz-h1 / wiz-lede / wiz-actions).
     The select binds `taxCountryCode` live so the additive-seed reassurance
     note appears as soon as a country is chosen; Continue persists through
-    the Tax module's public TaxCountrySetup surface, Skip bubbles
-    `wizard.step.skipped`. Blade default {{ }} escaping throughout.
+    Core's UserCountry seam, Skip bubbles `wizard.step.skipped`.
+    Blade default {{ }} escaping throughout.
 --}}
 <section class="wiz-step wiz-step-tax-country" aria-labelledby="wiz-tax-country-h1">
     <p class="wiz-eyebrow">{{ Lang::get('onboarding::tax_country.eyebrow') }}</p>

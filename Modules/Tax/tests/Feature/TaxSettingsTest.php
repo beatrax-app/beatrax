@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
-use Modules\Tax\Public\Enums\TaxCountry;
 use Modules\Tax\Public\Http\Livewire\TaxSettingsSection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -365,74 +365,38 @@ it('archive throws NotFoundHttpException on a cross-user category id', function 
         ->toThrow(NotFoundHttpException::class);
 });
 
-it('the component mounts and exposes the user tax_country_code', function (): void {
+// The country is a user preference now, chosen beside the language. This
+// section only points at it — and must keep pointing, or the reader who
+// learned to find it here finds nothing.
+it('signposts the country rather than setting it', function (): void {
     $user = taxSettingsUser('tax-livewire-01');
     $this->actingAs($user);
 
     Livewire::test(TaxSettingsSection::class)
-        ->assertSet('taxCountryCode', '');
-
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $db->connection()->table('users')->where('id', $user->id)->update(['tax_country_code' => 'nl']);
-
-    Livewire::test(TaxSettingsSection::class)
-        ->assertSet('taxCountryCode', 'nl');
+        ->assertOk()
+        ->assertSeeHtml('data-testid="tax-country-signpost"')
+        ->assertSeeHtml('href="#country"')
+        ->assertSee('Change your country')
+        ->assertSee('Your country now sits with your language, under Display. It still decides which deduction categories are offered here.')
+        ->assertDontSeeHtml('data-testid="tax-country-select"');
 });
 
-it('setTaxCountry seeds categories and persists users.tax_country_code', function (): void {
+it('shows the chosen country as a value, not as a picker', function (): void {
     $user = taxSettingsUser('tax-livewire-02');
     $this->actingAs($user);
 
     Livewire::test(TaxSettingsSection::class)
-        ->call('setTaxCountry', 'nl')
-        ->assertSet('taxCountryCode', 'nl');
+        ->assertDontSeeHtml('data-testid="tax-country-current"');
 
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-
-    $countryCode = $db->connection()->table('users')->where('id', $user->id)->value('tax_country_code');
-    expect($countryCode)->toBe('nl');
-
-    $categoryCount = $db->connection()->table('tax_deduction_categories')
-        ->where('user_id', $user->id)
-        ->where('country_code', 'nl')
-        ->count();
-    expect($categoryCount)->toBeGreaterThan(0);
-});
-
-it('setTaxCountry rejects a code outside the allow-list (no-op)', function (): void {
-    $user = taxSettingsUser('tax-livewire-03');
-    $this->actingAs($user);
+    app(UserCountry::class)->store($user->id, 'nl');
 
     Livewire::test(TaxSettingsSection::class)
-        ->call('setTaxCountry', 'xx')
-        ->assertSet('taxCountryCode', '');
-
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $countryCode = $db->connection()->table('users')->where('id', $user->id)->value('tax_country_code');
-    expect($countryCode)->toBeNull();
+        ->assertSeeHtml('data-testid="tax-country-current"')
+        ->assertSee('Netherlands');
 });
 
-it('renders the country allow-list even when unauthenticated (no throw at mount)', function (): void {
-    // Derived from the enum, not copied out of it: a literal allow-list here
-    // would only ever fail on the day someone adds a country.
-    $expected = array_map(
-        static fn (TaxCountry $case): string => $case->value,
-        TaxCountry::cases(),
-    );
-    sort($expected);
-
+it('renders unauthenticated without throwing at mount', function (): void {
     Livewire::test(TaxSettingsSection::class)
         ->assertOk()
-        ->assertViewHas('allowedCountries', $expected);
-});
-
-it('settings page blade includes the tax settings section livewire tag', function (): void {
-    $content = file_get_contents(
-        dirname(__DIR__, 4).'/Modules/Shell/Resources/views/livewire/settings-page.blade.php'
-    );
-    assert(is_string($content));
-    expect($content)->toContain("@livewire('tax.settings-section')");
+        ->assertViewHas('countryLabel', '');
 });

@@ -14,6 +14,7 @@ use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
+use Modules\Ledger\Public\Services\CounterpartyKeyBackfill;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
 use Throwable;
 
@@ -64,6 +65,8 @@ class EncryptionMigrationService
                             .'keyring file must be finalized/restored before sensitive writes resume.',
                         );
                     }
+
+                    $this->backfillCounterpartyKeysOnce($connection, $userId, $state, $support, $session);
                 }
 
                 return;
@@ -133,6 +136,11 @@ class EncryptionMigrationService
                 $this->encryptProjectionTable($connection, $userId, 'counterparties', $support, $total, $processed);
                 $this->encryptProjectionTable($connection, $userId, 'tax_transaction_tags', $support, $total, $processed);
                 $this->encryptProjectionTable($connection, $userId, 'transaction_splits', $support, $total, $processed);
+
+                // Last, and inside the same transaction: it rewrites
+                // `fingerprint` alongside the key it is derived from, and a
+                // half-swept table would re-import as a second ledger.
+                $this->backfillCounterpartyKeys($connection, $userId, $support->stagedBlindIndexKeyHex());
 
                 $this->finalizeMigration($connection, $userId);
             });
@@ -332,6 +340,42 @@ class EncryptionMigrationService
                 'migration_in_progress' => $inProgress,
                 'updated_at' => $now,
             ]);
+    }
+
+    // runMigration() never re-enters once `current_epoch` is set, so a user
+    // who enabled encryption before the counterparty key existed would keep
+    // plaintext matching keys forever. This is the pass that converts them,
+    // on the first unlocked visit to any screen that calls migrate().
+    private function backfillCounterpartyKeysOnce(
+        ConnectionInterface $connection,
+        int $userId,
+        ?\stdClass $state,
+        EncryptionMigrationSupport $support,
+        Session $session,
+    ): void {
+        if ($state !== null && ($state->counterparty_key_backfilled_at ?? null) !== null) {
+            return;
+        }
+
+        $keyHex = $support->ensureBlindIndexKey($userId, $session);
+
+        $connection->transaction(function () use ($connection, $userId, $keyHex): void {
+            $this->backfillCounterpartyKeys($connection, $userId, $keyHex);
+        });
+    }
+
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
+     */
+    private function backfillCounterpartyKeys(ConnectionInterface $connection, int $userId, string $blindIndexKeyHex): void
+    {
+        /** @var CounterpartyKeyBackfill $backfill */
+        $backfill = $this->container->make(CounterpartyKeyBackfill::class);
+        $backfill->run($userId, $blindIndexKeyHex);
+
+        $connection->table('sync_encryption_state')
+            ->where('user_id', $userId)
+            ->update(['counterparty_key_backfilled_at' => $this->clock->now()]);
     }
 
     private function finalizeMigration(ConnectionInterface $connection, int $userId): void

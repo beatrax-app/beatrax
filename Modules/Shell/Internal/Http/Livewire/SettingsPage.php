@@ -14,8 +14,10 @@ use Livewire\Component;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\Country;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Enums\Theme;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
@@ -48,6 +50,10 @@ final class SettingsPage extends Component
     // shipped locales into a second list that drifts when a language is added.
     public string $locale = self::LOCALE_AUTO;
 
+    // Empty is a real state, not a missing one: with no country chosen the
+    // classification falls back to every region rather than guessing one.
+    public string $country = '';
+
     #[Validate('boolean')]
     public bool $isDeveloper = false;
 
@@ -71,8 +77,12 @@ final class SettingsPage extends Component
 
     public ?string $fxLastUpdated = null;
 
-    public function mount(CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): void
-    {
+    public function mount(
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        BaseCurrency $baseCurrency,
+        UserCountry $countries,
+    ): void {
         $user = $currentUser->user();
         $this->defaultCurrencyView = $user->default_currency_view;
         $this->periodStartDay = $user->period_start_day;
@@ -81,6 +91,7 @@ final class SettingsPage extends Component
         $this->driftAlertThresholdPercent = $user->drift_alert_threshold_percent;
         $this->theme = $user->theme;
         $this->locale = $user->locale ?? self::LOCALE_AUTO;
+        $this->country = $countries->current($user->id);
         $this->isDeveloper = $user->is_developer === true;
         $this->baseCurrency = $user->base_currency ?? $baseCurrency->code();
         $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
@@ -120,6 +131,24 @@ final class SettingsPage extends Component
         // `app()->getLocale()` on dehydrate and re-applies it next action, so
         // retargeting the translator alone reverted the language one action later.
         $app->setLocale($storedLocale ?? Locale::DEFAULT);
+    }
+
+    // Empty is the placeholder, and nothing else in the app can put the
+    // preference back to unset. The rule is passed here rather than declared in
+    // rules(), which save() runs wholesale: an unchosen country is the empty
+    // string, and a required rule up there failed every unrelated field's save.
+    public function setCountry(string $country, CurrentUser $currentUser, UserCountry $countries): void
+    {
+        if ($country === '') {
+            return;
+        }
+
+        $this->country = $country;
+        $this->validateOnly('country', [
+            'country' => 'required|in:'.implode(',', array_column(Country::cases(), 'value')),
+        ]);
+
+        $countries->store($currentUser->user()->id, $this->country);
     }
 
     public function setDevMode(bool $value, CurrentUser $currentUser): void
@@ -219,8 +248,13 @@ final class SettingsPage extends Component
         $this->saved = true;
     }
 
-    public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): View
-    {
+    public function render(
+        ViewFactory $views,
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        BaseCurrency $baseCurrency,
+        UserCountry $countries,
+    ): View {
         // Sorted by code so the <select> is stable. Both queries use the DB
         // connection directly, never a facade, per BoundaryArchTest.
         $accounts = $db->connection()->table('accounts')
@@ -248,6 +282,7 @@ final class SettingsPage extends Component
             'userId' => $currentUser->user()->id,
             'forecastingAccounts' => $this->mapAccounts($accounts, $baseCurrency->code()),
             'currencyOptions' => $this->mapCurrencyOptions($currencyRows),
+            'countryOptions' => $countries->options(),
         ]);
     }
 

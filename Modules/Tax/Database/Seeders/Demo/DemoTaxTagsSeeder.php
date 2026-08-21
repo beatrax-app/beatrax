@@ -75,7 +75,7 @@ final class DemoTaxTagsSeeder
         $this->db->connection()
             ->table('users')
             ->where('id', $user->id)
-            ->update(['tax_country_code' => self::COUNTRY]);
+            ->update(['country_code' => self::COUNTRY]);
     }
 
     /**

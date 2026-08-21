@@ -9,12 +9,12 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Community\Public\Services\SupportResourceProvider;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
-use Modules\Tax\Public\Services\TaxCountrySetup;
 use Modules\Tax\Public\Services\TaxTagQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -60,7 +60,7 @@ final class CounterpartyProfile extends Component
         SupportResourceProvider $supportResources,
         RecurringSeriesQuery $recurring,
         TaxTagQuery $taxTagQuery,
-        TaxCountrySetup $taxCountry,
+        UserCountry $countries,
     ): View {
         $user = $currentUser->user();
         $profile = $query->bySlug($user, $this->slug);
@@ -89,8 +89,8 @@ final class CounterpartyProfile extends Component
         // name (Sanitas is a Swiss insurer and a Spanish provider), and an
         // unscoped lookup handed whichever file sorted last to everybody.
         // Empty means "not set" and searches everywhere, as before.
-        $taxCountryCode = $taxCountry->currentCountry($user->id);
-        $supportCountry = $taxCountryCode === '' ? null : $taxCountryCode;
+        $countryCode = $countries->current($user->id);
+        $supportCountry = $countryCode === '' ? null : $countryCode;
 
         $supportResource = in_array($profile->type, [CounterpartyType::Merchant->value, CounterpartyType::Government->value], true)
             ? $supportResources->forCounterparty($profile->displayName, $profile->type, $supportCountry)

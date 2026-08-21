@@ -100,6 +100,26 @@
             </x-core::primary-button>
         </form>
 
-        <x-core::locale-switcher />
+        {{-- The language and the country are the two easiest controls on this
+             screen to mix up: both list places, and "Nederlands" and
+             "Nederland" differ by two letters. Neither carries a flag, and
+             each help line says what the OTHER one does not do. --}}
+        <div class="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <x-core::locale-switcher labelled />
+
+            <x-core::form-field
+                field-id="signup-country"
+                name="country"
+                type="select"
+                :label="Lang::get('core::settings.country.label')"
+                :hint="Lang::get('core::settings.country.help')"
+                wire:model="country"
+            >
+                <option value="">{{ Lang::get('core::settings.country.choose') }}</option>
+                @foreach ($countryOptions as $countryCode => $countryName)
+                    <option value="{{ $countryCode }}">{{ $countryName }}</option>
+                @endforeach
+            </x-core::form-field>
+        </div>
     </div>
 </div>

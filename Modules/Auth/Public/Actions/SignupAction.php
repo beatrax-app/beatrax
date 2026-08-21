@@ -19,6 +19,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\Lang;
 
 final class SignupAction
@@ -36,13 +37,18 @@ final class SignupAction
         private readonly SessionFactory $session,
         private readonly Dispatcher $events,
         private readonly Translator $translator,
+        private readonly UserCountry $countries,
     ) {}
 
     /**
      * @return array{user: User, codesPlain: list<string>}
      */
-    public function __invoke(string $usernameInput, string $password, bool $seedsStarterData = true): array
-    {
+    public function __invoke(
+        string $usernameInput,
+        string $password,
+        bool $seedsStarterData = true,
+        string $countryCode = '',
+    ): array {
         $username = Username::normalize($usernameInput);
 
         if (! Username::isValid($username)) {
@@ -115,6 +121,11 @@ final class SignupAction
         // After commit and before auto-login, so the listener chain runs in
         // the same unauthenticated context as the console install path.
         $this->events->dispatch(new UserInstalled($result['user']->id, $seedsStarterData));
+
+        // Through the same seam Settings writes, so the country-scoped
+        // reference data a fresh install needs is seeded here too. An empty
+        // code is the reader skipping the picker, and store() leaves it unset.
+        $this->countries->store($result['user']->id, $countryCode);
 
         /** @var StatefulGuard $guard */
         $guard = $this->auth->guard();

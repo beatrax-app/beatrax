@@ -7,11 +7,11 @@ namespace Modules\Tax\Internal\Http\Livewire;
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Support\FilingSeason;
 use Modules\Tax\Public\Services\TaxCsvExporter;
@@ -89,7 +89,7 @@ final class TaxPage extends Component
         CurrentUser $currentUser,
         TaxYearQuery $query,
         ViewFactory $views,
-        DatabaseManager $db,
+        UserCountry $countries,
     ): View {
         // Unreachable behind the route group's 'auth' middleware; kept so an
         // unauthenticated render degrades to the empty page instead of throwing.
@@ -110,14 +110,7 @@ final class TaxPage extends Component
         $data = $query->forUser($user->id, $this->year);
         $availableYears = $query->availableYears($user->id);
 
-        // tax_country_code is not typed on User; TaxSettingsSection writes it
-        // through the query builder too.
-        $taxCountryCode = $db->connection()
-            ->table('users')
-            ->where('id', $user->id)
-            ->value('tax_country_code');
-
-        $hasTaxCountry = is_string($taxCountryCode) && $taxCountryCode !== '';
+        $hasTaxCountry = $countries->current($user->id) !== '';
 
         $view = $views->make('tax::livewire.tax-page', [
             'data' => $data,

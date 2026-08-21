@@ -8,25 +8,25 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Tax\Public\Services\TaxCountrySetup;
+use Modules\Core\Public\Services\UserCountry;
 
 final class TaxCountryStep extends Component
 {
     public string $taxCountryCode = '';
 
-    public function mount(CurrentUser $currentUser, TaxCountrySetup $setup): void
+    public function mount(CurrentUser $currentUser, UserCountry $countries): void
     {
         if ($currentUser->isAuthenticated()) {
-            $this->taxCountryCode = $setup->currentCountry($currentUser->id());
+            $this->taxCountryCode = $countries->current($currentUser->id());
         }
     }
 
-    public function continue(CurrentUser $currentUser, TaxCountrySetup $setup): void
+    public function continue(CurrentUser $currentUser, UserCountry $countries): void
     {
         if ($this->taxCountryCode !== '' && $currentUser->isAuthenticated()) {
             // Re-checks the code against the allow-list server-side; an
             // injected one is dropped.
-            $setup->selectCountry($currentUser->id(), $this->taxCountryCode);
+            $countries->store($currentUser->id(), $this->taxCountryCode);
         }
 
         $this->dispatch('wizard.step.completed');
@@ -37,10 +37,10 @@ final class TaxCountryStep extends Component
         $this->dispatch('wizard.step.skipped');
     }
 
-    public function render(TaxCountrySetup $setup, ViewFactory $views): View
+    public function render(UserCountry $countries, ViewFactory $views): View
     {
         return $views->make('onboarding::livewire.steps.tax-country-step', [
-            'countries' => $setup->availableCountries(),
+            'countries' => $countries->options(),
         ]);
     }
 }
