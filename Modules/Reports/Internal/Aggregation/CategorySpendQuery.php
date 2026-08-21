@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use stdClass;
 
@@ -154,7 +155,7 @@ final class CategorySpendQuery
                 ->where(static function (QueryBuilder $q) use ($userId): void {
                     $q->whereNull('user_id')->orWhere('user_id', $userId);
                 })
-                ->get(['id', 'parent_id', 'name']);
+                ->get(['id', 'parent_id', 'name', 'slug', 'name_is_default']);
 
             $nextFetch = [];
             foreach ($batch as $row) {
@@ -186,7 +187,7 @@ final class CategorySpendQuery
         while (isset($byId[$current]) && ! isset($visited[$current]) && $depth < $maxDepth) {
             $visited[$current] = true;
             $row = $byId[$current];
-            array_unshift($parts, self::toString($row->name));
+            array_unshift($parts, CategoryDisplayName::fromRow($row) ?? '');
             $parentId = $row->parent_id === null ? null : self::toInt($row->parent_id);
             if ($parentId === null) {
                 break;

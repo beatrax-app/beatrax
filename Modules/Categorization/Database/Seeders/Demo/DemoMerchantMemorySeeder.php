@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 
 // merchant_memories.merchant_id is FK-constrained to merchants, so a per-user
 // merchants row is upserted first. Neither table has an Eloquent model, hence
@@ -27,6 +28,7 @@ final class DemoMerchantMemorySeeder
 
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly CounterpartyKey $counterpartyKey,
     ) {}
 
     /**
@@ -45,7 +47,15 @@ final class DemoMerchantMemorySeeder
                 continue;
             }
 
-            $merchantId = $this->ensureMerchant($primary, $row['merchantName'], $row['normalizedName'], $categoryId);
+            // Keyed through the same producer the transactions get, or the
+            // join in RuleEvaluator would miss every seeded merchant for a
+            // user with at-rest encryption on.
+            $merchantId = $this->ensureMerchant(
+                $primary,
+                $row['merchantName'],
+                $this->counterpartyKey->forNormalized($row['normalizedName'], $primary->id),
+                $categoryId,
+            );
             $this->upsertMemory($primary, $merchantId, $categoryId, $row['occurrenceCount']);
         }
 

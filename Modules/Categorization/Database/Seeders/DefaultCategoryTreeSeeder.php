@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Categorization\Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Enums\CategoryKind;
 
@@ -67,10 +66,10 @@ final class DefaultCategoryTreeSeeder extends Seeder
         }
     }
 
-    // Structure is re-asserted every run; the NAME is written once, at
-    // creation. The tree is shared and re-seeded per user, so rewriting names
-    // would retranslate a second user's categories into whatever locale was
-    // active and discard any rename the first had made. Editable data, not fixtures.
+    // Structure is re-asserted every run; the name and the flag are written
+    // once, at creation — re-asserting either would undo a rename on a tree
+    // that is shared and re-seeded per user. The name goes in untranslated,
+    // because CategoryDisplayName translates it per reader at render.
     /**
      * @param  array{name: string, slug: string, kind: string}  $node
      */
@@ -81,7 +80,8 @@ final class DefaultCategoryTreeSeeder extends Seeder
         );
 
         if (! $model->exists) {
-            $model->name = $this->localisedName($node['slug'], $node['name']);
+            $model->name = $node['name'];
+            $model->name_is_default = true;
         }
 
         $model->kind = $node['kind'];
@@ -90,16 +90,5 @@ final class DefaultCategoryTreeSeeder extends Seeder
         $model->save();
 
         return $model;
-    }
-
-    // The English literal in TREE stays the fallback, so an unreachable key
-    // degrades to the name this seeder has always written rather than to the
-    // key itself appearing on someone's budget screen.
-    private function localisedName(string $slug, string $fallback): string
-    {
-        $key = 'categorization::categories.'.$slug;
-        $translated = Lang::get($key);
-
-        return is_string($translated) && $translated !== $key ? $translated : $fallback;
     }
 }

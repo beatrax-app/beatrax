@@ -12,6 +12,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 
 final class BudgetProgressQuery
 {
@@ -40,8 +41,7 @@ final class BudgetProgressQuery
             ->where(static function (QueryBuilder $query) use ($user): void {
                 $query->whereNull('c.user_id')->orWhere('c.user_id', $user->id);
             })
-            ->orderBy('c.name')
-            ->get(['b.category_id', 'c.name', 'b.budget_minor', 'b.currency']);
+            ->get(['b.category_id', ...CategoryDisplayName::columns('c'), 'b.budget_minor', 'b.currency']);
 
         if ($budgets->isEmpty()) {
             return [];
@@ -69,7 +69,7 @@ final class BudgetProgressQuery
 
             $rows[] = new BudgetProgressRow(
                 categoryId: $categoryId,
-                name: self::toString($budget->name),
+                name: CategoryDisplayName::fromRow($budget, 'category') ?? '',
                 budgetMinor: $budgetMinor,
                 spentMinor: $spentMinor,
                 currency: $currency,
@@ -77,6 +77,10 @@ final class BudgetProgressQuery
                 status: $status,
             );
         }
+
+        // Alphabetical by what the reader sees, not by what is stored — the
+        // stored English orders a Dutch budget screen by the wrong word.
+        usort($rows, static fn (BudgetProgressRow $a, BudgetProgressRow $b): int => strcasecmp($a->name, $b->name));
 
         return $rows;
     }
@@ -91,13 +95,14 @@ final class BudgetProgressQuery
             ->where(static function (QueryBuilder $query) use ($user): void {
                 $query->whereNull('user_id')->orWhere('user_id', $user->id);
             })
-            ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'slug', 'name_is_default']);
 
         $options = [];
         foreach ($rows as $row) {
-            $options[self::toInt($row->id)] = self::toString($row->name);
+            $options[self::toInt($row->id)] = CategoryDisplayName::fromRow($row) ?? '';
         }
+
+        asort($options, SORT_NATURAL | SORT_FLAG_CASE);
 
         return $options;
     }

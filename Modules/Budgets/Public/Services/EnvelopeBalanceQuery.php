@@ -10,6 +10,7 @@ use Modules\Budgets\Public\Dto\EnvelopeMoveRow;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 
 // There is no stored balance column anywhere: a category's net_moved is
 // always SUM(amount_minor) over its own rows, derived fresh on every read.
@@ -53,7 +54,7 @@ final class EnvelopeBalanceQuery
                 'm.kind',
                 'm.amount_minor',
                 'm.counterpart_category_id',
-                'c.name as counterpart_category_name',
+                ...CategoryDisplayName::columns('c', 'counterpart_category'),
                 'm.memo',
                 'm.created_at',
             ]);
@@ -100,7 +101,7 @@ final class EnvelopeBalanceQuery
                 'm.kind',
                 'm.amount_minor',
                 'm.counterpart_category_id',
-                'c.name as counterpart_category_name',
+                ...CategoryDisplayName::columns('c', 'counterpart_category'),
                 'm.memo',
                 'm.created_at',
             ]);
@@ -124,7 +125,7 @@ final class EnvelopeBalanceQuery
             direction: self::toString($row->kind) === 'move_in' ? 'in' : 'out',
             amountMinor: self::toInt($row->amount_minor),
             counterpartCategoryId: self::toInt($row->counterpart_category_id),
-            counterpartCategoryName: self::toString($row->counterpart_category_name),
+            counterpartCategoryName: CategoryDisplayName::fromRow($row, 'counterpart_category') ?? '',
             memo: is_string($row->memo) ? $row->memo : null,
             createdAt: $this->formatCreatedAt($row->created_at ?? null),
         );

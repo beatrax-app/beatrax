@@ -15,6 +15,7 @@ use Modules\Categorization\Public\Dto\RuleConditionDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -228,15 +229,13 @@ final readonly class CategorizationRuleQuery
             ->where(static function (QueryBuilder $q) use ($userId): void {
                 $q->whereNull('c.user_id')->orWhere('c.user_id', $userId);
             })
-            ->select(['c.id', 'c.name as category_name', 'p.name as parent_category_name'])
+            ->select(['c.id', ...CategoryDisplayName::columns('c'), ...CategoryDisplayName::columns('p', 'parent_category')])
             ->get();
 
         $out = [];
         foreach ($rows as $row) {
-            $categoryName = is_string($row->category_name ?? null) ? $row->category_name : '';
-            $parentName = isset($row->parent_category_name) && is_string($row->parent_category_name)
-                ? $row->parent_category_name
-                : null;
+            $categoryName = CategoryDisplayName::fromRow($row, 'category') ?? '';
+            $parentName = CategoryDisplayName::fromRow($row, 'parent_category');
             $out[self::toInt($row->id)] = $parentName === null ? $categoryName : $parentName.' / '.$categoryName;
         }
 

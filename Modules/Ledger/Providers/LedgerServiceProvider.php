@@ -25,6 +25,7 @@ use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 use Modules\Ledger\Public\Services\CategorySpendTrendQuery;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\StatementSummaryWriter;
@@ -50,6 +51,7 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(ReassignsCounterparty::class, ReassignCounterparty::class);
         $this->app->bind(SetsTransactionNote::class, SetTransactionNote::class);
         $this->app->singleton(FingerprintComposer::class);
+        $this->app->singleton(CounterpartyKey::class);
         // Transient, not singleton: it resolves the per-request CurrentUser, and
         // a singleton would freeze the first request's user in a long-lived worker.
         $this->app->bind(PeriodQuery::class);

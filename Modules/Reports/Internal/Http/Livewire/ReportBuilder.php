@@ -17,6 +17,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Reports\Internal\Actions\SaveReport;
 use Modules\Reports\Internal\Actions\UpdateReport;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
@@ -311,16 +312,19 @@ final class ReportBuilder extends Component
             ->where(static function (Builder $query) use ($userId): void {
                 $query->whereNull('user_id')->orWhere('user_id', $userId);
             })
-            ->orderBy('name')
-            ->get(['id', 'name'])
+            ->get(['id', 'name', 'slug', 'name_is_default'])
             ->all();
 
-        return array_values(array_map(static function (object $row): array {
+        $options = array_values(array_map(static function (object $row): array {
             return [
                 'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'name' => is_string($row->name) ? $row->name : '',
+                'name' => CategoryDisplayName::fromRow($row) ?? '',
             ];
         }, $rows));
+
+        usort($options, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']));
+
+        return $options;
     }
 
     /**

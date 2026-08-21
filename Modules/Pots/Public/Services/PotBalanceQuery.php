@@ -12,6 +12,7 @@ use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Pots\Public\Dto\PotMovementRow;
 use Modules\Pots\Public\Dto\PotRow;
 use Modules\Pots\Public\Dto\ReconciliationRow;
@@ -272,7 +273,7 @@ final class PotBalanceQuery
                 'pots.category_id',
                 'accounts.name as account_name',
                 'goals.name as goal_name',
-                'categories.name as category_name',
+                ...CategoryDisplayName::columns('categories'),
             ]);
 
         if ($pots->isEmpty()) {
@@ -332,7 +333,7 @@ final class PotBalanceQuery
             goalId: $pot->goal_id !== null ? self::toInt($pot->goal_id) : null,
             goalName: is_string($pot->goal_name) ? $pot->goal_name : null,
             categoryId: $categoryId,
-            categoryName: is_string($pot->category_name) ? $pot->category_name : null,
+            categoryName: CategoryDisplayName::fromRow($pot, 'category'),
             categorySpentMinor: $this->categorySpentMinor($connection, $pot, $categoryId, $user, $periodStart, $periodEndExclusive),
             recentMovements: $this->buildRecentMovements($movementRows, $potNameById),
         );

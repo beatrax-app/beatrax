@@ -14,6 +14,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Ledger\Public\Dto\TransactionListPage;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -84,7 +85,7 @@ final class TransactionListQuery
             'transactions.category_id',
             $amountMinorColumn,
             $currencyColumn,
-            'categories.name as category_name',
+            ...CategoryDisplayName::columns('categories'),
             'counterparties.slug as counterparty_slug',
         ];
 
@@ -140,7 +141,7 @@ final class TransactionListQuery
     {
         $bookedAt = CarbonImmutable::parse(self::toString($row->booked_at));
         $categoryId = $row->category_id === null ? null : self::toInt($row->category_id);
-        $categoryName = $row->category_name === null ? null : self::toString($row->category_name);
+        $categoryName = CategoryDisplayName::fromRow($row, 'category');
         // Read-side decrypt — pass-through no-op when encryption is not
         // enabled for this user.
         $counterpartyName = $row->counterparty_name === null

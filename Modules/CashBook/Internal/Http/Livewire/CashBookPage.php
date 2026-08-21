@@ -19,6 +19,7 @@ use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
@@ -150,7 +151,7 @@ final class CashBookPage extends Component
             ->orderByDesc('t.posted_at')
             ->orderByDesc('t.id')
             ->limit(100)
-            ->get(['t.id', 't.posted_at', 't.counterparty_name', 't.settled_amount_minor', 't.type', 'c.name as category_name']);
+            ->get(['t.id', 't.posted_at', 't.counterparty_name', 't.settled_amount_minor', 't.type', ...CategoryDisplayName::columns('c')]);
 
         // The raw query builder applies no cast to ciphertext columns.
         // decryptValue is a pass-through for non-encryption users.
@@ -165,6 +166,8 @@ final class CashBookPage extends Component
                 )['value'];
             }
 
+            $entry->category_name = CategoryDisplayName::fromRow($entry, 'category');
+
             return $entry;
         });
 
@@ -172,8 +175,14 @@ final class CashBookPage extends Component
             ->where(static function (Builder $query) use ($user): void {
                 $query->whereNull('user_id')->orWhere('user_id', $user->id);
             })
-            ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'slug', 'name_is_default'])
+            ->map(static function (object $row): object {
+                $row->name = CategoryDisplayName::fromRow($row) ?? '';
+
+                return $row;
+            })
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
 
         $entryIds = array_map(static fn (object $row): int => is_numeric($row->id) ? (int) $row->id : 0, $entries->all());
         $taxState = $this->taxTagStateFor($entryIds, $taxTagQuery, $currentUser);
