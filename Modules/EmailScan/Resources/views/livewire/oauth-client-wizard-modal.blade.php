@@ -97,12 +97,18 @@
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step5_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step5_body') }}</p>
+                            {{-- The URI is one unbreakable token, and a shrink-to-fit button
+                                 takes its min-content width as a floor. Inside a
+                                 <dialog> sized to its content that floor became the
+                                 dialog's width: 441px on a 411px phone, with every
+                                 line of body text clipped and the close button half
+                                 off-screen. --}}
                             <x-core::secondary-button
                                 size="sm"
-                                class="gap-1 font-mono"
+                                class="gap-1 font-mono max-w-full"
                                 x-data
                                 x-on:click="(async () => { const label = $el.querySelector('span'); const was = label.textContent; if (await window.beatraxCopy(was)) { label.textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => label.textContent = '{{ $redirectUri }}', 2000); } })()"
-                            ><span>{{ $redirectUri }}</span></x-core::secondary-button>
+                            ><span class="min-w-0 break-all">{{ $redirectUri }}</span></x-core::secondary-button>
                         </div>
                     </li>
 
@@ -163,10 +169,10 @@
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step3_body') }}</p>
                             <x-core::secondary-button
                                 size="sm"
-                                class="gap-1 font-mono"
+                                class="gap-1 font-mono max-w-full"
                                 x-data
                                 x-on:click="(async () => { const label = $el.querySelector('span'); const was = label.textContent; if (await window.beatraxCopy(was)) { label.textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => label.textContent = '{{ $redirectUri }}', 2000); } })()"
-                            ><span>{{ $redirectUri }}</span></x-core::secondary-button>
+                            ><span class="min-w-0 break-all">{{ $redirectUri }}</span></x-core::secondary-button>
                         </div>
                     </li>
 

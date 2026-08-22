@@ -285,9 +285,8 @@
          right inbox. --}}
     <livewire:email-scan.backfill-window-modal />
 
-    {{-- Wizard modal (single SFC; branches on the $provider property
-         to render the Gmail or Microsoft 365 variant). Mounted
-         unconditionally so the openWizard() action can dispatch
-         modal-show to open it. --}}
-    <livewire:email-scan.oauth-client-wizard-modal />
+    {{-- The wizard modal is NOT mounted here. layouts.app mounts it once for
+         the whole session, and open() listens on a global Livewire event, so a
+         second mount opens a second identical dialog on top of the first —
+         measured on a phone: close one and an unchanged copy is still there. --}}
 </div>
