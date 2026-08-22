@@ -124,9 +124,12 @@ composer test
   Confirm `RefreshDatabase` clears the cache too (it does by
   default in this project's TestCase).
 - **OAuth redirect lands on the wrong port** — the
-  `OAUTH_LOOPBACK_PORT` env var was overridden in one place but
-  not the other (connect vs callback). Both must read through
-  `LoopbackRedirectUri::compose()`.
+  `OAUTH_LOOPBACK_PORT` env var (read as
+  `config('email-scan.oauth_loopback_port')`) was overridden in one
+  place but not the other (connect vs callback). Both must read
+  through `LoopbackRedirectUri::forProvider()`, which falls back to
+  the port in `app.url` when that host is loopback, and to `8000`
+  otherwise.
 - **`OAuthSecret` plaintext visible in a log line** — the
   `OAuthScrubSet` from [`DevMode`](../dev-mode/how-to-test.md) busts on
   every save; if a recently-rotated secret leaks, the scrub set

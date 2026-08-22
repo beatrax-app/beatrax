@@ -95,19 +95,28 @@ Modules/EmailScan/
 ## Public API
 
 - **Services/**
-  - `OAuthSecretsRepository::store($userId, $provider, $credentials)`
-    / `retrieveFor($userId, $provider): ?InboxCredentials`. Single
-    sanctioned read/write path for `oauth_secrets`. Safe-write
-    sequence (`.bak` + `.new` + atomic rename); throws
-    `SecretsWriteFailed` on failure.
-  - `EmlBlobStore::put($messageId, $bytes)`,
-    `path($messageId)`, `delete($messageId)`. Per-message blob
+  - `OAuthSecretsRepository::hasProviderClient($provider)`,
+    `saveProviderClient($provider, $clientId, $clientSecret,
+    $redirectUri)`, `loadProviderClient($provider)`,
+    `loadInbox($inboxId): ?InboxCredentials`,
+    `saveInboxRefreshToken(...)`, `rotateRefreshToken(...)`,
+    `removeInbox($inboxId)`. Single sanctioned read/write path for
+    `oauth_secrets`, which is an Eloquent-backed table — not the
+    `.bak` + `.new` + atomic-rename JSON file it started life as.
+    Takes no `$userId`: the reader comes from `CurrentUser`. Throws
+    `SecretsWriteFailed` when the save fails.
+  - `EmlBlobStore::put($messageId, $bytes)`, `pathFor($messageId)`,
+    `exists($messageId)`, `delete($messageId)`. Per-message blob
     persistence under the user-data path. Writes `chmod 0600`.
-  - `InboxQuery::list($user)`, `forId($id, $user)`,
-    `healthForUser($user)` — read-side queries.
-  - `InboxMessageQuery::for($inbox, $user)` — paged message list.
+  - `InboxQuery::forCurrentUser($user)`, `findForUser($inboxId,
+    $user)`, `reviewBadgeCount($user)` — read-side queries returning
+    `InboxHealthDto`s.
+  - `InboxMessageQuery::forStatus($status)` — a `Generator` over the
+    messages in one `InboxMessageStatus`; throws
+    `InvalidArgumentException` on a status outside the enum.
   - `KnownSenderQuery::all($user)` — the allow-list.
-  - `DiscoveredSenderQuery::for($user)` — the panel data.
+  - `DiscoveredSenderQuery::candidatesForUser($user, $minOccurrences,
+    $withinDays)` — the panel data.
   - `InboxesBadgeCount::forCurrentUser($user)` — single COUNT for
     the sidebar badge.
 - **Actions/**
@@ -121,6 +130,13 @@ Modules/EmailScan/
     `EmailScanHealthTile`.
 - **Events/**
   - `InboxTokenFailed` — `(inboxId, userId, reason)`.
+- `LoopbackRedirectUri::forProvider($provider, $scheme = 'http')` —
+  sits at the root of `Public/`, not in a subdirectory. Composes the
+  OAuth redirect URI
+  (`<scheme>://127.0.0.1:<port>/oauth/callback/<provider>`). The
+  loopback port is configurable via the `OAUTH_LOOPBACK_PORT` env
+  var; unset, it falls back to the port in `app.url` when that host
+  is `127.0.0.1` or `localhost`, and to `8000` otherwise.
 
 ## Internal services
 
@@ -128,9 +144,15 @@ Modules/EmailScan/
   `MicrosoftOAuthProvider` — concrete OAuth handshake +
   refresh-token flow. Each throws the typed exceptions on the
   documented failure modes.
-- `Internal/OAuth/OAuthStateRepository::store($state, $userId)` /
-  `validate($state): ?int` — CSRF state tracking for the OAuth
-  redirect.
+- `Internal/OAuth/OAuthStateRepository::issueState($provider,
+  $userId, $existingInboxId)` / `consumeState($provider,
+  $candidateState, $currentUserId): ?int` — session-backed CSRF state
+  for the OAuth redirect. `consume` `pull()`s, so a state is
+  single-use, and one older than `MAX_AGE_SECONDS` (600) is refused.
+  The same store
+  holds the PKCE verifier (`storePkceVerifier` /
+  `consumePkceVerifier`) and the client-wizard success handoff
+  (`issueClientWizardSuccess`).
 - `Internal/Clients/GmailApiClient` /
   `Internal/Clients/GraphApiClient` — concrete API clients. Both
   implement their respective `*Contract` so tests rebind to
@@ -153,9 +175,6 @@ Modules/EmailScan/
   — writes a single de-duped `system_alerts` row per inbox.
 - `Internal/Listeners/EmitOAuthReauthRequiredAlert::handle()` —
   per-request belt-and-braces; runs from the sidebar composer.
-- `Internal/LoopbackRedirectUri::compose($port = null)` —
-  composes the OAuth redirect URI. The loopback port is configurable
-  via the `OAUTH_LOOPBACK_PORT` env var.
 - `Internal/MimeHeaderParser`, `Internal/ParsedMessageHeaders`,
   `Internal/SafeMessage` — parsing utilities used by the
   receipt-handing-off path. `SafeMessage` ensures untrusted MIME

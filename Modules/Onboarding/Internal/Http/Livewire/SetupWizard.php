@@ -15,6 +15,7 @@ use Livewire\Component;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\AnnouncesStepChanges;
 use Modules\Onboarding\Internal\Enums\WizardStepStatus;
 use Modules\Onboarding\Internal\Services\ResumeStepResolver;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
@@ -27,9 +28,9 @@ final class SetupWizard extends Component
 {
     // A step change is a re-render of one page, not a navigation, so nothing
     // resets the scroll: step 3 opened 424px down, past its own heading, with
-    // the wizard chrome dragged under the status bar. The browser is the only
-    // thing that can put the viewport back at the top.
-    public const string STEP_CHANGED_EVENT = 'wizard-step-changed';
+    // the wizard chrome dragged under the status bar. The trait names the
+    // event and the bundle carries the one listener that acts on it.
+    use AnnouncesStepChanges;
 
     public string $currentStepKey = 'welcome';
 
@@ -121,7 +122,7 @@ final class SetupWizard extends Component
 
         $this->currentStepKey = $stepKey;
         $this->progress = $progress;
-        $this->dispatch(self::STEP_CHANGED_EVENT);
+        $this->announceStepChange();
     }
 
     #[On('wizard.step.completed')]
@@ -224,6 +225,6 @@ final class SetupWizard extends Component
 
         $this->isResuming = false;
         $this->progress = $query->list($userId);
-        $this->dispatch(self::STEP_CHANGED_EVENT);
+        $this->announceStepChange();
     }
 }

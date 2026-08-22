@@ -250,6 +250,74 @@ it('gives every touch control the floor and the halo both miss a 44px hit area',
     );
 });
 
+/**
+ * @return list<string> the declarations of every unlayered coarse-pointer rule
+ *                      whose selector list carries exactly this selector
+ */
+function phoneUiCoarseRuleBodies(string $selector): array
+{
+    $bodies = [];
+
+    foreach (phoneUiCoarsePointerBlocks() as $block) {
+        $block = (string) preg_replace('#/\*.*?\*/#s', '', $block);
+
+        preg_match_all('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $block, $rules, PREG_SET_ORDER);
+        foreach ($rules as $rule) {
+            foreach (explode(',', $rule['selector']) as $part) {
+                if (trim((string) preg_replace('/\s+/', ' ', $part)) === $selector) {
+                    $bodies[] = $rule['body'];
+                }
+            }
+        }
+    }
+
+    return $bodies;
+}
+
+it('drops the native appearance the select floor is inert without', function (): void {
+    // Measured on an iPhone with the floor already in place: 29pt, with the
+    // rule applying and its padding, radius and colours all landing. WebKit
+    // sizes a select that keeps its native appearance from the font alone and
+    // ignores height on it, so the declaration was inert rather than lost.
+    $floors = array_values(array_filter(
+        phoneUiCoarseRuleBodies('select'),
+        static fn (string $body): bool => preg_match('/(?<![a-z-])min-height:\s*44px/', $body) === 1,
+    ));
+
+    expect($floors)->not->toBeEmpty(
+        'no unlayered coarse-pointer rule holds a bare `select` at 44px any more'
+    );
+
+    // Removing the appearance also removes the arrow the platform drew, and a
+    // select cannot carry a pseudo-element to put one back — so the rule that
+    // takes the arrow away is the one that has to redraw it.
+    $inert = array_values(array_filter(
+        $floors,
+        static fn (string $body): bool => ! str_contains($body, '-webkit-appearance: none')
+            || preg_match('/(?<![-a-z])appearance:\s*none/', $body) !== 1
+            || ! str_contains($body, 'background-image: var(--select-chevron)'),
+    ));
+
+    expect($inert)->toBe([], implode("\n", [
+        'A select that keeps its native appearance is sized by WebKit from its font,',
+        'and this floor measured 29pt on device while applying. It needs BOTH spellings',
+        'of appearance: none — the prefixed one for WebKit, the standard one for every',
+        'engine that has dropped the prefix — and a drawn chevron, because dropping the',
+        'appearance takes the platform arrow with it. Rules missing one of the three:',
+        ...$inert,
+    ]));
+});
+
+it('defines the drawn chevron in both colour schemes', function (): void {
+    // A background-image reading a custom property nothing defines paints
+    // nothing at all, and the control loses its arrow rather than its height —
+    // which looks like a design choice from every angle except a device.
+    $css = phoneUiUnlayeredCss();
+
+    expect($css)->toMatch('/:root\s*\{[^{}]*--select-chevron:/');
+    expect($css)->toMatch('/:root\.dark\s*\{[^{}]*--select-chevron:/');
+});
+
 it('gives the login recovery-code link a touch reach', function (): void {
     // A lone link in its own paragraph: 17px tall, and no floor covers an <a>.
     $login = (string) file_get_contents(base_path('Modules/Auth/Resources/views/livewire/login-page.blade.php'));
