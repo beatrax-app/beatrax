@@ -25,6 +25,7 @@ use Modules\Mobile\Internal\Exceptions\LanSyncException;
 use Modules\Mobile\Internal\Sync\LanSyncClient;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Crypto\GdkWrapRecipient;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
@@ -267,7 +268,7 @@ it('routes a pushed GDK_EPOCH_WRAP frame through the authenticated session and c
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
     $recipientPub = sodium_hex2bin($phone->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawEpochKey, $recipientPub, $phone->deviceId, 'desktop-peer', $desktopEdSecretHex);
+    $wrap = $rotation->buildGdkEpochWrap(1, $rawEpochKey, new GdkWrapRecipient($phone->deviceId, $recipientPub), 'desktop-peer', $desktopEdSecretHex);
 
     // Sealed in wire order — Noise cipher states are counter-based.
     $header = lanReceivePushHeader($desktopNoiseSession, 1);

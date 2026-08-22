@@ -10,6 +10,7 @@ use LogicException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
+use Modules\Sync\Internal\Exceptions\BlindIndexKeyMalformedException;
 use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
 use RuntimeException;
 use SodiumException;
@@ -52,6 +53,7 @@ final class BlindIndexCodec
     // the enable-time sweep unable to tell converted rows from unconverted.
     /**
      * @throws BlindIndexKeyUnavailableException when encryption IS enabled and the key is not held.
+     * @throws BlindIndexKeyMalformedException when the key IS held but is not valid hex.
      */
     public function derive(string $domain, string $plaintext, int $userId, Session $session): string
     {
@@ -66,6 +68,10 @@ final class BlindIndexCodec
     // re-derive sweep uses this so a whole table costs one keyring read
     // rather than one per row, and so it can hash under a key it is in the
     // middle of adopting.
+    /**
+     * @throws LogicException when $domain is not one the registry declares.
+     * @throws BlindIndexKeyMalformedException when $keyHex is not valid hex.
+     */
     public function deriveWithKey(string $domain, string $plaintext, int $userId, string $keyHex): string
     {
         self::requireKnownDomain($domain);
@@ -73,7 +79,7 @@ final class BlindIndexCodec
         try {
             $rawKey = sodium_hex2bin($keyHex);
         } catch (SodiumException $e) {
-            throw new RuntimeException('BlindIndexCodec: the stored blind-index key is not valid hex.', 0, $e);
+            throw BlindIndexKeyMalformedException::forUser($userId, $domain, $e);
         }
 
         try {

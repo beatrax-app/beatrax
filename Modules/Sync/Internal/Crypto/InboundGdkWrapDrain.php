@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Crypto;
 
 use Illuminate\Contracts\Session\Session;
+use Modules\Sync\Internal\Transport\PendingMailboxScan;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Psr\Log\LoggerInterface;
 
@@ -27,6 +28,7 @@ final readonly class InboundGdkWrapDrain
 
     public function __construct(
         private RelayMailbox $mailbox,
+        private PendingMailboxScan $scan,
         private GdkEpochControlHandler $handler,
         private LoggerInterface $logger,
     ) {}
@@ -44,33 +46,18 @@ final readonly class InboundGdkWrapDrain
 
         $applied = 0;
         $handled = 0;
-        $scanned = 0;
-        $cursorCreatedAt = null;
-        $cursorId = null;
 
-        while ($scanned < self::MAX_ROWS_SCANNED_PER_PASS && $handled < self::MAX_WRAPS_PER_PASS) {
-            $rows = $this->mailbox->drain($localDeviceId, self::MAX_WRAPS_PER_PASS, $cursorCreatedAt, $cursorId);
-
-            if ($rows === []) {
-                return $applied;
+        foreach ($this->scan->rows($localDeviceId, self::MAX_WRAPS_PER_PASS, self::MAX_ROWS_SCANNED_PER_PASS) as $row) {
+            $outcome = $this->consumeRow($row, $userId, $session);
+            if ($outcome === null) {
+                continue;
             }
 
-            foreach ($rows as $row) {
-                $scanned++;
-                $cursorCreatedAt = is_string($row->created_at ?? null) ? $row->created_at : null;
-                $cursorId = is_numeric($row->id ?? null) ? (int) $row->id : null;
+            $handled++;
+            $applied += $outcome === GdkWrapOutcome::Applied ? 1 : 0;
 
-                $outcome = $this->consumeRow($row, $userId, $session);
-                if ($outcome === null) {
-                    continue;
-                }
-
-                $handled++;
-                $applied += $outcome === GdkWrapOutcome::Applied ? 1 : 0;
-            }
-
-            if ($cursorCreatedAt === null || $cursorId === null) {
-                return $applied;
+            if ($handled >= self::MAX_WRAPS_PER_PASS) {
+                break;
             }
         }
 

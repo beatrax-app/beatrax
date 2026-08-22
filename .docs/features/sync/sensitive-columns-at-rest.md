@@ -384,6 +384,14 @@ Where a value must be computed and the key is not held, `BlindIndexCodec::derive
 whole point: this column sits inside `transactions_fingerprint_uq`, and one statement stored
 under two lock states would make a re-import a second ledger.
 
+The neighbouring failure is deliberately a different type in a different place. A key that IS
+held but is not valid hex throws `BlindIndexKeyMalformedException`, which lives in Sync's
+`Internal\Exceptions` rather than beside its sibling on the public surface.
+`BlindIndexKeyUnavailableException` is public because `ImportPipeline` acts on it — it maps to
+the "the app is locked" preview row, and unlocking is a thing the reader can do. Nothing
+unlocks invalid hex, so no caller outside Sync has a different response to it. Both extend
+`RuntimeException`, so a caller catching the base type still catches both.
+
 **The fingerprint is re-derived from the stored column.** Solvable purely by ordering, and it
 was. `FingerprintComposer::compose()` treats `counterpartyNormalized` as an opaque tuple
 member, and both re-derivers — `FingerprintRederiveService::buildCanonicalFromRow()` and

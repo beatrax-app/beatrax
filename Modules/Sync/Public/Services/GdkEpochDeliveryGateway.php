@@ -7,6 +7,7 @@ namespace Modules\Sync\Public\Services;
 use Illuminate\Contracts\Session\Session;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\InboundGdkWrapDrain;
+use Modules\Sync\Internal\Transport\PendingMailboxScan;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 
 // The door a transport outside this module uses to move GDK wraps. It owns
@@ -37,6 +38,7 @@ final class GdkEpochDeliveryGateway
     public function __construct(
         private readonly InboundGdkWrapDrain $drain,
         private readonly RelayMailbox $mailbox,
+        private readonly PendingMailboxScan $scan,
     ) {}
 
     public static function maxWrapsPerPass(): int
@@ -89,31 +91,19 @@ final class GdkEpochDeliveryGateway
         }
 
         $wraps = [];
-        $scanned = 0;
-        $cursorCreatedAt = null;
-        $cursorId = null;
 
-        while ($scanned < InboundGdkWrapDrain::MAX_ROWS_SCANNED_PER_PASS && count($wraps) < InboundGdkWrapDrain::MAX_WRAPS_PER_PASS) {
-            $rows = $this->mailbox->drain($peerDeviceId, InboundGdkWrapDrain::MAX_WRAPS_PER_PASS, $cursorCreatedAt, $cursorId);
-            if ($rows === []) {
-                return $wraps;
+        foreach ($this->scan->rows($peerDeviceId, InboundGdkWrapDrain::MAX_WRAPS_PER_PASS, InboundGdkWrapDrain::MAX_ROWS_SCANNED_PER_PASS) as $row) {
+            $id = is_numeric($row->id ?? null) ? (int) $row->id : null;
+            $blob = is_string($row->blob ?? null) ? $row->blob : '';
+
+            if ($id === null || $blob === '' || ! InboundGdkWrapDrain::isEpochWrap($blob)) {
+                continue;
             }
 
-            foreach ($rows as $row) {
-                $scanned++;
-                $cursorCreatedAt = is_string($row->created_at ?? null) ? $row->created_at : null;
-                $cursorId = is_numeric($row->id ?? null) ? (int) $row->id : null;
+            $wraps[] = ['id' => $id, 'blob' => $blob];
 
-                $blob = is_string($row->blob ?? null) ? $row->blob : '';
-                if ($blob === '' || $cursorId === null || ! InboundGdkWrapDrain::isEpochWrap($blob)) {
-                    continue;
-                }
-
-                $wraps[] = ['id' => $cursorId, 'blob' => $blob];
-            }
-
-            if ($cursorCreatedAt === null || $cursorId === null) {
-                return $wraps;
+            if (count($wraps) >= InboundGdkWrapDrain::MAX_WRAPS_PER_PASS) {
+                break;
             }
         }
 

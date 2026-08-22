@@ -12,7 +12,9 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Crypto\InboundGdkWrapDrain;
 use Modules\Sync\Internal\Crypto\GdkWrapOutcome;
+use Modules\Sync\Internal\Crypto\GdkWrapRecipient;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
@@ -82,8 +84,7 @@ function kdwEpochWrapJson(DeviceIdentityDto $self, string $senderId, string $sen
     return json_encode($rotation->buildGdkEpochWrap(
         4242,
         random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES),
-        sodium_hex2bin($self->x25519PublicKeyHex),
-        $self->deviceId,
+        new GdkWrapRecipient($self->deviceId, sodium_hex2bin($self->x25519PublicKeyHex)),
         $senderId,
         $senderSecretHex,
     ), JSON_THROW_ON_ERROR);
@@ -282,6 +283,43 @@ it('pages past a hundred foreign frames to reach the wrap queued behind them', f
 
     expect(app(GdkEpochDeliveryGateway::class)->drainInbox((int) $user->id, $self->deviceId, $session))->toBe(1);
     expect(app(GdkKeyringService::class)->loadKeyring((int) $user->id, $session)->keyFor(4242))->toBeString();
+});
+
+// The push leg answers a peer's GDK_EPOCH_ACK by confirming that many rows and
+// clamps the count to one pass, so offering more than a pass holds would push
+// wraps whose acknowledgement can never reach them — on every connect, forever.
+it('offers at most one pass of pending wraps, however many are queued behind a partial page', function (): void {
+    $user = kdwUser();
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+
+    [$self] = kdwSelfAndSender($user, $session);
+
+    /** @var RelayMailbox $mailbox */
+    $mailbox = app(RelayMailbox::class);
+
+    // Foreign frames first, so the first page carries fewer wraps than a pass
+    // holds and a second page is fetched — the shape a page-boundary budget
+    // could only stop at once it had already gone past the limit.
+    for ($i = 0; $i < 40; $i++) {
+        $mailbox->deliver(
+            senderDid: 'kdw-flood',
+            recipientDid: $self->deviceId,
+            blob: json_encode(['type' => 'PAIR_CONFIRM', 'payload' => (string) $i], JSON_THROW_ON_ERROR),
+        );
+    }
+
+    for ($i = 0; $i < InboundGdkWrapDrain::MAX_WRAPS_PER_PASS + 60; $i++) {
+        $mailbox->deliver(
+            senderDid: 'kdw-peer',
+            recipientDid: $self->deviceId,
+            blob: json_encode(['type' => GdkEpochDeliveryGateway::MSG_EPOCH_WRAP, 'n' => $i], JSON_THROW_ON_ERROR),
+        );
+    }
+
+    expect(app(GdkEpochDeliveryGateway::class)->pendingWrapsFor($self->deviceId))
+        ->toHaveCount(InboundGdkWrapDrain::MAX_WRAPS_PER_PASS);
 });
 
 // UNDELIVERED_TTL_DAYS only means something if something enforces it. Nothing

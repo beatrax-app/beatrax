@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Sync\Internal\Exceptions\BlindIndexKeyMalformedException;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use Modules\Sync\Internal\Exceptions\KeyringStateException;
 use Modules\Sync\Internal\Exceptions\NoiseDecryptionFailedException;
@@ -62,6 +63,7 @@ it('says which path the secret material could not reach', function (): void {
 it('keeps every failure catchable as a RuntimeException', function (string $class): void {
     expect(is_subclass_of($class, RuntimeException::class))->toBeTrue();
 })->with([
+    BlindIndexKeyMalformedException::class,
     CryptoOperationFailedException::class,
     KeyringStateException::class,
     SecretFileException::class,

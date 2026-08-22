@@ -90,9 +90,12 @@ Delivery is not one flow, and the legs are independent:
 2. **Drain your own mailbox.** `InboundGdkWrapDrain::drainFor()` reads this device's own inbound
    `relay_mailbox` rows and routes each blob through `GdkEpochControlHandler`. This needs no
    peer session at all — a wrap that arrived via an external relay or a forwarding peer
-   converges the keyring on its own. It pages by cursor, so a row it cannot retire costs one
-   slot of a scan budget rather than holding the head of the window, and it expires rows past
-   the mailbox TTL on the way through, which is the only thing that honours `expires_at`.
+   converges the keyring on its own. It pages by cursor through `PendingMailboxScan` — the same
+   bounded walk leg 1's `pendingWrapsFor()` reads through — so a row it cannot retire costs one
+   slot of a scan budget rather than holding the head of the window. One pass carries at most
+   `MAX_WRAPS_PER_PASS` wraps, which is exactly what leg 1 clamps the peer's ack count to. It
+   also expires rows past the mailbox TTL on the way through, which is the only thing that
+   honours `expires_at`.
 3. **Come back for it unlocked.** The drain above is called from the listener, and the listener
    can never open a wrap (see the outcomes below). So it is *also* called from contexts that do
    hold the app-lock key: `DevicesAndSyncSettingsSection::mount()` on the desktop, and

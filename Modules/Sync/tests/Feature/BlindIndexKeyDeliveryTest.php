@@ -20,6 +20,7 @@ use Modules\Sync\Internal\Crypto\GdkEpochWrapSignature;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Crypto\GdkWrapOutcome;
+use Modules\Sync\Internal\Crypto\GdkWrapRecipient;
 use Modules\Sync\Internal\Crypto\LocallyKeyedRowsProbe;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
@@ -123,8 +124,7 @@ function bikDeliver(User $user, Session $session, DeviceIdentityDto $self, strin
     $wrap = $rotation->buildGdkEpochWrap(
         0,
         sodium_hex2bin($keyHex),
-        sodium_hex2bin($self->x25519PublicKeyHex),
-        $self->deviceId,
+        new GdkWrapRecipient($self->deviceId, sodium_hex2bin($self->x25519PublicKeyHex)),
         $senderId,
         $senderSecretHex,
         GdkEpochWrapSignature::ROLE_BLIND_INDEX,
@@ -139,8 +139,7 @@ function bikDeliverOutcome(User $user, Session $session, DeviceIdentityDto $self
     $wrap = app(GdkRotationService::class)->buildGdkEpochWrap(
         GdkEpochWrapSignature::BLIND_INDEX_EPOCH_ID,
         sodium_hex2bin($keyHex),
-        sodium_hex2bin($self->x25519PublicKeyHex),
-        $self->deviceId,
+        new GdkWrapRecipient($self->deviceId, sodium_hex2bin($self->x25519PublicKeyHex)),
         $senderId,
         $senderSecretHex,
         GdkEpochWrapSignature::ROLE_BLIND_INDEX,
@@ -358,8 +357,8 @@ it('tags the fan-out wrap with its role so an epoch and a blind-index key cannot
     $raw = random_bytes(32);
     $pub = sodium_hex2bin($self->x25519PublicKeyHex);
 
-    $epochWrap = $rotation->buildGdkEpochWrap(7, $raw, $pub, $self->deviceId, $senderId, $senderSecretHex);
-    $blindWrap = $rotation->buildGdkEpochWrap(0, $raw, $pub, $self->deviceId, $senderId, $senderSecretHex, GdkEpochWrapSignature::ROLE_BLIND_INDEX);
+    $epochWrap = $rotation->buildGdkEpochWrap(7, $raw, new GdkWrapRecipient($self->deviceId, $pub), $senderId, $senderSecretHex);
+    $blindWrap = $rotation->buildGdkEpochWrap(0, $raw, new GdkWrapRecipient($self->deviceId, $pub), $senderId, $senderSecretHex, GdkEpochWrapSignature::ROLE_BLIND_INDEX);
 
     expect($epochWrap)->not->toHaveKey('key_role');
     expect($blindWrap['key_role'])->toBe(GdkEpochWrapSignature::ROLE_BLIND_INDEX);
@@ -474,8 +473,7 @@ it('refuses a blind-index wrap whose keyed flag was flipped in transit', functio
     $wrap = $rotation->buildGdkEpochWrap(
         0,
         sodium_hex2bin($peerKeyHex),
-        sodium_hex2bin($self->x25519PublicKeyHex),
-        $self->deviceId,
+        new GdkWrapRecipient($self->deviceId, sodium_hex2bin($self->x25519PublicKeyHex)),
         $senderId,
         $senderSecretHex,
         GdkEpochWrapSignature::ROLE_BLIND_INDEX,
@@ -546,8 +544,7 @@ it('refuses a blind-index wrap whose role was stripped in transit', function ():
     $wrap = $rotation->buildGdkEpochWrap(
         0,
         sodium_hex2bin($peerKeyHex),
-        sodium_hex2bin($self->x25519PublicKeyHex),
-        $self->deviceId,
+        new GdkWrapRecipient($self->deviceId, sodium_hex2bin($self->x25519PublicKeyHex)),
         $senderId,
         $senderSecretHex,
         GdkEpochWrapSignature::ROLE_BLIND_INDEX,
@@ -679,8 +676,7 @@ it('ignores a field on an epoch wrap that no signature covers, instead of retiri
     $wrap = app(GdkRotationService::class)->buildGdkEpochWrap(
         4242,
         random_bytes(32),
-        sodium_hex2bin($self->x25519PublicKeyHex),
-        $self->deviceId,
+        new GdkWrapRecipient($self->deviceId, sodium_hex2bin($self->x25519PublicKeyHex)),
         $senderId,
         $senderSecretHex,
     );
@@ -733,8 +729,7 @@ it('refuses a blind-index wrap carrying an epoch id other than the reserved one'
     $wrap = app(GdkRotationService::class)->buildGdkEpochWrap(
         91827,
         sodium_hex2bin($peerKeyHex),
-        sodium_hex2bin($self->x25519PublicKeyHex),
-        $self->deviceId,
+        new GdkWrapRecipient($self->deviceId, sodium_hex2bin($self->x25519PublicKeyHex)),
         $senderId,
         $senderSecretHex,
         GdkEpochWrapSignature::ROLE_BLIND_INDEX,

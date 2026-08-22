@@ -18,6 +18,7 @@ use Modules\Mobile\Internal\Sync\SyncPhase;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Crypto\GdkWrapRecipient;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
@@ -310,7 +311,7 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
     $recipientPub = sodium_hex2bin($phone->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawEpochKey, $recipientPub, $phone->deviceId, 'desktop-sender', $senderSecretHex);
+    $wrap = $rotation->buildGdkEpochWrap(1, $rawEpochKey, new GdkWrapRecipient($phone->deviceId, $recipientPub), 'desktop-sender', $senderSecretHex);
     $wrapJson = json_encode($wrap, JSON_THROW_ON_ERROR);
 
     /** @var GdkEpochDeliveryGateway $delivery */
