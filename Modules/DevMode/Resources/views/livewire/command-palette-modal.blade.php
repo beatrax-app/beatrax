@@ -320,7 +320,7 @@
                                     <span
                                         class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800"
                                         :class="'palette-source--' + hit.item.source"
-                                        x-text="hit.item.source"
+                                        x-text="hit.item.sourceLabel"
                                     ></span>
                                     <span class="kbd hidden-touch max-lg:hidden" aria-hidden="true">↩</span>
                                 </button>
