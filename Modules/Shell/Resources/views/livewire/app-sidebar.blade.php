@@ -390,7 +390,7 @@
                     making and the app reads as frozen mid-navigation.
                     The values still refresh on any page load.
                 --}}
-                <div class="dev-pulse" @if ($pollsLiveData) wire:poll.5s @endif>
+                <div class="dev-pulse" @if ($pollsLiveData) wire:poll.5s.keep-alive @endif>
                     {{ Lang::get('core::sidebar.dev.pulse', ['queue' => $queueCount, 'worker' => $workerSecondsAgo !== null ? $workerSecondsAgo . 's ago' : '—']) }}
                 </div>
             </div>

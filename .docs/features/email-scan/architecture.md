@@ -100,23 +100,47 @@ What the module explicitly does NOT do:
 
 ## Key services + events
 
-- `OAuthSecretsRepository::store($userId, $provider, $credentials)`
-  / `retrieveFor($userId, $provider)` — the encrypted-at-rest
-  read/write. Safe-write sequence: write `.bak`, write `.new`,
-  atomic rename. On failure throws `SecretsWriteFailed`.
-- `EmlBlobStore::put($messageId, $bytes)` / `path($messageId)` —
-  per-message `.eml` blob persistence under the user-data path.
-  Files are written `chmod 0600` so only the running user can read.
-- `InboxScanStateMachine::transition($state, $next, $message)` —
-  single sanctioned mutator of `inbox_scan_state.status`. Allowed
-  transitions enforce the lifecycle:
-  `idle → discovering → scanning → idle`,
-  `* → error`, `error → idle` (on retry).
-- `GmailApiClient::messagesSince($cursor, $credentials)` /
-  `GraphApiClient::messagesSince($cursor, $credentials)` — the
-  paginated fetch. On token-refresh failure raises
-  `ReconsentRequiredException`; the calling job catches it and
-  fires `InboxTokenFailed`.
+- `OAuthSecretsRepository` — the encrypted-at-rest credential store,
+  split along the line that matters: the per-provider app
+  registration (`hasProviderClient($provider)`,
+  `saveProviderClient($provider, $clientId, $clientSecret,
+  $redirectUri)`, `loadProviderClient($provider)`) and the per-inbox
+  grant (`loadInbox($inboxId)`, `saveInboxRefreshToken(...)`,
+  `rotateRefreshToken(...)`, `removeInbox($inboxId)`). Note the
+  absence of a `$userId` parameter: the repository resolves the
+  reader through `CurrentUser`, so a caller cannot ask for someone
+  else's row by passing an id.
+
+  This used to be a chmod-0600 JSON file written through a
+  `.bak` / `.new` / atomic-rename sequence. It is not any more — it
+  is an Eloquent `OAuthSecret` row in the per-user SQLite database,
+  with the client secret and the refresh tokens passed through
+  `SecretShield` (the OS keychain on desktop, identity elsewhere).
+  `SecretsWriteFailed` survived the move and is still what a failed
+  write raises, but it now wraps a DB save, not a rename; its message
+  never carries the credential payload.
+- `EmlBlobStore::put($messageId, $bytes)` / `pathFor($messageId)` /
+  `exists(...)` / `delete(...)` — per-message `.eml` blob persistence
+  under the user-data path. Files are written `chmod 0600` so only
+  the running user can read.
+- `InboxScanStateMachine` — single sanctioned mutator of
+  `inbox_scan_state`. `applyStatus($inboxId, $newStatus,
+  $errorMessage)` moves the status under a `lockForUpdate()` inside a
+  transaction; `applyRateLimited($inboxId, $retryAfterSeconds)`,
+  `resetRetryAttempts($inboxId)` and `backoffForAttempt($attempt)`
+  own the retry schedule, and `recordCursor($inboxId, $cursor)` /
+  `recordBackfillProgress($inboxId, $progress)` own the position.
+- The two API clients do not share a method name, because the two
+  providers do not share a pagination model. Gmail walks history ids
+  (`listSenderMessages($inboxId, $senderPatterns, $pageToken,
+  $windowStart)`, `currentHistoryId($inboxId)`,
+  `listHistory($inboxId, $startHistoryId)`); Graph walks delta and
+  next links (`listSenderMessagesPaged($inboxId, $senderPatterns,
+  $windowStart, $nextLink)`, `deltaPage($inboxId, $deltaLink,
+  $sinceOverride)`). Both answer `getRawMessage($inboxId,
+  $providerMessageId)`. On token-refresh failure both raise
+  `ReconsentRequiredException`; the calling job catches it and fires
+  `InboxTokenFailed`.
 - `IncrementalScanJob::handle()` — pulls since the last cursor;
   stores each message via `EmlBlobStore`; advances cursor; raises
   `InboxMessagesFetched` so `Receipts` can match.

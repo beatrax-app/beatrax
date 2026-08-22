@@ -77,6 +77,24 @@
     color-scheme: dark;
 }
 
+/*
+ * The disclosure arrow a <select> draws for itself, redrawn.
+ *
+ * A select cannot carry a pseudo-element, so the only place the mark can come
+ * from once the native appearance is dropped is the element's own background —
+ * and a data URI cannot read a custom property, so the colour has to be baked
+ * in twice. Two declarations rather than two rules further down, so the pair
+ * that has to flip together sits together. The stroke is --color-text-muted in
+ * each scheme: the arrow says the control opens, not that it is important.
+ */
+:root {
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%2364748b' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.75 6 6.25 11 1.75'/%3E%3C/svg%3E");
+}
+
+:root.dark {
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%2394a3b8' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.75 6 6.25 11 1.75'/%3E%3C/svg%3E");
+}
+
 @theme {
     /* Surfaces */
     --color-bg: #ffffff;
@@ -3323,6 +3341,35 @@ td.date,
         padding-right: var(--safe-right);
     }
 
+    /* The padding above only holds the heading clear of the status bar at
+     * rest. Under viewport-fit=cover the bars are painted OVER the page, so a
+     * screen taller than the viewport scrolls its own <h1> up under the clock
+     * and the two draw on top of each other. This paints the strip the padding
+     * reserves, which is what .top-bar does for the screens that have one. */
+    .safe-screen::before {
+        content: '';
+        position: fixed;
+        inset: 0 0 auto 0;
+        height: var(--safe-top);
+        background: var(--color-bg);
+        z-index: 30;
+        pointer-events: none;
+    }
+
+    /* A document carrying a bar already reserves and paints that strip, so the
+     * screen under it must not do either again. Asked of the document rather
+     * than of the screen because Livewire re-renders the component and never
+     * the layout: which chrome a page has was settled at page load, and a
+     * component that signs its reader in mid-flow still sits in the markup the
+     * signed-out branch produced. */
+    body:has(.top-bar) .safe-screen {
+        padding-top: 0;
+    }
+
+    body:has(.top-bar) .safe-screen::before {
+        content: none;
+    }
+
     /* .top-bar — mobile top bar.
      * Only visible at <1024px (CSS hidden at desktop via the .top-bar rule above).
      * safe-area-inset-top handles the notch/Dynamic Island on phones. */
@@ -5328,9 +5375,27 @@ mark {
     /*
      * A select is tapped like a button but is matched by neither the floor nor
      * the halo, and px-3 py-2 on 13px text left the language picker at 29px.
+     *
+     * The floor alone did not move it. WebKit sizes a select that keeps its
+     * NATIVE APPEARANCE from the font it renders, and ignores height and
+     * min-height on it entirely — so this rule applied, its padding, radius
+     * and colours all landed, and the control still measured 29pt on iOS.
+     * Dropping the appearance is what lets the height land, and it takes the
+     * native arrow with it, so the chevron below replaces what it removed.
+     *
+     * Coarse pointers only, like every rule in this block: a fine pointer is
+     * already at the floor, and leaving it native there is also what keeps a
+     * drawn chevron from ever sitting beside one the platform still paints.
      */
     select {
         min-height: 44px;
+        -webkit-appearance: none;
+        appearance: none;
+        background-image: var(--select-chevron);
+        background-repeat: no-repeat;
+        background-position: right var(--space-3) center;
+        background-size: 12px 8px;
+        padding-right: calc(var(--space-3) * 2 + 12px);
     }
 
     /* height, not min-height: the search field sets a hard 36px. */
