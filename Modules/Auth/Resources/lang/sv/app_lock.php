@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN-koden måste ha minst 6 siffror.',
     'error_pin_mismatch' => 'PIN-koderna stämmer inte överens. Försök igen.',
+    'error_pin_required' => 'Ange din PIN-kod.',
     'error_pin_incorrect' => 'Fel PIN-kod.',
+    'error_account_password_required' => 'Ange ditt kontolösenord.',
     'error_account_password' => 'Fel kontolösenord.',
     'change_pin_success' => 'Din krypteringsnyckel har säkrats om med din nya PIN-kod.',
     'error_forgot_failed' => 'Återställningen av PIN-koden misslyckades — återställningsnyckeln är inte tillgänglig.',
     'error_enable_first' => 'Aktivera PIN-låset innan du registrerar biometri.',
+    'error_disable_blocked_by_encryption' => 'Dina anteckningar och motpartsuppgifter är krypterade med nyckeln som det här applåset håller, så att stänga av låset skulle göra dem oläsliga. Låset förblir på — byt PIN-kod i stället.',
+    'error_key_material_lost' => 'Den här enheten håller inte längre nyckeln som öppnar dina krypterade data, så en ny PIN-kod gör dem inte läsbara igen. Parkoppla den här enheten med en som fortfarande har nyckeln för att få tillbaka dem.',
+    'error_recovery_wrap_stale' => 'Ditt kontolösenord öppnar inte längre det här applåset — det byttes efter att låset sattes upp. Din PIN-kod fungerar fortfarande, men det finns ingenting bakom den om du glömmer den. Koppla om ditt kontolösenord nu.',
+    'relink_recovery' => 'Koppla om kontolösenordet',
+    'relink_modal_heading' => 'Koppla om kontolösenordet — bekräfta med PIN-kod',
+    'relink_recovery_success' => 'Ditt kontolösenord kan återställa det här applåset igen.',
 ];

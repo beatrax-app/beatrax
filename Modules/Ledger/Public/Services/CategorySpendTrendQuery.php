@@ -14,27 +14,28 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Dto\SpendTrend;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 
-// Spend is EUR-settled outflow over [start, endExclusive), the same definition
-// the rest of the ledger uses, so the figures reconcile with the dashboard.
+// Spend is base-currency-settled outflow over [start, endExclusive), the same
+// definition the rest of the ledger uses, so the figures reconcile with the
+// dashboard.
 final class CategorySpendTrendQuery
 {
     use CoercesScalars;
-
-    private const DISPLAY_CURRENCY = 'EUR';
 
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly PeriodQuery $periods,
         private readonly SpendByCategoryQuery $spendByCategoryQuery,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function forUser(User $user, int $moverLimit = 6): SpendTrend
     {
+        $displayCurrency = $this->baseCurrency->code();
         $current = $this->periods->current();
         $previous = $this->periods->previous($current);
 
-        $currentSpend = $this->spendByCategory($user->id, $current);
-        $previousSpend = $this->spendByCategory($user->id, $previous);
+        $currentSpend = $this->spendByCategory($user->id, $current, $displayCurrency);
+        $previousSpend = $this->spendByCategory($user->id, $previous, $displayCurrency);
 
         $names = $this->categoryNames(array_keys($currentSpend + $previousSpend), $user->id);
 
@@ -61,7 +62,7 @@ final class CategorySpendTrendQuery
             currentTotalMinor: array_sum($currentSpend),
             previousTotalMinor: array_sum($previousSpend),
             totalDeltaMinor: array_sum($currentSpend) - array_sum($previousSpend),
-            currency: self::DISPLAY_CURRENCY,
+            currency: $displayCurrency,
             currentLabel: $current->label,
             previousLabel: $previous->label,
             movers: array_slice($movers, 0, $moverLimit),
@@ -69,13 +70,13 @@ final class CategorySpendTrendQuery
     }
 
     /**
-     * @return array<int, int> category_id => spend (EUR minor, positive)
+     * @return array<int, int> category_id => spend (base-currency minor, positive)
      */
-    private function spendByCategory(int $userId, Period $period): array
+    private function spendByCategory(int $userId, Period $period, string $displayCurrency): array
     {
         // A split transaction's legs count individually, never the parent row,
         // and uncategorised outflow lands under id 0 so the total stays whole.
-        return $this->spendByCategoryQuery->forUserAndPeriod($userId, $period, self::DISPLAY_CURRENCY, includeUncategorized: true);
+        return $this->spendByCategoryQuery->forUserAndPeriod($userId, $period, $displayCurrency, includeUncategorized: true);
     }
 
     /**

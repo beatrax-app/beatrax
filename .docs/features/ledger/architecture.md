@@ -50,15 +50,27 @@ What the module explicitly does NOT do:
 `Public/` exposes the cross-module surface:
 
 - **Contracts/**
-  - `RecordsTransactions::record(CanonicalTransaction $tx, User
-    $user): RecordResult` — the single sanctioned writer for
-    `transactions`. Idempotent on the v3 fingerprint.
+  - `RecordsTransactions::__invoke(iterable<CanonicalTransaction>
+    $canonical, User $user, bool $captureForSync = true):
+    RecordResult` — the single sanctioned writer for
+    `transactions`. Idempotent on the v3 fingerprint. It takes a
+    BATCH, not one row: the argument is deliberately `iterable`
+    so a lazy generator is never forced into memory, and the
+    implementation buffers it into chunks committed one
+    transaction at a time. `$captureForSync` is the import
+    path's opt-out — that caller captures the run, its accounts
+    and its transactions itself, parents first, and capturing
+    here as well wrote every imported row to the op log twice.
   - `UpdatesTransactionCategory::__invoke($transactionId,
     $categoryId, $user): int` — the single sanctioned writer for
     `transactions.category_id`. Returns affected row count.
-  - `RecordsStatementSummary::record(StatementSummaryData $data,
-    User $user)` — the single sanctioned writer for
-    `statement_summaries`. Receipts module raises this.
+  - `RecordsStatementSummary::__invoke(User $user,
+    StatementSummaryData $data): void` — the single sanctioned
+    writer for `statement_summaries`. Receipts module raises
+    this. Idempotent on `(user_id, import_run_id)`: a second
+    call upserts, so a re-preview refreshes the metadata
+    instead of leaving a stale row behind. CSV imports never
+    reach it.
 - **Actions/**
   - `RecordTransactions` (impl. `RecordsTransactions`).
   - `UpdateTransactionCategory` (impl. `UpdatesTransactionCategory`).
@@ -88,8 +100,18 @@ What the module explicitly does NOT do:
     aggregate.
   - `TopCategoriesByPeriodQuery::for($user, $period)` — top
     categories within a period.
-  - `TransactionListQuery::page($user, $filters, $pagination)` —
-    the transactions list read.
+  - `TransactionListQuery::recent($user, $daysBack, $cursorId,
+    $limit, $cursorPostedAt, $currency)` and
+    `TransactionListQuery::fullHistory($user, $cursorId, $limit,
+    $cursorPostedAt, $currency)` — the transactions list read,
+    each returning a `TransactionListPage`. There is no
+    `page()` taking a filter bag and a page number: the list is
+    KEYSET-paginated, so the caller carries an opaque
+    `(postedAt, id)` cursor forward rather than an offset, and
+    the only filter the query itself applies is the display
+    currency. The two methods differ only in the date floor —
+    `recent()` cuts at `$daysBack`, `fullHistory()` does not
+    cut at all.
   - `StatementSummaryWriter` (impl. `RecordsStatementSummary`).
 
 `Internal/` houses the implementation:
@@ -105,10 +127,16 @@ What the module explicitly does NOT do:
 
 ## Key services + events
 
-- `RecordTransactions::record($tx, $user)` — INSERT ON CONFLICT
-  on the v3 fingerprint. Returns the inserted / dedupped /
-  enriched counts so the caller can render a useful confirm
-  result.
+- `RecordTransactions::__invoke($canonical, $user,
+  $captureForSync)` — INSERT ON CONFLICT on the v3 fingerprint,
+  per row, inside a transaction per chunk. Returns a
+  `RecordResult` carrying two counts, `inserted` and
+  `duplicates`; the enriched count the confirm screen renders
+  is NOT from here — `ConfirmImport` gets it from
+  `AppliesEnrichments`, which runs in its own transaction after
+  the recorder has finished. A `TransactionImported` event
+  fires per inserted row after that row's chunk commits, and
+  one `TransactionBatchImported` fires once per call.
 - `UpdateTransactionCategory::__invoke($txId, $catId, $user)` —
   scoped by `(id, user_id)`; returns affected count. Categorization's
   `AssignCategory` delegates here.
@@ -137,11 +165,12 @@ The persistence path through the pipeline:
 ```
 ImportPipeline.confirm
   → ConfirmImport (Import)
-       → for each cached canonical row:
-            RecordsTransactions::record(tx, user)
-              → INSERT INTO transactions (...) ON CONFLICT(fingerprint)
-                DO UPDATE (enrichment via enriched_from append)
-              → return (inserted, dedupped, enriched) per row
+       → RecordsTransactions::__invoke(cachedRows, user, false)
+            → per chunk of rows, in one transaction:
+                 INSERT INTO transactions (...) ON CONFLICT(fingerprint)
+                 DO UPDATE (enrichment via enriched_from append)
+            → after each chunk commits: TransactionImported per row
+            → return RecordResult(inserted, duplicates) for the batch
 
 Categorization (manual reclassify)
   → AssignCategory (Categorization)
@@ -198,7 +227,7 @@ Mechanics:
 - Transfer pairs (the monthly ASN→PayPal top-up that funds online
   spending) are linked via `pair_transaction_id` after both legs land,
   mirroring the production Layer-1 pair detector.
-- The dataset covers every value of `Transaction::TYPES` (expense,
+- The dataset covers every case of `TransactionType` (expense,
   income, transfer_out, transfer_in, fee, refund, adjustment) and
   every value of `PaymentType` (pin, online, transfer, direct_debit,
   cash, fee, refund, unknown) with at least two rows each, so the chip

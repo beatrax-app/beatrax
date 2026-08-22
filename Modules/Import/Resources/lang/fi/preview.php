@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Avaa sovelluksen lukitus tuodaksesi: kauppiasavainta ei voi laskea lukittuna.',
+        'app_locked' => 'Avaa sovelluksen lukitus tuodaksesi: salausavaimia ei voi käyttää lukittuna.',
         'file_unreadable' => 'Tätä tiedostoa ei voitu lukea.',
         'iban_not_in_preview' => 'Tämä IBAN ei kuulu nykyiseen esikatseluun.',
         'row_unreadable' => 'Tätä riviä ei voitu lukea.',

@@ -112,7 +112,7 @@ final class RecordManualTransaction
             'slug' => $this->accountSlugs->resolveUnique($user->id, self::ACCOUNT_NAME),
             'kind' => AccountKind::Cash->value,
             'iban' => 'CASH'.str_pad((string) $user->id, 12, '0', STR_PAD_LEFT),
-            'default_currency' => 'EUR',
+            'default_currency' => $this->baseCurrency->code(),
             'created_at' => $now,
             'updated_at' => $now,
         ]);

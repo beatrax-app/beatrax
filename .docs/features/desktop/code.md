@@ -56,7 +56,7 @@ separate, longer-lived UI element.
 ## Public API
 
 - **Contracts/**
-  - `OsThemeSignal::current()` → `'light'|'dark'|null`. Bound only
+  - `OsThemeSignal::currentOsTheme()` → `'light'|'dark'|null`. Bound only
     inside the NativePHP bundle. The layout's
     `app()->bound(OsThemeSignal::class)` check is the documented
     discoverability gate.
@@ -64,9 +64,11 @@ separate, longer-lived UI element.
     consume()` → `?string`. Session-scoped store for the OS-supplied
     file path the user opened before logging in.
 - **Events/**
-  - `FileOpenedFromOs` — `(string $path)`. Raised by
-    `FileOpenIntake::admit()` after validation succeeds. Subscribed
-    by `Import` and `Receipts`.
+  - `FileOpenedFromOs` — `(string $path, string $extension)`. Raised
+    by `FileOpenIntake::receive()` after validation succeeds — the
+    already-canonicalised path and its lower-cased extension, so no
+    subscriber re-checks either. Subscribed by `Import` and
+    `Receipts`.
   - `NotificationDeepLink` — `(string $url)`. Raised when the user
     clicks an OS notification carrying a deep link.
 
@@ -76,21 +78,25 @@ separate, longer-lived UI element.
   module registers. Owns the NativePHP-side bindings: the
   close-intercept hook, the persistent menu, and the desktop
   shell's bootstrap.
-- `Internal/Native/FirstLaunchBootstrap` — `run()` chains the
-  framework migrator with `Core::EnsureAppKey`. Both steps
+- `Internal/Native/FirstLaunchBootstrap` — `runPendingMigrations()`
+  chains the framework migrator with `Core::EnsureAppKey`. Both steps
   idempotent on every launch.
 - `Internal/Native/AppMenuBuilder` — composes the application menu
   shown by the bundle on macOS / Windows.
-- `Internal/Native/WindowCloseBehavior::decide($user)` — reads
-  `users.close_behavior` and returns `'minimize'|'quit'`. Stateless;
-  the singleton wrapper saves one constructor call per resolution.
+- `Internal/Native/WindowCloseBehavior::choiceFor($user)` — reads
+  `users.close_behavior` and returns `'quit'|'tray'|null`, `null`
+  meaning the user has not been asked yet (`shouldPromptFor($user)`
+  is the same question phrased for the caller). `persistChoice($user,
+  $choice)` is the write and throws on anything outside
+  `{quit, tray}`.
 - `Internal/Native/WindowFocusState` — singleton holding the
   focused / blurred flag. Flipped by closures registered in the
   provider's boot on `WindowFocused` / `WindowBlurred`.
 - `Internal/Native/OsThemeProbe` — concrete `OsThemeSignal`.
-- `Internal/Native/FileOpenIntake::admit(string $path)` — the
-  security boundary. Validates extension allow-list, size, realpath
-  canonicalisation; raises `FileOpenedFromOs` on success.
+- `Internal/Native/FileOpenIntake::receive(string $path)` — the
+  security boundary. Canonicalises with realpath, then checks the
+  extension allow-list and the per-extension size cap; raises
+  `FileOpenedFromOs` on success and returns silently otherwise.
 - `Internal/Native/PendingFileIntent` — session-scoped store. Both
   the concrete class and the `RemembersPendingFileIntent` binding
   resolve to it.

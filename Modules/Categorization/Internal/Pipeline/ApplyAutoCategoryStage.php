@@ -13,6 +13,7 @@ use Modules\Categorization\Internal\Services\RuleEvaluator;
 use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Categorization\Public\Dto\AutoCategorizationOutcomeDto;
+use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeExceptionContext;
@@ -74,7 +75,7 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
                 foreach ($rule->actions as $action) {
                     // Deliberately no break: the LAST category action wins,
                     // matching RuleApplier::applyAtImport's own fold order.
-                    if ($action->type === 'category') {
+                    if ($action->type === ActionType::Category->value) {
                         $categoryRuleId = $rule->ruleId;
                     }
                 }

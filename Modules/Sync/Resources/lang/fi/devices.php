@@ -6,10 +6,14 @@ return [
     'heading' => 'Laitteet ja synkronointi',
 
     'enable_sync' => 'Ota synkronointi käyttöön',
-    'enable_sync_help' => 'Jaa tietosi turvallisesti luotettujen laitteiden kesken. Vaatii sovelluslukon.',
+    'enable_sync_help' => 'Jaa tietosi turvallisesti luotettujen laitteiden kesken. Vaatii sovelluslukon. Kun se on päällä, tietosi salataan eikä sovelluslukkoa voi enää poistaa käytöstä.',
 
     'app_lock_notice' => 'Aseta ensin sovelluslukko, niin voit ottaa synkronoinnin käyttöön.',
     'go_to_app_lock' => 'Siirry sovelluslukkoon',
+
+    'identity_unreadable' => 'Tämän laitteen synkronointi-identiteetti luotiin toisella sovelluslukolla, eikä se enää aukea. Siihen asti laite ei voi synkronoida eikä muodostaa laiteparia. Palauttamalla tietokannan varmuuskopion, jolla se luotiin, se on jälleen luettavissa.',
+    'identity_unreadable_replace_help' => 'Voit myös aloittaa alusta: laite saa uuden identiteetin, vanha jää käyttämättömänä talteen, ja aiemmin pariksi liitetyt laitteet on liitettävä uudelleen.',
+    'identity_unreadable_replace' => 'Luo laitteelle uusi identiteetti',
 
     'encrypted_at_rest' => 'Tiedot salattu levylle',
     'encrypted_at_rest_scope' => 'Muistiinpanot, tapahtumakuvaukset sekä maksunsaajien nimet ja IBAN-tilinumerot salataan kirjanpidossa sovelluslukituksen tunnuslauseella. Summia, päivämääriä eikä oman tilisi nimeä ja IBANia ei salata. Hakemisto säilyttää oman luettavan kopionsa siitä, kenelle maksat, tapahtumakuvauksistasi ja veromuistiinpanoistasi, ja jotkin kauppiaiden nimet näkyvät selkokielisenä muualla tietokantatiedostossa.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => 'Poista :name',
     'remove' => 'Poista',
     'pair_new_device' => 'Parita uusi laite',
+
+    'pairing_waiting' => 'Viimeistele laiteparin muodostus laitteen :name kanssa',
+    'pairing_waiting_help' => 'Molempien näyttöjen on näytettävä samat kuusi sanaa, ennen kuin laitepari on voimassa. Avaa se uudelleen ja vertaa niitä.',
+    'pairing_waiting_resume' => 'Jatka laiteparin muodostusta',
+    'pairing_waiting_lock_override' => 'Lukituksen avaaminen avaa tämän laiteparin uudelleen sen sijaan, että antaisi sen vanhentua, joten se kestää asettamaasi sovelluslukituksen aikakatkaisua pidempään. Se päättyy, kun viimeistelet tai peruutat sen.',
 
     'relay_endpoint' => 'Välityspalvelimen osoite',
     'relay_endpoint_help' => 'Valinnainen. Kun tämä on asetettu, verkon ulkopuolella olevat laitteet synkronoivat tämän välityspalvelimen kautta. Jätä tyhjäksi, jos haluat vain LAN&#8209;suoran yhteyden.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Aseta ensin sovelluslukko, niin voit ottaa synkronoinnin käyttöön.',
         'enable_failed' => 'Synkronoinnin käyttöönotto epäonnistui. Varmista, että sovelluslukkosi on aktiivinen, ja yritä uudelleen.',
+        'identity_replaced' => 'Laitteella on uusi synkronointi-identiteetti. Liitä muut laitteesi uudelleen pariksi.',
+        'identity_replace_failed' => 'Vanhaa laiteidentiteettiä ei voitu siirtää sivuun. Yritä uudelleen.',
         'cannot_remove_self' => 'Et voi poistaa tätä laitetta — se on laite, jota käytät juuri nyt.',
         'remove_failed' => 'Laitteen poistaminen epäonnistui. Yritä uudelleen.',
         'app_lock_first_settings' => 'Aseta ensin sovelluslukko, niin voit muuttaa synkronoinnin asetuksia.',
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Välityspalvelimen osoite tallennettu.',
         'relay_save_failed' => 'Välityspalvelimen osoitteen tallennus epäonnistui: :message',
     ],
+    'app_lock_permanent' => 'Kun tietosi on kerran salattu, sovelluslukkoa ei voi enää poistaa käytöstä — se pitää ainoaa avainta, eikä salaamattomaan ole paluuta.',
+    'backlog_heading' => 'Odottaa lisäämistä',
+    'backlog_deferred' => 'Tämä laite on vastaanottanut tietoja toiselta laitteelta eikä ole vielä lisännyt niitä kirjanpitoosi. Mitään ei katoa — ne otetaan käyttöön automaattisesti, yleensä hetkessä.',
+    'backlog_awaiting_key' => 'Tämä laite on vastaanottanut tietoja, joihin sillä ei vielä ole avainta. Mitään ei katoa. Avaa sovellus laiteparilla samaan aikaan kun tämä on auki, jotta laitteet voivat yhdistää ja avain voidaan lähettää.',
 ];

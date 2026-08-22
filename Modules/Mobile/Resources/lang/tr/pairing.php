@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Diğer cihazdaki kelime kodunu gir',
     'submit_code' => 'Kodu gönder',
     'cancel' => 'İptal',
+    'skip_import' => 'İçe aktarmadan devam et',
 
     'confirm_heading' => 'Bu kelimeleri diğer cihazla karşılaştır',
     'safety_words_aria' => 'Güvenlik numarası kelimeleri: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Diğer cihaza ulaşılamıyor. Her ikisinin de aynı ağda olduğundan ve masaüstünde senkronizasyonun açık olduğundan emin ol.',
         'invalid_code' => 'Bu kod geçersiz veya süresi dolmuş. Diğer cihazdan yeni bir kod oluşturmasını iste.',
         'code_not_accepted' => 'Bu ağdaki hiçbir cihaz bu kodu kabul etmedi. Kodu ve diğer cihazın onu hâlâ gösterip göstermediğini kontrol et.',
+        'no_peer_answered' => 'Bu ağda bu koda hiçbir şey yanıt vermedi. Diğer cihazda eşitlemenin çalıştığını kontrol et ya da kodunu kamerayla tara — kameranın ağda arama yapması gerekmez.',
+        'no_peer_answered_ios' => 'Bu ağda bu koda hiçbir şey yanıt vermedi. Diğer cihazı ağda aramak iPhone’da henüz çalışmıyor, bu yüzden kodunu kamerayla tara.',
         'rate_limited' => 'Çok fazla deneme. Bir dakika bekle ve tekrar dene.',
         'identity_locked' => 'Cihaz kimliğin kilitli. Uygulamanın kilidini açıp yeniden dene.',
         'identity_needs_lock' => 'Önce uygulama kilidini ayarlayın — cihaz kimliğinizi o korur.',

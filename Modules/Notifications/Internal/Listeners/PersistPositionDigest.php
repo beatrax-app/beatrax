@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Budgets\Public\Enums\BudgetProgressStatus;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Notifications\Internal\Support\CopyLine;
 use Modules\Notifications\Internal\Support\CopyParam;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
@@ -27,6 +28,7 @@ final class PersistPositionDigest
         private readonly UrlGenerator $urls,
         private readonly LoggerInterface $log,
         private readonly NotificationCopyRenderer $copyRenderer,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function handle(PositionDigestDue $event): void
@@ -88,7 +90,7 @@ final class PersistPositionDigest
 
         if ($position->budgets !== []) {
             $overBudgetMinor = 0;
-            $currency = 'EUR';
+            $currency = $this->baseCurrency->code();
             foreach ($position->budgets as $row) {
                 $currency = $row->currency;
                 if ($row->status === BudgetProgressStatus::Over) {

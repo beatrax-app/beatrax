@@ -14,6 +14,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
 use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -26,7 +27,7 @@ final class ModelWhatIfDropdown extends Component
 
     public int $currentAmountMinor = 0;
 
-    public string $currency = 'EUR';
+    public string $currency = Currency::Eur->value;
 
     public string $newAmountInput = '';
 

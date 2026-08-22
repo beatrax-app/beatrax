@@ -109,7 +109,7 @@
                     {{-- Disabled rather than merely ignored — setCountry()
                          returns early on the empty value, so re-choosing the
                          placeholder was a round-trip that changed nothing and
-                         said nothing. This is the one of the three country
+                         said nothing. This is the one of the four country
                          pickers that cannot go back to unset. --}}
                     <x-core::country-options
                         :options="$countryOptions"
@@ -198,7 +198,7 @@
                     <div
                         wire:transition
                         class="flex items-center justify-between gap-3"
-                        @if ($fxRefreshing) wire:poll.2s="pollFxRefresh" @endif
+                        @if ($fxRefreshing) wire:poll.2s.keep-alive="pollFxRefresh" @endif
                     >
                         {{-- The fetch is a queued job that can fail on every
                              provider, so "Refreshing…" needs an end: either the

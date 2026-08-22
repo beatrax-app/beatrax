@@ -6,10 +6,14 @@ return [
     'heading' => 'Ierīces un sinhronizācija',
 
     'enable_sync' => 'Ieslēgt sinhronizāciju',
-    'enable_sync_help' => 'Droši koplietojiet savus datus starp uzticamām ierīcēm. Nepieciešama lietotnes bloķēšana.',
+    'enable_sync_help' => 'Droši koplietojiet savus datus starp uzticamām ierīcēm. Nepieciešama lietotnes bloķēšana. Tiklīdz tā ir ieslēgta, dati tiek šifrēti un lietotnes bloķēšanu vairs nevar izslēgt.',
 
     'app_lock_notice' => 'Vispirms iestatiet lietotnes bloķēšanu, lai ieslēgtu sinhronizāciju.',
     'go_to_app_lock' => 'Doties uz lietotnes bloķēšanu',
+
+    'identity_unreadable' => 'Šīs ierīces sinhronizācijas identitāte tika izveidota ar citu lietotnes bloķēšanu un vairs neatveras. Kamēr tā ir, šī ierīce nevar ne sinhronizēt, ne savienoties pārī. Atjaunojot datu bāzes dublējumu, ar kuru tā tika izveidota, tā atkal kļūst lasāma.',
+    'identity_unreadable_replace_help' => 'Vari arī sākt no jauna: ierīce saņem jaunu identitāti, vecā paliek neizmantota, un iepriekš savienotās ierīces būs jāsavieno pārī atkārtoti.',
+    'identity_unreadable_replace' => 'Izveidot šai ierīcei jaunu identitāti',
 
     'encrypted_at_rest' => 'Dati šifrēti glabāšanā',
     'encrypted_at_rest_scope' => 'Piezīmes, darījumu apraksti un maksājumu saņēmēju vārdi un IBAN ir šifrēti virsgrāmatā ar tavu lietotnes bloķēšanas paroles frāzi. Summas, datumi un tava paša konta nosaukums un IBAN nav šifrēti. Meklēšanas indekss glabā savu lasāmu kopiju no tā, kam tu maksā, no taviem darījumu aprakstiem un no tavām nodokļu piezīmēm, un daži tirgotāju nosaukumi ir lasāmi citviet datubāzes failā.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => 'Noņemt: :name',
     'remove' => 'Noņemt',
     'pair_new_device' => 'Sapārot jaunu ierīci',
+
+    'pairing_waiting' => 'Pabeidziet pārošanu ar :name',
+    'pairing_waiting_help' => 'Abiem ekrāniem jārāda vieni un tie paši seši vārdi, pirms pārošana ir spēkā. Atveriet to vēlreiz, lai tos salīdzinātu.',
+    'pairing_waiting_resume' => 'Turpināt pārošanu',
+    'pairing_waiting_lock_override' => 'Atbloķēšana atkārtoti atver šo pārošanu, nevis ļauj tai beigties, tāpēc tā ilgst ilgāk par jūsu iestatīto lietotnes bloķēšanas laiku. Tā beidzas, kad to pabeidzat vai atceļat.',
 
     'relay_endpoint' => 'Retranslatora adrese',
     'relay_endpoint_help' => 'Neobligāti. Ja norādīts, bezsaistes ierīces sinhronizējas caur šo retranslatoru. Atstājiet tukšu, lai izmantotu tikai tiešu LAN&#8209;savienojumu.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Vispirms iestatiet lietotnes bloķēšanu, lai ieslēgtu sinhronizāciju.',
         'enable_failed' => 'Neizdevās ieslēgt sinhronizāciju. Pārliecinieties, ka lietotnes bloķēšana ir aktīva, un mēģiniet vēlreiz.',
+        'identity_replaced' => 'Šai ierīcei ir jauna sinhronizācijas identitāte. Savieno pārī pārējās ierīces vēlreiz.',
+        'identity_replace_failed' => 'Neizdevās nolikt malā veco ierīces identitāti. Mēģini vēlreiz.',
         'cannot_remove_self' => 'Šo ierīci nevarat noņemt — tā ir ierīce, kuru pašlaik izmantojat.',
         'remove_failed' => 'Neizdevās noņemt ierīci. Mēģiniet vēlreiz.',
         'app_lock_first_settings' => 'Vispirms iestatiet lietotnes bloķēšanu, lai mainītu sinhronizācijas iestatījumus.',
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Retranslatora adrese saglabāta.',
         'relay_save_failed' => 'Neizdevās saglabāt retranslatora adresi: :message',
     ],
+    'app_lock_permanent' => 'Tiklīdz dati ir šifrēti, lietotnes bloķēšanu vairs nevar izslēgt — tā glabā vienīgo atslēgu, un ceļa atpakaļ uz nešifrētiem datiem nav.',
+    'backlog_heading' => 'Gaida pievienošanu',
+    'backlog_deferred' => 'Šī ierīce ir saņēmusi datus no citas ierīces un vēl nav tos pievienojusi tavai uzskaitei. Nekas nepazūd — tie tiek pievienoti automātiski, parasti mirklī.',
+    'backlog_awaiting_key' => 'Šī ierīce ir saņēmusi datus, kuriem tai vēl nav atslēgas. Nekas nepazūd. Atver lietotni savienotajā ierīcē, kamēr šī ir atvērta, lai abas varētu savienoties un atslēgu nosūtīt.',
 ];

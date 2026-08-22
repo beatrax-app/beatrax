@@ -156,16 +156,26 @@ final class RuleEngine
     }
 
     // Both sides collapse to start-of-day, so `between`'s inclusive upper
-    // bound still contains a transaction posted later that same day.
+    // bound still contains a transaction posted later that same day. The
+    // emptiness guard precedes the parse because parse('') is NOW; a present
+    // but unreadable value still throws, and the job counts that row as errored.
+    /**
+     * @link ../../../../.docs/features/categorization/rule-evaluation-order.md#how-a-condition-is-evaluated
+     */
     private static function matchDate(ConditionOperator $op, CarbonImmutable $target, string $value, ?string $value2): bool
     {
+        if ($value === '') {
+            return false;
+        }
+
         $t = $target->startOfDay();
         $v = CarbonImmutable::parse($value)->startOfDay();
 
         return match ($op) {
             ConditionOperator::After => $t->greaterThan($v),
             ConditionOperator::Before => $t->lessThan($v),
-            ConditionOperator::Between => $value2 !== null && self::withinInclusiveRange($t, $v, CarbonImmutable::parse($value2)->startOfDay()),
+            ConditionOperator::Between => $value2 !== null && $value2 !== ''
+                && self::withinInclusiveRange($t, $v, CarbonImmutable::parse($value2)->startOfDay()),
             default => false,
         };
     }

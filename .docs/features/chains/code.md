@@ -72,11 +72,12 @@ Modules/Chains/
 ## Public API
 
 - **Contracts/**
-  - `DispatchesChainResolution::dispatch(User $user)` — post-commit
-    dispatch surface called from `ConfirmImport`.
-  - `UpsertsCardStatements::upsert(int $importRunId, User $user)` —
-    post-commit `card_statements` upsert called from `ConfirmImport`
-    BEFORE the dispatcher fires.
+  - `DispatchesChainResolution::dispatchForUser(int $userId)` —
+    post-commit dispatch surface called from `ConfirmImport`.
+  - `UpsertsCardStatements::upsertForImportRun(int $importRunId,
+    User $user)` and `upsertForUser(User $user)` — post-commit
+    `card_statements` upserts called from `ConfirmImport` BEFORE the
+    dispatcher fires; each returns the number of statements touched.
 - **Actions/**
   - `ConfirmChainLink($chainLinkId, $user)` — promotes a candidate;
     runs the auto-promotion learning loop. Throws
@@ -101,11 +102,15 @@ Modules/Chains/
   - `ChainLinkRequiresConcretePartnerException` — typed exception so
     Livewire renders a friendly message instead of an SQLSTATE 23000.
 - **Services/**
-  - `ChainLinkQuery::reviewQueue($user)`,
+  - `ChainLinkQuery::candidatesForReview($user, $cursorId,
+    $cursorConfidence, $limit)` — the keyset-paged review queue,
     `ChainLinkQuery::openCandidateCount($user)` (sidebar badge),
-    `ChainLinkQuery::chainTreeFor($transaction, $user)`.
-  - `CardStatementQuery::nextSettlement($user)`,
-    `CardStatementQuery::forecastTiles($user)`.
+    `ChainLinkQuery::forTransaction($transactionId, $user)` — the
+    `ChainTree` walk. Also `allChainsForUser`,
+    `hasChainForTransaction`, `confirmedAndDeterministicForSeries`
+    (what `Forecasting` routes on), `hintsForReview` and `hintCount`.
+  - `CardStatementQuery::nextSettlementForUser($user)`,
+    `CardStatementQuery::openForAccount($accountId, $user)`.
 
 ## Internal services
 

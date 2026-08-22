@@ -81,9 +81,9 @@ leading characters matched.
 > **Supersedes the earlier scheme.** The relay once derived each device's drain
 > token as `HMAC(relay auth token, did)`. The relay auth token travels in the
 > pairing QR, so every peer that had ever paired could recompute *any* device's
-> drain token and pull or delete that device's blobs. The description of that
-> scheme in [architecture.md](architecture.md) is out of date; the registry
-> above is what the code does.
+> drain token and pull or delete that device's blobs. The registry above is
+> what the code does, and [architecture.md](architecture.md) now describes the
+> same mechanism.
 
 The residual weakness of trust-on-first-use is worth naming: an attacker who
 registers a victim's device id **before** the victim ever drains wins the slot.

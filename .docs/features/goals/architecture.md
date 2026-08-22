@@ -69,8 +69,28 @@ target figure are always expressed in this same fixed currency, so
 `fractionComplete` and the "reached" transition are internally consistent
 even if the user's base currency later diverges.
 
-`fractionComplete` is a plain float ratio of two integer minor-unit amounts
-— never a `Money::toFloat()` call on a monetary value.
+`fractionComplete` is a plain float ratio of two integer minor-unit amounts —
+`contributedMinor / targetMinor`, computed in `GoalProgressQuery` and never
+passed through `Money` at all. There is no float accessor on `Money` to reach
+for and there never has been one: it exposes `toMinor()` and its formatters,
+and `ofMinor()` is the only constructor — the class has carried "there is no
+`ofFloat`" in its own docblock since it landed.
+
+The practice the name suggested is what got banned, and it got banned because
+it shipped. Two arch tests hold the line, both pointing at
+[invariants-from-shipped-failures](../../conventions/invariants-from-shipped-failures.md).
+`NoFloatMoneyArchTest` keeps money out of a float in the schema — no
+`float`/`double`/`real` amount column, every `decimal` column cast to
+`string` so it cannot reach `brick/math` as a float.
+`MoneyNeverPassesThroughFloatArchTest` keeps it out of a float in code — no
+amount rendered through `number_format()`, no minor-unit value derived by
+multiplying a float by 100, no `(float)` cast of a typed amount (PHP reads
+`"1.234,56"` as `1.234`, a silent hundredfold error).
+
+A ratio is not a money value and stays legible under both rules: it lands in
+neither a minor-unit name nor a `(float)` return, which is the same carve-out
+`MoneyNeverPassesThroughFloatArchTest` documents for chart coordinates. A
+currency amount stays an integer count of minor units end to end.
 
 `GoalProgressRow` derives the three things every goal surface asks of it:
 `percentComplete()` (floored at 0 and capped at 100, since an attributed spend

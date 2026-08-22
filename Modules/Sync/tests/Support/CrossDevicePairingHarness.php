@@ -192,6 +192,7 @@ trait CrossDevicePairingHarness
             $table->text('accepted_at')->nullable();
             $table->text('initiator_confirmed_at')->nullable();
             $table->text('responder_confirmed_at')->nullable();
+            $table->text('deferred_peer_confirm')->nullable();
             $table->text('initiator_seeded_at')->nullable();
             $table->string('initiator_name')->nullable();
             $table->text('created_at');

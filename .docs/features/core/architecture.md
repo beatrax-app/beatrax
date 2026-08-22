@@ -136,9 +136,13 @@ What the module explicitly does NOT do:
     configurable line count so a deep recursion cannot flood the log.
 - **Events/**
   - `UserInstalled` — dispatched by `Modules\Auth\Public\Actions\SignupAction`
-    after a successful install AND by `beatrax:install` on every re-run.
-    Listeners (default-category-tree seeder, community-corpus seeder,
-    wizard first-step priming) MUST be idempotent.
+    after a successful install AND by `beatrax:install` on every re-run,
+    AND by `MobilePairingScan::abandonImport()` when a phone gives up on
+    joining another device's account. Listeners (default-category-tree
+    seeder, community-corpus seeder, wizard first-step priming, the Tax
+    deduction-corpus seeder for the country already stored) MUST be
+    idempotent. `seedsStarterData: false` marks an install that is
+    JOINING an existing account and will receive that data from a peer.
 - **Exceptions/**
   - `NotAuthenticatedException` — thrown by `CurrentUserService::resolveUser()`
     when no guard is bound. Maps to a 401 / redirect at the request
@@ -180,8 +184,9 @@ listener that watches the boot probes during the install ceremony.
   a real answer meaning "every region", not a missing one — and
   `store()` gates the code through the `Country` enum before writing,
   so an injected value is dropped rather than persisted. `options()`
-  returns the label map all three pickers render — signup, Settings and
-  the onboarding step — sorted through `LocaleCollator` rather than by
+  returns the label map all four pickers render — signup, the phone's
+  import screen, Settings and the onboarding step — sorted through
+  `LocaleCollator` rather than by
   ISO code. They render it through one `x-core::country-options`, so the
   empty option is named once; only whether it stays choosable differs,
   and that follows whether the surface accepts an empty submission.
@@ -192,7 +197,13 @@ listener that watches the boot probes during the install ceremony.
   can react without the writer knowing it exists. Tax listens for it
   and seeds that country's deduction categories; nothing else in Core
   knows Tax is there. This is what lets signup, Settings and the
-  onboarding `CountryStep` all set a country through one seam.
+  onboarding `CountryStep` all set a country through one seam. It
+  carries `seedsCountryData`, defaulting to `true` and false only for a
+  device joining another device's account: `store()` writes the
+  preference either way, but the country-scoped reference data behind it
+  is that peer's to send. `SignupAction` passes its own
+  `seedsStarterData` straight through, so the two halves of one decision
+  cannot drift apart.
 - `LocaleCollator::compare()` — the ordering seam for every list the
   reader scans by name. An ICU `Collator` for the active locale,
   memoised per locale because a sort asks for one n·log n times, and an
@@ -234,11 +245,23 @@ listener that watches the boot probes during the install ceremony.
   session key — because the translator only ever reports a concrete
   locale and cannot distinguish "English chosen" from "nothing chosen".
 
-The country is captured at signup beside the language, not inside Tax:
-`SignupPage::$country` is passed to `SignupAction` and stored through
-the same `UserCountry::store()` the other two routes use, so a fresh
-install starts correctly classified. Skipping it is a real answer and
+The country is captured beside the language on both screens that create
+an account, not inside Tax: `SignupPage::$country` on `/signup`, and
+`MobileImportBootstrap::$country` on `/mobile/import`, the screen a
+phone uses to join another device's account. Each passes it to
+`SignupAction`, which stores it through the same `UserCountry::store()`
+the Settings and wizard pickers use, so a fresh install starts
+correctly classified. The import screen has to ask in its own right:
+`users` is not a synced table, so a country skipped there is never
+supplied by the device being joined. Skipping it is a real answer and
 leaves it unset.
+
+The import screen stores the country and nothing else. It signs up with
+`seedsStarterData: false`, and `SignupAction` hands that same value to
+`UserCountry::store()` as `seedsCountryData`, because the reference data
+a country implies lands on tables that DO sync — and a row this device
+seeds is one the peer's own row can no longer land beside. See
+`.docs/features/tax/architecture.md`.
 
 - `UserDataPathService` — every read of `database_path()`,
   `storage_path()`, `base_path()` outside this class is forbidden by
@@ -451,7 +474,7 @@ the SQLite-substrate probes. `BackupFreshnessProbe` reads the newest
 `completed_at` to the clock; if none exists or the newest is older
 than 48h it returns `warning` AND writes a system-wide
 `system_alerts(kind=backup_overdue)` row, gated by a 1-hour recency
-check (mirrors `HealthCheckServiceProvider::recordDriftAlert` — 100
+check (mirrors `HealthCheckListener::recordDriftAlert` — 100
 `beatrax:doctor` runs in an hour produce at most one banner card, not
 100). The recency check uses the raw Query Builder (not Eloquent)
 since larastan-strict-rules rejects chained `Eloquent\Builder` calls

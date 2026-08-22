@@ -6,10 +6,14 @@ return [
     'heading' => 'Dispositivi e sincronizzazione',
 
     'enable_sync' => 'Attiva la sincronizzazione',
-    'enable_sync_help' => "Condividi i tuoi dati in modo sicuro tra i dispositivi attendibili. Richiede un blocco dell'app.",
+    'enable_sync_help' => 'Condividi i tuoi dati in modo sicuro tra i dispositivi attendibili. Richiede un blocco dell\'app. Una volta attivo, i tuoi dati sono cifrati e il blocco dell\'app non può più essere disattivato.',
 
     'app_lock_notice' => "Imposta prima un blocco dell'app per attivare la sincronizzazione.",
     'go_to_app_lock' => "Vai a Blocco dell'app",
+
+    'identity_unreadable' => 'L\'identità di sincronizzazione di questo dispositivo è stata creata con un altro blocco app e non si apre più. Finché è così, questo dispositivo non può sincronizzare né associarsi. Ripristinare il backup del database con cui è stata creata la rende di nuovo leggibile.',
+    'identity_unreadable_replace_help' => 'Puoi anche ricominciare: questo dispositivo riceve una nuova identità, quella vecchia resta da parte inutilizzata e i dispositivi già associati vanno associati di nuovo.',
+    'identity_unreadable_replace' => 'Crea una nuova identità per questo dispositivo',
 
     'encrypted_at_rest' => 'Dati crittografati a riposo',
     'encrypted_at_rest_scope' => 'Le note, le descrizioni delle transazioni e i nomi e gli IBAN di chi paghi sono cifrati nel registro con la passphrase del blocco app. Gli importi, le date e il nome e l\'IBAN del tuo conto no. L\'indice di ricerca conserva una propria copia leggibile di chi paghi, delle descrizioni delle tue transazioni e delle tue note fiscali, e alcuni nomi di esercenti restano in chiaro altrove nel file di database.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => 'Rimuovi :name',
     'remove' => 'Rimuovi',
     'pair_new_device' => 'Abbina un nuovo dispositivo',
+
+    'pairing_waiting' => 'Completa l’abbinamento con :name',
+    'pairing_waiting_help' => 'Entrambi gli schermi devono mostrare le stesse sei parole perché l’abbinamento valga. Riaprilo per confrontarle.',
+    'pairing_waiting_resume' => 'Continua l’abbinamento',
+    'pairing_waiting_lock_override' => 'Sbloccare riapre questo abbinamento invece di lasciarlo scadere, quindi dura più del timeout di blocco che hai impostato. Termina quando lo completi o lo annulli.',
 
     'relay_endpoint' => 'Endpoint del relay',
     'relay_endpoint_help' => 'Facoltativo. Se impostato, i dispositivi offline si sincronizzano tramite questo relay. Lascia vuoto per usare solo la LAN&#8209;diretta.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => "Imposta prima un blocco dell'app per attivare la sincronizzazione.",
         'enable_failed' => "Attivazione della sincronizzazione non riuscita. Assicurati che il blocco dell'app sia attivo e riprova.",
+        'identity_replaced' => 'Questo dispositivo ha una nuova identità di sincronizzazione. Associa di nuovo gli altri dispositivi.',
+        'identity_replace_failed' => 'Non è stato possibile mettere da parte la vecchia identità del dispositivo. Riprova.',
         'cannot_remove_self' => 'Non puoi rimuovere questo dispositivo — è quello che stai usando.',
         'remove_failed' => 'Rimozione del dispositivo non riuscita. Riprova.',
         'app_lock_first_settings' => "Imposta prima un blocco dell'app per modificare le impostazioni di sincronizzazione.",
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Endpoint del relay salvato.',
         'relay_save_failed' => "Impossibile salvare l'endpoint del relay: :message",
     ],
+    'app_lock_permanent' => 'Una volta cifrati i dati, il blocco app non può più essere disattivato — custodisce l\'unica chiave, e non si torna in chiaro.',
+    'backlog_heading' => 'In attesa di essere aggiunti',
+    'backlog_deferred' => 'Questo dispositivo ha ricevuto dati da un altro dispositivo e non li ha ancora aggiunti alla tua contabilità. Non si perde nulla: vengono applicati automaticamente, di solito in un attimo.',
+    'backlog_awaiting_key' => 'Questo dispositivo ha ricevuto dati di cui non ha ancora la chiave. Non si perde nulla. Apri l\'app sul dispositivo abbinato mentre questo è aperto, così i due possono collegarsi e la chiave può essere inviata.',
 ];

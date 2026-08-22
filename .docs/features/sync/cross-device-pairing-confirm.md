@@ -45,14 +45,31 @@ Two tempting shortcuts fail:
 | Result | Meaning |
 | --- | --- |
 | `'confirmed'` | Signature verified and the local human had already confirmed. The peer is admitted. |
-| `'deferred'` | Signature verified, but the local human has *not* confirmed yet. **Nothing is written.** |
+| `'deferred'` | Signature verified, but the local human has *not* confirmed yet. **No confirmation is recorded.** |
 | `null` | Rejected: bad signature, or the local row is expired or cancelled. |
 
 `'deferred'` is the load-bearing one. A correctly-signed frame can never complete a pairing on
-its own — arriving early, it is dropped on the floor and the row stays `awaiting_confirm` with
-the peer column unset. The courier redelivers the same frame on a later poll, and once the
-local human has confirmed, that identical frame completes the gate. Both halves of the gate
-are local: your own human, and the peer's signature.
+its own — arriving early, the row stays `awaiting_confirm` with the peer column unset. Both
+halves of the gate are local: your own human, and the peer's signature.
+
+What the early frame does not do is vanish. It is parked on the row and replayed — verified
+again from scratch — the moment the local human confirms, because the peer that sent it stops
+re-emitting as soon as *its* side reaches `confirmed`, and a LAN push is answered `202` and
+kept by nobody. See
+[a deferred confirm is held, not dropped](pairing-handshake.md#a-deferred-confirm-is-held-not-dropped).
+
+## Neither half of this depends on a screen being open
+
+Both devices reach the state above by tapping in a modal, and the ordinary next thing a human
+does is close it. What used to move the frames — drain the mailbox, re-emit this side's
+confirm — lived on that modal's three-second poll, so closing it on either device stopped
+redelivery and left the ceremony half-finished.
+
+`PendingPairingCourier` does that work now, driven by the `sync:serve` timer on a desktop and
+by the ordinary request cycle on a phone, which has no daemon and no scheduler to give it. It
+carries confirmations; it never creates one, because the only thing it re-emits is a frame the
+local `<side>_confirmed_at` stamp says the human already authorised. See
+[redelivery must not depend on an open screen](pairing-handshake.md#redelivery-must-not-depend-on-an-open-screen).
 
 ## What a relay attacker can and cannot do
 
@@ -92,3 +109,20 @@ registry. The blast radius of a substituted identity is one device's row, not th
 - [`architecture.md`](architecture.md) — the pairing ceremony in the wider sync design.
 - [`gdk-epoch-wrap-delivery.md`](gdk-epoch-wrap-delivery.md) — what gets sent to a device once
   it is confirmed, and why leftover pairing frames on the shared mailbox matter.
+
+## Why the courier sends before it collects
+
+`PendingPairingCourier::tick()` re-emits this device's own confirm *before* it
+drains what has arrived, and the order is load-bearing rather than stylistic.
+
+Collecting first can finish the ceremony on this device — the peer's confirm
+lands, both sides are stamped, the row reaches `confirmed`. But a finished row
+is the courier's own stop signal: `liveCeremonyOwnedBy()` answers only for
+`pending` and `awaiting_confirm`. So the tick that completed the pairing would
+return without ever having offered this device's confirmation to the peer, and
+the peer would sit at `awaiting_confirm` until the token expired.
+
+That is precisely the one-sided pairing the courier exists to end, rebuilt one
+level up — and it is what the first implementation did. The asymmetry in cost is
+what settles it: re-sending a frame the peer already holds costs one idempotent
+apply, while not sending it costs the peer the pairing.

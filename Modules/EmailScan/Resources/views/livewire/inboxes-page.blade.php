@@ -45,7 +45,7 @@
              count climbs without a full page reload; the strip disappears once every
              inbox has finished and backfill_progress has been cleared. --}}
         <section
-            wire:poll.2s="refreshBackfillProgress"
+            wire:poll.2s.keep-alive="refreshBackfillProgress"
             class="rounded-md border border-slate-200 bg-slate-50 p-4 space-y-2 mb-6 dark:bg-slate-900 dark:border-slate-700"
             aria-live="polite"
         >

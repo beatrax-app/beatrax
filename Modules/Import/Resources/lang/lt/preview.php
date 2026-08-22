@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Atrakinkite programėlę, kad importuotumėte: pardavėjo rakto negalima apskaičiuoti, kol ji užrakinta.',
+        'app_locked' => 'Atrakinkite programėlę, kad importuotumėte: šifravimo raktų negalima naudoti, kol ji užrakinta.',
         'file_unreadable' => 'Šio failo nepavyko perskaityti.',
         'iban_not_in_preview' => 'Šis IBAN nėra dabartinės peržiūros dalis.',
         'row_unreadable' => 'Šios eilutės nepavyko perskaityti.',

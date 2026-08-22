@@ -28,8 +28,9 @@ isolation.
   - The cross-user 404 posture on every action + mount.
   - The cadence-flip path (an `approved` series whose
     inferred cadence shifted).
-  - The `RecurringSeriesQuery::lastTwoOccurrences` shape
-    consumed by `DriftAlerts`.
+  - The `RecurringSeriesQuery::occurrencesForSeries` shape
+    consumed by `DriftAlerts` — the whole `observed_at` DESC
+    list, of which `DriftEvaluator` reads the first two.
 
 ## Contract / arch invariants
 
@@ -161,10 +162,45 @@ The behavioural contract for the `Recurring` module.
   5% floor at evaluation time (not at write time — the user
   can set any value; the evaluator decides the effective
   threshold).
-- **`RecurringSeriesQuery::lastTwoOccurrences` is the SOLE
-  sanctioned external read of recurring occurrences.**
-  `DriftAlerts::DriftEvaluator` and any other consumer never
-  query the `recurring_series_occurrences` table directly.
+- **`RecurringSeriesQuery::occurrencesForSeries` is the
+  sanctioned external read of recurring occurrences.** It
+  returns every occurrence row for the series ordered
+  `observed_at` DESC, and an empty list for a cross-user
+  lookup; `DriftAlerts::DriftEvaluator` bails when fewer than
+  two come back and compares `[0]` against `[1]`. It is the
+  sanctioned PER-SERIES read, and nothing more than that: it is
+  not the only external reader of the table, and it should not
+  be described as one. Four other places read
+  `recurring_series_occurrences` directly, all user-scoped, and
+  each wants a shape this query does not expose:
+  - `Calendar::OccurrenceMatcher::buildOccurrenceMap` — one
+    query for every occurrence in a month window across ALL of
+    the user's series. Routing it through a per-series read
+    would make a calendar month N queries.
+  - `Calendar::SeriesEntryPlacer::seriesStartFloors` — a
+    `MIN(observed_at)` per series, joined onto
+    `recurring_series`. An aggregate, not a row list.
+  - `Chains::ChainLinkQuery::confirmedAndDeterministicForSeries`
+    — joins the table as an EDGE (`rso.transaction_id =
+    chain_links.from_transaction_id`) to find a series' funder
+    links. It reads no occurrence field at all.
+  - `Sync::MergeRulesRegistry` — declares the table's
+    replication rules (`_delete_wins`, the create-required
+    set). A registry of every synced table has to name it.
+
+  So the SOLE-external-read invariant this page used to assert
+  was never true, and it is the invariant that is wrong rather
+  than the four call sites. The property actually worth holding
+  is on the WRITE side, where the module really is alone:
+  `Recurring`'s `OccurrenceWriter::write()` is the only
+  production writer, its `insertOrIgnore` against the (series,
+  transaction) UNIQUE is what makes a re-detection sweep a
+  no-op, and that append-only shape is exactly what Sync's
+  merge rules for the table depend on — a second writer
+  updating rows in place would break replication, whereas a
+  second reader breaks nothing. The only other writer today is
+  `DriftAlerts`' demo seeder. No arch test enforces either
+  side; the write-side one is the one worth adding.
 - **`pending_count_for_user` query is a single COUNT
   against `(user_id, state='pending')`.** No JOIN, no aggregation.
   It no longer feeds a badge: the sidebar's Recurring count is the
@@ -219,14 +255,16 @@ The behavioural contract for the `Recurring` module.
     `RecurringSeriesQuery`.
   - [`DriftAlerts`](../drift-alerts/how-to-test.md) — subscribes
     to `MetricsRefreshed`; reads
-    `RecurringSeriesQuery::lastTwoOccurrences`.
+    `RecurringSeriesQuery::occurrencesForSeries`, plus
+    `forSeries`, `driftThresholdForSeries`, `forSeriesIds`,
+    `statesForSeriesIds` and `displayNamesForSeriesIds`.
   - The app sidebar — reads the active-series count from `Core`'s
     `NavCountsService`, not from this module.
   - The dashboard layout — renders `FixedPaymentsCard`.
 
 ## Configuration + feature flags
 
-- `users.recurring_detection_window` (per-user) — default
+- `users.recurring_detection_window_months` (per-user) — default
   two months; lowered from a higher original default in the
   `2026_05_24_233044` migration.
 - `users.drift_alert_threshold_percent` (per-user global)

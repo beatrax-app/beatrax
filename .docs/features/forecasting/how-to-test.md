@@ -207,8 +207,11 @@ The behavioural contract for the `Forecasting` module.
   - [`DriftAlerts`](../drift-alerts/how-to-test.md) —
     `DriftAlertDismissedCancelled` event + `CancellationImpactQuery`.
   - [`Ledger`](../ledger/how-to-test.md) — account reads (no writes).
-  - [`Chains`](../chains/how-to-test.md) — `CardStatementQuery::nextSettlement`,
-    `forecastTiles`; chain routing inputs.
+  - [`Chains`](../chains/how-to-test.md) —
+    `CardStatementQuery::nextSettlementForUser` (the synthetic
+    settlement contribution and the highlights tile) and
+    `ChainLinkQuery::confirmedAndDeterministicForSeries` (the
+    funder account chain routing sends a series to).
 - **Depended on by**
   - [`Desktop`](../desktop/how-to-test.md) — subscribes to
     `ForecastShortfallDetected` for OS notifications.

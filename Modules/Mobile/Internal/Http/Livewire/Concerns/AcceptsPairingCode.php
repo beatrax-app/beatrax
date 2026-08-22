@@ -80,7 +80,7 @@ trait AcceptsPairingCode
             $this->flashMessage = Lang::get(match ($discovered) {
                 PairingOfferLookup::CodeNotAccepted => 'mobile::pairing.errors.code_not_accepted',
                 PairingOfferLookup::CodeMalformed => 'mobile::pairing.errors.invalid_code',
-                PairingOfferLookup::NoPeerReached => 'mobile::pairing.errors.relay_unreachable',
+                PairingOfferLookup::NoPeerReached => $this->nothingAnsweredKey($gateway),
                 PairingOfferLookup::RateLimited => 'mobile::pairing.errors.rate_limited',
             });
 
@@ -88,6 +88,23 @@ trait AcceptsPairingCode
         }
 
         return $discovered;
+    }
+
+    // Nothing answered is the EXPECTED outcome on iOS, which drops the app's
+    // own multicast query, so that reader is sent to the camera rather than to
+    // their router. Neither line names a cause this device cannot observe: it
+    // knows only that it asked and heard nothing back.
+    /**
+     * @link ../../../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md
+     */
+    // Asked of the transport, not of the platform. A hardcoded iOS check keeps
+    // telling an iPhone the search cannot run on the day the entitlement lands
+    // and it can; reach() flips on its own, so the advice retires itself.
+    private function nothingAnsweredKey(PairingGateway $gateway): string
+    {
+        return $gateway->lanDiscoveryReach()->silenceMeansNoPeers()
+            ? 'mobile::pairing.errors.no_peer_answered'
+            : 'mobile::pairing.errors.no_peer_answered_ios';
     }
 
     /**

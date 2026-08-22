@@ -117,13 +117,17 @@ UploadWizard
   → on mismatch: friendly error, don't run the adapter
 ```
 
-The parse phase (called from `ImportPipeline::ParseStage`):
+The parse phase. `ParseStage` is not a member of `ImportPipeline` — it is an
+Import-owned collaborator the pipeline takes in its constructor, entered at
+`ParseStage::run()`, and it is where this module's adapters are reached. It
+has two arms: `eml` / `mbox` go to the receipt adapter, and every other
+format is looked up in the registry.
 
 ```
-ImportPipeline.preview
-  → ParseStage
+ImportPipeline::preview
+  → ParseStage::run($localPath, $sourceFormat, $accounts, $user)
        → SourceAdapterRegistry::for($sourceFormat)
-       → SourceAdapter::parse($file)
+       → SourceAdapter::parse($localPath, $accounts)
             yield SourceTransactionDto per row
   → NormalizeStage (Import-owned) — turns the
                                      SourceTransactionDto into a
@@ -312,7 +316,11 @@ pair share the same event type and Reference Txn ID.
 
 `PaypalCsvEventTypeMap::MAP` classifies each event type as `'skip'` /
 `'parent'` / `'child-fee'` / `'child-fx'`; `TRANSACTION_TYPE` maps
-`'parent'` event types to a `Transaction::TYPES` value. The two funding-
+`'parent'` event types to a `TransactionType` backing value (`Ledger`'s
+enum, which replaced a hand-kept `TYPES` list constant on the
+`Transaction` model in #136 — the map holds the string, and
+`RecordTransactions` validates it through `TransactionType::tryFrom()` on
+the way in). The two funding-
 leg parent event types (`Bankstorting`/`General Withdrawal`/`Transfer
 to bank`) classify as `'parent'` and resolve to `transfer_in`, so an
 ASN→PayPal top-up surfaces as the PayPal-side `transfer_in` leg that

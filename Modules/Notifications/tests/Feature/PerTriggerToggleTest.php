@@ -190,7 +190,7 @@ function pttRunBudgetNudge(User $user): bool
     ]);
 
     $job = new EmitBudgetNudgesJob($user->id);
-    $job->handle(app(CarryoverQuery::class), app(Clock::class), app(Dispatcher::class), app(AuthFactory::class));
+    $job->handle(app(CarryoverQuery::class), app(PeriodQuery::class), app(Dispatcher::class), app(AuthFactory::class));
 
     return pttOsFired();
 }

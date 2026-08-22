@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN must be at least 6 digits.',
     'error_pin_mismatch' => 'PINs don\'t match. Try again.',
+    'error_pin_required' => 'Enter your PIN.',
     'error_pin_incorrect' => 'Incorrect PIN.',
+    'error_account_password_required' => 'Enter your account password.',
     'error_account_password' => 'Incorrect account password.',
     'change_pin_success' => 'Your encryption key has been re-secured with your new PIN.',
     'error_forgot_failed' => 'PIN reset failed — the recovery key is unavailable.',
     'error_enable_first' => 'Enable the PIN lock first before enrolling biometrics.',
+    'error_disable_blocked_by_encryption' => 'Your notes and counterparty details are encrypted with the key this app lock holds, so turning the lock off would leave them unreadable. The lock stays on — change your PIN instead.',
+    'error_key_material_lost' => 'This device no longer holds the key that opens your encrypted data, so a new PIN cannot make it readable again. Pair this device with one that still holds the key to recover it.',
+    'error_recovery_wrap_stale' => 'Your account password no longer opens this app lock — it was changed after the lock was set up. Your PIN still works, but there is nothing behind it if you forget it. Re-link your account password now.',
+    'relink_recovery' => 'Re-link account password',
+    'relink_modal_heading' => 'Re-link account password — confirm with PIN',
+    'relink_recovery_success' => 'Your account password can recover this app lock again.',
 ];

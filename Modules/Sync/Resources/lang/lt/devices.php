@@ -6,10 +6,14 @@ return [
     'heading' => 'Įrenginiai ir sinchronizavimas',
 
     'enable_sync' => 'Įjungti sinchronizavimą',
-    'enable_sync_help' => 'Saugiai dalykis savo duomenimis tarp patikimų įrenginių. Reikia programėlės užrakto.',
+    'enable_sync_help' => 'Saugiai dalykis savo duomenimis tarp patikimų įrenginių. Reikia programėlės užrakto. Kai jis įjungtas, duomenys užšifruojami, o programėlės užrakto nebegalima išjungti.',
 
     'app_lock_notice' => 'Kad įjungtum sinchronizavimą, pirma nustatyk programėlės užraktą.',
     'go_to_app_lock' => 'Eiti į programėlės užraktą',
+
+    'identity_unreadable' => 'Šio įrenginio sinchronizavimo tapatybė buvo sukurta su kitu programos užraktu ir nebeatsidaro. Kol taip yra, šis įrenginys negali nei sinchronizuoti, nei susieti. Atkūrus duomenų bazės atsarginę kopiją, su kuria ji sukurta, ji vėl bus perskaitoma.',
+    'identity_unreadable_replace_help' => 'Gali ir pradėti iš naujo: įrenginys gaus naują tapatybę, senoji liks nenaudojama, o anksčiau susietus įrenginius reikės susieti iš naujo.',
+    'identity_unreadable_replace' => 'Sukurti šiam įrenginiui naują tapatybę',
 
     'encrypted_at_rest' => 'Duomenys šifruojami saugykloje',
     'encrypted_at_rest_scope' => 'Užrašai, operacijų aprašymai ir gavėjų vardai bei IBAN yra užšifruoti apskaitos knygoje tavo programėlės užrakto slaptafraze. Sumos, datos ir tavo paties sąskaitos pavadinimas bei IBAN – ne. Paieškos indeksas saugo savo įskaitomą kopiją to, kam moki, tavo operacijų aprašymų ir tavo mokestinių užrašų, o kai kurie prekybininkų pavadinimai matomi atviru tekstu kitose duomenų bazės failo vietose.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => 'Pašalinti :name',
     'remove' => 'Pašalinti',
     'pair_new_device' => 'Susieti naują įrenginį',
+
+    'pairing_waiting' => 'Užbaikite susiejimą su :name',
+    'pairing_waiting_help' => 'Abu ekranai turi rodyti tuos pačius šešis žodžius, kad susiejimas galiotų. Atidarykite jį dar kartą ir palyginkite.',
+    'pairing_waiting_resume' => 'Tęsti susiejimą',
+    'pairing_waiting_lock_override' => 'Atrakinus šis susiejimas atveriamas iš naujo, o ne leidžiama jam pasibaigti, todėl jis trunka ilgiau nei jūsų nustatytas programos užrakto laikas. Jis baigiasi, kai jį užbaigiate arba atšaukiate.',
 
     'relay_endpoint' => 'Retransliavimo adresas',
     'relay_endpoint_help' => 'Neprivaloma. Nurodžius, neprisijungę įrenginiai sinchronizuojasi per šį retransliatorių. Palik tuščią, jei nori tik tiesioginio LAN&#8209;ryšio.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Kad įjungtum sinchronizavimą, pirma nustatyk programėlės užraktą.',
         'enable_failed' => 'Nepavyko įjungti sinchronizavimo. Įsitikink, kad programėlės užraktas aktyvus, ir bandyk dar kartą.',
+        'identity_replaced' => 'Šis įrenginys turi naują sinchronizavimo tapatybę. Susiek kitus įrenginius iš naujo.',
+        'identity_replace_failed' => 'Nepavyko padėti į šalį senosios įrenginio tapatybės. Bandyk dar kartą.',
         'cannot_remove_self' => 'Šio įrenginio pašalinti negali — juo šiuo metu naudojiesi.',
         'remove_failed' => 'Nepavyko pašalinti įrenginio. Bandyk dar kartą.',
         'app_lock_first_settings' => 'Kad pakeistum sinchronizavimo nustatymus, pirma nustatyk programėlės užraktą.',
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Retransliavimo adresas išsaugotas.',
         'relay_save_failed' => 'Nepavyko išsaugoti retransliavimo adreso: :message',
     ],
+    'app_lock_permanent' => 'Kai duomenys užšifruoti, programėlės užrakto nebegalima išjungti — jis saugo vienintelį raktą, o kelio atgal į nešifruotus duomenis nėra.',
+    'backlog_heading' => 'Laukiama pridėjimo',
+    'backlog_deferred' => 'Šis įrenginys gavo duomenų iš kito įrenginio ir dar nepridėjo jų prie tavo apskaitos. Niekas neprarandama — jie pritaikomi automatiškai, paprastai per akimirką.',
+    'backlog_awaiting_key' => 'Šis įrenginys gavo duomenų, kuriems dar neturi rakto. Niekas neprarandama. Atidaryk programėlę susietame įrenginyje, kol šis yra atidarytas, kad abu galėtų susijungti ir raktas būtų išsiųstas.',
 ];

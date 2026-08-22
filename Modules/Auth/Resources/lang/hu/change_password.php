@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Új jelszó megerősítése',
     'submit' => 'Új jelszó mentése',
 
+    'error_current_required' => 'Add meg a jelenlegi jelszavad.',
     'error_current_incorrect' => 'A jelenlegi jelszó helytelen.',
     'error_mismatch' => 'A jelszavak nem egyeznek.',
     'error_min_length' => 'Használj legalább 12 karaktert.',

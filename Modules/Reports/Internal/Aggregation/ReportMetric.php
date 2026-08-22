@@ -8,7 +8,9 @@ use InvalidArgumentException;
 use Modules\Ledger\Public\Enums\TransactionType;
 
 // The report vocabulary also has `net_worth`, but that is a balance series the
-// aggregator answers on its own, so it never reaches a dimension query.
+// aggregator answers on its own, so it never reaches a dimension query. The
+// wider set a reader can select is Enums\ReportMetricSelection; this one stays
+// strict because a value arriving here has already been through that gate.
 enum ReportMetric: string
 {
     case Spend = 'spend';

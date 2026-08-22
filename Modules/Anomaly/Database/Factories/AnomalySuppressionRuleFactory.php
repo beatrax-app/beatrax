@@ -6,6 +6,7 @@ namespace Modules\Anomaly\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Anomaly\Models\AnomalySuppressionRule;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 
 /**
@@ -26,7 +27,7 @@ final class AnomalySuppressionRuleFactory extends Factory
             'direction' => Direction::Expense->value,
             'amount_band_low_minor' => -2819,
             'amount_band_high_minor' => -1879,
-            'currency' => 'EUR',
+            'currency' => Currency::Eur->value,
             'source_anomaly_alert_id' => null,
         ];
     }

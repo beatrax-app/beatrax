@@ -17,7 +17,7 @@
     // pounds everywhere else. Guests have no preference, so they get the
     // fallback.
     $chartCurrency = $currentUser->isAuthenticated()
-        ? $currentUser->user()->base_currency
+        ? ($currentUser->user()->base_currency ?? BaseCurrency::value())
         : BaseCurrency::value();
 
     $chartLabels = json_encode([

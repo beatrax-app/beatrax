@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN en az 6 haneli olmalı.',
     'error_pin_mismatch' => 'PIN kodları eşleşmiyor. Yeniden dene.',
+    'error_pin_required' => 'PIN kodunu gir.',
     'error_pin_incorrect' => 'Hatalı PIN.',
+    'error_account_password_required' => 'Hesap parolanı gir.',
     'error_account_password' => 'Hatalı hesap parolası.',
     'change_pin_success' => 'Şifreleme anahtarın yeni PIN kodunla yeniden güvenceye alındı.',
     'error_forgot_failed' => 'PIN sıfırlama başarısız — kurtarma anahtarı kullanılamıyor.',
     'error_enable_first' => 'Biyometri kaydetmeden önce PIN kilidini etkinleştir.',
+    'error_disable_blocked_by_encryption' => 'Notların ve karşı taraf bilgilerin bu uygulama kilidinin tuttuğu anahtarla şifreli, bu yüzden kilidi kapatmak onları okunamaz hâle getirir. Kilit açık kalıyor — bunun yerine PIN kodunu değiştir.',
+    'error_key_material_lost' => 'Bu cihaz artık şifreli verilerini açan anahtarı tutmuyor, bu yüzden yeni bir PIN onları yeniden okunur hâle getirmez. Geri almak için bu cihazı anahtarı hâlâ olan bir cihazla eşleştir.',
+    'error_recovery_wrap_stale' => 'Hesap parolan artık bu uygulama kilidini açmıyor — kilit kurulduktan sonra değiştirildi. PIN kodun hâlâ çalışıyor, ama unutursan arkasında hiçbir şey kalmıyor. Hesap parolanı şimdi yeniden bağla.',
+    'relink_recovery' => 'Hesap parolasını yeniden bağla',
+    'relink_modal_heading' => 'Hesap parolasını yeniden bağla — PIN ile onayla',
+    'relink_recovery_success' => 'Hesap parolan bu uygulama kilidini yeniden kurtarabilir.',
 ];

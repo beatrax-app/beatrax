@@ -6,10 +6,14 @@ return [
     'heading' => 'Apparaten & synchronisatie',
 
     'enable_sync' => 'Synchronisatie inschakelen',
-    'enable_sync_help' => 'Deel je gegevens veilig tussen vertrouwde apparaten. Vereist een app-vergrendeling.',
+    'enable_sync_help' => 'Deel je gegevens veilig tussen vertrouwde apparaten. Vereist een app-vergrendeling. Zodra die aanstaat, worden je gegevens versleuteld en kan de app-vergrendeling niet meer worden uitgezet.',
 
     'app_lock_notice' => 'Stel eerst een app-vergrendeling in om synchronisatie in te schakelen.',
     'go_to_app_lock' => 'Ga naar App-vergrendeling',
+
+    'identity_unreadable' => 'De synchronisatie-identiteit van dit apparaat is gemaakt met een andere app-vergrendeling en gaat niet meer open. Zolang dat zo is, kan dit apparaat niet synchroniseren of koppelen. Zet je de database-back-up terug waarmee hij is gemaakt, dan is hij weer leesbaar.',
+    'identity_unreadable_replace_help' => 'Je kunt ook opnieuw beginnen: dit apparaat krijgt een nieuwe identiteit, de oude blijft ongebruikt bewaard, en apparaten die je eerder koppelde moet je opnieuw koppelen.',
+    'identity_unreadable_replace' => 'Nieuwe identiteit voor dit apparaat starten',
 
     'encrypted_at_rest' => 'Gegevens versleuteld opgeslagen',
     'encrypted_at_rest_scope' => 'Notities, omschrijvingen van transacties en de namen en IBANs van wie je betaalt zijn in het grootboek versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en je eigen rekeningnaam en IBAN niet. De zoekindex bewaart een eigen leesbare kopie van wie je betaalt, van je omschrijvingen van transacties en van je belastingnotities, en sommige namen van winkels staan leesbaar elders in het databasebestand.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => ':name verwijderen',
     'remove' => 'Verwijderen',
     'pair_new_device' => 'Een nieuw apparaat koppelen',
+
+    'pairing_waiting' => 'Voltooi het koppelen met :name',
+    'pairing_waiting_help' => 'Beide schermen moeten dezelfde zes woorden tonen voordat de koppeling telt. Open het opnieuw om ze te vergelijken.',
+    'pairing_waiting_resume' => 'Verder koppelen',
+    'pairing_waiting_lock_override' => 'Ontgrendelen heropent deze koppeling in plaats van hem te laten verlopen, dus hij duurt langer dan de app-vergrendeltijd die je hebt ingesteld. Hij eindigt zodra je hem voltooit of annuleert.',
 
     'relay_endpoint' => 'Relay-endpoint',
     'relay_endpoint_help' => 'Optioneel. Als dit is ingesteld, synchroniseren offline apparaten via deze relay. Laat leeg voor alleen LAN&#8209;direct.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Stel eerst een app-vergrendeling in om synchronisatie in te schakelen.',
         'enable_failed' => 'Synchronisatie inschakelen mislukt. Zorg dat je app-vergrendeling actief is en probeer het opnieuw.',
+        'identity_replaced' => 'Dit apparaat heeft een nieuwe synchronisatie-identiteit. Koppel je andere apparaten opnieuw.',
+        'identity_replace_failed' => 'De oude apparaatidentiteit kon niet opzij worden gezet. Probeer het opnieuw.',
         'cannot_remove_self' => 'Je kunt dit apparaat niet verwijderen — het is het apparaat dat je nu gebruikt.',
         'remove_failed' => 'Apparaat verwijderen mislukt. Probeer het opnieuw.',
         'app_lock_first_settings' => 'Stel eerst een app-vergrendeling in om synchronisatie-instellingen te wijzigen.',
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Relay-endpoint opgeslagen.',
         'relay_save_failed' => 'Relay-endpoint opslaan mislukt: :message',
     ],
+    'app_lock_permanent' => 'Zodra je gegevens versleuteld zijn, kan de app-vergrendeling niet meer worden uitgezet — die bewaart de enige sleutel, en terug naar onversleuteld kan niet.',
+    'backlog_heading' => 'Wacht om toegevoegd te worden',
+    'backlog_deferred' => 'Dit apparaat heeft gegevens van een ander apparaat ontvangen en nog niet aan je administratie toegevoegd. Er gaat niets verloren — het wordt automatisch verwerkt, meestal binnen een moment.',
+    'backlog_awaiting_key' => 'Dit apparaat heeft gegevens ontvangen waarvoor het nog geen sleutel heeft. Er gaat niets verloren. Open de app op het apparaat waarmee je hebt gekoppeld terwijl dit apparaat openstaat, zodat ze verbinding kunnen maken en de sleutel kan worden verstuurd.',
 ];

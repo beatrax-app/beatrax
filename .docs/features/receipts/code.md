@@ -64,20 +64,39 @@ Modules/Receipts/
 ## Public API
 
 - **Contracts/**
-  - `SenderMatcher::matches(MatcherInputDto $input): bool`,
-    `match(MatcherInputDto $input): MatchOutcomeDto`,
-    `priority(): int`. Tag `receipts.matcher`.
+  - `SenderMatcher::key(): string` — the stable lowercase-kebab
+    id persisted on `inbox_messages.matcher_key` for audit and
+    re-parse traceability.
+  - `SenderMatcher::priority(): int` — higher sorts earlier;
+    sender-specific matchers use 100, a future generic fallback
+    would use 0.
+  - `SenderMatcher::canHandle(InboxMessageDto $msg): bool` — the
+    authoritative filter, over `EmailScan`'s inbox-message DTO
+    rather than a Receipts type. Dispatch stops at the first
+    matcher returning true and never consults the rest.
+  - `SenderMatcher::match(string $emlRaw): MatchOutcomeDto` —
+    takes the raw message, not a DTO, because a matcher that
+    claimed the headers still has to read the body.
+    Tag `receipts.matcher`; matchers are pure — no DB reads, no
+    per-call state.
 - **Actions/**
-  - `RecordReceipt::__invoke(MatcherInputDto $input, User
-    $user): MatchOutcomeDto` — sole entry point.
-  - `ApplyReceiptConflictResolution::__invoke(int $conflictId,
-    string $resolution, User $user): void`.
+  - `RecordReceipt::__invoke(string $emlBytes, User $user,
+    ?string $sourceFilename = null): MatchOutcomeDto` — sole
+    entry point.
+  - `ApplyReceiptConflictResolution::__invoke(User $user, string
+    $choice): int` — returns how many conflicts the chosen policy
+    resolved.
 - **DTOs/**
-  - `MatcherInputDto` — `(emlBytes, headers, senderHints,
-    messageId, sourceKind)`.
-  - `MatchOutcomeDto` — `(matched, parsedReceipt,
-    enrichments, chainHints, statementSummary)`. Static
-    `::miss()` for no-match.
+  - `MatcherInputDto` — `(id, userId, source, providerMessageId,
+    senderEmail, senderName, subject, internalDate, emlPath)`,
+    plus `MatcherInputDto::toInboxMessageDto()`, which is how the
+    registry hands a matcher the shape `canHandle()` expects.
+  - `MatchOutcomeDto` — `(kind, parsed, skipReason,
+    unmatchedReason)`, a sum type built through
+    `MatchOutcomeDto::parsed()`, `MatchOutcomeDto::skipped()` and
+    `MatchOutcomeDto::unmatched()`. `skipped` is "I own this
+    sender and this message is not a transaction"; `unmatched` is
+    "no matcher claimed it".
   - `ParsedReceiptDto` — typed receipt structure.
   - `ChainHintPayload/*` — `FundedByCardPayload(cardLast4,
     cardKind)`, `RefundOfPayload(originalChargeRef)`.
@@ -89,22 +108,41 @@ Modules/Receipts/
   - `ReceiptConflictChoice` — `prefer_receipt` /
     `prefer_first_write`.
 - **Events/**
-  - `ChainHintDetected` — `(sourceTransactionId, hintType,
-    hintPayload, evidence, userId)`; `hintType` is a
-    `ChainHintType`.
-  - `ReceiptConflictDetected` — `(conflictId, userId)`.
+  - `ChainHintDetected` — `(int $sourceTransactionId,
+    ChainHintType $hintType, object $hintPayload, string
+    $evidence, int $userId)`. `hintPayload` is a typed sub-DTO
+    from `ChainHintPayload/`, deconstructed with `instanceof`
+    rather than array access.
+  - `ReceiptConflictDetected` — `(int $transactionId, int $userId,
+    string $field, ?string $receiptValue, ?string $csvValue,
+    ?int $importRunId)`. It carries the conflict itself, not a
+    row id: the toast renders from the event.
 - **Pipeline/** — pre-parse layer: MIME reader, header
   profiles, mbox iterator, drop-in blob store, source
   adapter.
 - **Services/**
-  - `ReceiptConflictQuery::pending(User $user):
-    list<PendingConflictDto>`.
+  - `ReceiptConflictQuery::latestForUser(User $user):
+    ?array{transactionId, field, storedValue, incomingValue,
+    sourceFormat}` — the SINGLE most recent
+    `pending_enrichment_conflicts` row for the user, or null.
+    Not a list and not a DTO: its one consumer is
+    `ReceiptConflictToast::mount()`, which shows one conflict
+    at a time, so there is no `PendingConflictDto` and no
+    pending-list read. Every read is scoped by `user_id`, so a
+    foreign conflict cannot surface. `storedValue` /
+    `incomingValue` come back JSON-decoded to a string, since
+    the column stores the scalar encoded.
 
 ## Internal services
 
-- `Internal/MatcherRegistry::for(MatcherInputDto $input):
-  ?SenderMatcher` — iterates the priority-sorted matcher list;
-  first `matches($input)` true wins.
+- `Internal/MatcherRegistry::dispatch(MatcherInputDto $input,
+  string $emlRaw): MatchOutcomeDto` — walks the priority-sorted
+  matcher list and returns the outcome of the first matcher whose
+  `canHandle()` claims the message; `MatchOutcomeDto::unmatched()`
+  when none does. There is no lookup method that hands the matcher
+  back to the caller: the registry dispatches, so no caller can
+  hold a matcher and call it on a message it did not claim.
+  `MatcherRegistry::supportedKeys()` is the audit list.
 - `Internal/Matchers/PaypalReceiptMatcher` — parses PayPal
   receipt HTML / text; extracts the merchant, the per-line
   items, the funding-card hint when present.

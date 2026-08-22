@@ -120,14 +120,13 @@ final class ReindexSearchCommand extends Command
         return [array_values($rebuildable), array_values($blocked)];
     }
 
-    // encryptValue() is a documented pass-through whenever no epoch is usable,
-    // so a probe that comes back changed proves this process holds the same
-    // keyring decryptValue() needs. Both gate on the app-lock key.
+    // canSeal() answers the same question the encrypt-a-probe-and-compare trick
+    // was inferring, and it answers it without asking for a write: encryptValue()
+    // now REFUSES rather than passing plaintext through, so the probe would
+    // throw in exactly the state it existed to detect.
     private function holdsKeyMaterialFor(int $userId, Session $session): bool
     {
-        $probe = 'fts-reindex-key-probe';
-
-        return $this->codec->encryptValue('transactions', 'description', $probe, $userId, $session) !== $probe;
+        return $this->codec->canSeal($userId, $session);
     }
 
     /**

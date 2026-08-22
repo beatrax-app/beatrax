@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN-koden skal have mindst 6 cifre.',
     'error_pin_mismatch' => 'PIN-koderne er ikke ens. Prøv igen.',
+    'error_pin_required' => 'Indtast din PIN-kode.',
     'error_pin_incorrect' => 'Forkert PIN-kode.',
+    'error_account_password_required' => 'Indtast din kontoadgangskode.',
     'error_account_password' => 'Forkert kontoadgangskode.',
     'change_pin_success' => 'Din krypteringsnøgle er sikret på ny med din nye PIN-kode.',
     'error_forgot_failed' => 'Nulstilling af PIN-koden mislykkedes — gendannelsesnøglen er ikke tilgængelig.',
     'error_enable_first' => 'Slå PIN-låsen til, før du registrerer biometri.',
+    'error_disable_blocked_by_encryption' => 'Dine noter og modpartsoplysninger er krypteret med den nøgle, denne app-lås holder, så at slå låsen fra ville gøre dem ulæselige. Låsen bliver på — skift din PIN-kode i stedet.',
+    'error_key_material_lost' => 'Denne enhed har ikke længere nøglen, der åbner dine krypterede data, så en ny PIN-kode gør dem ikke læselige igen. Par denne enhed med en, der stadig har nøglen, for at gendanne dem.',
+    'error_recovery_wrap_stale' => 'Din kontoadgangskode åbner ikke længere denne applås — den blev ændret, efter låsen blev sat op. Din PIN-kode virker stadig, men der er intet bag den, hvis du glemmer den. Tilknyt din kontoadgangskode igen nu.',
+    'relink_recovery' => 'Tilknyt kontoadgangskode igen',
+    'relink_modal_heading' => 'Tilknyt kontoadgangskode igen — bekræft med PIN-kode',
+    'relink_recovery_success' => 'Din kontoadgangskode kan gendanne denne applås igen.',
 ];

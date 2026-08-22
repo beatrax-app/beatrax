@@ -30,10 +30,10 @@ final class RuleApplier
 {
     /** @var array<string, string> Action `type` → `field_provenance` key. */
     private const PROVENANCE_KEY = [
-        'category' => 'category_id',
-        'counterparty' => 'counterparty_id',
-        'note' => 'note',
-        'tax_tag' => 'tax_tag',
+        ActionType::Category->value => 'category_id',
+        ActionType::Counterparty->value => 'counterparty_id',
+        ActionType::Note->value => 'note',
+        ActionType::TaxTag->value => 'tax_tag',
     ];
 
     // Keyed rather than a single slot: one instance is reused across every
@@ -129,7 +129,7 @@ final class RuleApplier
     {
         $categoryId = self::intFromPayload($action->payload, 'category_id');
         if ($categoryId === null) {
-            $this->logSkip($ruleId, 'category', 'missing/non-numeric category_id payload');
+            $this->logSkip($ruleId, ActionType::Category->value, 'missing/non-numeric category_id payload');
 
             return null;
         }
@@ -174,7 +174,7 @@ final class RuleApplier
     {
         $counterpartyId = self::intFromPayload($action->payload, 'counterparty_id');
         if ($counterpartyId === null) {
-            $this->logSkip($ruleId, 'counterparty', 'missing/non-numeric counterparty_id payload');
+            $this->logSkip($ruleId, ActionType::Counterparty->value, 'missing/non-numeric counterparty_id payload');
 
             return null;
         }
@@ -206,7 +206,7 @@ final class RuleApplier
     {
         $text = self::stringFromPayload($action->payload, 'text');
         if ($text === null || $text === '') {
-            $this->logSkip($ruleId, 'note', 'missing/empty text payload');
+            $this->logSkip($ruleId, ActionType::Note->value, 'missing/empty text payload');
 
             return null;
         }
@@ -250,7 +250,7 @@ final class RuleApplier
     {
         $deductionCategoryId = self::intFromPayload($action->payload, 'deduction_category_id');
         if ($deductionCategoryId === null) {
-            $this->logSkip($ruleId, 'tax_tag', 'missing/non-numeric deduction_category_id payload');
+            $this->logSkip($ruleId, ActionType::TaxTag->value, 'missing/non-numeric deduction_category_id payload');
 
             return null;
         }
@@ -295,7 +295,7 @@ final class RuleApplier
         } catch (Throwable $e) {
             $this->logger->warning('RuleApplier skipped a tax_tag action.', [
                 'rule_id' => $ruleId,
-                'action_type' => 'tax_tag',
+                'action_type' => ActionType::TaxTag->value,
                 ...SafeExceptionContext::describe($e),
             ]);
 
@@ -319,10 +319,10 @@ final class RuleApplier
     private function foldImportAction(int $ruleId, RuleAction $action, CanonicalTransaction $tx): CanonicalTransaction
     {
         return match ($action->type) {
-            'category' => $this->foldCategory($ruleId, $action, $tx),
-            'counterparty' => $this->foldCounterparty($ruleId, $action, $tx),
-            'note' => $this->foldNote($ruleId, $action, $tx),
-            'tax_tag' => $tx,
+            ActionType::Category->value => $this->foldCategory($ruleId, $action, $tx),
+            ActionType::Counterparty->value => $this->foldCounterparty($ruleId, $action, $tx),
+            ActionType::Note->value => $this->foldNote($ruleId, $action, $tx),
+            ActionType::TaxTag->value => $tx,
             default => $this->skipped($ruleId, $action->type, 'unrecognised action type', $tx),
         };
     }
@@ -331,7 +331,7 @@ final class RuleApplier
     {
         $categoryId = self::intFromPayload($action->payload, 'category_id');
         if ($categoryId === null) {
-            return $this->skipped($ruleId, 'category', 'missing/non-numeric category_id payload', $tx);
+            return $this->skipped($ruleId, ActionType::Category->value, 'missing/non-numeric category_id payload', $tx);
         }
 
         return $tx->withCategoryId($categoryId);
@@ -341,7 +341,7 @@ final class RuleApplier
     {
         $counterpartyId = self::intFromPayload($action->payload, 'counterparty_id');
         if ($counterpartyId === null) {
-            return $this->skipped($ruleId, 'counterparty', 'missing/non-numeric counterparty_id payload', $tx);
+            return $this->skipped($ruleId, ActionType::Counterparty->value, 'missing/non-numeric counterparty_id payload', $tx);
         }
 
         return $tx->withCounterpartyId($counterpartyId);
@@ -353,7 +353,7 @@ final class RuleApplier
     {
         $text = self::stringFromPayload($action->payload, 'text');
         if ($text === null || $text === '') {
-            return $this->skipped($ruleId, 'note', 'missing/empty text payload', $tx);
+            return $this->skipped($ruleId, ActionType::Note->value, 'missing/empty text payload', $tx);
         }
 
         return $tx->withNote($text);

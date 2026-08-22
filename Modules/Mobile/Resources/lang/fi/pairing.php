@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Syötä sanakoodi toiselta laitteelta',
     'submit_code' => 'Lähetä koodi',
     'cancel' => 'Peruuta',
+    'skip_import' => 'Jatka ilman tuontia',
 
     'confirm_heading' => 'Vertaa näitä sanoja toiseen laitteeseen',
     'safety_words_aria' => 'Turvanumeron sanat: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Toiseen laitteeseen ei saada yhteyttä. Varmista, että molemmat ovat samassa verkossa ja synkronointi on päällä työpöytäsovelluksessa.',
         'invalid_code' => 'Tämä koodi on virheellinen tai vanhentunut. Pyydä toista laitetta luomaan uusi.',
         'code_not_accepted' => 'Mikään tämän verkon laite ei hyväksynyt koodia. Tarkista koodi ja se, näyttääkö toinen laite sitä yhä.',
+        'no_peer_answered' => 'Mikään tässä verkossa ei vastannut koodiin. Tarkista, että synkronointi on käynnissä toisella laitteella, tai skannaa sen koodi kameralla — kamera ei etsi verkosta.',
+        'no_peer_answered_ios' => 'Mikään tässä verkossa ei vastannut koodiin. Toisen laitteen etsiminen verkosta ei vielä toimi iPhonessa, joten skannaa sen koodi kameralla.',
         'rate_limited' => 'Liian monta yritystä. Odota minuutti ja yritä uudelleen.',
         'identity_locked' => 'Laitteesi identiteetti on lukittu. Avaa sovelluksen lukitus ja yritä uudelleen.',
         'identity_needs_lock' => 'Määritä ensin sovelluslukitus — se suojaa laitteesi identiteettiä.',

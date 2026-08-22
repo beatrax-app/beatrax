@@ -64,9 +64,16 @@ What the module explicitly does NOT do:
     `DriftAlertDismissedCancelled` — raised by the corresponding
     actions.
 - **Services/**
-  - `DriftAlertQuery::openCountForUser($user)`, `listFor($user)`,
-    `forSeries($seriesId, $user)`.
-  - `CancellationImpactQuery::computeFor($alertId, $user)`.
+  - `DriftAlertQuery::openCountForUser($user)`,
+    `openForUser($user, $cursorId, $limit)`,
+    `historyForUser(...)`, `dismissedForUser(...)`,
+    `groupedBySeriesForUser($user)`,
+    `totalOpenAnnualizedImpactForUser($user)`,
+    `seriesStatesForUser($user, $seriesIds)`,
+    `seriesThresholdsForUser($user, $seriesIds)`.
+  - `CancellationImpactQuery::forSeries($seriesId, $user)` and
+    `forSeriesIds($seriesIds, $user)` — keyed on the recurring series,
+    not on an alert id.
 
 `Internal/` houses the implementation:
 
@@ -325,7 +332,7 @@ letting Carbon raise a bare `InvalidFormatException` out of an unscoped
 
 ## Key services + events
 
-- `DriftEvaluator::evaluate($seriesId, $user)` — the math. Reads
+- `DriftEvaluator::evaluateForSeries($seriesId, $user)` — the math. Reads
   the last two occurrences through `RecurringSeriesQuery`, computes
   `delta_minor`, applies the effective threshold (per-series →
   user-global → 5% floor, max), inserts on threshold-crossing.

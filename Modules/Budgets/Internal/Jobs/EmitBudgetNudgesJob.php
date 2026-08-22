@@ -20,10 +20,10 @@ use Modules\Budgets\Public\Events\BudgetThresholdCrossed;
 use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Services\PeriodQuery;
 
 final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -52,7 +52,7 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
         return LockStore::forUniqueJobs();
     }
 
-    public function handle(CarryoverQuery $carryover, Clock $clock, Dispatcher $events, AuthFactory $auth): void
+    public function handle(CarryoverQuery $carryover, PeriodQuery $periods, Dispatcher $events, AuthFactory $auth): void
     {
         /** @var User|null $user */
         $user = User::query()->where('id', $this->userId)->first();
@@ -60,16 +60,18 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
             return;
         }
 
-        $period = $this->currentPeriodFor($user, $clock);
-        $periodKey = $period->start->toDateString();
+        /** @var array{period: Period, rows: array<int, EnvelopeRow>} $resolved */
+        $resolved = $this->withGuardBoundTo($user, $auth, function () use ($carryover, $periods, $user): array {
+            $period = $periods->current();
 
-        /** @var array<int, EnvelopeRow> $rows */
-        $rows = $this->withGuardBoundTo($user, $auth, function () use ($carryover, $user, $period): array {
             /** @var array{toBudgetMinor: int, overspentCount: int, rows: array<int, EnvelopeRow>} $fold */
             $fold = $carryover->forUserAndPeriod($user, $period);
 
-            return $fold['rows'];
+            return ['period' => $period, 'rows' => $fold['rows']];
         });
+
+        $periodKey = $resolved['period']->start->toDateString();
+        $rows = $resolved['rows'];
 
         foreach ($rows as $row) {
             $budgetMinor = $row->availableMinor + $row->spentMinor;
@@ -97,27 +99,6 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
                 categoryNameIsDefault: $row->categoryNameIsDefault,
             ));
         }
-    }
-
-    // PeriodQuery::containing() resolves the period through the request-bound
-    // CurrentUser, which a queued job does not have: same window algorithm,
-    // read off $user->period_start_day instead.
-    private function currentPeriodFor(User $user, Clock $clock): Period
-    {
-        $instant = $clock->now();
-        $startDay = max(1, min(28, $user->period_start_day));
-
-        $candidate = $instant->setDay($startDay)->startOfDay();
-        $start = $instant->day >= $startDay
-            ? $candidate
-            : $candidate->subMonthNoOverflow();
-        $endExclusive = $start->addMonthNoOverflow();
-
-        $label = $startDay === 1
-            ? $start->format('F Y')
-            : $start->format('j M').' → '.$endExclusive->subDay()->format('j M Y');
-
-        return new Period(start: $start, endExclusive: $endExclusive, label: $label);
     }
 
     /**

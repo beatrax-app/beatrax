@@ -12,18 +12,23 @@ use RuntimeException;
 // something the keyring's own invariants reject.
 final class KeyringStateException extends RuntimeException
 {
+    private function __construct(public readonly KeyringState $state, string $message)
+    {
+        parent::__construct($message);
+    }
+
     public static function noCurrentEpoch(int $userId): self
     {
-        return new self("No current GDK epoch recorded for user {$userId}.");
+        return new self(KeyringState::NoCurrentEpoch, "No current GDK epoch recorded for user {$userId}.");
     }
 
     public static function missingKeyForEpoch(int $userId, int $epochId): self
     {
-        return new self("GDK keyring for user {$userId} has no key for current epoch {$epochId}.");
+        return new self(KeyringState::MissingKeyForEpoch, "GDK keyring for user {$userId} has no key for current epoch {$epochId}.");
     }
 
     public static function corruptPayload(int $userId): self
     {
-        return new self("Corrupt GDK keyring payload for user {$userId}.");
+        return new self(KeyringState::CorruptPayload, "Corrupt GDK keyring payload for user {$userId}.");
     }
 }

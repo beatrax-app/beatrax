@@ -12,6 +12,7 @@ use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
+use Modules\Ledger\Public\Services\BaseCurrency;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
@@ -28,7 +29,10 @@ final class AccountNamer implements NamesAccounts
 
     private const IBAN_MAX_LENGTH = 34;
 
-    public function __construct(private readonly AccountSlugResolver $slugs) {}
+    public function __construct(
+        private readonly AccountSlugResolver $slugs,
+        private readonly BaseCurrency $baseCurrency,
+    ) {}
 
     public function __invoke(string $iban, string $userSuppliedName, User $user): int
     {
@@ -55,7 +59,7 @@ final class AccountNamer implements NamesAccounts
             'slug' => $this->slugs->resolveUnique($user->id, $trimmed),
             'kind' => AccountKind::Bank->value,
             'iban' => $iban,
-            'default_currency' => 'EUR',
+            'default_currency' => $this->baseCurrency->code(),
         ]);
 
         return $account->id;

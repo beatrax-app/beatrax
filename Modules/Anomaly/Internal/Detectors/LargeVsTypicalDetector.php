@@ -43,13 +43,13 @@ final readonly class LargeVsTypicalDetector
             return null;
         }
 
-        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
+        $direction = TransactionType::directionOf($txn['type'] ?? null)->value;
         $counterpartyId = self::toPositiveIntOrNull($txn['counterparty_id'] ?? null);
         $categoryId = self::toPositiveIntOrNull($txn['category_id'] ?? null);
 
         $context = new LargeSampleContext(
             user: $user,
-            types: Direction::from($direction)->transactionTypes(),
+            types: TransactionType::valuesFor(Direction::from($direction)),
             currency: $settledCurrency,
             windowStart: $this->clock->now()->subMonthsNoOverflow(RobustStatistics::WINDOW_MONTHS)->toDateString(),
             excludeId: self::toInt($txn['id'] ?? 0),

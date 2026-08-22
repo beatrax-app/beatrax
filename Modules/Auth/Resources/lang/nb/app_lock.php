@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN-koden må ha minst 6 sifre.',
     'error_pin_mismatch' => 'PIN-kodene er ikke like. Prøv igjen.',
+    'error_pin_required' => 'Tast inn PIN-koden din.',
     'error_pin_incorrect' => 'Feil PIN-kode.',
+    'error_account_password_required' => 'Skriv inn kontopassordet ditt.',
     'error_account_password' => 'Feil kontopassord.',
     'change_pin_success' => 'Krypteringsnøkkelen din er sikret på nytt med den nye PIN-koden din.',
     'error_forgot_failed' => 'Tilbakestilling av PIN-koden mislyktes — gjenopprettingsnøkkelen er ikke tilgjengelig.',
     'error_enable_first' => 'Slå på PIN-låsen før du registrerer biometri.',
+    'error_disable_blocked_by_encryption' => 'Notatene dine og motpartsopplysningene er kryptert med nøkkelen denne app-låsen holder, så å slå av låsen ville gjort dem uleselige. Låsen blir stående på — bytt PIN-kode i stedet.',
+    'error_key_material_lost' => 'Denne enheten holder ikke lenger nøkkelen som åpner de krypterte dataene dine, så en ny PIN-kode gjør dem ikke lesbare igjen. Par denne enheten med en som fortsatt har nøkkelen for å hente dem tilbake.',
+    'error_recovery_wrap_stale' => 'Kontopassordet ditt åpner ikke lenger denne applåsen — det ble endret etter at låsen ble satt opp. PIN-koden din virker fortsatt, men det er ingenting bak den om du glemmer den. Koble til kontopassordet på nytt nå.',
+    'relink_recovery' => 'Koble til kontopassordet på nytt',
+    'relink_modal_heading' => 'Koble til kontopassordet på nytt — bekreft med PIN-kode',
+    'relink_recovery_success' => 'Kontopassordet ditt kan gjenopprette denne applåsen igjen.',
 ];

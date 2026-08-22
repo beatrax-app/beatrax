@@ -19,6 +19,7 @@ use Modules\Forecasting\Public\Actions\RemoveScenarioMutation;
 use Modules\Forecasting\Public\Actions\RenameScenario;
 use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -91,13 +92,13 @@ final class ScenarioEditorSidebar extends Component
         $this->formError = null;
     }
 
-    public function selectKind(string $kind): void
+    public function selectKind(string $kind, BaseCurrency $baseCurrency): void
     {
         if (ScenarioMutationKind::tryFrom($kind) === null) {
             return;
         }
         $this->selectedKind = $kind;
-        $this->form = $this->defaultFormFor($kind);
+        $this->form = $this->defaultFormFor($kind, $baseCurrency->code());
         $this->formError = null;
     }
 
@@ -113,6 +114,7 @@ final class ScenarioEditorSidebar extends Component
         CurrentUser $currentUser,
         AddScenarioMutation $action,
         ScenarioQuery $scenarioQuery,
+        BaseCurrency $baseCurrency,
     ): void {
         $this->formError = null;
         if ($this->selectedKind === null) {
@@ -120,7 +122,7 @@ final class ScenarioEditorSidebar extends Component
 
             return;
         }
-        $payload = $this->buildPayloadFromForm($this->selectedKind);
+        $payload = $this->buildPayloadFromForm($this->selectedKind, $baseCurrency->code());
         if ($payload === null) {
             return;
         }
@@ -169,12 +171,13 @@ final class ScenarioEditorSidebar extends Component
         CurrentUser $currentUser,
         EditScenarioMutation $action,
         ScenarioQuery $scenarioQuery,
+        BaseCurrency $baseCurrency,
     ): void {
         $this->formError = null;
         if ($this->editingMutationId === null || $this->selectedKind === null) {
             return;
         }
-        $payload = $this->buildPayloadFromForm($this->selectedKind);
+        $payload = $this->buildPayloadFromForm($this->selectedKind, $baseCurrency->code());
         if ($payload === null) {
             return;
         }

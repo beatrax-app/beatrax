@@ -24,19 +24,19 @@ trait BuildsMutationForms
     /**
      * @return array<string, mixed>
      */
-    private function defaultFormFor(string $kind): array
+    private function defaultFormFor(string $kind, string $baseCurrency): array
     {
         return match ($kind) {
             ScenarioMutationKind::CancelSeries->value => ['seriesId' => null],
-            ScenarioMutationKind::AddOneOff->value => ['date' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'note' => ''],
-            ScenarioMutationKind::AddRecurring->value => ['startDate' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'cadence' => SeriesCadence::Monthly->value, 'note' => ''],
+            ScenarioMutationKind::AddOneOff->value => ['date' => '', 'amount' => '', 'currency' => $baseCurrency, 'direction' => 'expense', 'note' => ''],
+            ScenarioMutationKind::AddRecurring->value => ['startDate' => '', 'amount' => '', 'currency' => $baseCurrency, 'direction' => 'expense', 'cadence' => SeriesCadence::Monthly->value, 'note' => ''],
             ScenarioMutationKind::ChangeSeriesAmount->value => ['seriesId' => null, 'newAmount' => ''],
             ScenarioMutationKind::ShiftSeriesDate->value => ['seriesId' => null, 'newNextDate' => '', 'scope' => ShiftScope::Next->value],
             default => [],
         };
     }
 
-    private function buildPayloadFromForm(string $kind): ?ScenarioMutationPayload
+    private function buildPayloadFromForm(string $kind, string $baseCurrency): ?ScenarioMutationPayload
     {
         try {
             return match ($kind) {
@@ -46,14 +46,14 @@ trait BuildsMutationForms
                 ScenarioMutationKind::AddOneOff->value => new AddOneOffPayload(
                     date: $this->stringField('date'),
                     amountMinor: $this->parseAmountMinor('amount'),
-                    currency: $this->stringField('currency', 'EUR'),
+                    currency: $this->stringField('currency', $baseCurrency),
                     direction: $this->stringField('direction', 'expense'),
                     note: $this->optionalStringField('note'),
                 ),
                 ScenarioMutationKind::AddRecurring->value => new AddRecurringPayload(
                     startDate: $this->stringField('startDate'),
                     amountMinor: $this->parseAmountMinor('amount'),
-                    currency: $this->stringField('currency', 'EUR'),
+                    currency: $this->stringField('currency', $baseCurrency),
                     direction: $this->stringField('direction', 'expense'),
                     cadence: $this->stringField('cadence', 'monthly'),
                     note: $this->optionalStringField('note'),

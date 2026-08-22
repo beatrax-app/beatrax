@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'A fentiek mind eltűnnek erről az eszközről, és kijelentkezel. Nincs visszaút, és nem marad biztonsági mentés.',
     'confirm' => 'Igen, töröljünk mindent',
     'cancel' => 'Megtartom a fiókom',
+    'error_password_required' => 'Add meg a jelszavad.',
     'error_password' => 'Ez a jelszó nem helyes.',
     'error_failed' => 'A fiókod nem lett törölve. Semmi sem változott — próbáld meg újra.',
 ];

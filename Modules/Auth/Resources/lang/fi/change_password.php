@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Vahvista uusi salasana',
     'submit' => 'Tallenna uusi salasana',
 
+    'error_current_required' => 'Anna nykyinen salasanasi.',
     'error_current_incorrect' => 'Nykyinen salasana on väärin.',
     'error_mismatch' => 'Salasanat eivät täsmää.',
     'error_min_length' => 'Käytä vähintään 12 merkkiä.',

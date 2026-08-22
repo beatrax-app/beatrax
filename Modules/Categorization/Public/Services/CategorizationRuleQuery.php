@@ -11,6 +11,8 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Categorization\Public\Dto\CategorizationRuleDto;
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
+use Modules\Categorization\Public\Enums\ActionType;
+use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -180,7 +182,7 @@ final readonly class CategorizationRuleQuery
      */
     private static function categoryIdOf(string $type, array $payload): ?int
     {
-        return $type === 'category' ? self::payloadIntId($payload, 'category_id') : null;
+        return $type === ActionType::Category->value ? self::payloadIntId($payload, 'category_id') : null;
     }
 
     /**
@@ -188,7 +190,7 @@ final readonly class CategorizationRuleQuery
      */
     private static function counterpartyIdOf(string $type, array $payload): ?int
     {
-        return $type === 'counterparty' ? self::payloadIntId($payload, 'counterparty_id') : null;
+        return $type === ActionType::Counterparty->value ? self::payloadIntId($payload, 'counterparty_id') : null;
     }
 
     /**
@@ -263,7 +265,7 @@ final readonly class CategorizationRuleQuery
             id: self::toInt($row->id),
             userId: self::toInt($row->user_id),
             priority: self::toInt($row->priority),
-            combinator: is_string($row->combinator) ? $row->combinator : 'all',
+            combinator: is_string($row->combinator) ? $row->combinator : RuleCombinator::All->value,
             hitsCount: self::toInt($row->hits_count),
             active: (bool) $row->active,
             notes: isset($row->notes) && is_string($row->notes) ? $row->notes : null,

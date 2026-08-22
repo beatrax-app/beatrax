@@ -6,10 +6,14 @@ return [
     'heading' => 'Uređaji i sinhronizacija',
 
     'enable_sync' => 'Uključi sinhronizaciju',
-    'enable_sync_help' => 'Bezbedno deli svoje podatke između pouzdanih uređaja. Zahteva zaključavanje aplikacije.',
+    'enable_sync_help' => 'Bezbedno deli svoje podatke između pouzdanih uređaja. Zahteva zaključavanje aplikacije. Kada je uključeno, podaci se šifruju i zaključavanje aplikacije više ne može da se isključi.',
 
     'app_lock_notice' => 'Prvo postavi zaključavanje aplikacije da uključiš sinhronizaciju.',
     'go_to_app_lock' => 'Idi na Zaključavanje aplikacije',
+
+    'identity_unreadable' => 'Identitet sinhronizacije ovog uređaja napravljen je uz drugo zaključavanje aplikacije i više se ne otvara. Dok je tako, uređaj ne može ni da sinhronizuje ni da se upari. Vraćanjem rezervne kopije baze podataka s kojom je napravljen ponovo postaje čitljiv.',
+    'identity_unreadable_replace_help' => 'Možeš i da počneš iz početka: uređaj dobija novi identitet, stari ostaje neiskorišćen sa strane, a ranije uparene uređaje treba upariti ponovo.',
+    'identity_unreadable_replace' => 'Napravi novi identitet za ovaj uređaj',
 
     'encrypted_at_rest' => 'Podaci šifrovani u mirovanju',
     'encrypted_at_rest_scope' => 'Beleške, opisi transakcija i imena i IBAN onih kojima plaćaš šifruju se u knjizi lozinkom za zaključavanje aplikacije. Iznosi, datumi i naziv i IBAN tvog sopstvenog računa nisu šifrovani. Indeks pretrage čuva sopstvenu čitljivu kopiju toga kome plaćaš, opisa tvojih transakcija i tvojih poreskih beleški, a neka imena trgovaca stoje u čitljivom obliku na drugim mestima u datoteci baze podataka.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => 'Ukloni :name',
     'remove' => 'Ukloni',
     'pair_new_device' => 'Upari novi uređaj',
+
+    'pairing_waiting' => 'Dovršite uparivanje sa :name',
+    'pairing_waiting_help' => 'Oba ekrana moraju prikazivati istih šest reči pre nego što uparivanje važi. Ponovo ga otvorite da biste ih uporedili.',
+    'pairing_waiting_resume' => 'Nastavi uparivanje',
+    'pairing_waiting_lock_override' => 'Otključavanje ponovo otvara ovo uparivanje umesto da mu dozvoli da istekne, pa traje duže od vremena zaključavanja aplikacije koje ste podesili. Završava se kada ga dovršite ili otkažete.',
 
     'relay_endpoint' => 'Krajnja tačka releja',
     'relay_endpoint_help' => 'Opciono. Kad je postavljena, uređaji van mreže se sinhronizuju preko ovog releja. Ostavi prazno samo za direktnu vezu unutar LAN&#8209;a.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Prvo postavi zaključavanje aplikacije da uključiš sinhronizaciju.',
         'enable_failed' => 'Uključivanje sinhronizacije nije uspelo. Proveri da li je zaključavanje aplikacije aktivno pa probaj ponovo.',
+        'identity_replaced' => 'Ovaj uređaj ima novi identitet sinhronizacije. Ponovo upari svoje druge uređaje.',
+        'identity_replace_failed' => 'Stari identitet uređaja nije mogao da se odloži sa strane. Pokušaj ponovo.',
         'cannot_remove_self' => 'Ne možeš da ukloniš ovaj uređaj — na njemu upravo radiš.',
         'remove_failed' => 'Uklanjanje uređaja nije uspelo. Probaj ponovo.',
         'app_lock_first_settings' => 'Prvo postavi zaključavanje aplikacije da promeniš podešavanja sinhronizacije.',
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Krajnja tačka releja je sačuvana.',
         'relay_save_failed' => 'Čuvanje krajnje tačke releja nije uspelo: :message',
     ],
+    'app_lock_permanent' => 'Kada su podaci jednom šifrovani, zaključavanje aplikacije više ne može da se isključi — drži jedini ključ, a povratka na nešifrovano nema.',
+    'backlog_heading' => 'Чека додавање',
+    'backlog_deferred' => 'Овај уређај је примио податке са другог уређаја и још их није додао у твоју евиденцију. Ништа се не губи — биће додати аутоматски, обично за тренутак.',
+    'backlog_awaiting_key' => 'Овај уређај је примио податке за које још нема кључ. Ништа се не губи. Отвори апликацију на упареном уређају док је овај отворен, како би могли да се повежу и кључ буде послат.',
 ];

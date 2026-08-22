@@ -11,6 +11,7 @@ use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Models\DriftAlertTransition;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 
 // Alerts are created directly in their target state rather than driven through
@@ -161,7 +162,7 @@ final class DemoDriftAlertsSeeder
             'direction' => $row['direction'],
             'baseline_amount_minor' => $row['baselineMinor'],
             'latest_amount_minor' => $row['latestMinor'],
-            'currency' => 'EUR',
+            'currency' => Currency::Eur->value,
             'delta_minor' => $row['deltaMinor'],
             'annualized_impact_minor' => $row['annualMinor'],
             'threshold_percent_used' => $row['thresholdPercent'],

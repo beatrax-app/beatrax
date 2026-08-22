@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Models\User;
@@ -51,8 +52,12 @@ final class ManageUserPage extends Component
         $this->partnerUsername = $partner->username;
     }
 
-    public function setPartnerPassword(Hasher $hasher, DatabaseManager $db, CurrentUser $currentUser): void
-    {
+    public function setPartnerPassword(
+        Hasher $hasher,
+        DatabaseManager $db,
+        CurrentUser $currentUser,
+        AppLockProvisioner $provisioner,
+    ): void {
         // The route middleware does not re-run on a Livewire update, so a
         // developer downgraded mid-session kept resetting passwords.
         if ($currentUser->user()->is_developer !== true) {
@@ -66,12 +71,21 @@ final class ManageUserPage extends Component
             return;
         }
 
+        $partnerId = $db->connection()->table('users')->where('username', $this->partnerUsername)->value('id');
+
         $db->connection()->table('users')
             ->where('username', $this->partnerUsername)
             ->update([
                 'password' => $hasher->make($this->newPartnerPassword),
                 'force_password_change_at_next_login' => true,
             ]);
+
+        // The owner sets this password without holding the old one, so the
+        // partner's app-lock recovery wrap cannot be carried over — and the
+        // forced change at their next sign-in cannot carry it either.
+        if (is_numeric($partnerId)) {
+            $provisioner->markRecoveryWrapStale((int) $partnerId);
+        }
 
         $this->newPartnerPassword = '';
         $this->flashMessage = Lang::get('auth::manage_user.password_set', ['name' => $this->partnerUsername]);

@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Déverrouillez l\'application pour importer : la clé de commerçant ne peut pas être calculée tant qu\'elle est verrouillée.',
+        'app_locked' => 'Déverrouillez l\'application pour importer : les clés de chiffrement ne peuvent pas être utilisées tant qu\'elle est verrouillée.',
         'file_unreadable' => 'Ce fichier n\'a pas pu être lu.',
         'iban_not_in_preview' => 'Cet IBAN ne fait pas partie de l\'aperçu actuel.',
         'row_unreadable' => 'Cette ligne n\'a pas pu être lue.',

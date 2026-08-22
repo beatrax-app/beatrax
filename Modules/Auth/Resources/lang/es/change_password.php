@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Confirmar la contraseña nueva',
     'submit' => 'Guardar la contraseña nueva',
 
+    'error_current_required' => 'Introduce tu contraseña actual.',
     'error_current_incorrect' => 'La contraseña actual es incorrecta.',
     'error_mismatch' => 'Las contraseñas no coinciden.',
     'error_min_length' => 'Usa al menos 12 caracteres.',

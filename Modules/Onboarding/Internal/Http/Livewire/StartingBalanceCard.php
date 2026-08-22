@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Ledger\Public\Services\BaseCurrency;
 
 final class StartingBalanceCard extends Component
 {
@@ -23,7 +24,7 @@ final class StartingBalanceCard extends Component
 
     public string $accountShort = '';
 
-    public string $currency = 'EUR';
+    public string $currency = '';
 
     public ?int $detectedMinor = null;
 
@@ -53,7 +54,8 @@ final class StartingBalanceCard extends Component
         int $accountId,
         string $accountLabel,
         string $accountShort,
-        string $currency = 'EUR',
+        BaseCurrency $baseCurrency,
+        ?string $currency = null,
         ?int $detectedMinor = null,
         ?string $detectedDate = null,
         string $state = 'detected',
@@ -62,7 +64,7 @@ final class StartingBalanceCard extends Component
         $this->accountId = $accountId;
         $this->accountLabel = $accountLabel;
         $this->accountShort = $accountShort;
-        $this->currency = $currency;
+        $this->currency = $currency ?? $baseCurrency->code();
         $this->detectedMinor = $detectedMinor;
         $this->detectedDate = $detectedDate;
         $this->state = $state;

@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Everything above is removed from this device and you are signed out. There is no undo and no backup is kept.',
     'confirm' => 'Yes, delete everything',
     'cancel' => 'Keep my account',
+    'error_password_required' => 'Enter your password.',
     'error_password' => 'That password is not correct.',
     'error_failed' => 'Your account was not deleted. Nothing was changed — please try again.',
 ];

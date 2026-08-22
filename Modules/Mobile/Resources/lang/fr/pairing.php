@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Saisis le code en mots affiché sur l\'autre appareil',
     'submit_code' => 'Envoyer le code',
     'cancel' => 'Annuler',
+    'skip_import' => 'Continuer sans importer',
 
     'confirm_heading' => 'Compare ces mots avec l\'autre appareil',
     'safety_words_aria' => 'Mots du numéro de sécurité : :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Impossible de joindre l\'autre appareil. Vérifie que les deux sont sur le même réseau et que la synchronisation est activée sur l\'ordinateur.',
         'invalid_code' => 'Ce code est invalide ou a expiré. Demande à l\'autre appareil d\'en générer un nouveau.',
         'code_not_accepted' => 'Aucun appareil de ce réseau n’a accepté ce code. Vérifie le code et que l’autre appareil l’affiche toujours.',
+        'no_peer_answered' => 'Rien sur ce réseau n’a répondu à ce code. Vérifie que la synchronisation tourne sur l’autre appareil, ou scanne son code avec l’appareil photo — celui-ci n’a pas besoin de chercher sur le réseau.',
+        'no_peer_answered_ios' => 'Rien sur ce réseau n’a répondu à ce code. Chercher l’autre appareil sur le réseau ne fonctionne pas encore sur iPhone : scanne plutôt son code avec l’appareil photo.',
         'rate_limited' => 'Trop de tentatives. Attends une minute et réessaie.',
         'identity_locked' => 'L\'identité de ton appareil est verrouillée. Déverrouille l\'application et réessaie.',
         'identity_needs_lock' => 'Configurez d\'abord le verrouillage de l\'application — il protège l\'identité de votre appareil.',

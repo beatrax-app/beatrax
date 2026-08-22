@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Потвърди новата парола',
     'submit' => 'Запази новата парола',
 
+    'error_current_required' => 'Въведи текущата си парола.',
     'error_current_incorrect' => 'Текущата парола е грешна.',
     'error_mismatch' => 'Паролите не съвпадат.',
     'error_min_length' => 'Използвай поне 12 знака.',

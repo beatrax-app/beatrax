@@ -50,14 +50,14 @@ final class UserCountry
     // Seeded before it is written, and both inside one transaction: a corpus
     // that throws half way must not leave the country set with nothing behind
     // it, which every empty state reads as an install that needs no help.
-    public function store(int $userId, string $countryCode): void
+    public function store(int $userId, string $countryCode, bool $seedsCountryData = true): void
     {
         if (Country::tryFrom($countryCode) === null) {
             return;
         }
 
-        $this->db->connection()->transaction(function () use ($userId, $countryCode): void {
-            $this->events->dispatch(new UserCountryChanged($userId, $countryCode));
+        $this->db->connection()->transaction(function () use ($userId, $countryCode, $seedsCountryData): void {
+            $this->events->dispatch(new UserCountryChanged($userId, $countryCode, $seedsCountryData));
 
             ($this->writeUserPreference)($userId, ['country_code' => $countryCode]);
         });

@@ -281,6 +281,7 @@ function dnsHasDeadLink(User $user): bool
             targetKind: null,
             glyph: '?',
             typeWord: 'Reminder',
+            unreadable: false,
         );
 
         $resolved = $resolver->resolve($dto, $user);

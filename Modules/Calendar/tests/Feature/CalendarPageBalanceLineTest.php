@@ -64,14 +64,14 @@ function cpblForecastRun(DatabaseManager $db, int $userId, int $accountId, strin
     ];
 
     if ($existing !== null) {
-        $decoded = json_decode($existing->result_json, associative: true); // @phpstan-ignore-line
+        $decoded = json_decode($existing->result_json, associative: true);
         if (! is_array($decoded)) {
             $decoded = ['as_of' => '2026-06-12', 'accounts' => []];
         }
         $decoded['accounts'][(string) $accountId] = $accountBlock;
 
         $db->connection()->table('forecast_runs')
-            ->where('id', $existing->id) // @phpstan-ignore-line
+            ->where('id', $existing->id)
             ->update(['result_json' => json_encode($decoded), 'updated_at' => '2026-06-12 00:00:00']);
     } else {
         $resultJson = json_encode([

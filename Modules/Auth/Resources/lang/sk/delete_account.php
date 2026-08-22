@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Všetko vyššie sa odstráni z tohto zariadenia a budeš odhlásený. Niet cesty späť a nezostane žiadna záloha.',
     'confirm' => 'Áno, odstrániť všetko',
     'cancel' => 'Účet si ponechať',
+    'error_password_required' => 'Zadaj svoje heslo.',
     'error_password' => 'Toto heslo nie je správne.',
     'error_failed' => 'Tvoj účet nebol odstránený. Nič sa nezmenilo — skús to znova.',
 ];

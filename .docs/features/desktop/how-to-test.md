@@ -55,8 +55,8 @@ vendor/bin/pest Modules/Desktop/tests
 # Just the first-launch bootstrap
 vendor/bin/pest Modules/Desktop/tests/Feature --filter "FirstLaunch"
 
-# Just the file-open intake unit
-vendor/bin/pest Modules/Desktop/tests/Unit --filter "FileOpenIntake"
+# Just the file-open intake
+vendor/bin/pest Modules/Desktop/tests/Feature --filter "FileOpenIntake"
 
 # Stop on first failure
 vendor/bin/pest Modules/Desktop/tests --stop-on-failure
@@ -128,13 +128,19 @@ The behavioural contract for the `Desktop` module.
   migrator's own `run()` is a no-op when nothing is pending;
   `Core::EnsureAppKey` short-circuits via its sentinel file. Both
   steps may execute on every launch without side effects.
-- **`FileOpenIntake::admit` rejects every inadmissible path.**
-  Extension allow-list (`.csv`, `.xlsx`, `.pdf`, `.eml`, `.mbox`,
-  `.json`, `.qif`, `.ofx` — confirm against the source), size bound
-  (no >50 MB file is admitted), and realpath canonicalisation
-  (no `..` traversal) are all enforced. A rejected path is logged at
-  `warning` and dropped silently — the OS never sees an error
-  payload, which would betray the app's presence.
+- **`FileOpenIntake::receive` rejects every inadmissible path.**
+  The allow-list is exactly two extensions, `csv` and `eml`
+  (`FileOpenIntake::SUPPORTED_EXTENSIONS`) — the document types the
+  published Electron project registers with the OS, and nothing wider.
+  The size bound is per-extension rather than one number
+  (`FileOpenIntake::MAX_BYTES`): 50 MB for `csv`, because bank exports
+  get large, and 5 MB for `eml`, so the same 6 MB file is admitted as
+  a `.csv` and refused as an `.eml`. Realpath canonicalisation runs
+  first, before the allow-list is consulted at all, so a `..`
+  traversal resolving to nothing is refused on the spot. A rejected
+  path is dropped in silence — no event, and no log line either; the
+  OS never sees an error payload, which would betray the app's
+  presence. (`tests/Feature/FileOpenedFromOsTest.php`)
 - **The OS-notification dispatcher stays quiet while the window is
   focused.** Every `handle*` method on `DispatchOsNotification`
   consults `WindowFocusState::isFocused()` first; when true, the
@@ -166,7 +172,7 @@ The behavioural contract for the `Desktop` module.
 
 - **An OS-supplied path that points at a non-existent file** —
   `FileOpenIntake` realpath canonicalisation returns `false`; the
-  intake logs `warning` and drops silently.
+  intake drops it silently, without a log line.
 - **A pending intent whose file was deleted by the time the user
   logs in** — `ContinuePendingFileIntentAfterLogin` re-checks the
   file before redirecting; a missing file clears the intent and the

@@ -14,6 +14,7 @@ use Modules\Chains\Public\Enums\ConfidenceTier;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -31,6 +32,7 @@ final class ChainTreeWalker
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
         private readonly SessionFactory $session,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function walk(int $transactionId, User $user): ChainTree
@@ -175,7 +177,7 @@ final class ChainTreeWalker
             $currency = self::toString($row->currency ?? null);
         }
         if ($currency === '') {
-            $currency = 'EUR';
+            $currency = $this->baseCurrency->code();
         }
         $amountMinor = self::toInt($row->settled_amount_minor ?? $row->amount_minor ?? null);
 

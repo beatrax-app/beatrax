@@ -4,15 +4,29 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport\Discovery;
 
+use Illuminate\Contracts\Config\Repository;
+use Modules\Core\Public\Enums\MobilePlatform;
+use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Public\Enums\LanDiscoveryReach;
+
 // Browses for a service by speaking mDNS on the wire rather than shelling out
 // to dns-sd or avahi, which a phone has neither of. Without this a fresh device
 // could only learn where the desktop is from a scanned QR, which is why the
 // typed-code arm of the import flow could never succeed.
+/**
+ * @link ../../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md
+ */
 final class MulticastMdnsQuery implements PeerDiscovery
 {
     public const string MULTICAST_ADDRESS = '224.0.0.251';
 
     public const int MULTICAST_PORT = 5353;
+
+    // Apple grants this per Team, on request, and no profile for this app
+    // carries it. Its absence is why the send below reaches nothing on an
+    // iPhone; its presence in a shipped build is proof of the grant, because
+    // declaring it ungranted stops the build at signing rather than at run.
+    public const string IOS_MULTICAST_ENTITLEMENT = 'com.apple.developer.networking.multicast';
 
     private const int CLASS_INTERNET = 1;
 
@@ -34,9 +48,20 @@ final class MulticastMdnsQuery implements PeerDiscovery
 
     private const string SERVICE_DOMAIN = 'local';
 
+    private ?LanDiscoveryReach $lastBrowseReach = null;
+
+    // Null config reads as "no entitlement declared", which is the honest
+    // default: the build ships with IOS_MULTICAST_ENTITLEMENT off, and a
+    // caller that cannot say otherwise has not been granted it.
     public function __construct(
         private readonly MdnsResponseParser $parser = new MdnsResponseParser,
+        private readonly ?Repository $config = null,
     ) {}
+
+    public function reach(): LanDiscoveryReach
+    {
+        return $this->lastBrowseReach ?? $this->runtimeReach();
+    }
 
     /**
      * @param  string  $serviceType  e.g. `_beatrax-sync._tcp`
@@ -45,6 +70,12 @@ final class MulticastMdnsQuery implements PeerDiscovery
      */
     public function browse(string $serviceType, float $timeoutSeconds = 2.0): array
     {
+        // Starts from what the runtime can manage and is only ever lowered
+        // from there: a send the kernel accepted proves nothing on a platform
+        // that drops the datagram afterwards, and nothing on the device can
+        // observe that drop.
+        $this->lastBrowseReach = $this->runtimeReach();
+
         $errorCode = 0;
         $errorMessage = '';
 
@@ -59,6 +90,8 @@ final class MulticastMdnsQuery implements PeerDiscovery
         );
 
         if (! is_resource($socket)) {
+            $this->lastBrowseReach = LanDiscoveryReach::Unsupported;
+
             return [];
         }
 
@@ -85,6 +118,8 @@ final class MulticastMdnsQuery implements PeerDiscovery
         );
 
         if ($sent === false || $sent < 1) {
+            $this->lastBrowseReach = LanDiscoveryReach::Unsupported;
+
             return [];
         }
 
@@ -156,6 +191,23 @@ final class MulticastMdnsQuery implements PeerDiscovery
             .$question
             ."\0"
             .pack('nn', DnsRecordType::Pointer->value, self::CLASS_INTERNET | self::UNICAST_RESPONSE_BIT);
+    }
+
+    // Since iOS 14 a raw multicast send is dropped unless the app holds the
+    // entitlement above, and no API reports the drop — so the declaration is
+    // the only thing that can be read. Every other runtime sends for real:
+    // Android gates only the RECEIVE side, which the unicast bit sidesteps.
+    private function runtimeReach(): LanDiscoveryReach
+    {
+        if (UserDataPathService::platform() !== MobilePlatform::Ios) {
+            return LanDiscoveryReach::Available;
+        }
+
+        $entitlements = $this->config?->get('nativephp.entitlements');
+
+        return is_array($entitlements) && array_key_exists(self::IOS_MULTICAST_ENTITLEMENT, $entitlements)
+            ? LanDiscoveryReach::Available
+            : LanDiscoveryReach::Unsupported;
     }
 
     // stream_socket_recvfrom reports the peer as `address:port`, and an IPv6

@@ -139,7 +139,7 @@
     @default
         {{-- $alert->message is operator-authored text from
              BackupDatabaseCommand::recordCorruptAlert,
-             HealthCheckServiceProvider::recordDriftAlert, and
+             HealthCheckListener::recordDriftAlert, and
              BackupFreshnessProbe::recordOverdueAlert. Blade's `{{ }}`
              expression auto-escapes HTML, so a future module writing
              an unsanitised string into the column cannot turn into a

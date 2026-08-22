@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Підтверди новий пароль',
     'submit' => 'Зберегти новий пароль',
 
+    'error_current_required' => 'Введи свій поточний пароль.',
     'error_current_incorrect' => 'Поточний пароль неправильний.',
     'error_mismatch' => 'Паролі не збігаються.',
     'error_min_length' => 'Використай щонайменше 12 символів.',

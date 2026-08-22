@@ -24,6 +24,7 @@ final class NotificationDto extends Data
         public readonly ?string $targetKind,
         public readonly string $glyph,
         public readonly string $typeWord,
+        public readonly bool $unreadable,
     ) {}
 
     public function resolved(): bool

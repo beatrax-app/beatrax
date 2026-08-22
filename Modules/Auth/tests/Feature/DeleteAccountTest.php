@@ -186,6 +186,30 @@ it('refuses a wrong password and changes nothing', function (): void {
     expect(deleteAccountOwnedRowCount($db, $owner->id))->toBeGreaterThan(0);
 });
 
+// A box left empty and a box filled in wrongly are different states. Told
+// "That password is not correct." for a blank field, a reader goes looking for
+// the right password rather than at the field they skipped.
+it('names the empty password box rather than calling it not correct', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $owner = deleteAccountUser('owner', administrator: true);
+    deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
+
+    $this->actingAs($owner);
+
+    $messages = [];
+
+    try {
+        app(DeleteAccountAction::class)($owner, '');
+    } catch (ValidationException $e) {
+        $messages = $e->validator->errors()->get('password');
+    }
+
+    expect($messages)->toBe(['Enter your password.']);
+    expect(User::query()->where('id', $owner->id)->exists())->toBeTrue();
+});
+
 it('offers the deletion path from settings and only deletes after confirming', function (): void {
     $owner = deleteAccountUser('owner', administrator: true);
     deleteAccountUser('partner', administrator: false);

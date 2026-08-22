@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     /recurring/series/{id} drill-in page — full amount-over-time chart
     (native-currency primary + EUR shadow when distinct) over the
@@ -19,7 +20,7 @@
 
     $fmt = static fn (Money $money): string => $money->format();
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
+    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
 
     $chartElementId = 'series-chart-'.$series->seriesId;
     $occurrenceCount = count($occurrences);

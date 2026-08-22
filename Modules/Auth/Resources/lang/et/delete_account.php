@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Kõik eelnev eemaldatakse sellest seadmest ja sind logitakse välja. Tagasiteed ega varukoopiat ei ole.',
     'confirm' => 'Jah, kustuta kõik',
     'cancel' => 'Jäta konto alles',
+    'error_password_required' => 'Sisesta oma parool.',
     'error_password' => 'See parool ei ole õige.',
     'error_failed' => 'Su kontot ei kustutatud. Midagi ei muudetud — proovi uuesti.',
 ];

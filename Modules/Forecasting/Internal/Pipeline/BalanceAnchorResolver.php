@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\BalanceAnchorDto;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
@@ -130,7 +131,7 @@ final readonly class BalanceAnchorResolver
         return new BalanceAnchorDto(
             accountId: $accountId,
             openingBalanceMinor: $signedAnchor,
-            currency: 'EUR',
+            currency: Currency::Eur->value,
             asOfDate: $asOf,
             source: 'ics_card_statement',
         );

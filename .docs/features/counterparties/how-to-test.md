@@ -73,9 +73,12 @@ composer test
 - **A `personal` counterparty's slug shows an IBAN fragment** — the
   privacy default regressed. Walk
   `tests/Unit/PrivacyDefaultsTest.php` first; the fix is in
-  `CounterpartyResolverService::deriveSlugForPersonal()`. Never
-  patch in the IBAN as a tiebreaker — collision-suffix walks are the
-  sanctioned answer.
+  `CounterpartyResolverService::resolvePersonal()`, the one place that
+  decides what a personal row's slug is derived from — it hands the
+  trimmed display name, and only that, to
+  `CounterpartySlugResolver::resolveUnique()`, while the IBAN travels
+  on as its own (encrypted) column. Never patch in the IBAN as a
+  tiebreaker — collision-suffix walks are the sanctioned answer.
 - **A merchant landing as `personal`** — the merchant matcher
   (`MerchantNameResolver`) did not produce a hit; the personal-IBAN
   heuristic then fired at step 4. Check the

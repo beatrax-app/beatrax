@@ -7,73 +7,91 @@ libxml_use_internal_errors(true);
 require_once __DIR__.'/nativephp_scaffold_root.php';
 
 /*
- * Let the iOS build speak mDNS at all.
+ * Let the iOS build declare an entitlement at all, and browse Bonjour.
  *
  * `MulticastMdnsQuery` finds a pairing peer by sending a raw UDP datagram to
  * 224.0.0.251 and reading the unicast answer. On a real iPhone that browse
  * returned NOTHING, every time, while the identical class on macOS found the
  * desktop instantly — so the code and the advertisement were fine and the
- * platform was refusing the send.
+ * platform was refusing the send. Since iOS 14 a raw multicast send is refused
+ * unless the app holds `com.apple.developer.networking.multicast`; the Local
+ * Network permission does not cover it, and `NSBonjourServices` exempts
+ * NWBrowser and NSNetService traffic rather than a BSD socket.
  *
- * Two declarations are missing from the generated scaffold, and iOS needs both:
+ * Writing that entitlement into the generated NativePHP.entitlements is what
+ * this script used to do, and it never reached a binary:
+ * `BuildIosAppCommand::updateEntitlementsFile()` rewrites that file FROM
+ * SCRATCH out of `deeplink_host` + `permissions.push_notifications` +
+ * `permissions.nfc` on every `native:build`, discarding whatever was there.
+ * With all three unset the result is a literal empty `<dict/>` — which is
+ * exactly what the installed binary carried.
  *
- *   com.apple.developer.networking.multicast   (entitlement)
- *     Since iOS 14 a raw multicast send is refused unless the app holds this.
- *     Local Network permission alone does NOT cover it — which is why the
- *     symptom was so confusing: the system prompt appeared, the reader could
- *     grant it, and the browse still found nothing.
+ * So the entitlement has to arrive AFTER that rewrite. `IOSPluginCompiler`
+ * runs later in the same `configureXcodeProject()` and already merges
+ * entitlements — from plugin manifests only. This patch teaches its merge to
+ * read `config('nativephp.entitlements')` too, the same way it already reads
+ * `config('nativephp.permissions')` for Info.plist, so the declaration lives
+ * in committed config instead of in generated output.
  *
- *   NSBonjourServices                          (Info.plist)
- *     The service types the app may browse. Without it the Local Network
- *     prompt can appear while discovery of this service is still not permitted.
+ * `IOSPluginCompiler` is the right file to patch rather than
+ * `BuildIosAppCommand`: Artisan instantiates every registered command before
+ * it fires CommandStarting, so by the time NativeBuildPatches runs a command
+ * class is already loaded and a rewrite of it cannot affect the build now
+ * being started. The compiler is resolved later, from `app()`, and picks the
+ * patched file up in the same process.
  *
- * The service type is `_beatrax-sync._tcp`, matching MdnsAdvertiser.
+ * The entitlement itself is one Apple grants per Team on request, and no
+ * provisioning profile on this account carries it yet, so declaring it
+ * unconditionally would fail signing rather than fail discovery. The config
+ * key is env-gated and off until the grant lands.
  *
- * A caveat that belongs in the release checklist rather than in code: the
- * multicast entitlement is one Apple grants on request for distribution
- * builds. Development signing accepts it, so this unblocks device testing and
- * the ad-hoc builds; shipping through the App Store needs the grant on the
- * account first, and a provisioning profile that lacks it fails to sign rather
- * than failing quietly at runtime.
- *
- * Without pairing over the LAN a phone can only pair through a relay, which
- * is the very thing the LAN roads exist to avoid.
+ * @link ../.docs/features/mobile/ios-lan-discovery-entitlement.md
  */
 
-$root = beatraxScaffoldPath('ios/NativePHP') ?? '';
-
-$entitlements = $root.'/NativePHP.entitlements';
-$infoPlist = $root.'/Info.plist';
-
-if (! is_file($entitlements) || ! is_file($infoPlist)) {
-    fwrite(STDOUT, "nativephp_ios_local_network_discovery: no iOS scaffold yet — skipping.\n");
-    exit(0);
-}
-
-const BEATRAX_MULTICAST_ENTITLEMENT = 'com.apple.developer.networking.multicast';
+const BEATRAX_ENTITLEMENTS_CONFIG = "config('nativephp.entitlements')";
 const BEATRAX_BONJOUR_SERVICE = '_beatrax-sync._tcp';
 
-$entitlementsXml = (string) file_get_contents($entitlements);
+// Both sit in IOSPluginCompiler::compile()/mergeEntitlements(). The guard has
+// to yield as well: with no plugin shipping iOS data, compile() returns before
+// the merge is ever reached and app-declared entitlements vanish with it.
+$compilerPatches = [
+    "            && ! \$hasAppLocalizations\n        ) {\n" => "            && ! \$hasAppLocalizations\n            && empty(".BEATRAX_ENTITLEMENTS_CONFIG.")\n        ) {\n",
+    "        // Collect all entitlements from plugins\n        \$allEntitlements = [];\n" => "        // Collect all entitlements from plugins\n        \$allEntitlements = (array) config('nativephp.entitlements', []);\n",
+];
 
-if (str_contains($entitlementsXml, BEATRAX_MULTICAST_ENTITLEMENT)) {
-    fwrite(STDOUT, "nativephp_ios_local_network_discovery: entitlement already declared.\n");
+$compiler = beatraxMobileVendorPath('nativephp/mobile/src/Plugins/Compilers/IOSPluginCompiler.php');
+
+if ($compiler === null) {
+    fwrite(STDOUT, "nativephp_ios_local_network_discovery: no mobile vendor tree — skipping the compiler patch.\n");
 } else {
-    // Matches both the empty `<dict></dict>` a fresh scaffold writes and a
-    // populated one, so this composes with whatever else has been added.
-    $entry = "\t<key>".BEATRAX_MULTICAST_ENTITLEMENT."</key>\n\t<true/>\n";
-    $patched = preg_replace('#(<dict>\s*)#', "<dict>\n".$entry, $entitlementsXml, 1);
+    $source = (string) file_get_contents($compiler);
 
-    if (! is_string($patched) || ! str_contains($patched, BEATRAX_MULTICAST_ENTITLEMENT)) {
-        fwrite(STDERR, "nativephp_ios_local_network_discovery: no <dict> to extend in {$entitlements}.\n");
-        exit(1);
+    if (str_contains($source, BEATRAX_ENTITLEMENTS_CONFIG)) {
+        fwrite(STDOUT, "nativephp_ios_local_network_discovery: compiler already reads app entitlements.\n");
+    } else {
+        foreach ($compilerPatches as $needle => $replacement) {
+            if (! str_contains($source, $needle)) {
+                fwrite(STDERR, "nativephp_ios_local_network_discovery: anchor not found in IOSPluginCompiler.php:\n{$needle}\n");
+                exit(1);
+            }
+
+            $source = str_replace($needle, $replacement, $source);
+        }
+
+        if (file_put_contents($compiler, $source) === false) {
+            fwrite(STDERR, "nativephp_ios_local_network_discovery: could not write {$compiler}.\n");
+            exit(1);
+        }
+
+        fwrite(STDOUT, "nativephp_ios_local_network_discovery: compiler now merges config('nativephp.entitlements').\n");
     }
+}
 
-    if (file_put_contents($entitlements, $patched) === false) {
-        fwrite(STDERR, "nativephp_ios_local_network_discovery: could not write {$entitlements}.\n");
-        exit(1);
-    }
+$infoPlist = beatraxScaffoldPath('ios/NativePHP/Info.plist');
 
-    fwrite(STDOUT, "nativephp_ios_local_network_discovery: multicast entitlement declared.\n");
+if ($infoPlist === null) {
+    fwrite(STDOUT, "nativephp_ios_local_network_discovery: no iOS scaffold yet — skipping the Info.plist entry.\n");
+    exit(0);
 }
 
 $infoXml = (string) file_get_contents($infoPlist);
@@ -99,16 +117,14 @@ if (str_contains($infoXml, 'NSBonjourServices')) {
 
 // Proof, not assumption: a malformed plist fails much later inside Xcode with
 // an error nobody reads back to this script.
-foreach ([$entitlements, $infoPlist] as $file) {
-    if (@simplexml_load_file($file) === false) {
-        fwrite(STDERR, "nativephp_ios_local_network_discovery: {$file} is no longer well-formed XML.\n");
+if (@simplexml_load_file($infoPlist) === false) {
+    fwrite(STDERR, "nativephp_ios_local_network_discovery: {$infoPlist} is no longer well-formed XML.\n");
 
-        foreach (libxml_get_errors() as $error) {
-            fwrite(STDERR, '  line '.$error->line.': '.trim($error->message)."\n");
-        }
-
-        exit(1);
+    foreach (libxml_get_errors() as $error) {
+        fwrite(STDERR, '  line '.$error->line.': '.trim($error->message)."\n");
     }
+
+    exit(1);
 }
 
 exit(0);

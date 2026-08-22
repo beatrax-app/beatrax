@@ -14,10 +14,6 @@ return [
     'region' => 'Region',
 
     'regions' => [
-        'nl' => 'NL — Nederland',
-        'be' => 'BE — Belgia',
-        'de' => 'DE — Tyskland',
-        'fr' => 'FR — Frankrike',
         'other' => 'Annet',
     ],
 

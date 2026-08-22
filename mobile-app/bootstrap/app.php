@@ -23,6 +23,7 @@ use Modules\Mobile\Internal\Http\Middleware\RestoreFrameworkRedirector;
 use Modules\Mobile\Internal\NativeMobileAppServiceProvider;
 use Modules\Mobile\Internal\Spike\SpikeStoragePathCommand;
 use Modules\Mobile\Internal\Spike\SpikeSyncDialCommand;
+use Modules\Sync\Internal\Http\Middleware\CarriesPendingPairingFrames;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -69,6 +70,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Appended rather than prepended: unlike the gate above, this one needs
         // an authenticated user, so it has to run after Authenticate.
         $middleware->web(append: [
+            // This root runs no daemon, no queue worker and no scheduler, so a
+            // request is the ONLY thing that ever drives the pairing courier
+            // here. Leaving it out is what tied redelivery to one open screen.
+            CarriesPendingPairingFrames::class,
             MobileEnsureImportCompleted::class,
             // This root carries its own bootstrap, so leaving it out left the
             // translator on config('app.locale'): the language switcher wrote

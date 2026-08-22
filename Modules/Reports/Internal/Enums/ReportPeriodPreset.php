@@ -22,4 +22,11 @@ enum ReportPeriodPreset: string
     case ThisYear = 'this_year';
 
     case Custom = 'custom';
+
+    // Named once rather than repeated as a 'this_month' literal at each boundary
+    // that can be handed nothing, which is the reason ReportGranularity has one.
+    public static function default(): self
+    {
+        return self::ThisMonth;
+    }
 }

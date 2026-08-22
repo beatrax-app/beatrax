@@ -17,6 +17,7 @@ use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Goals\Public\Services\GoalWriter;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
@@ -201,6 +202,7 @@ final class GoalsPage extends Component
         GoalProgressQuery $query,
         DatabaseManager $db,
         ViewFactory $views,
+        BaseCurrency $baseCurrency,
     ): View {
         // Unreachable behind the auth middleware; kept so an unauthenticated
         // render degrades to the empty page instead of throwing.
@@ -209,7 +211,7 @@ final class GoalsPage extends Component
                 'rows' => [],
                 'archived' => [],
                 'pots' => [],
-                'baseCurrency' => 'EUR',
+                'baseCurrency' => $baseCurrency->code(),
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     Inline dashboard card — top six approved recurring series by
     monthly equivalent, with a filter toggle (`All series` /
@@ -13,7 +14,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
+    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
 
     $expenseEur = (int) ($totals['expense_eur_minor'] ?? 0);
     $incomeEur = (int) ($totals['income_eur_minor'] ?? 0);

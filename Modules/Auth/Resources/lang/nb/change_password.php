@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Bekreft nytt passord',
     'submit' => 'Lagre nytt passord',
 
+    'error_current_required' => 'Skriv inn det nåværende passordet ditt.',
     'error_current_incorrect' => 'Det nåværende passordet er feil.',
     'error_mismatch' => 'Passordene er ikke like.',
     'error_min_length' => 'Bruk minst 12 tegn.',

@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Ievadiet vārdu kodu no otras ierīces',
     'submit_code' => 'Nosūtīt kodu',
     'cancel' => 'Atcelt',
+    'skip_import' => 'Turpināt bez importēšanas',
 
     'confirm_heading' => 'Salīdziniet šos vārdus ar otru ierīci',
     'safety_words_aria' => 'Drošības numura vārdi: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Nevar sasniegt otru ierīci. Pārliecinieties, ka abas ir vienā tīklā un ka datorā ir ieslēgta sinhronizācija.',
         'invalid_code' => 'Šis kods nav derīgs vai tam ir beidzies termiņš. Palūdziet otrai ierīcei izveidot jaunu.',
         'code_not_accepted' => 'Neviena šī tīkla ierīce nepieņēma šo kodu. Pārbaudi kodu un vai otra ierīce to joprojām rāda.',
+        'no_peer_answered' => 'Šajā tīklā uz šo kodu neviens neatbildēja. Pārbaudi, vai otrā ierīcē darbojas sinhronizācija, vai arī noskenē tās kodu ar kameru — kamerai tīklā nekas nav jāmeklē.',
+        'no_peer_answered_ios' => 'Šajā tīklā uz šo kodu neviens neatbildēja. Otras ierīces meklēšana tīklā iPhone vēl nedarbojas, tāpēc noskenē tās kodu ar kameru.',
         'rate_limited' => 'Pārāk daudz mēģinājumu. Pagaidi minūti un mēģini vēlreiz.',
         'identity_locked' => 'Ierīces identitāte ir bloķēta. Atbloķējiet lietotni un mēģiniet vēlreiz.',
         'identity_needs_lock' => 'Vispirms iestatiet lietotnes bloķēšanu — tā aizsargā ierīces identitāti.',

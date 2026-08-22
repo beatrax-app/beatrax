@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Enter the word code from the other device',
     'submit_code' => 'Submit code',
     'cancel' => 'Cancel',
+    'skip_import' => 'Continue without importing',
 
     'confirm_heading' => 'Compare these words with the other device',
     'safety_words_aria' => 'Safety number words: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Cannot reach the other device. Make sure both are on the same network and sync is enabled on the desktop.',
         'invalid_code' => 'This code is invalid or has expired. Ask the other device to generate a new one.',
         'code_not_accepted' => 'No device on this network accepted that code. Check the code, and that the other device is still showing it.',
+        'no_peer_answered' => 'Nothing on this network answered that code. Check that sync is running on the other device, or scan its code with the camera — the camera needs no network search.',
+        'no_peer_answered_ios' => 'Nothing on this network answered that code. Searching the network for the other device does not work on iPhone yet, so scan its code with the camera instead.',
         'rate_limited' => 'Too many attempts. Wait a minute and try again.',
         'identity_locked' => 'Your device identity is locked. Unlock the app and try again.',
         'identity_needs_lock' => 'Set up the app lock first — your device identity is protected by it.',

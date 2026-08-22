@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Sisesta teise seadme sõnakood',
     'submit_code' => 'Saada kood',
     'cancel' => 'Tühista',
+    'skip_import' => 'Jätka importimata',
 
     'confirm_heading' => 'Võrdle neid sõnu teise seadmega',
     'safety_words_aria' => 'Turvanumbri sõnad: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Teise seadmeni ei saa. Veendu, et mõlemad on samas võrgus ja et töölauas on sünkroonimine sisse lülitatud.',
         'invalid_code' => 'See kood on vigane või aegunud. Palu teisel seadmel uus luua.',
         'code_not_accepted' => 'Ükski selle võrgu seade ei võtnud koodi vastu. Kontrolli koodi ja seda, kas teine seade näitab seda veel.',
+        'no_peer_answered' => 'Selles võrgus ei vastanud sellele koodile miski. Kontrolli, kas teises seadmes töötab sünkroonimine, või skanni selle kood kaameraga — kaamera ei pea võrgust otsima.',
+        'no_peer_answered_ios' => 'Selles võrgus ei vastanud sellele koodile miski. Teise seadme otsimine võrgust ei tööta iPhone’is veel, seega skanni selle kood kaameraga.',
         'rate_limited' => 'Liiga palju katseid. Oota minut ja proovi uuesti.',
         'identity_locked' => 'Sinu seadme identiteet on lukus. Ava rakendus ja proovi uuesti.',
         'identity_needs_lock' => 'Seadista esmalt rakenduse lukustus — see kaitseb seadme identiteeti.',

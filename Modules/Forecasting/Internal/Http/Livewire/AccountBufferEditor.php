@@ -14,6 +14,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -27,7 +28,7 @@ final class AccountBufferEditor extends Component
 
     public ?int $currentBufferMinor = null;
 
-    public string $currency = 'EUR';
+    public string $currency = Currency::Eur->value;
 
     public string $bufferInput = '';
 

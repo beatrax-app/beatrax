@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Wpisz kod słowny z drugiego urządzenia',
     'submit_code' => 'Wyślij kod',
     'cancel' => 'Anuluj',
+    'skip_import' => 'Kontynuuj bez importu',
 
     'confirm_heading' => 'Porównaj te słowa z drugim urządzeniem',
     'safety_words_aria' => 'Słowa numeru bezpieczeństwa: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Nie można połączyć się z drugim urządzeniem. Upewnij się, że oba są w tej samej sieci, a synchronizacja na komputerze jest włączona.',
         'invalid_code' => 'Ten kod jest nieprawidłowy lub wygasł. Poproś o wygenerowanie nowego na drugim urządzeniu.',
         'code_not_accepted' => 'Żadne urządzenie w tej sieci nie przyjęło tego kodu. Sprawdź kod i czy drugie urządzenie nadal go pokazuje.',
+        'no_peer_answered' => 'Nic w tej sieci nie odpowiedziało na ten kod. Sprawdź, czy na drugim urządzeniu działa synchronizacja, albo zeskanuj jego kod aparatem — aparat nie musi niczego szukać w sieci.',
+        'no_peer_answered_ios' => 'Nic w tej sieci nie odpowiedziało na ten kod. Wyszukiwanie drugiego urządzenia w sieci na iPhonie jeszcze nie działa, więc zeskanuj jego kod aparatem.',
         'rate_limited' => 'Zbyt wiele prób. Poczekaj minutę i spróbuj ponownie.',
         'identity_locked' => 'Tożsamość Twojego urządzenia jest zablokowana. Odblokuj aplikację i spróbuj ponownie.',
         'identity_needs_lock' => 'Najpierw skonfiguruj blokadę aplikacji — to ona chroni tożsamość urządzenia.',

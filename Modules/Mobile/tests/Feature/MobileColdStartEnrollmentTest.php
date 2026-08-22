@@ -198,7 +198,7 @@ it('leaves the enrollment intact on a normal PIN change (data key unchanged)', f
         ->and(app(MobileLockGateway::class)->isColdStartEnrolled((int) $user->id))->toBeTrue();
 });
 
-it('re-enabling the app lock (which mints a new data key) resets the cold-start flag', function (): void {
+it('re-enabling the app lock (which re-provisions the data key) resets the cold-start flag', function (): void {
     $user = enrollmentUser('reprovision-resets');
     app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'account-password');
     app(MobileLockGateway::class)->markColdStartEnrolled((int) $user->id, true);

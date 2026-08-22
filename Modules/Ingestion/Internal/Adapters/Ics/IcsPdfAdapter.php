@@ -278,7 +278,7 @@ final class IcsPdfAdapter implements SourceAdapter
             ownIban: $ownIban,
             counterpartyIban: null,
             counterpartyName: $counterpartyName,
-            currency: $nativeCurrency ?? 'EUR',
+            currency: $nativeCurrency ?? IcsPdfHeaderProfile::STATEMENT_CURRENCY,
             amountMinor: $nativeAmountMinor ?? $settledMinor,
             sourceRef: null,
             description: $description,
@@ -289,7 +289,7 @@ final class IcsPdfAdapter implements SourceAdapter
             ],
             sourceRowIndex: $rowIndex,
             settledAmountMinor: $nativeCurrency === null ? null : $settledMinor,
-            settledCurrency: $nativeCurrency === null ? null : 'EUR',
+            settledCurrency: $nativeCurrency === null ? null : IcsPdfHeaderProfile::STATEMENT_CURRENCY,
             fxRateUsed: null,
         );
     }

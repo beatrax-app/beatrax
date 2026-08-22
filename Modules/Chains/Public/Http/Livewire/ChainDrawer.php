@@ -22,6 +22,7 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -86,6 +87,7 @@ final class ChainDrawer extends Component
         ViewFactory $views,
         SensitiveColumnCodec $codec,
         Session $session,
+        BaseCurrency $baseCurrency,
     ): View {
         if ($this->transactionId === null) {
             return $views->make('chains::livewire.chain-drawer', [
@@ -95,7 +97,7 @@ final class ChainDrawer extends Component
         }
 
         $tree = $query->forTransaction($this->transactionId, $currentUser->user());
-        $tree = $this->attachFanoutChildren($tree, $db, $currentUser, $codec, $session);
+        $tree = $this->attachFanoutChildren($tree, $db, $currentUser, $codec, $session, $baseCurrency->code());
 
         return $views->make('chains::livewire.chain-drawer', [
             'tree' => $tree,
@@ -105,7 +107,7 @@ final class ChainDrawer extends Component
 
     // ChainTreeNode.children always arrives empty from the Public DTO; the
     // fan-out shape is rebuilt here, in one bounded query.
-    private function attachFanoutChildren(ChainTree $tree, DatabaseManager $db, CurrentUser $currentUser, SensitiveColumnCodec $codec, Session $session): ChainTree
+    private function attachFanoutChildren(ChainTree $tree, DatabaseManager $db, CurrentUser $currentUser, SensitiveColumnCodec $codec, Session $session, string $baseCurrency): ChainTree
     {
         if ($tree->nodes === []) {
             return $tree;
@@ -121,7 +123,7 @@ final class ChainDrawer extends Component
         return $this->nestChildren(
             $tree,
             $childTxIdsByParent,
-            $this->loadChildNodes($childTxIdsByParent, $db, $user, $codec, $session),
+            $this->loadChildNodes($childTxIdsByParent, $db, $user, $codec, $session, $baseCurrency),
         );
     }
 
@@ -158,7 +160,7 @@ final class ChainDrawer extends Component
      * @param  array<int, list<int>>  $childTxIdsByParent
      * @return array<int, ChainTreeNode>
      */
-    private function loadChildNodes(array $childTxIdsByParent, DatabaseManager $db, User $user, SensitiveColumnCodec $codec, Session $session): array
+    private function loadChildNodes(array $childTxIdsByParent, DatabaseManager $db, User $user, SensitiveColumnCodec $codec, Session $session, string $baseCurrency): array
     {
         $allChildIds = [];
         foreach ($childTxIdsByParent as $ids) {
@@ -179,7 +181,7 @@ final class ChainDrawer extends Component
         $childNodes = [];
         foreach ($childRows as $row) {
             /** @var stdClass $row */
-            $childNodes[self::toInt($row->id)] = $this->makeChildNode($row, $db, $user, $codec, $session);
+            $childNodes[self::toInt($row->id)] = $this->makeChildNode($row, $db, $user, $codec, $session, $baseCurrency);
         }
 
         return $childNodes;
@@ -232,7 +234,7 @@ final class ChainDrawer extends Component
         );
     }
 
-    private function makeChildNode(stdClass $row, DatabaseManager $db, User $user, SensitiveColumnCodec $codec, Session $session): ChainTreeNode
+    private function makeChildNode(stdClass $row, DatabaseManager $db, User $user, SensitiveColumnCodec $codec, Session $session, string $baseCurrency): ChainTreeNode
     {
         $accountId = self::toInt($row->account_id ?? null);
         $accountName = '';
@@ -250,7 +252,7 @@ final class ChainDrawer extends Component
         $nativeCurrency = self::toString($row->currency ?? null);
         $currency = $settledCurrency !== '' ? $settledCurrency : $nativeCurrency;
         if ($currency === '') {
-            $currency = 'EUR';
+            $currency = $baseCurrency;
         }
 
         $amountMinor = self::toInt($row->settled_amount_minor ?? $row->amount_minor ?? null);

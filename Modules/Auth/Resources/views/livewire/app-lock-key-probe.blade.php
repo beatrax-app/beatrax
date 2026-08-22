@@ -17,7 +17,7 @@
     class="rounded-md p-3 space-y-2"
     style="background:#0b1220; color:#f1f5f9; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.75rem;"
     data-testid="app-lock-key-probe"
-    wire:poll.5s
+    wire:poll.5s.keep-alive
 >
     <div class="flex items-center justify-between gap-2">
         <span class="text-[#94a3b8] uppercase tracking-wide text-[10px]">{{ Lang::get('auth::key_probe.label') }}</span>

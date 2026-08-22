@@ -6,10 +6,14 @@ return [
     'heading' => 'Dispozitive și sincronizare',
 
     'enable_sync' => 'Activează sincronizarea',
-    'enable_sync_help' => 'Partajează-ți datele în siguranță între dispozitivele de încredere. Necesită o blocare a aplicației.',
+    'enable_sync_help' => 'Partajează-ți datele în siguranță între dispozitivele de încredere. Necesită o blocare a aplicației. Odată activată, datele tale sunt criptate, iar blocarea aplicației nu mai poate fi dezactivată.',
 
     'app_lock_notice' => 'Setează mai întâi o blocare a aplicației pentru a activa sincronizarea.',
     'go_to_app_lock' => 'Mergi la blocarea aplicației',
+
+    'identity_unreadable' => 'Identitatea de sincronizare a acestui dispozitiv a fost creată cu altă blocare a aplicației și nu se mai deschide. Până se deschide, dispozitivul nu poate sincroniza și nici asocia. Restaurarea copiei de rezervă a bazei de date cu care a fost creată o face din nou lizibilă.',
+    'identity_unreadable_replace_help' => 'Poți și să iei totul de la capăt: dispozitivul primește o identitate nouă, cea veche rămâne pusă deoparte nefolosită, iar dispozitivele asociate anterior trebuie asociate din nou.',
+    'identity_unreadable_replace' => 'Creează o identitate nouă pentru acest dispozitiv',
 
     'encrypted_at_rest' => 'Date criptate în repaus',
     'encrypted_at_rest_scope' => 'Notele, descrierile tranzacțiilor și numele și IBAN-urile celor cărora le plătești sunt criptate în registru cu parola de blocare a aplicației. Sumele, datele și numele și IBAN-ul propriului tău cont nu sunt. Indexul de căutare păstrează propria copie lizibilă a celor cărora le plătești, a descrierilor tranzacțiilor tale și a notelor tale fiscale, iar unele nume de comercianți rămân în text clar în alte locuri din fișierul bazei de date.',
@@ -37,6 +41,11 @@ return [
     'remove_aria' => 'Elimină :name',
     'remove' => 'Elimină',
     'pair_new_device' => 'Împerechează un dispozitiv nou',
+
+    'pairing_waiting' => 'Finalizează împerecherea cu :name',
+    'pairing_waiting_help' => 'Ambele ecrane trebuie să afișeze aceleași șase cuvinte pentru ca împerecherea să conteze. Redeschide pentru a le compara.',
+    'pairing_waiting_resume' => 'Continuă împerecherea',
+    'pairing_waiting_lock_override' => 'Deblocarea redeschide această împerechere în loc să o lase să expire, deci durează mai mult decât timpul de blocare a aplicației pe care l-ai setat. Se încheie când o finalizezi sau o anulezi.',
 
     'relay_endpoint' => 'Punctul final al releului',
     'relay_endpoint_help' => 'Opțional. Când este setat, dispozitivele offline se sincronizează prin acest releu. Lasă gol pentru doar LAN&#8209;direct.',
@@ -68,6 +77,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Setează mai întâi o blocare a aplicației pentru a activa sincronizarea.',
         'enable_failed' => 'Activarea sincronizării a eșuat. Asigură-te că blocarea aplicației este activă și încearcă din nou.',
+        'identity_replaced' => 'Acest dispozitiv are o identitate de sincronizare nouă. Asociază din nou celelalte dispozitive.',
+        'identity_replace_failed' => 'Identitatea veche a dispozitivului nu a putut fi pusă deoparte. Încearcă din nou.',
         'cannot_remove_self' => 'Nu poți elimina acest dispozitiv — este cel pe care îl folosești.',
         'remove_failed' => 'Eliminarea dispozitivului a eșuat. Încearcă din nou.',
         'app_lock_first_settings' => 'Setează mai întâi o blocare a aplicației pentru a schimba setările de sincronizare.',
@@ -75,4 +86,8 @@ return [
         'relay_saved' => 'Punctul final al releului a fost salvat.',
         'relay_save_failed' => 'Salvarea punctului final al releului a eșuat: :message',
     ],
+    'app_lock_permanent' => 'Odată ce datele sunt criptate, blocarea aplicației nu mai poate fi dezactivată — deține singura cheie și nu există drum înapoi la date necriptate.',
+    'backlog_heading' => 'Așteaptă să fie adăugat',
+    'backlog_deferred' => 'Acest dispozitiv a primit date de la un alt dispozitiv și nu le-a adăugat încă în evidența ta. Nu se pierde nimic — sunt aplicate automat, de obicei într-o clipă.',
+    'backlog_awaiting_key' => 'Acest dispozitiv a primit date pentru care nu are încă cheia. Nu se pierde nimic. Deschide aplicația pe dispozitivul asociat cât timp acesta este deschis, ca cele două să se poată conecta și cheia să fie trimisă.',
 ];

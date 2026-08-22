@@ -64,6 +64,10 @@ function thirdPartySeams(): array
         'PhpParser' => ['app/PhpStan'],
         'PHPStan' => ['app/PhpStan'],
         'Ramsey\Uuid' => ['Modules/Sync/Internal/Identity'],
+        // Same seam as Amp, and for the same reason: the event loop is what a
+        // long-running daemon schedules on, and DaemonTicker is the one place
+        // that has to know it.
+        'Revolt' => ['Modules/Sync/Internal/Transport'],
         'Spatie\Activitylog' => ['Modules/DevMode/Internal/Audit'],
         'Spatie\PdfToText' => ['Modules/Ingestion/Internal/Adapters/Ics'],
         'TheNetworg' => ['Modules/EmailScan/Internal/OAuth'],

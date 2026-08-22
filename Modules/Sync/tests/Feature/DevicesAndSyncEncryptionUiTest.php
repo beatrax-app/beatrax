@@ -363,3 +363,28 @@ it('retires the unqualified done-step promise in every locale and replaces it wi
     expect($missing)->toBe([]);
     expect($stale)->toBe([]);
 });
+
+// Encryption is one-way and its snapshot is deleted on success, so the app-lock
+// data key can never be replaced afterwards and AppLockProvisioner::disable()
+// refuses for the life of the install. The reader agrees to that here, not at
+// the disable button that later says no.
+it('the enable-encryption confirm step says the app lock becomes permanent, before the irreversible step', function (): void {
+    $user = encryptionUiUser('encryption-ui-permanent-lock');
+    $this->actingAs($user);
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('appLockConfigured', true)
+        ->set('syncEnabled', false)
+        ->set('encryptionOn', false)
+        ->call('showEnableEncryptionModal')
+        ->assertSee('the app lock can no longer be turned off');
+});
+
+// Sync auto-activates encryption with no confirm step at all, so the toggle's
+// own description is the only place its reader is told.
+it('states the same permanence in the sync toggle description, which has no confirm step of its own', function (): void {
+    $this->actingAs(encryptionUiUser('encryption-ui-permanent-sync'));
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->assertSee('the app lock can no longer be turned off');
+});

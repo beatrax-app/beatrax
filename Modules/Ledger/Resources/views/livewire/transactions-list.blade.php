@@ -39,8 +39,10 @@
     // has >= 2 legs (leg-row presence, NEVER category_id nullity).
     $splitLegs ??= [];
 
-    // Format minor-unit amount (settled EUR, nl_NL) for the summary strip
-    $fmtMinor = static fn (int $minor): string => Money::ofMinor(abs($minor), 'EUR')->format();
+    // Formats the summary strip in the reader's own base currency, which the
+    // component resolved from users.base_currency. Pinning the euro here printed
+    // € over totals SearchQuery had counted in the reader's currency.
+    $fmtMinor = static fn (int $minor): string => Money::ofMinor(abs($minor), $baseCurrency)->format();
 @endphp
 
 <div class="space-y-6">

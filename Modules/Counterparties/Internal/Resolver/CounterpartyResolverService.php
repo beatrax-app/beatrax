@@ -21,6 +21,7 @@ use Modules\Counterparties\Public\Events\CounterpartyResolved;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -50,9 +51,9 @@ final class CounterpartyResolverService implements CounterpartyResolver
         'LLC',
     ];
 
-    private const PERSONAL_TRANSACTION_TYPES = [
-        'transfer_in',
-        'transfer_out',
+    private const array PERSONAL_TRANSACTION_TYPES = [
+        TransactionType::TransferIn->value,
+        TransactionType::TransferOut->value,
     ];
 
     public function __construct(

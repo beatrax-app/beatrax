@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Modules\Core\Public\Support\UploadLimits;
+use Modules\Ledger\Public\Enums\Currency;
 
 final class IcsPdfHeaderProfile
 {
@@ -18,5 +19,5 @@ final class IcsPdfHeaderProfile
 
     // Mijn ICS always settles in EUR; a foreign-currency row carries an
     // inline Wisselkoers conversion rather than settling natively.
-    public const STATEMENT_CURRENCY = 'EUR';
+    public const STATEMENT_CURRENCY = Currency::Eur->value;
 }

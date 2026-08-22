@@ -6,6 +6,9 @@ namespace Modules\Categorization\Database\Seeders;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Models\CategorizationRule;
+use Modules\Categorization\Public\Enums\ActionType;
+use Modules\Categorization\Public\Enums\ConditionValueType;
+use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 use Psr\Log\LoggerInterface;
@@ -54,7 +57,7 @@ final class DefaultCategorizationRuleSeeder
                     ->whereHas('conditions', function ($query) use ($row): void {
                         $query->where('field', $row['field'])
                             ->where('op', $row['match'])
-                            ->where('value_type', 'string')
+                            ->where('value_type', ConditionValueType::Text->value)
                             ->where('value', $row['value']);
                     })
                     ->exists();
@@ -66,7 +69,7 @@ final class DefaultCategorizationRuleSeeder
                 $rule = CategorizationRule::withoutGlobalScopes()->create([
                     'user_id' => $user->id,
                     'priority' => $priority,
-                    'combinator' => 'all',
+                    'combinator' => RuleCombinator::All->value,
                     'active' => true,
                     'hits_count' => 0,
                 ]);
@@ -74,14 +77,14 @@ final class DefaultCategorizationRuleSeeder
                 $rule->conditions()->create([
                     'field' => $row['field'],
                     'op' => $row['match'],
-                    'value_type' => 'string',
+                    'value_type' => ConditionValueType::Text->value,
                     'value' => $row['value'],
                     'value2' => null,
                 ]);
 
                 $rule->actions()->create([
                     'position' => 0,
-                    'type' => 'category',
+                    'type' => ActionType::Category->value,
                     'payload' => ['category_id' => (int) $categoryId],
                 ]);
             }

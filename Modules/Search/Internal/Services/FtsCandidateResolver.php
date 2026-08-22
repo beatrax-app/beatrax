@@ -49,12 +49,14 @@ final class FtsCandidateResolver
             return null;
         }
 
+        $searchable = self::separateControlBytes($textQuery);
+
         // Short words (1-2 chars) still exist in the FTS body and pass
         // through naturally, but can't be explicit MATCH predicates; a
         // query with no >=3-char word falls back to the LIKE scan.
-        $ftsWords = $this->significantFtsWords($textQuery);
-        if (strlen($textQuery) < 3 || $ftsWords === []) {
-            return $this->likeFallbackIds($user, $textQuery, $applyFilters);
+        $ftsWords = $this->significantFtsWords($searchable);
+        if (strlen($searchable) < 3 || $ftsWords === []) {
+            return $this->likeFallbackIds($user, $searchable, $applyFilters);
         }
 
         $rowids = $this->db->connection()
@@ -83,7 +85,7 @@ final class FtsCandidateResolver
             return [];
         }
 
-        $ftsWords = $this->significantFtsWords($textQuery);
+        $ftsWords = $this->significantFtsWords(self::separateControlBytes($textQuery));
         if ($ftsWords === []) {
             return [];
         }
@@ -198,6 +200,15 @@ final class FtsCandidateResolver
             explode(' ', trim($textQuery)),
             static fn (string $w): bool => strlen($w) >= 3,
         ));
+    }
+
+    // The reader's text is a URL parameter, so it can carry bytes no keyboard
+    // sends. A NUL inside the quoted MATCH expression ends it early and FTS5
+    // raises "unterminated string"; the same byte is the field join below, so
+    // both readers of the query text get the substitution, not just FTS.
+    private static function separateControlBytes(string $textQuery): string
+    {
+        return preg_replace('/[\x00-\x1F\x7F]+/', ' ', $textQuery) ?? $textQuery;
     }
 
     // Each word is double-quote-wrapped with embedded quotes doubled, the

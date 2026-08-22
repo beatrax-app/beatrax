@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Sve navedeno se uklanja sa ovog uređaja i odjavljuješ se. Nema povratka i ne ostaje nikakva rezervna kopija.',
     'confirm' => 'Da, obriši sve',
     'cancel' => 'Zadrži moj nalog',
+    'error_password_required' => 'Unesi svoju lozinku.',
     'error_password' => 'Ta lozinka nije tačna.',
     'error_failed' => 'Tvoj nalog nije obrisan. Ništa nije promenjeno — pokušaj ponovo.',
 ];

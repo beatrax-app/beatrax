@@ -6,10 +6,14 @@ return [
     'heading' => 'Dispositivos y sincronización',
 
     'enable_sync' => 'Activar la sincronización',
-    'enable_sync_help' => 'Comparte tus datos de forma segura entre dispositivos de confianza. Requiere un bloqueo de la app.',
+    'enable_sync_help' => 'Comparte tus datos de forma segura entre dispositivos de confianza. Requiere un bloqueo de la app. Una vez activo, tus datos se cifran y el bloqueo de la app ya no se puede desactivar.',
 
     'app_lock_notice' => 'Define primero un bloqueo de la app para activar la sincronización.',
     'go_to_app_lock' => 'Ir a Bloqueo de la app',
+
+    'identity_unreadable' => 'La identidad de sincronización de este dispositivo se creó con otro bloqueo de app y ya no se abre. Mientras siga así, este dispositivo no puede sincronizar ni emparejarse. Restaurar la copia de seguridad de la base de datos con la que se creó vuelve a hacerla legible.',
+    'identity_unreadable_replace_help' => 'También puedes empezar de cero: este dispositivo recibe una identidad nueva, la antigua se guarda sin usar y los dispositivos que emparejaste antes tendrás que emparejarlos otra vez.',
+    'identity_unreadable_replace' => 'Crear una identidad nueva para este dispositivo',
 
     'encrypted_at_rest' => 'Datos cifrados en reposo',
     'encrypted_at_rest_scope' => 'Las notas, las descripciones de las transacciones y los nombres e IBAN de a quién pagas están cifrados en el libro de cuentas con la contraseña de bloqueo de la app. Los importes, las fechas y el nombre e IBAN de tu propia cuenta no lo están. El índice de búsqueda guarda su propia copia legible de a quién pagas, de las descripciones de tus transacciones y de tus notas fiscales, y algunos nombres de comercios aparecen en texto claro en otras partes del archivo de base de datos.',
@@ -37,6 +41,11 @@ return [
     'remove_aria' => 'Eliminar :name',
     'remove' => 'Eliminar',
     'pair_new_device' => 'Vincular un dispositivo nuevo',
+
+    'pairing_waiting' => 'Termina la vinculación con :name',
+    'pairing_waiting_help' => 'Ambas pantallas deben mostrar las mismas seis palabras para que la vinculación cuente. Vuelve a abrirla para compararlas.',
+    'pairing_waiting_resume' => 'Continuar la vinculación',
+    'pairing_waiting_lock_override' => 'Desbloquear reabre esta vinculación en lugar de dejar que caduque, así que dura más que el tiempo de bloqueo que has configurado. Termina cuando la completas o la cancelas.',
 
     'relay_endpoint' => 'Endpoint del relay',
     'relay_endpoint_help' => 'Opcional. Si se define, los dispositivos sin conexión se sincronizan a través de este relay. Déjalo vacío para usar solo LAN&#8209;directa.',
@@ -68,6 +77,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Define primero un bloqueo de la app para activar la sincronización.',
         'enable_failed' => 'No se ha podido activar la sincronización. Comprueba que el bloqueo de la app esté activo e inténtalo de nuevo.',
+        'identity_replaced' => 'Este dispositivo tiene una identidad de sincronización nueva. Vuelve a emparejar tus otros dispositivos.',
+        'identity_replace_failed' => 'No se pudo apartar la identidad antigua del dispositivo. Inténtalo de nuevo.',
         'cannot_remove_self' => 'No puedes eliminar este dispositivo: es el que estás usando.',
         'remove_failed' => 'No se ha podido eliminar el dispositivo. Inténtalo de nuevo.',
         'app_lock_first_settings' => 'Define primero un bloqueo de la app para cambiar los ajustes de sincronización.',
@@ -75,4 +86,8 @@ return [
         'relay_saved' => 'Endpoint del relay guardado.',
         'relay_save_failed' => 'No se ha podido guardar el endpoint del relay: :message',
     ],
+    'app_lock_permanent' => 'Una vez cifrados tus datos, el bloqueo de la app ya no se puede desactivar — guarda la única clave, y no hay vuelta a datos sin cifrar.',
+    'backlog_heading' => 'Pendiente de añadirse',
+    'backlog_deferred' => 'Este dispositivo ha recibido datos de otro dispositivo y aún no los ha añadido a tus cuentas. No se pierde nada: se aplican automáticamente, normalmente en un momento.',
+    'backlog_awaiting_key' => 'Este dispositivo ha recibido datos de los que aún no tiene la clave. No se pierde nada. Abre la aplicación en el dispositivo vinculado mientras este está abierto, para que ambos puedan conectarse y enviarse la clave.',
 ];

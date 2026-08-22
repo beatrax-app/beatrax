@@ -6,10 +6,14 @@ return [
     'heading' => 'Urządzenia i synchronizacja',
 
     'enable_sync' => 'Włącz synchronizację',
-    'enable_sync_help' => 'Bezpiecznie udostępniaj swoje dane zaufanym urządzeniom. Wymaga blokady aplikacji.',
+    'enable_sync_help' => 'Bezpiecznie udostępniaj swoje dane zaufanym urządzeniom. Wymaga blokady aplikacji. Gdy jest włączona, dane zostają zaszyfrowane, a blokady aplikacji nie da się już wyłączyć.',
 
     'app_lock_notice' => 'Najpierw ustaw blokadę aplikacji, aby włączyć synchronizację.',
     'go_to_app_lock' => 'Przejdź do Blokady aplikacji',
+
+    'identity_unreadable' => 'Tożsamość synchronizacji tego urządzenia powstała przy innej blokadzie aplikacji i już się nie otwiera. Dopóki tak jest, urządzenie nie może synchronizować ani parować. Przywrócenie kopii zapasowej bazy danych, przy której powstała, znów ją odczyta.',
+    'identity_unreadable_replace_help' => 'Możesz też zacząć od nowa: urządzenie dostanie nową tożsamość, stara zostanie odłożona bez użycia, a wcześniej sparowane urządzenia trzeba będzie sparować ponownie.',
+    'identity_unreadable_replace' => 'Utwórz nową tożsamość tego urządzenia',
 
     'encrypted_at_rest' => 'Dane szyfrowane w spoczynku',
     'encrypted_at_rest_scope' => 'Notatki, opisy transakcji oraz nazwy i numery IBAN odbiorców są szyfrowane w księdze hasłem blokady aplikacji. Kwoty, daty oraz nazwa i IBAN Twojego własnego konta nie są. Indeks wyszukiwania przechowuje własną czytelną kopię tego, komu płacisz, opisów Twoich transakcji i Twoich notatek podatkowych, a niektóre nazwy sprzedawców występują jawnie w innych miejscach pliku bazy danych.',
@@ -37,6 +41,11 @@ return [
     'remove_aria' => 'Usuń: :name',
     'remove' => 'Usuń',
     'pair_new_device' => 'Sparuj nowe urządzenie',
+
+    'pairing_waiting' => 'Dokończ parowanie z :name',
+    'pairing_waiting_help' => 'Oba ekrany muszą pokazywać te same sześć słów, zanim parowanie zacznie obowiązywać. Otwórz je ponownie, aby je porównać.',
+    'pairing_waiting_resume' => 'Kontynuuj parowanie',
+    'pairing_waiting_lock_override' => 'Odblokowanie ponownie otwiera to parowanie, zamiast pozwolić mu wygasnąć, więc trwa dłużej niż ustawiony przez Ciebie limit blokady aplikacji. Kończy się, gdy je dokończysz lub anulujesz.',
 
     'relay_endpoint' => 'Adres przekaźnika',
     'relay_endpoint_help' => 'Opcjonalne. Gdy jest ustawiony, urządzenia offline synchronizują się przez ten przekaźnik. Zostaw puste, aby korzystać wyłącznie z połączenia LAN&#8209;bezpośredniego.',
@@ -68,6 +77,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Najpierw ustaw blokadę aplikacji, aby włączyć synchronizację.',
         'enable_failed' => 'Nie udało się włączyć synchronizacji. Upewnij się, że blokada aplikacji jest aktywna, i spróbuj ponownie.',
+        'identity_replaced' => 'To urządzenie ma nową tożsamość synchronizacji. Sparuj pozostałe urządzenia ponownie.',
+        'identity_replace_failed' => 'Nie udało się odłożyć starej tożsamości urządzenia. Spróbuj ponownie.',
         'cannot_remove_self' => 'Nie możesz usunąć tego urządzenia — właśnie z niego korzystasz.',
         'remove_failed' => 'Nie udało się usunąć urządzenia. Spróbuj ponownie.',
         'app_lock_first_settings' => 'Najpierw ustaw blokadę aplikacji, aby zmienić ustawienia synchronizacji.',
@@ -75,4 +86,8 @@ return [
         'relay_saved' => 'Adres przekaźnika zapisany.',
         'relay_save_failed' => 'Nie udało się zapisać adresu przekaźnika: :message',
     ],
+    'app_lock_permanent' => 'Gdy dane są już zaszyfrowane, blokady aplikacji nie da się wyłączyć — przechowuje jedyny klucz, a powrotu do danych niezaszyfrowanych nie ma.',
+    'backlog_heading' => 'Czeka na dodanie',
+    'backlog_deferred' => 'To urządzenie otrzymało dane z innego urządzenia i jeszcze nie dodało ich do Twoich zapisów. Nic nie ginie — zostaną zastosowane automatycznie, zwykle w ciągu chwili.',
+    'backlog_awaiting_key' => 'To urządzenie otrzymało dane, do których nie ma jeszcze klucza. Nic nie ginie. Otwórz aplikację na sparowanym urządzeniu, gdy to jest otwarte, aby oba mogły się połączyć i przesłać klucz.',
 ];

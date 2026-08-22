@@ -46,11 +46,13 @@ What the module explicitly does NOT do:
 `Public/` exposes the cross-module surface:
 
 - **Contracts/**
-  - `SeriesDetector::detect(User $user, Period $window):
-    list<DetectedSeriesDto>` — the per-detector contract. Tag
-    `recurring.detector`.
-  - `DispatchesRecurringDetection::dispatch(User $user)` —
-    called by `Import::ConfirmImport` after every import
+  - `SeriesDetector::detectForUser(User $user): void` — the
+    per-detector contract. Tag `recurring.detector`. The
+    detector reads its own window from
+    `users.recurring_detection_window_months` and upserts the series
+    itself; it returns nothing to its caller.
+  - `DispatchesRecurringDetection::dispatchForUser(int $userId)`
+    — called by `Import::ConfirmImport` after every import
     commits; bound to `BusRecurringDetectionDispatcher`.
 - **Actions/** (every Public Action's `__invoke($seriesId,
   $user)` shape, except where noted):
@@ -77,13 +79,20 @@ What the module explicitly does NOT do:
     — cadence drifted to a different stable cadence.
   - `RecurringSeriesMetricsRefreshed` — `(seriesId, userId)`.
 - **Services/**
-  - `RecurringSeriesQuery::list($user, $filters)` —
-    main list query.
-  - `RecurringSeriesQuery::lastTwoOccurrences($seriesId,
-    $user)` — the read consumed by `DriftAlerts::DriftEvaluator`.
+  - `RecurringSeriesQuery::pendingForUser($user, $cursorId,
+    $limit)` and its `rejectedForUser` / `approvedForUser`
+    siblings — the per-state, cursor-paged list queries. There
+    is no single filtered list entry point; each review-page
+    state has its own method, plus `cadenceChangedForUser` and
+    the unpaged `allApprovedForUser`.
+  - `RecurringSeriesQuery::occurrencesForSeries($seriesId,
+    $user)` — every occurrence row that contributed to the
+    series, ordered `observed_at` DESC. This is the read
+    `DriftAlerts::DriftEvaluator` consumes; it takes the first
+    two entries itself.
   - `RecurringSeriesQuery::pendingCountForUser($user)` —
     the pending-review count.
-  - `FixedPaymentsViewQuery::for($user)` — the dashboard
+  - `FixedPaymentsViewQuery::viewForUser($user)` — the dashboard
     fixed-payments card data.
 
 `Internal/` houses the implementation:
@@ -108,28 +117,70 @@ What the module explicitly does NOT do:
   recent transactions.
 - **Internal/Services/BusRecurringDetectionDispatcher** —
   concrete `DispatchesRecurringDetection`.
-- **Internal/Http/Livewire/** — four SFCs.
+- **Internal/Http/Livewire/** — three SFCs (`RecurringPage`,
+  `RecurringReviewPage`, `RecurringSeriesDetailPage`). The
+  fourth, `FixedPaymentsCard`, is Public: the dashboard layout
+  renders it, so it is a cross-module surface rather than an
+  internal one.
 
 ## Key services + events
 
-- `DetectRecurringSeriesJob::handle()` — collects the
-  tag-discovered detectors via `iterable $detectors`; runs
-  each against the user's recent transactions; for each
-  detected cluster, upserts a `recurring_series` row keyed
-  on `(user_id, cluster_counterparty_key)`; raises
-  `RecurringSeriesDetected` per new row;
-  `RecurringSeriesMetricsRefreshed` per touched row.
-- `RecurringSeriesStateMachine::transition($series, $next,
-  $reason)` — the sole sanctioned mutator; writes
-  `recurring_series_transitions` audit row.
-- `BusRecurringDetectionDispatcher::dispatch($user)` —
+- `DetectRecurringSeriesJob::handle()` — writes NO
+  `recurring_series` row and raises NO detection event. It does
+  four things: loads the user, expires every `snoozed` series
+  whose `snoozed_until` has passed (through the state machine,
+  so the transition is audited), probes whether the app-lock
+  KEK is available for an encrypted user, and then loops the
+  tag-discovered detectors calling `detectForUser()` on each.
+  The KEK probe is why the loop is not uniform:
+  `IncomeSeriesDetector` clusters on IBAN, so without a KEK it
+  is skipped entirely for that sweep rather than called and
+  left to cluster on undecryptable ciphertext; it picks up on
+  the next in-app "Detect now".
+- The persistence and the events belong to the DETECTOR, not
+  the job. Each detector builds an in-memory index of the
+  user's existing series keyed on the cluster counterparty key,
+  then per cluster either calls `SeriesRefresher::refresh()` on
+  the row it found or inserts a new one. That is an
+  insert-or-update decided in PHP against the index, not a DB
+  upsert: `(user_id, direction, cluster_counterparty_key,
+  latest_currency)` carries a plain INDEX, and the UNIQUE
+  constraint (`rec_series_uniq`) is on `cluster_key` instead.
+  The index is the load-bearing part — two merchant keys can
+  normalise onto one `cluster_key` (an ampersand and a space
+  both become a hyphen), so a later cluster in the same sweep
+  must find the row an earlier one just wrote instead of
+  inserting over it.
+- Which event fires follows that split.
+  `RecurringSeriesDetected` fires only on the insert arm, once
+  per NEW series. `RecurringSeriesMetricsRefreshed` fires on
+  both arms, so once per touched series.
+  `RecurringSeriesCadenceFlipped` fires from the refresh arm
+  only when the inferred cadence moved, and only after a fresh
+  re-read of the row confirms it is still `approved` — the
+  `approved → cadence_changed` transition is illegal from any
+  other state, and the row may have moved since the detector
+  read it.
+- `RecurringSeriesStateMachine::transition($series, $toState,
+  $reason, $actor, $notes = null, $extraColumns = [])` — the
+  sole sanctioned mutator; writes the
+  `recurring_series_transitions` audit row. `$actor` is not
+  optional: an audit row that cannot say whether the detector
+  or the user moved the series is not an audit row.
+- `BusRecurringDetectionDispatcher::dispatchForUser($userId)` —
   dispatches `DetectRecurringSeriesJob` per user.
-- `RecurringSeriesQuery::lastTwoOccurrences` — the read
-  surface `DriftAlerts` consumes.
-- The five Public events form the cross-module reactivity
-  surface; every consumer (`Forecasting`, `DriftAlerts`)
-  subscribes via the Public event class, never reaches into
-  this module's internals.
+- `RecurringSeriesQuery::occurrencesForSeries` — the occurrence
+  read surface `DriftAlerts` consumes. It is not the only method
+  `DriftAlerts` calls: `DriftEvaluator` also uses `forSeries` and
+  `driftThresholdForSeries`, `DriftAlertQuery` uses
+  `statesForSeriesIds` and `displayNamesForSeriesIds`, and
+  `CancellationImpactQuery` uses `forSeries` and `forSeriesIds`.
+- The seven Public events form the cross-module reactivity
+  surface — the five series-lifecycle ones plus
+  `PaymentReminderDue` and `PaymentSettled`. Every consumer
+  (`Forecasting`, `DriftAlerts`, `Notifications`) subscribes
+  via the Public event class, never reaches into this module's
+  internals.
 
 ## `RecurringSeriesQuery` read contract
 

@@ -53,11 +53,10 @@
                         :label="Lang::get('community::suggest.region')"
                         wire:model.live="region"
                     >
-                        <option value="NL">{{ Lang::get('community::suggest.regions.nl') }}</option>
-                        <option value="BE">{{ Lang::get('community::suggest.regions.be') }}</option>
-                        <option value="DE">{{ Lang::get('community::suggest.regions.de') }}</option>
-                        <option value="FR">{{ Lang::get('community::suggest.regions.fr') }}</option>
-                        <option value="OTHER">{{ Lang::get('community::suggest.regions.other') }}</option>
+                        @foreach ($regionOptions as $regionCode => $regionLabel)
+                            <option value="{{ $regionCode }}">{{ $regionLabel }}</option>
+                        @endforeach
+                        <option value="">{{ Lang::get('community::suggest.regions.other') }}</option>
                     </x-core::form-field>
                 </div>
 
@@ -85,7 +84,7 @@
                             ((category && category.length)
                                 ? '    category: &quot;' + category + '&quot;\n'
                                 : '') +
-                            '    region: &quot;' + (region || 'NL') + '&quot;\n' +
+                            '    region: &quot;' + (region || '') + '&quot;\n' +
                             '    contributor: &quot;user&quot;\n'
                         "
                         class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-xs font-mono text-slate-900 whitespace-pre dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"

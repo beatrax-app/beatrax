@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Public\Dto;
 
+use Modules\Ledger\Public\Enums\Currency;
+
 final class CsvPreset
 {
     public const SIGNED = 'signed';
@@ -41,7 +43,7 @@ final class CsvPreset
         public readonly ?string $counterpartyNameHeader = null,
         public readonly ?string $counterpartyIbanHeader = null,
         public readonly ?string $currencyHeader = null,
-        public readonly string $fixedCurrency = 'EUR',
+        public readonly string $fixedCurrency = Currency::Eur->value,
         public readonly ?string $ownIbanHeader = null,
         public readonly ?string $sourceRefHeader = null,
         public readonly ?string $feeHeader = null,

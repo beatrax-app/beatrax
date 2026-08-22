@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Identity;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
@@ -11,8 +12,10 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Internal\Clock\ZuluTimestamp;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
+use Modules\Sync\Internal\Exceptions\DeviceIdentityUnreadableException;
 use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Ramsey\Uuid\Uuid;
 use SodiumException;
@@ -36,7 +39,11 @@ final class DeviceIdentityService
     // devices, and an unconfirmed self-row hides this device's own entries.
     private function restoreSelfRow(int $userId, DeviceIdentityDto $identity): void
     {
-        $now = $this->clock->now()->toIso8601String();
+        $now = ZuluTimestamp::stamp($this->clock->now());
+
+        // A key-file minted before the column was Zulu holds a local offset,
+        // and this is the one path that copies it back onto a migrated row.
+        $mintedAt = ZuluTimestamp::stamp(CarbonImmutable::parse($identity->createdAt));
 
         $row = [
             'name' => $this->nameDetector->detect(),
@@ -44,8 +51,8 @@ final class DeviceIdentityService
             'x25519_public_key_hex' => $identity->x25519PublicKeyHex,
             'safety_number_words' => '',
             'is_self' => 1,
-            'paired_at' => $identity->createdAt,
-            'confirmed_at' => $identity->createdAt,
+            'paired_at' => $mintedAt,
+            'confirmed_at' => $mintedAt,
             'updated_at' => $now,
         ];
 
@@ -64,8 +71,39 @@ final class DeviceIdentityService
             'user_id' => $userId,
             'device_id' => $identity->deviceId,
             'last_seen_at' => null,
-            'created_at' => $identity->createdAt,
+            'created_at' => $mintedAt,
         ]);
+    }
+
+    // The one consented way past generateAndPersist()'s refusal below, for a
+    // key-file that opens for nobody on this device. It is moved ASIDE, never
+    // deleted: the database wrapping the KEK that opens it may still be
+    // restored, and it holds the only copy of keys the op-log is signed with.
+    /**
+     * @return bool whether a key-file was actually retired
+     *
+     * @throws DeviceIdentityUnreadableException when the unreadable key-file cannot be moved aside.
+     */
+    public function retireUnreadableIdentity(int $userId, Session $session): bool
+    {
+        if ($this->loader->state($userId, $session) !== DeviceIdentityState::Unreadable) {
+            return false;
+        }
+
+        $encPath = UserDataPathService::appPath("sync/identity/{$userId}.enc");
+
+        // Timestamped AND random: a second retirement inside the same second
+        // must not land on the first, and every reader looks for the exact
+        // "{userId}.enc" name, so a sibling of it is invisible to all of them.
+        $retiredPath = $encPath.'.unreadable-'
+            .$this->clock->now()->format('Ymd-His').'-'
+            .bin2hex(random_bytes(4));
+
+        if (! @rename($encPath, $retiredPath)) {
+            throw DeviceIdentityUnreadableException::couldNotRetire($encPath);
+        }
+
+        return true;
     }
 
     // Generates the device identity, encrypts the key-file, and persists the
@@ -73,6 +111,7 @@ final class DeviceIdentityService
     // carries secret-key hex — never persist the DTO).
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
+     * @throws DeviceIdentityUnreadableException when a key-file exists that the held KEK cannot open.
      * @throws CryptoOperationFailedException on a libsodium failure.
      */
     public function generateAndPersist(int $userId, Session $session): DeviceIdentityDto
@@ -90,13 +129,24 @@ final class DeviceIdentityService
         if ($existing !== null) {
             $this->restoreSelfRow($userId, $existing);
             $this->events->dispatch(new DeviceSyncEnabled($userId));
+            sodium_memzero($kek);
 
             return $existing;
         }
 
+        // A null from load() with a KEK in hand is either no key-file or one
+        // that will not open under it, and the second is not a fresh device:
+        // minting here would write over secret keys a restored database could
+        // still use. retireUnreadableIdentity() is the consented way past this.
+        if ($this->loader->state($userId, $session) === DeviceIdentityState::Unreadable) {
+            sodium_memzero($kek);
+
+            throw DeviceIdentityUnreadableException::willNotOverwrite($userId);
+        }
+
         try {
             $deviceId = Uuid::uuid4()->toString();
-            $createdAt = $this->clock->now()->toIso8601String();
+            $createdAt = ZuluTimestamp::stamp($this->clock->now());
 
             $signKp = sodium_crypto_sign_keypair();
             // SEPARATE X25519 keypair — do NOT derive from the signing key,

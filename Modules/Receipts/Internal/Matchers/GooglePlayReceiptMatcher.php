@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Receipts\Internal\Matchers;
 
-use Carbon\CarbonImmutable;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
@@ -13,7 +13,6 @@ use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
-use Throwable;
 
 // Claims messages whose sender is EXACTLY googleplay-noreply@google.com
 // — exact equality, not a google.com suffix match, defeats a spoofed
@@ -88,10 +87,8 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
         }
         [$orderId, $nativeMinor, $settledMinor, $settledCurrency, $merchant] = $charge;
 
-        $dateRaw = $parsed->headers['date'] ?? '';
-        try {
-            $bookedAt = CarbonImmutable::parse($dateRaw)->startOfDay();
-        } catch (Throwable) {
+        $bookedAt = SafeDate::parseDayOrNull($parsed->headers['date'] ?? '');
+        if ($bookedAt === null) {
             return MatchOutcomeDto::unmatched('invalid_date_header');
         }
 
@@ -138,12 +135,12 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
         $nativeMinor = -$nativeMinor;
 
         $settledMinor = $nativeMinor;
-        $settledCurrency = 'USD';
+        $settledCurrency = Currency::Usd->value;
         if (preg_match(self::EUR_SETTLED_REGEX, $body, $eurMatches) === 1) {
-            $eurValue = $this->toMinorOrNull($eurMatches[1], 'EUR');
+            $eurValue = $this->toMinorOrNull($eurMatches[1], Currency::Eur->value);
             if ($eurValue !== null) {
                 $settledMinor = -$eurValue;
-                $settledCurrency = 'EUR';
+                $settledCurrency = Currency::Eur->value;
             }
         }
 

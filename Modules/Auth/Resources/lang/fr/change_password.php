@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Confirmer le nouveau mot de passe',
     'submit' => 'Enregistrer le mot de passe',
 
+    'error_current_required' => 'Saisis ton mot de passe actuel.',
     'error_current_incorrect' => 'Le mot de passe actuel est incorrect.',
     'error_mismatch' => 'Les mots de passe ne correspondent pas.',
     'error_min_length' => 'Utilise au moins 12 caractères.',

@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -33,8 +34,8 @@ final class DriftAlertDtoMapper
         $annualizedImpact = Money::ofMinor(self::toInt($row->annualized_impact_minor), $currency);
 
         $eurEquivalent = null;
-        if ($eurEquivalentMinor !== null && $currency !== 'EUR') {
-            $eurEquivalent = Money::ofMinor($eurEquivalentMinor, 'EUR');
+        if ($eurEquivalentMinor !== null && $currency !== Currency::Eur->value) {
+            $eurEquivalent = Money::ofMinor($eurEquivalentMinor, Currency::Eur->value);
         }
 
         // Fail loud rather than letting Carbon raise a bare

@@ -135,6 +135,37 @@ row is committed by then and the recovery-codes screen is still ahead:
 a preference that can be set again from Settings is never worth the
 only screen that shows those codes.
 
+## A device joining an account is sent this corpus, not seeded it
+
+`tax_deduction_categories` is a synced table
+(`MergeRulesRegistry::taxAndSplitRules()`), so the fourth picker — the
+one on `/mobile/import`, the screen a phone uses to join another
+device's account — must not seed it. The joining phone is deliberately
+epoch-less until pairing confirms, so `PreSyncHistoryCapture` declines
+to capture anything it wrote; and the desktop's rows arrive through
+`OpLogEntryApplier` under the op's own primary key with
+`insertOrIgnore`, so a locally-seeded row of that id — or of that
+`unique(user_id, name)` — swallows the peer's row without a word. Same
+country and an untouched corpus made that invisible; a category the
+desktop had renamed or deleted made it permanent.
+
+`UserCountryChanged` therefore carries `seedsCountryData`, mirroring
+`UserInstalled::$seedsStarterData`, and `SignupAction` passes the one
+through from the other. The import path already signed up with
+`seedsStarterData: false`; the corpus now follows that same decision.
+
+The country itself is still stored — `users` does not sync, so a phone
+that did not record it there never learns it — and the corpus behind it
+arrives from the peer. If the reader instead abandons pairing,
+`MobilePairingScan::abandonImport()` re-dispatches `UserInstalled`, and
+`SeedDeductionCategoriesForCountry::handleInstall()` answers it by
+seeding the corpus for whatever country is already stored. That second
+entry point is also what lets `beatrax:install` heal this corpus, which
+it could not do while the seeder hung off the picker alone. An
+unfinished ceremony needs neither: `MobileEnsureImportCompleted` returns
+every gated route to the pairing screen while the marker stands, so
+there is no surface on which the absent corpus can be seen.
+
 ## The corpus is the filing country's wording, not the reader's
 
 `seedFromCorpus()` writes `name`, `short_name` and `hint` verbatim from

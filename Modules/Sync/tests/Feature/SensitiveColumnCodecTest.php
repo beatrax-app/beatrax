@@ -167,3 +167,62 @@ it('encryptAttrs/decryptRow round-trip every sensitive column present and skip n
     expect($decrypted['amount_minor'])->toBe(1234);
     expect($decrypted['currency'])->toBe('EUR');
 });
+
+// The empty string is what a caller used to read "this row is sealed" from, and
+// it is also what a genuinely blank note decrypts to. Both arms below come back
+// '' — only the flag separates them, and every caller that guessed from the
+// value alone got the first arm wrong.
+it('separates a column whose plaintext is genuinely empty from one it could not open', function (): void {
+    $userId = (int) codecUser('codec-empty-plaintext')->id;
+
+    /** @var GdkKeyringService $keyringService */
+    $keyringService = $this->app->make(GdkKeyringService::class);
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var SensitiveColumnCodec $codec */
+    $codec = $this->app->make(SensitiveColumnCodec::class);
+
+    $keyringService->generateAndPersist($userId, $session);
+
+    $sealedEmptyNote = $codec->encryptValue('transactions', 'note', '', $userId, $session);
+    expect($sealedEmptyNote)->not->toBe('');
+
+    $readable = $codec->decryptRow('transactions', ['note' => $sealedEmptyNote], $userId, $session);
+    expect($readable['note'])->toBe('');
+    expect($readable->isUnreadable('note'))->toBeFalse();
+    expect($readable->hasUnreadable())->toBeFalse();
+
+    $strandedNote = substr($sealedEmptyNote, 0, -4).'xxxx';
+    $stranded = $codec->decryptRow('transactions', ['note' => $strandedNote], $userId, $session);
+    expect($stranded['note'])->toBe('');
+    expect($stranded->isUnreadable('note'))->toBeTrue();
+    expect($stranded->hasUnreadable())->toBeTrue();
+});
+
+// A column the registry has no opinion about is never named unreadable, whether
+// or not it happens to look like base64 — the flag reports what this codec
+// blanked, not what a row happens to hold.
+it('names only registered columns it had to blank', function (): void {
+    $userId = (int) codecUser('codec-unregistered')->id;
+
+    /** @var GdkKeyringService $keyringService */
+    $keyringService = $this->app->make(GdkKeyringService::class);
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var SensitiveColumnCodec $codec */
+    $codec = $this->app->make(SensitiveColumnCodec::class);
+
+    $keyringService->generateAndPersist($userId, $session);
+
+    $row = $codec->decryptRow('transactions', [
+        'currency' => base64_encode(str_repeat("\x11", 64)),
+        'amount_minor' => 1234,
+        'description' => 'never encrypted',
+    ], $userId, $session);
+
+    expect($row->hasUnreadable())->toBeFalse();
+    expect($row->isUnreadable('currency'))->toBeFalse();
+    expect($row['currency'])->toBe(base64_encode(str_repeat("\x11", 64)));
+    expect($row['amount_minor'])->toBe(1234);
+    expect($row['description'])->toBe('never encrypted');
+});

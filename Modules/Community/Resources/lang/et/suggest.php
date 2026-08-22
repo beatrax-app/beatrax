@@ -14,10 +14,6 @@ return [
     'region' => 'Piirkond',
 
     'regions' => [
-        'nl' => 'NL — Holland',
-        'be' => 'BE — Belgia',
-        'de' => 'DE — Saksamaa',
-        'fr' => 'FR — Prantsusmaa',
         'other' => 'Muu',
     ],
 

@@ -1,4 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Enums\Currency')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     /recurring page — grouped expense + income + transfers sections
     with the net-flow header at the top of the page.
@@ -22,7 +24,7 @@
 
     $fmt = static fn (Money $money): string => $money->format();
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
+    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
 
     $expenseTotal = (int) ($totals['expense_eur_minor'] ?? 0);
     $incomeTotal = (int) ($totals['income_eur_minor'] ?? 0);
@@ -122,7 +124,7 @@
                                             class="font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                                         >{{ $row->displayName() }}</a>
                                         <span class="ml-2 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
-                                        @if ($row->latestAmount->currency() !== 'EUR' && $row->eurEquivalent !== null)
+                                        @if ($row->latestAmount->currency() !== Currency::Eur->value && $row->eurEquivalent !== null)
                                             <span class="ml-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
                                         @endif
                                     </p>
@@ -197,7 +199,7 @@
                                             class="font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                                         >{{ $row->displayName() }}</a>
                                         <span class="ml-2 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
-                                        @if ($row->latestAmount->currency() !== 'EUR' && $row->eurEquivalent !== null)
+                                        @if ($row->latestAmount->currency() !== Currency::Eur->value && $row->eurEquivalent !== null)
                                             <span class="ml-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
                                         @endif
                                     </p>

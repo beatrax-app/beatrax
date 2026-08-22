@@ -15,6 +15,7 @@ use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\DriftAlerts\Public\Dto\SavingsInsight;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
@@ -31,6 +32,7 @@ final class SavingsInsightsQuery
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly CacheRepository $cache,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -123,8 +125,9 @@ final class SavingsInsightsQuery
     ): ?SavingsInsight {
         $monthly = Money::ofMinor($monthlyMinor, $currency)->format();
 
-        // The review floor is a EUR threshold; the arm applies it only to EUR
-        // series so a foreign-currency minor amount is never compared with it.
+        // The review floor is a base-currency threshold; the arm applies it only
+        // to base-currency series so a foreign minor amount is never compared
+        // with it.
         return match (true) {
             $resource->cheaperUrl !== null => new SavingsInsight(
                 key: 'cheaper:'.$seriesId,
@@ -150,7 +153,7 @@ final class SavingsInsightsQuery
                 actionUrl: $resource->cancelUrl,
                 counterpartySlug: $slug,
             ),
-            $currency === 'EUR' && $monthlyMinor >= self::REVIEW_FLOOR && $resource->cancelUrl !== null => new SavingsInsight(
+            $currency === $this->baseCurrency->code() && $monthlyMinor >= self::REVIEW_FLOOR && $resource->cancelUrl !== null => new SavingsInsight(
                 key: 'review:'.$seriesId,
                 type: 'review',
                 seriesId: $seriesId,

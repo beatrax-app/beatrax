@@ -94,8 +94,8 @@ Modules/DevMode/
     `destructive(): list<CommandSpec>`,
     `find(string $name): CommandSpec` (throws on an unregistered
     name).
-  - `NavigationRegistry::entries(): list<NavigationEntry>`.
-  - `AppActionRegistry::actions(): list<AppAction>`.
+  - `NavigationRegistry::all(): list<NavigationEntry>`.
+  - `AppActionRegistry::all(): list<AppAction>`.
   - `AuditWriter::recordCommandRun(CommandRunAudit $run): void`,
     `finalizeCommandRun(...): bool`,
     `recordDestructiveQueueAction(...): void`,
@@ -126,8 +126,9 @@ Modules/DevMode/
   sanctioned Symfony-`Process` constructor. Throws
   `InvalidArgumentException` for any unrecognised command.
 - `Internal/Process/RunRegistry` — cache-backed per-run state.
-- `Internal/Process/FileTailer::stream(string $path): iterable<string>`
-  — yields log lines.
+- `Internal/Process/FileTailer::tailOnce(string $path, int
+  $fromOffset): array{chunk: string, newOffset: int}` — one bounded
+  64 KiB read from an offset, polled rather than streamed.
 - `Internal/Audit/SpatieAuditWriter` — concrete `AuditWriter`, bound
   unconditionally: there is no null-object fallback.
 - `Internal/Enums/CommandTier` — `Safe` / `Destructive`.
@@ -137,10 +138,13 @@ Modules/DevMode/
 - `Internal/Support/DevModeSession` — `ADVANCED_KEY` and
   `ADVANCED_SEEN_KEY`, the two session keys the triple gate's second
   lock is held in.
-- `Internal/Audit/RedactionExcerptCap::cap(string $excerpt): string`
-  — scrubs OAuth literals and Bearer / JWT patterns.
-- `Internal/Audit/FinalizeRunAudit::handle($run)` — writes the
-  closing audit row.
+- `Internal/Audit/RedactionExcerptCap::apply(string $text, int
+  $maxBytes = self::DEFAULT_MAX_BYTES): string` — scrubs OAuth
+  literals and Bearer / JWT patterns, then caps at 8 KiB.
+- `Internal/Audit/FinalizeRunAudit::__invoke(string $runId, ?int
+  $exitCode, bool $cancelled)` — merges the closing state onto the
+  spawner's eager row, falling back to an append-only write so the
+  fact of the run is never lost.
 - `Internal/Logging/RedactSecretsProcessor::__invoke($record)` —
   Monolog tap. Lazy-rebuilds the OAuth pattern from
   `OAuthScrubSet::compiledPattern()` on demand.

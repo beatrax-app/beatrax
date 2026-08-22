@@ -396,7 +396,6 @@ it('NativeAppServiceProvider::boot() runs pending migrations before opening the 
         public function run($paths = [], array $options = [])
         {
             $this->runCalls++;
-            /** @phpstan-ignore-next-line property.notFound — opened is a public array on WindowManagerFake */
             $this->openedSnapshotAtRun[] = $this->windowFake->opened;
 
             return [];

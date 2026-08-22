@@ -7,10 +7,14 @@ isolation.
 
 - **Location:** `Modules/Onboarding/tests/Unit/`
 - **What they test:**
-  - `WizardProgressInitializerTest` — the seed insert is
-    idempotent on `UNIQUE(user_id, step_id)`.
-  - `ResumeStepResolverTest` — the resume math for every
-    combination of completed / incomplete step rows.
+  - `WizardProgressInitializerTest` — one row per registry
+    step, re-fire stays at one row per step, a step already
+    past `pending` is left alone, and a step added after the
+    wizard finished seeds `skipped` rather than `pending`.
+  - `ResumeStepResolverTest` — in_progress wins, then first
+    pending in registry order, then the empty-string sentinel.
+  - `WizardSkippableStepsTest` — which step keys `isSkippable()`
+    admits.
 
 ## Feature tests
 
@@ -122,34 +126,46 @@ The behavioural contract for the `Onboarding` module.
 ## Behavioral contracts
 
 - **The seed listener is idempotent.** Re-dispatching
-  `UserInstalled` does not duplicate `wizard_progress` rows;
-  the schema's `UNIQUE(user_id, step_id)` is the guard, and
-  the initializer uses INSERT-OR-IGNORE semantics.
+  `UserInstalled` does not duplicate `wizard_progress` rows.
+  `UNIQUE(user_id, step_key)` is the schema-level backstop, but
+  the initializer does not lean on it: it reads the user's
+  existing rows first and inserts only the missing steps, because
+  it also has to choose the seed status — `skipped` for a step
+  added after the wizard was finished, `pending` while the user
+  is still mid-wizard.
   (`tests/Unit/WizardProgressInitializerTest.php`,
   `tests/Feature/ReRunWizardTest.php`)
 - **The wizard always resumes from the first incomplete
-  step.** A user who completed step 3 and returns lands on
-  step 4; a fully-complete user lands on `done`.
+  step.** An `in_progress` row wins over any pending one; failing
+  that, the first `pending` step in registry order. A user with
+  no incomplete step left gets the empty-string sentinel, NOT
+  `'done'` — `'done'` is a real step key, and returning it would
+  send a finished user back into the wizard.
   (`tests/Unit/ResumeStepResolverTest.php`,
   `tests/Feature/ResumeWizardTest.php`)
 - **A fresh signup redirects to `/setup-wizard`.** The
   post-signup destination is the wizard, not the dashboard.
   (`tests/Feature/SignupRoutesToSetupTest.php`)
 - **A skipped step persists as skipped.**
-  Skip-this-step lands on the next step with
-  `wizard_progress.meta.skipped = true`; the user can return
-  to the skipped step explicitly via the navigation.
+  Skip-this-step lands on the next step and sets that row's
+  `wizard_progress.status` to `'skipped'` — the status column,
+  not a flag inside the JSON. "Resume later" (`skipRest`) flips
+  every remaining non-done row the same way in one call.
   (`tests/Feature/SkipWizardStepTest.php`)
 - **The connector steps stash their resulting `ImportRun.id`
-  on `wizard_progress.meta`.** The first-import step's
+  on `wizard_progress.data`.** The first-import step's
   consolidated preview reads the stashed ids to build the
   preview without re-uploading. (`tests/Feature/ConnectPaypalStepStashesRunIdTest.php`,
   `tests/Feature/ConnectCardStepStashesAllRunIdsTest.php`)
 - **The first-import step renders a consolidated
   multi-source preview.**
-  `BuildConsolidatedPreviewQuery::for($user, $runIds)` returns
-  per-source preview sections; the step renders them in a
-  unified row list. (`tests/Feature/ConsolidatedPreviewLoadTest.php`)
+  `BuildConsolidatedPreviewQuery::build($importRunIds, $user,
+  $sectionLimitOverrides = [])` returns a
+  `ConsolidatedPreviewBatch` of per-source-format sections; the
+  step renders them in a unified row list. The run ids come first
+  because the query's job is to filter THEM — by owner, by the
+  14-day stale window and by already-confirmed status — before any
+  cache read. (`tests/Feature/ConsolidatedPreviewLoadTest.php`)
 - **The first-import step's commit is all-or-nothing.** A
   rollback during commit unwinds every per-account write.
   (`tests/Feature/FirstImportStepCommitEverythingTest.php`,
@@ -200,18 +216,40 @@ The behavioural contract for the `Onboarding` module.
 - **A user whose first install left a half-applied
   `wizard_progress` set** (e.g. the initializer was
   interrupted) — the next install dispatch re-runs the
-  initializer; the unique constraint makes the existing rows
-  no-ops; missing rows are inserted.
+  initializer; it reads the rows that exist and inserts only the
+  missing ones, so the half-applied set completes rather than
+  raising on the unique index.
 - **A user uploading two ASN exports in the same step** —
   the step accepts one upload per session; a second upload
   replaces the first (the user's "I picked the wrong file"
   case).
 - **A user navigating to `/setup-wizard` after completion** —
-  the resume resolver returns `'done'`; the wizard shows the
-  `DoneStep` with a "back to dashboard" CTA.
-- **A PayPal upload that fatally fails to parse** — the
-  step surfaces the error from `RunImport::preview` directly;
-  the user retries.
+  `ResumeStepResolver::resolve()` returns the EMPTY STRING (not
+  `'done'`, which is a real step key), and `SetupWizard::mount`
+  redirects to `/`. The `DoneStep` with its "back to dashboard"
+  CTA is what the user sees on the visit where they finish:
+  advancing past the last step sets `allComplete` in the
+  already-mounted component. A fresh visit afterwards does not
+  re-render it. `tests/Feature/ReRunWizardTest.php` asserts
+  both halves: the redirect to `/` when every step is done and
+  no force flag is set, and the `?force=1` reset that puts a
+  finished user back at `welcome`.
+- **A PayPal upload that fatally fails to parse** — the step
+  does NOT get an exception to surface. `ImportPipeline` turns
+  a typed parse failure into error ROWS rather than raising, so
+  `RunsImports::runFromUpload` returns normally with an
+  all-error preview, and `ConnectPaypalStep::submit` has to
+  detect that itself: it calls its own `fatalParseMessage()`
+  over the result, sets `uploadError`, logs a warning, and
+  returns WITHOUT dispatching `wizard.step.completed` or
+  stashing the run id. The stash is the load-bearing half —
+  stashing here would hand `FirstImportStep` the poisoned
+  cache. The step's `catch` around `runFromUpload` is a
+  separate, unrelated path for a genuinely unreadable file, and
+  it produces the generic "unreadable" message rather than a
+  named one. The test asserts the message names the right
+  export ("Rapport Transactiegegevens") and that
+  `wizard_progress.data.paypal_import_run_id` stayed null.
   (`tests/Feature/ConnectPaypalStepFatalParseUploadTest.php`)
 - **A user who installs, completes the wizard, deletes
   every account, and re-runs the wizard** — the
@@ -224,7 +262,9 @@ The behavioural contract for the `Onboarding` module.
 - **Depends on**
   - [`Core`](../core/how-to-test.md) — `UserInstalled` event,
     `BelongsToUser`, `CurrentUser`.
-  - [`Import`](../import/how-to-test.md) — `RunImport::preview`,
+  - [`Import`](../import/how-to-test.md) —
+    `RunsImports::runFromUpload` (the contract, not the
+    concrete `RunImport`; bound to it in the container),
     `ConfirmImport`, `BuildConsolidatedPreviewQuery`,
     `DetectStartingBalancesQuery`.
   - [`Ingestion`](../ingestion/how-to-test.md) — `HeaderSniffer`
@@ -236,16 +276,23 @@ The behavioural contract for the `Onboarding` module.
     `OAuthClientWizardModal` the `ConnectEmailStep` link
     dispatches to.
 - **Depended on by**
-  - No module imports `Onboarding`'s Public surface today;
-    `WizardCompleted` is a future-subscriber event.
-  - The dashboard layout may consult
-    `WizardProgressQuery::isComplete` to suppress its
-    welcome tour.
+  - Nothing. `Onboarding` has no `Public/` directory to import
+    from, and `WizardCompleted` is `Internal/` with no
+    listener.
+  - The dashboard layout does not consult wizard progress, and
+    there is no `isComplete` read anywhere to consult:
+    `WizardProgressQuery` is `Internal/`, its only method is
+    `list($userId)`, and `SetupWizard` is its only caller. A
+    surface that genuinely needs "is the wizard done" should
+    ask for a contract with its name on it rather than reach
+    for this class.
 
 ## Configuration + feature flags
 
-- The step ordering is fixed in `WizardStepRegistry::all()`.
-  Reordering is a deliberate code change.
+- The step ordering is fixed in `WizardStepRegistry::steps()`,
+  and which steps may be skipped in
+  `WizardStepRegistry::isSkippable()`. Changing either is a
+  deliberate code change.
 - The starting-balance divergence threshold is fixed in the
   `StartingBalanceCard` SFC; no per-user knob.
 - No env flag changes the wizard's behaviour.

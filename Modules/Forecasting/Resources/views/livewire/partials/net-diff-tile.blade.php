@@ -21,7 +21,7 @@
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Core\Public\Support\Lang')
 @php
-    $fmt = static fn (int $absMinor, string $currency = 'EUR'): string => Money::ofMinor($absMinor, $currency)->format();
+    $fmt = static fn (int $absMinor, string $currency): string => Money::ofMinor($absMinor, $currency)->format();
 @endphp
 
 <section class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700" aria-label="{{ Lang::get('forecasting::forecast.net_diff_section_aria') }}">

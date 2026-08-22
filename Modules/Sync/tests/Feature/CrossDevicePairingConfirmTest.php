@@ -158,15 +158,17 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
     expect($deferredState)->toBe('deferred');
 
-    // DESKTOP's human now confirms too.
+    // DESKTOP's human now confirms too. The deferred frame is held on this
+    // row, so the tap is the last input the gate was waiting for and nothing
+    // has to arrive from the phone a second time.
     $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
         $row = cdpTokenRow($tokenHash);
         $state = app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
-        expect($state)->toBe(PairingState::AwaitingConfirm->value, 'the peer column is still unset on this row — only the local side confirmed so far');
+        expect($state)->toBe(PairingState::Confirmed->value, 'the held peer confirm is replayed by the local tap');
     });
 
-    // The relay redelivers the SAME (still-pending) PAIR_CONFIRM now that
-    // the desktop's local side is confirmed — this is what completes it.
+    // A relay that redelivers the same PAIR_CONFIRM afterwards finds the work
+    // already done and says so, rather than reopening anything.
     $desktopFinal = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
     expect($desktopFinal)->toBe(PairingState::Confirmed->value);

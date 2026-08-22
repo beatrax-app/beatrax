@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Otključajte aplikaciju za uvoz: ključ trgovca se ne može izračunati dok je zaključana.',
+        'app_locked' => 'Otključajte aplikaciju za uvoz: ključevi za šifrovanje ne mogu da se upotrebe dok je zaključana.',
         'file_unreadable' => 'Ovaj fajl nije bilo moguće pročitati.',
         'iban_not_in_preview' => 'Ovaj IBAN nije deo trenutnog pregleda.',
         'row_unreadable' => 'Ovaj red nije bilo moguće pročitati.',

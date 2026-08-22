@@ -6,10 +6,14 @@ return [
     'heading' => 'Eszközök és szinkronizálás',
 
     'enable_sync' => 'Szinkronizálás bekapcsolása',
-    'enable_sync_help' => 'Oszd meg az adataidat biztonságosan a megbízható eszközeid között. Alkalmazászár szükséges hozzá.',
+    'enable_sync_help' => 'Oszd meg az adataidat biztonságosan a megbízható eszközeid között. Alkalmazászár szükséges hozzá. Ha egyszer bekapcsoltad, az adataid titkosítva lesznek, és az alkalmazászár többé nem kapcsolható ki.',
 
     'app_lock_notice' => 'A szinkronizálás bekapcsolásához előbb állíts be alkalmazászárat.',
     'go_to_app_lock' => 'Ugrás az alkalmazászárhoz',
+
+    'identity_unreadable' => 'Ennek az eszköznek a szinkronizálási azonosítója másik alkalmazászárral készült, és már nem nyílik meg. Amíg ez így van, az eszköz nem tud sem szinkronizálni, sem párosítani. Ha visszaállítod azt az adatbázis-biztonsági mentést, amellyel készült, újra olvasható lesz.',
+    'identity_unreadable_replace_help' => 'Kezdheted elölről is: az eszköz új azonosítót kap, a régi használatlanul félretéve marad, a korábban párosított eszközöket pedig újra párosítanod kell.',
+    'identity_unreadable_replace' => 'Új azonosító létrehozása ehhez az eszközhöz',
 
     'encrypted_at_rest' => 'Az adatok nyugalmi állapotban titkosítva',
     'encrypted_at_rest_scope' => 'A jegyzetek, a tranzakciók leírásai, valamint a kedvezményezettek nevei és IBAN-jai a főkönyvben az alkalmazászár jelmondatával titkosítva vannak. Az összegek, a dátumok, valamint a saját számlád neve és IBAN-ja nincsenek. A keresési index saját olvasható másolatot őriz arról, kinek fizetsz, a tranzakcióid leírásairól és az adójegyzeteidről, és egyes kereskedőnevek olvashatóan szerepelnek az adatbázisfájl más részein.',
@@ -37,6 +41,11 @@ return [
     'remove_aria' => ':name eltávolítása',
     'remove' => 'Eltávolítás',
     'pair_new_device' => 'Új eszköz párosítása',
+
+    'pairing_waiting' => 'Fejezze be a párosítást ezzel: :name',
+    'pairing_waiting_help' => 'Mindkét képernyőnek ugyanazt a hat szót kell mutatnia, mielőtt a párosítás érvényes lenne. Nyissa meg újra az összehasonlításhoz.',
+    'pairing_waiting_resume' => 'Párosítás folytatása',
+    'pairing_waiting_lock_override' => 'A feloldás újranyitja ezt a párosítást, ahelyett hogy hagyná lejárni, így tovább tart a beállított alkalmazászár-időkorlátnál. Akkor ér véget, amikor befejezi vagy megszakítja.',
 
     'relay_endpoint' => 'Relé végpont',
     'relay_endpoint_help' => 'Opcionális. Ha meg van adva, az offline eszközök ezen a relén keresztül szinkronizálnak. Hagyd üresen a csak LAN&#8209;közvetlen módhoz.',
@@ -68,6 +77,8 @@ return [
     'flash' => [
         'app_lock_first' => 'A szinkronizálás bekapcsolásához előbb állíts be alkalmazászárat.',
         'enable_failed' => 'A szinkronizálást nem sikerült bekapcsolni. Győződj meg róla, hogy az alkalmazászár aktív, és próbáld újra.',
+        'identity_replaced' => 'Ez az eszköz új szinkronizálási azonosítót kapott. Párosítsd újra a többi eszközödet.',
+        'identity_replace_failed' => 'A régi eszközazonosítót nem sikerült félretenni. Próbáld újra.',
         'cannot_remove_self' => 'Ezt az eszközt nem távolíthatod el — éppen ezt használod.',
         'remove_failed' => 'Az eszközt nem sikerült eltávolítani. Próbáld újra.',
         'app_lock_first_settings' => 'A szinkronizálási beállítások módosításához előbb állíts be alkalmazászárat.',
@@ -75,4 +86,8 @@ return [
         'relay_saved' => 'A relé végpont mentve.',
         'relay_save_failed' => 'A relé végpontot nem sikerült menteni: :message',
     ],
+    'app_lock_permanent' => 'Ha az adataid egyszer titkosítva vannak, az alkalmazászár többé nem kapcsolható ki — nála van az egyetlen kulcs, és nincs út vissza a titkosítatlanhoz.',
+    'backlog_heading' => 'Hozzáadásra vár',
+    'backlog_deferred' => 'Ez az eszköz adatokat kapott egy másik eszköztől, és még nem adta hozzá a nyilvántartásodhoz. Semmi nem vész el — automatikusan bekerül, általában egy pillanaton belül.',
+    'backlog_awaiting_key' => 'Ez az eszköz olyan adatokat kapott, amelyekhez még nincs kulcsa. Semmi nem vész el. Nyisd meg az alkalmazást a párosított eszközön, amíg ez nyitva van, hogy a kettő kapcsolódni tudjon és a kulcs elküldhető legyen.',
 ];

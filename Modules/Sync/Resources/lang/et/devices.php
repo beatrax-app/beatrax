@@ -6,10 +6,14 @@ return [
     'heading' => 'Seadmed ja sünkroonimine',
 
     'enable_sync' => 'Luba sünkroonimine',
-    'enable_sync_help' => 'Jaga oma andmeid turvaliselt usaldusväärsete seadmete vahel. Nõuab rakenduse lukku.',
+    'enable_sync_help' => 'Jaga oma andmeid turvaliselt usaldusväärsete seadmete vahel. Nõuab rakenduse lukku. Kui see on sees, krüpteeritakse su andmed ja rakenduse lukku ei saa enam välja lülitada.',
 
     'app_lock_notice' => 'Sünkroonimise lubamiseks määra kõigepealt rakenduse lukk.',
     'go_to_app_lock' => 'Ava rakenduse lukk',
+
+    'identity_unreadable' => 'Selle seadme sünkroonimisidentiteet loodi teise rakenduseluku ajal ja seda ei saa enam avada. Seni ei saa see seade sünkroonida ega siduda. Kui taastad andmebaasi varukoopia, millega see loodi, muutub see taas loetavaks.',
+    'identity_unreadable_replace_help' => 'Võid ka otsast alustada: seade saab uue identiteedi, vana jääb kasutamata alles ja varem seotud seadmed tuleb uuesti siduda.',
+    'identity_unreadable_replace' => 'Loo sellele seadmele uus identiteet',
 
     'encrypted_at_rest' => 'Andmed on kettal krüpteeritud',
     'encrypted_at_rest_scope' => 'Märkmed, tehingute kirjeldused ning saajate nimed ja IBAN-id on pearaamatus krüpteeritud sinu rakenduseluku paroolifraasiga. Summad, kuupäevad ning sinu enda konto nimi ja IBAN ei ole. Otsinguindeks hoiab omaenda loetavat koopiat sellest, kellele sa maksad, sinu tehingute kirjeldustest ja sinu maksumärkmetest, ning mõned kaupmeeste nimed on loetavad andmebaasifaili teistes kohtades.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => 'Eemalda :name',
     'remove' => 'Eemalda',
     'pair_new_device' => 'Seo uus seade',
+
+    'pairing_waiting' => 'Lõpetage sidumine seadmega :name',
+    'pairing_waiting_help' => 'Mõlemad ekraanid peavad näitama samu kuut sõna, enne kui sidumine kehtib. Ava see uuesti, et neid võrrelda.',
+    'pairing_waiting_resume' => 'Jätka sidumist',
+    'pairing_waiting_lock_override' => 'Avamine avab selle sidumise uuesti, selle asemel et lasta sel aeguda, nii et see kestab kauem kui seatud rakenduse lukustusaeg. See lõpeb, kui selle lõpetate või tühistate.',
 
     'relay_endpoint' => 'Relee aadress',
     'relay_endpoint_help' => 'Valikuline. Kui see on määratud, sünkroonivad võrguühenduseta seadmed selle relee kaudu. Jäta tühjaks, et sünkroonida ainult otse kohtvõrgus.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Sünkroonimise lubamiseks määra kõigepealt rakenduse lukk.',
         'enable_failed' => 'Sünkroonimist ei õnnestunud lubada. Veendu, et rakenduse lukk on aktiivne, ja proovi uuesti.',
+        'identity_replaced' => 'Sellel seadmel on uus sünkroonimisidentiteet. Seo oma teised seadmed uuesti.',
+        'identity_replace_failed' => 'Vana seadmeidentiteeti ei õnnestunud kõrvale panna. Proovi uuesti.',
         'cannot_remove_self' => 'Sa ei saa seda seadet eemaldada — see on seade, mida praegu kasutad.',
         'remove_failed' => 'Seadet ei õnnestunud eemaldada. Palun proovi uuesti.',
         'app_lock_first_settings' => 'Sünkroonimise seadete muutmiseks määra kõigepealt rakenduse lukk.',
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Relee aadress on salvestatud.',
         'relay_save_failed' => 'Relee aadressi ei õnnestunud salvestada: :message',
     ],
+    'app_lock_permanent' => 'Kui andmed on kord krüpteeritud, ei saa rakenduse lukku enam välja lülitada — see hoiab ainsat võtit ja tagasiteed krüpteerimata olekusse pole.',
+    'backlog_heading' => 'Ootab lisamist',
+    'backlog_deferred' => 'See seade on saanud andmeid teiselt seadmelt ega ole neid veel arvestusse lisanud. Midagi ei lähe kaduma — need lisatakse automaatselt, tavaliselt hetkega.',
+    'backlog_awaiting_key' => 'See seade on saanud andmeid, mille võtit tal veel ei ole. Midagi ei lähe kaduma. Ava rakendus seotud seadmes, kui see seade on avatud, et need saaksid ühenduda ja võti edastada.',
 ];

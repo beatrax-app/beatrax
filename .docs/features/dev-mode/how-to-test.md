@@ -86,9 +86,11 @@ composer test
   deliberate change requiring a registry edit; never bypass via a
   direct `Process` constructor.
 - **The triple gate accepts an empty typed phrase** — the modal's
-  client-side gate is a UX shortcut; the server-side `TripleGateModal::run`
-  re-validates. Confirm the server-side check is intact; the
-  client-side gate is decorative.
+  client-side gate is a UX shortcut; the server-side
+  `TripleGateModal::confirm()` re-validates — dev mode on, the
+  advanced-session key set, and `hash_equals('Beatrax', $this->typed)`
+  — throwing a `ValidationException` on each. Confirm those three
+  checks are intact; the client-side gate is decorative.
 - **A leaked token visible in a log line** — extend
   `RedactSecretsProcessor` with the new pattern + a unit test
   proving the pattern fires. The processor is the single chokepoint;
@@ -99,10 +101,14 @@ composer test
   provider) must be loaded. Run `composer show laravel/horizon` to
   confirm the package is installed; check `.env` for `APP_DEV_MODE`.
 - **Audit rows missing for a run that completed** —
-  `FinalizeRunAudit::handle` did not fire. The most common cause is
+  `FinalizeRunAudit::__invoke` did not fire. The most common cause is
   the closing run state was missed because the worker process died
-  unexpectedly; the opening audit row is durable, the closing one
-  isn't, and the next prune cycle surfaces the orphan.
+  unexpectedly. The opening row is durable — `CommandSpawner` writes
+  it eagerly via `AuditWriter::recordCommandRun()` — so what you see
+  is not an absent row but an open one: no `finished_at`, no exit
+  code. Nothing sweeps for these; `beatrax:prune-dev-audit` is
+  manual-only and deletes by age rather than reporting orphans, so
+  the open row is the evidence and it stays until someone reads it.
 - **`WriteWorkerHeartbeat` not firing** — the closure form of
   `QueueManager::looping(closure)` is the only reliable shape; the
   event-listener form does not fire under `queue:work`. Confirm the
@@ -156,9 +162,14 @@ The behavioural contract for the `DevMode` module.
   observer on every `OAuthSecret` save / delete so a rotated secret
   applies on the very next log line.
 - **The audit-row excerpt is also scrubbed.**
-  `RedactionExcerptCap::cap()` runs the same scrub pipeline before
-  the row is persisted, so the audit surface never replays a leaked
-  token from the run's stdout.
+  `RedactionExcerptCap::apply()` runs the same scrub sequence as
+  `RedactSecretsProcessor` — OAuth scrub set, then the Bearer header,
+  then the JWT shape — and `SpatieAuditWriter` calls it on both
+  excerpts before the row is persisted, so the audit surface never
+  replays a leaked token from the run's stdout. The 8 KiB cap is
+  applied last, after redaction, which is why `FinalizeRunAudit`
+  reads 32 KiB of the run's output: a replacement can shorten the
+  text, and the cap has to consume real content.
 - **The queue-worker heartbeat updates on every queue tick.**
   `WriteWorkerHeartbeat` is registered via
   `QueueManager::looping(closure)` — the event-listener form does

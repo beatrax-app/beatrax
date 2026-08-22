@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Alles oben Genannte wird von diesem Gerät entfernt und du wirst abgemeldet. Es gibt kein Zurück und keine Sicherung.',
     'confirm' => 'Ja, alles löschen',
     'cancel' => 'Konto behalten',
+    'error_password_required' => 'Gib dein Passwort ein.',
     'error_password' => 'Dieses Passwort stimmt nicht.',
     'error_failed' => 'Dein Konto wurde nicht gelöscht. Es hat sich nichts geändert — bitte versuche es noch einmal.',
 ];

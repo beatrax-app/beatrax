@@ -9,9 +9,7 @@ parameters:
     # PHPStan's result cache defaults to a directory under the system temp
     # directory, which a fresh runner never has and which CI therefore cannot
     # restore. Naming it puts the cache somewhere actions/cache can carry
-    # between runs, so unchanged files are not re-analysed. It also lands for
-    # PhpStanBoundaryRuleTest, which shells out to PHPStan over the whole
-    # Modules tree from inside the suite and paid the full price every run.
+    # between runs, so unchanged files are not re-analysed.
     tmpDir: .phpstan-cache
     # phpstan 2.2.x intermittently crashes its parallel workers with
     # phar-include failures when it fans out to many processes inside the
@@ -31,6 +29,7 @@ parameters:
     scanFiles:
         - tools/phpstan-stubs/native-mobile-scanner.php
         - tools/phpstan-stubs/native-mobile-edge.php
+        - tools/phpstan-stubs/native-mobile-bridge.php
     paths:
         - Modules
         - app

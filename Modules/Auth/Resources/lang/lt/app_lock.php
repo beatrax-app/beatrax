@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN kodą turi sudaryti bent 6 skaitmenys.',
     'error_pin_mismatch' => 'PIN kodai nesutampa. Bandyk dar kartą.',
+    'error_pin_required' => 'Įvesk savo PIN kodą.',
     'error_pin_incorrect' => 'Neteisingas PIN kodas.',
+    'error_account_password_required' => 'Įvesk savo paskyros slaptažodį.',
     'error_account_password' => 'Neteisingas paskyros slaptažodis.',
     'change_pin_success' => 'Tavo šifravimo raktas iš naujo apsaugotas nauju PIN kodu.',
     'error_forgot_failed' => 'Nepavyko iš naujo nustatyti PIN kodo — atkūrimo raktas nepasiekiamas.',
     'error_enable_first' => 'Prieš registruodamas biometriją, pirmiausia įjunk PIN kodo užraktą.',
+    'error_disable_blocked_by_encryption' => 'Tavo užrašai ir kitų šalių duomenys užšifruoti raktu, kurį saugo šis programos užraktas, todėl jį išjungus jie taptų neįskaitomi. Užraktas lieka įjungtas — verčiau pasikeisk PIN kodą.',
+    'error_key_material_lost' => 'Šis įrenginys nebesaugo rakto, kuris atrakina tavo užšifruotus duomenis, tad naujas PIN kodas jų vėl įskaitomų nepadarys. Susiek šį įrenginį su tuo, kuris raktą dar turi, kad juos atkurtum.',
+    'error_recovery_wrap_stale' => 'Paskyros slaptažodis nebeatrakina šio programėlės užrakto — jis buvo pakeistas jau nustačius užraktą. PIN kodas dar veikia, bet už jo nieko nelieka, jei jį pamirši. Susiek paskyros slaptažodį iš naujo dabar.',
+    'relink_recovery' => 'Susieti paskyros slaptažodį iš naujo',
+    'relink_modal_heading' => 'Susieti paskyros slaptažodį iš naujo — patvirtink PIN kodu',
+    'relink_recovery_success' => 'Paskyros slaptažodis vėl gali atkurti šį programėlės užraktą.',
 ];

@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'A PIN-kódnak legalább 6 számjegyűnek kell lennie.',
     'error_pin_mismatch' => 'A PIN-kódok nem egyeznek. Próbáld újra.',
+    'error_pin_required' => 'Add meg a PIN-kódodat.',
     'error_pin_incorrect' => 'Hibás PIN-kód.',
+    'error_account_password_required' => 'Add meg a fiókod jelszavát.',
     'error_account_password' => 'Hibás fiókjelszó.',
     'change_pin_success' => 'A titkosítási kulcsodat az új PIN-kód védi mostantól.',
     'error_forgot_failed' => 'A PIN-kód visszaállítása sikertelen — a helyreállítási kulcs nem érhető el.',
     'error_enable_first' => 'Előbb kapcsold be a PIN-zárat, mielőtt biometriát regisztrálsz.',
+    'error_disable_blocked_by_encryption' => 'A jegyzeteid és a partnereid adatai azzal a kulccsal vannak titkosítva, amelyet ez az alkalmazászár őriz, így a zár kikapcsolása olvashatatlanná tenné őket. A zár bekapcsolva marad — inkább a PIN-kódodat változtasd meg.',
+    'error_key_material_lost' => 'Ez az eszköz már nem őrzi a titkosított adataidat nyitó kulcsot, ezért egy új PIN-kód sem teszi őket újra olvashatóvá. Párosítsd ezt az eszközt olyannal, amelyen a kulcs még megvan, hogy visszakapd őket.',
+    'error_recovery_wrap_stale' => 'A fiókjelszavad már nem nyitja ezt az alkalmazászárat — a zár beállítása után változott meg. A PIN-kódod még működik, de ha elfelejted, nincs mögötte semmi. Kösd össze újra a fiókjelszavadat.',
+    'relink_recovery' => 'Fiókjelszó újbóli összekötése',
+    'relink_modal_heading' => 'Fiókjelszó újbóli összekötése — erősítsd meg PIN-kóddal',
+    'relink_recovery_success' => 'A fiókjelszavad újra vissza tudja állítani ezt az alkalmazászárat.',
 ];

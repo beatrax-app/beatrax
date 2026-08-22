@@ -9,20 +9,14 @@ use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Reports\Internal\Dto\SavedReportIndexRow;
+use Modules\Reports\Internal\Enums\ReportDimension;
+use Modules\Reports\Internal\Enums\ReportMetricSelection;
+use Modules\Reports\Internal\Enums\ReportPeriodPreset;
 use Modules\Reports\Internal\Support\DefinitionJsonDecoder;
 use stdClass;
 
 final readonly class SavedReportsQuery
 {
-    /** @var list<string> */
-    private const METRIC_KEYS = ['spend', 'income', 'net', 'net_worth'];
-
-    /** @var list<string> */
-    private const DIMENSION_KEYS = ['category', 'time_bucket', 'counterparty', 'account'];
-
-    /** @var list<string> */
-    private const PERIOD_KEYS = ['this_month', 'last_3_months', 'last_6_months', 'last_12_months', 'ytd', 'this_year', 'custom'];
-
     public function __construct(private DatabaseManager $db) {}
 
     /**
@@ -67,26 +61,29 @@ final readonly class SavedReportsQuery
      */
     private static function summaryFor(array $definition): string
     {
-        $metric = is_string($definition['metric'] ?? null) ? $definition['metric'] : 'spend';
-        $dimension = is_string($definition['dimension'] ?? null) ? $definition['dimension'] : 'category';
-        $period = is_string($definition['periodPreset'] ?? null) ? $definition['periodPreset'] : 'this_month';
+        $metric = is_string($definition['metric'] ?? null) ? $definition['metric'] : ReportMetricSelection::default()->value;
+        $dimension = is_string($definition['dimension'] ?? null) ? $definition['dimension'] : ReportDimension::default()->value;
+        $period = is_string($definition['periodPreset'] ?? null) ? $definition['periodPreset'] : ReportPeriodPreset::default()->value;
 
-        $metricKey = in_array($metric, self::METRIC_KEYS, true) ? $metric : 'fallback';
-        $periodKey = in_array($period, self::PERIOD_KEYS, true) ? $period : 'custom';
+        // Asked of the enums rather than a second copy of their cases: a list
+        // that drifts from them fails by picking the fallback label, which
+        // reads as a deliberate "unnamed" rather than as a missing case.
+        $metricKey = ReportMetricSelection::tryFrom($metric)->value ?? 'fallback';
+        $periodKey = ReportPeriodPreset::tryFrom($period)->value ?? ReportPeriodPreset::Custom->value;
 
         $metricLabel = Lang::get("reports::index.summary.metric.{$metricKey}");
         $periodLabel = Lang::get("reports::index.summary.period.{$periodKey}");
 
         // The builder hides group-by for net worth, so the summary drops the
         // "by {dimension}" segment to match.
-        if ($metric === 'net_worth') {
+        if ($metric === ReportMetricSelection::NetWorth->value) {
             return Lang::get('reports::index.summary.without_dimension', [
                 'metric' => $metricLabel,
                 'period' => $periodLabel,
             ]);
         }
 
-        $dimensionKey = in_array($dimension, self::DIMENSION_KEYS, true) ? $dimension : 'fallback';
+        $dimensionKey = ReportDimension::tryFrom($dimension)->value ?? 'fallback';
         $dimensionLabel = Lang::get("reports::index.summary.dimension.{$dimensionKey}");
 
         return Lang::get('reports::index.summary.with_dimension', [

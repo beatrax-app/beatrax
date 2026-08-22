@@ -15,6 +15,7 @@ use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
+use Modules\Ledger\Public\Enums\Currency;
 use Throwable;
 
 final class AsnCsvAdapter implements SourceAdapter
@@ -67,7 +68,7 @@ final class AsnCsvAdapter implements SourceAdapter
 
             $currency = $row[AsnCsvColumnMap::MUTATION_CURRENCY];
             if ($currency === '') {
-                $currency = 'EUR';
+                $currency = Currency::Eur->value;
             }
 
             yield new SourceTransactionDto(

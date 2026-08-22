@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Entsperren Sie die App zum Importieren: Der Händlerschlüssel kann im gesperrten Zustand nicht berechnet werden.',
+        'app_locked' => 'Entsperren Sie die App zum Importieren: Die Verschlüsselungsschlüssel können im gesperrten Zustand nicht verwendet werden.',
         'file_unreadable' => 'Diese Datei konnte nicht gelesen werden.',
         'iban_not_in_preview' => 'Diese IBAN gehört nicht zur aktuellen Vorschau.',
         'row_unreadable' => 'Diese Zeile konnte nicht gelesen werden.',

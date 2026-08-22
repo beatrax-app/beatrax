@@ -17,6 +17,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Core\Public\Support\RowChunk;
 use stdClass;
 
 final class BackfillAnomaliesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
@@ -27,7 +28,7 @@ final class BackfillAnomaliesJob implements ShouldBeUniqueUntilProcessing, Shoul
     use SerializesModels;
     use TunedQueueJob;
 
-    private const CHUNK = 500;
+    private const int CHUNK = RowChunk::DEFAULT_SIZE;
 
     public function __construct(
         public readonly int $userId,

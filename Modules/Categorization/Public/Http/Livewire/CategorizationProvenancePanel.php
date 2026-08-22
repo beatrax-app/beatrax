@@ -12,6 +12,7 @@ use Modules\Categorization\Internal\Http\Livewire\RulesPage;
 use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleActionDto;
+use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
@@ -183,7 +184,7 @@ final class CategorizationProvenancePanel extends Component
     private static function categoryPathOf(array $actions): string
     {
         foreach ($actions as $action) {
-            if ($action->type === 'category') {
+            if ($action->type === ActionType::Category->value) {
                 return $action->categoryPath ?? '';
             }
         }

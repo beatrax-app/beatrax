@@ -220,7 +220,7 @@ final class CalendarPage extends Component
             'atCeiling' => $atCeiling,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound */
+        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('calendar::messages.page.title').' · Beatrax']);
 
         return $view;

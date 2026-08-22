@@ -17,7 +17,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\DerivedRowId;
-use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Events\EntityMutated;
@@ -52,7 +51,7 @@ final readonly class AnomalyEvaluator
 
         $sensitivity = self::toInt($user->anomaly_sensitivity_percent, 50);
         $minFloor = self::toInt($user->anomaly_min_amount_minor, 1000);
-        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
+        $direction = TransactionType::directionOf($txn['type'] ?? null)->value;
 
         $reasons = [];
         $baselineMinor = null;

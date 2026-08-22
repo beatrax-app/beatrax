@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Potwierdź nowe hasło',
     'submit' => 'Zapisz nowe hasło',
 
+    'error_current_required' => 'Wpisz swoje obecne hasło.',
     'error_current_incorrect' => 'Obecne hasło jest nieprawidłowe.',
     'error_mismatch' => 'Hasła nie są zgodne.',
     'error_min_length' => 'Użyj co najmniej 12 znaków.',

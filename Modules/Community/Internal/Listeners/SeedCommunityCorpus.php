@@ -10,6 +10,7 @@ use Modules\Community\Internal\Corpus\CorpusLoader;
 use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Events\UserInstalled;
+use Modules\Core\Public\Support\RowChunk;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -26,7 +27,7 @@ final class SeedCommunityCorpus
 
     // One INSERT per row costs one implicit transaction per entry — thousands
     // of fsyncs, and the slowest thing that happens during signup.
-    private const INSERT_CHUNK = 500;
+    private const int INSERT_CHUNK = RowChunk::DEFAULT_SIZE;
 
     public function handle(UserInstalled $event): void
     {

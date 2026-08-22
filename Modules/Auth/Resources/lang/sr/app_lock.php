@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN mora da ima bar 6 cifre.',
     'error_pin_mismatch' => 'PIN-ovi se ne poklapaju. Probaj ponovo.',
+    'error_pin_required' => 'Unesi svoj PIN.',
     'error_pin_incorrect' => 'Neispravan PIN.',
+    'error_account_password_required' => 'Unesi lozinku svog naloga.',
     'error_account_password' => 'Neispravna lozinka naloga.',
     'change_pin_success' => 'Tvoj ključ za šifrovanje je ponovo obezbeđen novim PIN-om.',
     'error_forgot_failed' => 'Resetovanje PIN-a nije uspelo — ključ za oporavak nije dostupan.',
     'error_enable_first' => 'Pre upisa biometrije uključi zaključavanje PIN-om.',
+    'error_disable_blocked_by_encryption' => 'Tvoje beleške i podaci o drugim stranama šifrovani su ključem koji čuva ovo zaključavanje aplikacije, pa bi njegovo isključivanje ostavilo te podatke nečitljivima. Zaključavanje ostaje uključeno — umesto toga promeni PIN.',
+    'error_key_material_lost' => 'Ovaj uređaj više ne čuva ključ koji otvara tvoje šifrovane podatke, pa ih nov PIN neće ponovo učiniti čitljivima. Upari ovaj uređaj sa onim koji još ima ključ da ih vratiš.',
+    'error_recovery_wrap_stale' => 'Lozinka naloga više ne otvara ovo zaključavanje aplikacije — promenjena je nakon što je zaključavanje podešeno. PIN i dalje radi, ali iza njega ne ostaje ništa ako ga zaboraviš. Ponovo poveži lozinku naloga sada.',
+    'relink_recovery' => 'Ponovo poveži lozinku naloga',
+    'relink_modal_heading' => 'Ponovo poveži lozinku naloga — potvrdi PIN-om',
+    'relink_recovery_success' => 'Lozinka naloga ponovo može da vrati ovo zaključavanje aplikacije.',
 ];

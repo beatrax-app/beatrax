@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Modules\Ledger\Public\Enums\Currency;
 
 /**
  * @property int $id
@@ -80,7 +81,7 @@ final class User extends Authenticatable
         'anomaly_sensitivity_percent' => 50,
         'anomaly_min_amount_minor' => 1000,
         'theme' => 'system',
-        'base_currency' => 'EUR',
+        'base_currency' => Currency::Eur->value,
     ];
 
     /** @return array<string, string> */

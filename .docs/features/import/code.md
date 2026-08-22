@@ -12,6 +12,7 @@ Modules/Import/
 │   │   ├── ConfirmsImports.php
 │   │   ├── NamesAccounts.php
 │   │   ├── AppliesEnrichments.php
+│   │   ├── CapturesImportForSync.php
 │   │   ├── PaymentTypeHinter.php
 │   │   ├── DetectsStartingBalance.php
 │   │   └── ResolvesKnownCounterpartyIban.php
@@ -19,22 +20,29 @@ Modules/Import/
 │   │   ├── RunImport.php
 │   │   ├── ConfirmImport.php
 │   │   ├── ApplyEnrichments.php
+│   │   ├── DiscardImport.php
+│   │   ├── EnsurePaypalAccountAction.php
 │   │   ├── CreateMerchantAlias.php
 │   │   └── MergeMerchantAliases.php
-│   ├── Dto/                  (preview DTO, result DTO, hint DTOs, etc.)
-│   ├── Enums/                (SourceFormat, PaymentType, ImportRunStatus)
+│   ├── Dto/                  (ImportPreviewResult, ImportConfirmResult,
+│   │                          PreviewRowDto, PaymentTypeHint,
+│   │                          StartingBalanceCandidate, dispositions)
+│   ├── Enums/                (PaymentType, BankCsvFormatHint,
+│   │                          ImportFailureReason, PreviewRowStatus,
+│   │                          PreviewSectionStatus)
 │   ├── Events/
 │   │   └── TransactionImported.php
-│   ├── Exceptions/
-│   ├── Pipeline/             (ResolvesCounterparties — owned by
-│   │                          Counterparties module; injected here)
+│   ├── Pipeline/
+│   │   └── NormalizeStage.php   (Receipts uses it without the chain)
 │   └── Services/
 │       ├── AccountNamer.php
 │       ├── AliasMatchPreviewQuery.php
 │       ├── BuildConsolidatedPreviewQuery.php
 │       ├── DetectStartingBalancesQuery.php
+│       ├── EloquentAccountResolver.php
 │       ├── MerchantNameResolver.php
 │       ├── PatternGeneralizer.php
+│       ├── SourceRefRanker.php
 │       └── UploadFilename.php
 ├── Internal/
 │   ├── Pipeline/
@@ -45,20 +53,22 @@ Modules/Import/
 │   │       ├── ClassifyTransactionType.php
 │   │       ├── PaymentTypeClassifierStage.php
 │   │       └── FingerprintStage.php
-│   ├── Parsers/
-│   │   ├── Asn/
-│   │   │   ├── Camt053Parser.php
-│   │   │   ├── Mt940Parser.php
-│   │   │   ├── CsvParser.php
-│   │   │   └── (matching PaymentTypeHinter classes)
-│   │   ├── Ics/
-│   │   │   ├── PdfParser.php
-│   │   │   └── IcsPdfPaymentTypeHinter.php
-│   │   ├── Paypal/
-│   │   │   ├── CsvParser.php
-│   │   │   └── PaypalCsvPaymentTypeHinter.php
+│   ├── Parsers/               (PaymentTypeHinter classes only —
+│   │                           the readers live in Ingestion)
+│   │   ├── Asn/AsnCsvPaymentTypeHinter.php
+│   │   ├── Banking/Camt053PaymentTypeHinter.php
+│   │   ├── Banking/Mt940PaymentTypeHinter.php
+│   │   ├── Ics/IcsPdfPaymentTypeHinter.php
+│   │   ├── Paypal/PaypalCsvPaymentTypeHinter.php
+│   │   ├── DescriptionKeywordHinter.php
 │   │   └── DescriptionKeywordFallbackHinter.php
-│   ├── Detectors/             (4 starting-balance detectors)
+│   ├── Detectors/             (4 tagged starting-balance detectors
+│   │                           over a shared base class)
+│   ├── Dto/                   (ImportRowIssue, PreviewSectionSummary)
+│   ├── Enums/                 (ImportIssueKind)
+│   ├── Exceptions/
+│   ├── Sync/                  (NullImportSyncCapture — the bindIf
+│   │                           default when Sync is absent)
 │   ├── Services/
 │   │   ├── KnownCounterpartyIbanResolver.php
 │   │   ├── AliasYamlExporter.php
@@ -92,64 +102,136 @@ Modules/Import/
 ## Public API
 
 - **Contracts/**
-  - `RunsImports::preview(SplFileInfo $file, SourceFormat $format,
-    User $user): ImportPreviewDto`.
-  - `ConfirmsImports::confirm(string $previewId, User $user):
-    ImportRunResultDto`.
-  - `NamesAccounts::nameAccount(string $iban, string $name, User
-    $user): Account`.
-  - `AppliesEnrichments::apply(list<Enrichment> $enrichments, User
-    $user): void`.
-  - `PaymentTypeHinter::hint(CanonicalTransaction $tx):
-    ?PaymentType` — tag `import.payment_type_hinter`.
-  - `DetectsStartingBalance::detect(SplFileInfo $file):
-    list<StartingBalanceDto>` — tag `starting-balance.detector`.
-  - `ResolvesKnownCounterpartyIban::resolveFor(string $iban, User
-    $user): ?Account`.
+  - `RunsImports::runFromUpload(string $localPath, string
+    $sourceFormat, User $user, string $originalFilename,
+    ?BankCsvFormatHint $formatHint = null): ImportPreviewResult`.
+  - `RunsImports::runFromRemoteFetch(Generator $sourceRows, string
+    $sourceFormat, User $user, string $idempotencyKey):
+    ImportPreviewResult`.
+  - `RunsImports::runAndConfirm(string $localPath, string
+    $sourceFormat, User $user, string $originalFilename, ?BankCsvFormatHint
+    $formatHint = null): ImportConfirmResult` — both phases in one
+    call; the entrypoint the idempotency contract test drives.
+  - `ConfirmsImports::__invoke(int $importRunId, User $user, bool
+    $dispatchChain = true): ImportConfirmResult` — keyed on the
+    import run id, not on a preview id.
+  - `NamesAccounts::__invoke(string $iban, string
+    $userSuppliedName, User $user): int` — the id of the Account
+    row it created.
+  - `AppliesEnrichments::__invoke(list<PendingEnrichment>
+    $enrichments, User $user): int` — rows actually enriched,
+    race-condition no-ops excluded.
+  - `CapturesImportForSync::capture(ImportRun $importRun, User
+    $user): void` — bound with `bindIf`, so a build without `Sync`
+    still resolves the import path against a null implementation.
+  - `PaymentTypeHinter::hint(CanonicalTransaction $tx, string
+    $sourceFormat): ?PaymentTypeHint` — tag
+    `import.payment_type_hinter`.
+  - `DetectsStartingBalance::supports(string $sourceFormat): bool`
+    plus `DetectsStartingBalance::detect(list<int> $importRunIds,
+    User $user): list<StartingBalanceCandidate>` — tag
+    `starting-balance.detector`. A detector is handed ImportRun ids
+    and filters internally to its own format; it never re-reads the
+    file.
+  - `ResolvesKnownCounterpartyIban::resolveAccount(string $iban,
+    int $userId): ?Account`.
 - **Actions/**
   - `RunImport`, `ConfirmImport`, `ApplyEnrichments` — the three
     sanctioned write paths.
+  - `DiscardImport::__invoke($importRunId, $user)` drops a run's
+    cached preview; `EnsurePaypalAccountAction` creates the
+    synthetic PayPal account the Onboarding connector step needs
+    before it can stage a run.
   - `CreateMerchantAlias::__invoke($pattern, $friendlyName, $user)`,
     `MergeMerchantAliases::__invoke($sourceId, $targetId, $user)`.
-- **DTOs/** — preview row, result row, hint payloads, starting
-  balance, enrichment.
-- **Enums/** — `SourceFormat::Asn_Camt053`, `Asn_Mt940`,
-  `Asn_Csv`, `Ics_Pdf`, `Paypal_Csv`; `PaymentType` covering
-  the documented payment-type taxonomy.
+- **Dto/** — `ImportPreviewResult`, `ImportConfirmResult`,
+  `PreviewRowDto`, `PaymentTypeHint`, `StartingBalanceCandidate`,
+  `PendingEnrichment`, `UnknownIban`, `AliasMatchPreviewResultDto`,
+  the `FingerprintStage` dispositions and the consolidated-preview
+  batch/section pair.
+- **Enums/** — `PaymentType` (`Pin`, `Online`, `Transfer`,
+  `DirectDebit`, `Cash`, `Fee`, `Refund`, `Unknown`) covering
+  the documented payment-type taxonomy; `BankCsvFormatHint`,
+  `ImportFailureReason`, `PreviewRowStatus`,
+  `PreviewSectionStatus`.
+  `ImportRunStatus` is not one of them either: the `import_runs`
+  table is `Ledger`'s, so the enum naming its states lives at
+  `Modules\Ledger\Public\Enums\ImportRunStatus`.
+  `SourceFormat` is NOT one of them, and never was. It belongs
+  to `Ingestion` (`Modules\Ingestion\Public\Enums\SourceFormat`)
+  — the module that owns the adapters the value selects — where
+  it was introduced by #195 to replace bare strings at the
+  adapter registry, the header profiles, the payment-type
+  hinters and the starting-balance detectors. Its cases are
+  `AsnCsv`, `IngCsv`, `Camt053`, `Mt940`, `IcsPdf`,
+  `PaypalCsv`, `Eml`, `Mbox`, carrying no issuer prefix:
+  `ing-csv` rides the ASN CSV adapter as a layout, so a bank
+  name on the case would say which bank happened to be first
+  rather than what the file is. The `source_format` column
+  stays open — a CSV preset registers its own format at
+  runtime, so a value absent from the enum is a preset, not an
+  error.
 - **Events/**
-  - `TransactionImported` — `(transactionId, userId,
-    sourceFormat, importRunId)`. One per persisted row.
+  - `TransactionImported` — carries `(Transaction $transaction,
+    User $user)`, and is dispatched by `Ledger`'s
+    `RecordTransactions` once per row actually inserted, after
+    that chunk commits — never for a duplicate or an enrichment.
+    `Anomaly`, `Receipts`, `Transfers` and `Search` subscribe.
 
 ## Internal services
 
-- `Internal/Pipeline/ImportPipeline::preview(...)` — orchestrator.
+- `Internal/Pipeline/ImportPipeline::preview($localPath,
+  $sourceFormat, $accounts, $user, $importRunId, $formatHint =
+  null)` — orchestrator. It returns an array, not a DTO;
+  `RunImport` wraps that into an `ImportPreviewResult`.
+  `ImportPipeline::previewFromGenerator($sourceRows, $sourceFormat,
+  $accounts, $user, $importRunId)` is the connector-fed twin, with
+  no format hint because a fetched feed has no CSV layout to
+  disambiguate.
 - `Internal/Pipeline/PreviewCache` — Laravel cache wrapper with
-  the JSON-only DTO round-trip used by the wizard.
-- `Internal/Pipeline/Stages/ParseStage::parse(...)` — delegates to
-  the per-source parser based on the `SourceFormat`.
-- `Internal/Pipeline/Stages/ClassifyTransactionType::classify(...)`
-  — assigns the `type` (e.g. `expense`, `income`, `transfer_in`,
-  `transfer_out`, `payment_to_merchant`).
-- `Internal/Pipeline/Stages/PaymentTypeClassifierStage::__invoke(...)`
-  — runs every tagged `PaymentTypeHinter` in order; first hit
-  wins.
-- `Internal/Pipeline/Stages/FingerprintStage::classify(...)` —
-  computes the v3 fingerprint used for dedup.
-- `Internal/Parsers/Asn/*` — CAMT.053 (genkgo/camt), MT940
-  (kingsquare/php-mt940), CSV (league/csv) for ASN bank exports.
-- `Internal/Parsers/Ics/PdfParser` — Mijn ICS consumer-portal PDF
-  parser (the project's user is on the consumer portal — PDF-only,
-  no CSV export).
-- `Internal/Parsers/Paypal/CsvParser` — PayPal Activity Download
-  CSV (league/csv).
-- `Internal/Detectors/*` — four starting-balance detectors
-  (CAMT.053 / MT940 / ICS PDF / PayPal CSV).
-- `Internal/Services/KnownCounterpartyIbanResolver` — concrete
-  resolver.
-- `Internal/Services/AliasYamlExporter::export($user)` /
-  `AliasYamlImporter::import($yaml, $user)` — bulk-edit surface.
-- `Internal/Services/LongestCommonPrefix::find($strings)` — pure
-  function used by the alias UI to suggest a generalised pattern.
+  the JSON-only DTO round-trip used by the wizard, keyed by the
+  import run id on a 30-minute TTL.
+  `PreviewCache::sectionSummary($importRunId, $sampleLimit)` is the
+  small per-run entry the consolidated screen renders from without
+  reading the row set back.
+- `Internal/Pipeline/Stages/ParseStage::run($localPath,
+  $sourceFormat, $accounts, $user = null)` — a generator of
+  `SourceTransactionDto`, delegating to `Ingestion`'s
+  `SourceAdapterRegistry`, or to the receipt arm for the `eml` and
+  `mbox` formats.
+- `Internal/Pipeline/Stages/ClassifyTransactionType::run($tx,
+  $user)` — assigns the `type` (`expense`, `income`,
+  `transfer_in`, `transfer_out`, and the terminal `refund` / `fee`
+  / `adjustment` it leaves alone).
+- `Internal/Pipeline/Stages/PaymentTypeClassifierStage::run($tx,
+  $user, $sourceFormat)` — runs every tagged `PaymentTypeHinter`
+  in order; first hit wins.
+- `Internal/Pipeline/Stages/FingerprintStage::classify($tx, $user)`
+  — computes the v3 fingerprint used for dedup and answers with
+  the row's disposition (new / duplicate / enriched).
+- `Internal/Parsers/*` — per-source `PaymentTypeHinter`
+  implementations **only**. The readers themselves are
+  `Ingestion`'s `SourceAdapter` implementations
+  (`Camt053Adapter`, `Mt940Adapter`, `AsnCsvAdapter`,
+  `GenericCsvAdapter`, `IcsPdfAdapter`, `PaypalCsvAdapter`); the
+  directory kept its name from when this module owned both.
+- `Internal/Detectors/*` — four tagged starting-balance detectors
+  (CAMT.053 / MT940 / ICS PDF / PayPal CSV) over the shared
+  `StatementSummaryStartingBalanceDetector` base class.
+- `Internal/Services/KnownCounterpartyIbanResolver::resolveAccount(
+  $iban, $userId)` — concrete resolver; the sole reader of
+  `known_counterparty_ibans`.
+- `Internal/Services/AliasYamlExporter::export($user)` and the
+  three-step importer — `AliasYamlImporter::parse($yamlContent)`,
+  `AliasYamlImporter::diff($user, $entries)`,
+  `AliasYamlImporter::apply($user, $entries,
+  $conflictResolutions)` — the bulk-edit surface. There is no
+  single `import()` call: parse and diff are what let the UI show
+  conflicts before anything is written.
+- `Internal/Services/LongestCommonPrefix::compute($patterns)` —
+  pure function used by the alias merge dialog to prefill a
+  pattern. Throws on fewer than two inputs and returns `''` when
+  the shared prefix is under four characters.
 - `Internal/Listeners/HandleFileOpenedFromOs::handle($event)` —
   filters by `.csv` extension; persists into `Desktop`'s pending
   intent store.

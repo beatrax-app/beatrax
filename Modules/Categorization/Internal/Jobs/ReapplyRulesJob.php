@@ -22,6 +22,7 @@ use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\RowChunk;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -52,7 +53,7 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
     use SerializesModels;
     use TunedQueueJob;
 
-    private const CHUNK = 500;
+    private const int CHUNK = RowChunk::DEFAULT_SIZE;
 
     private const PROGRESS_TTL_SECONDS = 3600;
 

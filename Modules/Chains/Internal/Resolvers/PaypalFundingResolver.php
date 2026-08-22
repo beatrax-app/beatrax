@@ -88,7 +88,7 @@ final class PaypalFundingResolver
             })
             ->where('transactions.user_id', $user->id)
             ->where('accounts.kind', AccountKind::Paypal->value)
-            ->whereIn('transactions.type', ['expense', 'transfer_out'])
+            ->whereIn('transactions.type', [TransactionType::Expense->value, TransactionType::TransferOut->value])
             ->whereNull('chain_links.id')
             ->orderBy('transactions.posted_at')
             ->get([
@@ -297,7 +297,7 @@ final class PaypalFundingResolver
                     ->whereIn('existing.state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value]);
             })
             ->where('tx.user_id', $user->id)
-            ->where('tx.type', 'transfer_out')
+            ->where('tx.type', TransactionType::TransferOut->value)
             ->where('tx.settled_amount_minor', $settledMinor)
             ->whereBetween('tx.booked_at', [$windowStart, $windowEnd])
             ->whereNull('existing.id')
@@ -429,7 +429,7 @@ final class PaypalFundingResolver
         $candidates = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->where('id', '<>', self::toInt($row->tx_id ?? null))
-            ->where('type', 'transfer_in')
+            ->where('type', TransactionType::TransferIn->value)
             ->whereBetween('settled_amount_minor', [
                 $settledMinor - $amountBand,
                 $settledMinor + $amountBand,

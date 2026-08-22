@@ -38,39 +38,77 @@ What the module explicitly does NOT do:
 `Public/` exposes the cross-module surface:
 
 - **Contracts/**
-  - `RunsImports::preview($file, $sourceFormat, $user)` — the
-    preview phase entry point (no DB writes; caches the canonical
-    rows for the confirm step).
-  - `ConfirmsImports::confirm($previewId, $user)` — the confirm
-    phase entry point (persists through Ledger; dispatches Chains).
-  - `NamesAccounts::nameAccount($iban, $name, $user)` — the
-    "name this unknown IBAN" hook used inline in the wizard.
-  - `AppliesEnrichments::apply($enrichments, $user)` — re-imports
-    that produce stronger `source_ref` values.
-  - `PaymentTypeHinter::hint($tx)` — per-source hinter contract;
-    discovered through the `import.payment_type_hinter` tag.
-  - `DetectsStartingBalance::detect($file)` — per-source detector
-    contract; discovered through the `starting-balance.detector`
+  - `RunsImports::runFromUpload($localPath, $sourceFormat, $user,
+    $originalFilename, $formatHint)` — the preview phase entry point
+    (no DB writes; caches the canonical rows for the confirm step),
+    returning an `ImportPreviewResult`.
+    `RunsImports::runFromRemoteFetch($sourceRows, $sourceFormat,
+    $user, $idempotencyKey)` is the same phase fed by a connector's
+    generator instead of a staged file.
+    `RunsImports::runAndConfirm(...)` walks both phases in one call
+    and is the single entrypoint the idempotency contract test
+    drives, so a new adapter joins it without re-implementing the
+    wizard's two-step dance.
+  - `ConfirmsImports` is invokable — `ConfirmsImports::__invoke(
+    $importRunId, $user, $dispatchChain = true)` — the confirm phase
+    entry point (persists through Ledger; dispatches Chains). It is
+    keyed on the **import run id**, not on a preview id.
+  - `NamesAccounts` is invokable — `NamesAccounts::__invoke($iban,
+    $userSuppliedName, $user)` returns the id of the Account row it
+    created; the "name this unknown IBAN" hook used inline in the
+    wizard.
+  - `AppliesEnrichments` is invokable —
+    `AppliesEnrichments::__invoke($enrichments, $user)` returns how
+    many rows were actually enriched; re-imports that produce
+    stronger `source_ref` values.
+  - `CapturesImportForSync::capture($importRun, $user)` — the
+    post-commit hook `Sync` implements. An implementation must not
+    throw into the import: a device that could not capture has still
+    imported.
+  - `PaymentTypeHinter::hint($tx, $sourceFormat)` — per-source hinter
+    contract; discovered through the `import.payment_type_hinter`
     tag.
-  - `ResolvesKnownCounterpartyIban::resolveFor($iban, $user)` —
+  - `DetectsStartingBalance::supports($sourceFormat)` and
+    `DetectsStartingBalance::detect($importRunIds, $user)` —
+    per-source detector contract; discovered through the
+    `starting-balance.detector` tag. A detector is handed ImportRun
+    ids and filters internally to its own source format; it never
+    re-reads the file.
+  - `ResolvesKnownCounterpartyIban::resolveAccount($iban, $userId)` —
     the bridge between an institution IBAN (PayPal Luxembourg, ICS
     at ABN AMRO) and the user's synthetic-IBAN account.
 - **Actions/**
   - `RunImport` (impl. `RunsImports`).
   - `ConfirmImport` (impl. `ConfirmsImports`).
   - `ApplyEnrichments` (impl. `AppliesEnrichments`).
+  - `DiscardImport` — drops a run's cached preview.
+  - `EnsurePaypalAccountAction` — the synthetic PayPal account the
+    Onboarding connector step needs before it can stage a run.
   - `CreateMerchantAlias`, `MergeMerchantAliases`.
 - **Pipeline/**
-  - `ResolvesCounterparties` lives in
+  - `NormalizeStage` — the one stage this module publishes, because
+    `Receipts` normalizes a fetched-inbox row without going through
+    `ImportPipeline`. `ResolvesCounterparties` lives in
     [`Counterparties`](../counterparties/architecture.md); the
     pipeline injects the contract.
-- **DTOs/** — `ImportPreviewDto`, `ImportRunResultDto`,
-  `PaymentTypeHintDto`, `StartingBalanceDto`, etc.
-- **Enums/** — `SourceFormat`, `PaymentType`,
-  `ImportRunStatus`.
+- **Dto/** — `ImportPreviewResult`, `ImportConfirmResult`,
+  `PreviewRowDto`, `PaymentTypeHint`, `StartingBalanceCandidate`,
+  `PendingEnrichment`, `UnknownIban`, the three dispositions
+  (`NewRowDisposition`, `DuplicateDisposition`,
+  `EnrichedDisposition`) plus `FingerprintDisposition`, and the
+  consolidated-preview batch/section pair.
+- **Enums/** — `PaymentType`, `BankCsvFormatHint`,
+  `ImportFailureReason`, `PreviewRowStatus`, `PreviewSectionStatus`.
+  `SourceFormat` is **not** one of them; it belongs to `Ingestion`,
+  the module that owns the adapters the value selects. Nor is
+  `ImportRunStatus`, which belongs to `Ledger` along with the
+  `import_runs` table it describes.
 - **Events/**
-  - `TransactionImported` — raised by `ConfirmImport` per row
-    after persist. Consumed by `Desktop` for OS notifications.
+  - `TransactionImported` — carries `(transaction, user)`. Dispatched
+    by `Ledger`'s `RecordTransactions` once per row actually
+    inserted, after that chunk commits, never for a duplicate or an
+    enrichment. Consumed by `Anomaly`, `Receipts`, `Transfers` and
+    `Search`.
 - **Services/**
   - `AccountNamer` (impl. `NamesAccounts`).
   - `MerchantNameResolver` — five-step matcher (per-user exact →
@@ -91,13 +129,22 @@ What the module explicitly does NOT do:
   renders from.
 - **Internal/Pipeline/Stages/** — `ParseStage`,
   `ClassifyTransactionType`, `PaymentTypeClassifierStage`,
-  `FingerprintStage`. The other stages
-  (`NormalizeStage`, `ApplyAutoCategoryStage`,
-  `ResolveCounterpartyStage`, `RecordsStatementSummary`) are
-  owned by their respective modules and injected here.
-- **Internal/Parsers/** — per-source parsers (`Asn/Camt053`,
-  `Asn/Mt940`, `Asn/Csv`, `Ics/Pdf`, `Paypal/Csv`). Each ships
-  its own `PaymentTypeHinter`.
+  `FingerprintStage`. `NormalizeStage` sits in this module's
+  `Public/Pipeline/` instead, because `Receipts` needs it without
+  the rest of the chain. The remaining links are other modules'
+  contracts injected here: `AppliesAutoCategory`
+  (`Categorization`), `ResolvesCounterparties` (`Counterparties`)
+  and `RecordsStatementSummary` (`Ledger`).
+- **Internal/Parsers/** — per-source `PaymentTypeHinter`
+  implementations only (`Asn/AsnCsvPaymentTypeHinter`,
+  `Banking/Camt053PaymentTypeHinter`,
+  `Banking/Mt940PaymentTypeHinter`,
+  `Ics/IcsPdfPaymentTypeHinter`,
+  `Paypal/PaypalCsvPaymentTypeHinter`, plus the two
+  description-keyword hinters). The file readers themselves are
+  **not** here: they are `Ingestion`'s `SourceAdapter`
+  implementations, reached through `SourceAdapterRegistry`. The
+  directory kept its name from when this module owned both.
 - **Internal/Detectors/** — per-source starting-balance
   detectors.
 - **Internal/Services/KnownCounterpartyIbanResolver** — concrete
@@ -114,18 +161,48 @@ What the module explicitly does NOT do:
 
 ## Key services + events
 
-- `ImportPipeline::preview($file, $sourceFormat, $user)` —
-  stages: parse → normalize → classify-transaction-type →
-  payment-type → auto-category → counterparty-resolve →
-  fingerprint. No DB writes; result cached.
-- `ConfirmImport::confirm($previewId, $user)` — replays cached
-  rows through `RecordsTransactions`; applies pending
-  enrichments inside the same DB transaction; AFTER commit:
-  `UpsertsCardStatements::upsert` then
-  `DispatchesChainResolution::dispatch`.
-- `KnownCounterpartyIbanResolver::resolveFor($iban, $user)` —
+- `ImportPipeline::preview($localPath, $sourceFormat, $accounts,
+  $user, $importRunId, $formatHint = null)` — six parameters, not
+  three: the stage chain resolves each row's own account through the
+  injected `AccountResolver` and stamps the run id onto every
+  canonical row, so both have to arrive with the file. Stages:
+  parse → account-resolve → normalize → classify-transaction-type →
+  payment-type → auto-category → counterparty-resolve → fingerprint.
+  It returns an array, not a DTO — `RunImport` is what wraps it into
+  an `ImportPreviewResult`. No DB writes beyond the statement
+  metadata the run's own row carries; the rows are cached.
+  `ImportPipeline::previewFromGenerator(...)` is the same chain fed
+  by a connector's generator, and takes no format hint because a
+  fetched feed has no CSV layout to disambiguate.
+- `ConfirmImport::__invoke($importRunId, $user, $dispatchChain =
+  true)` — an invokable action, keyed on the import run id
+  rather than a preview id; replays cached rows through
+  `RecordsTransactions` (which runs its own chunked transactions),
+  then applies pending enrichments and flips the run to `confirmed`
+  inside one further transaction. AFTER that commit:
+  `CapturesImportForSync::capture($importRun, $user)` always runs,
+  then — only under `$dispatchChain` —
+  `UpsertsCardStatements::upsertForImportRun($importRunId,
+  $user)` runs unconditionally, and only when the run inserted
+  or enriched something does it write the
+  `ChainResolutionRun` row and call
+  `DispatchesChainResolution::dispatchForUser($userId)` followed
+  by `DispatchesRecurringDetection::dispatchForUser($userId)`.
+  The card-statement upsert sits outside that inner gate on purpose:
+  an all-duplicate re-import still has to recover a deleted
+  `card_statements` row. `$dispatchChain = false` is the
+  fixture escape hatch that skips the upsert and both dispatches —
+  the Sync capture runs regardless, because a fixture's rows still
+  belong on the paired device.
+  A re-confirm of an already-`confirmed` run short-circuits: it
+  returns 0 inserted and reports the original inserts as
+  duplicates, so `ImportConfirmResult` values must never be summed
+  across attempts for one run.
+- `KnownCounterpartyIbanResolver::resolveAccount($iban, $userId)` —
   reads `known_counterparty_ibans`; returns the user's matching
-  `paypal` / `ics_card` Account (or null).
+  `paypal` / `ics_card` Account, or null when no alias exists or the
+  user owns no account of the alias's target kind. Lowest-id account
+  wins on several matches.
 - `PaymentTypeClassifierStage` — collects tagged
   `PaymentTypeHinter` instances; first match wins; the
   description-keyword fallback is intentionally LAST so the
@@ -134,8 +211,10 @@ What the module explicitly does NOT do:
   `DetectsStartingBalance` detectors; returns the first
   non-empty list. CAMT.053 first (canonical), MT940 second
   (legacy), ICS PDF third, PayPal CSV last (always declines).
-- `MerchantNameResolver::resolve($description, $user)` —
-  five-step matcher consumed by `Counterparties::CounterpartyResolverService`.
+- `MerchantNameResolver::resolve($rawDescription, $userId)` —
+  five-step matcher consumed by
+  `Counterparties`' `CounterpartyResolverService` and its
+  `CounterpartyTriageQueue`. It takes a user **id**, not a User.
 - `HandleFileOpenedFromOs` — extension filter; persists into the
   `Desktop` pending-intent store.
 
@@ -145,32 +224,46 @@ The end-to-end import:
 
 ```
 User uploads file (or drops a .csv onto the app)
-  ├─ drop path: Desktop::FileOpenedFromOs → HandleFileOpenedFromOs
-  │              → Desktop::PendingFileIntent
+  ├─ drop path: Desktop FileOpenedFromOs → HandleFileOpenedFromOs
+  │              → Desktop PendingFileIntent store
   │              → user logs in (if needed)
   │              → /desktop/file-staging → /imports/new
   └─ upload path: UploadWizard SFC
 
 PreviewWizard
-  → RunImport::preview($file, $sourceFormat, $user)
-       → ImportPipeline::preview
-            → ParseStage (per-source parser)
-            → NormalizeStage (from Ingestion; injected)
+  → RunImport::runFromUpload($localPath, $sourceFormat, $user,
+                             $originalFilename, $formatHint)
+       → ImportPipeline::preview($localPath, $sourceFormat,
+                                 $accounts, $user, $importRunId,
+                                 $formatHint)
+            → ParseStage (Ingestion SourceAdapter for the format)
+            → AccountResolver (own-IBAN → account, or UnknownIban)
+            → NormalizeStage (Import Public/Pipeline)
             → ClassifyTransactionType
             → PaymentTypeClassifierStage (per-source hinters)
-            → ApplyAutoCategoryStage (from Categorization)
-            → ResolveCounterpartyStage (from Counterparties)
+            → AppliesAutoCategory (from Categorization)
+            → ResolvesCounterparties (from Counterparties)
             → FingerprintStage
-       → cache canonical rows under preview id
+       → PreviewCache::put keyed by IMPORT RUN id (30-minute TTL)
   → user reviews preview
-  → ConfirmImport::confirm($previewId, $user)
+  → ConfirmImport::__invoke($importRunId, $user)
+       → RecordsTransactions::__invoke($cachedRows, $user,
+                                        captureForSync: false)
+            → BEGIN TX (one per CHUNK_SIZE rows, not one per run)
+                 → INSERT ON CONFLICT(fingerprint) per row
+            → COMMIT
+            → per inserted row: dispatch TransactionImported
        → BEGIN TX
-            → for each cached row: RecordsTransactions::record
-            → ApplyEnrichments::apply (pending source_ref strengthens)
+            → AppliesEnrichments::__invoke (pending source_ref
+                                             strengthens)
+            → import_runs row updated to `confirmed`
        → COMMIT
-       → UpsertsCardStatements::upsert  (Chains contract — Pre-Chain step)
-       → DispatchesChainResolution::dispatch (Chains contract)
-       → per row: dispatch TransactionImported
+       → CapturesImportForSync::capture (run + accounts, parents first)
+       → UpsertsCardStatements::upsertForImportRun (Chains contract
+                                                    — Pre-Chain step)
+       → if inserted or enriched:
+            → DispatchesChainResolution::dispatchForUser (Chains)
+            → DispatchesRecurringDetection::dispatchForUser (Recurring)
 ```
 
 `DefaultKnownCounterpartyIbansSeeder` seeds two real-world institution
@@ -196,7 +289,7 @@ UserInstalled
   → SeedDefaultKnownCounterpartyIbans
        → INSERT (PayPal Luxembourg → paypal kind)
        → INSERT (ICS at ABN AMRO → ics_card kind)
-            both idempotent on UNIQUE(user_id, institution_iban)
+            both idempotent on UNIQUE(user_id, real_iban)
 ```
 
 ## Consolidated preview (multi-run commit)

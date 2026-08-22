@@ -128,25 +128,39 @@ The behavioural contract for the `Import` module.
 
 ## Behavioral contracts
 
-- **The preview phase writes nothing to the database.** Every
-  stage produces an in-memory canonical row; the
-  `PreviewCache` is the only persistence and it's a JSON-only
-  cache keyed by preview id.
+- **The preview phase writes no transactions.** Every stage
+  produces an in-memory canonical row and the rows themselves go
+  only to `PreviewCache`, a JSON-only cache keyed by the
+  **import run id** with a 30-minute TTL. Two things are still
+  written: the `import_runs` row the phase is keyed on, and the
+  statement summary the adapter reports through
+  `RecordsStatementSummary`. Nothing reaches `transactions`
+  until confirm.
 - **The confirm phase is the SOLE sanctioned dispatcher of the
   Chains resolver.** Inside `ConfirmImport`, AFTER the outer
-  DB transaction commits, `UpsertsCardStatements::upsert` runs
-  first, then `DispatchesChainResolution::dispatch`. An in-
+  DB transaction commits,
+  `UpsertsCardStatements::upsertForImportRun` runs first, then
+  `DispatchesChainResolution::dispatchForUser`. An in-
   transaction dispatch would let the worker see stale state.
+  The two are not gated alike: the upsert runs on every
+  confirm, the dispatch only when the run inserted or enriched
+  at least one row. A re-import of an all-duplicate file must
+  still heal a deleted `card_statements` row, but has nothing
+  new for the resolver to chase.
 - **`RunImport` and `ConfirmImport` are idempotent on re-runs
   by fingerprint.** The pipeline's `FingerprintStage` produces
   a v3 fingerprint that the persistence layer keys on; a re-
-  imported file produces zero new rows and an empty
-  `ImportRunResultDto`.
+  imported file produces zero new rows and an
+  `ImportConfirmResult` reporting 0 inserted. A re-upload whose
+  SHA256 already belongs to a confirmed run short-circuits
+  earlier still, returning an `ImportPreviewResult` with no rows
+  rather than re-parsing.
 - **The `PaymentTypeClassifierStage` first-match-wins rule.**
   The tagged hinters are ordered: per-source hinters first
   (CAMT.053 → MT940 → ASN CSV → ICS PDF → PayPal CSV), then
   `DescriptionKeywordFallbackHinter` last. The "fallback is
-  last" invariant is asserted by the registry test.
+  last" invariant, the count and the whole order are asserted by
+  `Modules/Import/tests/Feature/PaymentTypeHinterRegistryTest.php`.
 - **`DetectStartingBalancesQuery` returns the first non-empty
   detector's result.** CAMT.053 first (canonical), MT940 second
   (legacy), ICS PDF third, PayPal CSV last (always declines).
@@ -156,15 +170,19 @@ The behavioural contract for the `Import` module.
   inject the contract.
 - **The seed listener is idempotent.** Re-dispatching
   `UserInstalled` does not duplicate institution-IBAN aliases;
-  `UNIQUE(user_id, institution_iban)` is the schema-level
+  `UNIQUE(user_id, real_iban)` is the schema-level
   guard.
 - **`HandleFileOpenedFromOs` only consumes `.csv` paths.**
   Other extensions pass through to whichever subscriber owns
   them ([`Receipts`](../receipts/how-to-test.md) handles `.eml` /
   `.mbox`). The listener's extension filter is the gate.
 - **`TransactionImported` fires once per persisted row.** Not
-  once per file. Subscribers (`Desktop::DispatchOsNotification`)
-  see one event per transaction the user confirmed.
+  once per file, and never for a duplicate or an enrichment. It
+  is dispatched by `Ledger`'s `RecordTransactions` after each
+  chunk commits, carrying the persisted `Transaction` and the
+  `User`. Subscribers are `Anomaly`, `Receipts`, `Transfers` and
+  `Search`; OS notifications are **not** among them — `Desktop`
+  raises those off `NotificationDeliverable` instead.
 - **A new payment-type hinter ships by adding the FQN to the
   provider constant and shipping the class.** The classifier
   stage and pipeline binding do not change; the registry test

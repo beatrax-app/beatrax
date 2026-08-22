@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Lock;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Events\AppLockUnlocked;
 
 final class LockStateManager
 {
@@ -22,9 +24,12 @@ final class LockStateManager
      *                                   NullKeyCustodian so `new LockStateManager` (used widely in tests)
      *                                   keeps its pre-custody behaviour; the container binds the
      *                                   platform-appropriate custodian for production resolution.
+     * @param  Dispatcher|null  $events  Nullable for the same reason, and only for it: a
+     *                                   container-resolved instance always receives one.
      */
     public function __construct(
         private readonly KeyCustodian $custodian = new NullKeyCustodian,
+        private readonly ?Dispatcher $events = null,
     ) {}
 
     public function isLocked(Session $session): bool
@@ -64,9 +69,15 @@ final class LockStateManager
         $session->put(self::SESSION_KEY, false);
         $session->put(self::DATA_KEY_SESSION, $this->custodian->store($dataKey));
 
-        // Flagged here, not at the three call sites, because only one of them
-        // remembered to and a fourth path would forget too.
+        // Flagged here, not at the five call sites, because only one of them
+        // remembered to and a sixth path would forget too.
         $session->put(self::SESSION_UNLOCK_ACTIVITY_PENDING, true);
+
+        // Announced from the funnel for that same reason: a PIN unlock, a
+        // biometric unlock, a sign-in, an enable and an enclave recovery all
+        // arrive here, and an event that fired from only one of them would be
+        // trusted for all five.
+        $this->events?->dispatch(new AppLockUnlocked($session));
     }
 
     // The only sanctioned reader: it applies the custodian's read(), where

@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN kodā jābūt vismaz 6 cipariem.',
     'error_pin_mismatch' => 'PIN kodi nesakrīt. Mēģiniet vēlreiz.',
+    'error_pin_required' => 'Ievadiet savu PIN kodu.',
     'error_pin_incorrect' => 'Nepareizs PIN kods.',
+    'error_account_password_required' => 'Ievadiet sava konta paroli.',
     'error_account_password' => 'Nepareiza konta parole.',
     'change_pin_success' => 'Jūsu šifrēšanas atslēga ir no jauna aizsargāta ar jauno PIN kodu.',
     'error_forgot_failed' => 'PIN koda atiestatīšana neizdevās — atkopšanas atslēga nav pieejama.',
     'error_enable_first' => 'Vispirms ieslēdziet PIN koda bloķēšanu un tikai tad reģistrējiet biometriju.',
+    'error_disable_blocked_by_encryption' => 'Tavas piezīmes un darījuma partneru dati ir šifrēti ar atslēgu, ko glabā šī lietotnes bloķēšana, tāpēc tās izslēgšana padarītu tos nelasāmus. Bloķēšana paliek ieslēgta — labāk nomaini savu PIN.',
+    'error_key_material_lost' => 'Šī ierīce vairs neglabā atslēgu, kas atver tavus šifrētos datus, tāpēc jauns PIN tos atkal lasāmus nepadarīs. Savieno šo ierīci ar tādu, kurai atslēga vēl ir, lai tos atgūtu.',
+    'error_recovery_wrap_stale' => 'Tava konta parole vairs neatver šo lietotnes bloķēšanu — tā tika nomainīta pēc bloķēšanas iestatīšanas. PIN kods vēl darbojas, bet aiz tā nekas nepaliek, ja to aizmirsti. Piesaisti konta paroli no jauna tagad.',
+    'relink_recovery' => 'Piesaistīt konta paroli no jauna',
+    'relink_modal_heading' => 'Piesaistīt konta paroli no jauna — apstiprini ar PIN kodu',
+    'relink_recovery_success' => 'Tava konta parole atkal var atjaunot šo lietotnes bloķēšanu.',
 ];

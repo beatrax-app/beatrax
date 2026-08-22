@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'İçe aktarmak için uygulamanın kilidini açın: kilitliyken satıcı anahtarı hesaplanamaz.',
+        'app_locked' => 'İçe aktarmak için uygulamanın kilidini açın: kilitliyken şifreleme anahtarları kullanılamaz.',
         'file_unreadable' => 'Bu dosya okunamadı.',
         'iban_not_in_preview' => 'Bu IBAN geçerli önizlemenin bir parçası değil.',
         'row_unreadable' => 'Bu satır okunamadı.',

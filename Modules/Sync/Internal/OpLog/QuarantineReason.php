@@ -34,4 +34,15 @@ enum QuarantineReason: string
     // so one unsatisfiable reference discarded every op beside it and the
     // poll driving the UI answered 500 instead of advancing.
     case MissingReference = 'missing_reference';
+
+    // The two a key arriving later can undo. Everything else above is a
+    // permanent verdict on the entry itself — a forged signature stays forged —
+    // so replaying history for one of those would only re-reach it.
+    /**
+     * @return list<string>
+     */
+    public static function keyRecoverable(): array
+    {
+        return [self::GdkDecryptFailed->value, self::StrategyError->value];
+    }
 }

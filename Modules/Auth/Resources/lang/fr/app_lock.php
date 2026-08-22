@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'Le PIN doit comporter au moins 6 chiffres.',
     'error_pin_mismatch' => 'Les PIN ne correspondent pas. Réessaie.',
+    'error_pin_required' => 'Saisis ton PIN.',
     'error_pin_incorrect' => 'PIN incorrect.',
+    'error_account_password_required' => 'Saisis le mot de passe de ton compte.',
     'error_account_password' => 'Mot de passe du compte incorrect.',
     'change_pin_success' => 'Ta clé de chiffrement est de nouveau protégée, avec ton nouveau PIN.',
     'error_forgot_failed' => 'Échec de la réinitialisation du PIN — la clé de récupération est indisponible.',
     'error_enable_first' => 'Active d\'abord le verrouillage par PIN avant la biométrie.',
+    'error_disable_blocked_by_encryption' => 'Tes notes et les détails de tes tiers sont chiffrés avec la clé que détient ce verrou d\'application ; le désactiver les rendrait illisibles. Le verrou reste actif — change plutôt ton code PIN.',
+    'error_key_material_lost' => 'Cet appareil ne détient plus la clé qui ouvre tes données chiffrées, donc un nouveau code PIN ne les rendra pas lisibles. Associe cet appareil à un autre qui détient encore la clé pour les récupérer.',
+    'error_recovery_wrap_stale' => 'Ton mot de passe du compte n\'ouvre plus ce verrouillage de l\'app — il a été changé après la mise en place du verrou. Ton PIN fonctionne encore, mais il n\'y a plus rien derrière si tu l\'oublies. Relie ton mot de passe du compte maintenant.',
+    'relink_recovery' => 'Relier le mot de passe du compte',
+    'relink_modal_heading' => 'Relier le mot de passe du compte — confirme avec ton PIN',
+    'relink_recovery_success' => 'Ton mot de passe du compte peut de nouveau récupérer ce verrouillage de l\'app.',
 ];

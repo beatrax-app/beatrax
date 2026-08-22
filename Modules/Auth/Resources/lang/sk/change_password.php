@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Potvrď nové heslo',
     'submit' => 'Uložiť nové heslo',
 
+    'error_current_required' => 'Zadaj svoje súčasné heslo.',
     'error_current_incorrect' => 'Súčasné heslo nie je správne.',
     'error_mismatch' => 'Heslá sa nezhodujú.',
     'error_min_length' => 'Použi aspoň 12 znakov.',

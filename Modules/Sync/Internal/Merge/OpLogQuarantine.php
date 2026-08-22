@@ -25,6 +25,10 @@ final readonly class OpLogQuarantine
                 'pk' => (string) $entry->pk,
                 'device_id' => $entry->deviceId,
                 'reason' => $reason->value,
+                // The epoch this entry needs, so a later pass can tell an
+                // entry waiting for a key that is coming from one waiting for
+                // a key this device has no way to obtain.
+                'gdk_epoch' => $entry->gdkEpoch,
                 'hlc_l' => $entry->hlcL,
                 'hlc_c' => $entry->hlcC,
                 'raw_value' => $entry->value,

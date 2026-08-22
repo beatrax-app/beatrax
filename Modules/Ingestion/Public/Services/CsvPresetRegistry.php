@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Public\Services;
 
 use Modules\Ingestion\Public\Dto\CsvPreset;
+use Modules\Ledger\Public\Enums\Currency;
 
 final class CsvPresetRegistry
 {
@@ -52,7 +53,7 @@ final class CsvPresetRegistry
                 valueDateHeader: 'Value Date',
                 counterpartyNameHeader: 'Partner Name',
                 counterpartyIbanHeader: 'Partner Iban',
-                fixedCurrency: 'EUR',
+                fixedCurrency: Currency::Eur->value,
             ),
 
             // A pending Revolut row ships an empty Completed Date; the adapter's
@@ -93,7 +94,7 @@ final class CsvPresetRegistry
                 counterpartyNameHeader: 'Naam/Omschrijving',
                 counterpartyIbanHeader: 'Tegenrekening',
                 ownIbanHeader: 'Rekening',
-                fixedCurrency: 'EUR',
+                fixedCurrency: Currency::Eur->value,
             ),
         ];
 

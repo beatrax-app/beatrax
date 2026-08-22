@@ -16,6 +16,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Support\LockStore;
 use Modules\FX\Internal\RateProviderRegistry;
+use Modules\Ledger\Public\Enums\Currency;
 use Psr\Log\LoggerInterface;
 
 final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
@@ -94,7 +95,7 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
             // the feed still carries the previous business day, and now()
             // would write a false "today" row.
             $rows[] = [
-                'base_currency' => 'EUR',
+                'base_currency' => Currency::Eur->value,
                 'quote_currency' => $quoteCurrency,
                 'rate_date' => $date,
                 'rate' => $rateStr,

@@ -102,6 +102,34 @@ return [
     ],
 
     /*
+     * App-level iOS entitlements, merged into NativePHP.entitlements at build
+     * time. `BuildIosAppCommand::updateEntitlementsFile()` rewrites that file
+     * from scratch out of deeplink_host + push_notifications + nfc, so an
+     * entitlement declared anywhere earlier is discarded; this key is read
+     * afterwards by IOSPluginCompiler, patched there by
+     * `scripts/nativephp_ios_local_network_discovery.php`.
+     *
+     * `com.apple.developer.networking.multicast` is what LAN peer discovery
+     * needs: MulticastMdnsQuery sends a raw datagram to 224.0.0.251, and since
+     * iOS 14 that send is dropped without this entitlement. Neither
+     * NSLocalNetworkUsageDescription nor NSBonjourServices covers a BSD socket
+     * — they gate NWBrowser and unicast, which is why the prompt appears, the
+     * reader grants it, and discovery still returns nothing.
+     *
+     * Apple grants this entitlement per Team by request, and no provisioning
+     * profile for com.beatrax.mobile carries it yet. Declaring it before the
+     * grant does not degrade — the build stops at signing with "doesn't
+     * include the com.apple.developer.networking.multicast entitlement" — so
+     * it stays env-gated and off. LAN discovery on iOS is dead until the grant
+     * lands; the desktop and Android are unaffected.
+     *
+     * @see ../../.docs/features/mobile/ios-lan-discovery-entitlement.md
+     */
+    'entitlements' => filter_var(env('IOS_MULTICAST_ENTITLEMENT', false), FILTER_VALIDATE_BOOL)
+        ? ['com.apple.developer.networking.multicast' => true]
+        : [],
+
+    /*
      * iOS signing is split between local development and cloud distribution.
      *
      * LOCAL DEV (kept): `development_team` feeds Xcode AUTOMATIC signing so

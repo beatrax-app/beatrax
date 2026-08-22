@@ -13,4 +13,11 @@ enum ReportCurrencyMode: string
     case Base = 'base';
 
     case Original = 'original';
+
+    // Named once rather than repeated as a 'base' literal at each boundary that
+    // can be handed nothing, which is the reason ReportGranularity has one.
+    public static function default(): self
+    {
+        return self::Base;
+    }
 }

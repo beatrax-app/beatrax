@@ -1,6 +1,7 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     /drift/watch — Subscription Drift Watch overview. Approved subscriptions
     ranked by how much their price has crept up since the first observed charge,
@@ -66,7 +67,7 @@
                 <span class="font-medium {{ $driftedUpCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">{{ $driftedUpCount }}</span>
                 <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.crept_up') }}</span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
-                <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totalMonthlyMinor, 'EUR') }}</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totalMonthlyMinor, BaseCurrency::value()) }}</span>
                 <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.per_month_total') }}</span>
             </div>
         @endif

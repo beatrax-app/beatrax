@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'Die PIN muss mindestens 6 Ziffern haben.',
     'error_pin_mismatch' => 'Die PINs stimmen nicht überein. Versuch es noch mal.',
+    'error_pin_required' => 'Gib deine PIN ein.',
     'error_pin_incorrect' => 'Falsche PIN.',
+    'error_account_password_required' => 'Gib dein Kontopasswort ein.',
     'error_account_password' => 'Falsches Kontopasswort.',
     'change_pin_success' => 'Dein Verschlüsselungsschlüssel wurde mit deiner neuen PIN neu gesichert.',
     'error_forgot_failed' => 'Zurücksetzen der PIN fehlgeschlagen — der Wiederherstellungsschlüssel ist nicht verfügbar.',
     'error_enable_first' => 'Aktiviere zuerst die PIN-Sperre, bevor du Biometrie registrierst.',
+    'error_disable_blocked_by_encryption' => 'Deine Notizen und Zahlungspartner-Daten sind mit dem Schlüssel verschlüsselt, den diese App-Sperre hält — sie auszuschalten würde sie unlesbar machen. Die Sperre bleibt an; ändere stattdessen deine PIN.',
+    'error_key_material_lost' => 'Dieses Gerät hält den Schlüssel zu deinen verschlüsselten Daten nicht mehr, deshalb macht eine neue PIN sie nicht wieder lesbar. Koppele dieses Gerät mit einem, das den Schlüssel noch hat, um sie wiederherzustellen.',
+    'error_recovery_wrap_stale' => 'Dein Kontopasswort öffnet diese App-Sperre nicht mehr — es wurde nach dem Einrichten der Sperre geändert. Deine PIN funktioniert noch, aber dahinter liegt nichts mehr, falls du sie vergisst. Verknüpfe dein Kontopasswort jetzt neu.',
+    'relink_recovery' => 'Kontopasswort neu verknüpfen',
+    'relink_modal_heading' => 'Kontopasswort neu verknüpfen — mit PIN bestätigen',
+    'relink_recovery_success' => 'Dein Kontopasswort kann diese App-Sperre wieder wiederherstellen.',
 ];

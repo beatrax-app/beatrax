@@ -14,10 +14,6 @@ return [
     'region' => 'Region',
 
     'regions' => [
-        'nl' => 'NL — Holandia',
-        'be' => 'BE — Belgia',
-        'de' => 'DE — Niemcy',
-        'fr' => 'FR — Francja',
         'other' => 'Inny',
     ],
 

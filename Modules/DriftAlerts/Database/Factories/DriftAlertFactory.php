@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 
 // Callers must override recurring_series_id and latest_occurrence_id: both are
@@ -31,7 +32,7 @@ final class DriftAlertFactory extends Factory
             'direction' => Direction::Expense->value,
             'baseline_amount_minor' => -999,
             'latest_amount_minor' => -1149,
-            'currency' => 'EUR',
+            'currency' => Currency::Eur->value,
             'delta_minor' => -150,
             'annualized_impact_minor' => -1800,
             'threshold_percent_used' => 5,

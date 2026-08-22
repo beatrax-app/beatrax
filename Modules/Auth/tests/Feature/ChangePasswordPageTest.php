@@ -108,3 +108,28 @@ it('flashes a length error when the new password is shorter than twelve characte
         ->assertNoRedirect()
         ->assertSet('flashMessage', 'Use at least 12 characters.');
 });
+
+// A box left empty and a box filled in wrongly are different states, and the
+// page called both incorrect — which sends a reader who typed nothing off to
+// look up a password rather than back to the field they skipped.
+it('names the empty current-password box rather than calling it incorrect', function (): void {
+    /** @var Hasher $hasher */
+    $hasher = $this->app->make(Hasher::class);
+
+    $user = User::query()->create([
+        'username' => 'partner',
+        'password' => $hasher->make('initial-password-12'),
+        'period_start_day' => 1,
+        'force_password_change_at_next_login' => true,
+    ]);
+
+    Livewire::actingAs($user)->test(ChangePasswordPage::class)
+        ->set('currentPassword', '')
+        ->set('newPassword', 'a-brand-new-password')
+        ->set('newPasswordConfirmation', 'a-brand-new-password')
+        ->call('submit')
+        ->assertSet('flashMessage', 'Enter your current password.')
+        ->assertNoRedirect();
+
+    expect($hasher->check('initial-password-12', (string) $user->fresh()?->password))->toBeTrue();
+});

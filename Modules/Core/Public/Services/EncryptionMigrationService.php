@@ -10,6 +10,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Core\Internal\Encryption\PlaintextResidueSweep;
 use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -394,6 +395,9 @@ class EncryptionMigrationService
         $backfill->run($userId, $blindIndexKeyHex);
     }
 
+    // The digest is stamped here because this pass just swept every column it
+    // covers. Left null, the recovery seam would re-sweep a freshly enabled
+    // install on its very next request for nothing.
     private function finalizeMigration(ConnectionInterface $connection, int $userId): void
     {
         $now = $this->clock->now();
@@ -403,6 +407,7 @@ class EncryptionMigrationService
             ->update([
                 'migration_in_progress' => false,
                 'enabled_at' => $now,
+                'resealed_columns_digest' => PlaintextResidueSweep::columnsDigest(),
                 'updated_at' => $now,
             ]);
     }

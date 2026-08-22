@@ -63,16 +63,23 @@ the module. The module reads them via `CorpusLoader`.
 - **DTOs/**
   - `CorpusEntryDto` — `(pattern, name, category, region, contributor,
     generalizedPattern)` value object emitted by `CorpusLoader`.
-  - `SuggestMappingDto` — `(pattern, name, category, region)` payload
-    feeding `GitHubCompareUrlBuilder`.
+  - `SuggestMappingDto` — `(pattern, name, region, category)` payload
+    feeding `GitHubCompareUrlBuilder`. `region` is required: the caller
+    resolves it from the reader's country, so there is no default to fall
+    back to.
 - **Events/**
   - `MysteryMerchantSubmitted` — `(SuggestMappingDto $dto, int $userId)`.
     No listener today; reserved.
 - **Services/**
-  - `CommunityCorpusQuery::findFor($pattern, $user)` — returns a
-    matched corpus row (per-user override beats global) or `null`.
-  - `CommunityCorpusQuery::count($user)` — total visible entries for
-    a user.
+  - `CommunityCorpusQuery::lookupExact(string $rawDescription,
+    ?string $region = null)`, `lookupGeneralized(...)`,
+    `lookupRegex(...)` — each returns the matched merchant name or
+    `null`. Region-scoped, not user-scoped: all three filter
+    `user_id IS NULL` and read only the global tier.
+  - `CommunityCorpusQuery::contactForMerchant(string $name)` — the
+    `MerchantContactDto` for a merchant, or `null`.
+  - `CommunityCorpusQuery::mappingsCount()` /
+    `contributorsCount()` — corpus totals; neither takes a user.
 
 ## Internal services
 
@@ -101,7 +108,10 @@ the module. The module reads them via `CorpusLoader`.
   `/community/mystery-merchants` triage list.
 - `Internal/Http/Livewire/SuggestMappingModal` — the modal that
   composes a suggestion. DIs `OpenExternalUrlAction` into the
-  `submit()` method.
+  `submit()` method, and `UserCountry` into `mount()`, `open()`,
+  `submit()` and `render()` — the first three to seed `$region` from the
+  reader's own country, the last to build the dropdown from
+  `UserCountry::options()`.
 - `Internal/Http/Livewire/SharedListSettingsPanel` — the corpus
   opt-in toggles surfaced under `/settings`. The per-row triage
   call-to-action is rendered by Categorization's own view, gated on the

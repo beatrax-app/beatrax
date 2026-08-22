@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Yukarıdakilerin hepsi bu cihazdan kaldırılır ve oturumun kapatılır. Geri dönüş yok ve yedek kalmaz.',
     'confirm' => 'Evet, hepsini sil',
     'cancel' => 'Hesabımı tut',
+    'error_password_required' => 'Parolanı gir.',
     'error_password' => 'Bu parola doğru değil.',
     'error_failed' => 'Hesabın silinmedi. Hiçbir şey değişmedi — lütfen tekrar dene.',
 ];

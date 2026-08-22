@@ -112,7 +112,8 @@ composer test
   `JobFailed` event never fired because the failure was not a final
   exhaustion — read `failed_jobs` to confirm.
 - **A confirmed chain_link is missing from the chain-drawer** — the
-  drawer queries via `ChainLinkQuery::chainTreeFor`. Check the
+  drawer queries via `ChainLinkQuery::forTransaction`, which
+  returns a `ChainTree` built by `ChainTreeWalker::walk`. Check the
   underlying SQL with `DB::enableQueryLog()` in a test harness; the
   most common cause is the FK `to_transaction_id` was nulled out by a
   cascade delete that left the from-side intact.
@@ -170,8 +171,9 @@ The behavioural contract for the `Chains` module.
   `NotFoundHttpException` for any row not matching
   `(id, user_id)`. (`tests/Feature/CrossUserChainLinkIsolationTest.php`)
 - **The dispatcher fires AFTER the import's outer transaction
-  commits.** Calling `DispatchesChainResolution::dispatch()` inside the
-  transaction closure would let the worker observe rolled-back state.
+  commits.** Calling `DispatchesChainResolution::dispatchForUser()`
+  inside the transaction closure would let the worker observe
+  rolled-back state.
   The dispatcher's call site in `ConfirmImport` runs in the
   post-commit boundary; tests assert the queue is empty mid-transaction
   and populated post-commit. (`tests/Feature/ResolveChainLinksJobTest.php`)
@@ -185,8 +187,9 @@ The behavioural contract for the `Chains` module.
   `evidence.signature_hash` flip every remaining same-signature
   candidate to `confirmed` with `resolver='rule'` in one DB
   transaction. (`tests/Feature/ConfirmChainLinkTest.php`)
-- **`CardStatementUpserter::upsert()` runs BEFORE the dispatcher** in
-  the `ConfirmImport` post-commit boundary, so the resolver always
+- **`CardStatementUpserter::upsertForImportRun()` runs BEFORE the
+  dispatcher** in the `ConfirmImport` post-commit boundary, so the
+  resolver always
   sees fresh `card_statements` rows for every ICS PDF the user just
   imported. (`tests/Feature/CardStatementUpsertOnImportTest.php`)
 - **A `JobFailed` event for a `ResolveChainLinksJob` final-retry
@@ -209,9 +212,9 @@ The behavioural contract for the `Chains` module.
 
 ## Edge cases
 
-- **Empty input** — `IcsSettlementResolver::resolve()` and
-  `PaypalFundingResolver::resolve()` are no-ops; the audit row flips
-  cleanly to `complete` with `linked_count = 0`.
+- **Empty input** — `IcsSettlementResolver::resolveForUser()` and
+  `PaypalFundingResolver::resolveForUser()` are no-ops; the audit row
+  flips cleanly to `complete` with `linked_count = 0`.
 - **Exceeded tolerance** — the ICS resolver writes a candidate row
   with `to_transaction_id = NULL` and
   `evidence.tolerance_used = 'exceeded'`. The DB-layer trigger pair

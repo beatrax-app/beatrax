@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Allt ovanstående tas bort från den här enheten och du loggas ut. Det går inte att ångra och ingen säkerhetskopia sparas.',
     'confirm' => 'Ja, radera allt',
     'cancel' => 'Behåll mitt konto',
+    'error_password_required' => 'Ange ditt lösenord.',
     'error_password' => 'Lösenordet stämmer inte.',
     'error_failed' => 'Ditt konto raderades inte. Ingenting ändrades — försök igen.',
 ];

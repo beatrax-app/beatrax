@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'El PIN debe tener al menos 6 dígitos.',
     'error_pin_mismatch' => 'Los PIN no coinciden. Inténtalo de nuevo.',
+    'error_pin_required' => 'Introduce tu PIN.',
     'error_pin_incorrect' => 'PIN incorrecto.',
+    'error_account_password_required' => 'Introduce tu contraseña de la cuenta.',
     'error_account_password' => 'Contraseña de la cuenta incorrecta.',
     'change_pin_success' => 'Tu clave de cifrado se ha vuelto a proteger con tu PIN nuevo.',
     'error_forgot_failed' => 'No se pudo restablecer el PIN — la clave de recuperación no está disponible.',
     'error_enable_first' => 'Activa primero el bloqueo con PIN antes de registrar la biometría.',
+    'error_disable_blocked_by_encryption' => 'Tus notas y datos de contrapartes están cifrados con la clave que guarda este bloqueo de la app, así que desactivarlo los dejaría ilegibles. El bloqueo se queda activado; cambia tu PIN en su lugar.',
+    'error_key_material_lost' => 'Este dispositivo ya no guarda la clave que abre tus datos cifrados, así que un PIN nuevo no volverá a hacerlos legibles. Empareja este dispositivo con otro que todavía tenga la clave para recuperarlos.',
+    'error_recovery_wrap_stale' => 'Tu contraseña de la cuenta ya no abre este bloqueo de la app — cambió después de configurar el bloqueo. Tu PIN sigue funcionando, pero no queda nada detrás si lo olvidas. Vuelve a vincular tu contraseña de la cuenta ahora.',
+    'relink_recovery' => 'Volver a vincular la contraseña',
+    'relink_modal_heading' => 'Volver a vincular la contraseña — confirma con el PIN',
+    'relink_recovery_success' => 'Tu contraseña de la cuenta ya puede recuperar este bloqueo de la app otra vez.',
 ];

@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use stdClass;
@@ -16,7 +17,10 @@ final readonly class RecurringSeriesProjector
 {
     use CoercesScalars;
 
-    public function __construct(private DatabaseManager $db) {}
+    public function __construct(
+        private DatabaseManager $db,
+        private BaseCurrency $baseCurrency,
+    ) {}
 
     /**
      * @param  list<string>  $states
@@ -76,6 +80,6 @@ final readonly class RecurringSeriesProjector
             ? self::toInt($row->latest_funding_chain_link_id)
             : null;
 
-        return RecurringSeriesDtoMapper::hydrate($row, $chainLinkId);
+        return RecurringSeriesDtoMapper::hydrate($row, $chainLinkId, $this->baseCurrency->code());
     }
 }

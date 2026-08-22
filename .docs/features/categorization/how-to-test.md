@@ -178,9 +178,13 @@ The behavioural contract for the `Categorization` module.
 
 ## Edge cases
 
-- **Empty rule corpus** — `RuleEvaluator` returns
-  `RuleEvaluationOutcome::none()`; the stage degrades to
-  `manual($tx)`; the import succeeds.
+- **Empty rule corpus** — `RuleEngine::match` returns an empty
+  `MatchedRule` list, so no category action fires and no `hits_count`
+  is bumped. That on its own does not degrade the row to manual:
+  merchant memory is still consulted afterwards, and only when
+  `RuleEvaluator::lookupMemory` ALSO returns null does the stage
+  return `AutoCategorizationOutcomeDto::manual($folded)`. Either way
+  the import succeeds.
 - **Memory candidate but counterparty is the empty sentinel** —
   `CounterpartyKey::NONE` short-circuits the memory JOIN; only
   rule candidates participate in scoring.

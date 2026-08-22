@@ -14,18 +14,19 @@ use Modules\Ledger\Public\ValueObjects\Money;
  */
 final class TopCategoriesByPeriodQuery
 {
-    public const DEFAULT_DISPLAY_CURRENCY = 'EUR';
-
     public function __construct(
         private readonly SpendByCategoryQuery $spendByCategory,
         private readonly CategoryAncestry $ancestry,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     /**
      * @return array<TopCategoryRow>
      */
-    public function for(User $user, Period $period, string $displayCurrency = self::DEFAULT_DISPLAY_CURRENCY, int $limit = 5): array
+    public function for(User $user, Period $period, ?string $displayCurrency = null, int $limit = 5): array
     {
+        $displayCurrency ??= $this->baseCurrency->code();
+
         // The shared service returns an unordered map, so DESC-by-spend
         // ordering + limit are re-applied here in PHP.
         $spendByCategoryId = $this->spendByCategory->forUserAndPeriod($user->id, $period, $displayCurrency);

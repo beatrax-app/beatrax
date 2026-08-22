@@ -32,6 +32,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
+use Modules\Ledger\Public\Services\BaseCurrency;
 
 /**
  * @link ../../../../../.docs/features/import/architecture.md#preview-wizard-inline-account-naming
@@ -184,6 +185,7 @@ final class PreviewWizard extends Component
         RunsImports $importer,
         CurrentUser $currentUser,
         AccountSlugResolver $slugs,
+        BaseCurrency $baseCurrency,
     ): void {
         $this->resetErrorBag('icsAccountName');
 
@@ -205,7 +207,7 @@ final class PreviewWizard extends Component
             'slug' => $slugs->resolveUnique($user->id, $trimmed),
             'kind' => AccountKind::IcsCard->value,
             'iban' => self::ICS_OWN_IBAN,
-            'default_currency' => 'EUR',
+            'default_currency' => $baseCurrency->code(),
         ]);
 
         /** @var ImportRun $importRun */

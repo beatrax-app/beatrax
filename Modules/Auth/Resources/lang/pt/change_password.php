@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Confirmar a nova palavra-passe',
     'submit' => 'Guardar a nova palavra-passe',
 
+    'error_current_required' => 'Introduz a tua palavra-passe atual.',
     'error_current_incorrect' => 'A palavra-passe atual está incorreta.',
     'error_mismatch' => 'As palavras-passe não coincidem.',
     'error_min_length' => 'Usa pelo menos 12 caracteres.',

@@ -44,8 +44,8 @@ final readonly class DuplicateChargeDetector
         }
 
         $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : $this->baseCurrency->code();
-        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
-        $types = Direction::from($direction)->transactionTypes();
+        $direction = TransactionType::directionOf($txn['type'] ?? null)->value;
+        $types = TransactionType::valuesFor(Direction::from($direction));
         $thisId = self::toInt($txn['id'] ?? 0);
         $postedAt = is_string($txn['posted_at'] ?? null) ? $txn['posted_at'] : $this->clock->now()->toDateString();
 

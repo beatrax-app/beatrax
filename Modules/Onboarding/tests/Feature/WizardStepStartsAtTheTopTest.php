@@ -59,9 +59,11 @@ it('tells the browser to go back to the top when a completed step is revisited',
         ->assertDispatched(SetupWizard::STEP_CHANGED_EVENT);
 });
 
-it('has a listener on the page that acts on it', function (): void {
-    $html = (string) Livewire::test(SetupWizard::class)->html();
+it('announces under the one name the bundle listens for', function (): void {
+    // The event is only worth dispatching if something moves the viewport, and
+    // the listener is registered once for every screen rather than rendered
+    // into this one — so the name is the only thing that can drift.
+    $bundle = (string) file_get_contents(base_path('resources/js/app.js'));
 
-    // The event is only worth dispatching if something moves the viewport.
-    expect($html)->toContain('x-on:'.SetupWizard::STEP_CHANGED_EVENT.'.window="window.scrollTo({ top: 0 })"');
+    expect($bundle)->toContain("addEventListener('".SetupWizard::STEP_CHANGED_EVENT."'");
 });

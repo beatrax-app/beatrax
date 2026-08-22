@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Viss iepriekš minētais tiek noņemts no šīs ierīces, un tu tiec izrakstīts. Atgriezties nevar, un rezerves kopija netiek saglabāta.',
     'confirm' => 'Jā, dzēst visu',
     'cancel' => 'Paturēt manu kontu',
+    'error_password_required' => 'Ievadi savu paroli.',
     'error_password' => 'Šī parole nav pareiza.',
     'error_failed' => 'Tavs konts netika izdzēsts. Nekas netika mainīts — mēģini vēlreiz.',
 ];

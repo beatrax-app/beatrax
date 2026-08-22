@@ -293,7 +293,7 @@
     {{-- Chain-resolution polling surface.
 
          Polls the `chain_resolution_runs` audit table via
-         `wire:poll.2s="refreshChainResolutionStatus"`. The auto-navigate
+         `wire:poll.2s.keep-alive="refreshChainResolutionStatus"`. The auto-navigate
          on status='complete' fires inside `refreshChainResolutionStatus`
          itself; the rendered Blade body covers pending / running /
          failed states only.
@@ -304,7 +304,7 @@
          cross-user state via id-prefix substring matches). --}}
     @if ($chainResolutionStatus !== null && $chainResolutionStatus !== JobRunStatus::Complete)
         <section
-            wire:poll.2s="refreshChainResolutionStatus"
+            wire:poll.2s.keep-alive="refreshChainResolutionStatus"
             class="rounded-md border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700"
             aria-live="polite"
         >

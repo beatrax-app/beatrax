@@ -7,26 +7,22 @@ namespace Modules\Reports\Internal\Http;
 use Illuminate\Http\Request;
 use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Reports\Internal\Dto\ReportDefinition;
-use Modules\Reports\Internal\Enums\ReportCurrencyMode;
-use Modules\Reports\Internal\Enums\ReportGranularity;
-use Modules\Reports\Internal\Enums\ReportPeriodPreset;
-use Modules\Reports\Internal\Enums\ReportViz;
+use Modules\Reports\Internal\Support\ReportVocabulary;
 
 final class ReportDefinitionRequestFactory
 {
     public function fromExportQuery(Request $request): ReportDefinition
     {
         return new ReportDefinition(
-            metric: $this->stringOr($request->query('metric'), 'spend'),
-            dimension: $this->stringOr($request->query('dim'), 'category'),
-            periodPreset: $this->stringOr($request->query('period'), ReportPeriodPreset::ThisMonth->value),
-            // tryFrom, not from: an unknown ?gran= is a bad link, not corrupt
-            // state, and it used to reach TimeBucketGenerator and 500. Rejecting
+            // tryFrom, not from: an unknown parameter is a bad link, not corrupt
+            // state, and ?gran= used to reach TimeBucketGenerator and 500. Rejecting
             // a bad STORED value is ReportDefinition::from()'s job instead.
-            granularity: ReportGranularity::tryFrom($this->stringOr($request->query('gran'), ''))
-                ?? ReportGranularity::default(),
-            currencyMode: $this->stringOr($request->query('ccy'), ReportCurrencyMode::Base->value),
-            viz: $this->stringOr($request->query('viz'), ReportViz::Table->value),
+            metric: ReportVocabulary::metric($this->nullableString($request->query('metric'))),
+            dimension: ReportVocabulary::dimension($this->nullableString($request->query('dim'))),
+            periodPreset: ReportVocabulary::periodPreset($this->nullableString($request->query('period'))),
+            granularity: ReportVocabulary::granularity($this->nullableString($request->query('gran'))),
+            currencyMode: ReportVocabulary::currencyMode($this->nullableString($request->query('ccy'))),
+            viz: ReportVocabulary::viz($this->nullableString($request->query('viz'))),
             customFrom: $this->nullableString($request->query('from')),
             customTo: $this->nullableString($request->query('to')),
             compare: $request->boolean('cmp'),

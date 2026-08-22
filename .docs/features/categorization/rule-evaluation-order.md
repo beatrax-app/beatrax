@@ -93,6 +93,22 @@ inclusive upper bound behave: without it, a transaction posted at 14:00
 on the final day of the range would sort after a bound parsed as 00:00
 and fall outside a range the user believes includes it.
 
+A blank date value is refused before it is parsed, and the order matters.
+`CarbonImmutable::parse('')` returns **now** rather than raising, so a
+Date condition whose stored value is empty stopped being a date test at
+all and silently became "posted today" — matching a different set of rows
+on every run, and never the set its author wrote. `normalizeCondition()`
+rejects an empty value on the write path, so the way in is a row written
+around that path: a sync, or a restore. The column is `NOT NULL`, which
+leaves the empty string as the only route and rules a null out.
+
+A value that is *present but unreadable* is treated differently on
+purpose: it still throws. `ReapplyRulesJob` catches that per row, counts
+the row as errored and skips it, which is what keeps a malformed rule
+visible to the operator. Turning that throw into a quiet `false` would
+make a broken rule indistinguishable from one that simply matched
+nothing — so the guard is on emptiness, never on parseability.
+
 ## Ordering actions within a rule
 
 `RuleEngine::actionsFor()` reads a fired rule's actions ordered by

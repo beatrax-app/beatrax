@@ -7,6 +7,7 @@ namespace Modules\Auth\Public\Actions;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Public\Support\Lang;
@@ -19,6 +20,7 @@ final class ResetPasswordAction
         private readonly DatabaseManager $db,
         private readonly Hasher $hasher,
         private readonly RecoveryCodeAuthenticator $authenticator,
+        private readonly AppLockProvisioner $provisioner,
     ) {}
 
     public function __invoke(string $usernameInput, string $codeInput, string $newPassword): void
@@ -43,6 +45,11 @@ final class ResetPasswordAction
                 'password' => $this->hasher->make($newPassword),
                 'force_password_change_at_next_login' => false,
             ]);
+
+        // A recovery code proves the account, never the old password, so the
+        // app-lock recovery wrap cannot be carried over. Stamped rather than
+        // left to fail on the day it is needed.
+        $this->provisioner->markRecoveryWrapStale($user->id);
 
         // The account may have been out of the owner's hands, so every session
         // goes; the caller is a guest with none to preserve.

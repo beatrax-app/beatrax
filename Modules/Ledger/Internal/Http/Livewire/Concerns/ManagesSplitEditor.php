@@ -55,7 +55,7 @@ trait ManagesSplitEditor
 
     public ?int $pendingRemoveIndex = null;
 
-    public function openSplitEditor(CurrentUser $currentUser, DatabaseManager $db): void
+    public function openSplitEditor(CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): void
     {
         if ($this->hasPersistedSplit) {
             return;
@@ -82,7 +82,7 @@ trait ManagesSplitEditor
         $this->editingSplit = true;
         $this->splitError = null;
 
-        $this->recomputeRemaining($currentUser, $db);
+        $this->recomputeRemaining($currentUser, $db, self::readerCurrency($currentUser, $baseCurrency));
     }
 
     public function addLeg(): void
@@ -92,7 +92,7 @@ trait ManagesSplitEditor
 
     // Removing the second-to-last leg would collapse the split to a single
     // category, so it routes to the same two-step confirm as "Unsplit".
-    public function removeLeg(int $index, CurrentUser $currentUser, DatabaseManager $db): void
+    public function removeLeg(int $index, CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): void
     {
         if (! array_key_exists($index, $this->legs)) {
             return;
@@ -108,7 +108,7 @@ trait ManagesSplitEditor
         $legs = $this->legs;
         array_splice($legs, $index, 1);
         $this->legs = $legs;
-        $this->recomputeRemaining($currentUser, $db);
+        $this->recomputeRemaining($currentUser, $db, self::readerCurrency($currentUser, $baseCurrency));
     }
 
     public function cancelRemoveToOne(): void
@@ -208,12 +208,13 @@ trait ManagesSplitEditor
 
     // Re-validates server-side: the disabled Save button is a UX gate only,
     // never authoritative.
-    public function saveSplit(SavesTransactionSplit $splitter, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session): void
+    public function saveSplit(SavesTransactionSplit $splitter, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session, BaseCurrency $baseCurrency): void
     {
         $this->splitError = null;
         $userId = $currentUser->user()->id;
+        $readerCurrency = self::readerCurrency($currentUser, $baseCurrency);
 
-        $this->recomputeRemaining($currentUser, $db);
+        $this->recomputeRemaining($currentUser, $db, $readerCurrency);
 
         if ($this->remainingMinor !== 0) {
             $this->splitError = Lang::get('ledger::detail.errors.totals_must_match');
@@ -246,7 +247,7 @@ trait ManagesSplitEditor
 
             // Reload persisted legs (real DB ids) + tax state so subsequent
             // edits/removals correctly diff against the now-saved rows.
-            $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session);
+            $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session, $readerCurrency);
             $this->toast(Lang::get('ledger::detail.toast.split_saved'));
         } catch (SplitSumMismatchException) {
             $this->splitError = Lang::get('ledger::detail.errors.totals_must_match');
@@ -335,7 +336,7 @@ trait ManagesSplitEditor
         $this->legs[$index]['tax'] = $newState;
     }
 
-    private function loadSplitState(CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session): void
+    private function loadSplitState(CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session, string $readerCurrency): void
     {
         $userId = $currentUser->user()->id;
 
@@ -378,10 +379,18 @@ trait ManagesSplitEditor
         $this->hasPersistedSplit = true;
         $this->editingSplit = true;
 
-        $this->recomputeRemaining($currentUser, $db);
+        $this->recomputeRemaining($currentUser, $db, $readerCurrency);
     }
 
-    private function recomputeRemaining(CurrentUser $currentUser, DatabaseManager $db): void
+    // The reader's own setting, not config('currency.base'): the /settings picker
+    // writes users.base_currency, and nothing wires the config value to an env, so
+    // the service alone would answer € over a ledger counted in pounds.
+    private static function readerCurrency(CurrentUser $currentUser, BaseCurrency $baseCurrency): string
+    {
+        return $currentUser->user()->base_currency ?? $baseCurrency->code();
+    }
+
+    private function recomputeRemaining(CurrentUser $currentUser, DatabaseManager $db, string $readerCurrency): void
     {
         $userId = $currentUser->user()->id;
 
@@ -398,7 +407,7 @@ trait ManagesSplitEditor
         }
 
         $parentMinor = is_numeric($parent->settled_amount_minor) ? (int) $parent->settled_amount_minor : 0;
-        $currency = is_string($parent->settled_currency) ? $parent->settled_currency : 'EUR';
+        $currency = is_string($parent->settled_currency) ? $parent->settled_currency : $readerCurrency;
 
         $parentAbs = Money::ofMinor(abs($parentMinor), $currency);
         $sumAbs = Money::ofMinor(0, $currency);

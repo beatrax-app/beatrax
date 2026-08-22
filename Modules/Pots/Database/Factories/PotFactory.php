@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Pots\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Pots\Models\Pot;
 use Modules\Pots\Public\Enums\PotStatus;
 
@@ -27,7 +28,7 @@ final class PotFactory extends Factory
             'goal_id' => null,
             'category_id' => null,
             'name' => $this->faker->word(),
-            'currency' => 'EUR',
+            'currency' => Currency::Eur->value,
             'status' => PotStatus::Active->value,
         ];
     }

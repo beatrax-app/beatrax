@@ -68,8 +68,8 @@ final readonly class TransferPairCascade
             // A leg whose partner is gone is no longer money moving between
             // two of your own accounts — it is money that arrived or left.
             $newType = match ($cascade['deletedType']) {
-                'transfer_out' => 'income',
-                'transfer_in' => 'expense',
+                TransactionType::TransferOut->value => TransactionType::Income->value,
+                TransactionType::TransferIn->value => TransactionType::Expense->value,
                 default => null,
             };
 

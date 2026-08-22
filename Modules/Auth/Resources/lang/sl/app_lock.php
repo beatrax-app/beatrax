@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN mora imeti vsaj 6 števke.',
     'error_pin_mismatch' => 'PIN-a se ne ujemata. Poskusi znova.',
+    'error_pin_required' => 'Vnesi svoj PIN.',
     'error_pin_incorrect' => 'Napačen PIN.',
+    'error_account_password_required' => 'Vnesi geslo svojega računa.',
     'error_account_password' => 'Napačno geslo računa.',
     'change_pin_success' => 'Tvoj šifrirni ključ je znova zavarovan z novim PIN-om.',
     'error_forgot_failed' => 'Ponastavitev PIN-a ni uspela — ključ za obnovitev ni na voljo.',
     'error_enable_first' => 'Pred vpisom biometrije vklopi zaklepanje s PIN-om.',
+    'error_disable_blocked_by_encryption' => 'Tvoji zapiski in podatki o nasprotnih strankah so šifrirani s ključem, ki ga hrani ta zaklep aplikacije, zato bi jih izklop pustil neberljive. Zaklep ostane vklopljen — raje zamenjaj PIN.',
+    'error_key_material_lost' => 'Ta naprava ne hrani več ključa, ki odpira tvoje šifrirane podatke, zato jih nov PIN ne bo znova naredil berljivih. Napravo poveži s tako, ki ključ še ima, da jih obnoviš.',
+    'error_recovery_wrap_stale' => 'Geslo računa tega zaklepanja aplikacije ne odpre več — spremenjeno je bilo po tem, ko je bilo zaklepanje nastavljeno. PIN še vedno deluje, a za njim ne ostane nič, če ga pozabiš. Znova poveži geslo računa zdaj.',
+    'relink_recovery' => 'Znova poveži geslo računa',
+    'relink_modal_heading' => 'Znova poveži geslo računa — potrdi s PIN-om',
+    'relink_recovery_success' => 'Geslo računa lahko to zaklepanje aplikacije spet obnovi.',
 ];

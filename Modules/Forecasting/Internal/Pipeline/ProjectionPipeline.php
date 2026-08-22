@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Internal\Exceptions\ForecastResultEncodingException;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Forecasting\Models\ForecastRun;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 use Throwable;
@@ -31,6 +32,7 @@ final readonly class ProjectionPipeline
         private ChainAwareForecastRouter $router,
         private ShortfallDetector $shortfall,
         private ScenarioApplier $scenarioApplier,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function project(User $user, ?int $scenarioId, int $horizonDays): void
@@ -143,7 +145,7 @@ final readonly class ProjectionPipeline
             $anchor = $this->anchor->forAccount($accountId, $user);
             $defaultCurrency = self::toString($account->default_currency ?? null);
             if ($defaultCurrency === '') {
-                $defaultCurrency = 'EUR';
+                $defaultCurrency = $this->baseCurrency->code();
             }
 
             $contributions = $byAccount[$accountId] ?? [];

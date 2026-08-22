@@ -81,13 +81,17 @@ Modules/DriftAlerts/
   - `DriftAlertQuery::openCountForUser($user)` — open-alert count
     (single COUNT against the `(user_id, state)` index). The sidebar
     badge applies the same predicate from `NavCountsService`.
-  - `DriftAlertQuery::listFor($user)` — drift page list ordered by
-    `detected_at DESC`.
-  - `DriftAlertQuery::forSeries($seriesId, $user)` — per-series
+  - `DriftAlertQuery::openForUser($user, $cursorId, $limit)` — the
+    drift page's open tab, keyset-paged on id DESC rather than
+    offset-paged. `historyForUser(...)` and `dismissedForUser(...)`
+    are the same shape over the acknowledged and dismissed states.
+  - `DriftAlertQuery::groupedBySeriesForUser($user)` — the per-series
     drill-in.
-  - `CancellationImpactQuery::computeFor($alertId, $user)` —
-    projected annual savings (cadence-aware multiplication of the
-    current per-occurrence amount).
+  - `CancellationImpactQuery::forSeries($seriesId, $user)` —
+    projected annual savings (the series' monthly equivalent × 12).
+    Keyed on the recurring series, not on an alert id;
+    `forSeriesIds($seriesIds, $user)` is the batched form the open tab
+    calls once instead of looping.
 
 ## Internal services
 

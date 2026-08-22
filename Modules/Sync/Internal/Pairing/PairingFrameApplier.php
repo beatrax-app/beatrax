@@ -89,7 +89,7 @@ final readonly class PairingFrameApplier
 
         return match ($result) {
             null => PairingFrameOutcome::Refused,
-            'deferred' => PairingFrameOutcome::Deferred,
+            PairingTokenService::DEFERRED => PairingFrameOutcome::Deferred,
             default => PairingFrameOutcome::Applied,
         };
     }

@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\DB;
+use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
@@ -14,6 +15,7 @@ use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // The slug resolver compares a plaintext displayName against the stored value,
 // so it has to decrypt first: without that, every re-resolution of one merchant
@@ -190,4 +192,45 @@ it('CounterpartyIndexQuery::forUser stays correctly name-sorted (PHP usort) desp
     )->values()->all();
 
     expect($names)->toBe(['Alpha', 'Middle', 'Zebra']);
+});
+
+// A merchant with no separate trading name stores merchant_name as the empty
+// string, which is exactly what the codec substitutes for a column it could not
+// open. Read off the value alone the profile cannot tell the two apart, so a
+// sealed IBAN or trading name reached the page as a present-but-blank field.
+it('reads a genuinely blank merchant_name as blank and a sealed one as absent', function (): void {
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var SensitiveColumnCodec $codec */
+    $codec = $this->app->make(SensitiveColumnCodec::class);
+
+    $attrs = $codec->encryptAttrs('counterparties', [
+        'user_id' => $this->user->id,
+        'type' => 'merchant',
+        'slug' => 'blank-trading-name',
+        'display_name' => 'Blank Trading Name',
+        'merchant_name' => '',
+        'iban' => 'NL91ABNA0417164300',
+        'created_at' => now()->toDateTimeString(),
+        'updated_at' => now()->toDateTimeString(),
+    ], (int) $this->user->id, $session);
+
+    DB::table('counterparties')->insert($attrs);
+
+    /** @var CounterpartyProfileQuery $query */
+    $query = $this->app->make(CounterpartyProfileQuery::class);
+
+    $readable = $query->bySlug($this->user, 'blank-trading-name');
+    expect($readable)->not->toBeNull();
+    expect($readable->displayName)->toBe('Blank Trading Name');
+    expect($readable->merchantName)->toBe('');
+    expect($readable->iban)->toBe('NL91ABNA0417164300');
+
+    $this->app->make(AppLockKeyService::class)->withhold($session);
+
+    $sealed = $query->bySlug($this->user, 'blank-trading-name');
+    expect($sealed)->not->toBeNull();
+    expect($sealed->displayName)->toBe('');
+    expect($sealed->merchantName)->toBeNull();
+    expect($sealed->iban)->toBeNull();
 });

@@ -565,6 +565,28 @@ for `Modules\Notifications`, which may not reach
 `Modules\Sync\Internal\Identity` directly — both expose only public,
 non-secret projections of the registry.
 
+**Stamps are Zulu, and the column is sorted as text.** `paired_at`,
+`confirmed_at`, `created_at`, `updated_at` and `last_seen_at` are TEXT, and
+`confirmedDevices()` orders by `paired_at` — so SQLite compares them
+byte-wise, not as instants. A stamp written at a local offset reads by its own
+hour digits: `2026-06-15T20:30:00+02:00` sorts *after* the `2026-06-15T19:00:00Z`
+row it actually predates, and the device list silently reorders. Every writer
+therefore goes through `ZuluTimestamp::stamp()`, the same producer
+`pairing_tokens.expires_at` and `relay_mailbox` use, and
+`2026_08_22_000002_rewrite_sync_stamps_as_zulu` rewrote the rows an earlier
+version had already stored at an offset. Rewritten, not deleted as the
+`pairing_tokens` sweep beside it does: a registry row is the permanent trust
+anchor, and dropping one un-pairs both devices and costs a fresh
+safety-number ceremony. `restoreSelfRow()` re-stamps the `created_at` it reads
+back out of the device key-file for the same reason — a key-file minted before
+this change still carries the offset form, and switching sync off and on is
+what copies it back onto a migrated row.
+
+`tests/Contracts/TextTimestampsAreZuluArchTest` holds the rule open for the
+next table: it derives the columns from the migrated schema rather than a
+list, so any table that stores a `*_at` as TEXT is covered the moment its
+migration lands.
+
 ### Pairing internals (`Internal\Pairing\*`)
 
 `Bip39WordList` bundles the canonical BIP39 English wordlist (2048 entries)
@@ -797,6 +819,52 @@ behind a multicast lock — and accumulates the answers through
 filter of its own: the fresh device using it has no confirmed peers yet, which
 is the whole reason it is browsing.
 
+#### `PeerDiscovery::reach()` — silence with a reason attached
+
+`browse()` returning `[]` carries two opposite meanings: no peer is
+advertising, or this runtime never got to ask. `reach()` separates them,
+returning a `Modules\Sync\Public\Enums\LanDiscoveryReach`:
+
+| Case | Means | `silenceMeansNoPeers()` |
+|---|---|---|
+| `Available` | the question reached the network | `true` |
+| `Unsupported` | the question never left this device | `false` |
+
+It describes the **last** browse, and before any browse the runtime's own
+verdict. `MulticastMdnsQuery` starts each browse from that verdict — iOS
+without `com.apple.developer.networking.multicast` is `Unsupported`, every
+other runtime is `Available` — and lowers it to `Unsupported` when the socket
+could not be opened or the question could not be put on the wire. It never
+raises it, because a send the kernel accepted proves nothing on a platform
+that drops the datagram afterwards.
+
+`CachedPeerDiscovery` delegates `reach()` rather than caching it beside the
+peers: a cache hit skips the browse, so the inner query's verdict is still the
+one belonging to the browse those peers came from.
+
+`PairingGateway::lanDiscoveryReach()` is the cross-module read of the same
+value, sitting beside `discoverInitiatorOnLan()` whose `NoPeerReached` is the
+outcome it explains, so a screen reporting "nothing answered" asks the transport
+what that silence meant instead of naming a platform.
+
+#### `BonjourBridgeQuery` — the same contract over the platform's own browser
+
+A second `PeerDiscovery` that asks the mobile shell to browse Bonjour, instead
+of sending the datagram itself, through the `NativeBridge` seam
+(`NativePhpBridge` in production, calling `nativephp_can` / `nativephp_call`).
+Its `reach()` is `Unsupported` unless the shell registered a `Discovery.Browse`
+bridge function, and a browse the native side refuses is likewise an inability
+rather than an empty network.
+
+`SyncServiceProvider::discovery()` binds whichever road can look: the Bonjour
+browser where the shell provides one, the multicast query everywhere else. When
+neither can look the multicast query is still bound — something has to answer
+the caller — and it says so through `reach()`.
+
+**The iOS half of this is not built.** No `Discovery.Browse` bridge function
+exists on either platform, so `BonjourBridgeQuery` is never selected today.
+See [the iOS discovery page](../mobile/ios-lan-discovery-entitlement.md).
+
 ### Zero-knowledge relay (`Commands\RelayServeCommand`, `Internal\Transport\Relay\*`)
 
 The relay exposes the ZK relay mailbox over three HTTP routes:
@@ -812,20 +880,29 @@ end-to-end between devices, inside the Noise session; the relay operator
 learns only: sender_did, recipient_did, blob size, and delivery timestamp.
 
 **Drain authorization.** `GET /relay/drain` and `DELETE /relay/drain/{id}`
-require a bearer token in the Authorization header that matches the
-per-device token derived for the mailbox being accessed:
+require a bearer token in the Authorization header bound to the mailbox
+being accessed. The credential is the draining device's OWN per-instance
+drain secret — 32 random bytes minted on first use by
+`RelayConfig::deviceDrainSecret()` and persisted at
+`secretsPath()/sync-relay-drain-secret.json` — not a value derived from
+anything the relay or its peers hold.
 
-```
-expected = HMAC-SHA256(RelayConfig::authToken(), recipient_did)
-```
+The relay side is `RelayDrainRegistry`, a trust-on-first-use store: the first
+token ever presented for a device id is recorded as `did → sha256(token)` and
+accepted, and every later drain or confirm for that id must present a token
+whose digest `hash_equals` the stored one. A token scoped to device A
+therefore cannot drain or confirm-delete device B's mailbox.
 
-(`RelayConfig::deriveDeviceToken()`). A single relay-wide token is not
-accepted — a token scoped to device A cannot drain or confirm-delete device
-B's mailbox. This closes the metadata-isolation hole where any holder of the
-shared token could pull or delete an arbitrary recipient's blobs.
+An earlier scheme derived each device's token as
+`HMAC-SHA256(RelayConfig::authToken(), recipient_did)`. It is gone: the relay
+auth token travels in the pairing QR, so every peer that had ever paired could
+recompute any device's drain token. The residual weakness of the registry is
+narrower but real — an attacker who registers a victim's device id BEFORE the
+victim ever drains wins the slot. See
+[the relay endpoint authorization page](relay-endpoint-authorization.md).
 
-ZK is preserved: the relay only HMACs the device_id (routing metadata it
-already sees) with the secret it already holds — it never reads blobs, never
+ZK is preserved: the relay stores only a hash of a bearer token against a
+device id (routing metadata it already sees) — it never reads blobs, never
 learns a user_id, and never has device key material.
 
 Authorization is enforced at the endpoint (`RelayServeCommand`), not inside
@@ -870,8 +947,11 @@ reads/writes the relay endpoint URL (non-secret, plain JSON at
 JSON at `secretsPath()/sync-relay-token.json`, chmod 600, never `.env`).
 `isInsecure()` flags non-https URLs so the UI can warn the user (the relay is
 ZK regardless of TLS, but an `http://` endpoint leaks ciphertext sizes and
-metadata to a network eavesdropper). `deriveDeviceToken()` derives a
-per-device drain token as `HMAC-SHA256(authToken, device_id)`.
+metadata to a network eavesdropper). `deviceDrainSecret()` mints this device's
+own drain credential on first call — 32 random bytes — and persists it to a
+third secret file, `secretsPath()/sync-relay-drain-secret.json`, under the same
+`mkdir 0700 → write → chmod 0600` discipline as the auth token. It derives
+nothing: the relay learns the secret by seeing it, once.
 
 `RelayMailbox` is the zero-knowledge ciphertext mailbox: stores and routes
 opaque Noise ciphertext blobs addressed by recipient `device_id`. Hard ZK
@@ -1142,8 +1222,9 @@ page promised the balances add up to the real account balance.
 only the named container; the mutations are what the scenario actually changes,
 so a synced scenario arrived as an empty what-if. It carries its own `user_id`
 and needs no `PARENT_SCOPE` entry, but both ids it names are owner-scoped and
-sit in `RowOwnership::OWNED_REFERENCES`: `forecast_scenario_id`, and
-`target_series_id`, which is deliberately not FK-constrained because the series
+sit in `RowOwnership::ownedReferences('forecast_scenario_mutations')`:
+`forecast_scenario_id`, and `target_series_id`, which is deliberately not
+FK-constrained because the series
 lives in another module — so that check is the only thing standing between a
 replayed mutation and another household member's series.
 

@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Unesi kod u rečima sa drugog uređaja',
     'submit_code' => 'Pošalji kod',
     'cancel' => 'Otkaži',
+    'skip_import' => 'Nastavi bez uvoza',
 
     'confirm_heading' => 'Uporedi ove reči sa drugim uređajem',
     'safety_words_aria' => 'Reči bezbednosnog broja: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Nije moguće doći do drugog uređaja. Proveri da li su oba na istoj mreži i da li je sinhronizacija uključena na računaru.',
         'invalid_code' => 'Ovaj kod nije ispravan ili je istekao. Zatraži da drugi uređaj napravi novi.',
         'code_not_accepted' => 'Nijedan uređaj na ovoj mreži nije prihvatio taj kôd. Proveri kôd i da li ga drugi uređaj još uvek prikazuje.',
+        'no_peer_answered' => 'Ništa na ovoj mreži nije odgovorilo na taj kôd. Proveri da li sinhronizacija radi na drugom uređaju ili skeniraj njegov kôd kamerom — kamera ne mora da pretražuje mrežu.',
+        'no_peer_answered_ios' => 'Ništa na ovoj mreži nije odgovorilo na taj kôd. Traženje drugog uređaja na mreži na iPhone-u još ne radi, pa skeniraj njegov kôd kamerom.',
         'rate_limited' => 'Previše pokušaja. Sačekaj minut i pokušaj ponovo.',
         'identity_locked' => 'Identitet tvog uređaja je zaključan. Otključaj aplikaciju pa probaj ponovo.',
         'identity_needs_lock' => 'Prvo podesite zaključavanje aplikacije — ono štiti identitet vašeg uređaja.',

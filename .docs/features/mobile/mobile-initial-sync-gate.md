@@ -212,6 +212,43 @@ An import exists because another device *has* data. Completing one with
 nothing to carry. The puller logs a warning on exactly that shape. Nothing
 else in the system would say so.
 
+## Before the epoch: the gate that returns you to pairing
+
+`SetupProgressScreen` is the second half of this gate. The first is
+`MobileEnsureImportCompleted`, which reads the durable `mobile_import_intent`
+marker and, while the device still has no epoch, redirects every route that is
+not pair, setup, lock, import, welcome or logout back to
+`mobile.pair?mode=import`.
+
+That is right while the ceremony is live and was a trap when it was not. The
+pairing screen renders in `layouts.lock`, which draws no navigation at all, and
+its camera arm offered exactly two controls: open the camera, and enter a code
+instead. Choosing "Import from another device" on a phone whose pairing could
+not complete therefore left the reader on a screen with nothing behind it and
+no way off — dashboard, transactions, budgets and settings all returned there —
+and the only recovery was reinstalling the app.
+
+`MobilePairingScan::abandonImport()` is the way out. It expires any in-flight
+token, retires the intent marker, and lands on the dashboard. Nothing is added
+to the exempt list: retiring the marker is the gate's *own* convergence move,
+the one it already makes when an import genuinely converges, so a device that
+has taken the exit is held no differently from one that never chose to import.
+
+Two pieces of state make that honest rather than merely quiet:
+
+- **No epoch is not a broken device.** A plain signup has no
+  `sync_encryption_state.current_epoch` either — encryption is minted when sync
+  is enabled, not at signup — so the abandoned device sits in exactly the state
+  a local-only account normally sits in.
+- **The withheld starter data is seeded.** The import path signs up with
+  `seedsStarterData: false`, because those categorization rules were to arrive
+  from the peer. Abandoning means nothing ever will, so the exit re-dispatches
+  `UserInstalled` — the same idempotent heal `InstallCommand` performs for an
+  existing user.
+
+Taking the exit does not spend the import: `/mobile/import` stays exempt and
+still leads back into `mobile.pair?mode=import`.
+
 ## Related
 
 - [Mobile module architecture](architecture.md) — cold start, pairing, and

@@ -11,6 +11,7 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupDecryptionException;
+use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Crypto\Concerns\ManagesBlindIndexKey;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
@@ -161,6 +162,9 @@ final class GdkKeyringService
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
      * @throws BackupDecryptionException when the held KEK does not open the file.
+     * @throws BackupFormatException when the stored keyring is not a Beatrax
+     *                               envelope, which BackupEncryptor::decrypt()
+     *                               raises from readKeyringFile().
      */
     public function loadKeyring(int $userId, Session $session): GdkKeyring
     {
@@ -281,6 +285,10 @@ final class GdkKeyringService
      * @throws \LogicException when the app-lock KEK is unavailable.
      * @throws KeyringStateException when no current epoch is recorded, or
      *                               the keyring does not hold a key for it.
+     * @throws BackupDecryptionException when a held KEK does not open the
+     *                                   file, which loadKeyring() raises and
+     *                                   this call has always been able to
+     *                                   surface.
      */
     public function currentEpoch(int $userId, Session $session): GdkEpoch
     {
@@ -324,6 +332,18 @@ final class GdkKeyringService
             sodium_memzero($oldKek);
             sodium_memzero($newKek);
         }
+    }
+
+    // The keyring file's own bytes, hashed. No app-lock key is involved: the
+    // file is authenticated ciphertext, so any epoch added, replaced or
+    // rewrapped changes it, and a caller can ask "did key material move?" on a
+    // request that has no key at all.
+    public function keyringFingerprint(int $userId): ?string
+    {
+        $path = $this->keyringPath($userId);
+        $hash = is_file($path) ? @hash_file('xxh128', $path) : false;
+
+        return is_string($hash) ? $hash : null;
     }
 
     private function keyringPath(int $userId): string
@@ -456,6 +476,15 @@ final class GdkKeyringService
                 'current_epoch' => $epochId,
                 'updated_at' => $now,
             ]);
+    }
+
+    // True once `sync_encryption_state.current_epoch` is set — a plain integer
+    // readable with no key at all. Deliberately NOT the same question as
+    // currentEpoch(): this one says the user's rows are supposed to be sealed,
+    // which is what makes an unsealed write a defect rather than a no-op.
+    public function hasCurrentEpoch(int $userId): bool
+    {
+        return $this->currentEpochId($userId) !== null;
     }
 
     private function currentEpochId(int $userId): ?int

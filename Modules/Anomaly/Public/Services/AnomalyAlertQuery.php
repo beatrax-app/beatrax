@@ -14,6 +14,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
 final readonly class AnomalyAlertQuery
@@ -28,6 +29,7 @@ final readonly class AnomalyAlertQuery
         private DatabaseManager $db,
         private Clock $clock,
         private CounterpartyProfileQuery $counterpartyQuery,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     // Elapsed snoozes count as open here: the sweep is the durable write, this
@@ -162,7 +164,7 @@ final readonly class AnomalyAlertQuery
             /** @var stdClass $row */
             $txnId = self::toInt($row->transaction_id ?? null);
             $counterpartyId = $counterpartyByTxn[$txnId] ?? 0;
-            $result[] = AnomalyAlertDtoMapper::hydrate($row, $displayNames[$counterpartyId] ?? '');
+            $result[] = AnomalyAlertDtoMapper::hydrate($row, $displayNames[$counterpartyId] ?? '', $this->baseCurrency->code());
         }
 
         return $result;

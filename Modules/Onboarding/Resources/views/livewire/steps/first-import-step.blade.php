@@ -20,6 +20,7 @@
     is 620px; this one needs the room for the preview table.
 --}}
 @use('Modules\Ingestion\Public\Enums\SourceFormat')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @php
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewBatch $preview */
     /** @var list<\Modules\Import\Public\Dto\StartingBalanceCandidate> $startingBalances */
@@ -106,7 +107,7 @@
                             $meta = $accountMeta[$accountId] ?? [
                                 'label' => 'account',
                                 'short' => '· · · ·',
-                                'currency' => 'EUR',
+                                'currency' => BaseCurrency::value(),
                             ];
                             $isConflict = count($candidates) > 1;
                             $cardState = $isConflict ? 'conflict' : 'detected';
