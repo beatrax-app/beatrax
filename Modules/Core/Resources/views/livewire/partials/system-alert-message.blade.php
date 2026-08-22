@@ -14,7 +14,7 @@
     Blade change.
 --}}
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Core\Public\Enums\BackupAlertKind')
+@use('Modules\Core\Internal\Enums\BackupAlertKind')
 @use('Modules\Core\Public\Enums\UpdateAlertKind')
 @switch ($alert->kind)
     @case (UpdateAlertKind::Available->value)

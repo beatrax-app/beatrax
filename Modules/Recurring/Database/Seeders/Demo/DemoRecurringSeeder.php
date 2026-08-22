@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\CounterpartyKey;
+use Modules\Recurring\Internal\Detectors\OccurrenceWriter;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
@@ -114,6 +115,7 @@ final class DemoRecurringSeeder
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly CounterpartyKey $counterpartyKey,
+        private readonly OccurrenceWriter $occurrences,
     ) {}
 
     /**
@@ -250,7 +252,6 @@ final class DemoRecurringSeeder
 
         $seriesId = (int) $series->id;
         $signedMinor = self::signedMinor($row['latestAmountMinor'], Direction::Expense);
-        $now = CarbonImmutable::now()->toDateTimeString();
 
         $charges = $connection->table('transactions')
             ->where('user_id', $user->id)
@@ -259,32 +260,24 @@ final class DemoRecurringSeeder
             ->orderBy('booked_at')
             ->get(['id', 'booked_at', 'amount_minor', 'currency']);
 
+        $observed = [];
         foreach ($charges as $charge) {
             $bookedAt = CarbonImmutable::parse(self::stringValue($charge->booked_at));
             if ($bookedAt->day !== $row['dayOfMonth']) {
                 continue;
             }
 
-            $exists = $connection->table('recurring_series_occurrences')
-                ->where('recurring_series_id', $seriesId)
-                ->where('transaction_id', $charge->id)
-                ->exists();
-
-            if ($exists) {
-                continue;
-            }
-
-            $connection->table('recurring_series_occurrences')->insert([
-                'user_id' => $user->id,
-                'recurring_series_id' => $seriesId,
-                'transaction_id' => $charge->id,
-                'observed_at' => $bookedAt->toDateString(),
-                'observed_amount_minor' => $signedMinor,
-                'observed_currency' => Currency::Eur->value,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+            $observed[] = (object) [
+                'id' => $charge->id,
+                'posted_at' => $bookedAt->toDateString(),
+                'amount_minor' => $signedMinor,
+            ];
         }
+
+        // Through the one writer the table has, whose insertOrIgnore against
+        // rec_occ_uniq is what makes a re-seed idempotent — the same guarantee
+        // a re-detection relies on, rather than a second copy of it here.
+        $this->occurrences->write($user->id, $seriesId, $observed, Currency::Eur->value);
     }
 
     private static function stringValue(mixed $value): string

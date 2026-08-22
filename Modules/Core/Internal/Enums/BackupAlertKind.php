@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Core\Public\Enums;
+namespace Modules\Core\Internal\Enums;
 
 // The system_alerts.kind values the backup machinery emits: db:backup and
 // db:restore raise Corrupt, the freshness probe raises Overdue. The column

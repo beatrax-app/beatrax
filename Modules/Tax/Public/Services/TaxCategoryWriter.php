@@ -8,7 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter as InternalTaxCategoryWriter;
-use Modules\Tax\Public\Enums\TaxCategoryStatus;
+use Modules\Tax\Internal\Enums\TaxCategoryStatus;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class TaxCategoryWriter

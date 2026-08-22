@@ -12,7 +12,7 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\Support\BackupRetentionPolicy;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Enums\BackupAlertKind;
+use Modules\Core\Internal\Enums\BackupAlertKind;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Exceptions\BackupCorruptException;
 use Modules\Core\Public\Exceptions\BackupIoException;

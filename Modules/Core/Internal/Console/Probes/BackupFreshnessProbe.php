@@ -9,7 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Enums\BackupAlertKind;
+use Modules\Core\Internal\Enums\BackupAlertKind;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SafeDate;

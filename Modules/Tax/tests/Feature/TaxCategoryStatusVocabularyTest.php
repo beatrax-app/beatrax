@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
-use Modules\Tax\Public\Enums\TaxCategoryStatus;
+use Modules\Tax\Internal\Enums\TaxCategoryStatus;
 use Modules\Tax\Public\Http\Livewire\TaxSettingsSection;
 
 // tax_deduction_categories.status has no CHECK trigger, so the column default

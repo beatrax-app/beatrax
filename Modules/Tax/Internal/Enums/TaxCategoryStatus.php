@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Tax\Public\Enums;
+namespace Modules\Tax\Internal\Enums;
 
 // The lifecycle of a tax_deduction_categories row: `active` (the column
 // default) until the user archived it. The column stays string with no

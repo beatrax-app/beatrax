@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Enums\BackupAlertKind;
+use Modules\Core\Internal\Enums\BackupAlertKind;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 

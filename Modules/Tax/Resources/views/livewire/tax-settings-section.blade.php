@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Tax\Public\Enums\TaxCategoryStatus')
+@use('Modules\Tax\Internal\Enums\TaxCategoryStatus')
 {{--
     Tax settings — deduction categories, plus a signpost to the country
     preference that decides which of them are offered.
