@@ -29,6 +29,7 @@ use Modules\Reports\Internal\Dto\ReportResultRow;
 use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
+use Modules\Reports\Internal\Support\ReportVocabulary;
 use Modules\Reports\Models\SavedReport;
 use stdClass;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -181,6 +182,7 @@ final class ReportBuilder extends Component
         }
 
         $user = $currentUser->user();
+
         $definition = $this->currentDefinition();
 
         return $responses->streamDownload(
@@ -202,6 +204,14 @@ final class ReportBuilder extends Component
         CounterpartyDisplayName $counterpartyNames,
     ): View {
         $user = $currentUser->user();
+        // The property itself, not only the way to the definition: Livewire
+        // hands the raw array to the view too, and the filter chips subscript
+        // [0] on a count of one, which a keyed ?account[key]= satisfies without
+        // ever having a zero.
+        $this->filterAccounts = ReportVocabulary::ids($this->filterAccounts);
+        $this->filterCategories = ReportVocabulary::ids($this->filterCategories);
+        $this->filterCounterparties = ReportVocabulary::ids($this->filterCounterparties);
+
         $definition = $this->currentDefinition();
 
         // "custom" needs both dates, and resolving mid-selection would throw,
@@ -264,19 +274,23 @@ final class ReportBuilder extends Component
 
     private function currentDefinition(): ReportDefinition
     {
+        // Every #[Url] property is reader-supplied, so each one is coerced to a
+        // value the aggregator names rather than passed through: an unknown
+        // ?metric=, ?period= or ?ccy= reached a match() with no arm and 500'd
+        // the page. The rail can only produce valid values; the address bar cannot.
         return new ReportDefinition(
-            metric: $this->metric,
-            dimension: $this->dimension,
-            periodPreset: $this->periodPreset,
-            granularity: ReportGranularity::tryFrom($this->granularity) ?? ReportGranularity::default(),
-            currencyMode: $this->currencyMode,
-            viz: $this->viz,
+            metric: ReportVocabulary::metric($this->metric),
+            dimension: ReportVocabulary::dimension($this->dimension),
+            periodPreset: ReportVocabulary::periodPreset($this->periodPreset),
+            granularity: ReportVocabulary::granularity($this->granularity),
+            currencyMode: ReportVocabulary::currencyMode($this->currencyMode),
+            viz: ReportVocabulary::viz($this->viz),
             customFrom: $this->customFrom !== '' ? $this->customFrom : null,
             customTo: $this->customTo !== '' ? $this->customTo : null,
             compare: $this->compare,
-            accounts: array_values(array_filter($this->filterAccounts, static fn (int $id): bool => $id > 0)),
-            categories: array_values(array_filter($this->filterCategories, static fn (int $id): bool => $id > 0)),
-            counterparties: array_values(array_filter($this->filterCounterparties, static fn (int $id): bool => $id > 0)),
+            accounts: ReportVocabulary::ids($this->filterAccounts),
+            categories: ReportVocabulary::ids($this->filterCategories),
+            counterparties: ReportVocabulary::ids($this->filterCounterparties),
             amountMin: $this->filterAmountMin !== '' ? $this->filterAmountMin : null,
             amountMax: $this->filterAmountMax !== '' ? $this->filterAmountMax : null,
             amountDirection: $this->filterAmountDir,

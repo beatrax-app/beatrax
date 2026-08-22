@@ -34,6 +34,8 @@ final class SearchQuery
     // which reads to the typist exactly as if the token had worked.
     private const NO_SUCH_ID = 0;
 
+    private const YEAR_MONTH_LENGTH = 7;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly QueryParser $parser,
@@ -378,7 +380,9 @@ final class SearchQuery
     private function applyDateFilters(Builder $query, SearchFilters $filters): void
     {
         if ($filters->after !== null) {
-            $afterDate = strlen($filters->after) === 7 ? $filters->after.'-01' : $filters->after;
+            $afterDate = strlen($filters->after) === self::YEAR_MONTH_LENGTH
+                ? $filters->after.'-01'
+                : $filters->after;
             $query->where('transactions.posted_at', '>=', $afterDate);
         }
 
@@ -390,11 +394,16 @@ final class SearchQuery
 
     // A bare Y-m before-bound covers the whole month, so it widens to that
     // month's last day; an unparseable Y-m yields null and drops the bound
-    // rather than clamping to an arbitrary date.
+    // rather than clamping to an arbitrary date. The shape is checked before
+    // createFromFormat, which throws on junk instead of returning the null.
     private function normalizeBeforeDate(string $before): ?string
     {
-        if (strlen($before) !== 7) {
+        if (strlen($before) !== self::YEAR_MONTH_LENGTH) {
             return $before;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}$/', $before) !== 1) {
+            return null;
         }
 
         return CarbonImmutable::createFromFormat('Y-m', $before)?->endOfMonth()->toDateString();
