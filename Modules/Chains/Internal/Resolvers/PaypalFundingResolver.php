@@ -18,9 +18,9 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Enums\CounterLegOrder;
+use Modules\Transfers\Public\Services\PairLookup;
 use Modules\Transfers\Public\Support\CounterLegMatch;
 use Modules\Transfers\Public\Support\CounterLegWindow;
-use Modules\Transfers\Public\Services\PairLookup;
 use stdClass;
 
 /**
