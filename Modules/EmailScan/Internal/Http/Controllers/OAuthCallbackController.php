@@ -13,6 +13,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\SystemAlertWriter;
+use Modules\EmailScan\Internal\Listeners\RaiseReconsentAlertOnTokenFailure;
 use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
@@ -290,7 +291,7 @@ final class OAuthCallbackController
 
         $base = $connection->table('system_alerts')
             ->where('user_id', $userId)
-            ->where('kind', 'oauth_reconsent_required')
+            ->where('kind', RaiseReconsentAlertOnTokenFailure::ALERT_KIND)
             ->whereNull('acknowledged_at');
 
         try {
