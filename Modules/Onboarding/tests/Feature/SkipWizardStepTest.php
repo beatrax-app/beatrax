@@ -41,9 +41,10 @@ it('advances past a skippable step and marks the wizard_progress row as skipped'
     expect($status)->toBe('skipped');
 });
 
-it('marks every non-done step skipped and redirects to / when skipRest is called', function (): void {
-    // With welcome and connect-bank done, "Resume later" must flip the
-    // remaining seven rows to skipped in one call.
+it('skips only the step the reader is on, never the ones after it', function (): void {
+    // The wizard has two exits and only this one writes. "Resume later" used to
+    // share this method and marked all seven remaining rows skipped with it.
+    // @link ../../../../.docs/features/onboarding/architecture.md#leaving-the-wizard
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
         ->where('step_key', 'welcome')
@@ -55,24 +56,24 @@ it('marks every non-done step skipped and redirects to / when skipRest is called
 
     Livewire::test(SetupWizard::class)
         ->assertSet('currentStepKey', 'connect-paypal')
-        ->call('skipRest')
-        ->assertRedirect('/');
-
-    $doneRows = DB::table('wizard_progress')
-        ->where('user_id', $this->user->id)
-        ->where('status', 'done')
-        ->pluck('step_key')
-        ->all();
-    sort($doneRows);
-    expect($doneRows)->toBe(['connect-bank', 'welcome']);
+        ->dispatch('wizard.step.skipped')
+        ->assertSet('currentStepKey', 'connect-card');
 
     $skippedRows = DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
         ->where('status', 'skipped')
         ->pluck('step_key')
         ->all();
-    sort($skippedRows);
-    expect($skippedRows)->toBe(['budgets', 'connect-card', 'connect-email', 'connect-paypal', 'done', 'first-import', 'tax-country']);
+
+    expect($skippedRows)->toBe(['connect-paypal']);
+
+    $pendingRows = DB::table('wizard_progress')
+        ->where('user_id', $this->user->id)
+        ->where('status', 'pending')
+        ->pluck('step_key')
+        ->all();
+    sort($pendingRows);
+    expect($pendingRows)->toBe(['budgets', 'connect-card', 'connect-email', 'done', 'first-import', 'tax-country']);
 });
 
 it('is a no-op on non-skippable steps', function (): void {

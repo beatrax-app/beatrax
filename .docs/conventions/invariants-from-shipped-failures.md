@@ -1357,6 +1357,37 @@ it resolves `OpLogWriter` inside each handler and treats a
 `BindingResolutionException` as "no writer yet, skip" — and it is asserted clean
 by the guard for that reason.
 
+## A Livewire redirect from `mount()`
+
+`$this->redirect()` calls `skipRender()`. On a Livewire *update* that is
+harmless — the client is handed a redirect effect and navigates. On the
+**initial full-page render** of a component registered directly as a route
+action, the reader gets whatever the layout draws around a slot the component
+never filled.
+
+Both Composer roots answer that with a real 302: a probe against
+`/setup-wizard` with nothing left to resume returned `302 -> /` from the repo
+root and from `mobile-app/`. The NativePHP runtime on Android does not. There
+the same route answered **200 with the default layout painted around an empty
+slot** — no exception, no log line, `BRIDGE_TOTAL [/setup-wizard] 73ms` in
+logcat, and a blank body under the app header with no way back into the
+wizard. Redirects as such do reach the reader on that runtime: `/login` for a
+signed-in reader answers 200 carrying the dashboard's body, because the bridge
+follows the middleware redirect server-side. It is the Livewire-mount one that
+does not.
+
+Found on a Samsung SM-S928B in round 5, after "Resume later" left nothing for
+`ResumeStepResolver` to resolve and `SetupWizard::mount()` took its
+`$resumeKey === ''` branch.
+
+The fix shape is to render a coherent terminal state instead — the wizard now
+mounts `WizardStepRegistry::lastStep()` with `allComplete` set. A `mount()`
+that cannot proceed has to answer with a page, because on one of the two
+runtimes the redirect it would rather send never becomes one.
+
+`MobilePairingScan::mount()` carries the same shape on the pairing entry and
+has not been exercised in that state on a device.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

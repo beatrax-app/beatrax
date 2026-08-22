@@ -67,7 +67,7 @@
         <button
             type="button"
             class="wiz-resume-later"
-            wire:click="skipRest"
+            wire:click="leaveForNow"
             aria-label="{{ Lang::get('onboarding::wizard.resume_later_aria') }}"
         >
             {{ Lang::get('onboarding::wizard.resume_later') }} <span aria-hidden="true">→</span>
