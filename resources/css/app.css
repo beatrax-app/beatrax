@@ -1918,6 +1918,87 @@ td.date,
         font-style: italic;
     }
 
+    /* The three fixed tracks above sum to 328px, which is the ENTIRE table
+       width inside the card on a 411px phone: the counterparty — the only
+       column that says who was paid — measured 0px, its header printed on
+       top of AMOUNT, and the 328px floor pushed the card 32px wider than the
+       document. One line for the payee, one for date, type and amount: the
+       same shape .card-list-item already takes at this width.
+
+       Immediately after the rules it overrides, and restating each
+       :nth-child, because those base rules are one specificity step above a
+       bare `td` and a media query buys nothing. Same trap as .mini-steps. */
+    @media (max-width: 640px) {
+        .preview-section-table,
+        .preview-section-table thead,
+        .preview-section-table tbody,
+        .preview-section-table tr,
+        .preview-section-table th,
+        .preview-section-table td {
+            display: block;
+        }
+
+        /* Not display:none: the column names are the only thing that says
+           which number is the amount once the row is a free-form line. */
+        .preview-section-table thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+
+        .preview-section-table tbody tr {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            column-gap: var(--space-2);
+            row-gap: var(--space-1);
+            padding: var(--space-2) 0;
+            border-bottom: 1px solid var(--color-border-faint);
+        }
+
+        .preview-section-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .preview-section-table tbody td:nth-child(1),
+        .preview-section-table tbody td:nth-child(2),
+        .preview-section-table tbody td:nth-child(3),
+        .preview-section-table tbody td:nth-child(4) {
+            width: auto;
+            padding: 0;
+            border-bottom: 0;
+        }
+
+        .preview-section-table tbody td:nth-child(3) {
+            flex: 1 1 100%;
+            order: 1;
+        }
+
+        .preview-section-table tbody td:nth-child(1) {
+            order: 2;
+        }
+
+        .preview-section-table tbody td:nth-child(2) {
+            order: 3;
+        }
+
+        .preview-section-table tbody td:nth-child(4) {
+            order: 4;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        /* The nowrap that made the ellipsis work in a fixed cell is what
+           would keep the IBAN on one 328px line here. */
+        .preview-section-table .preview-row-counterparty {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+    }
+
     /* Payment-type chip used in the Type column. Variants map to the
        existing chip-* palette in the dashboard tables. */
     .ptype-chip {
@@ -3368,6 +3449,33 @@ td.date,
 
     body:has(.top-bar) .safe-screen::before {
         content: none;
+    }
+
+    /* The wizard shell is the third case: it wears neither .safe-screen nor
+     * .top-bar, and .wiz-top/.wiz-footer only PAD the seams. On a phone every
+     * step is taller than the viewport, so on real hardware the step eyebrow
+     * scrolled up into the status bar and drew through the clock, and the
+     * primary "Continue →" sat under the navigation bar glyphs. Both edges,
+     * because unlike .safe-screen this shell scrolls past both of them. */
+    .wiz-page::before,
+    .wiz-page::after {
+        content: '';
+        position: fixed;
+        left: 0;
+        right: 0;
+        background: var(--color-bg-subtle);
+        z-index: 30;
+        pointer-events: none;
+    }
+
+    .wiz-page::before {
+        top: 0;
+        height: var(--safe-top);
+    }
+
+    .wiz-page::after {
+        bottom: 0;
+        height: var(--safe-bottom);
     }
 
     /* .top-bar — mobile top bar.
