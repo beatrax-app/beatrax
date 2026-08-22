@@ -46,17 +46,16 @@ final readonly class ArtisanCancelController
 
         // Blocking the HTTP request through the grace period buys the SSE
         // liveness check a PID that is actually gone by the time it looks.
-        // The ignore directives guard a posix_kill stub typed as always-true.
         $deadline = microtime(true) + self::SIGTERM_GRACE_SECONDS;
         while (microtime(true) < $deadline) {
-            /** @phpstan-ignore-next-line booleanNot.alwaysFalse */
+            /** @phpstan-ignore-next-line booleanNot.alwaysFalse — the posix_kill stub is typed as always-true */
             if (! posix_kill($record->pid, 0)) {
                 break;
             }
             usleep(100_000);
         }
 
-        /** @phpstan-ignore-next-line if.alwaysTrue */
+        /** @phpstan-ignore-next-line if.alwaysTrue — the posix_kill stub is typed as always-true */
         if (posix_kill($record->pid, 0)) {
             @posix_kill($record->pid, SIGKILL);
             usleep(200_000);
