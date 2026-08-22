@@ -1452,6 +1452,48 @@ runtimes the redirect it would rather send never becomes one.
 `MobilePairingScan::mount()` carries the same shape on the pairing entry and
 has not been exercised in that state on a device.
 
+## A stale `X-Livewire` header on a page load
+
+`Modules/Mobile/tests/Feature/StaleLivewireHeaderDoesNotEatTheQueryStringTest.php`
+
+Livewire asks one question — `request()->hasHeader('X-Livewire')` — and
+branches two behaviours on the answer:
+
+- `BaseUrl::getFromUrlQueryString()` reads a `#[Url]` property from the URL's
+  query string when it is false, and from the **Referer** header when it is
+  true.
+- `SupportRedirects::dehydrate()` turns a `$this->redirect()` into a real
+  `abort(redirect(...))` when it is false, and into a client-side effect when
+  it is true.
+
+The Android runtime keeps one PHP worker alive across every request, and once
+that worker has served a single component update, an ordinary page load
+arrives with the header still on it. Both behaviours then invert.
+
+Measured on a Samsung SM-S928B, same device and same data, cold worker versus
+warm:
+
+| request | cold worker | after one component update |
+|---|---|---|
+| `GET /drift?type=anomaly` | Unusual charges tab | Subscription drift (the default) |
+| `GET /tax?year=2025` | — | `<title>Tax 2026</title>`, `year` 2026 in the snapshot |
+| `GET /setup-wizard` with nothing to resume | 131,604 bytes, `Dashboard · Beatrax` | 105,316 bytes, no page component, **blank body** |
+
+So every deep link carrying a query parameter lands on the default view within
+seconds of launch — the sidebar's own "Unusual charges" entry points at
+`?type=anomaly` and answered "No open drift alerts" while the dashboard
+counted seven. And a redirect from `mount()` paints nothing at all.
+
+The query string itself reaches PHP intact — logcat shows
+`persistent_dispatch: GET /drift?type=anomaly&tab=dismissed` — and a plain
+`$request->boolean('force')` still reads it on a warm worker. Only the two
+branches above are affected, and both through that one header.
+
+Reproduced at a desk by sending the header on an ordinary GET, which is what
+the test does. The fix strips it from every request that is not Livewire's own
+update endpoint, alongside the three other middlewares that exist to undo what
+this runtime carries between requests.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
