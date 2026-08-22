@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Uue kategooria nimi…',
     'add_category' => 'Lisa kategooria',
     'category_added' => 'Kategooria on lisatud.',
+    'category_gone' => 'Kategooriat ei leitud (see võidi kustutada teisel vahelehel).',
 
     'archived_count' => 'Arhiveeritud (:count)',
     'restore' => 'Taasta',

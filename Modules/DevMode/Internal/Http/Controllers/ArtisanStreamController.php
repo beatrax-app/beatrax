@@ -153,6 +153,10 @@ final readonly class ArtisanStreamController
                     'exception_class' => get_class($error),
                 ]);
         } catch (\Throwable) {
+            // Nothing is left to try: this IS the report of a failure, and the
+            // only other channel is the response body, which is a live SSE
+            // stream a stray frame would corrupt. Rethrowing would kill the
+            // stream — the exact outcome safelyFinalize() exists to prevent.
         }
     }
 

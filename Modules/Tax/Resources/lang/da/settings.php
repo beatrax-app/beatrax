@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Navn på ny kategori…',
     'add_category' => 'Tilføj kategori',
     'category_added' => 'Kategorien er tilføjet.',
+    'category_gone' => 'Kategorien blev ikke fundet (den kan være slettet i en anden fane).',
 
     'archived_count' => 'Arkiverede (:count)',
     'restore' => 'Gendan',

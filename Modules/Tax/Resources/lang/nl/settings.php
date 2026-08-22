@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Naam nieuwe categorie…',
     'add_category' => 'Categorie toevoegen',
     'category_added' => 'Categorie toegevoegd.',
+    'category_gone' => 'Categorie niet gevonden (mogelijk verwijderd in een ander tabblad).',
 
     'archived_count' => 'Gearchiveerd (:count)',
     'restore' => 'Herstellen',

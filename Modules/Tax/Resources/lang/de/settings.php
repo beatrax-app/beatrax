@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Name der neuen Kategorie…',
     'add_category' => 'Kategorie hinzufügen',
     'category_added' => 'Kategorie hinzugefügt.',
+    'category_gone' => 'Kategorie nicht gefunden (sie wurde möglicherweise in einem anderen Tab gelöscht).',
 
     'archived_count' => 'Archiviert (:count)',
     'restore' => 'Wiederherstellen',

@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Име на новата категория…',
     'add_category' => 'Добави категория',
     'category_added' => 'Категорията е добавена.',
+    'category_gone' => 'Категорията не е намерена (може да е изтрита в друг раздел).',
 
     'archived_count' => 'Архивирани (:count)',
     'restore' => 'Възстанови',

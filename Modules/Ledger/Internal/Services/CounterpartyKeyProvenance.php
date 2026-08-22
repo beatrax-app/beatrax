@@ -84,17 +84,11 @@ final class CounterpartyKeyProvenance implements BlindIndexProvenance
     // by a sweep that could not read their names still answers truthfully.
     private function nameDigestIsStored(stdClass $row, int $userId, string $keyHex, Session $session): bool
     {
-        $name = $this->readable('counterparty_name', $row->counterparty_name ?? null, $userId, $session);
-        if ($name === '') {
+        $digest = $this->nameDigest($row, $userId, $keyHex, $session);
+        if ($digest === null) {
             return false;
         }
 
-        $normalized = $this->fingerprints->normalize($name);
-        if ($normalized === '' || $normalized === CounterpartyKey::NONE) {
-            return false;
-        }
-
-        $digest = $this->blindIndex->deriveWithKey(CounterpartyKey::DOMAIN, $normalized, $userId, $keyHex);
         $stored = self::toString($row->counterparty_normalized ?? null);
 
         if ($stored !== '' && hash_equals($stored, $digest)) {
@@ -103,6 +97,24 @@ final class CounterpartyKeyProvenance implements BlindIndexProvenance
 
         return $this->columnHolds('merchants', 'normalized_name', $userId, $digest)
             || $this->columnHolds('recurring_series', 'cluster_counterparty_key', $userId, $digest);
+    }
+
+    // Null where the row names no counterparty this key could have written: an
+    // unreadable value, or the `_no_counterparty` sentinel every ledger holds
+    // and therefore no ledger's authorship can rest on.
+    private function nameDigest(stdClass $row, int $userId, string $keyHex, Session $session): ?string
+    {
+        $name = $this->readable('counterparty_name', $row->counterparty_name ?? null, $userId, $session);
+        if ($name === '') {
+            return null;
+        }
+
+        $normalized = $this->fingerprints->normalize($name);
+        if ($normalized === '' || $normalized === CounterpartyKey::NONE) {
+            return null;
+        }
+
+        return $this->blindIndex->deriveWithKey(CounterpartyKey::DOMAIN, $normalized, $userId, $keyHex);
     }
 
     // The income half. A ledger of nothing but named-payer-less SEPA credits

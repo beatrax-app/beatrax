@@ -231,3 +231,28 @@ it('keeps the too-large message for an amount that was read and is too big', fun
         ->call('add')
         ->assertSet('error', 'That amount is too large. Check the digits.');
 });
+
+// A byte comparison files every accented name after Z, and nothing here
+// asserted the order the picker is actually built with — so the collation and
+// the id tiebreak beside it were both free to change unnoticed.
+it('orders the category options by collated name, then by id', function (): void {
+    foreach ([['Appel', 'cb-order-appel-1'], ['Appel', 'cb-order-appel-2'], ['Zebra', 'cb-order-zebra'], ['Émile', 'cb-order-emile']] as [$name, $slug]) {
+        DB::table('categories')->insert([
+            'user_id' => $this->user->id, 'name' => $name, 'slug' => $slug, 'kind' => 'expense',
+            'name_is_default' => false,
+            'created_at' => '2026-01-01 00:00:00', 'updated_at' => '2026-01-01 00:00:00',
+        ]);
+    }
+
+    $categories = Livewire::actingAs($this->user)->test(CashBookPage::class)->viewData('categories');
+
+    $mine = array_values(array_filter(
+        $categories->all(),
+        static fn (stdClass $row): bool => str_starts_with((string) $row->slug, 'cb-order-'),
+    ));
+
+    expect(array_map(static fn (stdClass $row): string => (string) $row->name, $mine))
+        ->toBe(['Appel', 'Appel', 'Émile', 'Zebra']);
+
+    expect((int) $mine[0]->id)->toBeLessThan((int) $mine[1]->id);
+});

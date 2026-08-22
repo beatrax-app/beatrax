@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Új kategória neve…',
     'add_category' => 'Kategória hozzáadása',
     'category_added' => 'Kategória hozzáadva.',
+    'category_gone' => 'A kategória nem található (lehet, hogy egy másik lapon törölték).',
 
     'archived_count' => 'Archiválva (:count)',
     'restore' => 'Visszaállítás',

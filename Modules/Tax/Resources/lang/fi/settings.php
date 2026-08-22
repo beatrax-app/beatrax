@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Uuden kategorian nimi…',
     'add_category' => 'Lisää kategoria',
     'category_added' => 'Kategoria lisätty.',
+    'category_gone' => 'Kategoriaa ei löytynyt (se on saatettu poistaa toisessa välilehdessä).',
 
     'archived_count' => 'Arkistoidut (:count)',
     'restore' => 'Palauta',

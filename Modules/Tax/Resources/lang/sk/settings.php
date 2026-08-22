@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Názov novej kategórie…',
     'add_category' => 'Pridať kategóriu',
     'category_added' => 'Kategória pridaná.',
+    'category_gone' => 'Kategória sa nenašla (možno bola odstránená v inej karte).',
 
     'archived_count' => 'Archivované (:count)',
     'restore' => 'Obnoviť',

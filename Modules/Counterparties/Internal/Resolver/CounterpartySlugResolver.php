@@ -126,7 +126,7 @@ final readonly class CounterpartySlugResolver
      */
     private static function expand(array $match): string
     {
-        $ascii = preg_match('/\p{Latin}|\P{L}/u', $match[0]) === 1 ? Str::ascii($match[0]) : '';
+        $ascii = preg_match('/[\p{Latin}\P{L}]/u', $match[0]) === 1 ? Str::ascii($match[0]) : '';
 
         return $ascii === '' ? self::SEPARATOR : $ascii;
     }

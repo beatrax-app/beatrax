@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Όνομα νέας κατηγορίας…',
     'add_category' => 'Προσθήκη κατηγορίας',
     'category_added' => 'Η κατηγορία προστέθηκε.',
+    'category_gone' => 'Η κατηγορία δεν βρέθηκε (μπορεί να διαγράφηκε σε άλλη καρτέλα).',
 
     'archived_count' => 'Αρχειοθετημένες (:count)',
     'restore' => 'Επαναφορά',

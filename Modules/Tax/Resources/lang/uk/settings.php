@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Назва нової категорії…',
     'add_category' => 'Додати категорію',
     'category_added' => 'Категорію додано.',
+    'category_gone' => 'Категорію не знайдено (можливо, її видалено в іншій вкладці).',
 
     'archived_count' => 'В архіві (:count)',
     'restore' => 'Відновити',

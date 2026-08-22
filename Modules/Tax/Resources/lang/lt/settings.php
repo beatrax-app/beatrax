@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Naujos kategorijos pavadinimas…',
     'add_category' => 'Pridėti kategoriją',
     'category_added' => 'Kategorija pridėta.',
+    'category_gone' => 'Kategorija nerasta (ji galėjo būti ištrinta kitoje kortelėje).',
 
     'archived_count' => 'Archyvuota (:count)',
     'restore' => 'Atkurti',

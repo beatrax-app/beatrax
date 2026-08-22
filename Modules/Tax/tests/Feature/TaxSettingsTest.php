@@ -289,6 +289,52 @@ it('renameCategory surfaces empty/duplicate-name errors inline instead of 500ing
         ->where('id', $catId)->value('name'))->toBe('Renamed OK');
 });
 
+// All three writes throw NotFoundHttpException for a row that is no longer
+// there, and all three used to swallow it whole. Archive and restore are the
+// traps: the row leaves the list it was in either way, so silence reads as the
+// action having succeeded.
+it('says so when the category an action names is no longer there', function (): void {
+    $user = taxSettingsUser('tax-vanished-row');
+
+    /** @var TaxCategoryWriter $writer */
+    $writer = app(TaxCategoryWriter::class);
+    $catId = $writer->add($user->id, 'Vanishing Category');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $db->connection()->table('tax_deduction_categories')->where('id', $catId)->delete();
+
+    $gone = 'Category not found (it may have been deleted in another tab).';
+
+    Livewire::actingAs($user)->test(TaxSettingsSection::class)
+        ->call('renameCategory', $catId, 'New Name')
+        ->assertDispatched('toast', message: $gone);
+
+    Livewire::actingAs($user)->test(TaxSettingsSection::class)
+        ->call('archiveCategory', $catId)
+        ->assertDispatched('toast', message: $gone);
+
+    Livewire::actingAs($user)->test(TaxSettingsSection::class)
+        ->call('unarchiveCategory', $catId)
+        ->assertDispatched('toast', message: $gone);
+});
+
+// The name errors keep the inline channel they already had: that message sits
+// under the field the reader is still typing in, and a toast would take it
+// away from the input it is about.
+it('keeps a name error inline rather than moving it to a toast', function (): void {
+    $user = taxSettingsUser('tax-rename-stays-inline');
+
+    /** @var TaxCategoryWriter $writer */
+    $writer = app(TaxCategoryWriter::class);
+    $catId = $writer->add($user->id, 'Still Here');
+
+    Livewire::actingAs($user)->test(TaxSettingsSection::class)
+        ->call('renameCategory', $catId, '')
+        ->assertNotDispatched('toast')
+        ->assertSet('renameError', 'Category name cannot be empty.');
+});
+
 it('unarchive restores an archived category to active', function (): void {
     $user = taxSettingsUser('tax-unarchive');
 

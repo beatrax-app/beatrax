@@ -12,6 +12,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Livewire\Component;
 use Modules\CashBook\Internal\Actions\RecordManualTransaction;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Locale;
@@ -32,6 +33,7 @@ use stdClass;
  */
 final class CashBookPage extends Component
 {
+    use CoercesScalars;
     use DispatchesToast;
     use HandlesTaxTagging;
 
@@ -184,15 +186,13 @@ final class CashBookPage extends Component
                 return $row;
             })
             ->sort(static function (stdClass $a, stdClass $b): int {
-                $byName = LocaleCollator::compare(is_string($a->name) ? $a->name : '', is_string($b->name) ? $b->name : '');
+                $byName = LocaleCollator::compare(self::toString($a->name), self::toString($b->name));
 
-                return $byName !== 0
-                    ? $byName
-                    : (is_numeric($a->id) ? (int) $a->id : 0) <=> (is_numeric($b->id) ? (int) $b->id : 0);
+                return $byName !== 0 ? $byName : (self::toInt($a->id) <=> self::toInt($b->id));
             })
             ->values();
 
-        $entryIds = array_map(static fn (object $row): int => is_numeric($row->id) ? (int) $row->id : 0, $entries->all());
+        $entryIds = array_map(static fn (stdClass $row): int => self::toInt($row->id), $entries->all());
         $taxState = $this->taxTagStateFor($entryIds, $taxTagQuery, $currentUser);
 
         $view = $views->make('cashbook::livewire.cash-book-page', [

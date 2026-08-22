@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Naziv nove kategorije…',
     'add_category' => 'Dodaj kategoriju',
     'category_added' => 'Kategorija dodana.',
+    'category_gone' => 'Kategorija nije pronađena (možda je izbrisana u drugoj kartici).',
 
     'archived_count' => 'Arhivirano (:count)',
     'restore' => 'Vrati',
