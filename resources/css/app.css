@@ -5469,15 +5469,20 @@ mark {
     }
 
     /*
-     * .tax-badge--untagged already takes this exemption; .row-cta was left on
-     * the hover reveal alone. A finger never hovers, so on /uncategorized the
-     * "Help others identify this" button in all 50 rows was invisible and
-     * still took its 44px — a blank band under every category picker.
+     * A control revealed on hover does not exist on a phone. .tax-badge--untagged
+     * already took this exemption one class at a time; every other site kept
+     * the pattern and lost the control. Measured: 50 rows on /uncategorized
+     * each drew a 44px blank band where "Help others identify this" was, and
+     * every tax category on /settings hid its own Rename and Archive.
      *
-     * Unlayered and here rather than beside .row-cta, because the markup also
-     * carries Tailwind's own opacity-0, and a utility beats every layer.
+     * Matched on the reveal utility itself rather than per component, so a new
+     * site cannot be added without it. [class] doubles the specificity, which
+     * is what beats Tailwind's own opacity-0 beside it — the single-attribute
+     * form ties and loses, measured on the device.
      */
-    .row-cta {
+    [class][class~='group-hover:opacity-100'],
+    [class][class~='hover:opacity-100'],
+    [class][class~='focus-within:opacity-100'] {
         opacity: 1;
     }
 
