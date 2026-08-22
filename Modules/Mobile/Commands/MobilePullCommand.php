@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Services\SessionFactory;
@@ -21,7 +22,10 @@ final class MobilePullCommand extends Command
     protected $description = 'Run one bounded background sync burst per user (best-effort).';
 
     public function __construct(
-        private readonly MobileSyncTriggerService $trigger,
+        // Resolved on demand for the reason the next parameter states: this one
+        // reaches DeviceIdentityLoader, RelayClient and RelayConfig, none of
+        // which exist yet at the moment Artisan builds the command to list it.
+        private readonly Container $container,
         // A factory, not the session itself: resolving a session builds the
         // encrypter, and this class is reachable from a console command that
         // Artisan constructs merely to list it.
@@ -55,7 +59,8 @@ final class MobilePullCommand extends Command
     // LAN target, falling straight to the off-LAN relay leg.
     private function runOneBoundedBurstFor(int $userId): void
     {
-        $result = $this->trigger->syncOnce($userId, ($this->session)());
+        $result = $this->container->make(MobileSyncTriggerService::class)
+            ->syncOnce($userId, ($this->session)());
 
         if ($result === null) {
             $this->logger?->info('sync:mobile-pull: no usable device identity — tick skipped cleanly.', [

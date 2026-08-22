@@ -8,7 +8,7 @@ isolation.
 - **Location:** `Modules/Receipts/tests/Unit/` (when present)
 - **What they test:** the per-matcher parser against fixture
   HTML / text bodies for representative senders; the
-  `EmlMimeReader::parse` against `.eml` fixtures; the
+  `EmlMimeReader::read` against `.eml` fixtures; the
   `MboxIterator` against a multi-receipt `.mbox`; the
   `MatcherRegistry` priority-sort logic.
 - **Common stubs:** matchers are pure-function over the parsed
@@ -65,10 +65,11 @@ composer test
 ## Common debugging recipes
 
 - **A receipt that should match returns
-  `MatchOutcomeDto::miss()`** — walk the matcher registry:
-  the highest-priority matcher's `matches($input)` returned
-  false. The most common cause is a header / sender check
-  on the matcher that didn't fire (the registered domain
+  `MatchOutcomeDto::unmatched()`** — walk the matcher registry:
+  no matcher's `canHandle($msg)` returned true, so
+  `MatcherRegistry::dispatch` fell through to `unmatched()`.
+  The most common cause is a header / sender check on the
+  matcher that didn't fire (the registered domain
   changed, the From header has unexpected whitespace).
   Inspect the `MatcherInputDto` headers in a debugger.
 - **A new matcher not appearing in the registry** — confirm
@@ -76,8 +77,8 @@ composer test
   that the class is autoloadable (the `class_exists()` gate
   silently skips missing classes). Run
   `php artisan tinker` →
-  `app(MatcherRegistry::class)->all()` to see the active
-  list.
+  `app(MatcherRegistry::class)->supportedKeys()` to see the
+  active list.
 - **A chain hint not raising `ChainHintDetected`** —
   `DispatchChainHintsFromReceipt` listens for
   `TransactionImported`. Tail `/dev/queue` and `/dev/logs`
@@ -119,11 +120,16 @@ The behavioural contract for the `Receipts` module.
   is internal to the action.
 - **`MatcherRegistry` returns the highest-priority matching
   matcher.** Matchers are sorted by `priority()` descending at
-  bind time; first `matches($input)` true wins.
-- **A receipt with no matching matcher logs and skips.** No
-  exception is thrown; the `MatchOutcomeDto::miss()` static
-  is the documented no-match return shape. The matcher_key
-  column on the source row stays NULL.
+  bind time; `dispatch` stops at the first `canHandle($msg)`
+  true and returns that matcher's `match($emlRaw)` outcome.
+- **A receipt with no matching matcher is recorded as
+  unmatched, not skipped.** No exception is thrown and nothing
+  is logged; `MatchOutcomeDto::unmatched()` is the documented
+  no-match return shape, and `RecordReceipt` stamps the
+  `file_imports` row `status = unmatched`. The matcher_key
+  column on the source row stays NULL. `skipped($reason)` is a
+  different outcome: a matcher DID claim the message and then
+  found the body was not a transaction.
 - **Adding a new matcher is one constant edit + one class
   ship.** Append the FQN to `MATCHER_FQNS` in the provider;
   ship the class implementing `SenderMatcher`. The provider's
@@ -160,10 +166,11 @@ The behavioural contract for the `Receipts` module.
 ## Edge cases
 
 - **An `.eml` that parses cleanly but matches no registered
-  sender** — `MatchOutcomeDto::miss()`; the row is logged
-  with `matcher_key = NULL`; no enrichment fires.
+  sender** — `MatchOutcomeDto::unmatched()`; the `file_imports`
+  row lands `status = unmatched` with `matcher_key = NULL`; no
+  enrichment fires.
 - **A user-dropped `.mbox` containing several receipts** —
-  `MboxIterator::iter($file)` yields each message; each is
+  `MboxIterator::iterate($file)` yields each message; each is
   processed by `RecordReceipt` independently.
 - **A matcher that throws during `match()`** —
   `RecordReceipt` does NOT catch (matchers are project-

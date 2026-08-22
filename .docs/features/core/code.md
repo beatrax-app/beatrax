@@ -143,7 +143,12 @@ Modules/Core/
     `oauth_secrets.refresh_token`, `oauth_secrets.client_secret`,
     `users.password`, `users.remember_token`,
     `user_recovery_codes.code_hash`.
-  - `SystemAlertQuery::activeFor($user)`.
+  - `SystemAlertQuery::active(?User $user)`, `visibleTo($alertId,
+    $user)`, `count(?User $user)`. The nullable user is deliberate and
+    is not "any user": a user reads their own rows plus the
+    system-wide ones, while a NULL narrows the read to system-wide
+    rows alone — the shape a background probe needs when it has no
+    auth context.
 - **Actions/**
   - `AcknowledgeSystemAlert::__invoke($alertId, $user)` — single
     sanctioned writer of `system_alerts.acknowledged_at`.

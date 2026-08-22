@@ -75,7 +75,7 @@ composer test
   was imported with `currency = NULL` because of a parser
   bug); inspect both legs' `currency` columns.
 - **A re-imported row pairing a second time** — should not
-  happen; the dedup at `RecordsTransactions::record` means
+  happen; the dedup at `RecordsTransactions::__invoke` means
   the second import doesn't fire `TransactionImported` for
   the dedupped row. If you see a second pair attempt,
   fingerprint dedup failed upstream — investigate the
@@ -123,15 +123,25 @@ The behavioural contract for the `Transfers` module.
   `±WINDOW_DAYS` calendar comparison.
 - **The matcher is the SOLE sanctioned writer of
   `transactions.pair_transaction_id`.** Every write to the
-  column flows through `TransferPairer::pair`; the per-row
-  listener and the bulk orphan-sweep both call it.
+  column flows through `TransferPairer::pairOne`. There is no
+  single `pair()` entry point: the `PairsTransferLegs` contract
+  declares two, and `pairOne(Transaction $tx, User $user): ?int`
+  is the one that writes. The per-row listener calls it
+  directly with the transaction it was handed; the bulk
+  orphan-sweep is `pairOrphansForUser(User $user): int`, which
+  collects the user's unpaired transfer legs oldest-first and
+  calls `pairOne` per candidate, returning how many NEW links
+  it wrote.
 - **Both legs are written bidirectionally inside one
   transaction.** A successful pair writes the FK on each leg
   pointing at the other, atomically; a partial write cannot
   land.
-- **A re-fired `pair($transactionId, $user)` for an already-
-  paired row is a no-op.** The matcher's first filter is
-  "neither leg already paired".
+- **A re-fired `pairOne($tx, $user)` for an already-paired row
+  is a no-op.** It takes the `Transaction` model, not an id,
+  and its first guard returns `null` when the row is not a
+  transfer leg or already carries a `pair_transaction_id`. The
+  partner side is filtered separately, in the lookup's
+  `whereNull('pair_transaction_id')`.
 - **Match rules:**
   - same user;
   - amount equal-and-opposite, same currency;

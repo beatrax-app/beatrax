@@ -109,3 +109,7 @@ yarn-error.log
 # Console logs and page snapshots dropped by the Playwright MCP server when
 # it drives the app during local debugging.
 /.playwright-mcp/
+
+# Device-test rounds: screenshots, per-screen audit dumps and the account
+# notes a walk-through needs. Kept on the machine that captured them.
+.device-test/

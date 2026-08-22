@@ -10,7 +10,7 @@ the operational notes a reader needs to extend or debug it safely.
 | Module | What it does | Deep dives |
 |---|---|---|
 | [`anomaly`](anomaly/architecture.md) | Unusual-charge detection — large-vs-typical (robust median/MAD + per-category p95), large-and-first-time, duplicate-window detectors; one-alert/multi-reason aggregation; server-computed suppression bands | [architecture](anomaly/architecture.md) |
-| [`auth`](auth/architecture.md) | Per-user authentication, recovery codes, owner-resets-partner, the no-SMTP password-reset posture | [architecture](auth/architecture.md) · [code](auth/code.md) · [tests](auth/how-to-test.md) |
+| [`auth`](auth/architecture.md) | Per-user authentication, recovery codes, owner-resets-partner, the no-SMTP password-reset posture | [architecture](auth/architecture.md) · [the app-lock data key's lifetime](auth/app-lock-data-key-lifetime.md) · [code](auth/code.md) · [tests](auth/how-to-test.md) |
 | [`budgets`](budgets/architecture.md) | Zero-based envelope budgeting — genesis-to-target carryover fold, move-money between envelopes, per-envelope over-budget nudges | [architecture](budgets/architecture.md) |
 | [`calendar`](calendar/architecture.md) | `/calendar` month-grid cash-flow surface — index-stepped recurring-series placement, per-account forecast aggregation with FX bucketing, past-day real-balance actuals, cadence-clamped paid/missed matching | [architecture](calendar/architecture.md) |
 | [`categorization`](categorization/architecture.md) | Rule-based classifier + per-user merchant memory, the seeded default-rule corpus, the receipt-vs-statement conflict resolver | [architecture](categorization/architecture.md) · [code](categorization/code.md) · [tests](categorization/how-to-test.md) |

@@ -15,14 +15,24 @@ Practical recipes for exercising the `Ledger` module in isolation.
 
 - **Location:** `Modules/Ledger/tests/Feature/`
 - **What they test:**
-  - `RecordTransactions::record` end-to-end (INSERT ON CONFLICT
-    with `enriched_from` append).
+  - `RecordTransactions::__invoke` end-to-end (INSERT ON
+    CONFLICT with `enriched_from` append) — it takes an
+    iterable batch, so a fixture passes a list or a generator,
+    never a single row. `RecordTransactionsChunkingTest`
+    covers the per-chunk transaction boundary and
+    `RecordTransactionsDispatchesEventTest` the one-event-per-
+    inserted-row rule (and that a fingerprint duplicate raises
+    nothing).
   - `UpdateTransactionCategory` end-to-end (scoped by user_id;
     cross-user no-op).
   - `ThisPeriodAtAGlanceQuery::for` against a multi-currency
     fixture month.
   - `TopCategoriesByPeriodQuery::for` ordering.
-  - `TransactionListQuery::page` filters + pagination.
+  - `TransactionListQuery::recent` / `fullHistory` — the
+    display-currency projection and the keyset cursor. There is
+    no `page()` and no page number; the cursor unit test is
+    `tests/Unit/TransactionCursorTest.php` and the list-side
+    behaviour is `TransactionsListInfiniteScrollTest`.
   - The `/transactions` Livewire SFC.
   - The transaction-detail SFC with auto-category provenance.
   - The `beatrax:rederive-fingerprints` artisan command's
@@ -121,7 +131,7 @@ The behavioural contract for the `Ledger` module.
   `noCategoryColumnWritesOutsideLedgerUpdater` enforces it.
 - **`RecordsStatementSummary` is the SOLE sanctioned writer for
   `statement_summaries`.**
-- **`RecordTransactions::record` is idempotent on the v3
+- **`RecordTransactions::__invoke` is idempotent on the v3
   fingerprint.** INSERT ON CONFLICT(fingerprint) DO UPDATE
   (append to `enriched_from`); re-importing the same row never
   produces a duplicate transaction.
@@ -169,7 +179,7 @@ The behavioural contract for the `Ledger` module.
 ## Edge cases
 
 - **A canonical row with no resolved category** —
-  `RecordTransactions::record` inserts with
+  `RecordTransactions::__invoke` inserts with
   `category_id = NULL`; the row appears in the uncategorised
   triage queue (Categorization owns the read-side query).
 - **A canonical row with no counterparty** — insert with
@@ -205,8 +215,9 @@ The behavioural contract for the `Ledger` module.
   - [`Ingestion`](../ingestion/how-to-test.md) — implements the
     `AccountResolver` contract declared there.
   - [`Import`](../import/how-to-test.md) — calls
-    `RecordsTransactions::record` per row in
-    `ConfirmImport`.
+    `RecordsTransactions::__invoke` once per confirm in
+    `ConfirmImport`, handing it the whole cached batch with
+    `captureForSync: false`.
   - [`Categorization`](../categorization/how-to-test.md) — calls
     `UpdatesTransactionCategory` via its `AssignCategory`.
   - [`Chains`](../chains/how-to-test.md) — reads `transactions` +
