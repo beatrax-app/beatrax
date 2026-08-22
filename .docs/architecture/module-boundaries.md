@@ -98,6 +98,54 @@ import pipeline never knows or cares which class implements the contract; the
 arch tests guarantee `Import` never reaches into `Categorization/Internal/`
 directly.
 
+### A Public facade keeps its door and moves its work
+
+A few `Public/Services/` classes are facades: one injectable that a whole
+family of screens reaches a subsystem through. `Modules\Sync\Public\Services\PairingGateway`
+is the clearest one — every pairing screen on desktop and mobile injects it,
+and `MobilePairingScan` alone calls fourteen of its methods. Splitting the door
+by subject would hand each caller three or four collaborators to replace one,
+and the boundary it guards is exactly that there is one door. So the door does
+not move. The work behind it does.
+
+The default is a collaborator object under the owning module's `Internal/`,
+holding the dependencies that group needs, with the facade keeping a
+one-line public method that delegates to it. `PairingGateway`'s five
+peer-facing methods moved into `Modules/Sync/Internal/Pairing/PairingPeerLink.php`,
+which took the five collaborators that carry frames, discovery and relay
+configuration with them; the gateway's constructor went from twelve
+dependencies to eight and every caller stayed as it was.
+
+A trait is the right shape only for a group that owns **no dependencies of its
+own** — one whose methods compose references the facade already holds for other
+reasons. `ReportsLocalPairingState` is that case: its ten read-only methods
+name the identity loader and the row reader, both of which the gateway's own
+`acceptToken()` names too. An object there would have been a second holder of
+the same two references and a delegation layer over nothing.
+
+That rule is not a matter of taste, and the hazard it avoids is worth stating:
+
+- **A private field read only from a trait reads as an unused field.** The
+  static analysis this repo gates on does not follow a property read across a
+  trait boundary. A trait that borrows a field the class body no longer names
+  turns a live dependency into a reported-unused one — which is how three LAN
+  pairing classes each ended up declaring two collaborators their own bodies
+  never mentioned, fixed by promoting the trait to
+  `Modules/Sync/Internal/Pairing/LanPeerBrowser.php`. Extracting by dependency
+  ownership makes that impossible rather than merely unlikely.
+- **Traits go under `Internal/`, never beside the facade in a
+  `Public/Services/Concerns/` directory.** `pinnedUnconsumedPublicClasses` in
+  `tests/Contracts/PublicSurfaceArchTest.php` holds that a class under
+  `Public/` with no consumer outside its module is not public; an
+  implementation trait never has one, and that pinned list only shrinks.
+- **`tests/Contracts/TraitMethodsAreNotShadowedArchTest.php`** refuses a class
+  that redeclares a method its own trait already defines, so the extracted
+  group has to be a clean cut rather than an overridable default.
+
+The same trait rule, applied inside a module rather than at its edge, produced
+`Modules/Sync/Internal/Pairing/Concerns/AppliesResponderAccept.php` and
+`Modules/Categorization/Internal/Http/Livewire/Concerns/ValidatesRuleForm.php`.
+
 ## The arch invariants that hold the line
 
 `tests/Contracts/BoundaryArchTest.php` ships the arch invariants that guard the

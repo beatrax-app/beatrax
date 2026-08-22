@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Sync\Internal\Pairing\Concerns\AppliesResponderAccept;
 use Modules\Sync\Public\Enums\PairingSide;
 
 /**
@@ -16,6 +17,8 @@ use Modules\Sync\Public\Enums\PairingSide;
  */
 final class PairingTokenService
 {
+    use AppliesResponderAccept;
+
     private const int TTL_MINUTES = 10;
 
     private const int ACCEPT_GRACE_MINUTES = 5;
@@ -222,6 +225,19 @@ final class PairingTokenService
             return null;
         }
 
+        $stamped = $this->stampSideConfirmation($tokenId, $userId, $side, $comparedKeys);
+
+        return $stamped === null ? null : $this->finalizeIfBothConfirmed($stamped, $userId);
+    }
+
+    // Stamping and reading back are one step: the stamp is conditional on the
+    // compared keys still being the bound ones, so only the row that comes back
+    // carrying it is evidence that this side was recorded.
+    /**
+     * @param  array{initiator: string, responder: string}  $comparedKeys
+     */
+    private function stampSideConfirmation(int $tokenId, int $userId, PairingSide $side, array $comparedKeys): ?\stdClass
+    {
         $column = $side->confirmedAtColumn();
 
         // Those keys ride in the WHERE rather than being checked and then
@@ -245,7 +261,7 @@ final class PairingTokenService
             return null;
         }
 
-        return $this->finalizeIfBothConfirmed($row, $userId);
+        return $row;
     }
 
     // The two Ed25519 keys the compared words were derived from, or null when
@@ -271,204 +287,25 @@ final class PairingTokenService
             return null;
         }
 
-        try {
-            $current = $this->safetyDeriver->digestFor(
-                $row->initiator_ed25519_pub_hex,
-                $row->responder_ed25519_pub_hex,
-            );
-        } catch (InvalidPublicKeyException) {
-            return null;
-        }
+        $pair = ['initiator' => $row->initiator_ed25519_pub_hex, 'responder' => $row->responder_ed25519_pub_hex];
 
-        return hash_equals($current, $expectedSafetyDigest)
-            ? ['initiator' => $row->initiator_ed25519_pub_hex, 'responder' => $row->responder_ed25519_pub_hex]
-            : null;
+        return $this->pairDerivesDigest($pair, $expectedSafetyDigest) ? $pair : null;
     }
 
-    // Applies a relayed PAIR_RESPONDER_ACCEPT frame, binding the phone's
-    // responder identity onto the DESKTOP's own local row (see @link). No
-    // new trust decision. Idempotent for a redelivered frame binding the
-    // SAME responder; refuses a DIFFERENT responder (first binding wins).
+    // Key material the deriver refuses derives nothing, so an unusable pair is
+    // a plain mismatch rather than an exception out of the confirm path.
     /**
-     * @return object|false The bound (or already-bound, idempotent) row, or
-     *                      `false` when the local row is unknown/expired/
-     *                      already terminal, or the responder key material
-     *                      is malformed — fail closed in every case.
+     * @param  array{initiator: string, responder: string}  $pair
      */
-    public function applyResponderAccept(
-        int $userId,
-        string $tokenHash,
-        string $responderDeviceId,
-        string $responderEd25519Hex,
-        string $responderX25519Hex,
-        string $responderName = '',
-    ): object|false {
-        if (! $this->responderKeysWellFormed($responderEd25519Hex, $responderX25519Hex)) {
-            return false;
-        }
-
-        $now = $this->clock->now();
-
-        // No state filter here (unlike accept()): a redelivered frame must
-        // be recognizable as idempotent even after the row has already
-        // advanced past PENDING, so the row is located first and the
-        // legal-state branching happens below.
-        $row = $this->db->connection()->table('pairing_tokens')
-            ->where('user_id', $userId)
-            ->where('token_hash', $tokenHash)
-            ->where('expires_at', '>', ZuluTimestamp::stamp($now))
-            ->first();
-
-        if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
-            return false;
-        }
-
-        // A device is never its own responder, and a frame that would take the
-        // side this device already occupies locks it out of its own pairing —
-        // one hostile answer to the phone's own pull, and it can never confirm.
-        if ($this->touchesOwnSide($row, $userId, $responderDeviceId)) {
-            return false;
-        }
-
-        $state = is_string($row->state) ? $row->state : '';
-
-        return match ($state) {
-            // Already advanced. A redelivery of the SAME responder is
-            // idempotent; a different one may still take the slot, but only
-            // while nobody has confirmed anything yet.
-            PairingState::AwaitingConfirm->value => $this->rebindOrIdempotent(
-                $row,
-                $userId,
-                $now,
-                $responderDeviceId,
-                $responderEd25519Hex,
-                $responderX25519Hex,
-                $responderName,
-            ),
-            PairingState::Pending->value => $this->bindResponderOntoRow(
-                $row,
-                $userId,
-                $now,
-                $responderDeviceId,
-                $responderEd25519Hex,
-                $responderX25519Hex,
-                $responderName,
-            ),
-            // Terminal, expired-into-another-state, or unrecognized: fail
-            // closed rather than re-opening a handshake that has moved on.
-            default => false,
-        };
-    }
-
-    // True when applying the frame would name this device as the responder, or
-    // would overwrite a responder slot this device itself occupies. Neither can
-    // arrive from an honest peer: a device binds its own side through accept().
-    private function touchesOwnSide(\stdClass $row, int $userId, string $responderDeviceId): bool
-    {
-        $selfDeviceId = $this->db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 1)
-            ->value('device_id');
-
-        if (! is_string($selfDeviceId) || $selfDeviceId === '') {
-            return false;
-        }
-
-        $existingResponder = is_string($row->responder_device_id) ? $row->responder_device_id : null;
-
-        return hash_equals($selfDeviceId, $responderDeviceId)
-            || ($existingResponder !== null && hash_equals($existingResponder, $selfDeviceId));
-    }
-
-    // Both responder keys must decode before the row is touched, so a
-    // malformed frame cannot half-bind an identity onto the local row.
-    private function responderKeysWellFormed(string $ed25519Hex, string $x25519Hex): bool
+    private function pairDerivesDigest(array $pair, string $expectedSafetyDigest): bool
     {
         try {
-            SafetyNumberDeriver::hexToRawKey($ed25519Hex);
-            SafetyNumberDeriver::hexToRawKey($x25519Hex);
+            $current = $this->safetyDeriver->digestFor($pair['initiator'], $pair['responder']);
         } catch (InvalidPublicKeyException) {
             return false;
         }
 
-        return true;
-    }
-
-    // A binding nobody has confirmed is not yet a decision, so a later accept may
-    // replace it — absolute first-binding-wins let anyone on the network hold the
-    // slot forever. What stops a replacement becoming a capture is confirm()
-    // binding the tap to the compared keys (see @link).
-    private function rebindOrIdempotent(
-        \stdClass $row,
-        int $userId,
-        CarbonImmutable $now,
-        string $responderDeviceId,
-        string $responderEd25519Hex,
-        string $responderX25519Hex,
-        string $responderName,
-    ): object|false {
-        $existingResponder = is_string($row->responder_device_id) ? $row->responder_device_id : null;
-
-        if ($existingResponder !== null && hash_equals($existingResponder, $responderDeviceId)) {
-            return $row;
-        }
-
-        if (self::eitherSideConfirmed($row)) {
-            return false;
-        }
-
-        return $this->bindResponderOntoRow(
-            $row,
-            $userId,
-            $now,
-            $responderDeviceId,
-            $responderEd25519Hex,
-            $responderX25519Hex,
-            $responderName,
-        );
-    }
-
-    private static function eitherSideConfirmed(\stdClass $row): bool
-    {
-        return is_string($row->initiator_confirmed_at ?? null)
-            || is_string($row->responder_confirmed_at ?? null);
-    }
-
-    // The PENDING -> AWAITING_CONFIRM transition: binds the responder identity
-    // and extends the window, never shortening an expiry that is already later.
-    private function bindResponderOntoRow(
-        \stdClass $row,
-        int $userId,
-        CarbonImmutable $now,
-        string $responderDeviceId,
-        string $responderEd25519Hex,
-        string $responderX25519Hex,
-        string $responderName,
-    ): object|false {
-        $newExpiry = $this->extendedExpiry($row, $now);
-        $rowId = is_numeric($row->id) ? (int) $row->id : 0;
-
-        $this->db->connection()->table('pairing_tokens')
-            ->where('id', $rowId)
-            ->where('user_id', $userId)
-            ->update([
-                'responder_device_id' => $responderDeviceId,
-                'responder_ed25519_pub_hex' => $responderEd25519Hex,
-                'responder_x25519_pub_hex' => $responderX25519Hex,
-                // Cosmetic label only, carried from accept to admission;
-                // see the migration for why it rides on this row.
-                'responder_name' => $responderName !== '' ? $responderName : null,
-                'state' => PairingState::AwaitingConfirm->value,
-                'accepted_at' => $now->toIso8601String(),
-                'expires_at' => ZuluTimestamp::stamp($newExpiry),
-            ]);
-
-        $accepted = $this->db->connection()->table('pairing_tokens')
-            ->where('id', $rowId)
-            ->where('user_id', $userId)
-            ->first();
-
-        return $accepted ?? false;
+        return hash_equals($current, $expectedSafetyDigest);
     }
 
     // Applies a relayed, Ed25519-SIGNED PAIR_CONFIRM frame from the bound

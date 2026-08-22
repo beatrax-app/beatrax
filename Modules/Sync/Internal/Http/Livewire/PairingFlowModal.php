@@ -399,27 +399,7 @@ final class PairingFlowModal extends Component
         }
 
         if ($row->state === PairingState::Confirmed->value && $this->currentStep() !== PairingWizardStep::Success) {
-            $this->step = PairingWizardStep::Success->value;
-
-            try {
-                $migrationService->migrate($currentUser->user(), $session);
-            } catch (Throwable) {
-                // Best-effort — mirrors confirmMatch()'s own
-                // migration-failure handling below.
-            }
-
-            // Everything on this device that predates sync, captured before
-            // the new peer asks for it. A device that enabled sync before
-            // capture worked has an empty log and would hand over nothing.
-            $historyCapture->capture($userId);
-
-            // Fans out EVERY desktop epoch to the just-confirmed device —
-            // ONLY reachable inside the state === CONFIRMED branch. migrate()
-            // runs FIRST so a desktop that had never enabled encryption has
-            // something to deliver.
-            $this->fanOutToNewlyConfirmedDevice($db, $gateway, $logger, $userId, $session);
-
-            $this->dispatch('pairing-confirmed');
+            $this->enterSuccessStep($currentUser, $session, $migrationService, $historyCapture, $db, $gateway, $logger);
         }
     }
 
@@ -501,35 +481,51 @@ final class PairingFlowModal extends Component
 
         if ($state === PairingState::Confirmed->value) {
             $this->awaitingPeer = false;
-            $this->step = PairingWizardStep::Success->value;
+            $this->enterSuccessStep($currentUser, $session, $migrationService, $historyCapture, $db, $gateway, $logger);
+        } else {
+            $this->awaitingPeer = true;
+        }
+    }
 
-            // Mandatory auto-activation — no decline path. A migration
-            // failure never undoes the just-completed pairing; the
-            // encryption row simply keeps rendering its mandatory/off state
-            // until the next successful pass.
-            try {
-                $migrationService->migrate($currentUser->user(), $session);
-            } catch (Throwable) {
-                // Best-effort — see the mandatory auto-activation
-                // comment above; this never undoes the pairing.
-            }
+    // The tail of a completed ceremony, run by whichever side learns of the
+    // both-confirm first — its own tap, or the poll seeing the peer's. Both
+    // roads reach it, so a device that finished second is not left holding an
+    // uncaptured log and an undelivered epoch.
+    private function enterSuccessStep(
+        CurrentUser $currentUser,
+        Session $session,
+        EncryptionMigrationService $migrationService,
+        PreSyncHistoryCapture $historyCapture,
+        DatabaseManager $db,
+        PairingGateway $gateway,
+        LoggerInterface $logger,
+    ): void {
+        $userId = $currentUser->user()->id;
 
-            // Same pre-sync capture as the poll path: whichever side reaches
-            // CONFIRMED first is the one that must have a populated log.
-            $historyCapture->capture($userId);
+        $this->step = PairingWizardStep::Success->value;
 
-            // Fans out EVERY desktop epoch to the just-confirmed device —
-            // ONLY reachable here, inside the state === CONFIRMED branch
-            // (trust-gate ordering). migrate() runs FIRST so a desktop that
-            // had never enabled encryption has something to deliver.
-            $this->fanOutToNewlyConfirmedDevice($db, $gateway, $logger, $userId, $session);
-
-            $this->dispatch('pairing-confirmed');
-
-            return;
+        // Mandatory auto-activation — no decline path. A migration failure
+        // never undoes the just-completed pairing; the encryption row simply
+        // keeps rendering its mandatory/off state until the next successful
+        // pass.
+        try {
+            $migrationService->migrate($currentUser->user(), $session);
+        } catch (Throwable) {
+            // Best-effort by the rule above — nothing in this tail may undo a
+            // pairing that has already completed.
         }
 
-        $this->awaitingPeer = true;
+        // Everything on this device that predates sync, captured before the
+        // new peer asks for it. A device that enabled sync before capture
+        // worked has an empty log and would hand over nothing.
+        $historyCapture->capture($userId);
+
+        // Fans out EVERY epoch to the just-confirmed device. migrate() runs
+        // FIRST so a device that had never enabled encryption has something to
+        // deliver, and this whole tail is reachable only from a CONFIRMED row.
+        $this->fanOutToNewlyConfirmedDevice($db, $gateway, $logger, $userId, $session);
+
+        $this->dispatch('pairing-confirmed');
     }
 
     // Fans out every keyring epoch to EVERY confirmed peer, asking the
