@@ -61,9 +61,9 @@
 
     @if ($reapplyInFlight && $reapplyProgress !== null)
         {{-- Re-apply progress strip — reuses the EmailScan InboxesPage
-             wire:poll.2s idiom verbatim (no new async mechanism). --}}
+             wire:poll.2s.keep-alive idiom verbatim (no new async mechanism). --}}
         <section
-            wire:poll.2s="refreshReapplyProgress"
+            wire:poll.2s.keep-alive="refreshReapplyProgress"
             class="rounded-md border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700"
             aria-live="polite"
         >
