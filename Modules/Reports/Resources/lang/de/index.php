@@ -6,7 +6,7 @@ return [
     'title' => 'Berichte',
     'page_title' => 'Berichte · Beatrax',
     'saved_report' => ':count gespeicherter Bericht|:count gespeicherte Berichte',
-    'pinned_count' => 'angeheftet',
+    'pinned_count' => ':count von :max angeheftet|:count von :max angeheftet',
     'dismiss' => 'Ausblenden',
 
     'build_new' => 'Neuen Bericht erstellen',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Bericht nicht gefunden (er wurde möglicherweise in einem anderen Tab gelöscht).',
         'deleted' => 'Bericht gelöscht.',
     ],
-    'pin_cap' => 'Du kannst bis zu 3 Berichte anheften. Löse einen, um diesen hinzuzufügen.',
+    'pin_cap' => 'Du kannst bis zu :max Berichte anheften. Löse einen, um diesen hinzuzufügen.',
 
     'summary' => [
         'metric' => [

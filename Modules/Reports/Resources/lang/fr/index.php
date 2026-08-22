@@ -6,7 +6,7 @@ return [
     'title' => 'Rapports',
     'page_title' => 'Rapports · Beatrax',
     'saved_report' => ':count rapport enregistré|:count rapports enregistrés',
-    'pinned_count' => 'épinglés',
+    'pinned_count' => ':count sur :max épinglé|:count sur :max épinglés',
     'dismiss' => 'Ignorer',
 
     'build_new' => 'Créer un nouveau rapport',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Rapport introuvable (il a peut-être été supprimé dans un autre onglet).',
         'deleted' => 'Rapport supprimé.',
     ],
-    'pin_cap' => 'Tu peux épingler jusqu\'à 3 rapports. Détaches-en un pour ajouter celui-ci.',
+    'pin_cap' => 'Tu peux épingler jusqu\'à :max rapports. Détaches-en un pour ajouter celui-ci.',
 
     'summary' => [
         'metric' => [

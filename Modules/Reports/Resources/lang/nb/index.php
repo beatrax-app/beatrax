@@ -6,7 +6,7 @@ return [
     'title' => 'Rapporter',
     'page_title' => 'Rapporter · Beatrax',
     'saved_report' => ':count lagret rapport|:count lagrede rapporter',
-    'pinned_count' => 'festet',
+    'pinned_count' => ':count av :max festet|:count av :max festet',
     'dismiss' => 'Lukk',
 
     'build_new' => 'Bygg en ny rapport',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Rapporten ble ikke funnet (den kan ha blitt slettet i en annen fane).',
         'deleted' => 'Rapporten er slettet.',
     ],
-    'pin_cap' => 'Du kan feste opptil 3 rapporter. Løsne en for å legge til denne.',
+    'pin_cap' => 'Du kan feste opptil :max rapporter. Løsne en for å legge til denne.',
 
     'summary' => [
         'metric' => [

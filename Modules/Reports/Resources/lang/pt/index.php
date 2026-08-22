@@ -6,7 +6,7 @@ return [
     'title' => 'Relatórios',
     'page_title' => 'Relatórios · Beatrax',
     'saved_report' => ':count relatório guardado|:count relatórios guardados',
-    'pinned_count' => 'fixados',
+    'pinned_count' => ':count de :max fixado|:count de :max fixados',
     'dismiss' => 'Dispensar',
 
     'build_new' => 'Criar um novo relatório',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Relatório não encontrado (pode ter sido eliminado noutro separador).',
         'deleted' => 'Relatório eliminado.',
     ],
-    'pin_cap' => 'Podes fixar até 3 relatórios. Desafixa um para adicionares este.',
+    'pin_cap' => 'Podes fixar até :max relatórios. Desafixa um para adicionares este.',
 
     'summary' => [
         'metric' => [

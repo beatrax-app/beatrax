@@ -6,7 +6,10 @@ return [
     'title' => 'Sestavy',
     'page_title' => 'Sestavy · Beatrax',
     'saved_report' => ':count uložená sestava|:count uložené sestavy|:count uložených sestav',
-    'pinned_count' => 'připnuto',
+    // i18n-review: cs · pinned_count — the cap reaches this as a placeholder, so the
+    // preposition is the plain "z"; spoken as "tří" the current cap of 3 would take
+    // "ze". A native should say which form a written ratio wants.
+    'pinned_count' => ':count z :max připnutá|:count z :max připnuté|:count z :max připnutých',
     'dismiss' => 'Zamítnout',
 
     'build_new' => 'Vytvořit novou sestavu',
@@ -49,7 +52,9 @@ return [
         'not_found' => 'Sestava nenalezena (mohla být smazána na jiné kartě).',
         'deleted' => 'Sestava smazána.',
     ],
-    'pin_cap' => 'Připnout můžeš nejvýš 3 sestavy. Jednu odepni a tuhle přidáš.',
+    // i18n-review: cs · pin_cap — the noun agrees with the cap, which now
+    // arrives as :max rather than as the digit. sestavy is the 2–4 form; a cap of 5 or more needs sestav.
+    'pin_cap' => 'Připnout můžeš nejvýš :max sestavy. Jednu odepni a tuhle přidáš.',
 
     'summary' => [
         'metric' => [

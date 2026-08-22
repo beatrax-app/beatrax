@@ -6,7 +6,7 @@ return [
     'title' => 'Rapporter',
     'page_title' => 'Rapporter · Beatrax',
     'saved_report' => ':count gemt rapport|:count gemte rapporter',
-    'pinned_count' => 'fastgjort',
+    'pinned_count' => ':count af :max fastgjort|:count af :max fastgjort',
     'dismiss' => 'Luk',
 
     'build_new' => 'Byg en ny rapport',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Rapporten blev ikke fundet (den kan være slettet i en anden fane).',
         'deleted' => 'Rapporten er slettet.',
     ],
-    'pin_cap' => 'Du kan fastgøre op til 3 rapporter. Frigør en for at tilføje denne.',
+    'pin_cap' => 'Du kan fastgøre op til :max rapporter. Frigør en for at tilføje denne.',
 
     'summary' => [
         'metric' => [

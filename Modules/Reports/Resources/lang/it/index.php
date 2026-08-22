@@ -6,7 +6,7 @@ return [
     'title' => 'Report',
     'page_title' => 'Report · Beatrax',
     'saved_report' => ':count report salvato|:count report salvati',
-    'pinned_count' => 'fissati',
+    'pinned_count' => ':count su :max fissato|:count su :max fissati',
     'dismiss' => 'Ignora',
 
     'build_new' => 'Crea un nuovo report',
@@ -49,7 +49,7 @@ return [
         'not_found' => "Report non trovato (potrebbe essere stato eliminato in un'altra scheda).",
         'deleted' => 'Report eliminato.',
     ],
-    'pin_cap' => 'Puoi fissare fino a 3 report. Rimuovine uno per aggiungere questo.',
+    'pin_cap' => 'Puoi fissare fino a :max report. Rimuovine uno per aggiungere questo.',
 
     'summary' => [
         'metric' => [

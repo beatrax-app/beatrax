@@ -6,7 +6,7 @@ return [
     'title' => 'Izvješća',
     'page_title' => 'Izvješća · Beatrax',
     'saved_report' => ':count spremljeno izvješće|:count spremljena izvješća|:count spremljenih izvješća',
-    'pinned_count' => 'prikvačeno',
+    'pinned_count' => ':count od :max prikvačeno|:count od :max prikvačena|:count od :max prikvačenih',
     'dismiss' => 'Odbaci',
 
     'build_new' => 'Izradi novo izvješće',
@@ -49,7 +49,9 @@ return [
         'not_found' => 'Izvješće nije pronađeno (možda je izbrisano u drugoj kartici).',
         'deleted' => 'Izvješće je izbrisano.',
     ],
-    'pin_cap' => 'Možeš prikvačiti najviše 3 izvješća. Otkvači jedno da dodaš ovo.',
+    // i18n-review: hr · pin_cap — the noun agrees with the cap, which now
+    // arrives as :max rather than as the digit. izvješća is the 2–4 form; a cap of 5 or more needs izvješćа.
+    'pin_cap' => 'Možeš prikvačiti najviše :max izvješća. Otkvači jedno da dodaš ovo.',
 
     'summary' => [
         'metric' => [

@@ -6,7 +6,7 @@ return [
     'title' => 'Informes',
     'page_title' => 'Informes · Beatrax',
     'saved_report' => ':count informe guardado|:count informes guardados',
-    'pinned_count' => 'fijados',
+    'pinned_count' => ':count de :max fijado|:count de :max fijados',
     'dismiss' => 'Descartar',
 
     'build_new' => 'Crear un informe nuevo',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Informe no encontrado (puede que se haya eliminado en otra pestaña).',
         'deleted' => 'Informe eliminado.',
     ],
-    'pin_cap' => 'Puedes fijar hasta 3 informes. Quita uno para añadir este.',
+    'pin_cap' => 'Puedes fijar hasta :max informes. Quita uno para añadir este.',
 
     'summary' => [
         'metric' => [

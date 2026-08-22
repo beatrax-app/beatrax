@@ -6,7 +6,7 @@ return [
     'title' => 'Reports',
     'page_title' => 'Reports · Beatrax',
     'saved_report' => ':count saved report|:count saved reports',
-    'pinned_count' => 'pinned',
+    'pinned_count' => ':count of :max pinned|:count of :max pinned',
     'dismiss' => 'Dismiss',
 
     'build_new' => 'Build a new report',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Report not found (it may have been deleted in another tab).',
         'deleted' => 'Report deleted.',
     ],
-    'pin_cap' => 'You can pin up to 3 reports. Unpin one to add this.',
+    'pin_cap' => 'You can pin up to :max reports. Unpin one to add this.',
 
     'summary' => [
         'metric' => [
