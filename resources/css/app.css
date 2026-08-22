@@ -3001,6 +3001,20 @@ td.date,
         background: var(--color-surface-2);
         color: var(--color-text);
     }
+
+    /* On a phone the three-across row left the path 108px of a 275px card, so
+       the container path broke every twelve characters into fourteen lines.
+       Given the whole row it wraps at five, and the label and the copy button
+       keep the line above. */
+    @media (max-width: 640px) {
+        .help-locations .path-row {
+            flex-wrap: wrap;
+        }
+
+        .help-locations .path-mono {
+            flex-basis: 100%;
+        }
+    }
 }
 
 /*
