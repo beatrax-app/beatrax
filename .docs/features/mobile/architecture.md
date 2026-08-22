@@ -580,9 +580,8 @@ carries no `#[Locked]`, and a reset honouring a value past the two entry arms
 would walk a cancelled attempt onto a screen it never reached, so only `scan`
 and `enter_code` are accepted there.
 
-**Import-mode cross-device handshake.** When this pairing attempt was
-reached via the fresh-device import bootstrap (`?mode=import`), the
-scanned QR additionally carries the initiator's public identity
+**Cross-device handshake.** The scanned QR carries the initiator's public
+identity
 (`QrScanBridge::extractIdentity()`). `submitCode()` seeds a local
 `pairing_tokens` row from that identity before accepting (the fresh,
 separate device database otherwise has no local pending row to accept
@@ -600,8 +599,7 @@ row says this side confirmed — read from the row, not from the screen's
 rendered here as it is on the desktop: the words are re-derived from what the
 row now binds and `pairing.errors.safety_number_changed` says why.
 
-**Typed codes while importing.** The typed word-code arm is offered on the
-import path too. A word-code carries the token alone, so before seeding,
+**Typed codes.** A word-code carries the token alone, so before seeding,
 `submitCode()` asks `PairingGateway::discoverInitiatorOnLan()` for the public
 identity the code cannot carry: it browses `_beatrax-sync._tcp` and fetches
 `GET /pair/offer?token=…` from each discovered peer. From there the flow is
@@ -609,8 +607,15 @@ the QR flow, unchanged — seed, accept, compare safety numbers on both
 screens. The discovered address proves nothing (an mDNS answer can be spoofed
 by anyone on the network, and the offer therefore hands out public keys
 only), so the human safety-number comparison remains the sole trust gate.
+This lookup runs for every typed code, not only during an import. The row a
+typed code names was minted on the desktop that issued it, so a phone that
+does not ask the network has nothing to accept against and tells the reader
+their code expired when it did not.
+
 When discovery finds nothing at all, the screen says "cannot reach the other
-device". When something answered and refused, it says
+device". A code that cannot be decoded at all never reaches the network, and
+says so with `pairing.errors.invalid_code`. When something answered and
+refused, it says
 `pairing.errors.code_not_accepted` — "no device on this network accepted that
 code" — rather than calling the code invalid: a typed code names no device, so
 every desktop on the wifi is asked, and a housemate's laptop refusing a code it
@@ -635,8 +640,10 @@ re-read on every pairing-screen mount, which does not survive a re-entry
 without the param (back button, bookmark, a relaunched process). Two
 independent, idempotent callers mark the intent: `MobileImportBootstrap`'s
 provisioning step (the authoritative source, at the moment sync identity
-is enabled without an epoch) and `MobilePairingScan::mount()` (a
-defense-in-depth echo of the observed query param). It carries no key
+is enabled without an epoch) and `MobilePairingScan::mount()`, which is the
+only writer on that screen: it echoes the observed query param into the
+marker and then reads nothing but the marker, so the unlock return URL,
+cancel and finish all survive a re-entry without the param. It carries no key
 material and is never read by any crypto/admission code path — a plain
 marker consumed only to pick between otherwise-ambiguous UI/completion
 states.

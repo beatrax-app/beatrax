@@ -52,7 +52,7 @@ final readonly class LanPairingOfferFetcher
         } catch (InvalidArgumentException) {
             // Not a word code at all — a truncated or over-long paste. Nothing
             // was asked of the network, so the network cannot be the answer.
-            return PairingOfferLookup::CodeNotAccepted;
+            return PairingOfferLookup::CodeMalformed;
         }
 
         return $this->askEveryPeer($tokenHex);
