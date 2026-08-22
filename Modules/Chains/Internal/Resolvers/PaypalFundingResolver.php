@@ -18,6 +18,8 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Enums\CounterLegOrder;
+use Modules\Transfers\Public\Support\CounterLegMatch;
+use Modules\Transfers\Public\Support\CounterLegWindow;
 use Modules\Transfers\Public\Services\PairLookup;
 use stdClass;
 
@@ -197,15 +199,19 @@ final class PaypalFundingResolver
         // not disqualify one, and the currency it would compare against is the
         // PayPal event's rather than the row's.
         $partnerId = $accountId === null ? null : $this->pairs->counterLegOnAccount(
-            $accountId,
-            -$amountMinor,
-            [TransactionType::TransferIn],
-            CarbonImmutable::parse($bookedAt),
-            self::DATE_WINDOW_DAYS,
-            null,
-            false,
-            null,
-            CounterLegOrder::NearestToCentre,
+            new CounterLegMatch(
+                accountId: $accountId,
+                amountMinor: -$amountMinor,
+                types: [TransactionType::TransferIn],
+                currency: null,
+                unpairedOnly: false,
+                excludeTransactionId: null,
+            ),
+            new CounterLegWindow(
+                CarbonImmutable::parse($bookedAt),
+                self::DATE_WINDOW_DAYS,
+                CounterLegOrder::NearestToCentre,
+            ),
             $user,
         );
         if ($iban === null || $partnerId === null) {

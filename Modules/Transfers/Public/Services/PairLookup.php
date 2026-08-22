@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Transfers\Public\Services;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Transfers\Public\Enums\CounterLegOrder;
+use Modules\Transfers\Public\Support\CounterLegMatch;
+use Modules\Transfers\Public\Support\CounterLegWindow;
 
 final class PairLookup
 {
@@ -48,46 +49,33 @@ final class PairLookup
     // and amount rather than a paired row's id. Every bound is the caller's,
     // down to the ordering: a default here would answer, silently and for the
     // other caller too, a question that caller never asked.
-    /**
-     * @param  list<TransactionType>  $types
-     */
-    public function counterLegOnAccount(
-        int $accountId,
-        int $amountMinor,
-        array $types,
-        CarbonImmutable $bookedAt,
-        int $windowDays,
-        ?string $currency,
-        bool $unpairedOnly,
-        ?int $excludeTransactionId,
-        CounterLegOrder $order,
-        User $user,
-    ): ?int {
-        $windowStart = $bookedAt->subDays($windowDays)->startOfDay()->toDateTimeString();
-        $windowEnd = $bookedAt->addDays($windowDays)->endOfDay()->toDateTimeString();
+    public function counterLegOnAccount(CounterLegMatch $match, CounterLegWindow $window, User $user): ?int
+    {
+        $windowStart = $window->bookedAt->subDays($window->windowDays)->startOfDay()->toDateTimeString();
+        $windowEnd = $window->bookedAt->addDays($window->windowDays)->endOfDay()->toDateTimeString();
 
         $query = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->where('account_id', $accountId)
-            ->whereIn('type', array_map(static fn (TransactionType $type): string => $type->value, $types))
-            ->where('amount_minor', $amountMinor)
+            ->where('account_id', $match->accountId)
+            ->whereIn('type', array_map(static fn (TransactionType $type): string => $type->value, $match->types))
+            ->where('amount_minor', $match->amountMinor)
             ->whereBetween('booked_at', [$windowStart, $windowEnd]);
 
-        if ($currency !== null) {
-            $query->where('currency', $currency);
+        if ($match->currency !== null) {
+            $query->where('currency', $match->currency);
         }
-        if ($unpairedOnly) {
+        if ($match->unpairedOnly) {
             $query->whereNull('pair_transaction_id');
         }
-        if ($excludeTransactionId !== null) {
-            $query->where('id', '!=', $excludeTransactionId);
+        if ($match->excludeTransactionId !== null) {
+            $query->where('id', '!=', $match->excludeTransactionId);
         }
 
-        $ordered = match ($order) {
+        $ordered = match ($window->order) {
             CounterLegOrder::NearestToCentre => $query->orderByRaw(
                 'ABS(julianday(booked_at) - julianday(?))',
-                [$bookedAt->toDateTimeString()],
+                [$window->bookedAt->toDateTimeString()],
             ),
             CounterLegOrder::EarliestBooked => $query,
         };

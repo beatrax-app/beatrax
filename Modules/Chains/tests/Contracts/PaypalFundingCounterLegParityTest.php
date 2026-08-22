@@ -13,6 +13,8 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Transfers\Public\Enums\CounterLegOrder;
+use Modules\Transfers\Public\Support\CounterLegMatch;
+use Modules\Transfers\Public\Support\CounterLegWindow;
 use Modules\Transfers\Public\Services\PairLookup;
 
 // The resolver used to carry a private findPartnerOnAccount(), so the
@@ -162,17 +164,17 @@ it('links the counter-leg id PairLookup returns, tie-break included', function (
     /** @var PairLookup $lookup */
     $lookup = $this->app->make(PairLookup::class);
     $viaLookup = $lookup->counterLegOnAccount(
-        $this->asn->id,
-        -$paypalTx->amount_minor,
-        [TransactionType::TransferIn],
-        CarbonImmutable::parse($paypalTx->booked_at),
-        PaypalFundingResolver::DATE_WINDOW_DAYS,
-        null,
-        false,
-        null,
-        CounterLegOrder::NearestToCentre,
-        $this->user,
-    );
+            new CounterLegMatch(
+                accountId: $this->asn->id,
+                amountMinor: -$paypalTx->amount_minor,
+                types: [TransactionType::TransferIn],
+                currency: null,
+                unpairedOnly: false,
+                excludeTransactionId: null,
+            ),
+            new CounterLegWindow(CarbonImmutable::parse($paypalTx->booked_at), PaypalFundingResolver::DATE_WINDOW_DAYS, CounterLegOrder::NearestToCentre),
+            $this->user,
+        );
 
     expect($viaLookup)->toBe($closer->id);
 

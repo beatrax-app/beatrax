@@ -10,6 +10,8 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use Modules\Transfers\Public\Enums\CounterLegOrder;
+use Modules\Transfers\Public\Support\CounterLegMatch;
+use Modules\Transfers\Public\Support\CounterLegWindow;
 use Modules\Transfers\Public\Services\PairLookup;
 
 // The forward arm's candidate set and its ordering, pinned row by row. Every
@@ -317,17 +319,17 @@ it('pairs the very leg PairLookup returns when asked the forward arm\'s question
     ]);
 
     $viaLookup = $this->lookup->counterLegOnAccount(
-        $this->ics->id,
-        3300,
-        [TransactionType::TransferOut, TransactionType::TransferIn],
-        CarbonImmutable::parse('2026-05-15 12:00:00'),
-        3,
-        'EUR',
-        true,
-        $firing->id,
-        CounterLegOrder::EarliestBooked,
-        $this->user,
-    );
+            new CounterLegMatch(
+                accountId: $this->ics->id,
+                amountMinor: 3300,
+                types: [TransactionType::TransferOut, TransactionType::TransferIn],
+                currency: 'EUR',
+                unpairedOnly: true,
+                excludeTransactionId: $firing->id,
+            ),
+            new CounterLegWindow(CarbonImmutable::parse('2026-05-15 12:00:00'), 3, CounterLegOrder::EarliestBooked),
+            $this->user,
+        );
 
     expect($viaLookup)->toBe($earlier->id);
     expect($this->pairer->pairOne($firing, $this->user))->toBe($viaLookup);
@@ -349,17 +351,17 @@ it('orders nearest-to-centre ahead of earliest for the chain-resolution caller',
     ]);
 
     expect($this->lookup->counterLegOnAccount(
-        $this->asn->id,
-        4400,
-        [TransactionType::TransferIn],
-        CarbonImmutable::parse('2026-05-15 12:00:00'),
-        3,
-        null,
-        false,
-        null,
-        CounterLegOrder::NearestToCentre,
-        $this->user,
-    ))->toBe($nearer->id, 'earlier id '.$earlier->id.', nearer id '.$nearer->id);
+            new CounterLegMatch(
+                accountId: $this->asn->id,
+                amountMinor: 4400,
+                types: [TransactionType::TransferIn],
+                currency: null,
+                unpairedOnly: false,
+                excludeTransactionId: null,
+            ),
+            new CounterLegWindow(CarbonImmutable::parse('2026-05-15 12:00:00'), 3, CounterLegOrder::NearestToCentre),
+            $this->user,
+        ))->toBe($nearer->id, 'earlier id '.$earlier->id.', nearer id '.$nearer->id);
 });
 
 it('settles an equidistant pair on the earlier booked_at, whichever row was imported first', function (): void {
@@ -390,17 +392,17 @@ it('settles an equidistant pair on the earlier booked_at, whichever row was impo
     ]);
 
     $ask = fn (int $amountMinor): ?int => $this->lookup->counterLegOnAccount(
-        $this->asn->id,
-        $amountMinor,
-        [TransactionType::TransferIn],
-        CarbonImmutable::parse('2026-05-15 12:00:00'),
-        3,
-        null,
-        false,
-        null,
-        CounterLegOrder::NearestToCentre,
-        $this->user,
-    );
+            new CounterLegMatch(
+                accountId: $this->asn->id,
+                amountMinor: $amountMinor,
+                types: [TransactionType::TransferIn],
+                currency: null,
+                unpairedOnly: false,
+                excludeTransactionId: null,
+            ),
+            new CounterLegWindow(CarbonImmutable::parse('2026-05-15 12:00:00'), 3, CounterLegOrder::NearestToCentre),
+            $this->user,
+        );
 
     expect($ask(5500))->toBe($before->id);
     expect($ask(6600))->toBe($earlierSecond->id, 'later-but-first id '.$laterFirst->id);
@@ -421,15 +423,15 @@ it('settles two rows sharing a booked_at on the lower id for the chain-resolutio
     ]);
 
     expect($this->lookup->counterLegOnAccount(
-        $this->asn->id,
-        7700,
-        [TransactionType::TransferIn],
-        CarbonImmutable::parse('2026-05-15 12:00:00'),
-        3,
-        null,
-        false,
-        null,
-        CounterLegOrder::NearestToCentre,
-        $this->user,
-    ))->toBe($first->id);
+            new CounterLegMatch(
+                accountId: $this->asn->id,
+                amountMinor: 7700,
+                types: [TransactionType::TransferIn],
+                currency: null,
+                unpairedOnly: false,
+                excludeTransactionId: null,
+            ),
+            new CounterLegWindow(CarbonImmutable::parse('2026-05-15 12:00:00'), 3, CounterLegOrder::NearestToCentre),
+            $this->user,
+        ))->toBe($first->id);
 });
