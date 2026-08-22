@@ -10,6 +10,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\RowChunk;
 
 final readonly class PreMigrationSnapshot
 {
@@ -32,9 +33,9 @@ final readonly class PreMigrationSnapshot
     // restore is driven entirely by what the file holds.
     private const OP_LOG_COLUMNS = ['value', 'gdk_epoch'];
 
-    private const READ_CHUNK_SIZE = 500;
+    private const int READ_CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
-    private const RESTORE_BUFFER_ROWS = 500;
+    private const int RESTORE_BUFFER_ROWS = RowChunk::DEFAULT_SIZE;
 
     // A build compiled before SQLite's parameter ceiling was raised to 32766
     // stops at 999, so a batched write sizes itself to stay under the lower

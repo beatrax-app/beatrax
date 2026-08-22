@@ -13,6 +13,7 @@
 
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
+@use('Modules\Categorization\Public\Enums\RuleCombinator')
 <div class="space-y-6">
     <header class="mb-12 space-y-1">
         <div class="flex items-start justify-between gap-4">
@@ -103,7 +104,7 @@
                     <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
                         <div class="flex flex-wrap items-center gap-1">
                             @if (count($rule->conditions) >= 2)
-                                <span class="chip">{{ $rule->combinator === 'any' ? 'ANY' : 'ALL' }}</span>
+                                <span class="chip">{{ $rule->combinator === RuleCombinator::Any->value ? 'ANY' : 'ALL' }}</span>
                             @endif
                             @if (count($rule->conditions) > 0)
                                 <span>{{ \Modules\Categorization\Internal\Http\Livewire\RulesPage::conditionFragment($rule->conditions[0]) }}</span>

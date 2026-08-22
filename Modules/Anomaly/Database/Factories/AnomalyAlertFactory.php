@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Public\Enums\AnomalyAlertState;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 
 /**
@@ -30,7 +31,7 @@ final class AnomalyAlertFactory extends Factory
             'dismissed_as' => null,
             'baseline_amount_minor' => -999,
             'latest_amount_minor' => -2349,
-            'currency' => 'EUR',
+            'currency' => Currency::Eur->value,
             'sensitivity_percent_used' => 50,
             'snoozed_until' => null,
             'detected_at' => $this->faker->dateTimeBetween('-30 days', 'now'),

@@ -13,6 +13,7 @@ use Livewire\Component;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
 use Modules\Categorization\Public\Dto\RuleInput;
+use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -116,7 +117,7 @@ final class CorrectionDivergenceToast extends Component
 
         $actionsPayload = [];
         foreach ($rule->actions as $index => $action) {
-            $payload = $action->type === 'category'
+            $payload = $action->type === ActionType::Category->value
                 ? ['category_id' => $this->newCategoryId]
                 : $action->payload;
 

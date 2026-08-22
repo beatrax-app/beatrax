@@ -45,6 +45,26 @@ enum TransactionType: string
         };
     }
 
+    // Coerces rather than throwing, because the callers read `type` off a row
+    // array and an unreadable one has to resolve to something. Expense is what
+    // the mapping this replaced fell through to, and the DB triggers already
+    // reject anything outside the set on the way in.
+    public static function directionOf(mixed $type): Direction
+    {
+        return (is_string($type) ? self::tryFrom($type) : null)?->direction() ?? Direction::Expense;
+    }
+
+    // Derived from the cases rather than listed, so a case added without a
+    // direction cannot quietly fall out of the set an anomaly detector scans.
+    /** @return list<string> */
+    public static function valuesFor(Direction $direction): array
+    {
+        return array_values(array_map(
+            static fn (self $type): string => $type->value,
+            array_filter(self::cases(), static fn (self $type): bool => $type->direction() === $direction),
+        ));
+    }
+
     /** @return list<string> */
     public static function transferValues(): array
     {

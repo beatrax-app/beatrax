@@ -6,7 +6,10 @@ namespace Modules\Categorization\Internal\Http\Livewire\Concerns;
 
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
+use Modules\Categorization\Public\Enums\ActionType;
+use Modules\Categorization\Public\Enums\ConditionOperator;
 use Modules\Categorization\Public\Enums\ConditionValueType;
+use Modules\Categorization\Public\Enums\NoteMode;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 trait MapsRuleRows
@@ -49,7 +52,7 @@ trait MapsRuleRows
         return [
             'id' => null,
             'field' => 'counterparty',
-            'op' => 'contains',
+            'op' => ConditionOperator::Contains->value,
             'value' => '',
             'value2' => null,
         ];
@@ -66,7 +69,7 @@ trait MapsRuleRows
             'category_id' => null,
             'counterparty_id' => null,
             'note_text' => '',
-            'note_mode' => 'set',
+            'note_mode' => NoteMode::Set->value,
             'deduction_category_id' => null,
             'year_override_enabled' => false,
             'year_override' => null,
@@ -78,7 +81,7 @@ trait MapsRuleRows
      */
     private static function conditionFromDto(RuleConditionDto $dto): array
     {
-        $field = $dto->valueType === 'string' ? $dto->field : $dto->valueType;
+        $field = $dto->valueType === ConditionValueType::Text->value ? $dto->field : $dto->valueType;
 
         // `merchant` and `counterparty` are one field under two names and the
         // select no longer offers both, so a rule still stored as `merchant`
@@ -87,7 +90,7 @@ trait MapsRuleRows
             $field = 'counterparty';
         }
 
-        if ($dto->valueType === 'amount') {
+        if ($dto->valueType === ConditionValueType::Amount->value) {
             // The column holds signed minor units; the form shows Euro
             // decimals, so the raw string must never reach the input.
             $value = is_numeric($dto->value) ? MoneyInput::formatMinor((int) $dto->value) : $dto->value;
@@ -115,15 +118,15 @@ trait MapsRuleRows
         $row['id'] = $dto->id;
         $payload = $dto->payload;
 
-        if ($dto->type === 'category') {
+        if ($dto->type === ActionType::Category->value) {
             $row['category_id'] = self::intIdOrNull($payload['category_id'] ?? null);
-        } elseif ($dto->type === 'counterparty') {
+        } elseif ($dto->type === ActionType::Counterparty->value) {
             $row['counterparty_id'] = self::intIdOrNull($payload['counterparty_id'] ?? null);
-        } elseif ($dto->type === 'note') {
+        } elseif ($dto->type === ActionType::Note->value) {
             $noteText = $payload['text'] ?? null;
             $row['note_text'] = is_string($noteText) ? $noteText : '';
             $noteMode = $payload['mode'] ?? null;
-            $row['note_mode'] = is_string($noteMode) ? $noteMode : 'set';
+            $row['note_mode'] = is_string($noteMode) ? $noteMode : NoteMode::Set->value;
         } else {
             $row['deduction_category_id'] = self::intIdOrNull($payload['deduction_category_id'] ?? null);
             $year = self::intIdOrNull($payload['year'] ?? null);
@@ -138,7 +141,7 @@ trait MapsRuleRows
 
     private static function hasInvalidAmount(string $valueType, string $value, ?string $value2): bool
     {
-        if ($valueType !== 'amount') {
+        if ($valueType !== ConditionValueType::Amount->value) {
             return false;
         }
         if ($value2 !== null && MoneyInput::tryToMinor($value2) === null) {
@@ -155,18 +158,18 @@ trait MapsRuleRows
     private static function conditionPayload(array $condition): array
     {
         $valueType = self::valueTypeFor($condition['field']);
-        $dbField = $valueType === 'string' ? $condition['field'] : 'merchant';
+        $dbField = $valueType === ConditionValueType::Text->value ? $condition['field'] : 'merchant';
 
-        if ($valueType === 'amount') {
+        if ($valueType === ConditionValueType::Amount->value) {
             // conditionRowError() has already rejected an unparsable value, so
             // the `?? 0` fallback is unreachable rather than a silent zero.
             $value = (string) (MoneyInput::tryToMinor($condition['value']) ?? 0);
-            $value2 = $condition['op'] === 'between'
+            $value2 = $condition['op'] === ConditionOperator::Between->value
                 ? (string) (MoneyInput::tryToMinor($condition['value2'] ?? '') ?? 0)
                 : null;
         } else {
             $value = trim($condition['value']);
-            $value2 = $condition['op'] === 'between' ? trim($condition['value2'] ?? '') : null;
+            $value2 = $condition['op'] === ConditionOperator::Between->value ? trim($condition['value2'] ?? '') : null;
         }
 
         return [
@@ -186,9 +189,9 @@ trait MapsRuleRows
     private static function actionPayload(array $action, int $index): array
     {
         $payload = match ($action['type']) {
-            'category' => ['category_id' => $action['category_id']],
-            'counterparty' => ['counterparty_id' => $action['counterparty_id']],
-            'note' => ['text' => trim($action['note_text']), 'mode' => $action['note_mode']],
+            ActionType::Category->value => ['category_id' => $action['category_id']],
+            ActionType::Counterparty->value => ['counterparty_id' => $action['counterparty_id']],
+            ActionType::Note->value => ['text' => trim($action['note_text']), 'mode' => $action['note_mode']],
             default => self::taxTagPayload($action),
         };
 

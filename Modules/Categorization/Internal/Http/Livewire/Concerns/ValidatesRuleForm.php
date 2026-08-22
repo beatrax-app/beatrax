@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Categorization\Internal\Http\Livewire\Concerns;
 
+use Modules\Categorization\Public\Enums\ActionType;
+use Modules\Categorization\Public\Enums\ConditionOperator;
 use Modules\Core\Public\Support\Lang;
 
 // The form's own pass, distinct from the backend action's: it records every
@@ -77,7 +79,7 @@ trait ValidatesRuleForm
         $position = $index + 1;
         $value = trim($condition['value']);
         $valueType = self::valueTypeFor($condition['field']);
-        $isBetween = $condition['op'] === 'between';
+        $isBetween = $condition['op'] === ConditionOperator::Between->value;
         $value2 = $isBetween ? trim($condition['value2'] ?? '') : null;
 
         return match (true) {
@@ -94,9 +96,9 @@ trait ValidatesRuleForm
     private static function actionRowError(array $action): ?string
     {
         return match ($action['type']) {
-            'category' => self::isEmptyId($action['category_id']) ? Lang::get('categorization::rule_form.action_pick_category') : null,
-            'counterparty' => self::isEmptyId($action['counterparty_id']) ? Lang::get('categorization::rule_form.action_pick_counterparty') : null,
-            'note' => trim($action['note_text']) === '' ? Lang::get('categorization::rule_form.action_note_required') : null,
+            ActionType::Category->value => self::isEmptyId($action['category_id']) ? Lang::get('categorization::rule_form.action_pick_category') : null,
+            ActionType::Counterparty->value => self::isEmptyId($action['counterparty_id']) ? Lang::get('categorization::rule_form.action_pick_counterparty') : null,
+            ActionType::Note->value => trim($action['note_text']) === '' ? Lang::get('categorization::rule_form.action_note_required') : null,
             default => self::isEmptyId($action['deduction_category_id']) ? Lang::get('categorization::rule_form.action_pick_deduction') : null,
         };
     }

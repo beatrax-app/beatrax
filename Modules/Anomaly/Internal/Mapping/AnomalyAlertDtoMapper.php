@@ -22,10 +22,12 @@ final class AnomalyAlertDtoMapper
      * @param  stdClass  $row  raw anomaly_alerts row
      * @param  string|null  $displayName  resolved merchant display string
      *                                    supplied by the query layer
+     * @param  string  $baseCurrency  BaseCurrency::code(), supplied by the caller
+     *                                because a static mapper cannot inject it
      */
-    public static function hydrate(stdClass $row, ?string $displayName = null): AnomalyAlertDto
+    public static function hydrate(stdClass $row, ?string $displayName, string $baseCurrency): AnomalyAlertDto
     {
-        $currency = self::toCurrency($row->currency ?? null);
+        $currency = self::toCurrency($row->currency ?? null, $baseCurrency);
         $baselineAmount = Money::ofMinor(self::toInt($row->baseline_amount_minor ?? null), $currency);
         $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor ?? null), $currency);
 
@@ -88,9 +90,9 @@ final class AnomalyAlertDtoMapper
         return null;
     }
 
-    private static function toCurrency(mixed $value): string
+    private static function toCurrency(mixed $value, string $baseCurrency): string
     {
-        return is_string($value) && $value !== '' ? $value : 'EUR';
+        return is_string($value) && $value !== '' ? $value : $baseCurrency;
     }
 
     // Not CoercesScalars::toStringOrNull(): an empty `dismissed_as` means the

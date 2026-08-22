@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Enums\TransactionType;
 use stdClass;
 
 // Every metric is defined over `expense` and `income` alone, so a bank fee and
@@ -18,7 +19,7 @@ final class OtherMovementQuery
 {
     use CoercesScalars;
 
-    private const TYPES = ['fee', 'adjustment'];
+    private const array TYPES = [TransactionType::Fee->value, TransactionType::Adjustment->value];
 
     public function __construct(
         private readonly DatabaseManager $db,

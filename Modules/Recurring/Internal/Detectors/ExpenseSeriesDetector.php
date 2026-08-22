@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Models\RecurringSeries;
@@ -74,7 +75,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
                 'counterparty_iban',
             ])
             ->where('user_id', $user->id)
-            ->whereIn('type', ['expense', 'fee', 'refund'])
+            ->whereIn('type', [TransactionType::Expense->value, TransactionType::Fee->value, TransactionType::Refund->value])
             ->where('posted_at', '>=', $since)
             ->orderBy('posted_at')
             ->get();

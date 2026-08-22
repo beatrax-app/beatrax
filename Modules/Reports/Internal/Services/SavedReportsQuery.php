@@ -61,9 +61,9 @@ final readonly class SavedReportsQuery
      */
     private static function summaryFor(array $definition): string
     {
-        $metric = is_string($definition['metric'] ?? null) ? $definition['metric'] : 'spend';
-        $dimension = is_string($definition['dimension'] ?? null) ? $definition['dimension'] : 'category';
-        $period = is_string($definition['periodPreset'] ?? null) ? $definition['periodPreset'] : 'this_month';
+        $metric = is_string($definition['metric'] ?? null) ? $definition['metric'] : ReportMetricSelection::default()->value;
+        $dimension = is_string($definition['dimension'] ?? null) ? $definition['dimension'] : ReportDimension::default()->value;
+        $period = is_string($definition['periodPreset'] ?? null) ? $definition['periodPreset'] : ReportPeriodPreset::default()->value;
 
         // Asked of the enums rather than a second copy of their cases: a list
         // that drifts from them fails by picking the fallback label, which
@@ -76,7 +76,7 @@ final readonly class SavedReportsQuery
 
         // The builder hides group-by for net worth, so the summary drops the
         // "by {dimension}" segment to match.
-        if ($metric === 'net_worth') {
+        if ($metric === ReportMetricSelection::NetWorth->value) {
             return Lang::get('reports::index.summary.without_dimension', [
                 'metric' => $metricLabel,
                 'period' => $periodLabel,
