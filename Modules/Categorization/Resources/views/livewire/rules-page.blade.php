@@ -13,6 +13,7 @@
 
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
+@use('Modules\Categorization\Public\Enums\RuleCombinator')
 <div class="space-y-6">
     <header class="mb-12 space-y-1">
         <div class="flex items-start justify-between gap-4">
@@ -61,9 +62,9 @@
 
     @if ($reapplyInFlight && $reapplyProgress !== null)
         {{-- Re-apply progress strip — reuses the EmailScan InboxesPage
-             wire:poll.2s idiom verbatim (no new async mechanism). --}}
+             wire:poll.2s.keep-alive idiom verbatim (no new async mechanism). --}}
         <section
-            wire:poll.2s="refreshReapplyProgress"
+            wire:poll.2s.keep-alive="refreshReapplyProgress"
             class="rounded-md border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700"
             aria-live="polite"
         >
@@ -103,7 +104,7 @@
                     <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
                         <div class="flex flex-wrap items-center gap-1">
                             @if (count($rule->conditions) >= 2)
-                                <span class="chip">{{ $rule->combinator === 'any' ? 'ANY' : 'ALL' }}</span>
+                                <span class="chip">{{ $rule->combinator === RuleCombinator::Any->value ? 'ANY' : 'ALL' }}</span>
                             @endif
                             @if (count($rule->conditions) > 0)
                                 <span>{{ \Modules\Categorization\Internal\Http\Livewire\RulesPage::conditionFragment($rule->conditions[0]) }}</span>

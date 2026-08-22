@@ -12,6 +12,11 @@
      `modal-close` so any page can listen for the resulting refresh. --}}
 
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Categorization\Public\Enums\ActionType')
+@use('Modules\Categorization\Public\Enums\ConditionOperator')
+@use('Modules\Categorization\Public\Enums\ConditionValueType')
+@use('Modules\Categorization\Public\Enums\NoteMode')
+@use('Modules\Categorization\Public\Enums\RuleCombinator')
 <div>
     <flux:modal name="rule-form" dismissible>
         <div class="space-y-6">
@@ -24,15 +29,15 @@
                 <div class="view-toggle" role="group" aria-label="{{ Lang::get('categorization::rule_form.combinator_aria') }}">
                     <button
                         type="button"
-                        class="{{ $combinator === 'all' ? 'active' : '' }}"
-                        aria-pressed="{{ $combinator === 'all' ? 'true' : 'false' }}"
-                        wire:click="$set('combinator', 'all')"
+                        class="{{ $combinator === RuleCombinator::All->value ? 'active' : '' }}"
+                        aria-pressed="{{ $combinator === RuleCombinator::All->value ? 'true' : 'false' }}"
+                        wire:click="$set('combinator', '{{ RuleCombinator::All->value }}')"
                     >{{ Lang::get('categorization::rule_form.match_all') }}</button>
                     <button
                         type="button"
-                        class="{{ $combinator === 'any' ? 'active' : '' }}"
-                        aria-pressed="{{ $combinator === 'any' ? 'true' : 'false' }}"
-                        wire:click="$set('combinator', 'any')"
+                        class="{{ $combinator === RuleCombinator::Any->value ? 'active' : '' }}"
+                        aria-pressed="{{ $combinator === RuleCombinator::Any->value ? 'true' : 'false' }}"
+                        wire:click="$set('combinator', '{{ RuleCombinator::Any->value }}')"
                     >{{ Lang::get('categorization::rule_form.match_any') }}</button>
                 </div>
 
@@ -46,7 +51,7 @@
                         @php
                             $valueType = \Modules\Categorization\Internal\Http\Livewire\RuleFormModal::valueTypeFor($condition['field']);
                             $opOptions = \Modules\Categorization\Internal\Http\Livewire\RuleFormModal::operatorOptionsFor($condition['field']);
-                            $isBetween = $condition['op'] === 'between';
+                            $isBetween = $condition['op'] === ConditionOperator::Between->value;
                         @endphp
                         <div class="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2 dark:bg-slate-900 dark:border-slate-700">
                             <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rule_form.condition_label', ['number' => $i + 1]) }}</p>
@@ -72,7 +77,7 @@
                                     @endforeach
                                 </select>
 
-                                @if ($valueType === 'date')
+                                @if ($valueType === ConditionValueType::Date->value)
                                     <x-core::date-input
                                         wire:model.lazy="conditions.{{ $i }}.value"
                                         :aria-label="$isBetween ? Lang::get('categorization::rule_form.condition_value_from_aria', ['number' => $i + 1]) : Lang::get('categorization::rule_form.condition_value_aria', ['number' => $i + 1])"
@@ -84,7 +89,7 @@
                                             :aria-label="Lang::get('categorization::rule_form.condition_value_to_aria', ['number' => $i + 1])"
                                         />
                                     @endif
-                                @elseif ($valueType === 'amount')
+                                @elseif ($valueType === ConditionValueType::Amount->value)
                                     <input
                                         type="text"
                                         inputmode="decimal"
@@ -151,13 +156,13 @@
                                     aria-label="{{ Lang::get('categorization::rule_form.action_type_aria', ['number' => $i + 1]) }}"
                                     class="inline-flex rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                 >
-                                    <option value="category" @disabled($action['type'] !== 'category' && in_array('category', $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_category') }}</option>
-                                    <option value="counterparty" @disabled($action['type'] !== 'counterparty' && in_array('counterparty', $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_counterparty') }}</option>
-                                    <option value="note" @disabled($action['type'] !== 'note' && in_array('note', $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_note') }}</option>
-                                    <option value="tax_tag" @disabled($action['type'] !== 'tax_tag' && in_array('tax_tag', $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_tax_tag') }}</option>
+                                    <option value="{{ ActionType::Category->value }}" @disabled($action['type'] !== ActionType::Category->value && in_array(ActionType::Category->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_category') }}</option>
+                                    <option value="{{ ActionType::Counterparty->value }}" @disabled($action['type'] !== ActionType::Counterparty->value && in_array(ActionType::Counterparty->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_counterparty') }}</option>
+                                    <option value="{{ ActionType::Note->value }}" @disabled($action['type'] !== ActionType::Note->value && in_array(ActionType::Note->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_note') }}</option>
+                                    <option value="{{ ActionType::TaxTag->value }}" @disabled($action['type'] !== ActionType::TaxTag->value && in_array(ActionType::TaxTag->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_tax_tag') }}</option>
                                 </select>
 
-                                @if ($action['type'] === 'category')
+                                @if ($action['type'] === ActionType::Category->value)
                                     <select
                                         wire:model.live="actions.{{ $i }}.category_id"
                                         aria-label="{{ Lang::get('categorization::rule_form.assign_category_aria', ['number' => $i + 1]) }}"
@@ -168,7 +173,7 @@
                                             <option value="{{ $category->id }}">{{ $category->path }}</option>
                                         @endforeach
                                     </select>
-                                @elseif ($action['type'] === 'counterparty')
+                                @elseif ($action['type'] === ActionType::Counterparty->value)
                                     <select
                                         wire:model.live="actions.{{ $i }}.counterparty_id"
                                         aria-label="{{ Lang::get('categorization::rule_form.reassign_counterparty_aria', ['number' => $i + 1]) }}"
@@ -179,7 +184,7 @@
                                             <option value="{{ $counterparty->id }}">{{ $counterparty->display_name }}</option>
                                         @endforeach
                                     </select>
-                                @elseif ($action['type'] === 'note')
+                                @elseif ($action['type'] === ActionType::Note->value)
                                     <input
                                         type="text"
                                         placeholder="{{ Lang::get('categorization::rule_form.note_placeholder') }}"
@@ -190,13 +195,13 @@
                                     <div class="view-toggle" role="group" aria-label="{{ Lang::get('categorization::rule_form.note_mode_aria', ['number' => $i + 1]) }}">
                                         <button
                                             type="button"
-                                            class="{{ $action['note_mode'] === 'set' ? 'active' : '' }}"
-                                            wire:click="$set('actions.{{ $i }}.note_mode', 'set')"
+                                            class="{{ $action['note_mode'] === NoteMode::Set->value ? 'active' : '' }}"
+                                            wire:click="$set('actions.{{ $i }}.note_mode', '{{ NoteMode::Set->value }}')"
                                         >{{ Lang::get('categorization::rule_form.note_set') }}</button>
                                         <button
                                             type="button"
-                                            class="{{ $action['note_mode'] === 'append' ? 'active' : '' }}"
-                                            wire:click="$set('actions.{{ $i }}.note_mode', 'append')"
+                                            class="{{ $action['note_mode'] === NoteMode::Append->value ? 'active' : '' }}"
+                                            wire:click="$set('actions.{{ $i }}.note_mode', '{{ NoteMode::Append->value }}')"
                                         >{{ Lang::get('categorization::rule_form.note_append') }}</button>
                                     </div>
                                 @else
@@ -220,7 +225,7 @@
                                 >🗑️</x-core::emoji-action>
                             </div>
 
-                            @if ($action['type'] === 'tax_tag')
+                            @if ($action['type'] === ActionType::TaxTag->value)
                                 <details class="text-xs text-slate-500 dark:text-slate-400">
                                     <summary class="cursor-pointer select-none">{{ Lang::get('categorization::rule_form.this_year_only') }}</summary>
                                     <div class="mt-2 flex items-center gap-2">

@@ -22,6 +22,7 @@ use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -116,7 +117,7 @@ final class IcsSettlementResolver
             })
             ->where('transactions.user_id', $user->id)
             ->where('accounts.kind', AccountKind::Bank->value)
-            ->where('transactions.type', 'transfer_out')
+            ->where('transactions.type', TransactionType::TransferOut->value)
             ->whereNotNull('transactions.counterparty_iban')
             ->whereNull('chain_links.id')
             ->orderBy('transactions.posted_at')
@@ -342,7 +343,7 @@ final class IcsSettlementResolver
             })
             ->where('transactions.user_id', $user->id)
             ->where('accounts.kind', AccountKind::IcsCard->value)
-            ->where('transactions.type', 'refund')
+            ->where('transactions.type', TransactionType::Refund->value)
             ->whereNull('chain_links.id')
             ->get([
                 'transactions.id as refund_id',
@@ -394,7 +395,7 @@ final class IcsSettlementResolver
             ->table('transactions')
             ->where('user_id', $user->id)
             ->where('account_id', $accountId)
-            ->where('type', 'expense')
+            ->where('type', TransactionType::Expense->value)
             ->where('counterparty_normalized', $merchant)
             ->where('settled_amount_minor', -$refundAmount)
             ->whereBetween('posted_at', [$periodStart, $periodEnd])
@@ -517,7 +518,7 @@ final class IcsSettlementResolver
             })
             ->where('transactions.user_id', $user->id)
             ->where('transactions.account_id', $accountId)
-            ->where('transactions.type', 'expense')
+            ->where('transactions.type', TransactionType::Expense->value)
             ->whereBetween('transactions.posted_at', [$periodStart, $periodEnd])
             ->whereNull('chain_links.id')
             ->orderBy('transactions.posted_at')

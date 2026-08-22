@@ -8,8 +8,9 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Transaction;
 
 // Once per row actually inserted, never for a duplicate or an enrichment
-// update. Deliberately synchronous and in-transaction: a listener must see
-// partner rows inserted earlier in the same outer transaction.
+// update. Dispatched by RecordTransactions AFTER each chunk commits, never
+// inside it: the listeners are synchronous, and a rollback had left the search
+// index and the transfer pairing acting on rows that had vanished.
 final readonly class TransactionImported
 {
     public function __construct(

@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'Il PIN deve avere almeno 6 cifre.',
     'error_pin_mismatch' => 'I PIN non coincidono. Riprova.',
+    'error_pin_required' => 'Inserisci il tuo PIN.',
     'error_pin_incorrect' => 'PIN errato.',
+    'error_account_password_required' => 'Inserisci la password del tuo account.',
     'error_account_password' => "Password dell'account errata.",
     'change_pin_success' => 'La tua chiave di crittografia è stata protetta di nuovo con il tuo nuovo PIN.',
     'error_forgot_failed' => 'Reimpostazione del PIN non riuscita — la chiave di recupero non è disponibile.',
     'error_enable_first' => 'Attiva prima il blocco con PIN, poi registra la biometria.',
+    'error_disable_blocked_by_encryption' => 'Le tue note e i dati delle controparti sono cifrati con la chiave che questo blocco dell\'app custodisce, quindi disattivarlo li renderebbe illeggibili. Il blocco resta attivo — cambia invece il tuo PIN.',
+    'error_key_material_lost' => 'Questo dispositivo non custodisce più la chiave che apre i tuoi dati cifrati, quindi un nuovo PIN non li renderà di nuovo leggibili. Associa questo dispositivo a uno che ha ancora la chiave per recuperarli.',
+    'error_recovery_wrap_stale' => 'La password dell\'account non apre più questo blocco app — è stata cambiata dopo che il blocco era già attivo. Il tuo PIN funziona ancora, ma dietro non resta nulla se lo dimentichi. Ricollega ora la password dell\'account.',
+    'relink_recovery' => 'Ricollega la password dell\'account',
+    'relink_modal_heading' => 'Ricollega la password dell\'account — conferma con il PIN',
+    'relink_recovery_success' => 'La password dell\'account può di nuovo recuperare questo blocco app.',
 ];

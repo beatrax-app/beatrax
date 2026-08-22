@@ -1,3 +1,4 @@
+@use('Modules\Ledger\Public\Enums\AmountDirection')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Ledger\Public\ValueObjects\MoneyInput')
@@ -139,12 +140,12 @@
 {{-- ─── Amount chip ────────────────────────────────────────────────────── --}}
 <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
     @php
-        $amountActive = ($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? 'both') !== 'both';
+        $amountActive = ($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? AmountDirection::Both->value) !== AmountDirection::Both->value;
         $amountLabel = Lang::get('ledger::list.filter.amount').' &#9662;';
         if ($amountActive) {
-            if (($filterAmountDir ?? 'both') === 'in') {
+            if (($filterAmountDir ?? AmountDirection::Both->value) === AmountDirection::In->value) {
                 $amountLabel = Lang::get('ledger::list.filter.dir_in');
-            } elseif (($filterAmountDir ?? 'both') === 'out') {
+            } elseif (($filterAmountDir ?? AmountDirection::Both->value) === AmountDirection::Out->value) {
                 $amountLabel = Lang::get('ledger::list.filter.dir_out');
             }
             if (($filterAmountMin ?? '') !== '') {
@@ -168,7 +169,7 @@
         @if ($amountActive)
             <button
                 type="button"
-                wire:click.stop="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', 'both')"
+                wire:click.stop="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', '{{ AmountDirection::Both->value }}')"
                 class="srch-chip-close"
                 aria-label="{{ Lang::get('ledger::list.filter.remove_amount_aria') }}"
             >&times;</button>
@@ -185,7 +186,7 @@
         <div class="srch-popover-inner">
             {{-- Direction (in / out / both) --}}
             <div class="srch-dir-group mb-3">
-                @foreach (['both' => 'dir_both', 'in' => 'dir_in', 'out' => 'dir_out'] as $val => $dirKey)
+                @foreach ([AmountDirection::Both->value => 'dir_both', AmountDirection::In->value => 'dir_in', AmountDirection::Out->value => 'dir_out'] as $val => $dirKey)
                     <label class="srch-radio-row">
                         <input
                             type="radio"

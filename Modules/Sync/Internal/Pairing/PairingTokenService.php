@@ -19,6 +19,10 @@ final class PairingTokenService
 {
     use AppliesResponderAccept;
 
+    // Not a PairingState: the row does not move, and saying so with a state
+    // value would put a fourth member on an enum the column is written from.
+    public const string DEFERRED = 'deferred';
+
     private const int TTL_MINUTES = 10;
 
     private const int ACCEPT_GRACE_MINUTES = 5;
@@ -30,6 +34,7 @@ final class PairingTokenService
         private readonly PairedDeviceAdmitter $admitter,
         private readonly PeerConfirmVerifier $peerConfirmVerifier,
         private readonly SafetyNumberDeriver $safetyDeriver,
+        private readonly HeldPeerConfirm $heldPeerConfirm,
     ) {}
 
     // Mints a pairing token for the initiator and persists its hash. Returns
@@ -63,7 +68,7 @@ final class PairingTokenService
             'initiator_x25519_pub_hex' => $x25519PubHex,
             'state' => PairingState::Pending->value,
             'expires_at' => ZuluTimestamp::stamp($now->addMinutes(self::TTL_MINUTES)),
-            'created_at' => $now->toIso8601String(),
+            'created_at' => ZuluTimestamp::stamp($now),
         ]);
 
         return $token;
@@ -117,9 +122,9 @@ final class PairingTokenService
             'initiator_x25519_pub_hex' => $initiatorX25519PubHex,
             'state' => PairingState::Pending->value,
             'expires_at' => ZuluTimestamp::stamp($now->addMinutes(self::TTL_MINUTES)),
-            'initiator_seeded_at' => $now->toIso8601String(),
+            'initiator_seeded_at' => ZuluTimestamp::stamp($now),
             'initiator_name' => $initiatorName,
-            'created_at' => $now->toIso8601String(),
+            'created_at' => ZuluTimestamp::stamp($now),
         ]);
 
         $seeded = $this->db->connection()->table('pairing_tokens')
@@ -163,7 +168,7 @@ final class PairingTokenService
             return false;
         }
 
-        $acceptedAt = $now->toIso8601String();
+        $acceptedAt = ZuluTimestamp::stamp($now);
         $newExpiry = $this->extendedExpiry($row, $now);
 
         $this->db->connection()->table('pairing_tokens')
@@ -227,7 +232,35 @@ final class PairingTokenService
 
         $stamped = $this->stampSideConfirmation($tokenId, $userId, $side, $comparedKeys);
 
-        return $stamped === null ? null : $this->finalizeIfBothConfirmed($stamped, $userId);
+        return $stamped === null ? null : $this->stateAfterAnyHeldPeerConfirm($stamped, $userId);
+    }
+
+    // The tap is what makes a held peer confirm actionable, so this is where it
+    // gets its second chance. Without it the ceremony finished on the peer and
+    // never here: a peer that reaches `confirmed` stops re-emitting, and the
+    // frame it sent while this side was still comparing was answered and gone.
+    /**
+     * @link ../../../../.docs/features/sync/pairing-handshake.md#a-deferred-confirm-is-held-not-dropped
+     */
+    private function stateAfterAnyHeldPeerConfirm(\stdClass $stamped, int $userId): string
+    {
+        $held = $this->heldPeerConfirm->on($stamped);
+        $tokenHash = is_string($stamped->token_hash) ? $stamped->token_hash : '';
+
+        // Replayed through the whole gate sequence, never trusted for having
+        // been stored: a responder that rebound in between signed for keys this
+        // row no longer binds, and the verify fails exactly as it would inbound.
+        $replayed = $held === null || $tokenHash === '' ? null : $this->applyPeerConfirm(
+            $userId,
+            $tokenHash,
+            $held['confirming_device_id'],
+            $held['peer_device_id'],
+            $held['sig_hex'],
+        );
+
+        return $replayed === null || $replayed === self::DEFERRED
+            ? $this->finalizeIfBothConfirmed($stamped, $userId)
+            : $replayed;
     }
 
     // Stamping and reading back are one step: the stamp is conditional on the
@@ -248,7 +281,7 @@ final class PairingTokenService
             ->where('user_id', $userId)
             ->where('initiator_ed25519_pub_hex', $comparedKeys['initiator'])
             ->where('responder_ed25519_pub_hex', $comparedKeys['responder'])
-            ->update([$column => $this->clock->now()->toIso8601String()]);
+            ->update([$column => ZuluTimestamp::stamp($this->clock->now())]);
 
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('id', $tokenId)
@@ -340,9 +373,25 @@ final class PairingTokenService
             // itself drive this row toward CONFIRMED — the local human must
             // have already visually matched the safety words and tapped
             // confirm. Leave the relay row pending for redelivery until then.
-            $context->localConfirmedAt === null => 'deferred',
+            $context->localConfirmedAt === null => $this->holdUntilLocalHumanConfirms($context, $userId, $confirmingDeviceId, $peerDeviceId, $sigHex),
             default => $this->recordPeerConfirmAndFinalize($context, $userId),
         };
+    }
+
+    // Held on the row as well as left for redelivery, because only one of the
+    // two roads redelivers: the relay keeps its copy, while a LAN push is
+    // answered 202 and gone, and the sender stops re-emitting the moment its
+    // own side reaches confirmed.
+    private function holdUntilLocalHumanConfirms(
+        PeerConfirmContext $context,
+        int $userId,
+        string $confirmingDeviceId,
+        string $peerDeviceId,
+        string $sigHex,
+    ): string {
+        $this->heldPeerConfirm->hold($context->rowId, $userId, $confirmingDeviceId, $peerDeviceId, $sigHex);
+
+        return self::DEFERRED;
     }
 
     // Stamps the peer's confirmation if it is not already recorded, then
@@ -355,10 +404,16 @@ final class PairingTokenService
             : null;
 
         if ($peerConfirmedAt === null) {
+            // The held copy is spent the moment its stamp lands: leaving it
+            // would keep a signature on the row long after the column it
+            // authorises was written.
             $this->db->connection()->table('pairing_tokens')
                 ->where('id', $context->rowId)
                 ->where('user_id', $userId)
-                ->update([$context->peerConfirmedColumn => $this->clock->now()->toIso8601String()]);
+                ->update([
+                    $context->peerConfirmedColumn => ZuluTimestamp::stamp($this->clock->now()),
+                    HeldPeerConfirm::COLUMN => null,
+                ]);
         }
 
         $freshRow = $this->db->connection()->table('pairing_tokens')
@@ -411,6 +466,38 @@ final class PairingTokenService
         }
 
         return PairingState::Confirmed->value;
+    }
+
+    // Gives a ceremony the reader has come back to enough window left to make
+    // the comparison, and never shortens one that still has longer to run. The
+    // caller proves the session is unlocked by holding a device id at all (see
+    // @link for what that widens and what still closes it).
+    /**
+     * @link ../../../../.docs/features/sync/pairing-handshake.md#a-pairing-outlives-the-lock-that-interrupts-it
+     */
+    public function extendCeremonyAcrossLock(int $userId, string $selfDeviceId): bool
+    {
+        // No expiry filter: reviving a row whose TTL lapsed while the app sat
+        // locked is the whole point. `pending` is excluded because it binds no
+        // responder, so there is nothing to compare and a longer window buys
+        // only a longer race for the slot.
+        $row = $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->where('state', PairingState::AwaitingConfirm->value)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($row === null || PairingRowGuards::sideOwnedBy($row, $selfDeviceId) === null) {
+            return false;
+        }
+
+        $this->db->connection()->table('pairing_tokens')
+            ->where('id', is_numeric($row->id) ? (int) $row->id : 0)
+            ->where('user_id', $userId)
+            ->where('state', PairingState::AwaitingConfirm->value)
+            ->update(['expires_at' => ZuluTimestamp::stamp($this->extendedExpiry($row, $this->clock->now()))]);
+
+        return true;
     }
 
     public function expire(int $tokenId, int $userId): void

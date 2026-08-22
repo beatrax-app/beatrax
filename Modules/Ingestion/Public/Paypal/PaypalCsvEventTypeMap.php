@@ -6,6 +6,7 @@ namespace Modules\Ingestion\Public\Paypal;
 
 use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException;
 use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
+use Modules\Ledger\Public\Enums\TransactionType;
 
 final class PaypalCsvEventTypeMap
 {
@@ -44,14 +45,14 @@ final class PaypalCsvEventTypeMap
         'nl' => [
             // Only 'parent' event types appear here; children enrich their
             // parent rather than owning a canonical type of their own.
-            'Vooraf goedgekeurde betaling – rekening betaald door gebruiker' => 'expense',
-            'Express Checkout-betaling' => 'expense',
+            'Vooraf goedgekeurde betaling – rekening betaald door gebruiker' => TransactionType::Expense->value,
+            'Express Checkout-betaling' => TransactionType::Expense->value,
 
             // 'transfer_in' so PairTransferCandidates can match the PayPal
             // side of a top-up against the ASN-side 'transfer_out'.
-            'Bankstorting' => 'transfer_in',
-            'General Withdrawal' => 'transfer_in',
-            'Transfer to bank' => 'transfer_in',
+            'Bankstorting' => TransactionType::TransferIn->value,
+            'General Withdrawal' => TransactionType::TransferIn->value,
+            'Transfer to bank' => TransactionType::TransferIn->value,
         ],
     ];
 

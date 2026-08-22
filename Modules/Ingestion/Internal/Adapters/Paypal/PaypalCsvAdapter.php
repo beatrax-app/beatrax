@@ -13,6 +13,7 @@ use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
+use Modules\Ledger\Public\Enums\Currency;
 
 final class PaypalCsvAdapter implements SourceAdapter
 {
@@ -142,10 +143,10 @@ final class PaypalCsvAdapter implements SourceAdapter
             periodStart: $periodStart,
             periodEnd: $periodEnd,
             openingBalanceMinor: 0,
-            openingBalanceCurrency: 'EUR',
+            openingBalanceCurrency: Currency::Eur->value,
             openingBalanceDate: $periodStart,
             closingBalanceMinor: $netSumMinor,
-            closingBalanceCurrency: 'EUR',
+            closingBalanceCurrency: Currency::Eur->value,
             closingBalanceDate: $periodEnd,
             entryCount: $entryCount,
             extras: $extras,

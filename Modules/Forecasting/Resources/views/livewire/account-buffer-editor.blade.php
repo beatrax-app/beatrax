@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\ValueObjects\Money')
 {{--
     Per-account buffer editor popover.
 
@@ -20,7 +21,11 @@
 --}}
 
 @php
-    $symbol = $currency === 'EUR' ? '€' : ($currency === 'USD' ? '$' : $currency);
+    // Money::SYMBOLS, not a pair of ternaries: this editor knew two of the four
+    // codes format() writes, so a GBP account showed "GBP 12.34" here and
+    // "£12.34" on the row beside it. Placement stays local — the glyph sits
+    // before the input by form convention, which assemble() decides per locale.
+    $symbol = Money::SYMBOLS[$currency] ?? $currency;
 @endphp
 
 <div role="dialog" aria-labelledby="buffer-editor-heading-{{ $accountId }}" aria-modal="false">

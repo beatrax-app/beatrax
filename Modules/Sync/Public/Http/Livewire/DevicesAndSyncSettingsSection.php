@@ -19,12 +19,16 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Crypto\EncryptionSetupStep;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Exceptions\DeviceIdentityUnreadableException;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ManagesDeviceRenaming;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsDeviceState;
+use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\Identity\DeviceIdentityState;
+use Modules\Sync\Internal\OpLog\SyncBacklogState;
+use Modules\Sync\Internal\Support\DevicesScreenOpening;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\DeviceRegistryService;
-use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Public\Services\SyncStatusService;
 use Psr\Log\LoggerInterface;
@@ -39,10 +43,22 @@ final class DevicesAndSyncSettingsSection extends Component
 
     public bool $appLockConfigured = false;
 
+    // A key-file this device holds but cannot open. Distinct from "sync is
+    // off": the identity is there, it signs this device's history, and no
+    // unlock reaches it — so the section says so rather than presenting the
+    // ordinary off-state and quietly failing every action behind it.
+    public bool $identityUnreadable = false;
+
     /**
      * @var list<array<string, mixed>>
      */
     public array $devices = [];
+
+    // The peer of a handshake that has reached the safety-word comparison and
+    // is waiting on this device, or '' when none is. Empty is the whole of the
+    // "nothing pending" state: a ceremony this device owns no side of, and one
+    // already confirmed, both read as no ceremony here.
+    public string $pairingWaitingOnPeer = '';
 
     public ?int $renamingDeviceId = null;
 
@@ -69,6 +85,11 @@ final class DevicesAndSyncSettingsSection extends Component
 
     public int $encryptionProgress = 0;
 
+    // A peer's data this device has received and not yet written into the
+    // tables the screens read. A string on the wire for the same reason
+    // $encryptionStep is one. Nothing behind any value of it is lost.
+    public string $syncBacklog = SyncBacklogState::None->value;
+
     // Set true when the mandatory at-rest-encryption auto-activation threw
     // during enableSync() — the device is synced but not yet encrypted, so
     // the blade renders a retry affordance instead of failing silently.
@@ -91,10 +112,13 @@ final class DevicesAndSyncSettingsSection extends Component
         DeviceRegistryService $registry,
         RelayConfig $relayConfig,
         PairingGateway $pairing,
-        GdkEpochDeliveryGateway $epochDelivery,
+        DeviceIdentityLoader $identityLoader,
         Session $session,
+        DevicesScreenOpening $opening,
     ): void {
         $userId = $currentUser->user()->id;
+
+        $this->identityUnreadable = $identityLoader->state($userId, $session) === DeviceIdentityState::Unreadable;
 
         // An app-lock is configured iff AppLockClientConfig returns a
         // non-null idle timeout. Read via the Auth public service (never
@@ -109,25 +133,23 @@ final class DevicesAndSyncSettingsSection extends Component
 
         $this->encryptionOn = $this->encryptionEnabled($db, $userId);
 
-        $this->applyHeldKeyWraps($pairing, $epochDelivery, $session, $userId);
-    }
+        // Kept alongside HoldPairingCeremonyOpenOnUnlock, not replaced by it: the
+        // listener catches a lapse the lock caused, this one catches a lapse it
+        // did not — a 30-minute idle window outlives a pairing TTL with no lock
+        // in between. The extension is an idempotent UPDATE, so both is free.
 
-    // The listener that receives these can never open one: it resolves a
-    // session no middleware ever started, so its app-lock key is absent by
-    // construction. This mount is the unlocked pass that comes back for what
-    // it had to leave in the mailbox.
-    private function applyHeldKeyWraps(
-        PairingGateway $pairing,
-        GdkEpochDeliveryGateway $epochDelivery,
-        Session $session,
-        int $userId,
-    ): void {
-        $deviceId = $pairing->currentDeviceId($userId, $session);
-        if ($deviceId === null) {
-            return;
-        }
+        // Before the read, not after: the read filters on a live TTL, so a
+        // ceremony that lapsed behind the lock would report as no ceremony and
+        // the extension would never reach the row it exists for.
+        $pairing->holdCeremonyOpenAcrossLock($userId, $session);
+        $this->pairingWaitingOnPeer = $opening->peerWaitingOnThisDevice($userId, $session);
 
-        $epochDelivery->drainInbox($userId, $deviceId, $session);
+        $opening->applyHeldKeyWraps($userId, $session);
+
+        // After the inbox drain, never before it: that drain is what installs
+        // a wrap this device was holding, and asking first reports a wait that
+        // the same mount had already ended.
+        $this->syncBacklog = $opening->backlog($userId, $session)->value;
     }
 
     // Enable sync: generate + persist the device identity and show the self
@@ -157,13 +179,7 @@ final class DevicesAndSyncSettingsSection extends Component
 
         $userId = $currentUser->user()->id;
 
-        try {
-            $identityService->generateAndPersist($userId, $session);
-        } catch (\LogicException) {
-            // The KEK was unavailable despite the configured-lock check (the app
-            // is locked, or the session is keyless) — surface the recovery copy.
-            $this->flashMessage = Lang::get('sync::devices.flash.enable_failed');
-
+        if (! $this->mintIdentity($identityService, $userId, $session)) {
             return;
         }
 
@@ -186,6 +202,72 @@ final class DevicesAndSyncSettingsSection extends Component
         }
 
         $this->encryptionOn = $this->encryptionEnabled($db, $userId);
+    }
+
+    // Two refusals, not one: each leaves the screen in a different state, and
+    // the second one is the difference between refusing and minting over an
+    // identity whose history a peer already carries.
+    private function mintIdentity(DeviceIdentityService $identityService, int $userId, Session $session): bool
+    {
+        try {
+            $identityService->generateAndPersist($userId, $session);
+        } catch (\LogicException) {
+            // The KEK was unavailable despite the configured-lock check (the app
+            // is locked, or the session is keyless) — surface the recovery copy.
+            $this->flashMessage = Lang::get('sync::devices.flash.enable_failed');
+
+            return false;
+        } catch (DeviceIdentityUnreadableException) {
+            // Refused rather than minted over: this device already has a
+            // key-file, it just cannot open it. Raising the flag puts the
+            // notice and its explicit replacement action on screen.
+            $this->identityUnreadable = true;
+            $this->flashMessage = Lang::get('sync::devices.identity_unreadable');
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // The only route out of an identity key-file this device cannot open, and
+    // destructive on purpose — the notice states what is lost before the tap.
+    // Nothing on a render path may take this decision, which is why the loader
+    // reports the state instead of acting on it.
+    public function replaceUnreadableIdentity(
+        CurrentUser $currentUser,
+        DeviceIdentityService $identityService,
+        Session $session,
+        DatabaseManager $db,
+        DeviceRegistryService $registry,
+        EncryptionMigrationService $migrationService,
+        LoggerInterface $logger,
+    ): void {
+        // Offered only where the blade offers it. A registered self row means
+        // an identity peers were told about and a history signed under it:
+        // retiring THAT needs the registry row and every pairing retired with
+        // it, which is not a thing one settings button may decide.
+        if (! $this->identityUnreadable || $this->syncEnabled) {
+            return;
+        }
+
+        try {
+            $identityService->retireUnreadableIdentity($currentUser->user()->id, $session);
+        } catch (DeviceIdentityUnreadableException) {
+            $this->flashMessage = Lang::get('sync::devices.flash.identity_replace_failed');
+
+            return;
+        }
+
+        // Straight on through the ordinary enable, so a device recovering from
+        // a dead key-file lands in the state a first-time enable leaves:
+        // minted identity, self row, at-rest encryption activated.
+        $this->identityUnreadable = false;
+        $this->enableSync($currentUser, $identityService, $session, $db, $registry, $migrationService, $logger);
+
+        if ($this->syncEnabled) {
+            $this->flashMessage = Lang::get('sync::devices.flash.identity_replaced');
+        }
     }
 
     // ONLY reachable from the single-device (sync off) optional offer — the
@@ -351,10 +433,18 @@ final class DevicesAndSyncSettingsSection extends Component
         $this->cancelRemove();
     }
 
+    // The notice is re-read rather than cleared: closing the modal on a
+    // cancelled handshake retires it, and closing it on a live one does not.
     #[On('pairing-closed')]
-    public function onPairingClosed(CurrentUser $currentUser, DeviceRegistryService $registry): void
-    {
-        $this->devices = $this->loadDevices($registry, $currentUser->user()->id);
+    public function onPairingClosed(
+        CurrentUser $currentUser,
+        DeviceRegistryService $registry,
+        DevicesScreenOpening $opening,
+        Session $session,
+    ): void {
+        $userId = $currentUser->user()->id;
+        $this->devices = $this->loadDevices($registry, $userId);
+        $this->pairingWaitingOnPeer = $opening->peerWaitingOnThisDevice($userId, $session);
     }
 
     // A peer was just confirmed in the pairing modal: refresh the device
@@ -367,6 +457,7 @@ final class DevicesAndSyncSettingsSection extends Component
         $this->devices = $this->loadDevices($registry, $userId);
         $this->syncEnabled = true;
         $this->encryptionOn = $this->encryptionEnabled($db, $userId);
+        $this->pairingWaitingOnPeer = '';
     }
 
     // The app-lock was just configured in the sibling AppLockSettingsSection.
@@ -412,6 +503,7 @@ final class DevicesAndSyncSettingsSection extends Component
         // raw string the client last put on the wire.
         return $views->make('sync::livewire.devices-and-sync-settings-section', [
             'encryptionModalStep' => $this->currentEncryptionStep(),
+            'backlogState' => SyncBacklogState::tryFrom($this->syncBacklog) ?? SyncBacklogState::None,
         ]);
     }
 }

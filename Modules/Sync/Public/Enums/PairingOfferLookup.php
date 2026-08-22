@@ -20,8 +20,9 @@ enum PairingOfferLookup
     case CodeMalformed;
 
     // Nothing answered: no peer advertised the service, or every one that did
-    // refused the connection or timed out. This is the only outcome for which
-    // "check that both devices are on the same network" is true.
+    // refused the connection or timed out. It does not follow that the network
+    // is at fault — on iOS the platform cannot issue the query at all, so this
+    // is also what "unable to look" looks like from here.
     case NoPeerReached;
 
     // A peer answered 429. Distinct from CodeNotAccepted because the advice

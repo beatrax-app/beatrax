@@ -6,10 +6,14 @@ return [
     'heading' => 'Zařízení a synchronizace',
 
     'enable_sync' => 'Zapnout synchronizaci',
-    'enable_sync_help' => 'Sdílej svá data bezpečně mezi důvěryhodnými zařízeními. Vyžaduje zámek aplikace.',
+    'enable_sync_help' => 'Sdílej svá data bezpečně mezi důvěryhodnými zařízeními. Vyžaduje zámek aplikace. Jakmile je zapnutý, data se zašifrují a zámek už nelze vypnout.',
 
     'app_lock_notice' => 'Nejdřív nastav zámek aplikace, pak půjde synchronizaci zapnout.',
     'go_to_app_lock' => 'Přejít na Zámek aplikace',
+
+    'identity_unreadable' => 'Synchronizační identita tohoto zařízení vznikla s jiným zámkem aplikace a už se neotevře. Dokud to platí, zařízení nemůže synchronizovat ani se párovat. Obnovením zálohy databáze, se kterou vznikla, bude znovu čitelná.',
+    'identity_unreadable_replace_help' => 'Můžeš také začít znovu: zařízení dostane novou identitu, stará zůstane nepoužitá stranou a dříve spárovaná zařízení bude potřeba spárovat znovu.',
+    'identity_unreadable_replace' => 'Vytvořit pro toto zařízení novou identitu',
 
     'encrypted_at_rest' => 'Data šifrovaná v úložišti',
     'encrypted_at_rest_scope' => 'Poznámky, popisy transakcí a jména a IBAN příjemců jsou v účetní knize šifrovány přístupovou frází zámku aplikace. Částky, data a název a IBAN tvého vlastního účtu nikoli. Index vyhledávání si drží vlastní čitelnou kopii toho, komu platíš, popisů tvých transakcí a tvých daňových poznámek, a některá jména obchodníků zůstávají čitelná jinde v souboru databáze.',
@@ -37,6 +41,11 @@ return [
     'remove_aria' => 'Odebrat: :name',
     'remove' => 'Odebrat',
     'pair_new_device' => 'Spárovat nové zařízení',
+
+    'pairing_waiting' => 'Dokončete párování se zařízením :name',
+    'pairing_waiting_help' => 'Oba displeje musí zobrazovat stejných šest slov, než párování začne platit. Otevřete je znovu a porovnejte je.',
+    'pairing_waiting_resume' => 'Pokračovat v párování',
+    'pairing_waiting_lock_override' => 'Odemknutí toto párování znovu otevře, místo aby ho nechalo vypršet, takže přetrvá déle než nastavený časový limit zámku aplikace. Skončí, jakmile ho dokončíte nebo zrušíte.',
 
     'relay_endpoint' => 'Adresa relay serveru',
     'relay_endpoint_help' => 'Volitelné. Když je nastavená, zařízení offline se synchronizují přes tento relay server. Nech prázdné, pokud chceš jen spojení LAN&#8209;přímo.',
@@ -68,6 +77,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Nejdřív nastav zámek aplikace, pak půjde synchronizaci zapnout.',
         'enable_failed' => 'Synchronizaci se nepodařilo zapnout. Zkontroluj, že je zámek aplikace aktivní, a zkus to znovu.',
+        'identity_replaced' => 'Toto zařízení má novou synchronizační identitu. Spáruj ostatní zařízení znovu.',
+        'identity_replace_failed' => 'Starou identitu zařízení se nepodařilo odložit stranou. Zkus to znovu.',
         'cannot_remove_self' => 'Toto zařízení odebrat nemůžeš — právě ho používáš.',
         'remove_failed' => 'Zařízení se nepodařilo odebrat. Zkus to prosím znovu.',
         'app_lock_first_settings' => 'Nejdřív nastav zámek aplikace, pak půjde nastavení synchronizace změnit.',
@@ -75,4 +86,8 @@ return [
         'relay_saved' => 'Adresa relay serveru uložena.',
         'relay_save_failed' => 'Adresu relay serveru se nepodařilo uložit: :message',
     ],
+    'app_lock_permanent' => 'Jakmile jsou data šifrovaná, zámek aplikace už nelze vypnout — drží jediný klíč a cesta zpět k nešifrovaným datům neexistuje.',
+    'backlog_heading' => 'Čeká na přidání',
+    'backlog_deferred' => 'Toto zařízení přijalo data z jiného zařízení a zatím je nepřidalo do tvé evidence. Nic se neztrácí — přidají se automaticky, obvykle během okamžiku.',
+    'backlog_awaiting_key' => 'Toto zařízení přijalo data, ke kterým zatím nemá klíč. Nic se neztrácí. Otevři aplikaci na spárovaném zařízení, zatímco je toto otevřené, aby se obě mohla spojit a klíč se mohl odeslat.',
 ];

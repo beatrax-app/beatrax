@@ -16,6 +16,8 @@ use Modules\Sync\Internal\Pairing\PairingTokenRowReader;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
+use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Enums\LanDiscoveryReach;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 use stdClass;
 
@@ -45,7 +47,20 @@ final class PairingGateway
         private readonly GdkRotationService $rotationService,
         private readonly PairingPeerLink $peerLink,
         private readonly SafetyNumberDeriver $safetyDeriver,
+        private readonly PeerDiscovery $discovery,
     ) {}
+
+    // The companion question to discoverInitiatorOnLan()'s NoPeerReached: could
+    // this device have looked at all? An empty browse means "nobody answered"
+    // only where the question reached the network, so a screen reading this
+    // stops naming a platform to know what the silence meant.
+    /**
+     * @link ../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md
+     */
+    public function lanDiscoveryReach(): LanDiscoveryReach
+    {
+        return $this->discovery->reach();
+    }
 
     // A word-code carries the token alone, so a fresh responder has no local row to
     // accept against; this asks the LAN for the identity half the code cannot carry.
@@ -203,6 +218,22 @@ final class PairingGateway
     public function safetyDigestOf(array $words): string
     {
         return $this->safetyDeriver->digestOfWords($words);
+    }
+
+    // Holding a device id at all is the proof this session is unlocked: the
+    // loader behind it needs the app-lock KEK and answers null without one. So
+    // this cannot fire on a locked app, which is the only gate the extension has
+    // and the reason the screen it runs on must disclose it (see @link).
+    /**
+     * @link ../../../../.docs/features/sync/pairing-handshake.md#a-pairing-outlives-the-lock-that-interrupts-it
+     *
+     * @return bool whether a ceremony this device owns a side of was held open
+     */
+    public function holdCeremonyOpenAcrossLock(int $userId, Session $session): bool
+    {
+        $deviceId = $this->currentDeviceId($userId, $session);
+
+        return $deviceId !== null && $this->tokenService->extendCeremonyAcrossLock($userId, $deviceId);
     }
 
     public function expire(int $tokenId, int $userId): void

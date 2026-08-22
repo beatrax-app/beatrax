@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Conferma la nuova password',
     'submit' => 'Salva la nuova password',
 
+    'error_current_required' => 'Inserisci la tua password attuale.',
     'error_current_incorrect' => 'La password attuale non è corretta.',
     'error_mismatch' => 'Le password non coincidono.',
     'error_min_length' => 'Usa almeno 12 caratteri.',

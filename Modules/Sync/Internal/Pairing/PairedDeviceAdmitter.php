@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Pairing;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
+use Modules\Sync\Internal\Clock\ZuluTimestamp;
 
 /**
  * @link ../../../../.docs/features/sync/pairing-handshake.md
@@ -82,7 +83,7 @@ final class PairedDeviceAdmitter
         }
 
         $safetyWords = implode(' ', $this->safetyNumberDeriver->deriveWords($initiatorEdHex, $responderEdHex));
-        $now = $this->clock->now()->toIso8601String();
+        $now = ZuluTimestamp::stamp($this->clock->now());
 
         // Scope the lookup/update to NON-self rows — defense-in-depth so an
         // admit can never mutate the local self-row even if the collision

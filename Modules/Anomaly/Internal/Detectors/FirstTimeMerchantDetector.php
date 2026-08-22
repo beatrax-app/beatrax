@@ -68,8 +68,8 @@ final readonly class FirstTimeMerchantDetector
     private function isLargeVsOverall(array $txn, User $user, int $absMinor, int $excludeId): bool
     {
         $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : $this->baseCurrency->code();
-        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
-        $types = Direction::from($direction)->transactionTypes();
+        $direction = TransactionType::directionOf($txn['type'] ?? null)->value;
+        $types = TransactionType::valuesFor(Direction::from($direction));
         $windowStart = $this->clock->now()
             ->subMonthsNoOverflow(RobustStatistics::WINDOW_MONTHS)
             ->toDateString();

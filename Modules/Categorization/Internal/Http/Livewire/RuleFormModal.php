@@ -17,6 +17,8 @@ use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Categorization\Public\Enums\ActionType;
+use Modules\Categorization\Public\Enums\ConditionOperator;
+use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -34,7 +36,7 @@ final class RuleFormModal extends Component
 
     public ?int $editingRuleId = null;
 
-    public string $combinator = 'all';
+    public string $combinator = RuleCombinator::All->value;
 
     public string $priorityInput = '10';
 
@@ -127,13 +129,13 @@ final class RuleFormModal extends Component
         }
         $validOps = array_keys(self::operatorOptionsFor($this->conditions[$index]['field']));
         if (! in_array($this->conditions[$index]['op'], $validOps, true)) {
-            $this->conditions[$index]['op'] = $validOps[0] ?? 'contains';
+            $this->conditions[$index]['op'] = $validOps[0] ?? ConditionOperator::Contains->value;
         }
     }
 
     private function clearStaleUpperBound(int $index): void
     {
-        if (isset($this->conditions[$index]) && $this->conditions[$index]['op'] !== 'between') {
+        if (isset($this->conditions[$index]) && $this->conditions[$index]['op'] !== ConditionOperator::Between->value) {
             $this->conditions[$index]['value2'] = null;
         }
     }
@@ -283,12 +285,12 @@ final class RuleFormModal extends Component
     private function resetToBlankForm(): void
     {
         $this->editingRuleId = null;
-        $this->combinator = 'all';
+        $this->combinator = RuleCombinator::All->value;
         $this->priorityInput = '10';
         $this->active = true;
         $this->notes = null;
         $this->conditions = [self::blankCondition()];
-        $this->actions = [self::blankAction('category')];
+        $this->actions = [self::blankAction(ActionType::Category->value)];
     }
 
     public function cancel(): void
@@ -327,11 +329,11 @@ final class RuleFormModal extends Component
     private function resetToCreateDefaults(CurrentUser $currentUser, DatabaseManager $db): void
     {
         $this->editingRuleId = null;
-        $this->combinator = 'all';
+        $this->combinator = RuleCombinator::All->value;
         $this->active = true;
         $this->notes = null;
         $this->conditions = [self::blankCondition()];
-        $this->actions = [self::blankAction('category')];
+        $this->actions = [self::blankAction(ActionType::Category->value)];
 
         $maxPriority = $db->connection()
             ->table('categorization_rules')

@@ -16,6 +16,7 @@ use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
+use Modules\Core\Public\Support\RowChunk;
 use stdClass;
 
 // Deliberately unscoped by `user_id`: revival is a pure timer transition, and
@@ -28,7 +29,7 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
     use SerializesModels;
     use TunedQueueJob;
 
-    private const CHUNK = 500;
+    private const int CHUNK = RowChunk::DEFAULT_SIZE;
 
     public function handle(DatabaseManager $db, AnomalyAlertStateMachine $stateMachine, Clock $clock): void
     {

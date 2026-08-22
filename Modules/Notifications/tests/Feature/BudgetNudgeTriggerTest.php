@@ -10,11 +10,11 @@ use Modules\Budgets\Internal\Jobs\EmitBudgetNudgesJob;
 use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
@@ -122,7 +122,7 @@ function bntRunJob(User $user): void
         $job = new EmitBudgetNudgesJob($user->id);
         $job->handle(
             app(CarryoverQuery::class),
-            app(Clock::class),
+            app(PeriodQuery::class),
             app(Dispatcher::class),
             app(AuthFactory::class),
         );

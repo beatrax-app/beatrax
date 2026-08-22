@@ -22,6 +22,7 @@ return [
     'word_code_aria' => "Inserisci il codice a parole dell'altro dispositivo",
     'submit_code' => 'Invia il codice',
     'cancel' => 'Annulla',
+    'skip_import' => 'Continua senza importare',
 
     'confirm_heading' => "Confronta queste parole con l'altro dispositivo",
     'safety_words_aria' => 'Parole del numero di sicurezza: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => "Impossibile raggiungere l'altro dispositivo. Assicurati che siano entrambi sulla stessa rete e che la sincronizzazione sia attiva sul desktop.",
         'invalid_code' => "Questo codice non è valido o è scaduto. Chiedi all'altro dispositivo di generarne uno nuovo.",
         'code_not_accepted' => 'Nessun dispositivo su questa rete ha accettato il codice. Controlla il codice e che l’altro dispositivo lo stia ancora mostrando.',
+        'no_peer_answered' => 'Niente su questa rete ha risposto a quel codice. Controlla che la sincronizzazione sia attiva sull’altro dispositivo, oppure scansiona il suo codice con la fotocamera — la fotocamera non deve cercare sulla rete.',
+        'no_peer_answered_ios' => 'Niente su questa rete ha risposto a quel codice. Cercare l’altro dispositivo sulla rete non funziona ancora su iPhone, quindi scansiona il suo codice con la fotocamera.',
         'rate_limited' => 'Troppi tentativi. Aspetta un minuto e riprova.',
         'identity_locked' => "L'identità del tuo dispositivo è bloccata. Sblocca l'app e riprova.",
         'identity_needs_lock' => "Configura prima il blocco dell'app — protegge l'identità del tuo dispositivo.",

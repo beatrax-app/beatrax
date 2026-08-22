@@ -26,6 +26,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -94,6 +95,7 @@ final class ConnectBankStep extends Component
         Application $app,
         DatabaseManager $db,
         AccountSlugResolver $slugs,
+        BaseCurrency $baseCurrency,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -122,7 +124,7 @@ final class ConnectBankStep extends Component
             return;
         }
 
-        if ($this->createMissingBankAccounts($result, $user, $db, $slugs) > 0) {
+        if ($this->createMissingBankAccounts($result, $user, $db, $slugs, $baseCurrency) > 0) {
             $this->repreview($result->importRunId, $user, $importer, $formatHint, $logger, $app);
         }
 
@@ -151,13 +153,13 @@ final class ConnectBankStep extends Component
     /**
      * @return int how many accounts the preview needed that did not exist yet
      */
-    private function createMissingBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, AccountSlugResolver $slugs): int
+    private function createMissingBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, AccountSlugResolver $slugs, BaseCurrency $baseCurrency): int
     {
         $bankLabel = $this->bankLabelFor($this->selectedFormat, $this->selectedBankFormatHint);
 
         $created = 0;
         foreach ($result->accountsToName as $unknown) {
-            if ($this->createBankAccount($unknown, $bankLabel, $user, $db, $slugs)) {
+            if ($this->createBankAccount($unknown, $bankLabel, $user, $db, $slugs, $baseCurrency)) {
                 $created++;
             }
         }
@@ -165,7 +167,7 @@ final class ConnectBankStep extends Component
         return $created;
     }
 
-    private function createBankAccount(UnknownIban $unknown, string $bankLabel, User $user, DatabaseManager $db, AccountSlugResolver $slugs): bool
+    private function createBankAccount(UnknownIban $unknown, string $bankLabel, User $user, DatabaseManager $db, AccountSlugResolver $slugs, BaseCurrency $baseCurrency): bool
     {
         $exists = $db->connection()
             ->table('accounts')
@@ -182,7 +184,7 @@ final class ConnectBankStep extends Component
             'slug' => $slugs->resolveUnique($user->id, $bankLabel),
             'kind' => AccountKind::Bank->value,
             'iban' => $unknown->iban,
-            'default_currency' => 'EUR',
+            'default_currency' => $baseCurrency->code(),
         ]);
 
         return true;

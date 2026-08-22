@@ -12,6 +12,9 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ReportDimension;
+use Modules\Reports\Internal\Enums\ReportMetricSelection;
+use Modules\Reports\Internal\Enums\ReportViz;
 use Modules\Reports\Internal\Services\PinnedReportsQuery;
 
 final class PinnedReportsRow extends Component
@@ -59,7 +62,7 @@ final class PinnedReportsRow extends Component
     {
         $chartType = $this->chartTypeFor($definition);
 
-        $options = $chartType === 'donut'
+        $options = $chartType === ReportViz::Donut->value
             ? $this->donutOptions($rows)
             : $this->seriesOptions($chartType, $rows);
 
@@ -72,11 +75,15 @@ final class PinnedReportsRow extends Component
     // own metric default: net-worth/time-series -> line, else -> bar.
     private function chartTypeFor(ReportDefinition $definition): string
     {
-        if (in_array($definition->viz, ['bar', 'line', 'donut'], true)) {
-            return $definition->viz;
+        // Asked of the enum rather than a second copy of its cases: Table is the
+        // one case a chart cannot be drawn as, so everything else is drawable.
+        $viz = ReportViz::tryFrom($definition->viz);
+
+        if ($viz !== null && $viz !== ReportViz::Table) {
+            return $viz->value;
         }
 
-        return ($definition->metric === 'net_worth' || $definition->dimension === 'time_bucket') ? 'line' : 'bar';
+        return ($definition->metric === ReportMetricSelection::NetWorth->value || $definition->dimension === ReportDimension::TimeBucket->value) ? ReportViz::Line->value : ReportViz::Bar->value;
     }
 
     /**
@@ -102,8 +109,8 @@ final class PinnedReportsRow extends Component
             'series' => [
                 ['data' => $data],
             ],
-            'stroke' => $chartType === 'line' ? ['curve' => 'straight', 'width' => 2] : ['width' => 0],
-            'plotOptions' => $chartType === 'bar' ? ['bar' => ['borderRadius' => 2, 'columnWidth' => '55%']] : [],
+            'stroke' => $chartType === ReportViz::Line->value ? ['curve' => 'straight', 'width' => 2] : ['width' => 0],
+            'plotOptions' => $chartType === ReportViz::Bar->value ? ['bar' => ['borderRadius' => 2, 'columnWidth' => '55%']] : [],
             'colors' => ['#0F172A'],
             'dataLabels' => ['enabled' => false],
             'xaxis' => [

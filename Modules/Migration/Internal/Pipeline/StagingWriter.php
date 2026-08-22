@@ -7,6 +7,7 @@ namespace Modules\Migration\Internal\Pipeline;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\RowChunk;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Dto\MigrationAccountDto;
 use Modules\Migration\Internal\Dto\MigrationBatch;
@@ -19,7 +20,7 @@ use Modules\Migration\Internal\Dto\UnmappedItemDto;
 
 final class StagingWriter
 {
-    private const CHUNK_SIZE = 500;
+    private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     // No parser populates MigrationAccountDto::$kind, so this placeholder exists
     // only to satisfy the NOT NULL column; it carries no promote-time meaning.

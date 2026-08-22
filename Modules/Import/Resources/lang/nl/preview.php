@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Ontgrendel de app om te importeren: de handelaarssleutel kan niet worden berekend zolang hij vergrendeld is.',
+        'app_locked' => 'Ontgrendel de app om te importeren: de versleutelingssleutels kunnen niet worden gebruikt zolang hij vergrendeld is.',
         'file_unreadable' => 'Dit bestand kon niet worden gelezen.',
         'iban_not_in_preview' => 'Dit IBAN maakt geen deel uit van de huidige voorvertoning.',
         'row_unreadable' => 'Deze regel kon niet worden gelezen.',

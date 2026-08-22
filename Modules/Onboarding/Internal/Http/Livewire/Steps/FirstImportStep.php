@@ -23,6 +23,7 @@ use Modules\Import\Public\Dto\StartingBalanceCandidate;
 use Modules\Import\Public\Enums\PreviewSectionStatus;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Import\Public\Services\DetectStartingBalancesQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Onboarding\Internal\Enums\WizardStepStatus;
 use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 use Psr\Log\LoggerInterface;
@@ -220,6 +221,7 @@ final class FirstImportStep extends Component
         DetectStartingBalancesQuery $detectBalances,
         CurrentUser $currentUser,
         DatabaseManager $db,
+        BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
 
@@ -234,7 +236,7 @@ final class FirstImportStep extends Component
         // this flat list by accountId to spot it.
         $this->startingBalances = $detectBalances->collect($this->stashedImportRunIds, $user);
 
-        $this->accountMeta = $this->loadAccountMeta($user->id, $db, $this->startingBalances);
+        $this->accountMeta = $this->loadAccountMeta($user->id, $db, $this->startingBalances, $baseCurrency);
 
         return $views->make('onboarding::livewire.steps.first-import-step', [
             'preview' => $this->preview,
@@ -304,7 +306,7 @@ final class FirstImportStep extends Component
      * @param  list<StartingBalanceCandidate>  $candidates
      * @return array<int, array{label: string, short: string, currency: string}>
      */
-    private function loadAccountMeta(int $userId, DatabaseManager $db, array $candidates): array
+    private function loadAccountMeta(int $userId, DatabaseManager $db, array $candidates, BaseCurrency $baseCurrency): array
     {
         if ($candidates === []) {
             return [];
@@ -326,7 +328,7 @@ final class FirstImportStep extends Component
             $id = is_numeric($row->id) ? (int) $row->id : 0;
             $name = is_string($row->name) ? $row->name : '';
             $iban = is_string($row->iban) ? $row->iban : '';
-            $currency = is_string($row->default_currency) ? $row->default_currency : 'EUR';
+            $currency = is_string($row->default_currency) ? $row->default_currency : $baseCurrency->code();
             $kind = is_string($row->kind) ? $row->kind : '';
 
             $shortTail = strlen($iban) >= 4 ? substr($iban, -4) : $iban;

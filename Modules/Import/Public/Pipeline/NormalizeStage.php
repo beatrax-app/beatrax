@@ -7,6 +7,7 @@ namespace Modules\Import\Public\Pipeline;
 use Modules\Core\Models\User;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -27,9 +28,9 @@ final class NormalizeStage
         $normalized = $this->counterpartyKey->forName($source->counterpartyName, $user->id);
 
         $type = match (true) {
-            $source->amountMinor > 0 => 'income',
-            $source->amountMinor < 0 => 'expense',
-            default => 'adjustment',
+            $source->amountMinor > 0 => TransactionType::Income->value,
+            $source->amountMinor < 0 => TransactionType::Expense->value,
+            default => TransactionType::Adjustment->value,
         };
 
         // A EUR-native row leaves the settled fields null and inherits the

@@ -16,6 +16,7 @@ use Modules\Community\Public\Dto\SuggestMappingDto;
 use Modules\Community\Public\Events\MysteryMerchantSubmitted;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\Lang;
 
 final class SuggestMappingModal extends Component
@@ -28,22 +29,33 @@ final class SuggestMappingModal extends Component
 
     public ?string $category = null;
 
-    public string $region = 'NL';
+    public string $region = '';
 
     public string $submitError = '';
 
-    #[On('suggest-mapping:open')]
-    public function open(string $rawDescription, ?string $name = null, ?string $category = null): void
+    public function mount(CurrentUser $currentUser, UserCountry $countries): void
     {
+        $this->region = self::regionFor($currentUser, $countries);
+    }
+
+    #[On('suggest-mapping:open')]
+    public function open(
+        CurrentUser $currentUser,
+        UserCountry $countries,
+        string $rawDescription,
+        ?string $name = null,
+        ?string $category = null,
+    ): void {
         $this->pattern = $rawDescription;
         $this->name = $name ?? '';
         $this->category = $category;
-        $this->region = 'NL';
+        $this->region = self::regionFor($currentUser, $countries);
         $this->submitError = '';
     }
 
     public function submit(
         CurrentUser $currentUser,
+        UserCountry $countries,
         OpenExternalUrlAction $openUrl,
         GitHubCompareUrlBuilder $urlBuilder,
         Dispatcher $events,
@@ -74,8 +86,8 @@ final class SuggestMappingModal extends Component
         $dto = new SuggestMappingDto(
             pattern: $pattern,
             name: $name,
+            region: $this->region,
             category: $category,
-            region: $this->region !== '' ? $this->region : 'NL',
         );
 
         $url = $urlBuilder->build($dto);
@@ -99,7 +111,7 @@ final class SuggestMappingModal extends Component
         $this->pattern = '';
         $this->name = '';
         $this->category = null;
-        $this->region = 'NL';
+        $this->region = self::regionFor($currentUser, $countries);
     }
 
     public function cancel(): void
@@ -107,8 +119,31 @@ final class SuggestMappingModal extends Component
         $this->dispatch('modal-close', name: 'suggest-mapping');
     }
 
-    public function render(ViewFactory $views): View
+    public function render(ViewFactory $views, UserCountry $countries): View
     {
-        return $views->make('community::livewire.suggest-mapping-modal');
+        return $views->make('community::livewire.suggest-mapping-modal', [
+            'regionOptions' => self::regionOptions($countries),
+        ]);
+    }
+
+    // The corpus stores the region upper-cased and CommunityCorpusQuery scopes
+    // a read to it, so a suggestion filed under any other code never comes back
+    // to the reader who made it.
+    private static function regionFor(CurrentUser $currentUser, UserCountry $countries): string
+    {
+        return strtoupper($countries->current($currentUser->id()));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function regionOptions(UserCountry $countries): array
+    {
+        $options = [];
+        foreach ($countries->options() as $code => $label) {
+            $options[strtoupper($code)] = $label;
+        }
+
+        return $options;
     }
 }

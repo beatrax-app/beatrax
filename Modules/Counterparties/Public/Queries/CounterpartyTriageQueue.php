@@ -95,9 +95,12 @@ final readonly class CounterpartyTriageQueue
             'iban' => $row->iban ?? null,
         ], $userId, $this->session);
 
+        // Unknown, not empty: hydrate() makes whatever lands here the model's
+        // own value, and the two nullable columns say "we have none" with null.
+        // display_name is not nullable, so there the blank stands.
         $row->display_name = $decrypted['display_name'];
-        $row->merchant_name = $decrypted['merchant_name'];
-        $row->iban = $decrypted['iban'];
+        $row->merchant_name = $decrypted->isUnreadable('merchant_name') ? null : $decrypted['merchant_name'];
+        $row->iban = $decrypted->isUnreadable('iban') ? null : $decrypted['iban'];
 
         return $row;
     }

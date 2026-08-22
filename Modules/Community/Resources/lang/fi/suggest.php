@@ -14,10 +14,6 @@ return [
     'region' => 'Alue',
 
     'regions' => [
-        'nl' => 'NL — Alankomaat',
-        'be' => 'BE — Belgia',
-        'de' => 'DE — Saksa',
-        'fr' => 'FR — Ranska',
         'other' => 'Muu',
     ],
 

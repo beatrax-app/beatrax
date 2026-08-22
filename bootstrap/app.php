@@ -16,6 +16,8 @@ use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
+use Modules\Desktop\Internal\Http\Middleware\RecoverSealedLedger;
+use Modules\Sync\Internal\Http\Middleware\CarriesPendingPairingFrames;
 use Psr\Log\LoggerInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -40,9 +42,17 @@ return Application::configure(basePath: dirname(__DIR__))
         // `web`, not global: both read StartSession and the auth guard.
         // SetLocale goes first because EnsureDatabaseReady redirects a device
         // with no account, which left every pre-signup screen in English.
+        // This root only. The mobile root drives its own re-projection from
+        // the import cursor, and a second one firing per poll would rebuild
+        // the whole history on every tick of a running import.
         $middleware->web(append: [
             SetLocale::class,
             EnsureDatabaseReady::class,
+            RecoverSealedLedger::class,
+            // Terminate-time, and last: a pairing ceremony must not depend on
+            // one screen staying open, and this root's other driver — the
+            // sync:serve timer — is only running while the daemon is up.
+            CarriesPendingPairingFrames::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

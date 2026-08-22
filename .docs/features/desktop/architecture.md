@@ -43,8 +43,9 @@ What the module explicitly does NOT do:
 `Public/` exposes the cross-module contracts and events:
 
 - **Contracts/**
-  - `OsThemeSignal::current()` — returns the current OS theme
-    (`light` / `dark` / `null` for "unknown"). Bound to
+  - `OsThemeSignal::currentOsTheme()` — returns the current OS theme
+    (`light` / `dark`, or `null` when the OS itself holds no explicit
+    preference — NativePHP's `SystemThemesEnum::SYSTEM`). Bound to
     `Internal\Native\OsThemeProbe` ONLY inside the NativePHP bundle;
     under local dev / CI the binding is absent and the app-layout falls
     through to the client-side `prefers-color-scheme` pre-paint
@@ -113,13 +114,17 @@ What the module explicitly does NOT do:
 
 ## Key services + events
 
-- `FirstLaunchBootstrap::run()` — runs the migrator, then runs
-  `Core::EnsureAppKey`. Both steps are idempotent; the chain runs on
-  every launch.
-- `FileOpenIntake::admit($path)` — the security boundary for every
-  OS-supplied path. Validates extension allow-list, size bound, and
-  realpath canonicalisation before raising `FileOpenedFromOs`. A
-  rejected path is logged at `warning` and dropped.
+- `FirstLaunchBootstrap::runPendingMigrations()` — runs the migrator,
+  then runs `Core::EnsureAppKey`. Both steps are idempotent; the chain
+  runs on every launch. The same class also answers
+  `hasPendingMigrations()` and `isFreshInstall()`, which is what
+  `EnsureDatabaseReady` routes the first request on.
+- `FileOpenIntake::receive($path)` — the security boundary for every
+  OS-supplied path. Validates realpath canonicalisation, the
+  extension allow-list and the per-extension size cap before raising
+  `FileOpenedFromOs`. A rejected path is dropped in silence: nothing
+  is logged and no event is emitted, and `FileOpenController` answers
+  the Electron caller `204` either way.
 - `DispatchOsNotification` — the sole desktop delivery adapter for the
   Notifications module's `NotificationDeliverable` event. The
   Notifications module decides *what* to notify and persists the row
@@ -129,11 +134,17 @@ What the module explicitly does NOT do:
   the in-app `SystemAlertsBanner`/notification inbox handles it), then
   the per-device hide-details preference (swaps the real body for a
   detail-free fallback).
-- `WindowCloseBehavior::decide($user)` — reads
-  `users.close_behavior` and returns the choice. The Electron close-
-  intercept hook in `NativeAppServiceProvider` calls this and
-  delegates to either `App::quit()` or `Window::current()->hide()`.
-- `OsThemeProbe::current()` — concrete `OsThemeSignal` reading the
+- `WindowCloseBehavior::choiceFor($user)` — reads
+  `users.close_behavior` and returns the choice, with
+  `shouldPromptFor($user)` for the null case (never asked) and
+  `persistChoice($user, $choice)` for the write, which refuses
+  anything outside `{quit, tray}`. The two values are `'quit'` and
+  `'tray'` — hide to the menu bar, keeping the bundled worker and
+  scheduler alive — not `'minimize'`. The Electron close-intercept
+  hook in `NativeAppServiceProvider` reads the choice; the
+  `App::quit()` / `Window::current()->hide()` calls themselves live
+  in `ApplyCloseWindowChoice`.
+- `OsThemeProbe::currentOsTheme()` — concrete `OsThemeSignal` reading the
   OS theme. The binding is registered only inside the bundle, so the
   layout's `app()->bound(OsThemeSignal::class)` check falls through
   to the client-side pre-paint script under local dev / CI.
@@ -154,7 +165,7 @@ NativePHP main process boots
   → boot Laravel kernel
        → CoreServiceProvider boots
        → DesktopServiceProvider boots (registers NativePHP bindings)
-       → FirstLaunchBootstrap::run
+       → FirstLaunchBootstrap::runPendingMigrations
             → Migrator::run                      (idempotent)
             → Core::EnsureAppKey::run            (sentinel-guarded)
   → Electron renders the first window
@@ -168,10 +179,10 @@ User opens a .csv from Finder / Explorer
   → Electron main fires App::OpenFile($path)
   → Laravel event bus receives OpenFile
   → HandleNativeOpenFile::handle
-       → FileOpenIntake::admit($path)
-            → extension allow-list, size, realpath
-            → dispatch FileOpenedFromOs($path) on success
-            → log warning on rejection
+       → FileOpenIntake::receive($path)
+            → realpath, then extension allow-list, then per-extension cap
+            → dispatch FileOpenedFromOs($path, $extension) on success
+            → return without a trace on rejection (no event, no log)
   → Import / Receipts listeners pick up FileOpenedFromOs
        → if user logged in: route to ImportPipeline preview
        → if no auth: PendingFileIntent::remember($path); redirect /login

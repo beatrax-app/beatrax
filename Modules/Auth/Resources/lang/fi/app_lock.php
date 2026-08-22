@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN-koodissa on oltava vähintään 6 numeroa.',
     'error_pin_mismatch' => 'PIN-koodit eivät täsmää. Yritä uudelleen.',
+    'error_pin_required' => 'Anna PIN-koodisi.',
     'error_pin_incorrect' => 'Väärä PIN-koodi.',
+    'error_account_password_required' => 'Anna tilisi salasana.',
     'error_account_password' => 'Väärä tilin salasana.',
     'change_pin_success' => 'Salausavaimesi on suojattu uudelleen uudella PIN-koodillasi.',
     'error_forgot_failed' => 'PIN-koodin nollaus epäonnistui — palautusavain ei ole käytettävissä.',
     'error_enable_first' => 'Ota PIN-lukko käyttöön ennen biometrisen avauksen käyttöönottoa.',
+    'error_disable_blocked_by_encryption' => 'Muistiinpanosi ja vastapuolten tiedot on salattu avaimella, jota tämä sovelluslukitus pitää, joten lukituksen poistaminen jättäisi ne lukukelvottomiksi. Lukitus jää päälle — vaihda mieluummin PIN-koodisi.',
+    'error_key_material_lost' => 'Tämä laite ei enää pidä avainta, joka avaa salatut tietosi, joten uusi PIN-koodi ei tee niistä taas luettavia. Muodosta laitepari sellaisen laitteen kanssa, jolla avain on yhä tallessa, niin saat ne takaisin.',
+    'error_recovery_wrap_stale' => 'Tilin salasana ei enää avaa tätä sovelluslukkoa — se vaihdettiin lukon käyttöönoton jälkeen. PIN-koodisi toimii yhä, mutta sen takana ei ole mitään, jos unohdat sen. Liitä tilin salasana uudelleen nyt.',
+    'relink_recovery' => 'Liitä tilin salasana uudelleen',
+    'relink_modal_heading' => 'Liitä tilin salasana uudelleen — vahvista PIN-koodilla',
+    'relink_recovery_success' => 'Tilin salasana voi taas palauttaa tämän sovelluslukon.',
 ];

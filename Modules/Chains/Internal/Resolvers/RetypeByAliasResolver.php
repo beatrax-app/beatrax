@@ -10,6 +10,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\RowChunk;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -20,9 +22,9 @@ final class RetypeByAliasResolver
 {
     use CoercesScalars;
 
-    private const UPDATE_BATCH_SIZE = 500;
+    private const int UPDATE_BATCH_SIZE = RowChunk::DEFAULT_SIZE;
 
-    private const CANDIDATE_CHUNK_SIZE = 500;
+    private const int CANDIDATE_CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -58,7 +60,7 @@ final class RetypeByAliasResolver
             ->table('transactions')
             ->select(['id', 'account_id', 'amount_minor', 'counterparty_iban'])
             ->where('user_id', $user->id)
-            ->whereIn('type', ['expense', 'income'])
+            ->whereIn('type', [TransactionType::Expense->value, TransactionType::Income->value])
             ->whereNotNull('counterparty_iban')
             ->where('counterparty_iban', '!=', '')
             ->chunkById(self::CANDIDATE_CHUNK_SIZE, function ($rows) use (
@@ -82,8 +84,8 @@ final class RetypeByAliasResolver
             });
 
         $touched = 0;
-        $touched += $this->applyRetype($connection, $transferOutIds, 'transfer_out', $now);
-        $touched += $this->applyRetype($connection, $transferInIds, 'transfer_in', $now);
+        $touched += $this->applyRetype($connection, $transferOutIds, TransactionType::TransferOut->value, $now);
+        $touched += $this->applyRetype($connection, $transferInIds, TransactionType::TransferIn->value, $now);
 
         return $touched;
     }

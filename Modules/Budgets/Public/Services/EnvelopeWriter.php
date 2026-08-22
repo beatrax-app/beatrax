@@ -17,6 +17,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
@@ -25,8 +26,6 @@ use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 final class EnvelopeWriter
 {
     use CoercesScalars;
-
-    private const CURRENCY = 'EUR';
 
     public const MIN_NOTIFY_THRESHOLD_PERCENT = 1;
 
@@ -37,6 +36,7 @@ final class EnvelopeWriter
         private readonly Clock $clock,
         private readonly Dispatcher $events,
         private readonly BudgetProgressQuery $query,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -90,7 +90,7 @@ final class EnvelopeWriter
 
                 $connection->table('envelope_assignments')->where('id', $id)->update([
                     'assigned_minor' => $minor,
-                    'currency' => self::CURRENCY,
+                    'currency' => $this->baseCurrency->code(),
                     'updated_at' => $this->clock->now(),
                 ]);
 
@@ -110,7 +110,7 @@ final class EnvelopeWriter
                 'category_id' => $categoryId,
                 'period_start' => $periodDate,
                 'assigned_minor' => $minor,
-                'currency' => self::CURRENCY,
+                'currency' => $this->baseCurrency->code(),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]));
@@ -124,7 +124,7 @@ final class EnvelopeWriter
                     'category_id' => $categoryId,
                     'period_start' => $periodDate,
                     'assigned_minor' => $minor,
-                    'currency' => self::CURRENCY,
+                    'currency' => $this->baseCurrency->code(),
                 ],
             );
         });
@@ -339,7 +339,7 @@ final class EnvelopeWriter
                 'counterpart_category_id' => $toCategoryId,
                 'period_start' => $periodDate,
                 'amount_minor' => -$minor,
-                'currency' => self::CURRENCY,
+                'currency' => $this->baseCurrency->code(),
                 'kind' => 'move_out',
                 'memo' => $memo,
                 'move_group_id' => $groupId,
@@ -353,7 +353,7 @@ final class EnvelopeWriter
                 'counterpart_category_id' => $fromCategoryId,
                 'period_start' => $periodDate,
                 'amount_minor' => $minor,
-                'currency' => self::CURRENCY,
+                'currency' => $this->baseCurrency->code(),
                 'kind' => 'move_in',
                 'memo' => $memo,
                 'move_group_id' => $groupId,
@@ -374,7 +374,7 @@ final class EnvelopeWriter
                 'counterpart_category_id' => $toCategoryId,
                 'period_start' => $periodDate,
                 'amount_minor' => -$minor,
-                'currency' => self::CURRENCY,
+                'currency' => $this->baseCurrency->code(),
                 'kind' => 'move_out',
                 'move_group_id' => $groupId,
             ],
@@ -390,7 +390,7 @@ final class EnvelopeWriter
                 'counterpart_category_id' => $fromCategoryId,
                 'period_start' => $periodDate,
                 'amount_minor' => $minor,
-                'currency' => self::CURRENCY,
+                'currency' => $this->baseCurrency->code(),
                 'kind' => 'move_in',
                 'move_group_id' => $groupId,
             ],

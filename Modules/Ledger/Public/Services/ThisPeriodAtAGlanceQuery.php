@@ -30,8 +30,6 @@ final class ThisPeriodAtAGlanceQuery
 {
     use CoercesScalars;
 
-    public const DEFAULT_DISPLAY_CURRENCY = 'EUR';
-
     // 86400 = 24h: a scanned inbox untouched longer than that shows an amber
     // dot. Inboxes past TILE_LINE_LIMIT collapse into a "+N more" line.
     private const STALE_THRESHOLD_SECONDS = 86400;
@@ -45,10 +43,13 @@ final class ThisPeriodAtAGlanceQuery
         private readonly TopCategoriesByPeriodQuery $topCategoriesQuery,
         private readonly TransactionListQuery $listQuery,
         private readonly Clock $clock,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
-    public function for(User $user, Period $period, string $displayCurrency = self::DEFAULT_DISPLAY_CURRENCY): DashboardSummary
+    public function for(User $user, Period $period, ?string $displayCurrency = null): DashboardSummary
     {
+        $displayCurrency ??= $this->baseCurrency->code();
+
         $connection = $this->db->connection();
 
         $totalCount = $connection
@@ -113,8 +114,10 @@ final class ThisPeriodAtAGlanceQuery
     // The one canonical "subtractive income" sum. Do not add a second
     // WHERE type = 'income' anywhere else — extend this method if the
     // rule ever needs to change (see the linked architecture page).
-    public function incomeForPeriod(User $user, Period $period, string $currency = self::DEFAULT_DISPLAY_CURRENCY): int
+    public function incomeForPeriod(User $user, Period $period, ?string $currency = null): int
     {
+        $currency ??= $this->baseCurrency->code();
+
         $value = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)

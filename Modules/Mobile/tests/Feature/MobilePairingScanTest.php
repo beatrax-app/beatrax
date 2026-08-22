@@ -26,6 +26,7 @@ use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Enums\LanDiscoveryReach;
 use Modules\Sync\Public\Enums\PairingWizardStep;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\PairingSafetyDigest;
@@ -94,6 +95,11 @@ function pairingScanDesktopOnLan(): array
 
     app()->instance(PeerDiscovery::class, new class implements PeerDiscovery
     {
+        public function reach(): LanDiscoveryReach
+        {
+            return LanDiscoveryReach::Available;
+        }
+
         /**
          * @return list<DiscoveredPeer>
          */

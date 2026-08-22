@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\RowChunk;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Sync\Public\Services\BlindIndexCodec;
 use stdClass;
@@ -27,7 +28,7 @@ final class CounterpartyKeyBackfill
 {
     use CoercesScalars;
 
-    private const CHUNK_SIZE = 500;
+    private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     // ClusterKeyComposer::MAX_PART_LENGTH, which caps a composed part and so
     // truncates a 64-character digest to 240 of its 256 bits.

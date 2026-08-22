@@ -58,6 +58,14 @@ cannot be compared lexically at all, and this table is transient scratch — the
 store is `device_registry`, so nothing is lost. A handshake could not have survived the app
 restart that runs the migration either way.
 
+The guard first covered `expires_at` alone, because that is the column SQL orders. Its
+siblings — `created_at`, `accepted_at`, `initiator_seeded_at` and the two `*_confirmed_at`
+stamps — kept `toIso8601String()`, so one row carried a Zulu expiry beside a `+02:00`
+confirmation and a reader could not tell from the value which rule it was written under. None
+of them is compared lexically *today*; the rule is that the table has one format, not that
+each column earns one the day something starts sorting it. Every writer goes through
+`ZuluTimestamp::stamp()`, and `PairingRowTimestampsAreZuluTest` pins each of them.
+
 ## Two ways in, one shape
 
 **Camera.** The QR carries `beatrax://pair?v=1&token=…&ed=…&kx=…&device=…`, optionally the
@@ -282,6 +290,34 @@ that the gates passed; nothing downstream re-derives a side or re-checks a signa
    completed its own confirmation would drag the local device into a confirmed pairing the
    local human never approved — which would make the safety-number comparison decorative.
 
+### A deferred confirm is held, not dropped
+
+Deferral used to rely entirely on somebody sending the frame again, and only one of the two
+roads does. The relay keeps its copy: a `'deferred'` outcome leaves the mailbox row pending.
+A **LAN push** does not — `POST /pair/frame` answers `202`, which the sender reads as
+received, and the receiver kept nothing. What redelivered it was the peer's own three-second
+re-emit, which is gated on the peer's row not yet being `confirmed`.
+
+Those two facts close on each other in the ordinary order of a real ceremony. The phone
+confirms first, the desktop defers and discards, the desktop's human taps, the desktop sends
+*its* confirm, the phone applies it and reaches `confirmed` — and stops re-emitting. The
+desktop is then left in `awaiting_confirm` with `responder_confirmed_at` still null, holding
+no proof it can ever be given again, while the phone shows a completed pairing. One-sided
+trust, and the TTL is the only thing that ends it.
+
+So a deferred frame is now parked on its own pairing row (`deferred_peer_confirm`, written by
+`HeldPeerConfirm`) and replayed by `confirm()` the moment this device's own side is stamped.
+The replay is a full second pass through `authenticatePeerConfirm()` — same addressing check,
+same side derivation, same signature verify against the key the row binds *now*. Being stored
+grants a frame nothing that arriving would not have granted it, which is why a responder that
+rebound in between finds the held signature refused rather than inherited: it was signed over
+keys the row no longer holds. A rebind clears the column for the same reason it clears
+nothing else — dead key material has no business sitting on a live row.
+
+The gate above is untouched by this. A held confirm still cannot move the row on its own;
+the local tap is what makes it actionable, and without a tap it is simply a blob that expires
+with its token.
+
 ## Admission
 
 `finalizeIfBothConfirmed()` is the shared tail of both the local `confirm()` and the relayed
@@ -464,6 +500,102 @@ leaves the relay and the outbox. Cancelling expires the row, and the next open
 credentials the daemon normally. Restarting to rescue that case would mean
 restarting in exactly the state where a restart is destructive.
 
+## The poll must survive the window losing focus
+
+Both polled steps carry `wire:poll.3s.keep-alive`, and the modifier is the point.
+Livewire runs a poll whose tab reports `document.hidden` at one tick in twenty —
+a sensible default for a dashboard, and the wrong one here, because this ceremony
+*instructs* the reader to pick up the other device. The window that has to notice
+the peer's accept is the one guaranteed not to be in front of them.
+
+The observed shape was exact. A desktop showed a code at 15:53:53 and drained on
+the dot every three seconds until 15:54:58; the reader turned to the phone, and
+the next two drains landed 87 and 110 seconds apart. Nothing else in that poll
+skips a tick at random — the 95% throttle is the only stochastic branch in it. The
+phone's accept arrived at 15:57:32, into a poll running roughly once a minute, and
+the app-lock took the screen before a tick came round. The desktop sat on "Step 2
+of 3 — Show this code" for the whole ceremony, and the human comparison that is
+the sole trust gate of this protocol was never offered.
+
+## A ceremony outlives the screen that started it
+
+`awaiting_confirm` survives an auto-lock, a navigation and a reload, because it
+lives on the row. `PairingFlowModal::openModal()` has resumed one for a while —
+it reads `inFlightFor()`, derives which side this device owns, and lands on the
+comparison step. What was missing is that nothing on the page said so. Data &
+Devices listed the confirmed devices and offered "Pair a new device", which is
+the opposite of what the reader needs to be told and reads as *starting over*;
+the token then expired unmentioned, and the peer waited on a confirmation nobody
+could reach.
+
+So the section names it: `DevicesAndSyncSettingsSection` asks for the in-flight
+row this device owns a side of and renders the peer's name with a way back in.
+Cheap because it is the same `PairingGateway` reads the modal already makes, and
+scoped the same way — a row belonging to two *other* devices is not this device's
+ceremony and stays invisible, exactly as the modal's own resume treats it.
+
+The auto-lock itself is deliberately left alone. A pairing is precisely the moment
+the reader has walked away from this keyboard, which is the case the lock exists
+for; suppressing it would trade a real protection for the convenience of not
+re-entering a passphrase.
+
+## A pairing outlives the lock that interrupts it
+
+Restoring the screen is not enough on its own, because the row can die while
+nobody is looking at it. The lock fires at five minutes idle; a ceremony has at
+most ten, and from the accept onward only what is left of them. The observed run
+landed exactly in that gap — the token expired at 16:03:53 and the reader
+unlocked around 16:05, so a resume surface would have had nothing to offer.
+
+So `extendCeremonyAcrossLock()` gives a returning reader a fresh
+`ACCEPT_GRACE_MINUTES` — the same constant that already answers "how long do two
+humans need to compare six words". It reuses `extendedExpiry()`, so it is
+grow-only in the same sense every other writer is: a ceremony with longer to run
+is never shortened.
+
+**This lets an idle timeout lengthen a trust window, which is a real weakening
+and is stated as one.** What bounds it:
+
+- Only `awaiting_confirm`. A `pending` row binds no responder, so there is nothing
+  to compare and a longer window buys only a longer race for the responder slot.
+- Only a row **this device owns a side of**, so a ceremony between two other
+  devices on the account is not revived by a third watching the page.
+- Only while **unlocked**, and that is not a flag anyone sets: the extension needs
+  a device id, `DeviceIdentityLoader` needs the app-lock KEK to produce one, and
+  `AppLockKeyService::release()` answers null while locked. A locked app cannot
+  reach the write at all.
+- Only from two human moments: `DevicesAndSyncSettingsSection::mount()`, a reader
+  arriving at the surface, and `HoldPairingCeremonyOpenOnUnlock`, the listener on
+  `Modules\Auth\Public\Events\AppLockUnlocked` — a reader typing their PIN.
+  Never from the three-second poll, which would renew forever.
+
+  Both, not one: the listener catches a lapse the lock caused and reaches a reader
+  who never opens this screen, while the mount catches a lapse the lock did **not**
+  cause — a thirty-minute idle setting outlives a ten-minute ceremony with no lock
+  in between. The extension is an idempotent, grow-only `UPDATE`, so running it
+  twice costs nothing. The "only while unlocked" bound above still holds for the
+  listener: it runs after `unlock()` has stored the key, so `release()` answers,
+  and it no-ops when no user is bound to the guard.
+
+What reviving a lapsed row re-opens is the responder-rebind window: a peer on the
+LAN can take a responder slot nobody has confirmed. That is a **denial, not a
+capture**, because `confirm()` binds the tap to the keys behind the words that
+were displayed — a rebind makes the digest stop matching and the confirmation is
+refused out loud. So the revival hands an attacker the same stall they could
+already cause before the lock, and no new road to a confirmed pairing.
+
+### The extension and its disclosure are one render
+
+The condition that holds the ceremony open and the sentence that admits it are
+the same `@if` in `devices-and-sync-settings-section.blade.php`. That is the
+point: an extension nobody is told about is a lock policy quietly overridden,
+while a stated one is a bounded exception with a way out — the notice names
+cancelling as the thing that puts the ordinary limit back.
+
+The copy does not claim the lock is off, because it is not. The app still locks
+on its own schedule and still demands the passphrase. What outlives the timeout
+is the pairing window, and that is what the line says.
+
 ## What a confirmation is bound to
 
 `confirm()` takes the fingerprint of the six words the human actually compared and
@@ -501,6 +633,124 @@ too, so gating on it shipped a signed `PAIR_CONFIRM` every three seconds asserti
 confirmation `confirm()` had explicitly declined to record. Reading the row also
 survives the screen: a modal closed and reopened has forgotten that it tapped, and used
 to stop re-emitting for a peer still waiting.
+
+## Redelivery must not depend on an open screen
+
+Everything above kept a ceremony alive across a lock, a reload and a closed modal — but the
+thing that actually *moved frames* still lived inside the modal. `checkPairingState()` drained
+the relay and re-emitted this side's confirm on its three-second poll, and that poll exists
+only while the pairing modal is on screen. Close it on either device and re-emission stops.
+
+That is not a cosmetic gap. The ordinary end of a ceremony is two humans tapping and both
+putting their devices down. The desktop's confirm reaches the relay (or its own outbox, on a
+LAN with no relay) and waits for the phone to collect it; the phone's confirm waits for the
+desktop. With both modals closed nothing collects and nothing re-emits, and the pairing ends
+half-done — the same one-sided trust the held-confirm fix removed one level down.
+
+So the transport half moved out of the screen into `PendingPairingCourier`, and the modal poll
+now only advances the wizard. One mechanism, three drivers, and no second redelivery policy
+that could disagree with the first.
+
+### What the courier is allowed to do
+
+Two things, and deliberately not a third:
+
+- **Collect.** Drain this device's relay mailbox, and — where it holds an identity — ask the
+  peer for anything waiting in its outbox.
+- **Re-emit this device's own confirm**, read off `<side>_confirmed_at`, which `confirm()` is
+  the only writer of and only ever writes behind the safety-number match.
+
+It **mints nothing**. There is no path through the courier that produces a confirmation, only
+paths that carry one the local human already gave. That is what makes a courier safe to run
+from a process with no human attached to it: no tap, no stamp, nothing to re-emit, and a
+validly signed peer confirm still lands on `'deferred'` exactly as it does inbound.
+
+### Outward before inward
+
+The tick sends before it collects, and the order is load-bearing rather than incidental.
+Collecting first can *finish* the ceremony on this device — the peer's confirm arrives, the
+local stamp is already there, the row goes `confirmed` — and a confirmed row is this courier's
+stop signal. The very tick that completed the pairing would then exit without ever having
+offered this device's own confirmation, and the peer would be left waiting for a frame nobody
+will send again. That is the original defect rebuilt one level up, and the first version of
+this courier had it.
+
+Re-sending a frame the peer already holds costs one idempotent apply. Not sending it costs the
+peer the pairing.
+
+### The drivers, and the device where one of them cannot exist
+
+| Device | Driver | Can it sign? |
+|---|---|---|
+| Desktop | a `DaemonTimer` tick inside `sync:serve` | **no** |
+| Any device, any screen | `CarriesPendingPairingFrames`, after the response on the `web` group | yes, when unlocked |
+
+`DaemonTimer` is an interface with one implementation, `DaemonTicker`, which is the only place
+in the tree that names Revolt's event loop — the same containment `DaemonShutdownSignal`
+already gives the rest of Amp, and the one `ThirdPartyContainmentArchTest` asks for. That is not ceremony: what finishes a ceremony is now a *scheduled
+tick*, and a claim of that shape has to be testable without standing up a loop and a socket
+to watch it happen. `DaemonSchedulesThePairingCourierTest` asserts the daemon asks for a
+three-second tick, asks for none when it booted with no user, and that running the tick with
+nothing to carry cannot throw into the loop's error handler.
+
+`DaemonTicker` refuses to schedule a second tick over a live one. Work on that loop is
+synchronous, so a slow tick must cost the sockets one delay rather than a queue of ticks
+stacked behind it.
+
+The daemon is the only thing on this device that runs with no window open at all, and it is
+already the process serving the handshake's own routes — so it needs no new process, no
+supervision and no cron entry. It is handed the X25519 transport keypair and *not* the Ed25519
+signing key ([`SyncDaemonIdentity`](device-identity-key-files.md)), so it can only collect.
+That is exactly the half the desktop is missing: its inbound LAN road is a push its own
+listener already answers, and what no screen was draining was the relay.
+
+The scheduler and the queue were both rejected. The desktop has both, so either would have
+worked there — but **the phone has neither**, and it has no daemon either. A scheduler entry
+that never fires on iOS is worse than no entry, because the table above would then claim
+coverage the phone does not have. On a phone the only thing that reliably runs is a request
+the app itself makes, so that is what drives the courier there: every request, from every
+screen, gated on a live handshake and throttled to one tick per three seconds. It runs from
+`terminate()`, after the response has gone out, because a browse burns its full timeout.
+
+What this does **not** claim: a backgrounded phone carries nothing. iOS will not run this, and
+saying otherwise would be the covered-but-not-really failure above. What rescues the ceremony
+anyway is that the desktop holds the phone's confirm durably for the life of the token — in
+the relay mailbox or its own `PairingPeerOutbox` — so the phone completes on its next tick from
+whatever screen it happens to open. The frame stopped being ephemeral, which is the property
+that makes a foreground-only driver enough.
+
+### When it stops
+
+The stop rule is the row, not a counter. `liveCeremonyOwnedBy()` answers only for a row that is
+`pending` or `awaiting_confirm`, unexpired, and owned by this device — and every way a ceremony
+ends removes it from that set:
+
+| Ending | How the courier sees it |
+| --- | --- |
+| Both sides confirmed | state becomes `confirmed`, which is not a live state |
+| The user cancelled | `expire()` writes `expired` |
+| The token lapsed | `expires_at` fails the comparison; nothing has to write anything |
+| A new ceremony started | `prune()` deleted the row |
+
+So an abandoned ceremony is never resurrected, and there is no retry against a dead token. The
+tick returns `false` and does not even resolve a transport.
+
+### What it costs
+
+Idle, a tick is **one covered index read** (`pairing_tokens_user_expires_idx` is
+`(user_id, expires_at, state)`) and nothing else — no HTTP, no browse, no writes. That is the
+state a device is in essentially always.
+
+During a ceremony the bound is the ceremony itself: at most `TTL_MINUTES` (10), and after the
+accept `ACCEPT_GRACE_MINUTES` (5) at a time. At one tick per three seconds that is a couple of
+hundred ticks, each costing at most one relay round trip, one cached browse and one peer
+request — which is precisely what the modal poll already spent. Nothing new is on the wire; the
+same traffic simply stopped depending on a window being open. A device with no relay configured
+makes no network request at all on the collecting half, because `drainAndApply()` returns early.
+
+The daemon's tick blocks its event loop for the duration of a relay round trip, so it will not
+start a second tick while one is running. A slow relay costs the listener one delay rather than
+a growing queue behind it.
 
 ## See also
 

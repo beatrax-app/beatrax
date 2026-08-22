@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Receipts\Internal\Matchers;
 
-use Carbon\CarbonImmutable;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -14,7 +14,6 @@ use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
-use Throwable;
 
 // Claims messages whose sender domain is exactly paypal.com (exact
 // suffix equality, not str_contains, defeats a spoofed look-alike
@@ -105,10 +104,8 @@ final class PaypalReceiptMatcher implements SenderMatcher
     {
         [$transactionId, $nativeAmountMinor, $nativeCurrency, $settledAmountMinor, $settledCurrency] = $charge;
 
-        $dateRaw = $parsed->headers['date'] ?? '';
-        try {
-            $bookedAt = CarbonImmutable::parse($dateRaw)->startOfDay();
-        } catch (Throwable) {
+        $bookedAt = SafeDate::parseDayOrNull($parsed->headers['date'] ?? '');
+        if ($bookedAt === null) {
             return MatchOutcomeDto::unmatched('invalid_date_header');
         }
 
@@ -196,9 +193,9 @@ final class PaypalReceiptMatcher implements SenderMatcher
         if (preg_match(self::EUR_AMOUNT_REGEX, $body, $m) !== 1) {
             return null;
         }
-        $minor = $this->toMinorOrNull($m[1], 'EUR');
+        $minor = $this->toMinorOrNull($m[1], Currency::Eur->value);
 
-        return $minor === null ? null : [-$minor, 'EUR'];
+        return $minor === null ? null : [-$minor, Currency::Eur->value];
     }
 
     /**

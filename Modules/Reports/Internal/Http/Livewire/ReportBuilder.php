@@ -17,6 +17,7 @@ use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\LocaleCollator;
 use Modules\Counterparties\Public\Queries\CounterpartyDisplayName;
+use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Reports\Internal\Actions\SaveReport;
@@ -26,9 +27,15 @@ use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ReportCurrencyMode;
+use Modules\Reports\Internal\Enums\ReportDimension;
 use Modules\Reports\Internal\Enums\ReportGranularity;
+use Modules\Reports\Internal\Enums\ReportMetricSelection;
+use Modules\Reports\Internal\Enums\ReportPeriodPreset;
+use Modules\Reports\Internal\Enums\ReportViz;
 use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
+use Modules\Reports\Internal\Support\ReportVocabulary;
 use Modules\Reports\Models\SavedReport;
 use stdClass;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -37,14 +44,14 @@ final class ReportBuilder extends Component
 {
     use HoldsFlashMessage;
 
-    #[Url(as: 'metric', except: 'spend')]
-    public string $metric = 'spend';
+    #[Url(as: 'metric', except: ReportMetricSelection::Spend->value)]
+    public string $metric = ReportMetricSelection::Spend->value;
 
-    #[Url(as: 'dim', except: 'category')]
-    public string $dimension = 'category';
+    #[Url(as: 'dim', except: ReportDimension::Category->value)]
+    public string $dimension = ReportDimension::Category->value;
 
-    #[Url(as: 'period', except: 'this_month')]
-    public string $periodPreset = 'this_month';
+    #[Url(as: 'period', except: ReportPeriodPreset::ThisMonth->value)]
+    public string $periodPreset = ReportPeriodPreset::ThisMonth->value;
 
     #[Url(as: 'from', except: '')]
     public string $customFrom = '';
@@ -55,11 +62,11 @@ final class ReportBuilder extends Component
     #[Url(as: 'gran', except: ReportGranularity::Monthly->value)]
     public string $granularity = ReportGranularity::Monthly->value;
 
-    #[Url(as: 'ccy', except: 'base')]
-    public string $currencyMode = 'base';
+    #[Url(as: 'ccy', except: ReportCurrencyMode::Base->value)]
+    public string $currencyMode = ReportCurrencyMode::Base->value;
 
-    #[Url(as: 'viz', except: 'table')]
-    public string $viz = 'table';
+    #[Url(as: 'viz', except: ReportViz::Table->value)]
+    public string $viz = ReportViz::Table->value;
 
     #[Url(as: 'cmp', except: false)]
     public bool $compare = false;
@@ -82,8 +89,8 @@ final class ReportBuilder extends Component
     #[Url(as: 'amount_max', except: '')]
     public string $filterAmountMax = '';
 
-    #[Url(as: 'amount_dir', except: 'both')]
-    public string $filterAmountDir = 'both';
+    #[Url(as: 'amount_dir', except: AmountDirection::Both->value)]
+    public string $filterAmountDir = AmountDirection::Both->value;
 
     public ?int $loadedReportId = null;
 
@@ -181,6 +188,7 @@ final class ReportBuilder extends Component
         }
 
         $user = $currentUser->user();
+
         $definition = $this->currentDefinition();
 
         return $responses->streamDownload(
@@ -202,11 +210,19 @@ final class ReportBuilder extends Component
         CounterpartyDisplayName $counterpartyNames,
     ): View {
         $user = $currentUser->user();
+        // The property itself, not only the way to the definition: Livewire
+        // hands the raw array to the view too, and the filter chips subscript
+        // [0] on a count of one, which a keyed ?account[key]= satisfies without
+        // ever having a zero.
+        $this->filterAccounts = ReportVocabulary::ids($this->filterAccounts);
+        $this->filterCategories = ReportVocabulary::ids($this->filterCategories);
+        $this->filterCounterparties = ReportVocabulary::ids($this->filterCounterparties);
+
         $definition = $this->currentDefinition();
 
         // "custom" needs both dates, and resolving mid-selection would throw,
         // so render the empty state rather than a 500.
-        $customIncomplete = $definition->periodPreset === 'custom'
+        $customIncomplete = $definition->periodPreset === ReportPeriodPreset::Custom->value
             && ($definition->customFrom === null || $definition->customFrom === '' || $definition->customTo === null || $definition->customTo === '');
 
         if ($customIncomplete) {
@@ -230,8 +246,8 @@ final class ReportBuilder extends Component
             'displayRows' => $displayRows,
             'definition' => $definition,
             'drilldownUrls' => $drilldownUrls,
-            'showDimension' => $definition->metric !== 'net_worth',
-            'showGranularity' => $definition->metric === 'net_worth' || $definition->dimension === 'time_bucket',
+            'showDimension' => $definition->metric !== ReportMetricSelection::NetWorth->value,
+            'showGranularity' => $definition->metric === ReportMetricSelection::NetWorth->value || $definition->dimension === ReportDimension::TimeBucket->value,
             'availableAccounts' => $this->availableAccounts($db, $user->id, $baseCurrency->code()),
             'availableCategories' => $this->availableCategories($db, $user->id),
             'availableCounterparties' => $this->availableCounterparties($counterpartyNames, $user->id),
@@ -264,19 +280,23 @@ final class ReportBuilder extends Component
 
     private function currentDefinition(): ReportDefinition
     {
+        // Every #[Url] property is reader-supplied, so each one is coerced to a
+        // value the aggregator names rather than passed through: an unknown
+        // ?metric=, ?period= or ?ccy= reached a match() with no arm and 500'd
+        // the page. The rail can only produce valid values; the address bar cannot.
         return new ReportDefinition(
-            metric: $this->metric,
-            dimension: $this->dimension,
-            periodPreset: $this->periodPreset,
-            granularity: ReportGranularity::tryFrom($this->granularity) ?? ReportGranularity::default(),
-            currencyMode: $this->currencyMode,
-            viz: $this->viz,
+            metric: ReportVocabulary::metric($this->metric),
+            dimension: ReportVocabulary::dimension($this->dimension),
+            periodPreset: ReportVocabulary::periodPreset($this->periodPreset),
+            granularity: ReportVocabulary::granularity($this->granularity),
+            currencyMode: ReportVocabulary::currencyMode($this->currencyMode),
+            viz: ReportVocabulary::viz($this->viz),
             customFrom: $this->customFrom !== '' ? $this->customFrom : null,
             customTo: $this->customTo !== '' ? $this->customTo : null,
             compare: $this->compare,
-            accounts: array_values(array_filter($this->filterAccounts, static fn (int $id): bool => $id > 0)),
-            categories: array_values(array_filter($this->filterCategories, static fn (int $id): bool => $id > 0)),
-            counterparties: array_values(array_filter($this->filterCounterparties, static fn (int $id): bool => $id > 0)),
+            accounts: ReportVocabulary::ids($this->filterAccounts),
+            categories: ReportVocabulary::ids($this->filterCategories),
+            counterparties: ReportVocabulary::ids($this->filterCounterparties),
             amountMin: $this->filterAmountMin !== '' ? $this->filterAmountMin : null,
             amountMax: $this->filterAmountMax !== '' ? $this->filterAmountMax : null,
             amountDirection: $this->filterAmountDir,

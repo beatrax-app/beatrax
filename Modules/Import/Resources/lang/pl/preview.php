@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Odblokuj aplikację, aby zaimportować: klucza sprzedawcy nie można obliczyć, gdy jest zablokowana.',
+        'app_locked' => 'Odblokuj aplikację, aby zaimportować: kluczy szyfrowania nie można użyć, gdy jest zablokowana.',
         'file_unreadable' => 'Nie udało się odczytać tego pliku.',
         'iban_not_in_preview' => 'Ten IBAN nie należy do bieżącego podglądu.',
         'row_unreadable' => 'Nie udało się odczytać tego wiersza.',

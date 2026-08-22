@@ -12,6 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
+use Modules\Core\Public\Support\RowChunk;
 use Modules\Core\Public\Support\UniqueSlug;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Goals\Public\Services\GoalWriter;
@@ -20,6 +21,7 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -36,7 +38,7 @@ final class PromoteStagingToDomain
 {
     use CoercesScalars;
 
-    private const CHUNK_SIZE = 500;
+    private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     private const CATEGORY_SLUG_FALLBACK = 'item';
 
@@ -575,10 +577,10 @@ final class PromoteStagingToDomain
             : null;
 
         $type = match (true) {
-            $isTransfer => $amountMinor < 0 ? 'transfer_out' : 'transfer_in',
-            $amountMinor > 0 => 'income',
-            $amountMinor < 0 => 'expense',
-            default => 'adjustment',
+            $isTransfer => $amountMinor < 0 ? TransactionType::TransferOut->value : TransactionType::TransferIn->value,
+            $amountMinor > 0 => TransactionType::Income->value,
+            $amountMinor < 0 => TransactionType::Expense->value,
+            default => TransactionType::Adjustment->value,
         };
 
         $payeeExternalId = $row->payee_source_external_id;

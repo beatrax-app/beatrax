@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Bekräfta nytt lösenord',
     'submit' => 'Spara nytt lösenord',
 
+    'error_current_required' => 'Ange ditt nuvarande lösenord.',
     'error_current_incorrect' => 'Nuvarande lösenord är fel.',
     'error_mismatch' => 'Lösenorden stämmer inte överens.',
     'error_min_length' => 'Använd minst 12 tecken.',

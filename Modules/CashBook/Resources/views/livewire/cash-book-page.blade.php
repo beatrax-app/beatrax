@@ -1,9 +1,10 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
+    $fmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
 
     // Tax state map: array<int, array{taxTagged: bool, taxCategoryShortName: ?string}>
     $taxState ??= [];

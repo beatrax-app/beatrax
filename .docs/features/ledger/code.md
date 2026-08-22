@@ -66,17 +66,18 @@ Modules/Ledger/
 ## Public API
 
 - **Contracts/**
-  - `RecordsTransactions::record(CanonicalTransaction $tx, User
-    $user): RecordResult` — single sanctioned writer for
-    `transactions`. Idempotent on v3 fingerprint via INSERT ON
-    CONFLICT.
+  - `RecordsTransactions::__invoke(iterable<CanonicalTransaction>
+    $canonical, User $user, bool $captureForSync = true):
+    RecordResult` — single sanctioned writer for
+    `transactions`. Takes a batch, not a row. Idempotent on v3
+    fingerprint via INSERT ON CONFLICT.
   - `UpdatesTransactionCategory::__invoke(int $transactionId,
     ?int $categoryId, User $user): int` — single sanctioned
     writer for `transactions.category_id`. Returns affected
     count.
-  - `RecordsStatementSummary::record(StatementSummaryData
-    $data, User $user): void` — single sanctioned writer for
-    `statement_summaries`.
+  - `RecordsStatementSummary::__invoke(User $user,
+    StatementSummaryData $data): void` — single sanctioned
+    writer for `statement_summaries`.
 - **Actions/** — default implementations of the three
   contracts.
 - **DTOs/**
@@ -84,7 +85,9 @@ Modules/Ledger/
     Chainable `with*` setters used by pipeline stages
     (`withCategoryId`, `withCounterpartyId`,
     `withAutoCategoryProvenance`, ...).
-  - `RecordResult` — `(inserted, dedupped, enriched)` counts.
+  - `RecordResult` — `(inserted, duplicates)` counts. There is
+    no enriched count on it: enrichment is a separate pass
+    (`AppliesEnrichments`) run by the caller.
   - `DashboardSummary` — `(period, inflow, outflow, net: Money,
     topCategories, recentTransactions, uncategorizedCount,
     isFirstRun)`.
@@ -104,8 +107,12 @@ Modules/Ledger/
     single dashboard read.
   - `TopCategoriesByPeriodQuery::for($user, $period):
     list<TopCategoryRow>`.
-  - `TransactionListQuery::page($user, $filters,
-    $pagination): TransactionListPage`.
+  - `TransactionListQuery::recent($user, $daysBack = 90,
+    $cursorId = null, $limit = 50, $cursorPostedAt = null,
+    $currency = null): TransactionListPage` and
+    `TransactionListQuery::fullHistory($user, $cursorId = null,
+    $limit = 50, $cursorPostedAt = null, $currency = null):
+    TransactionListPage` — keyset-paged, no filter bag.
   - `StatementSummaryWriter` — concrete
     `RecordsStatementSummary` impl.
 

@@ -27,7 +27,7 @@
 @php
     use Modules\Forecasting\Public\Dto\ForecastDto;
 
-    $eurFmt = static fn (int $minor, string $currency = 'EUR'): string => Money::ofMinor($minor, $currency)->format();
+    $eurFmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
 @endphp
 
 <div class="mx-auto max-w-7xl px-4 py-12">

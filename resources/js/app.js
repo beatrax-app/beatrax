@@ -602,6 +602,25 @@ document.addEventListener('theme-changed', (event) => {
     root.classList.toggle('light', ! dark);
 });
 
+/**
+ * Put a multi-step screen back at the top when it changes step.
+ *
+ * The steps of a wizard share one page, so advancing is a re-render and never
+ * a navigation: the browser keeps the offset the previous step was left at and
+ * the new step opens below its own heading. Measured on device, the wizard
+ * handed step 3 a scrollY of 424 and the mobile import bootstrap handed its
+ * recovery codes 107 — far enough under `viewport-fit=cover` to put a heading
+ * behind the status-bar clock.
+ *
+ * One listener here rather than one per screen: it is registered before any
+ * component mounts and lives outside the DOM Livewire morphs, so it cannot be
+ * lost, duplicated or re-bound by a morph. Components announce through
+ * AnnouncesStepChanges, which is the only place the name is written.
+ */
+document.addEventListener('step-changed', () => {
+    window.scrollTo({ top: 0 });
+});
+
 document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);

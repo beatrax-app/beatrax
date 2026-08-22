@@ -22,6 +22,294 @@ Currently encrypted:
 - `tax_transaction_tags.note`, `transaction_splits.note`
 - `notifications.title`, `.body`, `.params`, `.trigger_type`
 
+## What may be written when no key is reachable
+
+Nothing. A registered column must never receive plaintext while
+`sync_encryption_state.current_epoch` is set, and `SensitiveColumnCodec::encryptValue()` /
+`encryptAttrs()` now refuse rather than pass the value through.
+
+The refusal exists because the pass-through was silent and provable. A live desktop's
+`notifications` table held one column in two states for one user: thirteen rows sealed by the
+enable-time sweep at 15:44, and six rows in the clear written at 16:00 by
+`EmitBudgetNudgesJob` on the queue worker. A queue worker has no HTTP session, so
+`AppLockKeyService::release()` returned null, so no epoch was reachable, so the codec returned
+the title and body unchanged and `NotificationWriter` inserted them. The settings screen
+reported encryption **On** throughout, nothing was logged, and no later pass ever re-read that
+column to notice. This is not a Notifications defect — every module's background writers reach
+the same path, and Notifications is only where it became visible.
+
+### The two states that used to be one null
+
+`tryCurrentEpoch()` returns null for two opposite reasons, and collapsing them is the whole
+bug:
+
+- **No `current_epoch`.** This user never enabled encryption. Every other column of theirs is
+  plaintext too, and writing one more is correct — refusing would break an install behaving
+  exactly as designed. The same live database's second user was in precisely this state, and
+  their plaintext row is not a defect.
+- **`current_epoch` set, no key reachable.** The ledger is sealed and this process simply
+  cannot open it: the app-lock is withheld, or the keyring no longer opens under the key the
+  session holds. Writing here is the leak.
+
+`GdkKeyringService::hasCurrentEpoch()` answers the first question — a plain integer readable
+with no key at all — and it is the one read both codecs now share, so they can never disagree
+about whether a row is supposed to be sealed.
+
+### Why refusing, rather than a background key source
+
+`BlindIndexCodec` already made this decision and `SensitiveColumnCodec` simply never got it:
+enrolled plus no key throws `BlindIndexKeyUnavailableException` with the reason "refusing to
+write a plaintext matching key". `SensitiveColumnKeyUnavailableException` is the AEAD half of
+the same rule. Two more call sites had already reached it independently —
+`ReindexSearchCommand` partitions users and skips the ones it cannot key, and
+`CounterpartyGarbageCollectorJob` composes `isEnabled()` with `release() !== null` and drops
+the encrypted half with a log line. The established answer for background work that cannot
+reach a key is **do less, and say so**.
+
+Giving background writers a sanctioned key source is the alternative, and it is excluded by
+the app-lock design rather than merely expensive. Only two durable copies of the data key
+exist, both in one row of `user_app_lock_configs`, and
+[nothing else on the machine can produce it](../auth/app-lock-data-key-lifetime.md).
+`LockOnWindowHideOrClose` withholds the key on every desktop window hide or close, ungated by
+`lock_enabled` — a closed window being unable to read the ledger is the design, not a gap in
+it. A third copy reachable without the user present would make the lock cosmetic and would
+put key material somewhere that page's invariant does not cover.
+
+Deferring the write until a key exists was the third option. The codec cannot do it: it
+transforms a value and does not own the write, so it has nowhere to hold one. The decision
+between dropping and deferring belongs to the caller, and the throw is how the caller is given
+it. In practice the split is already clean. Background writers carry regenerable content and
+drop it — all eight `Persist*` notification listeners already catch `Throwable` and log, so a
+refused nudge costs one nudge and re-emits on the next run, and `OpLogEntryApplier` routes
+both of its projector calls to quarantine. Writers carrying content the user typed run inside
+a request behind `AppLockMiddleware`, where the key is held and the refusal is unreachable; if
+one is ever reached, failing the save is the right outcome, because storing the note in the
+clear is not.
+
+### It is no longer silent
+
+The codec logs one warning per user per table per process before it throws, naming the fields
+and never their values. It is deliberately one alarm rather than one per row: an op-log drain
+over a sealed ledger would otherwise write a line per column per row into a daily log nobody
+could then read. `warning`, not `critical` — a withheld key is the ordinary state of a closed
+window, and the genuinely unrecoverable case already raises `auth.lock.key_material_stranded`
+at critical from the Auth side.
+
+### The rows already written in the clear
+
+`EncryptionMigrationService::migrate()` early-returns once `current_epoch` is set, so the
+enable-time sweep is once-only by construction; it is the only pass that has ever rewritten a
+projection column, and it will not run again on an install that is already enabled. An install
+that ran a background writer while locked therefore kept those rows readable on disk — the same
+shape as the table the sweep used to miss entirely, arriving by a different door.
+
+A live desktop holds exactly that: `notifications` for user 1 carries thirteen rows sealed by
+the sweep at 15:44 and six rows in the clear stamped `2026-08-22 16:00:09`, title `Budget
+nearly spent`, `trigger_type` `budget_nudge`. User 2, who never enabled encryption, has one
+plaintext row that is not a defect.
+
+The residue is a **closed set**. The codec now refuses, so no background writer can add to it;
+`OpLogEntryApplier` routes both of its projector calls to quarantine rather than writing in the
+clear; and `SensitiveColumnPredicateGuardTest` is what stands between a raw `update()` and a
+registered column. What was missing was a pass to convert what is already there.
+
+#### The sweep is NOT already safe to re-run, and why
+
+The claim that `projectionUpdatesForRow()` makes the enable-time sweep re-runnable is true on
+an install that has never rotated, and false on one that has.
+`EncryptionMigrationSupport::alreadyEncryptedProjectionValue()` verifies under the **current**
+epoch only. `GdkRotationService::rotateAndRevoke()` appends an epoch and advances
+`current_epoch`, and nothing re-encrypts the projection columns behind it — so on any device
+that has ever removed a peer, correctly sealed rows sit under an epoch that is no longer
+current. Driving a re-seal off that predicate would read them as plaintext and wrap the
+ciphertext a second time: still recoverable by decrypting twice, but every affected column
+would render blank, because one pass of the keyring returns base64 rather than text.
+
+`PlaintextResidueSweep` therefore asks a different question. A value is residue only when
+`SensitiveColumnCodec::decryptValue()` hands it **straight back** — every epoch in the keyring
+failed to open it, *and* the codec did not blank it as ciphertext-shaped. That covers the
+rotated case, and it errs towards leaving a value alone: an unopenable ciphertext (an epoch
+this device lacks) is skipped rather than wrapped again.
+`ResealSurvivesAnEpochRotationTest` pins both halves.
+
+## Getting back inside the guarantee
+
+Two things end up outside the encryption guarantee, and they are the same shape: content that
+is on disk, readable or unreadable, with nothing that will ever bring it back in. `SealedLedgerRecovery`
+is the one seam for both, because both need the same precondition — a reachable key — and
+neither is achievable without one.
+
+### The entries a locked desktop quarantines
+
+`sync:serve` is a console daemon. It has no HTTP session and never will, so **every** peer
+drain on a desktop runs with no app-lock key. `OpLogEntryVerifier` persists the entry to
+`op_log_entries` first and only then tries to decrypt, so the authoritative log is complete;
+the decrypt fails closed and the entry is quarantined as `gdk_decrypt_failed`. That is correct
+— projecting it would mean writing the peer's IBAN in the clear — but `op_log_quarantine` is
+audit-only, and until this change nothing on desktop ever replayed from it. `Modules/Mobile`'s
+`InitialSyncPuller` was the only caller of `HistoryReprojector::reproject()`.
+
+### Why the recovery is not a rebuild
+
+`reproject()` is a full `OpLogRebuilder::rebuild()`: drop triggers, delete every op-created
+row, replay the entire log, restore triggers, re-index FTS across every transaction. It is the
+right shape for the case it was written for — a phone's initial import, where the device has no
+projection and the whole log is new — and the wrong shape here, because on desktop it would run
+after every single sync and hold SQLite's writer for seconds on a large ledger.
+
+`replayQuarantined()` replays only what the quarantine names. The safe unit is **not** the
+failed entry: a strategy resolves over the set it is handed, so one op of a field makes that op
+the LWW winner over a newer one already projected, one field of a `CreateRow` is discarded as
+incomplete, a G-Counter sums the wrong per-device maxima, and a tombstone compares against a
+truncated maximum. The safe unit is **every persisted entry for each `(table, pk)` a
+quarantined entry touches** — `PersistedOpLogEntries::forRows()`. That set carries each field's
+whole history, every field of a create, and the row's tombstone beside them, so every strategy
+sees exactly what a full replay would give it.
+
+Nothing else the rebuild does is needed. The delete exists to drop rows whose creating ops were
+pruned, and skipping it is what makes this non-destructive; `insertOrIgnore` plus per-field
+updates converge on their own. Triggers stay up, because they are up for the incremental drain
+too. In fact the narrowed replay **is** the incremental drain — `OpLogReplayer::replay()`, built
+the way `SyncWebSocketHandler` builds it, with the confirmed-device key map read for this user
+explicitly rather than from the container's idea of who is signed in — reading its entries from
+the durable log instead of off the wire. `LockedDrainRecoversOnceUnlockedTest` pins the
+narrowing behaviourally with a row the quarantine never names: a whole-history replay puts the
+logged value back over an out-of-band edit, and the narrowed one leaves it alone.
+
+A full rebuild remains the right answer in two places and stays available for them: the mobile
+initial import, and a projection damaged by something other than the op log, which only a
+from-scratch reconstruction repairs.
+
+### Telling "not yet openable" apart from "never openable here"
+
+The narrowing alone does not stop the recurrence. An entry sealed under an epoch whose wrap
+never reached this device fails on every attempt, so the quarantine keeps naming rows and the
+pass keeps running — cheaper per pass, still forever, still recovering nothing.
+
+`op_log_quarantine.gdk_epoch` is copied from the entry when the row is written, which makes the
+question answerable without replaying anything: an entry is worth attempting when its epoch is
+in the keyring this device actually holds, or when it carries no epoch at all — a null epoch is
+a **refusal** rather than a failed decrypt, the codec declining to seal because no key was held,
+and a key alone undoes it.
+
+Nothing is discarded on that verdict. The entry stays in `op_log_entries`, the audit row stays
+in `op_log_quarantine`, and the pass only declines to replay it **now** — the same distinction
+`GdkWrapOutcome::Deferred` draws for the wrap itself, and for the same reason: a GDK epoch can
+arrive after the frame that needed it. What reopens the question is
+`sync_encryption_state.reprojected_keyring_fingerprint`, a content hash of the keyring file.
+It needs no app-lock key to read, so it can gate the pass on a request that holds none, and it
+changes whenever an epoch is appended, replaced or rewrapped. A pass that runs with a different
+fingerprint than the one recorded ignores its own watermark and asks across all of history
+again.
+
+Both marks are stamped whenever a pass **ran**, not only when it replayed something. A pass that
+looked and found only entries it has no key for has still answered the question for this
+keyring, and leaving the marks behind is what made it ask again on every request.
+
+### What the reader is told
+
+A desktop that has been synced to but not opened holds the data in its op log and shows none of
+it. Nothing is lost and it appears on the next unlocked request, but a screen that is briefly
+behind and a sync that is broken look identical from the reader's side, so the state has a name.
+
+`SyncBacklogState` sits beside `QuarantineReason` — the same rows, read for a different
+question — and borrows `GdkWrapOutcome`'s vocabulary rather than inventing a second one:
+
+- **`Deferred`** — received, decodable here, not yet written into the tables the screens read.
+  It clears by itself on the next request. The notice exists so the gap does not read as loss.
+- **`AwaitingKey`** — received, and this device holds no key for the epoch it was sealed under.
+  Time does not clear this one, so it must not borrow the other's words: telling somebody to
+  unlock where unlocking cannot help is worse than saying nothing. The remedy is a pairing one —
+  open the app on the other device so the two can connect and the key can be sent again.
+
+`AwaitingKey` outranks `Deferred` when both are present, because it is the half that will not
+resolve on its own and reporting only the self-healing half would leave the stuck one invisible.
+`clearsWithoutHelp()` is the single place that split is expressed, so a screen cannot get it
+half right. `DevicesAndSyncSettingsSection` reads the state in `mount()`, after
+`applyHeldKeyWraps()` — that drain is what installs a wrap this device was holding, and asking
+first would report a wait the same mount had already ended.
+
+### When it runs, and what was rejected
+
+`RecoverSealedLedger` is a `web`-group middleware on the desktop root, and it does its work
+after the response has been sent — in the `afterResponse()` hook its `AfterResponseMiddleware`
+base calls from `terminate()`.
+
+- **On unlock alone** is incomplete, not merely unavailable. `AppLockUnlocked` now exists and
+  Sync already listens to it, so it could be hung there — but the desktop case that produces
+  quarantine is a phone syncing while the window is *open* and the session is *already*
+  unlocked, and no unlock event follows that. A request-time trigger covers both: the first
+  request after an unlock carries the key, and so does every request after a drain.
+- **On a schedule** is the trap. A queue or scheduler tick has no session, so it has no key,
+  so it can do nothing — it is the same process that created the residue.
+- **From the settings screen** leaves the fix behind a button for a leak the user cannot see,
+  on a screen most people open once. `migrate()` is already called from there and from
+  pairing, and that is precisely why the residue survived.
+- **After a detected refusal** is a good signal for the *future* and useless for the *past*:
+  a refusal means nothing was written. The rows already on disk predate the refusal.
+
+It is registered on the desktop root only. The mobile root drives its own re-projection from
+the import cursor, and a second one firing per poll would rebuild the whole history on every
+tick of a running import.
+
+### What it costs when there is nothing to do
+
+A file hash and two indexed reads, before the keyring is touched:
+
+- one row of `sync_encryption_state`, which answers "is this device enrolled at all" and
+  carries all three marks;
+- `HistoryReprojector::keyringFingerprint()`, a hash of a key file a few hundred bytes long,
+  read without the app-lock key;
+- one `EXISTS` against `op_log_quarantine`, which carries `(user_id, created_at DESC)`.
+
+That last question is deliberately the cheap, epoch-blind one — "has anything arrived that no
+pass has looked at". The exact question needs the keyring, and asking it here would make every
+page load of an enrolled device decrypt a key file to learn there is nothing to do. Only if one
+of the three says there may be work does the pass ask `SensitiveColumnCodec::canSeal()`, and a
+request that arrives while the app is locked stops there having written nothing.
+
+The re-seal is gated on a **digest of `PreMigrationSnapshot::PROJECTION_COLUMNS`** rather than a
+boolean, stamped in `sync_encryption_state.resealed_columns_digest`. A boolean would cover the
+install that has residue today and nothing else; the digest also re-sweeps when a release
+registers a new column on an install that is **already** enabled, which is the one door
+plaintext can still arrive through and the exact shape of the `notifications` bug above.
+`finalizeMigration()` stamps it, because that pass has just swept every column it covers.
+
+The replay is gated on the watermark `history_reprojected_at`, compared against
+`op_log_quarantine.created_at` for the two reasons a key can undo —
+`QuarantineReason::keyRecoverable()`, which is `gdk_decrypt_failed` and `strategy_error`. A
+forged signature stays forged, and replaying history for one would only reach it again. The
+watermark is stamped **after** the pass, not before: the pass re-quarantines whatever it still
+cannot open, and a watermark taken first would read those rows back as new work on the very
+next request.
+
+The honest cost, per drain that quarantined something: one `EXISTS`, one keyring read, and a
+replay of the rows the quarantine names — not of the log. It is paid in `terminate()`, so the
+page the reader is looking at is already rendered. A device holding entries under an epoch it
+will never receive costs the two reads and nothing more, on every request, until the keyring
+changes.
+
+### The re-seal writes through the codec, not around it
+
+The sweep updates registered columns with `PreMigrationSnapshot::writeRowsById()` — the same raw
+writer the enable-time sweep uses, and for the same reason `OpLogRebuilder` takes raw DB access:
+routing it through each owning module's writer would emit a `Set` op for a change that is not
+one. Every peer would receive "the note changed" carrying identical plaintext, the HLC ordering
+would move, and a value a peer had since deleted could be resurrected. What must not be bypassed
+is the codec, and it is not: every value goes through `SensitiveColumnCodec::encryptValue()`,
+the same call the owning modules make, refusing under exactly the same condition. The marker
+writes go through `EncryptionRecoveryMarkers` because `sync_encryption_state` is Sync's table.
+
+### What re-sealing does not fix
+
+It bounds **future** readability. It does not erase history. SQLite leaves the old page contents
+in the freelist and in the write-ahead log, and this database runs in WAL mode with a 3.8 MB
+`-wal` beside a 2.1 MB main file. A `VACUUM` would rewrite the main file and a checkpoint would
+retire the WAL, but neither is performed here and neither reaches a backup, a Time Machine
+snapshot, or an SSD's own remapped blocks. Anyone who had read access to the file while the row
+was in the clear still has what they read. The pass converts what the ledger will hand out from
+now on, and that is all it claims.
+
 ## Why money columns are not on the list
 
 `transactions.amount_minor`, `settled_amount_minor` and `fx_rate_used` are deliberately
@@ -209,6 +497,58 @@ into the preview row, so `BlindIndexKeyUnavailableException` is printed to the r
 row, naming an internal class and their own user id where "unlock the app and try again"
 belongs. The same file already routes its *log* message through `MessageNamesNoUserData`; the
 preview row does not, and a screen needs the stricter rule of the two.
+
+### What the guard renders with, and the branch it used to leave unreached
+
+Most of what the guard renders is rendered **unlocked**: the fixture calls
+`AppLockTestHarness::unlock()`, migrates, and does not withhold the key again. That is the right
+setting for the question those cases ask, because a reader that skipped the codec leaks whether or
+not a key is held.
+
+For a long time that was the only setting, and it left the other branch of
+`SensitiveColumnCodec` unrendered. When no epoch opens a registered
+column, `safeUndecrypted()` substitutes the **empty string** for anything shaped like ciphertext,
+precisely so base64 cannot reach a reader. Two ordinary states reach it: a session holding no
+app-lock key, and a keyring file that no longer opens under the key the session does hold. Neither
+throws, and neither is visible in `sync_encryption_state`, which records only the epoch pointer.
+
+So every reader of a registered column has a third case besides "plaintext" and "decrypted": a
+value that is present, empty, and not the user's. `/notifications` found this the hard way.
+`NotificationCopy::typeChip()` indexed a nine-entry map with the decrypted `trigger_type` and
+threw `InvalidArgumentException` on the empty string, so one sealed row returned 500 for the whole
+inbox while every other screen returned 200 with quietly blank fields. The lookup is total now and
+falls back to a neutral chip, the row renders `notifications::row.unreadable` in place of a blank
+title, and `NotificationQuery` logs one warning per page naming the row ids — a sealed inbox
+should be discoverable, not merely quiet. A column whose plaintext is a **lookup key** needs that
+treatment; a column whose plaintext is prose degrades to an empty string on its own.
+
+### How a reader is told, rather than made to guess
+
+The third case is now a fact the codec hands over rather than one each reader infers.
+`decryptRow()` returns a [`DecryptedRow`](../../../Modules/Sync/Public/Dto/DecryptedRow.php): the
+column values, readable by name exactly as the plain array was, plus `isUnreadable(field)` and
+`hasUnreadable()` naming the registered columns this codec had to blank. A column is named there
+when no epoch opened it **and** the stored value was ciphertext-shaped — a legacy plaintext row
+passes straight through and is not "unreadable".
+
+That distinction cannot be recovered from the value. `transactions.note` legitimately holds the
+empty string, and so does a `note` no key in this keyring opens; read off the value alone they are
+one state. The inference only ever worked for columns whose plaintext is never empty, and nothing
+enforced that: `NotificationQuery` carried a comment explaining that an empty `trigger_type` was
+its one signal that a row was sealed, because there was no flag to read. It now asks
+`hasUnreadable()`, `DeepLinkResolver` asks `isUnreadable('params')` instead of testing the decoded
+JSON for emptiness, and `CounterpartyProfileQuery` answers `null` — absent — for a sealed `iban` or
+`merchant_name` rather than presenting a blank field as the stored one.
+
+The branch is now rendered too. A second arm re-unlocks the session under a **different** key
+after the migration, so the keyring file no longer opens under the key the session holds — the
+stranded state, reached without withholding the key, which matters because a withheld key would
+be turned away by `AppLockMiddleware` before any screen rendered. It walks the same fifteen full
+page routes and asserts each still answers 200 and still leaks no stored value. Reintroducing the
+non-total `typeChip()` lookup reproduces the shipped failure exactly and only there:
+`/notifications: 500`. A companion case proves the fixture really is stranded, by reading a
+registered column back and requiring `['value' => '', 'decrypted' => false]` — without it, "200
+with blank fields" would be indistinguishable from a fixture that quietly stayed readable.
 
 ### Why the two column lists stay separate
 

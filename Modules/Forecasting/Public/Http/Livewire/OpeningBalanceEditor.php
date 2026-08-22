@@ -15,6 +15,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Exceptions\OpeningBalanceDivergenceWarning;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountOpeningBalance;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -32,7 +33,7 @@ final class OpeningBalanceEditor extends Component
 
     public ?string $currentAsOfDate = null;
 
-    public string $currency = 'EUR';
+    public string $currency = Currency::Eur->value;
 
     public string $openingInput = '';
 

@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Alt ovenstående fjernes fra denne enhed, og du bliver logget ud. Der er ingen fortrydelse, og der gemmes ingen sikkerhedskopi.',
     'confirm' => 'Ja, slet det hele',
     'cancel' => 'Behold min konto',
+    'error_password_required' => 'Indtast din adgangskode.',
     'error_password' => 'Den adgangskode er ikke rigtig.',
     'error_failed' => 'Din konto blev ikke slettet. Intet blev ændret — prøv igen.',
 ];

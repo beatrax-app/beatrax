@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Introdu codul din cuvinte de pe celălalt dispozitiv',
     'submit_code' => 'Trimite codul',
     'cancel' => 'Anulează',
+    'skip_import' => 'Continuă fără import',
 
     'confirm_heading' => 'Compară aceste cuvinte cu celălalt dispozitiv',
     'safety_words_aria' => 'Cuvintele numărului de siguranță: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Celălalt dispozitiv nu poate fi contactat. Asigură-te că ambele sunt în aceeași rețea și că sincronizarea este activată pe desktop.',
         'invalid_code' => 'Acest cod este invalid sau a expirat. Cere celuilalt dispozitiv să genereze unul nou.',
         'code_not_accepted' => 'Niciun dispozitiv din această rețea nu a acceptat codul. Verifică codul și dacă celălalt dispozitiv încă îl afișează.',
+        'no_peer_answered' => 'Nimic din această rețea nu a răspuns la acel cod. Verifică dacă sincronizarea rulează pe celălalt dispozitiv sau scanează-i codul cu camera — camera nu caută în rețea.',
+        'no_peer_answered_ios' => 'Nimic din această rețea nu a răspuns la acel cod. Căutarea celuilalt dispozitiv în rețea încă nu funcționează pe iPhone, așa că scanează-i codul cu camera.',
         'rate_limited' => 'Prea multe încercări. Așteaptă un minut și încearcă din nou.',
         'identity_locked' => 'Identitatea dispozitivului tău este blocată. Deblochează aplicația și încearcă din nou.',
         'identity_needs_lock' => 'Configurați mai întâi blocarea aplicației — ea protejează identitatea dispozitivului.',

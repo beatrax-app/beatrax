@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     Inline dashboard card — "Drift alerts" open count + helper-line
     annualized impact roll-up. Hidden entirely when openCount === 0
@@ -15,11 +16,11 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    // The headline rolls up the annualized impact in EUR. The SUM is
-    // in original-currency minor units; the tile presents the absolute
-    // magnitude in EUR so it reads as "potential annualized cost".
+    // The headline rolls up the annualized impact in the base currency.
+    // The SUM is in original-currency minor units; the tile presents the
+    // absolute magnitude so it reads as "potential annualized cost".
     $eurMagnitude = abs((int) $totalAnnualizedImpact);
-    $eurFormatted = Money::ofMinor($eurMagnitude, 'EUR')->format();
+    $eurFormatted = Money::ofMinor($eurMagnitude, BaseCurrency::value())->format();
 @endphp
 
 <div>

@@ -10,7 +10,7 @@
     {{-- Count tiles. wire:poll.5s refreshes the entire component;
          every count derives from the raw query builder so they stay
          in sync with the table below. --}}
-    <div class="grid grid-cols-3 gap-3" wire:poll.5s data-testid="queue-count-tiles">
+    <div class="grid grid-cols-3 gap-3" wire:poll.5s.keep-alive data-testid="queue-count-tiles">
         <div class="card p-3" data-testid="tile-pending">
             <p class="text-[10.5px] uppercase tracking-wide text-[var(--color-text-faint)]">{{ Lang::get('dev::queue.tile_pending') }}</p>
             <p class="text-3xl font-semibold tabular-nums text-[var(--color-text)]" data-testid="tile-pending-count">{{ $pendingCount }}</p>

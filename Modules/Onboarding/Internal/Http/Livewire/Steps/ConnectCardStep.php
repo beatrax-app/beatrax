@@ -23,6 +23,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -88,6 +89,7 @@ final class ConnectCardStep extends Component
         Application $app,
         DatabaseManager $db,
         AccountSlugResolver $slugs,
+        BaseCurrency $baseCurrency,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -109,7 +111,16 @@ final class ConnectCardStep extends Component
             return;
         }
 
-        $this->ensureIcsAccount($newRunIds, $user, $db, $importer, $logger, $app, $slugs);
+        // Re-previewed here rather than inside the ensure: the statements were
+        // parsed before the account existed, so the ICS rows only acquire an
+        // account once one is created — and only then is a second pass worth
+        // its cost.
+        if ($this->ensureIcsAccount($user, $db, $slugs, $baseCurrency)) {
+            foreach ($newRunIds as $runId) {
+                $this->repreview($runId, $user, $importer, $logger, $app);
+            }
+        }
+
         $this->stashRunIds($user, $newRunIds);
 
         $this->dispatch('wizard.step.completed');
@@ -144,10 +155,9 @@ final class ConnectCardStep extends Component
 
     // Raw query builder rather than Account::query()->exists(), which trips
     // PHPStan strict-rules staticMethod.dynamicCall.
-    /**
-     * @param  list<int>  $newRunIds
-     */
-    private function ensureIcsAccount(array $newRunIds, User $user, DatabaseManager $db, RunsImports $importer, LoggerInterface $logger, Application $app, AccountSlugResolver $slugs): void
+    // Answers whether it created one, because the caller's re-preview is only
+    // worth running when the account it needs did not exist a moment ago.
+    private function ensureIcsAccount(User $user, DatabaseManager $db, AccountSlugResolver $slugs, BaseCurrency $baseCurrency): bool
     {
         $hasIcsAccount = $db->connection()
             ->table('accounts')
@@ -155,7 +165,7 @@ final class ConnectCardStep extends Component
             ->where('iban', self::ICS_OWN_IBAN)
             ->exists();
         if ($hasIcsAccount) {
-            return;
+            return false;
         }
 
         Account::query()->create([
@@ -164,12 +174,10 @@ final class ConnectCardStep extends Component
             'slug' => $slugs->resolveUnique($user->id, self::ICS_ACCOUNT_NAME),
             'kind' => AccountKind::IcsCard->value,
             'iban' => self::ICS_OWN_IBAN,
-            'default_currency' => 'EUR',
+            'default_currency' => $baseCurrency->code(),
         ]);
 
-        foreach ($newRunIds as $runId) {
-            $this->repreview($runId, $user, $importer, $logger, $app);
-        }
+        return true;
     }
 
     // Also repopulates statement_summaries, which the first-import step's

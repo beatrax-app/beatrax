@@ -17,6 +17,7 @@ use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Enums\LanDiscoveryReach;
 use Modules\Sync\Public\Enums\PairingWizardStep;
 
 uses(RefreshDatabase::class);
@@ -27,14 +28,19 @@ uses(RefreshDatabase::class);
 /**
  * @param  list<DiscoveredPeer>  $peers
  */
-function manualArmDiscovers(array $peers): void
+function manualArmDiscovers(array $peers, LanDiscoveryReach $reach = LanDiscoveryReach::Available): void
 {
-    app()->instance(PeerDiscovery::class, new class($peers) implements PeerDiscovery
+    app()->instance(PeerDiscovery::class, new class($peers, $reach) implements PeerDiscovery
     {
         /**
          * @param  list<DiscoveredPeer>  $peers
          */
-        public function __construct(private readonly array $peers) {}
+        public function __construct(private readonly array $peers, private readonly LanDiscoveryReach $reach) {}
+
+        public function reach(): LanDiscoveryReach
+        {
+            return $this->reach;
+        }
 
         /**
          * @return list<DiscoveredPeer>
@@ -157,8 +163,8 @@ it('answers a typed code in import mode by looking for the other device on the n
     $user = manualArmUser('armlan');
     test()->actingAs($user);
 
-    // Nothing advertising: the arm has to end in the "cannot reach the other
-    // device" message rather than a spinner or a 500.
+    // Nothing advertising: the arm has to end in a message rather than a
+    // spinner or a 500.
     manualArmDiscovers([]);
     Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
 
@@ -172,7 +178,82 @@ it('answers a typed code in import mode by looking for the other device on the n
         ->call('submitCode', null)
         ->assertSet('step', 'enter_code')
         ->assertSet('pairingTokenId', '')
-        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.relay_unreachable'));
+        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.no_peer_answered'));
+});
+
+// iphone-01. Both devices were on the same wifi, sync:serve was live and the
+// desktop was advertising on seven interfaces, and the screen said none of that
+// was true — under an unanswered "allow Beatrax to find devices on local
+// networks?" prompt. Every clause of the message was a fact the phone had not
+// established. The fixture supplies neither the permission nor a peer, because
+// that is what the field supplies.
+
+it('never blames the network for a silence it cannot explain', function (): void {
+    $user = manualArmUser('armsilent');
+    test()->actingAs($user);
+
+    manualArmDiscovers([]);
+    Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    $flashed = Livewire::test(MobilePairingScan::class)
+        ->set('wordCode', (new WordCodeEncoder)->encode(bin2hex(random_bytes(16))))
+        ->call('submitCode', null)
+        ->get('flashMessage');
+
+    expect($flashed)->not->toBe(Lang::get('mobile::pairing.errors.relay_unreachable'));
+    expect($flashed)->not->toContain('same network');
+    expect($flashed)->not->toContain('sync is enabled on the desktop');
+});
+
+it('sends a device that cannot search to the camera rather than to its router', function (): void {
+    $user = manualArmUser('armios');
+    test()->actingAs($user);
+
+    // Unsupported, not merely "no peers": the line is chosen by whether the
+    // search could run at all, so an iPhone that later gains the entitlement
+    // gets the ordinary sentence without anyone editing this branch.
+    manualArmDiscovers([], LanDiscoveryReach::Unsupported);
+    Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
+
+    putenv('NATIVEPHP_PLATFORM=ios');
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    try {
+        Livewire::test(MobilePairingScan::class)
+            ->set('wordCode', (new WordCodeEncoder)->encode(bin2hex(random_bytes(16))))
+            ->call('submitCode', null)
+            ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.no_peer_answered_ios'))
+            ->assertSet('flashMessage', fn (string $m): bool => str_contains($m, 'camera'));
+    } finally {
+        putenv('NATIVEPHP_PLATFORM');
+    }
+});
+
+it('offers both no-answer lines in every locale', function (): void {
+    $root = base_path('Modules/Mobile/Resources/lang');
+    $locales = array_values(array_filter(scandir($root) ?: [], static fn (string $e): bool => ! str_starts_with($e, '.')));
+
+    expect($locales)->toHaveCount(26);
+
+    $missing = [];
+    foreach ($locales as $locale) {
+        /** @var array<string, mixed> $pairing */
+        $pairing = require $root.'/'.$locale.'/pairing.php';
+        $errors = $pairing['errors'] ?? [];
+
+        foreach (['no_peer_answered', 'no_peer_answered_ios'] as $key) {
+            $copy = is_array($errors) ? ($errors[$key] ?? null) : null;
+
+            if (! is_string($copy) || $copy === '') {
+                $missing[] = $locale.'.'.$key;
+            }
+        }
+    }
+
+    expect($missing)->toBe([]);
 });
 
 // A typed code names no device, so every desktop on the wifi gets asked and a

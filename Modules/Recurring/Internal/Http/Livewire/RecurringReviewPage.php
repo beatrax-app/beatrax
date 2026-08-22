@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Internal\Http\Livewire;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
@@ -13,6 +12,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\SnoozeWindow;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Recurring\Internal\Enums\ReviewTab;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
@@ -68,7 +68,11 @@ final class RecurringReviewPage extends Component
 
     public function snooze(int $seriesId, string $untilIso, CurrentUser $currentUser, SnoozeRecurringSeries $action): void
     {
-        $until = CarbonImmutable::parse($untilIso);
+        $until = SafeDate::parseOrNull($untilIso);
+        if ($until === null) {
+            return;
+        }
+
         ($action)($seriesId, $currentUser->user(), $until);
         $this->toastWithUndo(Lang::get('recurring::review.toast.snoozed'), undoAction: 'approve', undoPayload: $seriesId);
     }

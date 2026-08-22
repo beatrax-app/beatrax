@@ -23,6 +23,7 @@ use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -40,8 +41,13 @@ final class ForecastPage extends Component
     #[Url(as: 'account', except: self::ALL_ACCOUNTS)]
     public string $account = self::ALL_ACCOUNTS;
 
-    #[Url(as: 'horizon', except: 30)]
-    public int $horizon = 30;
+    // The rail offers only ProjectForecastJob::HORIZON_DAYS; this is the one it
+    // opens on, named once so the property, the URL default and the fallback
+    // for an unlisted ?horizon= cannot drift apart.
+    private const DEFAULT_HORIZON = 30;
+
+    #[Url(as: 'horizon', except: self::DEFAULT_HORIZON)]
+    public int $horizon = self::DEFAULT_HORIZON;
 
     #[Url(as: 'scenarioId', except: null)]
     public ?int $scenarioId = null;
@@ -205,8 +211,16 @@ final class ForecastPage extends Component
         DatabaseManager $db,
         ViewFactory $views,
         ForecastDtoMapper $mapper,
+        BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
+
+        // setHorizon() refuses an unlisted value, but the address bar reaches the
+        // property directly: ?horizon=999 rendered a 999-day projection with no
+        // chip lit and no way back to a horizon the rail offers.
+        if (! in_array($this->horizon, ProjectForecastJob::HORIZON_DAYS, true)) {
+            $this->horizon = self::DEFAULT_HORIZON;
+        }
 
         $accountList = $this->resolveAccountList($db, $user);
         $selectedAccountId = $this->normaliseAndResolveAccount($accountList);
@@ -217,8 +231,8 @@ final class ForecastPage extends Component
         $this->assertScenarioOwnership($scenarios);
 
         $viewData = array_merge(
-            $this->selectedAccountView($selectedAccountId, $forecastQuery, $db, $user, $mapper),
-            $this->aggregateView($accountList, $isAllAccountsView, $isEmpty, $forecastQuery, $db, $user),
+            $this->selectedAccountView($selectedAccountId, $forecastQuery, $db, $user, $mapper, $baseCurrency->code()),
+            $this->aggregateView($accountList, $isAllAccountsView, $isEmpty, $forecastQuery, $db, $user, $baseCurrency->code()),
             [
                 'accounts' => $accountList,
                 'selectedAccountId' => $selectedAccountId,
@@ -318,6 +332,7 @@ final class ForecastPage extends Component
         DatabaseManager $db,
         User $user,
         ForecastDtoMapper $mapper,
+        string $baseCurrency,
     ): array {
         /** @var array<int, int> $netDiff */
         $netDiff = [];
@@ -327,7 +342,7 @@ final class ForecastPage extends Component
 
         $defaults = [
             'selectedAccountName' => '',
-            'selectedAccountCurrency' => 'EUR',
+            'selectedAccountCurrency' => $baseCurrency,
             'baseline' => null,
             'apexOptions' => null,
             'chartElementId' => null,
@@ -339,7 +354,7 @@ final class ForecastPage extends Component
             'todayBalanceMinor' => 0,
             'horizonLowMinor' => 0,
             'horizonHighMinor' => 0,
-            'defaultCurrency' => 'EUR',
+            'defaultCurrency' => $baseCurrency,
             'effectiveBufferMinor' => null,
             'shortfallWindows' => [],
         ];
@@ -420,13 +435,14 @@ final class ForecastPage extends Component
         ForecastQuery $forecastQuery,
         DatabaseManager $db,
         User $user,
+        string $baseCurrency,
     ): array {
         if (! $isAllAccountsView || $isEmpty) {
             return [
                 'aggregatePoints' => [],
                 'aggregateBufferFloor' => 0,
                 'aggregateChartElementId' => null,
-                'aggregateCurrency' => 'EUR',
+                'aggregateCurrency' => $baseCurrency,
             ];
         }
 
@@ -442,7 +458,7 @@ final class ForecastPage extends Component
             'aggregatePoints' => $aggregatePoints,
             'aggregateBufferFloor' => $aggregateBufferFloor,
             'aggregateChartElementId' => 'forecast-chart-aggregate-'.$this->horizon,
-            'aggregateCurrency' => 'EUR',
+            'aggregateCurrency' => $baseCurrency,
         ];
     }
 }

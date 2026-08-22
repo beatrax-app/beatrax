@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Providers;
 
-use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
+use Modules\Auth\Public\Events\AppLockUnlocked;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
-use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
@@ -33,7 +33,6 @@ use Modules\Sync\Internal\Crypto\LibsodiumPrimitives;
 use Modules\Sync\Internal\Crypto\LocallyKeyedRowsProbe;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\RewrapGdkOnPassphraseChange;
-use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
@@ -41,13 +40,16 @@ use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
 use Modules\Sync\Internal\Listeners\BackfillOpLogOnSyncEnabled;
+use Modules\Sync\Internal\Listeners\HoldPairingCeremonyOpenOnUnlock;
 use Modules\Sync\Internal\Listeners\SyncCaptureListener;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Merge\Strategies\GCounterStrategy;
 use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Internal\OpLog\OpLogWriterFactory;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
+use Modules\Sync\Internal\Pairing\HeldPeerConfirm;
 use Modules\Sync\Internal\Pairing\LanPairingFrameCourier;
 use Modules\Sync\Internal\Pairing\LanPairingFramePuller;
 use Modules\Sync\Internal\Pairing\PairedDeviceAdmitter;
@@ -60,14 +62,20 @@ use Modules\Sync\Internal\Pairing\PairingPullAuthorizer;
 use Modules\Sync\Internal\Pairing\PairingStateMachine;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\PeerConfirmVerifier;
+use Modules\Sync\Internal\Pairing\PendingPairingCourier;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
+use Modules\Sync\Internal\Transport\DaemonTicker;
+use Modules\Sync\Internal\Transport\DaemonTimer;
+use Modules\Sync\Internal\Transport\Discovery\BonjourBridgeQuery;
 use Modules\Sync\Internal\Transport\Discovery\CachedPeerDiscovery;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
+use Modules\Sync\Internal\Transport\Discovery\NativeBridge;
+use Modules\Sync\Internal\Transport\Discovery\NativePhpBridge;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
@@ -215,6 +223,7 @@ final class SyncServiceProvider extends ServiceProvider
         // the crypto deps it uses so the host stays a thin orchestrator.
         $this->app->singleton(PairedDeviceAdmitter::class);
         $this->app->singleton(PeerConfirmVerifier::class);
+        $this->app->singleton(HeldPeerConfirm::class);
 
         // Applies an inbound frame whichever transport carried it, so the relay
         // drain and the LAN route cannot drift apart.
@@ -228,6 +237,11 @@ final class SyncServiceProvider extends ServiceProvider
         // PairingFrame itself is static-only and needs no binding.
         $this->app->singleton(PairingFrameCourier::class);
 
+        // Redelivery with no pairing screen open anywhere. Bound, not a
+        // singleton: it is resolved from a request tail and from a daemon
+        // timer, and each of those wants the collaborators of its own process.
+        $this->app->bind(PendingPairingCourier::class);
+
         // OpLogWriter takes four runtime primitives no autowiring can supply,
         // so EVERY resolution threw "Unresolvable dependency". SyncCaptureListener
         // swallowed that: nothing was ever captured, and a paired device
@@ -236,87 +250,8 @@ final class SyncServiceProvider extends ServiceProvider
             OpLogWriter::class,
             function (Container $app, array $parameters): OpLogWriter {
                 /** @var array<string, mixed> $parameters */
-                return $parameters === []
-                    ? $this->makeOpLogWriter($app)
-                    : $this->makeOpLogWriterWith($app, $parameters);
+                return (new OpLogWriterFactory($app))->make($parameters);
             },
-        );
-    }
-
-    // Throws (not returns null) when no identity is available: an unlocked
-    // key is a precondition for signing, and callers already treat a failed
-    // resolution as "capture is not possible right now".
-    /**
-     * @throws BindingResolutionException when sync is off, locked, or the
-     *                                    request has no authenticated user.
-     */
-    private function makeOpLogWriter(Container $app): OpLogWriter
-    {
-        $currentUser = $app->make(CurrentUser::class);
-
-        if (! $currentUser->isAuthenticated()) {
-            throw new BindingResolutionException('OpLogWriter: no authenticated user to capture for.');
-        }
-
-        $userId = $currentUser->id();
-        $sessionFactory = $app->make(SessionFactory::class);
-        $identity = $app->make(DeviceIdentityLoader::class)->load($userId, $sessionFactory());
-
-        if ($identity === null) {
-            throw new BindingResolutionException('OpLogWriter: no usable device identity (sync off or locked).');
-        }
-
-        return $this->buildOpLogWriter(
-            $app,
-            $identity->deviceId,
-            $userId,
-            sodium_hex2bin($identity->ed25519SecretKeyHex),
-            sodium_hex2bin($identity->ed25519PublicKeyHex),
-        );
-    }
-
-    // Callers that already hold credentials (tests, and any future
-    // multi-identity caller) pass them explicitly to app(); honouring that
-    // keeps the make-with-parameters contract this binding replaced.
-    /**
-     * @param  array<string, mixed>  $parameters
-     *
-     * @throws BindingResolutionException when a credential is missing or the wrong type.
-     */
-    private function makeOpLogWriterWith(Container $app, array $parameters): OpLogWriter
-    {
-        $deviceId = $parameters['deviceId'] ?? null;
-        $userId = $parameters['userId'] ?? null;
-        $secretKey = $parameters['secretKey'] ?? null;
-        $publicKey = $parameters['publicKey'] ?? null;
-
-        if (! is_string($deviceId) || ! is_int($userId) || ! is_string($secretKey) || ! is_string($publicKey)) {
-            throw new BindingResolutionException('OpLogWriter: explicit credentials are incomplete.');
-        }
-
-        return $this->buildOpLogWriter($app, $deviceId, $userId, $secretKey, $publicKey);
-    }
-
-    private function buildOpLogWriter(
-        Container $app,
-        string $deviceId,
-        int $userId,
-        string $secretKey,
-        string $publicKey,
-    ): OpLogWriter {
-        return new OpLogWriter(
-            clock: $app->make(HybridLogicalClock::class),
-            db: $app->make(DatabaseManager::class),
-            signer: $app->make(DeviceKeySigner::class),
-            wallClock: $app->make(Clock::class),
-            deviceId: $deviceId,
-            userId: $userId,
-            secretKey: $secretKey,
-            publicKey: $publicKey,
-            sensitiveFields: $app->make(SensitiveFieldRegistry::class),
-            fieldCrypto: $app->make(OpLogFieldCrypto::class),
-            keyring: $app->make(GdkKeyringService::class),
-            session: $app->make(SessionFactory::class),
         );
     }
 
@@ -377,6 +312,10 @@ final class SyncServiceProvider extends ServiceProvider
     {
         $this->app->singleton(RelayServeCommand::class);
 
+        // Bound rather than newed inline so the daemon's periodic work can be
+        // driven by a test with no event loop under it.
+        $this->app->singleton(DaemonTimer::class, DaemonTicker::class);
+
         // The handler is a factory, not an instance: registering a console
         // command resolves it, and building it reaches the encrypted search
         // writer — which made every artisan call need an application key,
@@ -391,6 +330,8 @@ final class SyncServiceProvider extends ServiceProvider
             frameApplier: $this->app->make(PairingFrameApplier::class),
             peerOutbox: $this->app->make(PairingPeerOutbox::class),
             pullAuthorizer: $this->app->make(PairingPullAuthorizer::class),
+            pendingCourier: fn () => $this->app->make(PendingPairingCourier::class),
+            ticker: $this->app->make(DaemonTimer::class),
         ));
 
         $this->app->singleton(RelayMailbox::class);
@@ -401,8 +342,24 @@ final class SyncServiceProvider extends ServiceProvider
         // full browse timeout for the same answer.
         $this->app->singleton(
             PeerDiscovery::class,
-            fn () => new CachedPeerDiscovery(new MulticastMdnsQuery),
+            fn () => new CachedPeerDiscovery(self::discovery(
+                $this->app->make(NativeBridge::class),
+                $this->app->make(Repository::class),
+            )),
         );
+
+        $this->app->bind(NativeBridge::class, NativePhpBridge::class);
+    }
+
+    // Whichever road can actually put the question on the network: the shell's
+    // Bonjour browser where it exists, the only one iOS does not drop; the raw
+    // multicast query everywhere else. When NEITHER can look that query is still
+    // bound, so the caller gets Unsupported rather than a silent "no peers".
+    private static function discovery(NativeBridge $bridge, Repository $config): PeerDiscovery
+    {
+        $bonjour = new BonjourBridgeQuery($bridge);
+
+        return $bonjour->reach()->silenceMeansNoPeers() ? $bonjour : new MulticastMdnsQuery(config: $config);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
@@ -412,6 +369,7 @@ final class SyncServiceProvider extends ServiceProvider
         $this->registerCaptureListeners($events);
         $this->registerCryptoListeners($events);
         $this->registerBackfillListener($events);
+        $this->registerPairingListeners($events);
         $this->registerLivewireComponents($livewire);
         $this->registerConsoleCommands();
     }
@@ -450,6 +408,13 @@ final class SyncServiceProvider extends ServiceProvider
     private function registerCryptoListeners(Dispatcher $events): void
     {
         $events->listen(AppLockPassphraseChanged::class, [RewrapGdkOnPassphraseChange::class, 'handle']);
+    }
+
+    // The unlock itself, not a screen somebody may never open: a ceremony that
+    // lapsed behind the lock is revived the moment the lock lifts.
+    private function registerPairingListeners(Dispatcher $events): void
+    {
+        $events->listen(AppLockUnlocked::class, [HoldPairingCeremonyOpenOnUnlock::class, 'handle']);
     }
 
     private function registerLivewireComponents(LivewireManager $livewire): void

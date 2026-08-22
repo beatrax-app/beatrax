@@ -20,7 +20,7 @@
         class="console-pane rounded-md p-4"
         style="background:#0b1220; color:#f1f5f9;"
         data-testid="console-pane"
-        wire:poll.5s
+        wire:poll.5s.keep-alive
     >
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 console-pane-head items-start">
             {{-- Worker heartbeat tile --}}

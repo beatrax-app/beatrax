@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
@@ -35,25 +36,23 @@ final class ChangePasswordPage extends Component
         DatabaseManager $db,
         UrlGenerator $urls,
         Session $session,
+        AppLockProvisioner $provisioner,
     ): void {
         $user = $currentUser->user();
 
-        if (! $hasher->check($this->currentPassword, $user->password)) {
-            $this->flashMessage = Lang::get('auth::change_password.error_current_incorrect');
-            $this->resetPasswordFields();
+        // An empty box is not a wrong answer. Reported as an incorrect password
+        // it sends the reader off to check a password manager, when what is
+        // wrong is the field in front of them.
+        if ($this->currentPassword === '') {
+            $this->flashMessage = Lang::get('auth::change_password.error_current_required');
 
             return;
         }
 
-        if ($this->newPassword !== $this->newPasswordConfirmation) {
-            $this->flashMessage = Lang::get('auth::change_password.error_mismatch');
-            $this->resetPasswordFields();
+        $rejection = $this->passwordRejection($hasher, $user->password);
 
-            return;
-        }
-
-        if (strlen($this->newPassword) < PasswordPolicy::MINIMUM_LENGTH) {
-            $this->flashMessage = Lang::get('auth::change_password.error_min_length');
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
             $this->resetPasswordFields();
 
             return;
@@ -65,6 +64,11 @@ final class ChangePasswordPage extends Component
                 'password' => $hasher->make($this->newPassword),
                 'force_password_change_at_next_login' => false,
             ]);
+
+        // This is the only moment both passwords exist, and the app-lock
+        // recovery wrap is built from the old one — left alone it would stop
+        // opening, silently, until the day a forgotten PIN needed it.
+        $provisioner->rewrapRecoveryKey($user->id, $this->currentPassword, $this->newPassword);
 
         // A password changed after a suspected compromise must sever the other
         // sessions; this one survives only to finish the redirect.
@@ -84,6 +88,19 @@ final class ChangePasswordPage extends Component
         $view->extends('layouts.app', ['title' => Lang::get('auth::change_password.page_title')]);
 
         return $view;
+    }
+
+    // The empty-current-password answer above is deliberately not one of these:
+    // every rejection here wipes what was typed, and that one must not — the
+    // reader has a full form in front of them and one empty box to fill.
+    private function passwordRejection(Hasher $hasher, string $currentHash): ?string
+    {
+        return match (true) {
+            ! $hasher->check($this->currentPassword, $currentHash) => Lang::get('auth::change_password.error_current_incorrect'),
+            $this->newPassword !== $this->newPasswordConfirmation => Lang::get('auth::change_password.error_mismatch'),
+            strlen($this->newPassword) < PasswordPolicy::MINIMUM_LENGTH => Lang::get('auth::change_password.error_min_length'),
+            default => null,
+        };
     }
 
     private function resetPasswordFields(): void

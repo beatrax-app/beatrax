@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Sync\Public\Dto\DecryptedRow;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -63,17 +64,13 @@ final readonly class CounterpartyProfileQuery
             'iban' => $cp->iban,
         ], $user->id, $this->session);
 
-        $displayName = $decrypted['display_name'];
-        $iban = $decrypted['iban'];
-        $merchantName = $decrypted['merchant_name'];
-
         return new CounterpartyProfileDto(
             id: $cpId,
             slug: $cp->slug,
-            displayName: is_string($displayName) ? $displayName : $cp->display_name,
+            displayName: self::readable($decrypted, 'display_name') ?? '',
             type: $cp->type,
-            iban: is_string($iban) ? $iban : null,
-            merchantName: is_string($merchantName) ? $merchantName : null,
+            iban: self::readable($decrypted, 'iban'),
+            merchantName: self::readable($decrypted, 'merchant_name'),
             total12mMinor: $total12m,
             transactionCount: $txCount,
             firstSeenDate: is_string($firstSeen) ? substr($firstSeen, 0, 10) : null,
@@ -278,5 +275,15 @@ final readonly class CounterpartyProfileQuery
             ->get();
 
         return new Collection($rows->all());
+    }
+
+    // A column this device could not open is unknown, not empty. Read off the
+    // value alone the two are one state, so a sealed IBAN reached the profile
+    // as '' and rendered as a present-but-blank field beside a Show button.
+    private static function readable(DecryptedRow $row, string $field): ?string
+    {
+        $value = $row[$field];
+
+        return is_string($value) && ! $row->isUnreadable($field) ? $value : null;
     }
 }

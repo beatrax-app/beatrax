@@ -16,7 +16,9 @@ use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Pairing\PairingPeerOutbox;
 use Modules\Sync\Internal\Pairing\PairingPullAuthorizer;
+use Modules\Sync\Internal\Pairing\PendingPairingCourier;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
+use Modules\Sync\Internal\Transport\DaemonTimer;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\PairingFramePullHandler;
 use Modules\Sync\Internal\Transport\PairingFrameRequestHandler;
@@ -37,7 +39,19 @@ final class SyncServeCommand extends Command
     /** @var string */
     protected $description = 'Start the long-running Noise/WebSocket sync listener (amphp event loop).';
 
-    /** @param Closure(): SyncWebSocketHandler $handler */
+    // The pairing screen's own poll interval, kept because a ceremony should
+    // cost what it always cost. This driver only ever collects, so the number
+    // bounds inbound checking, never anything this device sends.
+    private const float COURIER_INTERVAL_SECONDS = 3.0;
+
+    /**
+     * @param  Closure(): SyncWebSocketHandler  $handler
+     * @param  Closure(): PendingPairingCourier  $pendingCourier  A factory for
+     *                                                            the same reason $handler is one: registering a console command
+     *                                                            resolves it, and this reaches RelayClient and RelayConfig — which
+     *                                                            would then be the ones that existed before any credential was
+     *                                                            written, for the whole life of the daemon.
+     */
     public function __construct(
         private readonly LoggerInterface $logger,
         private readonly Closure $handler,
@@ -48,6 +62,8 @@ final class SyncServeCommand extends Command
         private readonly PairingFrameApplier $frameApplier,
         private readonly PairingPeerOutbox $peerOutbox,
         private readonly PairingPullAuthorizer $pullAuthorizer,
+        private readonly Closure $pendingCourier,
+        private readonly DaemonTimer $ticker,
     ) {
         parent::__construct();
     }
@@ -136,11 +152,15 @@ final class SyncServeCommand extends Command
             $stopHint = $this->canTrapSignals() ? 'SIGTERM/SIGINT to stop' : 'no signal handling on this runtime';
             $this->info("sync:serve: listening on 0.0.0.0:{$port} ({$stopHint}).");
 
+            $this->startPendingPairingCourier($handler->localUserId());
+
             // Waits on a signal where ext-pcntl exists, and on the host's
             // stdin pipe closing either way — which is the only notice a
             // force-quit gives, and without it this daemon outlived the app
             // and kept holding the port.
             $this->shutdown->await($this->canTrapSignals());
+
+            $this->ticker->stop();
             $this->logger->info('sync:serve: shutdown requested — stopping server.');
 
             $httpServer->stop();
@@ -157,6 +177,37 @@ final class SyncServeCommand extends Command
         $this->logger->info('sync:serve: stopped cleanly.');
 
         return self::SUCCESS;
+    }
+
+    // The one driver on this device that owes nothing to an open screen. It is
+    // handed no signing key on purpose (see SyncDaemonIdentity), so all it can
+    // do is collect what is already addressed here — which is enough, because a
+    // confirmation only ever leaves a device the local human tapped on.
+    /**
+     * @link ../../../.docs/features/sync/pairing-handshake.md#redelivery-must-not-depend-on-an-open-screen
+     */
+    private function startPendingPairingCourier(int $userId): void
+    {
+        // Zero is the keyless spawn — a daemon started while the app was
+        // locked. It owns no user to carry a ceremony for, so it gets no timer
+        // rather than a query every three seconds that can only answer null.
+        if ($userId <= 0) {
+            return;
+        }
+
+        // Built on the first tick and kept, rather than resolved three times a
+        // second for the life of the daemon. Still lazy, which is the property
+        // that keeps command registration from constructing the graph.
+        $courier = null;
+
+        $this->ticker->every(self::COURIER_INTERVAL_SECONDS, function () use ($userId, &$courier): void {
+            try {
+                $courier ??= ($this->pendingCourier)();
+                $courier->tick($userId, null);
+            } catch (\Throwable $e) {
+                $this->logger->warning('sync:serve: pending pairing courier tick failed.', SafeExceptionContext::describe($e));
+            }
+        });
     }
 
     // Both are required: ext-pcntl supplies the trapping machinery and the

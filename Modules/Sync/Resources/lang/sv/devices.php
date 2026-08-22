@@ -6,10 +6,14 @@ return [
     'heading' => 'Enheter och synkronisering',
 
     'enable_sync' => 'Aktivera synkronisering',
-    'enable_sync_help' => 'Dela dina data säkert mellan betrodda enheter. Kräver ett applås.',
+    'enable_sync_help' => 'Dela dina data säkert mellan betrodda enheter. Kräver ett applås. När det väl är på krypteras dina data och applåset kan inte stängas av igen.',
 
     'app_lock_notice' => 'Ställ in ett applås först för att kunna aktivera synkronisering.',
     'go_to_app_lock' => 'Gå till Applås',
+
+    'identity_unreadable' => 'Den här enhetens synkroniseringsidentitet skapades med ett annat applås och går inte längre att öppna. Så länge det är så kan enheten varken synkronisera eller parkoppla. Återställer du databassäkerhetskopian den skapades med går den att läsa igen.',
+    'identity_unreadable_replace_help' => 'Du kan också börja om: enheten får en ny identitet, den gamla sparas oanvänd, och enheter du parkopplat tidigare måste parkopplas igen.',
+    'identity_unreadable_replace' => 'Starta en ny identitet för den här enheten',
 
     'encrypted_at_rest' => 'Data krypterade i vila',
     'encrypted_at_rest_scope' => 'Anteckningar, transaktionsbeskrivningar och namn och IBAN för dem du betalar krypteras i bokföringen med din applåslösenfras. Belopp, datum och ditt eget kontonamn och IBAN gör det inte. Sökindexet behåller en egen läsbar kopia av vem du betalar, dina transaktionsbeskrivningar och dina skatteanteckningar, och vissa handlarnamn står i klartext på andra ställen i databasfilen.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => 'Ta bort :name',
     'remove' => 'Ta bort',
     'pair_new_device' => 'Parkoppla en ny enhet',
+
+    'pairing_waiting' => 'Slutför parkopplingen med :name',
+    'pairing_waiting_help' => 'Båda skärmarna måste visa samma sex ord innan parkopplingen gäller. Öppna igen för att jämföra dem.',
+    'pairing_waiting_resume' => 'Fortsätt parkoppla',
+    'pairing_waiting_lock_override' => 'Upplåsning öppnar den här parkopplingen igen i stället för att låta den gå ut, så den varar längre än den applåstid du ställt in. Den upphör när du slutför eller avbryter den.',
 
     'relay_endpoint' => 'Relay-slutpunkt',
     'relay_endpoint_help' => 'Valfritt. När den är angiven synkroniserar frånkopplade enheter via denna relay. Lämna tomt för endast LAN&#8209;direkt.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Ställ in ett applås först för att kunna aktivera synkronisering.',
         'enable_failed' => 'Det gick inte att aktivera synkronisering. Kontrollera att ditt applås är aktivt och försök igen.',
+        'identity_replaced' => 'Den här enheten har en ny synkroniseringsidentitet. Parkoppla dina andra enheter igen.',
+        'identity_replace_failed' => 'Den gamla enhetsidentiteten kunde inte läggas åt sidan. Försök igen.',
         'cannot_remove_self' => 'Du kan inte ta bort den här enheten — det är den du använder.',
         'remove_failed' => 'Det gick inte att ta bort enheten. Försök igen.',
         'app_lock_first_settings' => 'Ställ in ett applås först för att kunna ändra synkroniseringsinställningarna.',
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Relay-slutpunkten sparades.',
         'relay_save_failed' => 'Det gick inte att spara relay-slutpunkten: :message',
     ],
+    'app_lock_permanent' => 'När dina data väl är krypterade kan applåset inte stängas av — det håller den enda nyckeln, och det finns ingen väg tillbaka till okrypterat.',
+    'backlog_heading' => 'Väntar på att läggas till',
+    'backlog_deferred' => 'Den här enheten har tagit emot data från en annan enhet och har ännu inte lagt till dem i din bokföring. Ingenting går förlorat — det sker automatiskt, oftast inom ett ögonblick.',
+    'backlog_awaiting_key' => 'Den här enheten har tagit emot data som den ännu inte har nyckeln till. Ingenting går förlorat. Öppna appen på enheten du parkopplade med medan den här är öppen, så att de två kan ansluta och nyckeln kan skickas.',
 ];

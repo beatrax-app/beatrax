@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Enums\GoalStatus;
+use Modules\Ledger\Public\Enums\Currency;
 
 // user_id stays null so callers must supply it: a default would silently
 // attribute goals to a user the test never created.
@@ -26,7 +27,7 @@ final class GoalFactory extends Factory
             'user_id' => null,
             'name' => $this->faker->word(),
             'target_minor' => 100000,
-            'target_currency' => 'EUR',
+            'target_currency' => Currency::Eur->value,
             'start_date' => CarbonImmutable::now()->toDateString(),
             'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
             'status' => GoalStatus::Active->value,

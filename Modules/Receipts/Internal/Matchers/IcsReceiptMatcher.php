@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Receipts\Internal\Matchers;
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
@@ -14,7 +15,6 @@ use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
-use Throwable;
 
 // Claims messages whose sender domain is exactly ics.nl or icscards.nl
 // (exact equality, not str_contains, so a look-alike domain cannot
@@ -135,7 +135,7 @@ final class IcsReceiptMatcher implements SenderMatcher
         if (preg_match(self::AMOUNT_REGEX, $body, $amountMatches) !== 1) {
             return null;
         }
-        $amountMinor = $this->toMinorOrNull($amountMatches[1], 'EUR');
+        $amountMinor = $this->toMinorOrNull($amountMatches[1], Currency::Eur->value);
         if ($amountMinor === null) {
             return null;
         }
@@ -145,10 +145,8 @@ final class IcsReceiptMatcher implements SenderMatcher
 
     private function buildOutcome(ParsedMimeMessage $parsed, string $body, string $merchant, int $amountMinor): MatchOutcomeDto
     {
-        $dateRaw = $parsed->headers['date'] ?? '';
-        try {
-            $bookedAt = CarbonImmutable::parse($dateRaw)->startOfDay();
-        } catch (Throwable) {
+        $bookedAt = SafeDate::parseDayOrNull($parsed->headers['date'] ?? '');
+        if ($bookedAt === null) {
             return MatchOutcomeDto::unmatched('invalid_date_header');
         }
 
@@ -195,9 +193,9 @@ final class IcsReceiptMatcher implements SenderMatcher
         return new ParsedReceiptDto(
             merchantName: $merchant,
             amountMinor: $amountMinor,
-            currency: 'EUR',
+            currency: Currency::Eur->value,
             settledAmountMinor: $amountMinor,
-            settledCurrency: 'EUR',
+            settledCurrency: Currency::Eur->value,
             referenceId: $reference,
             bookedAt: $bookedAt,
             ownIban: 'ICS-CARD',

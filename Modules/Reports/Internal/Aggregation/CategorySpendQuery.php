@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Ledger\Public\Services\CategoryAncestry;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use stdClass;
@@ -62,8 +63,8 @@ final class CategorySpendQuery
             ->when($filters->counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.counterparty_id', $filters->counterpartyIds))
             ->when($filters->amountMinMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(t.settled_amount_minor) >= ?', [$filters->amountMinMinor]))
             ->when($filters->amountMaxMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(t.settled_amount_minor) <= ?', [$filters->amountMaxMinor]))
-            ->when($filters->amountDirection === 'in', static fn (QueryBuilder $q): QueryBuilder => $q->where('t.settled_amount_minor', '>', 0))
-            ->when($filters->amountDirection === 'out', static fn (QueryBuilder $q): QueryBuilder => $q->where('t.settled_amount_minor', '<', 0))
+            ->when($filters->amountDirection === AmountDirection::In->value, static fn (QueryBuilder $q): QueryBuilder => $q->where('t.settled_amount_minor', '>', 0))
+            ->when($filters->amountDirection === AmountDirection::Out->value, static fn (QueryBuilder $q): QueryBuilder => $q->where('t.settled_amount_minor', '<', 0))
             ->groupBy('t.category_id')
             ->get(['t.category_id', $connection->raw($reportMetric->sumExpr('t.').' AS amount_minor')]);
 
@@ -90,8 +91,8 @@ final class CategorySpendQuery
             ->when($filters->counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.counterparty_id', $filters->counterpartyIds))
             ->when($filters->amountMinMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(ts.settled_amount_minor) >= ?', [$filters->amountMinMinor]))
             ->when($filters->amountMaxMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(ts.settled_amount_minor) <= ?', [$filters->amountMaxMinor]))
-            ->when($filters->amountDirection === 'in', static fn (QueryBuilder $q): QueryBuilder => $q->where('ts.settled_amount_minor', '>', 0))
-            ->when($filters->amountDirection === 'out', static fn (QueryBuilder $q): QueryBuilder => $q->where('ts.settled_amount_minor', '<', 0))
+            ->when($filters->amountDirection === AmountDirection::In->value, static fn (QueryBuilder $q): QueryBuilder => $q->where('ts.settled_amount_minor', '>', 0))
+            ->when($filters->amountDirection === AmountDirection::Out->value, static fn (QueryBuilder $q): QueryBuilder => $q->where('ts.settled_amount_minor', '<', 0))
             ->groupBy('ts.category_id')
             ->get(['ts.category_id', $connection->raw($reportMetric->sumExpr('ts.').' AS amount_minor')]);
 

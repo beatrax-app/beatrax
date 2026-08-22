@@ -53,25 +53,38 @@ What the module explicitly does NOT do:
 
 ## Module boundary
 
-`Public/` exposes a tiny cross-module surface:
+This module has NO `Public/` directory. That is deliberate and
+it is the reverse of an earlier plan: a `Public/Services`
+holding `WizardProgressQuery` with `isComplete($user)` and
+`currentStep($user)` was described for other surfaces to
+consult, and neither method nor the directory was ever built.
+Nothing outside the module needs to know where a user is in the
+wizard — the surfaces that were going to ask (the dashboard's
+"welcome tour" tile) resolve their own state instead, and a
+cross-module read of wizard progress would make every step's
+storage shape a published contract. If that need returns, it
+should arrive as a contract with a named consumer, not as a
+query left open in case someone wants it.
 
-- **Services/**
-  - `WizardProgressQuery::isComplete($user)`,
-    `currentStep($user)` — read-only progress queries that
-    other surfaces can consult (e.g. the dashboard suppresses
-    its "welcome tour" tile when the wizard is complete).
-- **Events/**
-  - `WizardCompleted` — `(userId)` raised when the user finishes
-    the wizard. No listener in v1.0.0; reserved for future
-    surfaces that want to react.
+`WizardCompleted` — `(userId)`, dispatched by `DoneStep` when
+the user lands on the final step — lives at
+`Internal/Events/WizardCompleted` for the same reason. It has
+no listener; a subscriber outside this module would be the
+thing that forces the event onto a Public surface.
 
-`Internal/` houses the implementation:
+`Internal/` is therefore the whole module:
 
 - **Internal/Services/WizardStepRegistry** — the canonical
-  ordered list of step IDs (`welcome` → `connect_bank` →
-  `connect_card` → `connect_paypal` → `connect_email` →
-  `first_import` → `done`). The wizard's navigation uses this
-  registry; tests assert the order.
+  ordered list of step keys, nine of them (`welcome` →
+  `connect-bank` → `connect-paypal` → `connect-card` →
+  `connect-email` → `first-import` → `budgets` → `tax-country`
+  → `done`), reachable through `steps()`. It also answers
+  `isSkippable($stepKey)` for the seven non-bookend steps —
+  `SetupWizard::skip()` gates on that list, so a step missing
+  from it renders a skip button that dispatches and goes
+  nowhere, which is how `first-import` shipped once. The
+  wizard's navigation uses this registry; tests assert the
+  order.
 - **Internal/Services/WizardProgressInitializer** — seeds one
   `wizard_progress` row per registry step for a fresh install.
   Insert-only per `(user_id, step_key)` — `UserInstalled` is
@@ -125,23 +138,38 @@ What the module explicitly does NOT do:
   account confirm card the first-import step surfaces.
 
 The wizard owns a dedicated layout under
-`Resources/views/layouts/app-wizard.blade.php` plus eleven
+`Resources/views/layouts/app-wizard.blade.php` plus twelve
 anonymous Blade components for the per-step UI shell.
 
 ## Key services + events
 
-- `WizardStepRegistry::all()` — ordered step ids; the wizard's
-  navigation uses this.
-- `WizardProgressInitializer::initialize($user)` — INSERT the
-  six per-user `wizard_progress` rows; idempotent on
-  `UNIQUE(user_id, step_id)`.
-- `ResumeStepResolver::resumeStep($user)` — returns the
-  first incomplete step's id, or `'done'` if every step is
-  complete.
-- `WizardProgressQuery::isComplete($user)` /
-  `currentStep($user)` — Public reads.
-- `WizardCompleted` event — raised when the user lands on
-  `DoneStep`.
+- `WizardStepRegistry::steps()` — the ordered step keys; the
+  wizard's navigation uses this. `isSkippable($stepKey)` is the
+  other half of the registry.
+- `WizardProgressInitializer::initialize($userId)` — takes the
+  id, not the `User`. INSERTs one `wizard_progress` row per
+  registry step (nine today) for rows the user does not already
+  have. Idempotence is by reading the existing rows first and
+  inserting only the gaps, with `UNIQUE(user_id, step_key)` as
+  the backstop rather than the mechanism — the seed STATUS
+  depends on what is already there, so a blind upsert would get
+  it wrong: a step added after a user finished the wizard seeds
+  `skipped`, not `pending`.
+- `ResumeStepResolver::resolve($userId)` — returns the step key
+  to mount: any `in_progress` row first, else the first
+  `pending` step in registry order, else the empty string. It
+  does NOT return `'done'` as a sentinel — `done` is a real
+  step key in the registry, so a sentinel spelled the same way
+  could not be told from "mount the done step". The empty
+  string means every step is done or skipped, and `SetupWizard`
+  redirects to `/` on it.
+- `WizardProgressQuery::list($userId)` — the per-step status
+  map the progress strip renders, defaulting an absent row to
+  `pending` so a partially-seeded user still gets a coherent
+  strip. Internal, and consumed only by `SetupWizard`.
+- `WizardCompleted` event — carries the user id, dispatched by
+  `DoneStep::finish()` just before it redirects to `/`. Nothing
+  listens to it today; it is the seam, not a wiring.
 
 ## wizard_progress cross-user posture
 
@@ -201,7 +229,9 @@ The connector step pattern (e.g. ConnectBankStep):
 ConnectBankStep::mount
   → user picks a bank format (CSV / CAMT.053 / MT940)
   → user uploads file
-  → call Import::RunImport::preview
+  → call Import::RunsImports::runFromUpload($tmp, $format,
+                                             $user, $filename,
+                                             $formatHint)
   → render preview
   → user clicks Continue
        → call Import::ConfirmImport
@@ -213,17 +243,19 @@ ConnectBankStep::mount
 The first-import step (after connector steps):
 
 ```
-FirstImportStep::mount
-  → BuildConsolidatedPreviewQuery::for($user, $stashedImportRunIds)
+FirstImportStep::render
+  → BuildConsolidatedPreviewQuery::build($stashedImportRunIds,
+                                         $user, $sectionLimits)
        → renders a consolidated multi-source preview
-  → for each account touched:
-       → DetectStartingBalancesQuery::for($file)
-       → StartingBalanceCard::mount($accountId, $detected)
+  → DetectStartingBalancesQuery::collect($stashedImportRunIds,
+                                         $user)
+       → per account touched:
+            → StartingBalanceCard ($accountId, $detected)
             → user confirms or overrides
             → write accounts.starting_balance_minor (Ledger)
   → user clicks Commit
-       → call Import::ConfirmImport (the final commit)
-       → mark first_import step complete
+       → ConfirmsImports per ready run (the final commit)
+       → mark the first-import step done
 
 DoneStep
   → dispatch WizardCompleted

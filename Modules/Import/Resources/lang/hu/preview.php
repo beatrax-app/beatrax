@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Oldja fel az alkalmazást az importáláshoz: a kereskedői kulcs zárolt állapotban nem számítható ki.',
+        'app_locked' => 'Oldja fel az alkalmazást az importáláshoz: a titkosítási kulcsok zárolt állapotban nem használhatók.',
         'file_unreadable' => 'Ezt a fájlt nem sikerült beolvasni.',
         'iban_not_in_preview' => 'Ez az IBAN nem része az aktuális előnézetnek.',
         'row_unreadable' => 'Ezt a sort nem sikerült beolvasni.',

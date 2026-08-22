@@ -15,6 +15,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
@@ -24,8 +25,6 @@ use Psr\Log\LoggerInterface;
 final class CarryoverQuery
 {
     use CoercesScalars;
-
-    private const CURRENCY = 'EUR';
 
     private const DEFAULT_OVERSPEND_MODE = OverspendMode::ReduceToBudget->value;
 
@@ -45,6 +44,7 @@ final class CarryoverQuery
         private readonly BudgetProgressQuery $budgetProgress,
         private readonly Clock $clock,
         private readonly LoggerInterface $log,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     // Nothing is budgeted, carried or moved before the first assignment — but
@@ -58,12 +58,13 @@ final class CarryoverQuery
     {
         $settings = $this->envelopeSettings($user);
         $spentByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $target);
+        $currency = $this->baseCurrency->code();
 
         $rows = [];
         $overspentCount = 0;
 
         foreach ($this->budgetProgress->expenseCategoryNaming($user) as $categoryId => $naming) {
-            $spent = $spentByKey["{$categoryId}|".self::CURRENCY] ?? 0;
+            $spent = $spentByKey["{$categoryId}|".$currency] ?? 0;
             $available = -$spent;
 
             if ($available < 0) {
@@ -79,7 +80,7 @@ final class CarryoverQuery
                 netMovedMinor: 0,
                 availableMinor: $available,
                 overspendMode: $settings['modes'][$categoryId] ?? self::DEFAULT_OVERSPEND_MODE,
-                currency: self::CURRENCY,
+                currency: $currency,
                 nonEurSpentMinor: $this->sumNonEurSpent($spentByKey, $categoryId),
                 notifyThresholdPercent: $settings['thresholds'][$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
                 categorySlug: $naming['slug'],
@@ -105,7 +106,7 @@ final class CarryoverQuery
             $unstarted = $this->unstartedRows($user, $target);
 
             return [
-                'toBudgetMinor' => $this->glance->incomeForPeriod($user, $target, self::CURRENCY),
+                'toBudgetMinor' => $this->glance->incomeForPeriod($user, $target, $this->baseCurrency->code()),
                 'overspentCount' => $unstarted['overspentCount'],
                 'rows' => $unstarted['rows'],
             ];
@@ -236,33 +237,34 @@ final class CarryoverQuery
         // Reuses the shared query: a fresh GROUP BY here would double-count a
         // split transaction, which is already legs ∪ unsplit parents.
         $spentByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
-        $income = $this->glance->incomeForPeriod($user, $period, self::CURRENCY);
+        $currency = $this->baseCurrency->code();
+        $income = $this->glance->incomeForPeriod($user, $period, $currency);
 
-        $totalAssignedMoney = Money::ofMinor(0, self::CURRENCY);
+        $totalAssignedMoney = Money::ofMinor(0, $currency);
         foreach ($assignedByCategory as $assignedMinor) {
-            $totalAssignedMoney = $totalAssignedMoney->plus(Money::ofMinor($assignedMinor, self::CURRENCY));
+            $totalAssignedMoney = $totalAssignedMoney->plus(Money::ofMinor($assignedMinor, $currency));
         }
 
-        $toBudgetMoney = Money::ofMinor($income, self::CURRENCY)
-            ->plus(Money::ofMinor($poolCarry, self::CURRENCY))
+        $toBudgetMoney = Money::ofMinor($income, $currency)
+            ->plus(Money::ofMinor($poolCarry, $currency))
             ->minus($totalAssignedMoney);
 
         $nextCarriedIn = [];
-        $shortfallMoney = Money::ofMinor(0, self::CURRENCY);
+        $shortfallMoney = Money::ofMinor(0, $currency);
         $rows = [];
         $overspentCount = 0;
 
         foreach ($context->expenseCategories as $categoryId => $naming) {
             $assigned = $assignedByCategory[$categoryId] ?? 0;
             $moved = $movedByCategory[$categoryId] ?? 0;
-            $spent = $spentByKey["{$categoryId}|".self::CURRENCY] ?? 0;
+            $spent = $spentByKey["{$categoryId}|".$currency] ?? 0;
             $carriedInForCategory = $carriedIn[$categoryId] ?? 0;
             $nonEurSpent = $this->sumNonEurSpent($spentByKey, $categoryId);
 
-            $availableMoney = Money::ofMinor($assigned, self::CURRENCY)
-                ->plus(Money::ofMinor($carriedInForCategory, self::CURRENCY))
-                ->plus(Money::ofMinor($moved, self::CURRENCY))
-                ->minus(Money::ofMinor($spent, self::CURRENCY));
+            $availableMoney = Money::ofMinor($assigned, $currency)
+                ->plus(Money::ofMinor($carriedInForCategory, $currency))
+                ->plus(Money::ofMinor($moved, $currency))
+                ->minus(Money::ofMinor($spent, $currency));
             $available = $availableMoney->toMinor();
 
             $mode = $context->overspendModeByCategory[$categoryId] ?? self::DEFAULT_OVERSPEND_MODE;
@@ -291,7 +293,7 @@ final class CarryoverQuery
                 netMovedMinor: $moved,
                 availableMinor: $available,
                 overspendMode: $mode,
-                currency: self::CURRENCY,
+                currency: $currency,
                 nonEurSpentMinor: $nonEurSpent,
                 notifyThresholdPercent: $notifyThreshold,
                 categorySlug: $naming['slug'],
@@ -313,13 +315,14 @@ final class CarryoverQuery
      */
     private function sumNonEurSpent(array $spentByKey, int $categoryId): int
     {
-        // Surfaced beside the fold, never folded into it: the fold is EUR-only,
-        // so a converted figure would drift against the ledger.
+        // Surfaced beside the fold, never folded into it: the fold runs in the
+        // base currency alone, so a converted figure would drift against the ledger.
         $nonEurSpent = 0;
         $prefix = "{$categoryId}|";
+        $suffix = '|'.$this->baseCurrency->code();
         foreach ($spentByKey as $key => $minor) {
             $keyStr = self::toString($key);
-            if (str_starts_with($keyStr, $prefix) && ! str_ends_with($keyStr, '|'.self::CURRENCY)) {
+            if (str_starts_with($keyStr, $prefix) && ! str_ends_with($keyStr, $suffix)) {
                 $nonEurSpent += self::toInt($minor);
             }
         }

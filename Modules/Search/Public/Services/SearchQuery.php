@@ -9,6 +9,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Enums\AmountDirection;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\TransactionCursor;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
@@ -34,12 +36,15 @@ final class SearchQuery
     // which reads to the typist exactly as if the token had worked.
     private const NO_SUCH_ID = 0;
 
+    private const YEAR_MONTH_LENGTH = 7;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly QueryParser $parser,
         private readonly DidYouMeanSuggester $suggester,
         private readonly FtsCandidateResolver $ftsResolver,
         private readonly SearchRowMapper $rowMapper,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function search(
@@ -92,14 +97,16 @@ final class SearchQuery
 
         $this->applyFilters($query, $user, $filters);
 
-        // The strip totals are labelled "€", so the SUMs must only
-        // aggregate rows whose settlement leg is actually EUR — a
-        // non-EUR-settled or unsettled row would otherwise be summed
-        // into a number shown under a € label.
+        // The reader's own reporting currency, not the app-wide fallback: the
+        // strip labels these totals with it, so a row settled in anything else
+        // would be summed into a figure shown under the wrong symbol.
+        $base = $user->base_currency ?? $this->baseCurrency->code();
+
         $summary = (clone $query)->selectRaw(
-            "COUNT(*) as total_count,
-             SUM(CASE WHEN settled_currency = 'EUR' AND settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
-             SUM(CASE WHEN settled_currency = 'EUR' AND settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in",
+            'COUNT(*) as total_count,
+             SUM(CASE WHEN settled_currency = ? AND settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
+             SUM(CASE WHEN settled_currency = ? AND settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in',
+            [$base, $base],
         )->first();
 
         $totalCount = is_numeric($summary?->total_count) ? (int) $summary->total_count : 0;
@@ -378,7 +385,9 @@ final class SearchQuery
     private function applyDateFilters(Builder $query, SearchFilters $filters): void
     {
         if ($filters->after !== null) {
-            $afterDate = strlen($filters->after) === 7 ? $filters->after.'-01' : $filters->after;
+            $afterDate = strlen($filters->after) === self::YEAR_MONTH_LENGTH
+                ? $filters->after.'-01'
+                : $filters->after;
             $query->where('transactions.posted_at', '>=', $afterDate);
         }
 
@@ -390,11 +399,16 @@ final class SearchQuery
 
     // A bare Y-m before-bound covers the whole month, so it widens to that
     // month's last day; an unparseable Y-m yields null and drops the bound
-    // rather than clamping to an arbitrary date.
+    // rather than clamping to an arbitrary date. The shape is checked before
+    // createFromFormat, which throws on junk instead of returning the null.
     private function normalizeBeforeDate(string $before): ?string
     {
-        if (strlen($before) !== 7) {
+        if (strlen($before) !== self::YEAR_MONTH_LENGTH) {
             return $before;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}$/', $before) !== 1) {
+            return null;
         }
 
         return CarbonImmutable::createFromFormat('Y-m', $before)?->endOfMonth()->toDateString();
@@ -448,9 +462,9 @@ final class SearchQuery
             $query->whereRaw('ABS(transactions.settled_amount_minor) <= ?', [$maxMinor]);
         }
 
-        if ($filters->amountDirection === 'in') {
+        if ($filters->amountDirection === AmountDirection::In->value) {
             $query->where('transactions.amount_minor', '>', 0);
-        } elseif ($filters->amountDirection === 'out') {
+        } elseif ($filters->amountDirection === AmountDirection::Out->value) {
             $query->where('transactions.amount_minor', '<', 0);
         }
     }

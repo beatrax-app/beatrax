@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Ange ordkoden från den andra enheten',
     'submit_code' => 'Skicka koden',
     'cancel' => 'Avbryt',
+    'skip_import' => 'Fortsätt utan att importera',
 
     'confirm_heading' => 'Jämför de här orden med den andra enheten',
     'safety_words_aria' => 'Ord för säkerhetsnummer: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Det går inte att nå den andra enheten. Kontrollera att båda är på samma nätverk och att synkronisering är aktiverad på datorn.',
         'invalid_code' => 'Koden är ogiltig eller har gått ut. Låt den andra enheten skapa en ny.',
         'code_not_accepted' => 'Ingen enhet i det här nätverket accepterade koden. Kontrollera koden och att den andra enheten fortfarande visar den.',
+        'no_peer_answered' => 'Inget på det här nätverket svarade på koden. Kontrollera att synkronisering körs på den andra enheten, eller skanna dess kod med kameran — kameran behöver inte söka på nätverket.',
+        'no_peer_answered_ios' => 'Inget på det här nätverket svarade på koden. Att söka efter den andra enheten på nätverket fungerar inte på iPhone ännu, så skanna dess kod med kameran.',
         'rate_limited' => 'För många försök. Vänta en minut och försök igen.',
         'identity_locked' => 'Enhetens identitet är låst. Lås upp appen och försök igen.',
         'identity_needs_lock' => 'Ställ in applåset först — det skyddar enhetens identitet.',

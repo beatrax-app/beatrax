@@ -15,6 +15,7 @@ use Modules\Notifications\Internal\Support\NotificationCopySpec;
 use Modules\Notifications\Public\Dto\NotificationDto;
 use Modules\Notifications\Public\NotificationCopy;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Psr\Log\LoggerInterface;
 use stdClass;
 
 final readonly class NotificationQuery
@@ -29,6 +30,7 @@ final readonly class NotificationQuery
         private DatabaseManager $db,
         private SensitiveColumnCodec $codec,
         private Session $session,
+        private LoggerInterface $log,
     ) {}
 
     /**
@@ -112,7 +114,44 @@ final readonly class NotificationQuery
             $result[] = $this->hydrate($row, $user);
         }
 
+        $this->reportUnnamed($result);
+
         return $result;
+    }
+
+    // The reader gets a neutral chip and a sentence; nothing about that reaches
+    // an operator, and a page quietly rendering thirteen unreadable rows is the
+    // shape this defect had. One line per page, ids only — the values are
+    // exactly the ones that must not be logged.
+    /**
+     * @param  list<NotificationDto>  $rows
+     */
+    private function reportUnnamed(array $rows): void
+    {
+        $unreadable = [];
+        $unknown = [];
+
+        foreach ($rows as $row) {
+            if ($row->unreadable) {
+                $unreadable[] = $row->id;
+            } elseif (! NotificationCopy::names($row->triggerType)) {
+                $unknown[$row->id] = $row->triggerType;
+            }
+        }
+
+        if ($unreadable !== []) {
+            $this->log->warning(
+                'NotificationQuery: notification content did not decrypt; rendering the unreadable row.',
+                ['notification_ids' => $unreadable],
+            );
+        }
+
+        if ($unknown !== []) {
+            $this->log->warning(
+                'NotificationQuery: trigger type this build does not name; rendering the neutral chip.',
+                ['trigger_types' => $unknown],
+            );
+        }
     }
 
     // A tampered #[Url] param must not 500 the inbox, so a malformed cursor
@@ -154,15 +193,16 @@ final readonly class NotificationQuery
             'trigger_type' => self::toString($row->trigger_type ?? null),
         ], $user->id, $this->session);
 
-        $triggerType = self::toString($decrypted['trigger_type'] ?? null);
-        $copy = self::copySpec($decrypted['params'] ?? null);
+        $triggerType = self::toString($decrypted['trigger_type']);
+        $unreadable = $decrypted->hasUnreadable();
+        $copy = self::copySpec($decrypted['params']);
 
         // The stored sentence catches two rows: one written before the copy
         // spec existed, and one whose key a later release removed. Both are
         // stuck in the language they were written in, which still reads as a
         // sentence where a raw translation key does not.
-        $title = $copy?->title() ?? self::toString($decrypted['title'] ?? null);
-        $body = $copy?->body() ?? self::toString($decrypted['body'] ?? null);
+        $title = $copy?->title() ?? self::toString($decrypted['title']);
+        $body = $copy?->body() ?? self::toString($decrypted['body']);
 
         $chip = NotificationCopy::typeChip($triggerType);
 
@@ -180,6 +220,7 @@ final readonly class NotificationQuery
             targetKind: null,
             glyph: $chip['glyph'],
             typeWord: $chip['word'],
+            unreadable: $unreadable,
         );
     }
 

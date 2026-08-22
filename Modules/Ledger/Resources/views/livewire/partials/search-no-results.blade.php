@@ -1,3 +1,4 @@
+@use('Modules\Ledger\Public\Enums\AmountDirection')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     No-results state (UI-SPEC Component Inventory #10).
@@ -63,12 +64,12 @@
                 </span>
             @endforeach
 
-            @if (($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? 'both') !== 'both')
+            @if (($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? AmountDirection::Both->value) !== AmountDirection::Both->value)
                 <span class="srch-chip srch-chip--active">
                     {{ Lang::get('ledger::list.filter.amount') }}
                     <button
                         type="button"
-                        wire:click="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', 'both')"
+                        wire:click="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', '{{ AmountDirection::Both->value }}')"
                         class="srch-chip-close"
                         aria-label="{{ Lang::get('ledger::list.filter.remove_amount_aria') }}"
                     >&times;</button>

@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Bekræft ny adgangskode',
     'submit' => 'Gem ny adgangskode',
 
+    'error_current_required' => 'Indtast din nuværende adgangskode.',
     'error_current_incorrect' => 'Den nuværende adgangskode er forkert.',
     'error_mismatch' => 'Adgangskoderne er ikke ens.',
     'error_min_length' => 'Brug mindst 12 tegn.',

@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Gib den Wortcode vom anderen Gerät ein',
     'submit_code' => 'Code senden',
     'cancel' => 'Abbrechen',
+    'skip_import' => 'Ohne Import fortfahren',
 
     'confirm_heading' => 'Vergleiche diese Wörter mit dem anderen Gerät',
     'safety_words_aria' => 'Sicherheitswörter: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Das andere Gerät ist nicht erreichbar. Stelle sicher, dass beide im selben Netzwerk sind und die Synchronisierung auf dem Desktop aktiviert ist.',
         'invalid_code' => 'Dieser Code ist ungültig oder abgelaufen. Lass das andere Gerät einen neuen erzeugen.',
         'code_not_accepted' => 'Kein Gerät in diesem Netzwerk hat den Code akzeptiert. Prüfe den Code und ob das andere Gerät ihn noch anzeigt.',
+        'no_peer_answered' => 'Nichts in diesem Netzwerk hat auf den Code geantwortet. Prüfe, ob die Synchronisierung auf dem anderen Gerät läuft, oder scanne dessen Code mit der Kamera — die Kamera sucht nicht im Netzwerk.',
+        'no_peer_answered_ios' => 'Nichts in diesem Netzwerk hat auf den Code geantwortet. Die Suche nach dem anderen Gerät im Netzwerk funktioniert auf dem iPhone noch nicht — scanne dessen Code deshalb mit der Kamera.',
         'rate_limited' => 'Zu viele Versuche. Warte eine Minute und versuche es erneut.',
         'identity_locked' => 'Die Identität deines Geräts ist gesperrt. Entsperre die App und versuche es erneut.',
         'identity_needs_lock' => 'Richte zuerst die App-Sperre ein — sie schützt die Identität deines Geräts.',

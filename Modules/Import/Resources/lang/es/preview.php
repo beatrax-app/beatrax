@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Desbloquea la aplicación para importar: la clave de comercio no se puede calcular mientras está bloqueada.',
+        'app_locked' => 'Desbloquea la aplicación para importar: las claves de cifrado no se pueden usar mientras está bloqueada.',
         'file_unreadable' => 'No se ha podido leer este archivo.',
         'iban_not_in_preview' => 'Este IBAN no forma parte de la vista previa actual.',
         'row_unreadable' => 'No se ha podido leer esta fila.',

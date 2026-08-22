@@ -6,10 +6,14 @@ return [
     'heading' => 'Devices & Sync',
 
     'enable_sync' => 'Enable sync',
-    'enable_sync_help' => 'Share your data securely across trusted devices. Requires an app lock.',
+    'enable_sync_help' => 'Share your data securely across trusted devices. Requires an app lock. Once on, your data is encrypted and the app lock can no longer be turned off.',
 
     'app_lock_notice' => 'Set an app lock first to enable sync.',
     'go_to_app_lock' => 'Go to App lock',
+
+    'identity_unreadable' => 'This device\'s sync identity was created under a different app lock and no longer opens. Until it does, this device cannot sync or pair. Restoring the database backup it was made with makes it readable again.',
+    'identity_unreadable_replace_help' => 'You can also start fresh: this device gets a new identity, the old one is kept aside unused, and devices you paired before have to be paired again.',
+    'identity_unreadable_replace' => 'Start a new identity for this device',
 
     'encrypted_at_rest' => 'Data encrypted at rest',
     'encrypted_at_rest_scope' => 'Notes, transaction descriptions and the names and IBANs of who you pay are encrypted in the ledger with your app-lock passphrase. Amounts, dates and your own account name and IBAN are not. The search index keeps its own readable copy of who you pay, your transaction descriptions and your tax notes, and some merchant names still appear in plain text elsewhere in the database file.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => 'Remove :name',
     'remove' => 'Remove',
     'pair_new_device' => 'Pair a new device',
+
+    'pairing_waiting' => 'Finish pairing with :name',
+    'pairing_waiting_help' => 'Both screens have to show the same six words before the pairing counts. Reopen it to compare them.',
+    'pairing_waiting_resume' => 'Continue pairing',
+    'pairing_waiting_lock_override' => 'Unlocking reopens this pairing instead of letting it expire, so it outlives the app-lock timeout you set. It ends when you finish or cancel it.',
 
     'relay_endpoint' => 'Relay endpoint',
     'relay_endpoint_help' => 'Optional. When set, offline devices sync via this relay. Leave empty for LAN&#8209;direct only.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Set an app lock first to enable sync.',
         'enable_failed' => 'Failed to enable sync. Make sure your app lock is active and try again.',
+        'identity_replaced' => 'This device has a new sync identity. Pair your other devices again.',
+        'identity_replace_failed' => 'Could not set the old device identity aside. Please try again.',
         'cannot_remove_self' => 'You cannot remove this device — it is the one you are using.',
         'remove_failed' => 'Failed to remove device. Please try again.',
         'app_lock_first_settings' => 'Set an app lock first to change sync settings.',
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Relay endpoint saved.',
         'relay_save_failed' => 'Failed to save relay endpoint: :message',
     ],
+    'app_lock_permanent' => 'Once your data is encrypted, the app lock can no longer be turned off — it holds the only key, and there is no way back to unencrypted.',
+    'backlog_heading' => 'Waiting to be added',
+    'backlog_deferred' => 'This device has received data from another device and has not added it to your ledger yet. Nothing is lost — it is applied automatically, normally within a moment.',
+    'backlog_awaiting_key' => 'This device has received data it does not have the key for yet. Nothing is lost. Open the app on the device you paired with while this one is open, so the two can connect and it can send the key.',
 ];

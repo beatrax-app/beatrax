@@ -7,6 +7,11 @@ namespace Modules\Categorization\Database\Seeders\Demo;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
+use Modules\Categorization\Public\Enums\ActionType;
+use Modules\Categorization\Public\Enums\ConditionOperator;
+use Modules\Categorization\Public\Enums\ConditionValueType;
+use Modules\Categorization\Public\Enums\NoteMode;
+use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
 
 // Written through the public action so the stored conditions and actions match
@@ -103,22 +108,22 @@ final class DemoCategorizationRulesSeeder
         }
 
         $actions = [
-            ['type' => 'category', 'payload' => ['category_id' => $categoryId]],
+            ['type' => ActionType::Category->value, 'payload' => ['category_id' => $categoryId]],
         ];
 
         if ($row['note'] !== null) {
-            $actions[] = ['type' => 'note', 'payload' => ['mode' => 'set', 'text' => $row['note']]];
+            $actions[] = ['type' => ActionType::Note->value, 'payload' => ['mode' => NoteMode::Set->value, 'text' => $row['note']]];
         }
 
         $this->createRule->__invoke($user, new RuleInput(
             priority: $row['priority'],
-            combinator: 'all',
+            combinator: RuleCombinator::All->value,
             active: $row['active'],
             notes: $row['notes'],
             conditions: [[
                 'field' => 'description',
-                'op' => 'contains',
-                'value_type' => 'string',
+                'op' => ConditionOperator::Contains->value,
+                'value_type' => ConditionValueType::Text->value,
                 'value' => $row['match'],
             ]],
             actions: $actions,

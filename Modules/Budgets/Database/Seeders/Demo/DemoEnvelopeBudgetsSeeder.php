@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\CategoryKind;
+use Modules\Ledger\Public\Services\BaseCurrency;
 
 final class DemoEnvelopeBudgetsSeeder
 {
@@ -35,6 +36,7 @@ final class DemoEnvelopeBudgetsSeeder
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -82,7 +84,7 @@ final class DemoEnvelopeBudgetsSeeder
                         'category_id' => $categoryId,
                         'period_start' => $periodStart,
                         'assigned_minor' => $minor,
-                        'currency' => 'EUR',
+                        'currency' => $this->baseCurrency->code(),
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]);
@@ -91,7 +93,7 @@ final class DemoEnvelopeBudgetsSeeder
                         ->where('id', $existing->id)
                         ->update([
                             'assigned_minor' => $minor,
-                            'currency' => 'EUR',
+                            'currency' => $this->baseCurrency->code(),
                             'updated_at' => $now,
                         ]);
                 }

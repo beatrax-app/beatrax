@@ -100,8 +100,13 @@ final class SignupAction
         // Through the same seam Settings writes, so the country-scoped
         // reference data a fresh install needs is seeded here too. An empty
         // code is the reader skipping the picker, and store() leaves it unset.
+
+        // The country is written either way — `users` does not sync, so a joiner
+        // that did not record it here never learns it. Only the reference data
+        // behind it rides on $seedsStarterData: those tables DO sync, and a row
+        // this device seeds is one the peer's own can no longer land beside.
         try {
-            $this->countries->store($result['user']->id, $countryCode);
+            $this->countries->store($result['user']->id, $countryCode, seedsCountryData: $seedsStarterData);
         } catch (Throwable $e) {
             // The user row is already committed and the recovery codes below
             // are the only way back into this account. A country the reader

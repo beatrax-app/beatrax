@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Potvrdi novu lozinku',
     'submit' => 'Spremi novu lozinku',
 
+    'error_current_required' => 'Unesi svoju trenutnu lozinku.',
     'error_current_incorrect' => 'Trenutna lozinka nije točna.',
     'error_mismatch' => 'Lozinke se ne podudaraju.',
     'error_min_length' => 'Upotrijebi najmanje 12 znakova.',

@@ -7,6 +7,7 @@ namespace Modules\Recurring\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Recurring\Models\RecurringSeries;
@@ -194,7 +195,7 @@ final class DemoRecurringSeeder
                 'user_id' => $user->id,
                 'direction' => Direction::Expense->value,
                 'cluster_key' => $row['clusterKey'],
-                'latest_currency' => 'EUR',
+                'latest_currency' => Currency::Eur->value,
             ],
             [
                 'detected_name' => $row['detectedName'],

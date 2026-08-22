@@ -12,6 +12,8 @@ use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ReportDimension;
+use Modules\Reports\Internal\Enums\ReportMetricSelection;
 
 final class ReportAggregator
 {
@@ -31,7 +33,7 @@ final class ReportAggregator
     {
         $period = $this->periodPresetResolver->resolve($definition->periodPreset, $definition->customFrom, $definition->customTo);
 
-        $result = $definition->metric === 'net_worth'
+        $result = $definition->metric === ReportMetricSelection::NetWorth->value
             ? $this->buildNetWorthResult($user, $period, $definition)
             : $this->buildTransactionResult($user, $period, $definition);
 
@@ -44,7 +46,7 @@ final class ReportAggregator
         $comparison = $this->periodComparison->compare(
             $period,
             $result->rows,
-            fn (Period $previousPeriod): ReportResultDto => $definition->metric === 'net_worth'
+            fn (Period $previousPeriod): ReportResultDto => $definition->metric === ReportMetricSelection::NetWorth->value
                 ? $this->buildNetWorthResult($user, $previousPeriod, $definition)
                 : $this->buildTransactionResult($user, $previousPeriod, $definition),
         );
@@ -99,9 +101,9 @@ final class ReportAggregator
     {
         return match ($definition->dimension) {
             'category' => $this->categorySpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
-            'counterparty' => $this->counterpartySpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
-            'account' => $this->accountSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
-            'time_bucket' => $this->timeBucketSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $definition->granularity, $filters),
+            ReportDimension::Counterparty->value => $this->counterpartySpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
+            ReportDimension::Account->value => $this->accountSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
+            ReportDimension::TimeBucket->value => $this->timeBucketSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $definition->granularity, $filters),
             default => throw new InvalidArgumentException("Unknown report dimension: {$definition->dimension}"),
         };
     }
