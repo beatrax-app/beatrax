@@ -50,20 +50,18 @@
 >
     <template x-if="visible">
         <div
-            class="palette-scrim fixed inset-0 z-[9999] flex items-start justify-center bg-slate-950/45 backdrop-blur-sm pt-[12vh]
-                   max-md:p-0 max-md:pt-0 max-md:items-start"
+            class="fixed inset-0 z-[9999] flex items-start justify-center bg-slate-950/45 backdrop-blur-sm pt-[12vh] max-md:p-0 max-md:pt-0 max-md:items-start"
             x-on:click.self="close()"
         >
             {{-- Desktop palette (>= 768px) + phone full-screen sheet (< 768px) --}}
             <div
-                class="palette w-[min(760px,92vw)] rounded-xl overflow-hidden shadow-2xl bg-white dark:bg-[#0b1220] text-slate-900 dark:text-slate-100 ring-1 ring-slate-200 dark:ring-slate-700
-                       max-md:w-full max-md:h-full max-md:rounded-none max-md:ring-0 max-md:shadow-none phone-palette-sheet"
+                class="w-[min(760px,92vw)] rounded-xl overflow-hidden shadow-2xl bg-white dark:bg-[#0b1220] text-slate-900 dark:text-slate-100 ring-1 ring-slate-200 dark:ring-slate-700 max-md:w-full max-md:h-full max-md:rounded-none max-md:ring-0 max-md:shadow-none phone-palette-sheet"
                 x-ref="panel"
                 role="dialog"
                 aria-modal="true"
                 aria-label="{{ Lang::get('dev::palette.dialog_aria') }}"
             >
-                <div class="palette-input flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative">
+                <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative">
                     {{-- Loading spinner or search icon. Both are pinned to the
                          same w-4 box: they swap in and out of one slot ahead
                          of the input, and two glyphs of different advance
@@ -136,16 +134,16 @@
 
                 <div class="palette-body flex min-h-[280px] max-h-[60vh] max-md:max-h-full max-md:flex-1">
                     <aside class="palette-rail w-[180px] p-3 border-r border-slate-200 dark:border-slate-700 text-sm overflow-y-auto max-md:hidden">
-                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_view') }}</div>
-                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_dev') }}</div>
-                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_action') }}</div>
-                        <div class="palette-rail-divider h-px bg-slate-200 dark:bg-slate-700 my-3"></div>
-                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_recent') }}</div>
+                        <div class="text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_view') }}</div>
+                        <div class="text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_dev') }}</div>
+                        <div class="text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_action') }}</div>
+                        <div class="h-px bg-slate-200 dark:bg-slate-700 my-3"></div>
+                        <div class="text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_recent') }}</div>
                         <template x-for="r in recent.slice(0, 5)" :key="r.id">
                             <button
                                 type="button"
                                 data-palette-row
-                                class="palette-row palette-row--mini block w-full text-left px-1 py-1.5 rounded text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100"
+                                class="palette-row block w-full text-left px-1 py-1.5 rounded text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100"
                                 x-text="r.label"
                                 x-on:click="execute(r)"
                             ></button>
@@ -155,7 +153,7 @@
                         </template>
                     </aside>
 
-                    <main class="palette-results flex-1 p-2 overflow-y-auto">
+                    <main class="flex-1 p-2 overflow-y-auto">
                         {{-- Server-backed sections — only rendered when Search module is wired and query >= 2 chars --}}
                         @if($searchAvailable)
                         <template x-if="query.length >= 2">
@@ -175,7 +173,7 @@
                                                 x-on:click="executeTransactionHit(hit)"
                                             >
                                                 <span class="ic w-5 text-center text-slate-400 dark:text-slate-500 mt-0.5 shrink-0" aria-hidden="true">≡</span>
-                                                <span class="palette-txn-row-text block flex-1 min-w-0">
+                                                <span class="block flex-1 min-w-0">
                                                     {{-- Line 1: counterparty name + amount --}}
                                                     <span class="flex items-baseline gap-2">
                                                         {{-- x-text, NOT x-html: counterpartyName is raw user input
@@ -186,7 +184,7 @@
                                                             x-text="hit.counterpartyName || @js(Lang::get('dev::palette.no_name'))"
                                                         ></span>
                                                         <span
-                                                            class="text-xs text-slate-500 dark:text-slate-400 shrink-0 font-variant-numeric tabular-nums ml-auto"
+                                                            class="text-xs text-slate-500 dark:text-slate-400 shrink-0 tabular-nums ml-auto"
                                                             x-text="hit.amount"
                                                         ></span>
                                                     </span>
@@ -198,7 +196,7 @@
                                                         ></span>
                                                     </template>
                                                 </span>
-                                                <span class="palette-source palette-source--txn text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 shrink-0">{{ Lang::get('dev::palette.source_txn') }}</span>
+                                                <span class="palette-source--txn text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 shrink-0">{{ Lang::get('dev::palette.source_txn') }}</span>
                                             </button>
                                         </template>
 
@@ -206,7 +204,7 @@
                                         <button
                                             type="button"
                                             data-palette-row
-                                            class="palette-row palette-see-all flex w-full items-center gap-3 px-4 py-2 rounded-lg text-left cursor-pointer text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100"
+                                            class="palette-row flex w-full items-center gap-3 px-4 py-2 rounded-lg text-left cursor-pointer text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100"
                                             x-on:click="seeAllResults()"
                                         >
                                             <span class="w-5 text-center text-slate-400 dark:text-slate-500 shrink-0" aria-hidden="true">→</span>
@@ -236,7 +234,7 @@
                                             >
                                                 <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">◈</span>
                                                 <span class="flex-1 text-sm" x-text="entity.label"></span>
-                                                <span class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">{{ Lang::get('dev::palette.source_counterparty') }}</span>
+                                                <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">{{ Lang::get('dev::palette.source_counterparty') }}</span>
                                             </button>
                                         </template>
                                     </div>
@@ -257,7 +255,7 @@
                                             >
                                                 <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">⊞</span>
                                                 <span class="flex-1 text-sm" x-text="entity.label"></span>
-                                                <span class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">{{ Lang::get('dev::palette.source_category') }}</span>
+                                                <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">{{ Lang::get('dev::palette.source_category') }}</span>
                                             </button>
                                         </template>
                                     </div>
@@ -278,7 +276,7 @@
                                             >
                                                 <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">◎</span>
                                                 <span class="flex-1 text-sm" x-text="entity.label"></span>
-                                                <span class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800" x-text="entity.type"></span>
+                                                <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800" x-text="entity.type"></span>
                                             </button>
                                         </template>
                                     </div>
@@ -309,18 +307,18 @@
                                     :tabindex="i === activeIndex ? 0 : -1"
                                     class="palette-row flex w-full items-center gap-3 px-3 py-2 rounded-lg text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100"
                                     :class="i === activeIndex
-                                        ? 'palette-row--active bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
+                                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
                                         : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
                                     x-on:click="execute(hit.item)"
                                     x-on:mouseenter="activeIndex = i"
                                 >
                                     <span class="ic w-5 text-center text-slate-500 dark:text-slate-400" aria-hidden="true" x-text="hit.item.icon"></span>
-                                    <span class="palette-row-text block flex-1 min-w-0">
-                                        <span class="palette-row-label block text-sm font-medium" x-text="hit.item.label"></span>
-                                        <span class="palette-row-hint block text-xs text-slate-500 dark:text-slate-400" x-text="hit.item.hint"></span>
+                                    <span class="block flex-1 min-w-0">
+                                        <span class="block text-sm font-medium" x-text="hit.item.label"></span>
+                                        <span class="block text-xs text-slate-500 dark:text-slate-400" x-text="hit.item.hint"></span>
                                     </span>
                                     <span
-                                        class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800"
+                                        class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800"
                                         :class="'palette-source--' + hit.item.source"
                                         x-text="hit.item.source"
                                     ></span>
@@ -334,7 +332,7 @@
                     </main>
                 </div>
 
-                <div class="palette-foot hidden-touch max-lg:hidden flex items-center gap-3 px-4 py-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+                <div class="hidden-touch max-lg:hidden flex items-center gap-3 px-4 py-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
                     <span><span class="kbd">↑</span><span class="kbd">↓</span> {{ Lang::get('dev::palette.foot_navigate') }}</span>
                     <span><span class="kbd">↩</span> {{ Lang::get('dev::palette.foot_select') }}</span>
                     <span><span class="kbd">esc</span> {{ Lang::get('dev::palette.foot_close') }}</span>

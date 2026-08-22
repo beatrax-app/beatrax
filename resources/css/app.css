@@ -5853,3 +5853,27 @@ mark {
         color: var(--color-text-muted);
     }
 }
+
+@layer components {
+    /* Theme-locked dark inset shared by the /dev overview and the sync-health
+       page. Both hard-coded the same three values inline; the pane never
+       participates in theme switching, which is why it has a name at all. */
+    .console-pane {
+        background: #0b1220;
+        color: #f1f5f9;
+        border-color: #1e293b;
+    }
+}
+
+/* Palette source chips. Unlayered, like `.palette-source--txn` above: the chip
+   carries Tailwind's muted slate utilities, and a `@layer components` rule
+   would lose to them. `view` and `dev-view` are the muted default. */
+.palette-source--dev {
+    background: var(--color-amber-bg, #fef3c7);
+    color: var(--color-amber, #b45309);
+}
+
+.palette-source--action {
+    background: var(--color-blue-bg, #dbeafe);
+    color: var(--color-blue, #2563eb);
+}
