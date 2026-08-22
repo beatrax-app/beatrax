@@ -4582,6 +4582,7 @@ mark {
 
 .srch-date-input {
     flex: 1;
+    min-width: 0;
     height: 32px;
     padding: 0 6px;
     border: 1px solid var(--color-border, oklch(93% 0 0));
@@ -4641,8 +4642,12 @@ mark {
     gap: var(--space-2, 8px);
 }
 
+/* min-width: 0 because flex:1 alone cannot shrink a text input below its own
+   intrinsic size: Min and Max each held 211px and the Max box ended 88pt past
+   the right edge of a 375pt phone. */
 .srch-amount-input {
     flex: 1;
+    min-width: 0;
     height: 32px;
     padding: 0 6px;
     border: 1px solid var(--color-border, oklch(93% 0 0));
