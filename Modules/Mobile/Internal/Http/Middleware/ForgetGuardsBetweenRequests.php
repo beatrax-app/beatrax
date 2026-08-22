@@ -26,7 +26,7 @@ final readonly class ForgetGuardsBetweenRequests
         // bound and every later request walks the whole list.
         $guard = $this->auth->guard();
 
-        if ($guard instanceof SessionGuard) {
+        if ($guard instanceof SessionGuard && $this->canBeResolvedAgain($guard)) {
             $guard->forgetUser();
         }
 
@@ -34,5 +34,14 @@ final readonly class ForgetGuardsBetweenRequests
         $response = $next($request);
 
         return $response;
+    }
+
+    // Dropping only refreshes a user the session can name again. An identity
+    // bound straight onto the guard has nothing behind it, so dropping that
+    // one signs the caller out instead — the same distinction that keeps
+    // ClearGuardBetweenJobs off the sync queue driver.
+    private function canBeResolvedAgain(SessionGuard $guard): bool
+    {
+        return $guard->getSession()->has($guard->getName());
     }
 }

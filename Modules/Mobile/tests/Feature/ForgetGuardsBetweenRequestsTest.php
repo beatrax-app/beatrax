@@ -69,6 +69,24 @@ it('reads the saved value once the stale guard is dropped', function (): void {
     expect($auth->guard()->user()?->locale)->toBe('nl');
 });
 
+it('leaves an identity the session cannot name, rather than signing it out', function (): void {
+    $user = guardStaleUser();
+
+    /** @var AuthManager $auth */
+    $auth = app(AuthManager::class);
+
+    // Bound straight onto the guard, the way actingAs() does it and a signed-in
+    // request never does. Dropping this one is no refresh — there is no session
+    // key behind it to re-resolve from, so it is a sign-out, and it answered
+    // every authenticated request under the mobile root as a guest.
+    $auth->guard()->setUser($user);
+
+    (new ForgetGuardsBetweenRequests($auth))
+        ->handle(new Request, static fn (): Response => new Response('ok'));
+
+    expect($auth->guard()->user()?->getAuthIdentifier())->toBe($user->id);
+});
+
 // forgetGuards() rebuilds the session driver, and rebuilding registers a
 // rebound callback the container never prunes. On a runtime that boots once and
 // runs for the life of the app, that list only grows — and every later request
