@@ -184,18 +184,28 @@ final class CounterpartyKeyBackfill
             return null;
         }
 
-        $storedHash = $evidence['signature_hash'] ?? null;
-        if (! is_string($storedHash) || $storedHash === '') {
-            return null;
-        }
-
         $plainKey = $plainKeys[self::toInt($row->from_transaction_id ?? null)] ?? '';
 
         if ($plainKey === '' || BlindIndexCodec::looksDerived($plainKey)) {
             return null;
         }
 
-        $derivedKey = $this->blindIndex->deriveWithKey(CounterpartyKey::DOMAIN, $plainKey, $userId, $keyHex);
+        return $this->resignedAgainstMatchingIban($evidence, $plainKey, $ibans, $userId, $keyHex);
+    }
+
+    // The derivation sits inside the loop rather than above it: a link whose
+    // hash no reachable IBAN reproduces is left alone, and on such a link the
+    // key it would have been re-signed with was never needed.
+    /**
+     * @param  array<array-key, mixed>  $evidence
+     * @param  list<string>  $ibans
+     */
+    private function resignedAgainstMatchingIban(array $evidence, string $plainKey, array $ibans, int $userId, string $keyHex): ?string
+    {
+        $storedHash = $evidence['signature_hash'] ?? null;
+        if (! is_string($storedHash) || $storedHash === '') {
+            return null;
+        }
 
         $matched = $evidence['matched_iban'] ?? null;
         if (is_string($matched) && $matched !== '') {
@@ -207,6 +217,7 @@ final class CounterpartyKeyBackfill
                 continue;
             }
 
+            $derivedKey = $this->blindIndex->deriveWithKey(CounterpartyKey::DOMAIN, $plainKey, $userId, $keyHex);
             $evidence['signature_hash'] = self::signatureHash($derivedKey, $iban);
 
             return json_encode($evidence, JSON_THROW_ON_ERROR);
@@ -327,7 +338,7 @@ final class CounterpartyKeyBackfill
     private static function looksLikeIban(string $normalizedIban): bool
     {
         return preg_match(
-            '/^[A-Z]{2}[0-9]{2}[A-Z0-9]{8,30}$/',
+            '/^[A-Z]{2}\d{2}[A-Z\d]{8,30}$/',
             CounterpartyKey::compactIban($normalizedIban),
         ) === 1;
     }

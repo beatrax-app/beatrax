@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Numele noii categorii…',
     'add_category' => 'Adaugă categorie',
     'category_added' => 'Categorie adăugată.',
+    'category_gone' => 'Categoria nu a fost găsită (poate a fost ștearsă în altă filă).',
 
     'archived_count' => 'Arhivate (:count)',
     'restore' => 'Restaurează',

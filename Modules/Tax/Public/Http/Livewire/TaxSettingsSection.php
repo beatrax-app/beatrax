@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
@@ -15,6 +16,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class TaxSettingsSection extends Component
 {
+    use DispatchesToast;
+
     public string $newCategoryName = '';
 
     public string $addError = '';
@@ -54,6 +57,7 @@ final class TaxSettingsSection extends Component
         try {
             $writer->rename($currentUser->user()->id, $categoryId, $name);
         } catch (NotFoundHttpException) {
+            $this->reportCategoryGone();
         } catch (\InvalidArgumentException|\RuntimeException $e) {
             $this->renameError = $e->getMessage();
         }
@@ -67,6 +71,7 @@ final class TaxSettingsSection extends Component
         try {
             $writer->archive($currentUser->user()->id, $categoryId);
         } catch (NotFoundHttpException) {
+            $this->reportCategoryGone();
         }
     }
 
@@ -78,7 +83,17 @@ final class TaxSettingsSection extends Component
         try {
             $writer->unarchive($currentUser->user()->id, $categoryId);
         } catch (NotFoundHttpException) {
+            $this->reportCategoryGone();
         }
+    }
+
+    // A row that vanished between render and click leaves the list on the very
+    // next render, so archiving reads as having worked and restoring reads as
+    // having worked — on the one action that did not happen. A toast rather
+    // than $renameError: the field the inline error sits under is gone too.
+    private function reportCategoryGone(): void
+    {
+        $this->toast(Lang::get('tax::settings.category_gone'));
     }
 
     public function render(

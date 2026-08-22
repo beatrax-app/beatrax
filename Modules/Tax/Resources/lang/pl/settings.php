@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Nazwa nowej kategorii…',
     'add_category' => 'Dodaj kategorię',
     'category_added' => 'Kategoria dodana.',
+    'category_gone' => 'Nie znaleziono kategorii (mogła zostać usunięta w innej karcie).',
 
     'archived_count' => 'Zarchiwizowane (:count)',
     'restore' => 'Przywróć',

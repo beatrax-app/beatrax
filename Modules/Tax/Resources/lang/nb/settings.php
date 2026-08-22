@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Navn på ny kategori…',
     'add_category' => 'Legg til kategori',
     'category_added' => 'Kategorien ble lagt til.',
+    'category_gone' => 'Fant ikke kategorien (den kan ha blitt slettet i en annen fane).',
 
     'archived_count' => 'Arkiverte (:count)',
     'restore' => 'Gjenopprett',

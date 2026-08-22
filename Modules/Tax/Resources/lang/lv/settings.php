@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Jaunās kategorijas nosaukums…',
     'add_category' => 'Pievienot kategoriju',
     'category_added' => 'Kategorija pievienota.',
+    'category_gone' => 'Kategorija nav atrasta (tā, iespējams, ir dzēsta citā cilnē).',
 
     'archived_count' => 'Arhivētās (:count)',
     'restore' => 'Atjaunot',

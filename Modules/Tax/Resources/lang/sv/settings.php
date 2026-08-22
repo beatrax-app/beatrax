@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Namn på ny kategori…',
     'add_category' => 'Lägg till kategori',
     'category_added' => 'Kategorin lades till.',
+    'category_gone' => 'Kategorin hittades inte (den kan ha tagits bort i en annan flik).',
 
     'archived_count' => 'Arkiverade (:count)',
     'restore' => 'Återställ',

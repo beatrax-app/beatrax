@@ -59,7 +59,7 @@ final class Mt940Adapter implements SourceAdapter
                 continue;
             }
 
-            $this->applyHeaderTag($state, $tag, $content, $accounts);
+            $this->applyHeaderTag($state, $tag, $content);
         }
 
         if ($state->pendingTag61 !== null) {
@@ -69,13 +69,13 @@ final class Mt940Adapter implements SourceAdapter
         $this->lastStatementMetadata = $state->toMetadata();
     }
 
-    private function applyHeaderTag(Mt940StatementAccumulator $state, string $tag, string $content, AccountResolver $accounts): void
+    private function applyHeaderTag(Mt940StatementAccumulator $state, string $tag, string $content): void
     {
         // Unknown tags are ignored on purpose: MT940 files carry vendor
         // extensions, and tolerating them survives an ASN export revision.
         match ($tag) {
             '20' => $this->applyStatementId($state, $content),
-            '25' => $this->applyOwnIban($state, $content, $accounts),
+            '25' => $this->applyOwnIban($state, $content),
             '28C' => $this->applyStatementNumber($state, $content),
             '60F', '60M' => $this->applyOpeningBalance($state, $content),
             '62F', '62M' => $this->applyClosingBalance($state, $content),
@@ -93,7 +93,7 @@ final class Mt940Adapter implements SourceAdapter
         }
     }
 
-    private function applyOwnIban(Mt940StatementAccumulator $state, string $content, AccountResolver $accounts): void
+    private function applyOwnIban(Mt940StatementAccumulator $state, string $content): void
     {
         if ($state->firstStatementFrozen) {
             return;

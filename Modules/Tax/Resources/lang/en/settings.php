@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'New category name…',
     'add_category' => 'Add category',
     'category_added' => 'Category added.',
+    'category_gone' => 'Category not found (it may have been deleted in another tab).',
 
     'archived_count' => 'Archived (:count)',
     'restore' => 'Restore',

@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Nome da nova categoria…',
     'add_category' => 'Adicionar categoria',
     'category_added' => 'Categoria adicionada.',
+    'category_gone' => 'Categoria não encontrada (pode ter sido eliminada noutro separador).',
 
     'archived_count' => 'Arquivadas (:count)',
     'restore' => 'Restaurar',

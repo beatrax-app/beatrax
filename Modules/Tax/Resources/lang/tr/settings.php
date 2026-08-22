@@ -23,6 +23,7 @@ return [
     'new_category_placeholder' => 'Yeni kategori adı…',
     'add_category' => 'Kategori ekle',
     'category_added' => 'Kategori eklendi.',
+    'category_gone' => 'Kategori bulunamadı (başka bir sekmede silinmiş olabilir).',
 
     'archived_count' => 'Arşivlenen (:count)',
     'restore' => 'Geri yükle',

@@ -22,7 +22,12 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         ReportDefinitionRequestFactory $definitions,
     ): StreamedResponse {
         if (! $currentUser->isAuthenticated()) {
-            return new StreamedResponse(static function (): void {});
+            return new StreamedResponse(static function (): void {
+                // Empty on purpose, and it may not stay that way by accident.
+                // The group's 'auth' makes this unreachable; it exists because
+                // user() throws NotAuthenticatedException, which is mapped to
+                // no response — letting it out would 500 instead of signing in.
+            });
         }
 
         $user = $currentUser->user();
