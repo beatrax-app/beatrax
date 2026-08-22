@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Tout ce qui précède est retiré de cet appareil et tu es déconnecté. Aucun retour en arrière, aucune sauvegarde conservée.',
     'confirm' => 'Oui, tout supprimer',
     'cancel' => 'Garder mon compte',
+    'error_password_required' => 'Saisis ton mot de passe.',
     'error_password' => 'Ce mot de passe n’est pas correct.',
     'error_failed' => 'Ton compte n’a pas été supprimé. Rien n’a changé — réessaie.',
 ];

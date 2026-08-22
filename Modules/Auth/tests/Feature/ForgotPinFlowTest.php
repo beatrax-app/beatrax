@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
+use Modules\Auth\Internal\Lock\AppLockDisableResult;
 use Modules\Auth\Internal\Lock\AppLockKdf;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
@@ -200,11 +201,11 @@ it('disable requires the correct PIN and clears all lock material on success', f
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
     $result = $provisioner->disable($user->id, 'wrong');
-    expect($result)->toBeFalse();
+    expect($result)->toBe(AppLockDisableResult::PinIncorrect);
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
     $result = $provisioner->disable($user->id, '999999');
-    expect($result)->toBeTrue();
+    expect($result)->toBe(AppLockDisableResult::Disabled);
     expect($provisioner->isEnabled($user->id))->toBeFalse();
 
     $row = app(DatabaseManager::class)
@@ -244,7 +245,7 @@ it('disable() and re-enable() both delete stale biometric credentials', function
     $store->store($user->id, base64_encode('stale-cred-1'), 'Old Device', str_repeat("\x05", 32), 'fake-cbor', 'webauthn');
     expect($credCount())->toBe(1);
 
-    expect($provisioner->disable($user->id, '123456'))->toBeTrue();
+    expect($provisioner->disable($user->id, '123456'))->toBe(AppLockDisableResult::Disabled);
     expect($credCount())->toBe(0);
 
     // Re-enabling mints a new data key, so a credential wrapping the old one

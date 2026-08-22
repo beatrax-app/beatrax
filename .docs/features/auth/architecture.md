@@ -223,9 +223,15 @@ read through `AppLockKeyService::release()`/`withhold()`.
 
 ### Key-wrapping model
 
-`AppLockProvisioner::enable()` generates a fresh random 32-byte data key
-(`random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES)`) and double-wraps it under
-a single shared KDF salt:
+`AppLockProvisioner::enable()` double-wraps a 32-byte data key under a single
+shared KDF salt. The key is freshly generated
+(`random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES)`) **only** where nothing is
+encrypted under an existing one; where at-rest encryption is active it takes
+the existing key or refuses, and `disable()` refuses outright. That invariant,
+and why the app lock cannot be turned off once data is encrypted, is
+[The app-lock data key, and the data that cannot outlive it](app-lock-data-key-lifetime.md).
+
+The two wraps:
 
 - **PIN wrap** (`pin_wrapped_key`) — the day-to-day unlock path.
 - **Password wrap** (`password_wrapped_key`) — the recovery path. The
@@ -240,11 +246,13 @@ is a shared (refcount > 1) buffer, that memzero is best-effort process
 hygiene, not a guarantee — the session's own copy persists by design until
 `lock()` removes it.
 
-Enabling always mints a **new** data key, which invalidates every existing
-per-device biometric wrap (they hold the old key) — `enable()` and
+A re-provisioning may replace the data key, which would invalidate every
+existing per-device biometric wrap (they hold the old key) — `enable()` and
 `disable()` both delete all biometric credentials for the user so a stale
-enrollment can never unlock with divergent key material. `changePin()`
-dispatches `AppLockPassphraseChanged` after a successful PIN change so a
+enrollment can never unlock with divergent key material. `enable()` deletes
+them only once it holds a key, so a refused enable destroys nothing.
+
+`changePin()` dispatches `AppLockPassphraseChanged` after a successful PIN change so a
 Sync listener re-wraps the Group Data Key keyring under the (unchanged)
 app-lock data key; the listener is deliberately best-effort/never-throw so
 a keyring re-wrap failure can never surface as this method throwing
@@ -257,8 +265,8 @@ security-sensitive it is:
 
 | Action | Requires |
 |---|---|
-| Enable (first PIN setup) | Account password (builds the password recovery wrap) |
-| Disable | Current PIN |
+| Enable (first PIN setup) | Account password (builds the password recovery wrap, and opens an existing one) |
+| Disable | Current PIN — and refused outright while at-rest encryption is active |
 | Change PIN | Current PIN |
 | De-enroll biometric | Current PIN (verify-only — never touches PIN/wrap columns) |
 | Forgot PIN → reset | Account password |
@@ -275,6 +283,33 @@ Two session keys: a boolean lock flag, and a **custody handle** for the
 data key (not necessarily the raw key — see `KeyCustodian` below). An
 absent lock flag is treated as unlocked, covering both "no PIN set up yet"
 and "fresh session" — there is no third state.
+
+#### The unlock moment has one name
+
+`LockStateManager::unlock()` dispatches `Modules\Auth\Public\Events\AppLockUnlocked`,
+carrying the session that now holds a key. It is dispatched from `unlock()` and
+nowhere else because `unlock()` is the funnel: five production paths reach it —
+`AppLockProvisioner::enable()`, `AppLockProvisioner::primeSessionAfterLogin()`,
+`PinVerificationService::markUnlocked()`, `WebAuthnBiometricService`, and
+`AppLockKeyService::admitDataKey()`. Announcing from any one of them, including
+the public `admitDataKey()`, would miss the other four — a lock-screen PIN and a
+biometric unlock among them — and a listener written against an event that fires
+for some unlocks is correct only by accident.
+
+It is a PHP event, not one of the browser-side names in `AppLockEvents`: an
+unlock lands in a service during an ordinary request (a lock-screen POST, a
+sign-in) where no Livewire component is mounted for `#[On]` to reach.
+
+`EveryUnlockAnnouncesItselfTest` asserts one dispatch per path, and closes the
+set with a structural check that nothing outside `LockStateManager` writes the
+held-key session entry — so no sixth path can appear without coming through the
+funnel. `LockStateManager`'s dispatcher argument is nullable only so
+`new LockStateManager` keeps working in unit tests; every container-resolved
+instance receives one, and `AppLockTestHarness` resolves one explicitly so the
+sanctioned test seam is not the one unlock listeners never hear.
+
+The first consumer is Sync's `HoldPairingCeremonyOpenOnUnlock`, which revives a
+pairing ceremony whose TTL lapsed while the app sat locked.
 
 The data key lives in the Laravel session payload for as long as the
 session stays unlocked, which the session driver serialises at rest (file

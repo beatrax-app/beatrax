@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Patvirtink naują slaptažodį',
     'submit' => 'Išsaugoti naują slaptažodį',
 
+    'error_current_required' => 'Įvesk savo dabartinį slaptažodį.',
     'error_current_incorrect' => 'Dabartinis slaptažodis neteisingas.',
     'error_mismatch' => 'Slaptažodžiai nesutampa.',
     'error_min_length' => 'Naudok bent 12 simbolių.',

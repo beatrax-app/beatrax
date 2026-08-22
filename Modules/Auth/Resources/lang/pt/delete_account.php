@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Tudo o que está acima é removido deste dispositivo e a sessão é terminada. Não há volta atrás nem cópia de segurança.',
     'confirm' => 'Sim, eliminar tudo',
     'cancel' => 'Manter a minha conta',
+    'error_password_required' => 'Escreve a tua palavra-passe.',
     'error_password' => 'Essa palavra-passe não está correta.',
     'error_failed' => 'A tua conta não foi eliminada. Nada mudou — tenta novamente.',
 ];
