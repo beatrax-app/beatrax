@@ -458,3 +458,49 @@ it('writes no fuzzy link when only the candidate is unreadable', function (): vo
 
     expect(ChainLink::query()->where('user_id', $this->user->id)->count())->toBe(0);
 });
+
+it('scores the nearest candidates, not whichever twenty the planner returned first', function (): void {
+    $expense = seedPaypalExpense($this->user, $this->paypal, $this->run, 1999, 'spotify ab', counterpartyName: 'Spotify AB');
+
+    // More decoys than the scan keeps, every one of them an exact merchant and
+    // amount match sitting at the far edge of the window. Under any row order
+    // the planner picks — insertion or posted_at — these fill the cut first.
+    for ($i = 0; $i < 25; $i++) {
+        seedAsnTransferIn(
+            $this->user,
+            $this->asn,
+            $this->run,
+            1999,
+            // The normalised column carries the row's uniqueness; the readable
+            // name is what the arm scores, so every decoy scores alike.
+            sprintf('spotify ab %d', $i),
+            '2026-05-12',
+            fingerprintSeed: sprintf('decoy%d', $i),
+            counterpartyName: 'Spotify AB',
+        );
+    }
+
+    $sameDay = seedAsnTransferIn(
+        $this->user,
+        $this->asn,
+        $this->run,
+        1999,
+        'spotifi ab',
+        '2026-05-15',
+        fingerprintSeed: 'sameday',
+        counterpartyName: 'Spotifi AB',
+    );
+
+    $this->resolver->resolveForUser($this->user);
+
+    /** @var ChainLink|null $link */
+    $link = ChainLink::query()->where('user_id', $this->user->id)->first();
+    expect($link)->not->toBeNull();
+    expect($link->from_transaction_id)->toBe((int) $expense->id);
+
+    // The decoys score 0.8 — a perfect merchant and amount against a date term
+    // worth nothing at three days out. The same-day row scores higher on the
+    // strength of that date, and is the row a reader would pick.
+    expect($link->to_transaction_id)->toBe((int) $sameDay->id);
+    expect((float) $link->confidence)->toBeGreaterThan(0.8);
+});
