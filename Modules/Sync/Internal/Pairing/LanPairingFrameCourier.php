@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-use Illuminate\Http\Client\Factory as HttpFactory;
-use Modules\Sync\Internal\Pairing\Concerns\BrowsesLanPeers;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
-use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\PairingFrameRequestHandler;
 use Throwable;
 
@@ -19,15 +16,10 @@ use Throwable;
  */
 final readonly class LanPairingFrameCourier
 {
-    use BrowsesLanPeers;
-
     /** @var list<int> */
     private const array RECEIVED_STATUSES = [202, 204];
 
-    public function __construct(
-        private HttpFactory $http,
-        private PeerDiscovery $discovery,
-    ) {}
+    public function __construct(private LanPeerBrowser $peers) {}
 
     // False means no peer on this network took it, so the caller still has the
     // relay and the holding space to try.
@@ -40,7 +32,7 @@ final readonly class LanPairingFrameCourier
             return false;
         }
 
-        foreach ($this->eachConnectablePeer(deviceId: $peerDeviceId) as $peer) {
+        foreach ($this->peers->eachConnectablePeer(deviceId: $peerDeviceId) as $peer) {
             if ($this->deliverTo($peer, $frame)) {
                 return true;
             }
@@ -59,7 +51,7 @@ final readonly class LanPairingFrameCourier
         $url = "http://{$peer->host}:{$peer->port}".PairingFrameRequestHandler::FRAME_PATH;
 
         try {
-            $response = $this->peerRequest()
+            $response = $this->peers->peerRequest()
                 ->asJson()
                 ->post($url, $frame);
         } catch (Throwable) {

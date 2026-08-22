@@ -8,6 +8,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
 use Modules\Sync\Internal\Pairing\LanPairingOfferFetcher;
+use Modules\Sync\Internal\Pairing\LanPeerBrowser;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
@@ -46,7 +47,7 @@ function lanOfferFetcher(array $peers = []): LanPairingOfferFetcher
         }
     };
 
-    return new LanPairingOfferFetcher(app(HttpFactory::class), $discovery, new WordCodeEncoder);
+    return new LanPairingOfferFetcher(new LanPeerBrowser(app(HttpFactory::class), $discovery), new WordCodeEncoder);
 }
 
 function lanOfferPeer(): DiscoveredPeer

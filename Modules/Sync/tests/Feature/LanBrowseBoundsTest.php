@@ -9,6 +9,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Pairing\LanPairingFrameCourier;
 use Modules\Sync\Internal\Pairing\LanPairingFramePuller;
 use Modules\Sync\Internal\Pairing\LanPairingOfferFetcher;
+use Modules\Sync\Internal\Pairing\LanPeerBrowser;
 use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
@@ -83,8 +84,7 @@ it('asks eight peers for an offer, because any of them might hold the typed code
     Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
 
     $fetcher = new LanPairingOfferFetcher(
-        app(HttpFactory::class),
-        browseBoundsDiscovery(browseBoundsPeers(20)),
+        new LanPeerBrowser(app(HttpFactory::class), browseBoundsDiscovery(browseBoundsPeers(20))),
         new WordCodeEncoder,
     );
 
@@ -97,8 +97,7 @@ it('stops at four peers when it is delivering to a device it can name', function
     Http::fake(['*' => Http::response('', 500)]);
 
     $courier = new LanPairingFrameCourier(
-        app(HttpFactory::class),
-        browseBoundsDiscovery(browseBoundsPeers(20, 'peer-device')),
+        new LanPeerBrowser(app(HttpFactory::class), browseBoundsDiscovery(browseBoundsPeers(20, 'peer-device'))),
     );
 
     expect($courier->deliver('peer-device', ['type' => 'accept']))->toBeFalse();
@@ -117,8 +116,7 @@ it('spends the delivery bound only on peers advertising the named device', funct
     $peers = [...browseBoundsPeers(6, 'someone-else'), $addressed];
 
     $courier = new LanPairingFrameCourier(
-        app(HttpFactory::class),
-        browseBoundsDiscovery($peers),
+        new LanPeerBrowser(app(HttpFactory::class), browseBoundsDiscovery($peers)),
     );
 
     expect($courier->deliver('peer-device', ['type' => 'accept']))->toBeTrue();
@@ -131,8 +129,7 @@ it('asks four peers for waiting frames, because the pull runs on every poll', fu
     Http::fake(['*' => Http::response(['frames' => []])]);
 
     $puller = new LanPairingFramePuller(
-        app(HttpFactory::class),
-        browseBoundsDiscovery(browseBoundsPeers(20)),
+        new LanPeerBrowser(app(HttpFactory::class), browseBoundsDiscovery(browseBoundsPeers(20))),
         app(PairingFrameApplier::class),
         app(DeviceKeySigner::class),
     );

@@ -7,6 +7,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
 use Modules\Sync\Internal\Pairing\LanPairingFrameCourier;
+use Modules\Sync\Internal\Pairing\LanPeerBrowser;
 use Modules\Sync\Internal\Pairing\PairingFrame;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
@@ -39,7 +40,7 @@ function lanFrameCourier(array $peers = []): LanPairingFrameCourier
         }
     };
 
-    return new LanPairingFrameCourier(app(HttpFactory::class), $discovery);
+    return new LanPairingFrameCourier(new LanPeerBrowser(app(HttpFactory::class), $discovery));
 }
 
 function lanFramePeer(): DiscoveredPeer

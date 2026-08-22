@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Http\Client\Response;
 use InvalidArgumentException;
-use Modules\Sync\Internal\Pairing\Concerns\BrowsesLanPeers;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
-use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\PairingHttpStatus;
 use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
@@ -20,8 +18,6 @@ use Throwable;
 // comes back is a candidate the safety-number comparison still has to prove.
 final readonly class LanPairingOfferFetcher
 {
-    use BrowsesLanPeers;
-
     // Twice the shared bound, and deliberately so: this browse has no device
     // id to aim at, because any peer on the network might be the one holding
     // the typed code. Asking too few asks the wrong ones, which reads to the
@@ -38,8 +34,7 @@ final readonly class LanPairingOfferFetcher
     private const int MAX_KEY_HEX_BYTES = 64;
 
     public function __construct(
-        private HttpFactory $http,
-        private PeerDiscovery $discovery,
+        private LanPeerBrowser $peers,
         private WordCodeEncoder $wordEncoder,
     ) {}
 
@@ -60,10 +55,22 @@ final readonly class LanPairingOfferFetcher
             return PairingOfferLookup::CodeNotAccepted;
         }
 
+        return $this->askEveryPeer($tokenHex);
+    }
+
+    // An identity ends the sweep where it is found, but WHICH refusal to report
+    // is not known until every peer has been asked: one peer that answered at
+    // all, or one that answered 429, changes the answer for all of them. That
+    // is what the two flags carry past the loop.
+    /**
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
+     */
+    private function askEveryPeer(string $tokenHex): array|PairingOfferLookup
+    {
         $anyPeerAnswered = false;
         $anyPeerLimited = false;
 
-        foreach ($this->eachConnectablePeer(self::MAX_PEERS_ASKED_FOR_AN_OFFER) as $peer) {
+        foreach ($this->peers->eachConnectablePeer(self::MAX_PEERS_ASKED_FOR_AN_OFFER) as $peer) {
             $attempt = $this->attempt($peer, $tokenHex);
 
             if (is_array($attempt)) {
@@ -98,7 +105,7 @@ final readonly class LanPairingOfferFetcher
         $url = "http://{$peer->host}:{$peer->port}".PairingOfferRequestHandler::OFFER_PATH;
 
         try {
-            $response = $this->peerRequest()
+            $response = $this->peers->peerRequest()
                 ->get($url, ['token' => hash('sha256', $tokenHex)]);
         } catch (Throwable) {
             // Refused or timed out. Nothing is logged — the token hash is in
@@ -113,24 +120,30 @@ final readonly class LanPairingOfferFetcher
             return PairingOfferLookup::RateLimited;
         }
 
-        // It answered. Whatever it said, the network is not the story: a 404 is
-        // this peer refusing the token, and the peer refuses an unknown, an
-        // expired and another user's token identically on purpose.
+        return $this->identityFrom(self::offeredBody($response), $tokenHex)
+            ?? PairingOfferLookup::CodeNotAccepted;
+    }
+
+    // Empty for every answer that carries no readable offer, which identityFrom
+    // refuses exactly as it refuses a hostile one. It answered, so the network
+    // is not the story: a 404 is this peer refusing the token, and the peer
+    // refuses an unknown, an expired and another user's token identically.
+    /**
+     * @return array<mixed>
+     */
+    private static function offeredBody(Response $response): array
+    {
         if (! $response->successful()) {
-            return PairingOfferLookup::CodeNotAccepted;
+            return [];
         }
 
         try {
             $body = $response->json();
         } catch (Throwable) {
-            return PairingOfferLookup::CodeNotAccepted;
+            return [];
         }
 
-        if (! is_array($body)) {
-            return PairingOfferLookup::CodeNotAccepted;
-        }
-
-        return $this->identityFrom($body, $tokenHex) ?? PairingOfferLookup::CodeNotAccepted;
+        return is_array($body) ? $body : [];
     }
 
     /**

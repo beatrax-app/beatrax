@@ -49,13 +49,20 @@ final readonly class PairingFramePullHandler implements RequestHandler
         }
 
         $params = $this->queryParams($request);
-        $deviceId = self::stringParam($params, 'device');
 
-        // An empty list, never a 404: whether anything is waiting for a given
-        // device is exactly the thing a prober would like to learn, so a device
-        // with nothing, an unproven one and one that does not exist all read
-        // identically.
-        if (! $this->authorizer->mayCollect($this->userId, $deviceId, self::stringParam($params, 'proof'))) {
+        return $this->framesFor(
+            self::stringParam($params, 'device'),
+            self::stringParam($params, 'proof'),
+        );
+    }
+
+    // An empty list, never a 404: whether anything is waiting for a given
+    // device is exactly the thing a prober would like to learn, so a device
+    // with nothing, an unproven one and one that does not exist all read
+    // identically.
+    private function framesFor(string $deviceId, string $proofSigHex): Response
+    {
+        if (! $this->authorizer->mayCollect($this->userId, $deviceId, $proofSigHex)) {
             return $this->json(HttpStatus::OK, self::EMPTY_BODY);
         }
 
