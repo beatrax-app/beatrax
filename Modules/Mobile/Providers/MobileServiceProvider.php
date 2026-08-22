@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Providers;
 
 use Illuminate\Console\Events\CommandStarting;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
@@ -20,6 +21,7 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Mobile\Commands\MobilePullCommand;
 use Modules\Mobile\Commands\PackageAndroidCommand;
+use Modules\Mobile\Internal\Boot\IosSigningPreflight;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Modules\Mobile\Internal\Http\BridgeSignedUploadUrl;
@@ -52,6 +54,25 @@ final class MobileServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        // A booting callback, not boot(): iOS reads the background-task
+        // manifest in BackgroundTasksServiceProvider::boot(), which runs long
+        // before this provider's, and a schedule declared there arrives too
+        // late to reach it — the phone scheduled nothing at all.
+
+        // Not register() either. Schedule resolves the cache for its overlap
+        // mutex, and the cache is not bindable yet while providers register.
+        // These callbacks run once registration is complete and before the
+        // first provider boots, which is the only window that satisfies both.
+
+        // require_once rather than loadRoutesFrom(): a console route is not
+        // part of the route cache, so that helper would drop this file
+        // entirely the moment routes are cached.
+        $this->app->booting(static function (): void {
+            if (is_file(__DIR__.'/../Routes/console.php')) {
+                require_once __DIR__.'/../Routes/console.php';
+            }
+        });
+
         // Stateless (wraps the console Kernel migrator), safe as a
         // singleton.
         $this->app->singleton(MobileFirstLaunchBootstrap::class);
@@ -121,6 +142,14 @@ final class MobileServiceProvider extends ServiceProvider
                 return;
             }
 
+            $team = $this->app->make(ConfigRepository::class)->get('nativephp.development_team');
+
+            $warning = IosSigningPreflight::teamIdWarning(is_string($team) ? $team : null);
+
+            if ($warning !== null) {
+                $event->output->writeln('<comment>'.$warning.'</comment>');
+            }
+
             $scripts = NativeBuildPatches::locate($this->app->basePath());
 
             if ($scripts !== null) {
@@ -129,10 +158,6 @@ final class MobileServiceProvider extends ServiceProvider
         });
 
         $this->loadModuleResources('mobile');
-
-        if (is_file(__DIR__.'/../Routes/console.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
-        }
 
         // The mobile-only Livewire full-page screens, wired to the tags
         // Routes/web.php references by string.
