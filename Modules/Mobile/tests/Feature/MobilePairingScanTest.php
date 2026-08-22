@@ -251,7 +251,7 @@ it('the typed word-code fallback also auto-advances to the confirm step', functi
         ->assertSet('flashMessage', '');
 });
 
-it('a bad typed word-code stays on enter_code with the code-not-accepted flash', function (): void {
+it('a typed word-code that cannot decode stays on enter_code and blames the code', function (): void {
     $user = pairingScanTestUser('mobile-pair-wordcode-bad');
     test()->actingAs($user);
 
@@ -263,7 +263,9 @@ it('a bad typed word-code stays on enter_code with the code-not-accepted flash',
         ->set('wordCode', 'ZZZZ-ZZZZ-ZZZZ-ZZZZ')
         ->call('submitCode', null)
         ->assertSet('step', 'enter_code')
-        ->assertSee(Lang::get('mobile::pairing.errors.code_not_accepted'));
+        // Not code_not_accepted: that sentence says no device on this network
+        // took the code, and this one never reached the network to be refused.
+        ->assertSee(Lang::get('mobile::pairing.errors.invalid_code'));
 });
 
 it('BOTH the QR path and the word-code path resolve to the identical PairingGateway::confirm() trust gate', function (): void {

@@ -79,6 +79,7 @@ trait AcceptsPairingCode
             // confident version of that guess; this one is true either way.
             $this->flashMessage = Lang::get(match ($discovered) {
                 PairingOfferLookup::CodeNotAccepted => 'mobile::pairing.errors.code_not_accepted',
+                PairingOfferLookup::CodeMalformed => 'mobile::pairing.errors.invalid_code',
                 PairingOfferLookup::NoPeerReached => 'mobile::pairing.errors.relay_unreachable',
                 PairingOfferLookup::RateLimited => 'mobile::pairing.errors.rate_limited',
             });

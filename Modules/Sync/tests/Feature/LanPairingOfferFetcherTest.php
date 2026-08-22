@@ -187,7 +187,7 @@ it('blames the code, not the network, for a word-code that is not a pairing code
     Http::fake();
 
     expect(lanOfferFetcher([lanOfferPeer()])->fetchForWordCode('NOPE'))
-        ->toBe(PairingOfferLookup::CodeNotAccepted);
+        ->toBe(PairingOfferLookup::CodeMalformed);
 
     // A code that cannot decode must not reach the network at all.
     Http::assertNothingSent();
