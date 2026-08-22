@@ -46,6 +46,17 @@ trait AcceptsPairingCode
             return $scanned ?? false;
         }
 
+        return $this->typedCodeIdentity($gateway);
+    }
+
+    /**
+     * @return InitiatorIdentity|false|null `false` when the LAN was asked and
+     *                                      answered no usable identity, the
+     *                                      reason already flashed; `null` when
+     *                                      it was never asked.
+     */
+    private function typedCodeIdentity(PairingGateway $gateway): array|false|null
+    {
         if (! $this->importMode) {
             return null;
         }

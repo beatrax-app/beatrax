@@ -331,25 +331,33 @@ final class AppLockSettingsSection extends Component
             return;
         }
 
-        // Same dead-button case with no OS vault to fall back on: say so
-        // rather than dispatching into nothing.
-        if ($config->get('nativephp-internal.running') === true) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_enroll_unsupported');
+        $refusal = $this->browserEnrolmentRefusal($config, $shield);
 
-            return;
-        }
-
-        // The browser path persists the unwrapping key beside the key it
-        // unwraps, in the same file as the ledger. Only a shield that really
-        // makes those bytes unreadable earns that; a self-hosted web install
-        // binds the pass-through, and the enrolment routes refuse there too.
-        if (! $shield->protectsAtRest()) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_enroll_unprotected');
+        if ($refusal !== null) {
+            $this->flashMessage = $refusal;
 
             return;
         }
 
         $this->dispatch('beatrax:webauthn-create');
+    }
+
+    // Reached only once the OS vault above turned out to be unavailable: both
+    // answers here are about the browser road specifically, and a device with
+    // its own vault never travels it.
+    private function browserEnrolmentRefusal(ConfigRepository $config, SecretShield $shield): ?string
+    {
+        return match (true) {
+            // Same dead-button case as an unavailable vault, with nothing left
+            // to fall back on: say so rather than dispatching into nothing.
+            $config->get('nativephp-internal.running') === true => Lang::get('auth::app_lock.error_enroll_unsupported'),
+            // The browser path persists the unwrapping key beside the key it
+            // unwraps, in the same file as the ledger. Only a shield that really
+            // makes those bytes unreadable earns that; a self-hosted web install
+            // binds the pass-through, and the enrolment routes refuse there too.
+            ! $shield->protectsAtRest() => Lang::get('auth::app_lock.error_enroll_unprotected'),
+            default => null,
+        };
     }
 
     // Stores the live data key under the OS gate, so it only works unlocked --

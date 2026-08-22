@@ -21,6 +21,7 @@ use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\AcceptsPairingCode;
+use Modules\Mobile\Internal\Http\Livewire\Concerns\ChoosesCodeEntryArm;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Enums\PairingSide;
@@ -33,6 +34,7 @@ use Throwable;
 final class MobilePairingScan extends Component
 {
     use AcceptsPairingCode;
+    use ChoosesCodeEntryArm;
     use HoldsFlashMessage;
 
     // Read once by MobileLockScreen::mount(). A public property cannot carry
@@ -181,57 +183,6 @@ final class MobilePairingScan extends Component
         return PairingWizardStep::tryFrom($this->step) ?? PairingWizardStep::Scan;
     }
 
-    // entryStep is not #[Locked], so a crafted payload can name any step here,
-    // and a reset would then land the reader on a later screen than the arm
-    // they actually chose. Only the two arms this page offers are honoured.
-    private function entryArm(): PairingWizardStep
-    {
-        $entry = PairingWizardStep::tryFrom($this->entryStep);
-
-        return $entry !== null && $entry->isEntryArm() ? $entry : PairingWizardStep::Scan;
-    }
-
-    public function enterACode(QrScanBridge $qrBridge): void
-    {
-        $this->wordCode = '';
-        $this->flashMessage = '';
-        $this->side = PairingSide::Responder->value;
-
-        if ($qrBridge->isAvailable()) {
-            $this->step = PairingWizardStep::Scan->value;
-            $this->entryStep = PairingWizardStep::Scan->value;
-            $this->cameraUnavailableNotice = false;
-
-            return;
-        }
-
-        $this->step = PairingWizardStep::EnterCode->value;
-        $this->entryStep = PairingWizardStep::EnterCode->value;
-        $this->cameraUnavailableNotice = true;
-    }
-
-    // The deliberate "I'd rather type it" choice, unlike cameraDenied()'s
-    // forced fallback: same step, no amber notice, because nothing failed.
-    public function useWordCode(): void
-    {
-        $this->flashMessage = '';
-        $this->cameraUnavailableNotice = false;
-        $this->step = PairingWizardStep::EnterCode->value;
-        $this->entryStep = PairingWizardStep::EnterCode->value;
-    }
-
-    // Driven from the view rather than mount() so the component is already
-    // live when the camera opens: a scan that completes before Livewire is
-    // listening would drop its CodeScanned event.
-    public function startScan(QrScanBridge $qrBridge): void
-    {
-        $this->flashMessage = '';
-
-        if (! $qrBridge->open(Lang::get('mobile::pairing.scan_prompt'))) {
-            $this->cameraDenied();
-        }
-    }
-
     // Dependencies lead so the optional payload fields can carry defaults;
     // Livewire binds the payload by name, not position.
     #[On(self::EVENT_CODE_SCANNED)]
@@ -259,16 +210,6 @@ final class MobilePairingScan extends Component
     public function onScannerCancelled(bool $cancelled = true, ?string $reason = null, ?string $id = null): void
     {
         $this->cameraDenied();
-    }
-
-    // A runtime permission-denied/no-camera signal, distinct from
-    // QrScanBridge::isAvailable(): the plugin can resolve while the OS
-    // permission is still denied.
-    public function cameraDenied(): void
-    {
-        $this->cameraUnavailableNotice = true;
-        $this->step = PairingWizardStep::EnterCode->value;
-        $this->entryStep = PairingWizardStep::EnterCode->value;
     }
 
     private function sendToUnlock(UrlGenerator $urls, Session $session, AppLockClientConfig $lock, int $userId): void
@@ -438,22 +379,40 @@ final class MobilePairingScan extends Component
         if ($state === PairingGateway::STATE_CONFIRMED && $this->currentStep() !== PairingWizardStep::Success) {
             $this->step = PairingWizardStep::Success->value;
 
-            if (! $this->shouldDeferSelfMint($userId, $importIntent, $db)) {
-                try {
-                    $migrationService->migrate($currentUser->user(), $session);
-                } catch (Throwable) {
-                    // Best-effort: the pairing is already recorded, and the
-                    // encryption row keeps rendering its own state until a
-                    // later pass succeeds.
-                }
-            }
-
-            // The phone sends too. A device that only ever received left the
-            // desktop settling the blind-index tie over a keyed-rows flag it
-            // was never sent, and a phone holding the ledger kept a key no
-            // other device could learn.
-            $this->fanOutToConfirmedPeers($gateway, $db, $logger, $userId, $session);
+            $this->settleConfirmedPairing($currentUser, $gateway, $session, $migrationService, $importIntent, $db, $logger);
         }
+    }
+
+    // The confirm arrives two ways — this device's own tap, and the poll that
+    // learns the peer completed first — and both have to settle the same, or a
+    // ceremony finished on the other screen leaves this device's epochs where
+    // no peer can reach them.
+    private function settleConfirmedPairing(
+        CurrentUser $currentUser,
+        PairingGateway $gateway,
+        Session $session,
+        EncryptionMigrationService $migrationService,
+        MobileImportIntentGate $importIntent,
+        DatabaseManager $db,
+        LoggerInterface $logger,
+    ): void {
+        $userId = $currentUser->user()->id;
+
+        if (! $this->shouldDeferSelfMint($userId, $importIntent, $db)) {
+            try {
+                $migrationService->migrate($currentUser->user(), $session);
+            } catch (Throwable) {
+                // Best-effort: the pairing is already recorded, and the
+                // encryption row keeps rendering its own state until a
+                // later pass succeeds.
+            }
+        }
+
+        // The phone sends too. A device that only ever received left the
+        // desktop settling the blind-index tie over a keyed-rows flag it
+        // was never sent, and a phone holding the ledger kept a key no
+        // other device could learn.
+        $this->fanOutToConfirmedPeers($gateway, $db, $logger, $userId, $session);
     }
 
     // Every confirmed peer, asked of the permanent device_registry rather than
@@ -556,30 +515,13 @@ final class MobilePairingScan extends Component
         // peer's own local side independently confirms too.
         $this->sendConfirmToPeer($gateway, $userId, $db, $session, $logger);
 
+        $this->awaitingPeer = $state !== PairingGateway::STATE_CONFIRMED;
+
         if ($state === PairingGateway::STATE_CONFIRMED) {
-            $this->awaitingPeer = false;
             $this->step = PairingWizardStep::Success->value;
 
-            if (! $this->shouldDeferSelfMint($userId, $importIntent, $db)) {
-                try {
-                    $migrationService->migrate($currentUser->user(), $session);
-                } catch (Throwable) {
-                    // Best-effort: the pairing is already recorded, and the
-                    // encryption row keeps rendering its own state until a
-                    // later pass succeeds.
-                }
-            }
-
-            // The phone sends too. A device that only ever received left the
-            // desktop settling the blind-index tie over a keyed-rows flag it
-            // was never sent, and a phone holding the ledger kept a key no
-            // other device could learn.
-            $this->fanOutToConfirmedPeers($gateway, $db, $logger, $userId, $session);
-
-            return;
+            $this->settleConfirmedPairing($currentUser, $gateway, $session, $migrationService, $importIntent, $db, $logger);
         }
-
-        $this->awaitingPeer = true;
     }
 
     private function sendConfirmToPeer(
@@ -635,15 +577,6 @@ final class MobilePairingScan extends Component
             ->where('is_self', 0)
             ->whereNotNull('confirmed_at')
             ->exists();
-    }
-
-    // Deliberately NOT cancelPairing(): nothing has been submitted yet, so
-    // there is no token to expire and no reason to leave the ceremony.
-    public function backToScan(QrScanBridge $qrBridge): void
-    {
-        $this->wordCode = '';
-        $this->flashMessage = '';
-        $this->enterACode($qrBridge);
     }
 
     public function cancelPairing(

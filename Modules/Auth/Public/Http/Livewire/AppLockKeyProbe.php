@@ -19,7 +19,12 @@ final class AppLockKeyProbe extends Component
         $keyService->withhold($session);
     }
 
-    public function refresh(): void {}
+    public function refresh(): void
+    {
+        // The round trip IS the refresh: render() re-reads the gate from the
+        // session on every request, so a body here could only re-read what is
+        // about to be read anyway.
+    }
 
     public function render(ViewFactory $views, AppLockKeyService $keyService, Session $session): View
     {

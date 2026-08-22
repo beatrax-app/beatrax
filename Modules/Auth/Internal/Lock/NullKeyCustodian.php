@@ -20,5 +20,11 @@ final class NullKeyCustodian implements KeyCustodian
         return $handle;
     }
 
-    public function forget(string $handle): void {}
+    public function forget(string $handle): void
+    {
+        // The handle IS the key, so there is no backing entry to erase and no
+        // copy of it anywhere this seam owns. A custodian that keeps one has
+        // something to forget; erasing the caller's own copy is not this one's
+        // to do.
+    }
 }

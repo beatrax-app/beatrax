@@ -27,10 +27,11 @@ final class SignupPage extends Component
     use HoldsFlashMessage;
     use ReportsFieldRejections;
 
-    // The three boxes on the form. SignupAction also rejects under `signup`
-    // when the device gained an owner mid-submit, and that has no box to sit
-    // under, so it stays on the form-level line.
-    private const array FIELD_KEYS = ['username', 'password', 'passwordConfirmation'];
+    // The three boxes on the form, read by ReportsFieldRejections rather than
+    // by anything here. SignupAction also rejects under `signup` when the
+    // device gained an owner mid-submit, and that has no box to sit under, so
+    // it stays on the form-level line.
+    protected const array FIELD_KEYS = ['username', 'password', 'passwordConfirmation'];
 
     public string $username = '';
 
