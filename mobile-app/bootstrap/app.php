@@ -16,6 +16,7 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SqliteDatabase;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Http\Middleware\ForgetGuardsBetweenRequests;
+use Modules\Mobile\Internal\Http\Middleware\ForgetStaleSessionBetweenRequests;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureImportCompleted;
 use Modules\Mobile\Internal\Http\Middleware\RestoreFrameworkRedirector;
@@ -42,6 +43,11 @@ return Application::configure(basePath: dirname(__DIR__))
         SpikeStoragePathCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        // Prepended ahead of the guard drop so it RUNS after it: that one reads
+        // the session the previous request left in memory to decide, and this is
+        // what empties it, so the other order leaves the stale User in place.
+        $middleware->prepend(ForgetStaleSessionBetweenRequests::class);
+
         // prepend() reverses, so the last call here runs first. This one belongs
         // after the container binding RestoreFrameworkRedirector repairs and
         // before anything reads the authenticated user, whose model a runtime

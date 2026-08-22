@@ -74,6 +74,11 @@ it('shows the codes in the chosen language on the round-trip that reveals them',
 
     $this->post(route('locale.switch'), ['code' => 'nl']);
 
+    // The test client keeps no cookie jar, and the mobile root drops the
+    // session the previous request left in memory, so the id the switch saved
+    // under is carried by hand here the way the webview carries it on device.
+    $this->withCookie((string) config('session.cookie'), app('session')->getId());
+
     $page = (string) $this->get(route('mobile.import'))->assertOk()->getContent();
 
     $rendered = LivewireRoundTrip::call($this, $page, 'mobile.import-bootstrap', 'submit', [
