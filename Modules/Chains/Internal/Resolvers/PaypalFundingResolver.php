@@ -395,8 +395,22 @@ final class PaypalFundingResolver
             return null;
         }
 
-        $postedAt = CarbonImmutable::parse($postedAtRaw);
+        $best = $this->bestFundingCandidate(
+            $row,
+            $user,
+            $readableMerchant,
+            $settledMinor,
+            CarbonImmutable::parse($postedAtRaw),
+        );
 
+        return $best === null ? null : $this->fuzzyLink($row, $best, $storedMerchantKey, $user);
+    }
+
+    /**
+     * @return array{transactionId: int, accountId: int, score: float, merchantSimilarity: float, amountDeltaMinor: int, dateDeltaDays: int}|null
+     */
+    private function bestFundingCandidate(stdClass $row, User $user, string $readableMerchant, int $settledMinor, CarbonImmutable $postedAt): ?array
+    {
         $amountBand = (int) round($settledMinor * (self::AMOUNT_BAND_PERCENT / 100));
 
         // SQLite stores `posted_at` as `YYYY-MM-DD` but the window bounds are
@@ -423,12 +437,8 @@ final class PaypalFundingResolver
                 'account_id',
             ]);
 
-        $bestId = null;
+        $best = null;
         $bestScore = 0.0;
-        $bestRow = null;
-        $bestMerchantSim = 0.0;
-        $bestAmountDelta = 0;
-        $bestDateDelta = 0;
 
         foreach ($candidates as $candidate) {
             /** @var stdClass $candidate */
@@ -453,33 +463,39 @@ final class PaypalFundingResolver
 
             if ($score >= self::FUZZY_MIN_CONFIDENCE && $score > $bestScore) {
                 $bestScore = $score;
-                $bestId = self::toInt($candidate->id ?? null);
-                $bestRow = $candidate;
-                $bestMerchantSim = $merchantSim;
-                $bestAmountDelta = $amountDelta;
-                $bestDateDelta = $dateDelta;
+                $best = [
+                    'transactionId' => self::toInt($candidate->id ?? null),
+                    'accountId' => self::toInt($candidate->account_id ?? null),
+                    'score' => $score,
+                    'merchantSimilarity' => $merchantSim,
+                    'amountDeltaMinor' => $amountDelta,
+                    'dateDeltaDays' => $dateDelta,
+                ];
             }
         }
 
-        if ($bestId === null || $bestRow === null) {
-            return null;
-        }
+        return $best;
+    }
 
-        $confidence = min(self::FUZZY_MAX_CONFIDENCE, $bestScore);
-
-        $fundingIban = $this->ibanForAccountId(self::toInt($bestRow->account_id ?? null), $user) ?? '';
+    /**
+     * @param  array{transactionId: int, accountId: int, score: float, merchantSimilarity: float, amountDeltaMinor: int, dateDeltaDays: int}  $best
+     * @return array<string, mixed>
+     */
+    private function fuzzyLink(stdClass $row, array $best, string $storedMerchantKey, User $user): array
+    {
+        $fundingIban = $this->ibanForAccountId($best['accountId'], $user) ?? '';
 
         return [
             'from_transaction_id' => self::toInt($row->tx_id ?? null),
-            'to_transaction_id' => $bestId,
+            'to_transaction_id' => $best['transactionId'],
             'kind' => ChainLinkKind::PaypalFunding->value,
             'state' => ChainLinkState::Candidate->value,
-            'confidence' => $this->formatConfidence($confidence),
+            'confidence' => $this->formatConfidence(min(self::FUZZY_MAX_CONFIDENCE, $best['score'])),
             'resolver' => 'auto',
             'evidence' => [
-                'merchant_similarity' => round($bestMerchantSim, 3),
-                'amount_delta_minor' => $bestAmountDelta,
-                'date_delta_days' => $bestDateDelta,
+                'merchant_similarity' => round($best['merchantSimilarity'], 3),
+                'amount_delta_minor' => $best['amountDeltaMinor'],
+                'date_delta_days' => $best['dateDeltaDays'],
                 'signature_hash' => $this->signatureHash($storedMerchantKey, $fundingIban),
             ],
         ];

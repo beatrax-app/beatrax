@@ -97,29 +97,26 @@ final readonly class CopyLine
             return null;
         }
 
-        $replace = [];
+        $named = [];
         foreach ($raw as $name => $value) {
             if (! is_string($name)) {
                 return null;
             }
-
-            if (is_array($value)) {
-                $param = CopyParam::fromArray($value);
-                if ($param === null) {
-                    return null;
-                }
-                $replace[$name] = $param;
-
-                continue;
-            }
-
-            if (! is_string($value) && ! is_int($value) && ! is_float($value)) {
-                return null;
-            }
-
-            $replace[$name] = $value;
+            $named[$name] = $value;
         }
 
-        return $replace;
+        return AllOrNothing::map($named, self::decodeValue(...));
+    }
+
+    // A replacement is either a CopyParam's own array or the user's own words,
+    // which are the same text in every language and ride verbatim. A stored
+    // value that is neither came from a release this one cannot read.
+    private static function decodeValue(mixed $value): string|int|float|CopyParam|null
+    {
+        if (is_array($value)) {
+            return CopyParam::fromArray($value);
+        }
+
+        return is_string($value) || is_int($value) || is_float($value) ? $value : null;
     }
 }

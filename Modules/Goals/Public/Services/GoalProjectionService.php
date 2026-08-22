@@ -44,11 +44,7 @@ final class GoalProjectionService
      */
     public function project(Goal $goal, int $contributedMinor, User $user, ?array $linkedPot, array $attributed): array
     {
-        if ($contributedMinor >= $goal->target_minor) {
-            return self::NO_PROJECTION;
-        }
-
-        if ($this->observedDays($goal) < self::MIN_OBSERVATION_DAYS) {
+        if ($this->hasNoProjection($goal, $contributedMinor)) {
             return self::NO_PROJECTION;
         }
 
@@ -65,6 +61,12 @@ final class GoalProjectionService
             'beyondHorizon' => $daysToFinish > self::HORIZON_LIMIT_DAYS,
             'stalled' => false,
         ];
+    }
+
+    private function hasNoProjection(Goal $goal, int $contributedMinor): bool
+    {
+        return $contributedMinor >= $goal->target_minor
+            || $this->observedDays($goal) < self::MIN_OBSERVATION_DAYS;
     }
 
     // Measured against whatever source the goal's progress comes from — pot
