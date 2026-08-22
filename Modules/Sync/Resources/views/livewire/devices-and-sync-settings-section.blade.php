@@ -39,6 +39,7 @@
 
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Sync\Internal\Crypto\EncryptionSetupStep')
+@use('Modules\Sync\Internal\OpLog\SyncBacklogState')
 <div class="space-y-6">
     <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.heading') }}</h2>
 
@@ -74,6 +75,48 @@
                 {{ Lang::get('sync::devices.go_to_app_lock') }}
             </a>
         </div>
+    @endif
+
+    {{-- A key-file this device holds and cannot open. Named, because the
+         ordinary off-state next to it would read as "sync was never turned
+         on" — and every action behind that reading fails. --}}
+    @if ($identityUnreadable)
+        <x-core::alert tone="warning" role="alert" data-testid="identity-unreadable-notice">
+            <p>{{ Lang::get('sync::devices.identity_unreadable') }}</p>
+
+            {{-- The replacement is offered only with no self row registered:
+                 with one, peers were told about the old identity and retiring
+                 it is more than this button does. --}}
+            @if (! $syncEnabled)
+                <p class="mt-2">{{ Lang::get('sync::devices.identity_unreadable_replace_help') }}</p>
+                <x-core::neutral-button
+                    class="mt-3 min-h-[44px]"
+                    wire:click="replaceUnreadableIdentity"
+                    data-testid="replace-unreadable-identity"
+                >
+                    {{ Lang::get('sync::devices.identity_unreadable_replace') }}
+                </x-core::neutral-button>
+            @endif
+        </x-core::alert>
+    @endif
+
+    {{-- Data that arrived while nobody was looking. Deferred clears itself on
+         the next request, so the notice exists only so a screen that is briefly
+         behind does not read as sync being broken; AwaitingKey does not clear
+         itself and must not be given the same words. --}}
+    @if ($backlogState !== SyncBacklogState::None)
+        <x-core::alert
+            :tone="$backlogState->clearsWithoutHelp() ? 'info' : 'warning'"
+            role="status"
+            data-testid="sync-backlog-notice"
+        >
+            <p class="font-semibold">{{ Lang::get('sync::devices.backlog_heading') }}</p>
+            <p class="mt-1">
+                {{ $backlogState->clearsWithoutHelp()
+                    ? Lang::get('sync::devices.backlog_deferred')
+                    : Lang::get('sync::devices.backlog_awaiting_key') }}
+            </p>
+        </x-core::alert>
     @endif
 
     {{-- ===== Surface A: encryption status row =====
@@ -131,6 +174,37 @@
     @if ($syncEnabled)
         <div class="space-y-4">
             <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.your_devices') }}</h3>
+
+            {{-- A handshake that reached the safety-word comparison and is
+                 waiting on this device. The modal already resumes one; without
+                 this the only way back in was a button reading "Pair a new
+                 device", and the token expires while the reader looks for it. --}}
+            @if ($pairingWaitingOnPeer !== '')
+                <x-core::alert tone="info" data-testid="pairing-waiting-notice">
+                    <p class="font-semibold">{{ Lang::get('sync::devices.pairing_waiting', ['name' => $pairingWaitingOnPeer]) }}</p>
+                    <p class="mt-1">{{ Lang::get('sync::devices.pairing_waiting_help') }}</p>
+
+                    {{-- The same render that held this ceremony open past the
+                         app-lock timeout says so. A silent extension is a lock
+                         policy quietly overridden; a stated one is a bounded
+                         exception the reader can end by cancelling. --}}
+                    <p
+                        class="mt-2 border-l-2 border-current pl-2 font-semibold"
+                        role="note"
+                        data-testid="pairing-lock-override-notice"
+                    >
+                        {{ Lang::get('sync::devices.pairing_waiting_lock_override') }}
+                    </p>
+
+                    <x-core::neutral-button
+                        class="mt-3 min-h-[44px]"
+                        wire:click="$dispatch('open-pairing-modal')"
+                        data-testid="pairing-waiting-resume"
+                    >
+                        {{ Lang::get('sync::devices.pairing_waiting_resume') }}
+                    </x-core::neutral-button>
+                </x-core::alert>
+            @endif
 
             <ul class="divide-y divide-slate-200 dark:divide-slate-700">
                 @foreach ($devices as $device)
@@ -369,6 +443,7 @@
                     <div class="text-xs text-slate-500 dark:text-slate-400">
                         <p>{{ Lang::get('sync::devices.amounts_plaintext') }}</p>
                         <p class="mt-1">{{ Lang::get('sync::devices.search_plaintext') }}</p>
+                        <p class="mt-1">{{ Lang::get('sync::devices.app_lock_permanent') }}</p>
                     </div>
                     <div class="flex gap-3">
                         <x-core::neutral-button
@@ -391,7 +466,7 @@
                         </x-core::secondary-button>
                     </div>
                 @elseif ($encryptionModalStep === EncryptionSetupStep::Progress)
-                    <div wire:poll.750ms="pollEncryptionProgress">
+                    <div wire:poll.750ms.keep-alive="pollEncryptionProgress">
                         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" aria-live="polite">
                             {{ Lang::get('sync::devices.securing') }}
                         </h3>

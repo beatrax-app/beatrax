@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Vnesi besedno kodo z druge naprave',
     'submit_code' => 'Pošlji kodo',
     'cancel' => 'Prekliči',
+    'skip_import' => 'Nadaljuj brez uvoza',
 
     'confirm_heading' => 'Primerjaj te besede z drugo napravo',
     'safety_words_aria' => 'Besede varnostne številke: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Druge naprave ni mogoče doseči. Preveri, ali sta obe v istem omrežju in ali je sinhronizacija na namizju vklopljena.',
         'invalid_code' => 'Ta koda ni veljavna ali je potekla. Prosi drugo napravo, naj ustvari novo.',
         'code_not_accepted' => 'Nobena naprava v tem omrežju ni sprejela te kode. Preveri kodo in ali jo druga naprava še vedno prikazuje.',
+        'no_peer_answered' => 'Nič v tem omrežju ni odgovorilo na to kodo. Preveri, ali na drugi napravi teče sinhronizacija, ali pa skeniraj njeno kodo s kamero — kameri ni treba iskati po omrežju.',
+        'no_peer_answered_ios' => 'Nič v tem omrežju ni odgovorilo na to kodo. Iskanje druge naprave v omrežju na iPhonu še ne deluje, zato skeniraj njeno kodo s kamero.',
         'rate_limited' => 'Preveč poskusov. Počakaj minuto in poskusi znova.',
         'identity_locked' => 'Identiteta tvoje naprave je zaklenjena. Odkleni aplikacijo in poskusi znova.',
         'identity_needs_lock' => 'Najprej nastavi zaklepanje aplikacije — ščiti identiteto tvoje naprave.',

@@ -15,6 +15,7 @@ use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Enums\LanDiscoveryReach;
 
 uses(RefreshDatabase::class);
 
@@ -61,6 +62,18 @@ it('no longer offers to scan on a surface that cannot', function (): void {
         ->not->toContain('scan');
 });
 
+// The copy stopped offering a camera and the icon kept offering one, on the
+// single screen where the reader picks between the two arms.
+it('draws the code arm with a pencil, not a camera', function (): void {
+    $this->actingAs(codeEntryUser('code-entry-icon'));
+
+    $rendered = Livewire::test(PairingFlowModal::class)->html();
+
+    expect($rendered)
+        ->toContain('M16.862 4.487')
+        ->not->toContain('M15.75 10.5l4.72-4.72');
+});
+
 // A refused confirmation used to return null and change nothing, which the
 // screen rendered as "waiting for the other device" with the confirm button
 // disabled. A responder rebinding the row could stall the ceremony for ever
@@ -85,6 +98,11 @@ it('says so when the keys changed under the words being compared', function (): 
     // Nothing on the wire, so the ceremony is driven entirely from the rows.
     app()->instance(PeerDiscovery::class, new class implements PeerDiscovery
     {
+        public function reach(): LanDiscoveryReach
+        {
+            return LanDiscoveryReach::Available;
+        }
+
         /**
          * @return list<DiscoveredPeer>
          */

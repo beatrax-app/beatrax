@@ -6,10 +6,14 @@ return [
     'heading' => 'Naprave in sinhronizacija',
 
     'enable_sync' => 'Vklopi sinhronizacijo',
-    'enable_sync_help' => 'Varno deli svoje podatke med zaupanja vrednimi napravami. Zahteva zaklepanje aplikacije.',
+    'enable_sync_help' => 'Varno deli svoje podatke med zaupanja vrednimi napravami. Zahteva zaklepanje aplikacije. Ko je vklopljeno, so tvoji podatki šifrirani, zaklepanja aplikacije pa ni več mogoče izklopiti.',
 
     'app_lock_notice' => 'Najprej nastavi zaklepanje aplikacije, da vklopiš sinhronizacijo.',
     'go_to_app_lock' => 'Pojdi na Zaklepanje aplikacije',
+
+    'identity_unreadable' => 'Sinhronizacijska identiteta te naprave je nastala z drugim zaklepom aplikacije in se ne odpre več. Dokler je tako, naprava ne more sinhronizirati ali se seznaniti. Če obnoviš varnostno kopijo zbirke podatkov, s katero je nastala, bo spet berljiva.',
+    'identity_unreadable_replace_help' => 'Lahko tudi začneš znova: naprava dobi novo identiteto, stara ostane neuporabljena ob strani, prej seznanjene naprave pa je treba seznaniti znova.',
+    'identity_unreadable_replace' => 'Ustvari novo identiteto za to napravo',
 
     'encrypted_at_rest' => 'Podatki šifrirani v mirovanju',
     'encrypted_at_rest_scope' => 'Zapiski, opisi transakcij ter imena in IBAN tistih, ki jim plačuješ, so v knjigi šifrirani z geslom za zaklep aplikacije. Zneski, datumi ter ime in IBAN tvojega računa niso. Iskalni indeks hrani svojo berljivo kopijo tega, komu plačuješ, opisov tvojih transakcij in tvojih davčnih zapiskov, nekatera imena trgovcev pa ostajajo berljiva drugje v datoteki baze podatkov.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => 'Odstrani :name',
     'remove' => 'Odstrani',
     'pair_new_device' => 'Seznani novo napravo',
+
+    'pairing_waiting' => 'Dokončajte seznanjanje z napravo :name',
+    'pairing_waiting_help' => 'Oba zaslona morata prikazovati istih šest besed, preden seznanjanje velja. Znova ga odprite in ju primerjajte.',
+    'pairing_waiting_resume' => 'Nadaljuj seznanjanje',
+    'pairing_waiting_lock_override' => 'Odklepanje to seznanjanje znova odpre, namesto da bi mu pustilo poteči, zato traja dlje od nastavljenega časa zaklepanja aplikacije. Konča se, ko ga dokončate ali prekličete.',
 
     'relay_endpoint' => 'Končna točka releja',
     'relay_endpoint_help' => 'Neobvezno. Ko je nastavljena, se naprave brez povezave sinhronizirajo prek tega releja. Pusti prazno samo za neposredno povezavo znotraj LAN&#8209;a.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Najprej nastavi zaklepanje aplikacije, da vklopiš sinhronizacijo.',
         'enable_failed' => 'Vklop sinhronizacije ni uspel. Preveri, ali je zaklepanje aplikacije aktivno, in poskusi znova.',
+        'identity_replaced' => 'Ta naprava ima novo sinhronizacijsko identiteto. Znova seznani druge naprave.',
+        'identity_replace_failed' => 'Stare identitete naprave ni bilo mogoče dati ob stran. Poskusi znova.',
         'cannot_remove_self' => 'Te naprave ne moreš odstraniti — na njej trenutno delaš.',
         'remove_failed' => 'Odstranitev naprave ni uspela. Poskusi znova.',
         'app_lock_first_settings' => 'Najprej nastavi zaklepanje aplikacije, da spremeniš nastavitve sinhronizacije.',
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Končna točka releja je shranjena.',
         'relay_save_failed' => 'Shranjevanje končne točke releja ni uspelo: :message',
     ],
+    'app_lock_permanent' => 'Ko so podatki enkrat šifrirani, zaklepanja aplikacije ni več mogoče izklopiti — hrani edini ključ, poti nazaj k nešifriranim podatkom pa ni.',
+    'backlog_heading' => 'Čaka na dodajanje',
+    'backlog_deferred' => 'Ta naprava je prejela podatke z druge naprave in jih še ni dodala v tvojo evidenco. Nič ni izgubljeno — dodani bodo samodejno, običajno v trenutku.',
+    'backlog_awaiting_key' => 'Ta naprava je prejela podatke, za katere še nima ključa. Nič ni izgubljeno. Odpri aplikacijo na povezani napravi, medtem ko je ta odprta, da se lahko povežeta in se ključ pošlje.',
 ];

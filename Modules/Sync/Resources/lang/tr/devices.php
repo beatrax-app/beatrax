@@ -6,10 +6,14 @@ return [
     'heading' => 'Cihazlar ve senkronizasyon',
 
     'enable_sync' => 'Senkronizasyonu etkinleştir',
-    'enable_sync_help' => 'Verilerini güvendiğin cihazlar arasında güvenle paylaş. Uygulama kilidi gerekir.',
+    'enable_sync_help' => 'Verilerini güvendiğin cihazlar arasında güvenle paylaş. Uygulama kilidi gerekir. Bir kez açıldığında verilerin şifrelenir ve uygulama kilidi artık kapatılamaz.',
 
     'app_lock_notice' => 'Senkronizasyonu etkinleştirmek için önce bir uygulama kilidi belirle.',
     'go_to_app_lock' => 'Uygulama kilidine git',
+
+    'identity_unreadable' => 'Bu cihazın senkronizasyon kimliği başka bir uygulama kilidiyle oluşturuldu ve artık açılmıyor. Bu sürdükçe cihaz ne senkronize olabilir ne de eşleşebilir. Kimliğin oluşturulduğu veritabanı yedeğini geri yüklersen yeniden okunabilir olur.',
+    'identity_unreadable_replace_help' => 'Baştan da başlayabilirsin: cihaz yeni bir kimlik alır, eskisi kullanılmadan bir kenarda kalır ve daha önce eşleştirdiğin cihazları yeniden eşleştirmen gerekir.',
+    'identity_unreadable_replace' => 'Bu cihaz için yeni bir kimlik oluştur',
 
     'encrypted_at_rest' => 'Veriler durağan halde şifreli',
     'encrypted_at_rest_scope' => 'Notlar, işlem açıklamaları ve ödeme yaptığın kişilerin adları ile IBAN\'ları defterde uygulama kilidi parolanla şifrelenir. Tutarlar, tarihler ve kendi hesabının adı ile IBAN\'ı şifrelenmez. Arama dizini kime ödeme yaptığının, işlem açıklamalarının ve vergi notlarının kendi okunabilir kopyasını saklar ve bazı satıcı adları veritabanı dosyasının başka yerlerinde açık metin olarak bulunur.',
@@ -37,6 +41,11 @@ return [
     'remove_aria' => ':name cihazını kaldır',
     'remove' => 'Kaldır',
     'pair_new_device' => 'Yeni bir cihaz eşleştir',
+
+    'pairing_waiting' => 'Şununla eşleştirmeyi tamamlayın: :name',
+    'pairing_waiting_help' => 'Eşleştirmenin geçerli olması için her iki ekranın da aynı altı kelimeyi göstermesi gerekir. Karşılaştırmak için yeniden açın.',
+    'pairing_waiting_resume' => 'Eşleştirmeye devam et',
+    'pairing_waiting_lock_override' => 'Kilidi açmak bu eşleştirmenin süresi dolmak yerine yeniden açılmasını sağlar; bu yüzden belirlediğiniz uygulama kilidi süresinden daha uzun sürer. Eşleştirmeyi tamamladığınızda veya iptal ettiğinizde sona erer.',
 
     'relay_endpoint' => 'Relay uç noktası',
     'relay_endpoint_help' => 'İsteğe bağlı. Ayarlandığında çevrimdışı cihazlar bu relay üzerinden senkronize olur. Yalnızca LAN&#8209;doğrudan bağlantı için boş bırak.',
@@ -68,6 +77,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Senkronizasyonu etkinleştirmek için önce bir uygulama kilidi belirle.',
         'enable_failed' => 'Senkronizasyon etkinleştirilemedi. Uygulama kilidinin etkin olduğundan emin olup yeniden dene.',
+        'identity_replaced' => 'Bu cihazın yeni bir senkronizasyon kimliği var. Diğer cihazlarını yeniden eşleştir.',
+        'identity_replace_failed' => 'Eski cihaz kimliği bir kenara alınamadı. Tekrar dene.',
         'cannot_remove_self' => 'Bu cihazı kaldıramazsın — şu anda kullandığın cihaz.',
         'remove_failed' => 'Cihaz kaldırılamadı. Lütfen yeniden dene.',
         'app_lock_first_settings' => 'Senkronizasyon ayarlarını değiştirmek için önce bir uygulama kilidi belirle.',
@@ -75,4 +86,8 @@ return [
         'relay_saved' => 'Relay uç noktası kaydedildi.',
         'relay_save_failed' => 'Relay uç noktası kaydedilemedi: :message',
     ],
+    'app_lock_permanent' => 'Verilerin bir kez şifrelendiğinde uygulama kilidi artık kapatılamaz — tek anahtarı o tutar ve şifresiz hâle dönüş yoktur.',
+    'backlog_heading' => 'Eklenmeyi bekliyor',
+    'backlog_deferred' => 'Bu cihaz başka bir cihazdan veri aldı ve henüz kayıtlarına eklemedi. Hiçbir şey kaybolmaz — otomatik olarak uygulanır, genellikle bir an içinde.',
+    'backlog_awaiting_key' => 'Bu cihaz, anahtarına henüz sahip olmadığı veriler aldı. Hiçbir şey kaybolmaz. Bu cihaz açıkken eşleştirdiğin cihazda uygulamayı aç ki ikisi bağlanabilsin ve anahtar gönderilebilsin.',
 ];

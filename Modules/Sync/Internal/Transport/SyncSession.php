@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Transport;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Clock\ZuluTimestamp;
 use Modules\Sync\Internal\Exceptions\SessionNotAuthenticatedException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
@@ -70,7 +71,7 @@ final class SyncSession
             }
         }
 
-        $now = $this->clock->now()->toIso8601String();
+        $now = ZuluTimestamp::stamp($this->clock->now());
 
         if ($matchedDeviceId === null) {
             $this->status = 'failed';
@@ -258,7 +259,7 @@ final class SyncSession
         $this->noiseSession = null;
 
         if ($this->sessionRowId !== null) {
-            $now = $this->clock->now()->toIso8601String();
+            $now = ZuluTimestamp::stamp($this->clock->now());
             $this->db->connection()
                 ->table('sync_sessions')
                 ->where('id', $this->sessionRowId)
@@ -293,7 +294,7 @@ final class SyncSession
         ?string $connectedAt,
         string $lastSeenAt,
     ): void {
-        $now = $this->clock->now()->toIso8601String();
+        $now = ZuluTimestamp::stamp($this->clock->now());
 
         if ($this->sessionRowId !== null) {
             $this->db->connection()

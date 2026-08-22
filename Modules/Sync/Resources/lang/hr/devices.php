@@ -6,10 +6,14 @@ return [
     'heading' => 'Uređaji i sinkronizacija',
 
     'enable_sync' => 'Uključi sinkronizaciju',
-    'enable_sync_help' => 'Sigurno dijeli svoje podatke među pouzdanim uređajima. Zahtijeva zaključavanje aplikacije.',
+    'enable_sync_help' => 'Sigurno dijeli svoje podatke među pouzdanim uređajima. Zahtijeva zaključavanje aplikacije. Kada je uključeno, podaci se šifriraju i zaključavanje aplikacije više se ne može isključiti.',
 
     'app_lock_notice' => 'Prvo postavi zaključavanje aplikacije da uključiš sinkronizaciju.',
     'go_to_app_lock' => 'Idi na Zaključavanje aplikacije',
+
+    'identity_unreadable' => 'Identitet sinkronizacije ovog uređaja nastao je uz drugo zaključavanje aplikacije i više se ne otvara. Dok je tako, uređaj ne može sinkronizirati ni upariti. Vraćanjem sigurnosne kopije baze podataka s kojom je nastao ponovno postaje čitljiv.',
+    'identity_unreadable_replace_help' => 'Možeš i početi ispočetka: uređaj dobiva novi identitet, stari ostaje neiskorišten sa strane, a ranije uparene uređaje treba upariti ponovno.',
+    'identity_unreadable_replace' => 'Stvori novi identitet za ovaj uređaj',
 
     'encrypted_at_rest' => 'Podaci šifrirani u mirovanju',
     'encrypted_at_rest_scope' => 'Bilješke, opisi transakcija te imena i IBAN onih kojima plaćaš šifriraju se u knjizi zaporkom za zaključavanje aplikacije. Iznosi, datumi te naziv i IBAN tvojeg vlastitog računa nisu šifrirani. Indeks pretraživanja čuva vlastitu čitljivu kopiju toga kome plaćaš, opisa tvojih transakcija i tvojih poreznih bilješki, a neka imena trgovaca ostaju čitljiva na drugim mjestima u datoteci baze podataka.',
@@ -39,6 +43,11 @@ return [
     'remove_aria' => 'Ukloni :name',
     'remove' => 'Ukloni',
     'pair_new_device' => 'Upari novi uređaj',
+
+    'pairing_waiting' => 'Dovršite uparivanje s :name',
+    'pairing_waiting_help' => 'Oba zaslona moraju prikazivati istih šest riječi prije nego što uparivanje vrijedi. Ponovno ga otvorite kako biste ih usporedili.',
+    'pairing_waiting_resume' => 'Nastavi uparivanje',
+    'pairing_waiting_lock_override' => 'Otključavanje ponovno otvara ovo uparivanje umjesto da mu pusti da istekne, pa traje dulje od vremena zaključavanja aplikacije koje ste postavili. Završava kad ga dovršite ili otkažete.',
 
     'relay_endpoint' => 'Krajnja točka releja',
     'relay_endpoint_help' => 'Neobavezno. Kad je postavljena, uređaji izvan mreže sinkroniziraju se preko ovog releja. Ostavi prazno samo za izravnu vezu unutar LAN&#8209;a.',
@@ -70,6 +79,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Prvo postavi zaključavanje aplikacije da uključiš sinkronizaciju.',
         'enable_failed' => 'Uključivanje sinkronizacije nije uspjelo. Provjeri je li zaključavanje aplikacije aktivno pa pokušaj ponovno.',
+        'identity_replaced' => 'Ovaj uređaj ima novi identitet sinkronizacije. Ponovno upari svoje druge uređaje.',
+        'identity_replace_failed' => 'Stari identitet uređaja nije se mogao odložiti sa strane. Pokušaj ponovno.',
         'cannot_remove_self' => 'Ne možeš ukloniti ovaj uređaj — na njemu upravo radiš.',
         'remove_failed' => 'Uklanjanje uređaja nije uspjelo. Pokušaj ponovno.',
         'app_lock_first_settings' => 'Prvo postavi zaključavanje aplikacije da promijeniš postavke sinkronizacije.',
@@ -77,4 +88,8 @@ return [
         'relay_saved' => 'Krajnja točka releja je spremljena.',
         'relay_save_failed' => 'Spremanje krajnje točke releja nije uspjelo: :message',
     ],
+    'app_lock_permanent' => 'Kada su podaci jednom šifrirani, zaključavanje aplikacije više se ne može isključiti — drži jedini ključ, a povratka na nešifrirano nema.',
+    'backlog_heading' => 'Čeka dodavanje',
+    'backlog_deferred' => 'Ovaj uređaj primio je podatke s drugog uređaja i još ih nije dodao u tvoju evidenciju. Ništa se ne gubi — bit će dodani automatski, obično u trenutku.',
+    'backlog_awaiting_key' => 'Ovaj uređaj primio je podatke za koje još nema ključ. Ništa se ne gubi. Otvori aplikaciju na uparenom uređaju dok je ovaj otvoren, kako bi se mogli povezati i ključ poslati.',
 ];

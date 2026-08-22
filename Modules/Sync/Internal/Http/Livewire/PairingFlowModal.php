@@ -21,11 +21,13 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsPairingTokenRow;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\Identity\DeviceIdentityState;
 use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
 use Modules\Sync\Internal\Pairing\PairingFrameCourier;
 use Modules\Sync\Internal\Pairing\PairingRowGuards;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Internal\Pairing\PendingPairingCourier;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\RelayBootstrap;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
@@ -46,6 +48,12 @@ final class PairingFlowModal extends Component
     // Translation key (resolved via Lang::get at each use site) rather than
     // literal copy, so the const stays free of the banned container call.
     private const IDENTITY_LOCKED_MESSAGE = 'sync::pairing.identity_locked';
+
+    // "Unlock and try again" is a lie for a key-file no unlock can open, and
+    // this modal is exactly where a user would keep trying. The copy for that
+    // state belongs to the settings section, which is where the way out of it
+    // is offered.
+    private const IDENTITY_UNREADABLE_MESSAGE = 'sync::devices.identity_unreadable';
 
     public bool $open = false;
 
@@ -227,7 +235,7 @@ final class PairingFlowModal extends Component
 
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = Lang::get(self::IDENTITY_LOCKED_MESSAGE);
+            $this->flashMessage = $this->identityUnavailableMessage($identityLoader, $userId, $session);
 
             return;
         }
@@ -298,7 +306,7 @@ final class PairingFlowModal extends Component
 
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = Lang::get(self::IDENTITY_LOCKED_MESSAGE);
+            $this->flashMessage = $this->identityUnavailableMessage($identityLoader, $userId, $session);
 
             return;
         }
@@ -345,7 +353,7 @@ final class PairingFlowModal extends Component
         EncryptionMigrationService $migrationService,
         PairingGateway $gateway,
         LoggerInterface $logger,
-        PairingFrameCourier $frameCourier,
+        PendingPairingCourier $courier,
         PreSyncHistoryCapture $historyCapture,
         DeviceRegistryService $registry,
     ): void {
@@ -355,14 +363,14 @@ final class PairingFlowModal extends Component
 
         $userId = $currentUser->user()->id;
 
-        // Applies any inbound cross-device frame BEFORE re-reading local
-        // state — this is what applies the phone's PAIR_RESPONDER_ACCEPT and
-        // PAIR_CONFIRM. drainAndApply() is designed to never throw; the
-        // try/catch here is defense-in-depth regardless.
+        // The poll no longer moves frames. Collecting and re-emitting are one
+        // mechanism now, running from the daemon and the request tail too — a
+        // second copy here would be a second redelivery policy, free to
+        // disagree. What is left below is this screen's job: the wizard.
         try {
-            $frameCourier->drainAndApply($userId);
+            $courier->tick($userId, $identityLoader->load($userId, $session));
         } catch (Throwable $e) {
-            $logger->warning('PairingFlowModal: cross-device relay drain failed during poll.', [
+            $logger->warning('PairingFlowModal: pending-pairing courier tick failed during poll.', [
                 'user_id' => $userId,
                 'exception' => $e::class,
             ]);
@@ -377,19 +385,6 @@ final class PairingFlowModal extends Component
             return;
         }
 
-        // A confirm the peer deferred, or lost in flight, is otherwise never
-        // sent again and the ceremony finishes on one device only. Gated on the
-        // row's own stamp, not on a flag a refusal also sets: re-emitting after
-        // a refused tap asserts a confirmation confirm() declined to record.
-        if ($row->state !== PairingState::Confirmed->value
-            && $gateway->hasConfirmedLocally((int) $this->pairingTokenId, $userId, $session)) {
-            $identity = $identityLoader->load($userId, $session);
-
-            if ($identity !== null) {
-                $this->sendConfirmToPeer($db, $frameCourier, $identity, $logger, $userId);
-            }
-        }
-
         if ($row->state === PairingState::AwaitingConfirm->value && $this->currentStep() === PairingWizardStep::ShowCode) {
             $this->safetyWords = $gateway->safetyWordsFor((int) $this->pairingTokenId, $userId);
             $this->hydrateDeviceNames($gateway, $registry, $userId, PairingSide::Initiator);
@@ -401,6 +396,18 @@ final class PairingFlowModal extends Component
         if ($row->state === PairingState::Confirmed->value && $this->currentStep() !== PairingWizardStep::Success) {
             $this->enterSuccessStep($currentUser, $session, $migrationService, $historyCapture, $db, $gateway, $logger);
         }
+    }
+
+    // Asked only once a load() already came back empty, so the extra read is
+    // paid on the refusal path alone.
+    private function identityUnavailableMessage(
+        DeviceIdentityLoader $identityLoader,
+        int $userId,
+        Session $session,
+    ): string {
+        return $identityLoader->state($userId, $session) === DeviceIdentityState::Unreadable
+            ? Lang::get(self::IDENTITY_UNREADABLE_MESSAGE)
+            : Lang::get(self::IDENTITY_LOCKED_MESSAGE);
     }
 
     // Which name is "the peer" depends on the side this modal is playing:
@@ -448,7 +455,7 @@ final class PairingFlowModal extends Component
         // service derives the side from this device id, never from client state.
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = Lang::get(self::IDENTITY_LOCKED_MESSAGE);
+            $this->flashMessage = $this->identityUnavailableMessage($identityLoader, $userId, $session);
 
             return;
         }

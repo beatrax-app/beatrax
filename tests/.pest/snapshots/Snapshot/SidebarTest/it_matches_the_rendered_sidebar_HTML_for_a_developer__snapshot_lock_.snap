@@ -184,7 +184,7 @@
                     >Ctrl+.</span>
                 </a>
                 
-                <div class="dev-pulse"  wire:poll.5s >
+                <div class="dev-pulse"  wire:poll.5s.keep-alive >
                     Queue 0 · Worker —
                 </div>
             </div>

@@ -124,6 +124,20 @@
             >
                 {{ Lang::get('mobile::pairing.enter_code_instead') }}
             </button>
+
+            {{-- The enter_code arm below carries its own Cancel; this step had
+                 none, and layouts.lock draws no navigation, so the camera arm
+                 could only be left by killing the app. --}}
+            @if (! $importing)
+                <button
+                    type="button"
+                    wire:click="cancelPairing"
+                    class="block w-full min-h-[44px] px-2 text-sm text-slate-500 underline-offset-2 hover:underline
+                           focus:outline-none focus-visible:underline dark:text-slate-400"
+                >
+                    {{ Lang::get('mobile::pairing.cancel') }}
+                </button>
+            @endif
         </div>
     @endif
 
@@ -202,9 +216,28 @@
         </div>
     @endif
 
+    {{-- Rendered for both entry arms at once, so a phone with no usable camera
+         still reaches it. While the intent marker stands
+         MobileEnsureImportCompleted returns every other route to this screen,
+         which made "Import from another device" a choice only a reinstall
+         undid. --}}
+    @if ($importing && $wizardStep->isEntryArm())
+        <div class="text-center">
+            <button
+                type="button"
+                wire:click="abandonImport"
+                data-testid="abandon-import"
+                class="min-h-[44px] px-2 text-sm text-slate-500 underline-offset-2 hover:underline
+                       focus:outline-none focus-visible:underline dark:text-slate-400"
+            >
+                {{ Lang::get('mobile::pairing.skip_import') }}
+            </button>
+        </div>
+    @endif
+
     {{-- ===== Step: confirm safety numbers (the trust gate) ===== --}}
     @if ($wizardStep === PairingWizardStep::Confirm)
-        <div wire:poll.3s="checkPairingState">
+        <div wire:poll.3s.keep-alive="checkPairingState">
             <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.confirm_heading') }}</h1>
 
             {{-- The words prove the CHANNEL is untampered; the names say

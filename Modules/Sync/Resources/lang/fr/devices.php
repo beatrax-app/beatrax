@@ -6,10 +6,14 @@ return [
     'heading' => 'Appareils et synchronisation',
 
     'enable_sync' => 'Activer la synchronisation',
-    'enable_sync_help' => 'Partage tes données en toute sécurité entre tes appareils de confiance. Nécessite un verrouillage de l\'app.',
+    'enable_sync_help' => 'Partage tes données en toute sécurité entre tes appareils de confiance. Nécessite un verrouillage de l\'app. Une fois activé, tes données sont chiffrées et le verrouillage de l\'app ne peut plus être désactivé.',
 
     'app_lock_notice' => 'Configure d\'abord un verrouillage de l\'app pour activer la synchronisation.',
     'go_to_app_lock' => 'Aller au verrouillage de l\'app',
+
+    'identity_unreadable' => 'L\'identité de synchronisation de cet appareil a été créée avec un autre verrouillage de l\'app et ne s\'ouvre plus. Tant que c\'est le cas, cet appareil ne peut ni se synchroniser ni s\'appairer. Restaurer la sauvegarde de base de données avec laquelle elle a été créée la rend à nouveau lisible.',
+    'identity_unreadable_replace_help' => 'Tu peux aussi repartir de zéro : cet appareil reçoit une nouvelle identité, l\'ancienne est conservée sans être utilisée, et les appareils déjà appairés devront l\'être à nouveau.',
+    'identity_unreadable_replace' => 'Créer une nouvelle identité pour cet appareil',
 
     'encrypted_at_rest' => 'Données chiffrées au repos',
     'encrypted_at_rest_scope' => 'Tes notes, les libellés de transaction et les noms et IBAN de tes bénéficiaires sont chiffrés dans le registre avec la phrase secrète de verrouillage de l\'app. Les montants, les dates et le nom et l\'IBAN de ton propre compte ne le sont pas. L\'index de recherche conserve sa propre copie lisible de qui tu paies, de tes libellés de transaction et de tes notes fiscales, et certains noms de commerçants restent en clair ailleurs dans le fichier de base de données.',
@@ -37,6 +41,11 @@ return [
     'remove_aria' => 'Supprimer :name',
     'remove' => 'Supprimer',
     'pair_new_device' => 'Appairer un nouvel appareil',
+
+    'pairing_waiting' => 'Terminer l’appairage avec :name',
+    'pairing_waiting_help' => 'Les deux écrans doivent afficher les mêmes six mots pour que l’appairage compte. Rouvrez-le pour les comparer.',
+    'pairing_waiting_resume' => 'Continuer l’appairage',
+    'pairing_waiting_lock_override' => 'Le déverrouillage rouvre cet appairage au lieu de le laisser expirer : il survit donc au délai de verrouillage que vous avez défini. Il prend fin dès que vous le terminez ou l’annulez.',
 
     'relay_endpoint' => 'Point de terminaison du relais',
     'relay_endpoint_help' => 'Facultatif. Une fois défini, les appareils hors ligne se synchronisent via ce relais. Laisse vide pour du LAN&#8209;direct uniquement.',
@@ -68,6 +77,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Configure d\'abord un verrouillage de l\'app pour activer la synchronisation.',
         'enable_failed' => 'Impossible d\'activer la synchronisation. Vérifie que ton verrouillage de l\'app est actif et réessaie.',
+        'identity_replaced' => 'Cet appareil a une nouvelle identité de synchronisation. Appaire à nouveau tes autres appareils.',
+        'identity_replace_failed' => 'Impossible de mettre de côté l\'ancienne identité de l\'appareil. Réessaie.',
         'cannot_remove_self' => 'Tu ne peux pas supprimer cet appareil — c\'est celui que tu utilises.',
         'remove_failed' => 'Impossible de supprimer l\'appareil. Réessaie.',
         'app_lock_first_settings' => 'Configure d\'abord un verrouillage de l\'app pour changer les paramètres de synchronisation.',
@@ -75,4 +86,8 @@ return [
         'relay_saved' => 'Point de terminaison du relais enregistré.',
         'relay_save_failed' => 'Impossible d\'enregistrer le point de terminaison du relais : :message',
     ],
+    'app_lock_permanent' => 'Une fois tes données chiffrées, le verrouillage de l\'app ne peut plus être désactivé — il détient la seule clé, et il n\'y a pas de retour au non chiffré.',
+    'backlog_heading' => 'En attente d\'intégration',
+    'backlog_deferred' => 'Cet appareil a reçu des données d\'un autre appareil et ne les a pas encore ajoutées à vos comptes. Rien n\'est perdu — l\'intégration se fait automatiquement, généralement en un instant.',
+    'backlog_awaiting_key' => 'Cet appareil a reçu des données dont il n\'a pas encore la clé. Rien n\'est perdu. Ouvrez l\'application sur l\'appareil associé pendant que celui-ci est ouvert, afin que les deux puissent se connecter et que la clé soit envoyée.',
 ];

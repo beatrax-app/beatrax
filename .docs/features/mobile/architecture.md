@@ -725,6 +725,40 @@ row (rather than a single hard-coded user) since the schema stays
 multi-user-ready even in a single-user v1, and each user's burst is
 isolated so one user's failure never stops the rest.
 
+That schedule is declared in `Modules/Mobile/Routes/console.php`, and *when*
+the file is loaded decides whether iOS ever runs it. The plugin hands
+BGTaskScheduler the whole task list once, from
+`BackgroundTasksServiceProvider::boot()`, which boots roughly thirty-seven
+providers ahead of `MobileServiceProvider`. Loaded from `MobileServiceProvider::
+boot()` the entry arrived after the manifest had already been registered, and
+the phone logged twenty schedule events — the app-root `routes/console.php`
+exactly — with `sync:mobile-pull` absent and background sync running never.
+The build-time half of the same plugin was never fooled:
+`native:background-tasks:pre-compile` runs in an ordinary console process,
+long after every provider has booted, so `BGTaskSchedulerPermittedIdentifiers`
+in the generated `Info.plist` has always listed
+`com.nativephp.task.sync-mobile-pull`. iOS was permitted to run the task and
+was never asked to schedule it.
+It is loaded from an `Application::booting()` callback instead: those all fire
+after registration and before the first provider boots, which is the only
+window where the schedule exists and the cache the `Schedule` overlap mutex
+needs is bindable. It is a plain `require_once` rather than `loadRoutesFrom()`,
+which drops the file outright once routes are cached — a console route is not
+part of the route cache.
+
+Two filters in `SchedulerManifestGenerator` drop schedules without failing
+anything, and `Modules/Mobile/tests/Unit/IosBackgroundTaskManifestTest.php`
+pins what they drop. A `Schedule::call()` closure has no name for
+BGTaskScheduler to dispatch, so skipping those is the only option there is. A
+cron the generator has no interval for is a different matter: `db:backup
+--force` at `dailyAt('03:00')` is a schedule somebody wrote which iOS then
+never runs, and BGTaskScheduler could not honour a wall-clock hour anyway. The
+pinned list is what makes the next one visible before a device does.
+
+LAN peer discovery is a separate story on iOS and currently does not work at
+all: see
+[ios-lan-discovery-entitlement.md](ios-lan-discovery-entitlement.md).
+
 ## Wiring
 
 `MobileServiceProvider` is the single-owner wiring surface for the whole

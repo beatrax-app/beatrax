@@ -10,9 +10,13 @@
                                  confirmation; the sole gate to confirmed_at
       Step 4  success          — "Device paired"
 
-    wire:poll.3s="checkPairingState" runs only on the show_code and confirm steps
-    (it advances the flow when the peer acts). Calm-slate (sketch-findings-beatrax),
-    weights 400/600 only, min-h-[44px] buttons, JetBrains Mono identifiers.
+    wire:poll.3s.keep-alive="checkPairingState" runs only on the show_code and
+    confirm steps (it advances the flow when the peer acts). keep-alive because
+    the whole point of the ceremony is that the reader is looking at the OTHER
+    device: Livewire drops a backgrounded poll to one tick in twenty, and the
+    peer's accept then went unseen for the minute the window sat behind the
+    phone. Calm-slate (sketch-findings-beatrax), weights 400/600 only,
+    min-h-[44px] buttons, JetBrains Mono identifiers.
 --}}
 
 @use('Modules\Core\Public\Support\Lang')
@@ -61,7 +65,11 @@
                        dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 dark:focus-visible:ring-slate-100"
             >
                 <svg class="h-6 w-6 text-slate-700 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                    {{-- pencil-square, not video-camera: this modal has no
+                         scanner and never did, so a camera here advertised a
+                         capability at the exact moment the reader is choosing
+                         between the two arms. The phone's screen has the camera. --}}
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                 </svg>
                 <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.enter_a_code') }}</span>
                 <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.enter_a_code_help') }}</span>
@@ -71,7 +79,7 @@
 
     {{-- ===== Step 2a: show my code (QR + word-code + countdown) ===== --}}
     @if ($wizardStep === PairingWizardStep::ShowCode)
-        <div wire:poll.3s="checkPairingState">
+        <div wire:poll.3s.keep-alive="checkPairingState">
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.show_this_code') }}</h3>
             <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_2_of_3') }}</p>
 
@@ -198,7 +206,7 @@
 
     {{-- ===== Step 3: confirm safety numbers (the trust gate) ===== --}}
     @if ($wizardStep === PairingWizardStep::Confirm)
-        <div wire:poll.3s="checkPairingState">
+        <div wire:poll.3s.keep-alive="checkPairingState">
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.compare_words') }}</h3>
             <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_3_of_3') }}</p>
 

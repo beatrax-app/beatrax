@@ -32,14 +32,14 @@ trait ChoosesCodeEntryArm
         $this->side = PairingSide::Responder->value;
 
         if ($qrBridge->isAvailable()) {
-            $this->step = PairingWizardStep::Scan->value;
+            $this->moveTo(PairingWizardStep::Scan);
             $this->entryStep = PairingWizardStep::Scan->value;
             $this->cameraUnavailableNotice = false;
 
             return;
         }
 
-        $this->step = PairingWizardStep::EnterCode->value;
+        $this->moveTo(PairingWizardStep::EnterCode);
         $this->entryStep = PairingWizardStep::EnterCode->value;
         $this->cameraUnavailableNotice = true;
     }
@@ -50,7 +50,7 @@ trait ChoosesCodeEntryArm
     {
         $this->flashMessage = '';
         $this->cameraUnavailableNotice = false;
-        $this->step = PairingWizardStep::EnterCode->value;
+        $this->moveTo(PairingWizardStep::EnterCode);
         $this->entryStep = PairingWizardStep::EnterCode->value;
     }
 
@@ -72,7 +72,7 @@ trait ChoosesCodeEntryArm
     public function cameraDenied(): void
     {
         $this->cameraUnavailableNotice = true;
-        $this->step = PairingWizardStep::EnterCode->value;
+        $this->moveTo(PairingWizardStep::EnterCode);
         $this->entryStep = PairingWizardStep::EnterCode->value;
     }
 
