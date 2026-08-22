@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkEpochWrapSignature;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Crypto\GdkWrapRecipient;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
@@ -112,7 +113,7 @@ it('builds one sealed-box GDK epoch wrap per remaining trusted device', function
     $senderSigKp = sodium_crypto_sign_keypair();
     $senderSecretHex = sodium_bin2hex(sodium_crypto_sign_secretkey($senderSigKp));
 
-    $wrap = $rotation->buildGdkEpochWrap(2, $rawGdkKey, $recipientPub, 'remaining-device', 'sender-device', $senderSecretHex);
+    $wrap = $rotation->buildGdkEpochWrap(2, $rawGdkKey, new GdkWrapRecipient('remaining-device', $recipientPub), 'sender-device', $senderSecretHex);
 
     expect($wrap)->toHaveKey('type', 'GDK_EPOCH_WRAP');
     expect($wrap)->toHaveKey('epoch_id', 2);

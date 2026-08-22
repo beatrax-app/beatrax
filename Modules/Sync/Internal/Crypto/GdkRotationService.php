@@ -101,8 +101,8 @@ final class GdkRotationService
                         continue;
                     }
 
-                    $recipientPub = $this->sodium->hexToBin($x25519PublicKeyHex);
-                    $wrap = $this->buildGdkEpochWrap($newEpochId, $rawGdkKey, $recipientPub, $deviceId, $identity->deviceId, $identity->ed25519SecretKeyHex);
+                    $recipient = new GdkWrapRecipient($deviceId, $this->sodium->hexToBin($x25519PublicKeyHex));
+                    $wrap = $this->buildGdkEpochWrap($newEpochId, $rawGdkKey, $recipient, $identity->deviceId, $identity->ed25519SecretKeyHex);
 
                     $this->relayMailbox->deliver(
                         senderDid: $selfDeviceId ?? '',
@@ -130,27 +130,26 @@ final class GdkRotationService
     public function buildGdkEpochWrap(
         int $epochId,
         string $rawGdkKey,
-        string $recipientX25519PublicKeyBin,
-        string $recipientDeviceId,
+        GdkWrapRecipient $recipient,
         string $senderDeviceId,
         string $senderEd25519SecretKeyHex,
         string $role = GdkEpochWrapSignature::ROLE_EPOCH,
         bool $senderHoldsKeyedRows = false,
     ): array {
-        if ($rawGdkKey === '' || $recipientX25519PublicKeyBin === ''
+        if ($rawGdkKey === '' || $recipient->x25519PublicKeyBin === ''
             || $senderDeviceId === '' || $senderEd25519SecretKeyHex === '') {
             throw new InvalidArgumentException(
-                'GdkRotationService::buildGdkEpochWrap — rawGdkKey/recipientX25519PublicKeyBin/sender identity must not be empty.',
+                'GdkRotationService::buildGdkEpochWrap — rawGdkKey/recipient public key/sender identity must not be empty.',
             );
         }
 
-        $sealed = sodium_crypto_box_seal($rawGdkKey, $recipientX25519PublicKeyBin);
+        $sealed = sodium_crypto_box_seal($rawGdkKey, $recipient->x25519PublicKeyBin);
 
         $senderSecretBin = $this->sodium->hexToBin($senderEd25519SecretKeyHex);
 
         try {
             $sigHex = $this->signer->sign(
-                GdkEpochWrapSignature::signingMessage($epochId, $sealed, $recipientDeviceId, $senderDeviceId, $role, $senderHoldsKeyedRows),
+                GdkEpochWrapSignature::signingMessage($epochId, $sealed, $recipient->deviceId, $senderDeviceId, $role, $senderHoldsKeyedRows),
                 $senderSecretBin,
             );
         } finally {
@@ -161,7 +160,7 @@ final class GdkRotationService
             'type' => GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP,
             'epoch_id' => $epochId,
             'wrapped_key_b64' => base64_encode($sealed),
-            'recipient_device_id' => $recipientDeviceId,
+            'recipient_device_id' => $recipient->deviceId,
             'sender_device_id' => $senderDeviceId,
             'sig_hex' => $sigHex,
         ];
@@ -185,8 +184,8 @@ final class GdkRotationService
      */
     public function fanOutAllEpochsToDevice(int $userId, int $newDeviceRegistryId, Session $session): void
     {
-        $recipient = $this->resolveFanOutRecipient($userId, $newDeviceRegistryId);
-        if ($recipient === null) {
+        $target = $this->resolveFanOutRecipient($userId, $newDeviceRegistryId);
+        if ($target === null) {
             return;
         }
 
@@ -195,7 +194,6 @@ final class GdkRotationService
         // this user — in that case the foreach below enqueues zero wraps.
         $keyring = $this->keyringService->loadKeyring($userId, $session);
         $selfDeviceId = $this->selfDeviceId($userId);
-        $recipientDeviceId = $recipient['deviceId'];
 
         // The acting device's identity signs each wrap so the new peer can
         // authenticate its provenance (see rotateAndRevoke()).
@@ -206,7 +204,7 @@ final class GdkRotationService
             // a libsodium failure here escaped as a raw SodiumException while
             // the identical call a few lines down was translated — one fault
             // reported as two types, depending on which key it was converting.
-            $recipientPub = $this->sodium->hexToBin($recipient['pubHex']);
+            $recipient = new GdkWrapRecipient($target['deviceId'], $this->sodium->hexToBin($target['pubHex']));
 
             // The recipient's appendEpoch() advances current_epoch to whatever
             // it applied last, and nothing on the wire says which epoch is
@@ -214,16 +212,16 @@ final class GdkRotationService
             // arrival order agree with this device's own answer.
             $currentEpochId = $this->currentEpochIdOrNull($userId, $session);
 
-            $this->db->connection()->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity, $userId, $currentEpochId, $session): void {
+            $this->db->connection()->transaction(function () use ($keyring, $recipient, $selfDeviceId, $identity, $userId, $currentEpochId, $session): void {
                 foreach ($keyring->epochs() as $epoch) {
                     if ($epoch->epochId !== $currentEpochId) {
-                        $this->deliverWrap($epoch->epochId, $epoch->keyHex, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity);
+                        $this->deliverWrap($epoch->epochId, $epoch->keyHex, $recipient, $selfDeviceId, $identity);
                     }
                 }
 
                 foreach ($keyring->epochs() as $epoch) {
                     if ($epoch->epochId === $currentEpochId) {
-                        $this->deliverWrap($epoch->epochId, $epoch->keyHex, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity);
+                        $this->deliverWrap($epoch->epochId, $epoch->keyHex, $recipient, $selfDeviceId, $identity);
                     }
                 }
 
@@ -236,8 +234,7 @@ final class GdkRotationService
                     $this->deliverWrap(
                         GdkEpochWrapSignature::BLIND_INDEX_EPOCH_ID,
                         $blindIndexKeyHex,
-                        $recipientPub,
-                        $recipientDeviceId,
+                        $recipient,
                         $selfDeviceId,
                         $identity,
                         GdkEpochWrapSignature::ROLE_BLIND_INDEX,
@@ -256,8 +253,7 @@ final class GdkRotationService
     private function deliverWrap(
         int $epochId,
         string $keyHex,
-        string $recipientPub,
-        string $recipientDeviceId,
+        GdkWrapRecipient $recipient,
         ?string $selfDeviceId,
         DeviceIdentityDto $identity,
         string $role = GdkEpochWrapSignature::ROLE_EPOCH,
@@ -266,11 +262,11 @@ final class GdkRotationService
         $rawKey = $this->sodium->hexToBin($keyHex);
 
         try {
-            $wrap = $this->buildGdkEpochWrap($epochId, $rawKey, $recipientPub, $recipientDeviceId, $identity->deviceId, $identity->ed25519SecretKeyHex, $role, $senderHoldsKeyedRows);
+            $wrap = $this->buildGdkEpochWrap($epochId, $rawKey, $recipient, $identity->deviceId, $identity->ed25519SecretKeyHex, $role, $senderHoldsKeyedRows);
 
             $this->relayMailbox->deliver(
                 senderDid: $selfDeviceId ?? '',
-                recipientDid: $recipientDeviceId,
+                recipientDid: $recipient->deviceId,
                 blob: json_encode($wrap, JSON_THROW_ON_ERROR),
             );
         } finally {
