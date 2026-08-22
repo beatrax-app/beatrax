@@ -23,6 +23,14 @@ it('draws the same mark in the mobile top bar', function (): void {
     expect($blade)->toContain('<x-core::search-mark');
 });
 
+it('draws the same mark in the counterparties search box', function (): void {
+    $blade = (string) file_get_contents(
+        base_path('Modules/Counterparties/Resources/views/livewire/counterparty-index.blade.php')
+    );
+
+    expect($blade)->toContain('<x-core::search-mark');
+});
+
 it('leaves the character where it sits in a column of other characters', function (): void {
     $sidebar = (string) file_get_contents(
         base_path('Modules/Shell/Resources/views/livewire/app-sidebar.blade.php')

@@ -3771,8 +3771,12 @@ td.date,
         padding: var(--space-2) var(--space-4);
     }
 
+    /* min-width: 0 or `flex: 1` is a floor, not a share: the search box held
+       its intrinsic width, pushed the Filters button past the row and squeezed
+       it onto the 44px touch floor, where its own label overflowed it. */
     .filter-search {
         flex: 1;
+        min-width: 0;
         display: flex;
         align-items: center;
         gap: var(--space-2);

@@ -19,3 +19,15 @@ it('lets the amount range shrink to the sheet it sits in', function (): void {
         expect($rule)->toContain('min-width: 0;');
     }
 });
+
+it('lets the phone search box shrink beside the Filters button', function (): void {
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    $start = strpos($css, '.filter-search {');
+    expect($start)->not->toBeFalse();
+
+    $rule = substr($css, (int) $start, 400);
+    $rule = substr($rule, 0, (int) strpos($rule, '}'));
+
+    expect($rule)->toContain('min-width: 0;');
+});
