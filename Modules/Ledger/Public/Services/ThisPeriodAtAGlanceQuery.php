@@ -21,6 +21,7 @@ use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -123,7 +124,7 @@ final class ThisPeriodAtAGlanceQuery
             ->table('transactions')
             ->where('user_id', $user->id)
             ->where('settled_currency', $currency)
-            ->where('type', 'income')
+            ->where('type', TransactionType::Income->value)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->sum('settled_amount_minor');
