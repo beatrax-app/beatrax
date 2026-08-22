@@ -6,7 +6,7 @@ return [
     'title' => 'Jelentések',
     'page_title' => 'Jelentések · Beatrax',
     'saved_report' => '{0} :count mentett jelentés|[1,*] :count mentett jelentés',
-    'pinned_count' => 'rögzítve',
+    'pinned_count' => ':count/:max rögzítve|:count/:max rögzítve',
     'dismiss' => 'Elvetés',
 
     'build_new' => 'Új jelentés összeállítása',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'A jelentés nem található (lehet, hogy egy másik lapon törölték).',
         'deleted' => 'Jelentés törölve.',
     ],
-    'pin_cap' => 'Legfeljebb 3 jelentést rögzíthetsz. Vegyél le egyet, hogy ezt hozzáadhasd.',
+    'pin_cap' => 'Legfeljebb :max jelentést rögzíthetsz. Vegyél le egyet, hogy ezt hozzáadhasd.',
 
     'summary' => [
         'metric' => [

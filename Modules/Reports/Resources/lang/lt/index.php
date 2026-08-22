@@ -6,7 +6,7 @@ return [
     'title' => 'Ataskaitos',
     'page_title' => 'Ataskaitos · Beatrax',
     'saved_report' => ':count išsaugota ataskaita|:count išsaugotos ataskaitos|:count išsaugotų ataskaitų',
-    'pinned_count' => 'prisegta',
+    'pinned_count' => ':count iš :max prisegta|:count iš :max prisegtos|:count iš :max prisegtų',
     'dismiss' => 'Slėpti',
 
     'build_new' => 'Sukurti naują ataskaitą',
@@ -49,7 +49,9 @@ return [
         'not_found' => 'Ataskaita nerasta (galbūt ji ištrinta kitoje kortelėje).',
         'deleted' => 'Ataskaita ištrinta.',
     ],
-    'pin_cap' => 'Gali prisegti iki 3 ataskaitų. Kad pridėtum šią, vieną atsek.',
+    // i18n-review: lt · pin_cap — the noun agrees with the cap, which now
+    // arrives as :max rather than as the digit. ataskaitų is the genitive iki takes; a bare numeral would need ataskaitos.
+    'pin_cap' => 'Gali prisegti iki :max ataskaitų. Kad pridėtum šią, vieną atsek.',
 
     'summary' => [
         'metric' => [

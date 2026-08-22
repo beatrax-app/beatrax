@@ -6,7 +6,7 @@ return [
     'title' => 'Atskaites',
     'page_title' => 'Atskaites · Beatrax',
     'saved_report' => ':count saglabātu atskaišu|:count saglabāta atskaite|:count saglabātas atskaites',
-    'pinned_count' => 'piespraustas',
+    'pinned_count' => ':count no :max piespraustu|:count no :max piesprausta|:count no :max piespraustas',
     'dismiss' => 'Aizvērt',
 
     'build_new' => 'Izveidot jaunu atskaiti',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Atskaite nav atrasta (iespējams, tā ir izdzēsta citā cilnē).',
         'deleted' => 'Atskaite izdzēsta.',
     ],
-    'pin_cap' => 'Varat piespraust līdz 3 atskaitēm. Atspraužiet kādu, lai pievienotu šo.',
+    'pin_cap' => 'Varat piespraust līdz :max atskaitēm. Atspraužiet kādu, lai pievienotu šo.',
 
     'summary' => [
         'metric' => [

@@ -6,7 +6,7 @@ return [
     'title' => 'Izveštaji',
     'page_title' => 'Izveštaji · Beatrax',
     'saved_report' => ':count sačuvan izveštaj|:count sačuvana izveštaja|:count sačuvanih izveštaja',
-    'pinned_count' => 'zakačeno',
+    'pinned_count' => ':count od :max zakačen|:count od :max zakačena|:count od :max zakačenih',
     'dismiss' => 'Odbaci',
 
     'build_new' => 'Napravi novi izveštaj',
@@ -49,7 +49,9 @@ return [
         'not_found' => 'Izveštaj nije pronađen (možda je obrisan u drugoj kartici).',
         'deleted' => 'Izveštaj je obrisan.',
     ],
-    'pin_cap' => 'Možeš da zakačiš najviše 3 izveštaja. Otkači jedan da dodaš ovaj.',
+    // i18n-review: sr · pin_cap — the noun agrees with the cap, which now
+    // arrives as :max rather than as the digit. izveštaja here reads as the 5-and-up form beside najviše :max.
+    'pin_cap' => 'Možeš da zakačiš najviše :max izveštaja. Otkači jedan da dodaš ovaj.',
 
     'summary' => [
         'metric' => [

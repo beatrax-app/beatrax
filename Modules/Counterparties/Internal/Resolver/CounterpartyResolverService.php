@@ -21,6 +21,7 @@ use Modules\Counterparties\Public\Events\CounterpartyResolved;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
@@ -70,16 +71,9 @@ final class CounterpartyResolverService implements CounterpartyResolver
         private readonly UserCountry $countries,
     ) {}
 
-    // Held for the length of ONE resolve() and no longer. This service is a
-    // singleton in a process the desktop never restarts, so a memo that
-    // outlived the call went on classifying against a country the reader had
-    // already changed in Settings.
-    private ?string $region = null;
-
     public function resolve(CanonicalTransaction $tx, User $user): ?CounterpartyResolutionDto
     {
         $userId = $user->id;
-        $this->region = null;
 
         // The order is the classification rule, not an implementation detail:
         // first match wins, so reordering this list changes what a row
@@ -229,7 +223,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
     // since the two rule tiers below both ask.
     private function regionFor(int $userId): string
     {
-        return $this->region ??= $this->countries->current($userId);
+        return $this->countries->current($userId);
     }
 
     // A merchant can be international; a government body and a bank's fee
@@ -425,12 +419,9 @@ final class CounterpartyResolverService implements CounterpartyResolver
             return null;
         }
 
-        $compact = preg_replace('/\s+/', '', $iban) ?? '';
-        if ($compact === '') {
-            return null;
-        }
+        $compact = CounterpartyKey::compactIban($iban);
 
-        return strtoupper($compact);
+        return $compact === '' ? null : $compact;
     }
 
     private function haystack(CanonicalTransaction $tx): string

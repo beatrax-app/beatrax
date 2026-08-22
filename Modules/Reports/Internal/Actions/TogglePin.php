@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\Lang;
+use Modules\Reports\Internal\Support\PinCap;
 use Modules\Reports\Internal\Support\PinOrderCompactor;
 use Modules\Reports\Models\SavedReport;
 use Modules\Sync\Public\Events\SavedReportMutated;
@@ -20,7 +21,7 @@ final class TogglePin
 {
     use CoercesScalars;
 
-    private const MAX_PINS = 3;
+    public const int MAX_PINS = PinCap::MAX_PINS;
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -79,7 +80,7 @@ final class TogglePin
                 ->count();
 
             if ($pinnedCount >= self::MAX_PINS) {
-                throw new InvalidArgumentException(Lang::get('reports::index.pin_cap'));
+                throw new InvalidArgumentException(Lang::get('reports::index.pin_cap', ['max' => self::MAX_PINS]));
             }
 
             $maxOrder = $this->db->connection()

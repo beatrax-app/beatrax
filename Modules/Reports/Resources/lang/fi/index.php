@@ -6,7 +6,7 @@ return [
     'title' => 'Raportit',
     'page_title' => 'Raportit · Beatrax',
     'saved_report' => ':count tallennettu raportti|:count tallennettua raporttia',
-    'pinned_count' => 'kiinnitetty',
+    'pinned_count' => ':count/:max kiinnitetty|:count/:max kiinnitetty',
     'dismiss' => 'Ohita',
 
     'build_new' => 'Rakenna uusi raportti',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Raporttia ei löytynyt (se on ehkä poistettu toisessa välilehdessä).',
         'deleted' => 'Raportti poistettu.',
     ],
-    'pin_cap' => 'Voit kiinnittää enintään 3 raporttia. Poista jonkin kiinnitys, niin voit lisätä tämän.',
+    'pin_cap' => 'Voit kiinnittää enintään :max raporttia. Poista jonkin kiinnitys, niin voit lisätä tämän.',
 
     'summary' => [
         'metric' => [

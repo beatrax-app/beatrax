@@ -6,7 +6,10 @@ return [
     'title' => 'Rapoarte',
     'page_title' => 'Rapoarte · Beatrax',
     'saved_report' => ':count raport salvat|:count rapoarte salvate|:count de rapoarte salvate',
-    'pinned_count' => 'fixate',
+    // i18n-review: ro · pinned_count — the third arm is what Romanian selects from 20
+    // up, which the pin cap keeps out of reach, so it repeats the second rather than
+    // guessing at a "de" nobody can read. It wants a native eye if the cap ever grows.
+    'pinned_count' => ':count din :max fixat|:count din :max fixate|:count din :max fixate',
     'dismiss' => 'Închide',
 
     'build_new' => 'Creează un raport nou',
@@ -49,7 +52,7 @@ return [
         'not_found' => 'Raportul nu a fost găsit (poate a fost șters în altă filă).',
         'deleted' => 'Raport șters.',
     ],
-    'pin_cap' => 'Poți fixa cel mult 3 rapoarte. Anulează fixarea unuia ca să îl adaugi pe acesta.',
+    'pin_cap' => 'Poți fixa cel mult :max rapoarte. Anulează fixarea unuia ca să îl adaugi pe acesta.',
 
     'summary' => [
         'metric' => [

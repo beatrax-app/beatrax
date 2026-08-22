@@ -17,6 +17,13 @@ use Modules\Core\Public\Support\LocaleCollator;
 // the app recognises, and more than one module now scopes to it.
 final class UserCountry
 {
+    // Read once per reader rather than once per row: classification asks on
+    // every transaction of an import, and two services each kept their own
+    // copy of the answer. The write below is the only thing that can change
+    // it, so it is also the only thing that has to drop this.
+    /** @var array<int, string> */
+    private array $currentByUser = [];
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly WriteUserPreference $writeUserPreference,
@@ -27,13 +34,17 @@ final class UserCountry
     // classification to every region, and every caller compares against ''.
     public function current(int $userId): string
     {
+        if (array_key_exists($userId, $this->currentByUser)) {
+            return $this->currentByUser[$userId];
+        }
+
         /** @var mixed $code */
         $code = $this->db->connection()
             ->table('users')
             ->where('id', $userId)
             ->value('country_code');
 
-        return is_string($code) ? $code : '';
+        return $this->currentByUser[$userId] = is_string($code) ? $code : '';
     }
 
     // Seeded before it is written, and both inside one transaction: a corpus
@@ -50,6 +61,8 @@ final class UserCountry
 
             ($this->writeUserPreference)($userId, ['country_code' => $countryCode]);
         });
+
+        unset($this->currentByUser[$userId]);
     }
 
     /**

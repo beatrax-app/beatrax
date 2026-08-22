@@ -6,7 +6,7 @@ return [
     'title' => 'Rapporten',
     'page_title' => 'Rapporten · Beatrax',
     'saved_report' => ':count opgeslagen rapport|:count opgeslagen rapporten',
-    'pinned_count' => 'vastgezet',
+    'pinned_count' => ':count van :max vastgezet|:count van :max vastgezet',
     'dismiss' => 'Sluiten',
 
     'build_new' => 'Een nieuw rapport bouwen',
@@ -48,7 +48,7 @@ return [
         'not_found' => 'Rapport niet gevonden (het is mogelijk in een ander tabblad verwijderd).',
         'deleted' => 'Rapport verwijderd.',
     ],
-    'pin_cap' => 'Je kunt maximaal 3 rapporten vastzetten. Maak er een los om dit toe te voegen.',
+    'pin_cap' => 'Je kunt maximaal :max rapporten vastzetten. Maak er een los om dit toe te voegen.',
 
     'summary' => [
         'metric' => [

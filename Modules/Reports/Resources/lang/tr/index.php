@@ -6,7 +6,7 @@ return [
     'title' => 'Raporlar',
     'page_title' => 'Raporlar · Beatrax',
     'saved_report' => ':count kayıtlı rapor',
-    'pinned_count' => 'sabitlenmiş',
+    'pinned_count' => ':count/:max sabitlenmiş',
     'dismiss' => 'Kapat',
 
     'build_new' => 'Yeni bir rapor oluştur',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Rapor bulunamadı (başka bir sekmede silinmiş olabilir).',
         'deleted' => 'Rapor silindi.',
     ],
-    'pin_cap' => 'En fazla 3 raporu sabitleyebilirsin. Bunu eklemek için birinin sabitlemesini kaldır.',
+    'pin_cap' => 'En fazla :max raporu sabitleyebilirsin. Bunu eklemek için birinin sabitlemesini kaldır.',
 
     'summary' => [
         'metric' => [

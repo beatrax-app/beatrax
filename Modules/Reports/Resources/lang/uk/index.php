@@ -6,7 +6,7 @@ return [
     'title' => 'Звіти',
     'page_title' => 'Звіти · Beatrax',
     'saved_report' => ':count збережений звіт|:count збережені звіти|:count збережених звітів',
-    'pinned_count' => 'закріплено',
+    'pinned_count' => ':count з :max закріплений|:count з :max закріплені|:count з :max закріплених',
     'dismiss' => 'Відхилити',
 
     'build_new' => 'Створити новий звіт',
@@ -49,7 +49,9 @@ return [
         'not_found' => 'Звіт не знайдено (можливо, його видалили в іншій вкладці).',
         'deleted' => 'Звіт видалено.',
     ],
-    'pin_cap' => 'Можна закріпити щонайбільше 3 звіти. Відкріпи один, щоб додати цей.',
+    // i18n-review: uk · pin_cap — the noun agrees with the cap, which now
+    // arrives as :max rather than as the digit. звіти is the 2–4 form; a cap of 5 or more needs звітів.
+    'pin_cap' => 'Можна закріпити щонайбільше :max звіти. Відкріпи один, щоб додати цей.',
 
     'summary' => [
         'metric' => [

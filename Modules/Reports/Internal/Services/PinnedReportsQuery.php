@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Support\DefinitionJsonDecoder;
+use Modules\Reports\Internal\Support\PinCap;
 use stdClass;
 use Throwable;
 
@@ -15,7 +16,7 @@ final readonly class PinnedReportsQuery
 {
     // A second enforcement point independent of TogglePin's write-layer cap, so
     // a stray fourth pinned row can never render a fourth mini card.
-    private const MAX_PINS = 3;
+    private const int MAX_PINS = PinCap::MAX_PINS;
 
     public function __construct(private DatabaseManager $db) {}
 

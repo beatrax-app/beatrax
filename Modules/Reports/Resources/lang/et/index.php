@@ -6,7 +6,7 @@ return [
     'title' => 'Aruanded',
     'page_title' => 'Aruanded · Beatrax',
     'saved_report' => ':count salvestatud aruanne|:count salvestatud aruannet',
-    'pinned_count' => 'kinnitatud',
+    'pinned_count' => ':count/:max kinnitatud|:count/:max kinnitatud',
     'dismiss' => 'Peida',
 
     'build_new' => 'Koosta uus aruanne',
@@ -49,7 +49,7 @@ return [
         'not_found' => 'Aruannet ei leitud (see võidi kustutada teisel vahelehel).',
         'deleted' => 'Aruanne on kustutatud.',
     ],
-    'pin_cap' => 'Kinnitada saab kuni 3 aruannet. Selle lisamiseks eemalda mõni teine.',
+    'pin_cap' => 'Kinnitada saab kuni :max aruannet. Selle lisamiseks eemalda mõni teine.',
 
     'summary' => [
         'metric' => [

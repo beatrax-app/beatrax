@@ -14,9 +14,6 @@ final class MerchantNameResolver
 {
     private const GENERALIZED_SCAN_LIMIT = 500;
 
-    /** @var array<int, string> */
-    private array $regionByUser = [];
-
     /** @var array<int, array{exact: array<string, string>, generalized: list<array{needle: string, friendly: string}>}> */
     private array $aliasesByUser = [];
 
@@ -52,10 +49,10 @@ final class MerchantNameResolver
     // Empty when the reader has named no country, which widens to every region
     // rather than resolving nothing. The government and bank-fee tiers go the
     // other way and stay silent, because a shop trades anywhere and a tax
-    // office does not. Memoised: this runs once per transaction on an import.
+    // office does not. UserCountry holds the memo; a copy here outlived it.
     private function regionFor(int $userId): string
     {
-        return $this->regionByUser[$userId] ??= $this->countries->current($userId);
+        return $this->countries->current($userId);
     }
 
     // Both alias tiers read one memoised list, for the same reason the corpus

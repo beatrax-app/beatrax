@@ -6,7 +6,7 @@ return [
     'title' => 'Raporty',
     'page_title' => 'Raporty · Beatrax',
     'saved_report' => ':count zapisany raport|:count zapisane raporty|:count zapisanych raportów',
-    'pinned_count' => 'przypięte',
+    'pinned_count' => ':count z :max przypięty|:count z :max przypięte|:count z :max przypiętych',
     'dismiss' => 'Odrzuć',
 
     'build_new' => 'Zbuduj nowy raport',
@@ -49,7 +49,9 @@ return [
         'not_found' => 'Nie znaleziono raportu (mógł zostać usunięty w innej karcie).',
         'deleted' => 'Raport usunięty.',
     ],
-    'pin_cap' => 'Możesz przypiąć maksymalnie 3 raporty. Odepnij jeden, aby dodać ten.',
+    // i18n-review: pl · pin_cap — the noun agrees with the cap, which now
+    // arrives as :max rather than as the digit. raporty is the 2–4 form, so a cap outside that range needs raportów.
+    'pin_cap' => 'Możesz przypiąć maksymalnie :max raporty. Odepnij jeden, aby dodać ten.',
 
     'summary' => [
         'metric' => [

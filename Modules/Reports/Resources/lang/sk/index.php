@@ -6,7 +6,10 @@ return [
     'title' => 'Zostavy',
     'page_title' => 'Zostavy · Beatrax',
     'saved_report' => ':count uložená zostava|:count uložené zostavy|:count uložených zostáv',
-    'pinned_count' => 'pripnutých',
+    // i18n-review: sk · pinned_count — the cap arrives as a placeholder, so this uses
+    // the plain "z" rather than the "zo" some numerals take when read aloud. A native
+    // should say which one a written ratio wants.
+    'pinned_count' => ':count z :max pripnutá|:count z :max pripnuté|:count z :max pripnutých',
     'dismiss' => 'Zamietnuť',
 
     'build_new' => 'Vytvoriť novú zostavu',
@@ -49,7 +52,9 @@ return [
         'not_found' => 'Zostava sa nenašla (mohla byť zmazaná na inej karte).',
         'deleted' => 'Zostava zmazaná.',
     ],
-    'pin_cap' => 'Pripnúť môžeš najviac 3 zostavy. Ak chceš pridať túto, jednu odopni.',
+    // i18n-review: sk · pin_cap — the noun agrees with the cap, which now
+    // arrives as :max rather than as the digit. zostavy is the 2–4 form; a cap of 5 or more needs zostáv.
+    'pin_cap' => 'Pripnúť môžeš najviac :max zostavy. Ak chceš pridať túto, jednu odopni.',
 
     'summary' => [
         'metric' => [
