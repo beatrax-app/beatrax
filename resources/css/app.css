@@ -5469,6 +5469,19 @@ mark {
     }
 
     /*
+     * .tax-badge--untagged already takes this exemption; .row-cta was left on
+     * the hover reveal alone. A finger never hovers, so on /uncategorized the
+     * "Help others identify this" button in all 50 rows was invisible and
+     * still took its 44px — a blank band under every category picker.
+     *
+     * Unlayered and here rather than beside .row-cta, because the markup also
+     * carries Tailwind's own opacity-0, and a utility beats every layer.
+     */
+    .row-cta {
+        opacity: 1;
+    }
+
+    /*
      * The guideline asks for a 44px target, not a 44px picture. Inflating the
      * box turned the 36x20 switch into a circle with its thumb stranded at the
      * top, so the reach moves to a pseudo-element that no layout can see.
