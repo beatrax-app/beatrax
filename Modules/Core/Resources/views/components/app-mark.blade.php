@@ -29,6 +29,11 @@
     (tests/Snapshot/SidebarTest.php) that holds the whole element to one
     line, and alt-before-width is the order that lock already records.
 
+    alt is the one exception, written on the tag. An alt that only exists
+    after the merge runs is invisible to a reader of the template and to
+    the HTML analyser, which reported this img as having none. Placing it
+    first keeps the order the lock records.
+
     `class` is a prop rather than something a caller merges in, for the
     reason x-core::progress-bar gives about its own width: two Tailwind
     classes for the same property on one element do not resolve by class
@@ -42,7 +47,7 @@
     as two things.
 --}}
 @php
-    $markAttributes = ['alt' => $alt];
+    $markAttributes = [];
 
     if ($size !== false) {
         $markAttributes['width'] = (string) $size;
@@ -55,4 +60,4 @@
         $markAttributes['aria-hidden'] = 'true';
     }
 @endphp
-<img src="{{ Vite::asset('resources/brand/logo.svg') }}" {{ $attributes->merge($markAttributes) }} />
+<img src="{{ Vite::asset('resources/brand/logo.svg') }}" alt="{{ $alt }}" {{ $attributes->merge($markAttributes) }} />

@@ -4,11 +4,11 @@
     The empty option and the country list, for the three surfaces that ask the
     reader which country they are in: signup, Settings and the onboarding step.
 
-    The options rather than the whole control, because the <select> around them
-    is not shared and should not be: signup's belongs to x-core::form-field,
-    which owns the label, the hint and the aria wiring, and the three bind
-    three different ways — a deferred wire:model, a wire:change action, a live
-    wire:model. form-field says why a binding is never a prop, and the reason
+    The options rather than the whole control, because the select element
+    around them is not shared and should not be: signup's belongs to
+    x-core::form-field, which owns the label, the hint and the aria wiring,
+    and the three bind three different ways — a deferred wire:model, a
+    wire:change action, a live wire:model. form-field says why a binding is never a prop, and the reason
     holds here: a spelling that only reproduces the bare directive would drop
     the modifier that decides WHEN the component updates.
 
@@ -20,7 +20,9 @@
     accepting the gesture and discarding it.
 
     strlen, not a comparison against '': an empty-string literal inside a Blade
-    directive reads to the HTML analyser as an opening attribute quote.
+    directive reads to the HTML analyser as an opening attribute quote. That
+    analyser reads this comment as markup too, which is why the control above
+    is named in prose and not spelled as a tag.
 --}}
 <option value="" @disabled($placeholderDisabled) @selected(strlen($selected) === 0)>{{ Lang::get('core::settings.country.choose') }}</option>
 @foreach ($options as $code => $name)
