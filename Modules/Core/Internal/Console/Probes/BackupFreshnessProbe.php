@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\BackupAlertKind;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SafeDate;
@@ -140,7 +141,7 @@ final class BackupFreshnessProbe implements Probe
             // SQLite's CURRENT_TIMESTAMP default writes in UTC, not app-local.
             $cutoff = $this->clock->now()->subHour()->setTimezone('UTC');
             $recentExists = $this->db->connection()->table('system_alerts')
-                ->where('kind', 'backup_overdue')
+                ->where('kind', BackupAlertKind::Overdue->value)
                 ->whereNull('acknowledged_at')
                 ->where('created_at', '>=', $cutoff)
                 ->exists();
@@ -150,7 +151,7 @@ final class BackupFreshnessProbe implements Probe
 
             SystemAlert::create([
                 'user_id' => null,
-                'kind' => 'backup_overdue',
+                'kind' => BackupAlertKind::Overdue->value,
                 'severity' => SystemAlertSeverity::Warning->value,
                 'message' => $hoursOld === null
                     ? 'No verified backups found under the backups directory.'
