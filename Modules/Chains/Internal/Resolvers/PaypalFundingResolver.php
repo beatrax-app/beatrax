@@ -59,6 +59,8 @@ final class PaypalFundingResolver
 
     private const ASN_DIRECT_CANDIDATE_SCAN_LIMIT = 20;
 
+    private const FUZZY_CANDIDATE_SCAN_LIMIT = 20;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly FingerprintComposer $fingerprints,
@@ -427,7 +429,12 @@ final class PaypalFundingResolver
                 $settledMinor + $amountBand,
             ])
             ->whereBetween('posted_at', [$windowStart, $windowEnd])
-            ->limit(20)
+            // The same rule the ASN arm carries, and for a stronger reason: an
+            // unordered cut decides WHICH rows get scored at all, so a better
+            // match beyond it was never compared. Nearest first also means the
+            // rows this keeps are the ones the date term would have favoured.
+            ->orderByRaw('ABS(julianday(posted_at) - julianday(?)), id', [$postedAt->toDateTimeString()])
+            ->limit(self::FUZZY_CANDIDATE_SCAN_LIMIT)
             ->get([
                 'id',
                 'counterparty_normalized',
