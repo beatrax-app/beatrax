@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Lås upp appen för att importera: handlarnyckeln kan inte beräknas medan den är låst.',
+        'app_locked' => 'Lås upp appen för att importera: krypteringsnycklarna kan inte användas medan den är låst.',
         'file_unreadable' => 'Filen gick inte att läsa.',
         'iban_not_in_preview' => 'Det här IBAN-numret ingår inte i den aktuella förhandsgranskningen.',
         'row_unreadable' => 'Raden gick inte att läsa.',

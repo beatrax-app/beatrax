@@ -37,6 +37,7 @@ use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
+use Modules\Sync\Public\Exceptions\SensitiveColumnKeyUnavailableException;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -219,8 +220,8 @@ final class ImportPipeline
             // Before the fingerprint stage, so counterparty_id rides the
             // canonical row into RecordTransactions.
             return $this->resolveCounterparty->run($normalized, $user);
-        } catch (BlindIndexKeyUnavailableException $e) {
-            // Its message names a class and the user's own id. Correct for a
+        } catch (BlindIndexKeyUnavailableException|SensitiveColumnKeyUnavailableException $e) {
+            // Both messages name a class and the user's own id. Correct for a
             // log, wrong for a preview row, and it would repeat once per row of
             // the statement.
             $this->logger->warning('ImportPipeline: row refused — the app-lock key is not held.', [
@@ -322,11 +323,12 @@ final class ImportPipeline
     }
 
     // The app-lock case is the one a reader can act on, and the only failure
-    // whose own message names an internal class and their user id. Everything
-    // else falls back to the caller's default rather than being guessed at.
+    // whose own message names an internal class and their user id. It arrives
+    // by two doors — the matching key cannot be derived, or the AEAD column
+    // cannot be sealed — and both mean "unlock the app and try again".
     private static function reasonFor(Throwable $e, ImportFailureReason $default): ImportFailureReason
     {
-        return $e instanceof BlindIndexKeyUnavailableException
+        return $e instanceof BlindIndexKeyUnavailableException || $e instanceof SensitiveColumnKeyUnavailableException
             ? ImportFailureReason::AppLocked
             : $default;
     }

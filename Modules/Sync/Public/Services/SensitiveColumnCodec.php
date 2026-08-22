@@ -11,15 +11,31 @@ use Modules\Sync\Internal\Crypto\GdkKeyring;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
+use Modules\Sync\Internal\Exceptions\KeyringState;
+use Modules\Sync\Internal\Exceptions\KeyringStateException;
+use Modules\Sync\Public\Dto\DecryptedRow;
+use Modules\Sync\Public\Exceptions\SensitiveColumnKeyUnavailableException;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use SodiumException;
 
+/**
+ * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
+ */
 final class SensitiveColumnCodec
 {
+    // One alarm per user per table per process. The refusal itself reaches
+    // every caller through the exception; this is the alarm, and an op-log
+    // drain over a sealed ledger would otherwise write one line per row into a
+    // daily log nobody could then read.
+    /** @var array<string, true> */
+    private array $refusalsAlarmed = [];
+
     public function __construct(
         private readonly OpLogFieldCrypto $crypto,
         private readonly GdkKeyringService $keyringService,
         private readonly SensitiveFieldRegistry $registry,
+        private readonly LoggerInterface $log,
     ) {}
 
     // PUBLIC and STATIC so other call sites (e.g. a raw SQL migration pass)
@@ -38,11 +54,24 @@ final class SensitiveColumnCodec
         return "{$table}:{$pk}:{$field}:{$epochId}";
     }
 
-    // Pass-through (returns $value unchanged) when encryption is not
-    // currently usable (not enabled for this user, or the app-lock is locked).
+    // Non-throwing, for a caller whose job is to decide what to do about a
+    // missing key rather than to be stopped by it. The console reindex asked
+    // this by encrypting a probe and comparing; encryptValue() now refuses, so
+    // that trick would throw in the very state it existed to detect.
+    public function canSeal(int $userId, Session $session): bool
+    {
+        return $this->tryCurrentEpoch($userId, $session) !== null;
+    }
+
+    // Pass-through (returns $value unchanged) only for a user who has never
+    // enabled encryption. Once `current_epoch` is set, an unreachable key is a
+    // refusal, never a quiet write in the clear.
+    /**
+     * @throws SensitiveColumnKeyUnavailableException when encryption IS enabled and no key is held.
+     */
     public function encryptValue(string $table, string $field, string $value, int $userId, Session $session): string
     {
-        $current = $this->tryCurrentEpoch($userId, $session);
+        $current = $this->sealingEpoch($userId, $session, $table, [$field]);
         if ($current === null) {
             return $value;
         }
@@ -50,15 +79,18 @@ final class SensitiveColumnCodec
         return $this->encryptWithEpoch($table, $field, $value, $current);
     }
 
-    // Non-sensitive or non-string entries are left untouched. Pass-through
-    // (returns $attrs unchanged) when encryption is not currently usable.
+    // Non-sensitive or non-string entries are left untouched, and an $attrs
+    // carrying none of them is never refused: the caller is writing a row this
+    // codec has no opinion about.
     /**
      * @param  array<string, mixed>  $attrs
      * @return array<string, mixed>
+     *
+     * @throws SensitiveColumnKeyUnavailableException when encryption IS enabled and no key is held.
      */
     public function encryptAttrs(string $table, array $attrs, int $userId, Session $session): array
     {
-        $current = $this->tryCurrentEpoch($userId, $session);
+        $current = $this->sealingEpoch($userId, $session, $table, $this->sensitiveFieldsIn($table, $attrs));
         if ($current === null) {
             return $attrs;
         }
@@ -96,14 +128,15 @@ final class SensitiveColumnCodec
     }
 
     // Columns that fail to verify under every epoch keep their raw stored
-    // value. NEVER throws.
+    // value; the ones this codec had to blank are named by isUnreadable(), so
+    // no caller has to read that back out of an empty string. NEVER throws.
     /**
      * @param  array<string, mixed>  $row
-     * @return array<string, mixed>
      */
-    public function decryptRow(string $table, array $row, int $userId, Session $session): array
+    public function decryptRow(string $table, array $row, int $userId, Session $session): DecryptedRow
     {
         $keyring = $this->tryLoadKeyring($userId, $session);
+        $unreadable = [];
 
         foreach ($row as $field => $value) {
             if (! is_string($value)) {
@@ -115,12 +148,17 @@ final class SensitiveColumnCodec
             // Same treatment with or without a keyring: without one, a
             // sensitive column holding ciphertext is unreadable here too, and
             // returning the row untouched put base64 straight on the screen.
-            $row[$field] = $keyring === null
-                ? self::safeUndecrypted($value)['value']
-                : $this->decryptWithKeyring($table, $field, $value, $keyring)['value'];
+            $opened = $keyring === null
+                ? self::safeUndecrypted($value)
+                : $this->decryptWithKeyring($table, $field, $value, $keyring);
+
+            $row[$field] = $opened['value'];
+            if (! $opened['decrypted'] && self::looksLikeCiphertext($value)) {
+                $unreadable[] = $field;
+            }
         }
 
-        return $row;
+        return new DecryptedRow($row, $unreadable);
     }
 
     private function encryptWithEpoch(string $table, string $field, string $value, GdkEpoch $epoch): string
@@ -198,6 +236,71 @@ final class SensitiveColumnCodec
         $decoded = base64_decode($value, true);
 
         return $decoded !== false && strlen($decoded) >= 40;
+    }
+
+    // The two states tryCurrentEpoch() collapses into one null are opposites:
+    // no `current_epoch` means every other column of this user's is plaintext
+    // too and writing one more is correct; `current_epoch` set means the
+    // ledger is sealed and this process simply cannot reach the key.
+    /**
+     * @param  list<string>  $fields
+     *
+     * @throws SensitiveColumnKeyUnavailableException
+     */
+    private function refuse(int $userId, string $table, array $fields): never
+    {
+        $alarm = "{$userId}:{$table}";
+        if (! isset($this->refusalsAlarmed[$alarm])) {
+            $this->refusalsAlarmed[$alarm] = true;
+            $this->log->warning(
+                'SensitiveColumnCodec: refused an unsealable write — encryption is enabled but no epoch key is held.',
+                ['userId' => $userId, 'table' => $table, 'fields' => $fields],
+            );
+        }
+
+        throw SensitiveColumnKeyUnavailableException::forColumns($userId, $table, $fields);
+    }
+
+    // One read, not two. currentEpoch() already separates "never enrolled" from
+    // "sealed and unreachable" by the state it throws with, and asking the
+    // second question again cost an extra sync_encryption_state select on every
+    // written row of every install that has encryption switched off.
+    /**
+     * @param  list<string>  $fields
+     */
+    private function sealingEpoch(int $userId, Session $session, string $table, array $fields): ?GdkEpoch
+    {
+        try {
+            return $this->keyringService->currentEpoch($userId, $session);
+        } catch (KeyringStateException $e) {
+            $enrolled = $e->state !== KeyringState::NoCurrentEpoch;
+        } catch (LogicException|RuntimeException) {
+            // Raised past the epoch lookup, so an epoch exists and the ledger
+            // this writer is adding to is already sealed.
+            $enrolled = true;
+        }
+
+        if ($enrolled && $fields !== []) {
+            $this->refuse($userId, $table, $fields);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attrs
+     * @return list<string>
+     */
+    private function sensitiveFieldsIn(string $table, array $attrs): array
+    {
+        $fields = [];
+        foreach ($attrs as $field => $value) {
+            if (is_string($value) && $this->registry->isSensitive($table, $field)) {
+                $fields[] = $field;
+            }
+        }
+
+        return $fields;
     }
 
     private function tryCurrentEpoch(int $userId, Session $session): ?GdkEpoch

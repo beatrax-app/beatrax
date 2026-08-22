@@ -18,6 +18,8 @@ final class OpLogRebuilder
 
     private readonly CoveredTableOrder $tableOrder;
 
+    private readonly PersistedOpLogEntries $persistedEntries;
+
     // Keyed by userId, true = lock held. Non-static because readonly classes
     // cannot have static properties; each instance tracks its own lock,
     // equivalent to a process-level guard in single-user SQLite.
@@ -37,7 +39,9 @@ final class OpLogRebuilder
         ?array $coveredTables = null,
         ?CoveredTableOrder $tableOrder = null,
         private readonly ?SearchIndexWriterContract $searchWriter = null,
+        ?PersistedOpLogEntries $persistedEntries = null,
     ) {
+        $this->persistedEntries = $persistedEntries ?? new PersistedOpLogEntries($db);
         // Built here when absent rather than left null. The container leaves
         // this optional parameter unresolved, and the null fallback was plain
         // registry order — which lists import_runs before transactions, so
@@ -168,60 +172,7 @@ final class OpLogRebuilder
      */
     private function loadEntries(int $userId): array
     {
-        $rows = $this->db->connection()
-            ->table('op_log_entries')
-            ->where('user_id', $userId)
-            ->orderBy('hlc_l')
-            ->orderBy('hlc_c')
-            ->orderBy('device_id')
-            ->get();
-
-        /** @var list<OpLogEntry> $entries */
-        $entries = [];
-
-        foreach ($rows as $row) {
-            $entries[] = $this->mapRowToEntry($row);
-        }
-
-        return $entries;
-    }
-
-    private function mapRowToEntry(object $row): OpLogEntry
-    {
-        $vars = get_object_vars($row);
-        $opTypeStr = is_string($vars['op_type'] ?? null) ? $vars['op_type'] : '';
-
-        return new OpLogEntry(
-            table: is_string($vars['table_name'] ?? null) ? $vars['table_name'] : '',
-            pk: self::normalizePk($vars['pk'] ?? ''),
-            field: is_string($vars['field'] ?? null) ? $vars['field'] : '',
-            value: is_string($vars['value'] ?? null) ? $vars['value'] : null,
-            hlcL: is_numeric($vars['hlc_l'] ?? null) ? (int) $vars['hlc_l'] : 0,
-            hlcC: is_numeric($vars['hlc_c'] ?? null) ? (int) $vars['hlc_c'] : 0,
-            deviceId: is_string($vars['device_id'] ?? null) ? $vars['device_id'] : '',
-            opType: OpType::from($opTypeStr),
-            signature: is_string($vars['signature'] ?? null) ? $vars['signature'] : '',
-            userId: is_numeric($vars['user_id'] ?? null) ? (int) $vars['user_id'] : 0,
-            // A GDK-encrypted entry's value can only be decrypted with its
-            // original epoch tag — dropping this on rebuild would silently
-            // lose every sensitive-field edit.
-            gdkEpoch: is_numeric($vars['gdk_epoch'] ?? null) ? (int) $vars['gdk_epoch'] : null,
-            // What the origin device signed under. Dropping it here made the
-            // rebuild recompute a v1 payload against the LOCAL user id, so
-            // every peer entry re-verified as forged.
-            originUserId: is_numeric($vars['origin_user_id'] ?? null) ? (int) $vars['origin_user_id'] : null,
-        );
-    }
-
-    // A numeric pk normalises to int; a non-numeric string pk (composite or
-    // UUID key) is preserved verbatim; anything else collapses to ''.
-    private static function normalizePk(mixed $pkRaw): int|string
-    {
-        if (is_numeric($pkRaw)) {
-            return (int) $pkRaw;
-        }
-
-        return is_string($pkRaw) ? $pkRaw : '';
+        return $this->persistedEntries->forUser($userId);
     }
 
     // Children before parents, derived from the live foreign keys rather

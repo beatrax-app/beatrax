@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Lås opp appen for å importere: forhandlernøkkelen kan ikke beregnes mens den er låst.',
+        'app_locked' => 'Lås opp appen for å importere: krypteringsnøklene kan ikke brukes mens den er låst.',
         'file_unreadable' => 'Denne filen kunne ikke leses.',
         'iban_not_in_preview' => 'Dette IBAN-nummeret er ikke en del av den gjeldende forhåndsvisningen.',
         'row_unreadable' => 'Denne raden kunne ikke leses.',

@@ -93,18 +93,13 @@ final class BlindIndexCodec
         }
     }
 
-    // True once `sync_encryption_state.current_epoch` is set, which is a plain
-    // integer readable with no key at all. That is deliberately NOT the same
-    // question as "is the key held right now": the first says the user's rows
-    // are supposed to be keyed, the second says this process can do it.
+    // Read through the keyring service, not off a second copy of the query:
+    // this codec and SensitiveColumnCodec both refuse to write in the clear on
+    // this answer, and two spellings that drifted would leave one refusing
+    // while the other passed the same row's plaintext straight through.
     public function isEnrolled(int $userId): bool
     {
-        $row = $this->db->connection()
-            ->table('sync_encryption_state')
-            ->where('user_id', $userId)
-            ->first(['current_epoch']);
-
-        return $row !== null && is_numeric($row->current_epoch ?? null);
+        return $this->keyringService->hasCurrentEpoch($userId);
     }
 
     // Null rather than a throw, for the callers whose job is to decide what to
