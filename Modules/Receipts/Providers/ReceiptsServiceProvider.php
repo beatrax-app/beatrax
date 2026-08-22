@@ -15,46 +15,46 @@ use Modules\Receipts\Internal\Http\Livewire\ReceiptConflictToast;
 use Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt;
 use Modules\Receipts\Internal\Listeners\HandleFileOpenedFromOs;
 use Modules\Receipts\Internal\MatcherRegistry;
+use Modules\Receipts\Internal\Matchers\GooglePlayReceiptMatcher;
+use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
+use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
 use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
+use Modules\Receipts\Public\Pipeline\EmlMimeReader;
+use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
+use Modules\Receipts\Public\Pipeline\MboxIterator;
+use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
 final class ReceiptsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
 
-    // Each entry is bound + tagged under receipts.matcher only when the
-    // implementing class exists on disk, so a missing class never
-    // aborts container resolution.
+    /** @var list<class-string<SenderMatcher>> */
     private const MATCHER_FQNS = [
-        'Modules\\Receipts\\Internal\\Matchers\\PaypalReceiptMatcher',
-        'Modules\\Receipts\\Internal\\Matchers\\IcsReceiptMatcher',
-        'Modules\\Receipts\\Internal\\Matchers\\GooglePlayReceiptMatcher',
+        PaypalReceiptMatcher::class,
+        IcsReceiptMatcher::class,
+        GooglePlayReceiptMatcher::class,
     ];
 
-    // Stateless singletons, each gated on class_exists() for the same
-    // reason as MATCHER_FQNS above.
+    /** @var list<class-string> */
     private const PIPELINE_FQNS = [
-        'Modules\\Receipts\\Public\\Pipeline\\EmlMimeReader',
-        'Modules\\Receipts\\Public\\Pipeline\\MboxIterator',
-        'Modules\\Receipts\\Public\\Pipeline\\FileDropEmlBlobStore',
-        'Modules\\Receipts\\Public\\Pipeline\\ReceiptSourceAdapter',
+        EmlMimeReader::class,
+        MboxIterator::class,
+        FileDropEmlBlobStore::class,
+        ReceiptSourceAdapter::class,
     ];
 
     public function register(): void
     {
         foreach (self::PIPELINE_FQNS as $fqn) {
-            if (class_exists($fqn)) {
-                $this->app->singleton($fqn);
-            }
+            $this->app->singleton($fqn);
         }
 
         foreach (self::MATCHER_FQNS as $fqn) {
-            if (class_exists($fqn)) {
-                $this->app->singleton($fqn);
-                $this->app->tag([$fqn], 'receipts.matcher');
-            }
+            $this->app->singleton($fqn);
+            $this->app->tag([$fqn], 'receipts.matcher');
         }
 
         $this->app->singleton(RecordReceipt::class);
