@@ -8,7 +8,9 @@ use Collator;
 use Error;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Translation\Translator;
+use Illuminate\Support\Str;
 use IntlException;
+use Normalizer;
 
 // The ordering seam for any list the reader scans by name. Byte comparison
 // files every accented name after Z and knows no alphabet but ASCII's, so a
@@ -16,6 +18,11 @@ use IntlException;
 // picker with no search box is only as usable as its order.
 final class LocaleCollator
 {
+    // Kept off the fold's own regex literal so the two spellings of "an
+    // accent is not a letter" cannot drift: enclosing marks matter for the
+    // Cyrillic and Greek names ICU would otherwise have ordered.
+    private const string COMBINING_MARKS = '/[\p{Mn}\p{Me}]+/u';
+
     /**
      * @var array<string, Collator|null>
      */
@@ -60,12 +67,18 @@ final class LocaleCollator
         return self::$collators[$locale];
     }
 
-    // Without ICU, fold the accents onto their base letters so a name at least
-    // lands beside its own initial rather than after every unaccented one.
+    // Not iconv //TRANSLIT: its tables are the C library's, and this arm is the
+    // one both phones take. macOS answered "Færge" with "ae?rge" and every
+    // Greek name with the empty string, so those names sorted arbitrarily
+    // among themselves — and differently again on Android.
+    /**
+     * @link ../../../../.docs/features/counterparties/slug-is-a-cross-platform-key.md
+     */
     private static function fold(string $label): string
     {
-        $folded = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $label);
+        $decomposed = Normalizer::normalize($label, Normalizer::FORM_KD);
+        $base = is_string($decomposed) ? $decomposed : $label;
 
-        return $folded === false ? $label : $folded;
+        return Str::ascii(preg_replace(self::COMBINING_MARKS, '', $base) ?? $base);
     }
 }
