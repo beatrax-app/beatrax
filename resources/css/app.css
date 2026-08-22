@@ -711,6 +711,33 @@ td.date,
         color: var(--color-text);
     }
 
+    /* A 220px rail beside a 375pt screen leaves 87pt of page: the queue
+       inspector's own heading was clipped, its three count tiles were 26pt
+       wide and two of its tabs sat off the display. Below the tablet
+       breakpoint the rail becomes a wrapped strip above the page instead. */
+    @media (max-width: 767px) {
+        .flex:has(> .dev-side) {
+            flex-direction: column;
+        }
+
+        .dev-side {
+            width: 100%;
+            height: auto;
+            z-index: 20;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--space-1);
+            border-right: 0;
+            border-bottom: 1px solid var(--color-border);
+            padding-top: calc(var(--space-3) + var(--safe-top));
+        }
+
+        .dev-side-head {
+            flex-basis: 100%;
+        }
+    }
+
     .dev-side-head {
         display: flex;
         align-items: center;
