@@ -81,7 +81,14 @@ it('declares the Mobile testsuite, and no two testsuites claim the same director
 it('forward-registers every future Internal/Livewire/command FQCN in MobileServiceProvider', function (): void {
     $provider = (string) file_get_contents(base_path('Modules/Mobile/Providers/MobileServiceProvider.php'));
 
-    expect($provider)->toContain('singletonIfExists');
+    // This used to assert the provider still carried a singletonIfExists()
+    // helper. That helper guarded first-party classes on whether they existed,
+    // which is never in doubt and turns a typo into a binding that silently
+    // does not happen. What the test is named for is the roster below; the
+    // guard that IS load-bearing names a vendor package absent from the
+    // desktop root, and stays.
+    expect($provider)->not->toContain('singletonIfExists');
+    expect($provider)->toContain("class_exists('Native\\Mobile\\Facades\\SecureStorage')");
 
     foreach ([
         'LanSyncClient',
