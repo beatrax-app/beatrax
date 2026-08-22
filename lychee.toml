@@ -13,9 +13,9 @@ exclude_path = [
   ".planning",
 ]
 exclude = [
-  # Discord rejects unauthenticated invite HEAD requests; the invite is
-  # verified by hand, not by CI.
-  "^https://discord\\.gg/",
+  # The community invite. It redirects to Discord, which rejects
+  # unauthenticated invite HEAD requests; the invite is verified by hand.
+  "^https://discord\\.nightworks\\.io",
   # Release and compare URLs that only exist once a release is cut, and
   # settings pages that require authentication to resolve.
   "^https://github\\.com/beatrax-app/beatrax/(releases|compare|security|settings|discussions)",
