@@ -106,7 +106,10 @@
         x-cloak
         role="dialog"
         aria-modal="false"
-        aria-label="{{ Lang::get('core::components.date.open') }}"
+        {{-- Named after the field, not after the control kind: a toolbar with a
+             "from" and a "to" opened two dialogs called "Choose a date", so
+             nothing said which of the two was on screen. --}}
+        aria-label="{{ $fieldLabel }}"
         {{-- max-w keeps the calendar inside the viewport when the field sits
              near the right edge of a narrow screen; the compact search
              toolbar is the case that finds it. `bx-date-pop` is what turns it

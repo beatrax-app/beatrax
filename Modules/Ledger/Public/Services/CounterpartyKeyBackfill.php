@@ -126,9 +126,11 @@ final class CounterpartyKeyBackfill
             ->where('user_id', $userId)
             ->orderBy('id')
             ->chunkById(self::CHUNK_SIZE, function ($rows) use ($connection, $userId, $keyHex, $ibans): void {
+                $plainKeys = $this->plainKeysFor($connection, $userId, $rows);
+
                 foreach ($rows as $row) {
                     /** @var stdClass $row */
-                    $rewritten = $this->rewrittenEvidence($connection, $row, $userId, $keyHex, $ibans);
+                    $rewritten = $this->rewrittenEvidence($row, $userId, $keyHex, $ibans, $plainKeys);
                     if ($rewritten === null) {
                         continue;
                     }
@@ -138,14 +140,44 @@ final class CounterpartyKeyBackfill
             }, 'id');
     }
 
+    // Keyed by transaction id, which is the primary key, so two links off one
+    // transaction share the entry rather than colliding. A row the user does
+    // not own is absent, which reads back as the empty key the per-link
+    // lookup's own user_id predicate produced.
+    /**
+     * @param  iterable<int, stdClass>  $rows
+     * @return array<int, string>
+     */
+    private function plainKeysFor(ConnectionInterface $connection, int $userId, iterable $rows): array
+    {
+        $ids = [];
+        foreach ($rows as $row) {
+            $ids[self::toInt($row->from_transaction_id ?? null)] = true;
+        }
+
+        $keys = [];
+        $transactions = $connection->table('transactions')
+            ->whereIn('id', array_keys($ids))
+            ->where('user_id', $userId)
+            ->get(['id', 'counterparty_normalized']);
+
+        foreach ($transactions as $transaction) {
+            /** @var stdClass $transaction */
+            $keys[self::toInt($transaction->id ?? null)] = self::toString($transaction->counterparty_normalized ?? null);
+        }
+
+        return $keys;
+    }
+
     // The IBAN half is on one arm's evidence and on neither of the others, so
     // it is recovered by trying every IBAN a resolver could have reached: the
     // blob's own first, then the user's accounts and the registered aliases. A
     // hash none of them reproduces belongs to an arm that hashes no IBAN.
     /**
      * @param  list<string>  $ibans
+     * @param  array<int, string>  $plainKeys
      */
-    private function rewrittenEvidence(ConnectionInterface $connection, stdClass $row, int $userId, string $keyHex, array $ibans): ?string
+    private function rewrittenEvidence(stdClass $row, int $userId, string $keyHex, array $ibans, array $plainKeys): ?string
     {
         $evidence = json_decode(self::toString($row->evidence ?? null), true);
         if (! is_array($evidence)) {
@@ -157,10 +189,7 @@ final class CounterpartyKeyBackfill
             return null;
         }
 
-        $plainKey = self::toString($connection->table('transactions')
-            ->where('id', $row->from_transaction_id)
-            ->where('user_id', $userId)
-            ->value('counterparty_normalized'));
+        $plainKey = $plainKeys[self::toInt($row->from_transaction_id ?? null)] ?? '';
 
         if ($plainKey === '' || BlindIndexCodec::looksDerived($plainKey)) {
             return null;
@@ -297,9 +326,10 @@ final class CounterpartyKeyBackfill
     // why the probe strips it and CounterpartyKey::normalizeIban() does not.
     private static function looksLikeIban(string $normalizedIban): bool
     {
-        $compact = (string) preg_replace('/\s+/u', '', $normalizedIban);
-
-        return preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{8,30}$/', $compact) === 1;
+        return preg_match(
+            '/^[A-Z]{2}[0-9]{2}[A-Z0-9]{8,30}$/',
+            CounterpartyKey::compactIban($normalizedIban),
+        ) === 1;
     }
 
     // Mirrors ClusterKeyComposer::compose(). Duplicated rather than shared

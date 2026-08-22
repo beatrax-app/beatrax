@@ -13,6 +13,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\JobRunStatus;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
 use Modules\Import\Internal\Exceptions\PreviewExpiredException;
@@ -319,7 +320,7 @@ final class PreviewWizard extends Component
     ): void {
         ($discarder)($this->importRunId, $currentUser->user());
 
-        $this->redirect($urls->route('imports.new'), navigate: false);
+        $this->redirect(Destination::Imports->urlFrom($urls), navigate: false);
     }
 
     public function render(

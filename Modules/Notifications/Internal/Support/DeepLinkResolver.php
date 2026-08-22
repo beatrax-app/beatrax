@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use JsonException;
 use Modules\Budgets\Public\Services\BudgetProgressQuery;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Notifications\Public\Dto\NotificationDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -133,10 +134,10 @@ final readonly class DeepLinkResolver
     {
         try {
             return match ($targetKind) {
-                'dashboard' => $this->urls->route('dashboard'),
-                'forecast' => $this->urls->route('forecast.index'),
-                'inbox' => $this->urls->route('inboxes.index'),
-                'import' => $this->urls->route('imports.new'),
+                'dashboard' => Destination::Dashboard->urlFrom($this->urls),
+                'forecast' => Destination::Forecasts->urlFrom($this->urls),
+                'inbox' => Destination::Email->urlFrom($this->urls),
+                'import' => Destination::Imports->urlFrom($this->urls),
                 // Must match the deepLinkRoute PersistIcsStatementReady
                 // stamps on the OS push.
                 'ics-import' => $this->urls->route('settings.open-banking').'#ics-import',
@@ -174,7 +175,7 @@ final readonly class DeepLinkResolver
             return [null, true];
         }
 
-        return [$this->urls->route('budgets.index'), false];
+        return [Destination::Budgets->urlFrom($this->urls), false];
     }
 
     /**

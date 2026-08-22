@@ -39,6 +39,7 @@
             x-data="{
                     ...copyToClipboard(@js($codes).join('\n')),
                     saved: false,
+                    saveFailed: false,
                     payload: @js($downloadPayload),
                     filename: @js($downloadFilename),
                     exportUrl: @js($exportUrl),
@@ -53,10 +54,10 @@
                                 const result = await response.json();
 
                                 this.saved = result.saved === true;
-                                this.failed = result.saved !== true;
+                                this.saveFailed = result.saved !== true;
                             } catch (e) {
                                 this.saved = false;
-                                this.failed = true;
+                                this.saveFailed = true;
                             }
 
                             return;
@@ -105,7 +106,12 @@
                  hands it to the OS, which on iOS surfaced nothing at all. --}}
             <p x-show="saved && ! exportUrl" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_as', ['username' => $downloadSlug]) }}</p>
             <p x-show="saved && exportUrl" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_native') }}</p>
+            {{-- Two failures, two sentences. They shared one flag, so a refused
+                 save told the reader the copy had failed — and the reader who
+                 then reaches for the clipboard instead of a pen leaves a screen
+                 shown exactly once with no copy of the codes at all. --}}
             <p x-show="failed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('auth::recovery_codes.copy_failed') }}</p>
+            <p x-show="saveFailed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('auth::recovery_codes.save_failed') }}</p>
         </div>
 
         <x-core::checkbox-field

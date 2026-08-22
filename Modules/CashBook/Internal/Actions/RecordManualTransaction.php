@@ -15,6 +15,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\AccountSlugResolver;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -28,6 +29,8 @@ final class RecordManualTransaction
 {
     private const MAX_ATTEMPTS = 5;
 
+    private const string ACCOUNT_NAME = 'Cash';
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly RecordsTransactions $record,
@@ -35,6 +38,7 @@ final class RecordManualTransaction
         private readonly Clock $clock,
         private readonly BaseCurrency $baseCurrency,
         private readonly CounterpartyKey $counterpartyKey,
+        private readonly AccountSlugResolver $accountSlugs,
     ) {}
 
     public function __invoke(
@@ -94,14 +98,18 @@ final class RecordManualTransaction
         }
     }
 
+    // The slug comes from the ledger's own walk rather than from the user id:
+    // `cash-<id>` is a spelling the walk also hands out, so a user whose id is
+    // 2 and who already owns an account named "Cash 2" collided on
+    // unique(user_id, slug) and lost the cash book outright.
     private function cashAccountId(User $user): int
     {
         $now = $this->clock->now()->toDateTimeString();
 
         return $this->findOrCreate('accounts', ['user_id' => $user->id, 'kind' => AccountKind::Cash->value], [
             'user_id' => $user->id,
-            'name' => 'Cash',
-            'slug' => 'cash-'.$user->id,
+            'name' => self::ACCOUNT_NAME,
+            'slug' => $this->accountSlugs->resolveUnique($user->id, self::ACCOUNT_NAME),
             'kind' => AccountKind::Cash->value,
             'iban' => 'CASH'.str_pad((string) $user->id, 12, '0', STR_PAD_LEFT),
             'default_currency' => 'EUR',

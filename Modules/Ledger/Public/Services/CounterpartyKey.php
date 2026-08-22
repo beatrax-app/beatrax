@@ -78,4 +78,13 @@ final class CounterpartyKey
     {
         return mb_strtoupper(trim($iban));
     }
+
+    // The other question about the same string: is it an IBAN, and which
+    // characters does a card mask. The u modifier is load-bearing — a bank's
+    // web page groups an IBAN with U+00A0, which /\s+/ leaves standing and a
+    // byte offset then slices through.
+    public static function compactIban(string $iban): string
+    {
+        return (string) preg_replace('/\s+/u', '', self::normalizeIban($iban));
+    }
 }

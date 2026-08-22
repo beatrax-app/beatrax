@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
 @use('Carbon\CarbonImmutable')
@@ -23,6 +24,7 @@
 --}}
 @use('Modules\Counterparties\Public\Enums\CounterpartyType')
 @use('Modules\Ledger\Public\Enums\Currency')
+@use('Modules\Ledger\Public\Services\CounterpartyKey')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
 
@@ -35,7 +37,7 @@
         if ($iban === null || $iban === '') {
             return '—';
         }
-        $clean = strtoupper(preg_replace('/\s+/', '', $iban) ?? $iban);
+        $clean = CounterpartyKey::compactIban($iban);
         if (strlen($clean) < 12) {
             return $clean;
         }
@@ -54,7 +56,7 @@
     x-on:focusout.capture="inputFocused = false"
     x-on:keydown.window.s.prevent="if (!inputFocused) $wire.skipForNow()"
     x-on:keydown.window.arrow-right.prevent="if (!inputFocused) $wire.nextItem()"
-    x-on:keydown.window.escape="if (!inputFocused) window.location.href = '{{ route('counterparties.index') }}'"
+    x-on:keydown.window.escape="if (!inputFocused) window.location.href = '{{ Destination::Counterparties->url() }}'"
     @if ($showSuggestion && $current !== null && $suggestion !== null)
         x-on:keydown.window.y.prevent="if (!inputFocused) $wire.acceptSuggestion()"
         x-on:keydown.window.n.prevent="if (!inputFocused) $wire.rejectSuggestion()"
@@ -94,7 +96,7 @@
                 {{ Lang::get('counterparties::triage.all_caught_heading') }}
             </h2>
             <p style="margin: 0;">
-                <a href="{{ route('counterparties.index') }}" style="font-size: var(--text-sm); color: var(--color-text); text-decoration: underline;">{{ Lang::get('counterparties::triage.back_to_index') }}</a>
+                <a href="{{ Destination::Counterparties->url() }}" style="font-size: var(--text-sm); color: var(--color-text); text-decoration: underline;">{{ Lang::get('counterparties::triage.back_to_index') }}</a>
             </p>
         </section>
     @else

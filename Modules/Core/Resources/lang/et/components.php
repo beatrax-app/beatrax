@@ -42,14 +42,14 @@ return [
         'next_month' => 'Järgmine kuu',
         'today' => 'Täna',
         'clear' => 'Tühjenda',
-        'empty' => 'kuupäev valimata',
+        'empty' => 'kuupäeva pole valitud',
     ],
 
     'time' => [
         'open' => 'Vali kellaaeg',
         'hour' => 'Tund',
         'minute' => 'Minut',
-        'empty' => 'kellaaeg valimata',
+        'empty' => 'kellaaega pole valitud',
     ],
 
     'veil_locked' => 'Rakendus lukustatud',

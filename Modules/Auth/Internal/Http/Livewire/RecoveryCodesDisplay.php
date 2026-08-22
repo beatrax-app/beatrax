@@ -12,6 +12,7 @@ use Illuminate\Routing\Router;
 use Livewire\Component;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -51,7 +52,7 @@ final class RecoveryCodesDisplay extends Component
         // The default is the setup wizard, not the dashboard: this screen sits
         // between signup and setup, and onboarding has not run yet.
         $target = $returnTo === self::RETURN_TO_SETTINGS
-            ? $urls->route('settings')
+            ? Destination::Settings->urlFrom($urls)
             : $urls->route('setup');
 
         $this->redirect($target, navigate: false);

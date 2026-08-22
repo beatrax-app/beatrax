@@ -9,6 +9,7 @@ return [
     'copy' => 'Kódok másolása',
     'copied' => 'Másolva',
     'copy_failed' => 'A másolás nem sikerült. Írja le a kódokat.',
+    'save_failed' => 'A fájl mentése nem sikerült. Írja le a kódokat.',
     'download' => 'Letöltés .txt fájlként',
 
     'saved_as' => 'Mentve így: beatrax-recovery-codes-:username.txt',

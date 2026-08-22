@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @php
     use Carbon\CarbonImmutable;
@@ -22,7 +23,7 @@
          Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
          The page title is "Transaction" + the posted date for context. --}}
     <x-core::mobile-top-bar
-        :backUrl="route('transactions.index')"
+        :backUrl="Destination::Transactions->url()"
         :title="Lang::get('ledger::detail.heading')"
     />
 

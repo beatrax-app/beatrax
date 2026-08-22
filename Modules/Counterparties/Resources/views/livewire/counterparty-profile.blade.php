@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     /counterparties/{slug} profile shell. Renders the type-aware tab
@@ -28,7 +29,7 @@
     {{-- Mobile top bar back affordance: shown at <1024px with ← to /counterparties.
          Must live INSIDE the root div — Livewire allows only one root element. --}}
     <x-core::mobile-top-bar
-        :backUrl="route('counterparties.index')"
+        :backUrl="Destination::Counterparties->url()"
         :title="$isSelf ? ($profile->displayName ?? Lang::get('counterparties::profile.fallback_account')) : ($profile->displayName ?? Lang::get('counterparties::profile.fallback_counterparty'))"
     />
     @if ($isSelf)

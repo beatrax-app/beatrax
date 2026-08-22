@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     /tax year cockpit.
@@ -116,7 +117,7 @@
                      language, so both the anchor and the word in the sentence
                      name the control that still exists. --}}
                 <a
-                    href="{{ route('settings') }}#country"
+                    href="{{ Destination::Settings->url() }}#country"
                     class="pill-btn-primary"
                     style="display: inline-block; text-decoration: none;"
                 >{{ Lang::get('tax::page.country_prompt_cta') }}</a>
@@ -181,7 +182,7 @@
                         </p>
                     @endif
                     <a
-                        href="{{ route('transactions.index') }}"
+                        href="{{ Destination::Transactions->url() }}"
                         class="font-medium underline-offset-2 hover:underline"
                         style="display: inline-block; margin-top: var(--space-4); font-size: var(--text-base); color: var(--color-text);"
                     >{{ Lang::get('tax::page.go_to_transactions') }}</a>

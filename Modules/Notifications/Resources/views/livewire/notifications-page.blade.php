@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     /notifications — the unified inbox.
@@ -44,7 +45,7 @@
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::inbox.heading') }}</h1>
         </div>
         <a
-            href="{{ route('settings') }}#notifications"
+            href="{{ Destination::Settings->url() }}#notifications"
             class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
         >{{ Lang::get('notifications::inbox.settings_link') }}</a>
     </header>

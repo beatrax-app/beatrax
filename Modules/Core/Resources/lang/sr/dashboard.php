@@ -17,7 +17,10 @@ return [
     'net' => 'Neto',
 
     'status_tiles_aria' => 'Statusne pločice',
-    'email_scan_health' => 'Stanje skeniranja e-pošte — :count povezano sanduče|Stanje skeniranja e-pošte — :count povezano sandučeta|Stanje skeniranja e-pošte — :count povezano sandučadi',
+    // i18n-review: sr · email_scan_health — agreement is fixed, the noun is not:
+    // "sandučad" is a collective, so its genitive plural is contested against
+    // "sandučića", and badge.inboxes calls the same thing "prijemno sanduče".
+    'email_scan_health' => 'Stanje skeniranja e-pošte — :count povezano sanduče|Stanje skeniranja e-pošte — :count povezana sandučeta|Stanje skeniranja e-pošte — :count povezanih sandučadi',
 
     'top_spending' => 'Najveći troškovi',
     'no_expenses' => 'Još nema kategorizovanih troškova.',

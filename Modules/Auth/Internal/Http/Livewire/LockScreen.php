@@ -21,6 +21,7 @@ use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 
 final class LockScreen extends Component
@@ -143,7 +144,7 @@ final class LockScreen extends Component
         return match (true) {
             is_string($intended) && $intended !== '' => $intended,
             is_string($lastPage) && $lastPage !== '' => $lastPage,
-            default => $urls->route('dashboard'),
+            default => Destination::Dashboard->urlFrom($urls),
         };
     }
 

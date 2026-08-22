@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 return [
     'title' => 'Poikkeavat veloitukset',
-    'aria_label' => 'Poikkeavat veloitukset — :count avointa',
+    'aria_label' => 'Poikkeavat veloitukset — :open',
 
-    'open' => 'avointa',
+    'open' => ':count avoin|:count avointa',
     'detectors' => [
-        'large' => 'suuri',
-        'first_time' => 'ensimmäinen kerta',
-        'duplicate' => 'kaksoisveloitus',
+        'large' => ':count suuri|:count suurta',
+        'first_time' => ':count ensimmäinen kerta|:count ensimmäistä kertaa',
+        'duplicate' => ':count kaksoisveloitus|:count kaksoisveloitusta',
     ],
 ];

@@ -110,16 +110,12 @@ final readonly class ScenarioApplier
         return $earliestIndex;
     }
 
-    // Unbounded on purpose: a recurring start may precede asOf (the occurrence
-    // walk skips those), so the horizon check belongs to the caller.
-    private function parsedDate(string $raw): ?CarbonImmutable
-    {
-        return SafeDate::parseOrNull($raw)?->startOfDay();
-    }
-
+    // The bounded parse. A recurring start may precede asOf — the occurrence
+    // walk skips those — so the two callers that read a start date go straight
+    // to SafeDate and keep no horizon of their own.
     private function dateWithinHorizon(string $raw, CarbonImmutable $asOf, CarbonImmutable $horizonEnd): ?CarbonImmutable
     {
-        $date = $this->parsedDate($raw);
+        $date = SafeDate::parseDayOrNull($raw);
 
         return $date === null || $date->lessThan($asOf) || $date->greaterThan($horizonEnd) ? null : $date;
     }
@@ -225,7 +221,7 @@ final readonly class ScenarioApplier
         CarbonImmutable $horizonEnd,
         User $user,
     ): array {
-        $start = $this->parsedDate($payload->startDate);
+        $start = SafeDate::parseDayOrNull($payload->startDate);
         $cadence = SeriesCadence::tryFrom($payload->cadence);
 
         if ($start === null || $cadence === null || ! $cadence->isRegular()) {
@@ -338,7 +334,7 @@ final readonly class ScenarioApplier
         ShiftSeriesDatePayload $payload,
         CarbonImmutable $horizonEnd,
     ): array {
-        $newDate = $this->parsedDate($payload->newNextDate);
+        $newDate = SafeDate::parseDayOrNull($payload->newNextDate);
         $firstIndex = $this->earliestIndexForSeries($contributions, $payload->seriesId);
         $firstDate = $firstIndex === null ? null : $contributions[$firstIndex]->date;
 

@@ -113,3 +113,54 @@ it('names the truncation on the results screen after a part-read file is confirm
         ->assertSee('The file could not be read past row 4.')
         ->assertSee('Nothing after that row was imported.');
 });
+
+// The preview screen and the results screen each answered "why did this row
+// fail?" for a row that recorded no reason, and they answered differently:
+// "This row could not be read." against "No reason was recorded." — the second
+// describing the record rather than the row.
+it('gives a row that failed without a recorded reason the same sentence the preview gave it', function (): void {
+    $run = ImportRun::query()->create([
+        'user_id' => $this->fixtureUser->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/reasonless-fixture.csv',
+        'sha256' => hash('sha256', 'reasonless-'.bin2hex(random_bytes(8))),
+        'uploaded_at' => CarbonImmutable::parse('2026-08-01 09:00:00'),
+        'status' => 'previewed',
+    ]);
+
+    app(PreviewCache::class)->put(
+        $run->id,
+        new ImportPreviewResult(
+            importRunId: $run->id,
+            rows: [
+                new PreviewRowDto(
+                    rowIndex: 4,
+                    status: PreviewRowStatus::Error,
+                    accountId: 1,
+                    bookedAt: null,
+                    counterpartyName: null,
+                    counterpartyIban: null,
+                    description: null,
+                    categoryName: null,
+                    amountMinor: null,
+                    currency: 'EUR',
+                    error: null,
+                    errorReason: null,
+                    errorDetail: null,
+                ),
+            ],
+            accountsToName: [],
+            fileFailureReason: null,
+            fileFailureDetail: null,
+            fileFailureRowIndex: null,
+        ),
+        canonical: [],
+        enrichments: [],
+    );
+
+    app(ConfirmsImports::class)($run->id, $this->fixtureUser);
+
+    Livewire::test(ImportResults::class, ['id' => $run->id])
+        ->assertSee('Row 5: '.ImportFailureReason::RowUnreadable->label())
+        ->assertDontSee('No reason was recorded.');
+});

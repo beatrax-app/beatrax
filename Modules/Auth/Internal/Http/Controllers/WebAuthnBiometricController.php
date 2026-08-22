@@ -14,6 +14,7 @@ use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Navigation\Destination;
 use Symfony\Component\HttpFoundation\Response;
 
 // In the standard 'web' group, so VerifyCsrfToken is enforced with no JSON
@@ -59,9 +60,9 @@ final class WebAuthnBiometricController
         $unlocked = $service->verifyAndRelease($user->id, $assertion, $session);
 
         if ($unlocked) {
-            $redirect = $session->pull('url.intended', $urls->route('dashboard'));
+            $redirect = $session->pull('url.intended', Destination::Dashboard->urlFrom($urls));
             if (! is_string($redirect)) {
-                $redirect = $urls->route('dashboard');
+                $redirect = Destination::Dashboard->urlFrom($urls);
             }
         } else {
             $redirect = $urls->route('auth.lock');

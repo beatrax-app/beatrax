@@ -57,9 +57,9 @@ final class ImportRowIssue
         return $issues;
     }
 
-    public function reasonLabel(): ?string
+    public function reasonLabel(): string
     {
-        return $this->reason?->label();
+        return ImportFailureReason::labelFor($this->reason);
     }
 
     private static function fromStoredEntry(mixed $entry): ?self

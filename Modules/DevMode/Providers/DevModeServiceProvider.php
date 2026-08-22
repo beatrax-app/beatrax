@@ -20,6 +20,7 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
@@ -410,7 +411,7 @@ final class DevModeServiceProvider extends ServiceProvider
 
             $actions = [];
 
-            $importsNew = self::resolveRouteUrl($router, 'imports.new');
+            $importsNew = self::resolveRouteUrl($router, Destination::Imports->routeName());
             if ($importsNew !== null) {
                 $actions[] = new AppAction(
                     id: 'action.run-import',
@@ -423,7 +424,7 @@ final class DevModeServiceProvider extends ServiceProvider
                 );
             }
 
-            $inboxes = self::resolveRouteUrl($router, 'inboxes.index');
+            $inboxes = self::resolveRouteUrl($router, Destination::Email->routeName());
             if ($inboxes !== null) {
                 $actions[] = new AppAction(
                     id: 'action.scan-email',
@@ -436,7 +437,7 @@ final class DevModeServiceProvider extends ServiceProvider
                 );
             }
 
-            $settings = self::resolveRouteUrl($router, 'settings');
+            $settings = self::resolveRouteUrl($router, Destination::Settings->routeName());
             if ($settings !== null) {
                 $actions[] = new AppAction(
                     id: 'action.open-profile',

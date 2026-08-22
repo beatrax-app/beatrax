@@ -55,7 +55,9 @@
         <span aria-hidden="true" class="text-slate-400">◷</span>
     </button>
 
-    <div x-show="open" x-cloak role="dialog" aria-label="{{ Lang::get('core::components.time.open') }}" class="bx-date-pop">
+    {{-- Named after the field, not after the control kind — the same reason,
+         and the same toolbar, as x-core::date-input's calendar. --}}
+    <div x-show="open" x-cloak role="dialog" aria-label="{{ $fieldLabel }}" class="bx-date-pop">
         <div class="flex gap-2">
             {{-- Two scrolling columns rather than a grid: hours and minutes are
                  independent, and a 24x12 grid is unreadable on a phone.

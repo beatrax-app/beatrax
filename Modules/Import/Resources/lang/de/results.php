@@ -25,6 +25,5 @@ return [
         'detail' => 'Der Leser meldete: :reason',
         'duplicate' => 'Zeile :row war bereits in deinem Hauptbuch.',
         'more' => '+ :count nicht aufgeführt',
-        'unknown_reason' => 'Es wurde kein Grund erfasst.',
     ],
 ];

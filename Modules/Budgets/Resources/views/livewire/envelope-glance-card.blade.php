@@ -9,6 +9,7 @@
     intermediate "no envelopes yet" chrome state, only "no categories yet."
 --}}
 
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
@@ -29,7 +30,7 @@
             <div class="flex items-center justify-between">
                 <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.page.title') }}</p>
                 <a
-                    href="{{ route('budgets.index') }}"
+                    href="{{ Destination::Budgets->url() }}"
                     class="tap-link text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
                 >{{ Lang::get('budgets::messages.glance.see_all') }}</a>
             </div>

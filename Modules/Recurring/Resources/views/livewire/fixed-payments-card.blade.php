@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     Inline dashboard card — top six approved recurring series by
@@ -119,7 +120,7 @@
 
     <footer class="mt-4 text-right">
         <a
-            href="{{ route('recurring.index') }}"
+            href="{{ Destination::Recurring->url() }}"
             class="tap-link text-xs text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
         >{{ Lang::get('recurring::fixed_payments.view_all') }}</a>
     </footer>

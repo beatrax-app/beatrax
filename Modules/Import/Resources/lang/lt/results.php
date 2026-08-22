@@ -25,6 +25,5 @@ return [
         'detail' => 'Skaitytuvas pranešė: :reason',
         'duplicate' => 'Eilutė :row jau buvo tavo knygoje.',
         'more' => '+ :count nenurodyta',
-        'unknown_reason' => 'Priežastis neužfiksuota.',
     ],
 ];

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     /counterparties index — cards-default grid with type-filter chip
@@ -33,7 +34,7 @@
             @if ($unknownCount > 0)
                 {{ Lang::choice('counterparties::index.entities', $totalEntities) }} ·
                 <a
-                    href="{{ route('counterparties.triage') }}"
+                    href="{{ Destination::Triage->url() }}"
                     style="color: var(--color-amber); text-decoration: underline;"
                 >{{ Lang::get('counterparties::index.need_identification', ['count' => $unknownCount]) }}</a>
             @else
@@ -121,7 +122,7 @@
             :body="Lang::get('counterparties::index.empty_body')"
         >
             <a
-                href="{{ route('imports.new') }}"
+                href="{{ Destination::Imports->url() }}"
                 class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                 style="display: inline-block;"
             >{{ Lang::get('counterparties::index.empty_cta') }}</a>
@@ -191,14 +192,16 @@
                             <span class="label">{{ Lang::get('counterparties::index.stat_avg_mo') }}</span>
                         </div>
                         <div role="img" class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
+                            @php
+                                $sparkMax = max(1, max(array_map('abs', $row->sparkline)));
+                                $sparkLastIdx = count($row->sparkline) - 1;
+                            @endphp
                             @foreach ($row->sparkline as $idx => $bar)
                                 @php
-                                    $isLast = $idx === count($row->sparkline) - 1;
-                                    $max = max(1, max(array_map('abs', $row->sparkline)));
-                                    $heightPct = (int) round((abs($bar) / $max) * 100);
+                                    $heightPct = (int) round((abs($bar) / $sparkMax) * 100);
                                 @endphp
                                 <span
-                                    class="bar {{ $isLast ? 'last' : '' }}"
+                                    class="bar {{ $idx === $sparkLastIdx ? 'last' : '' }}"
                                     style="height: {{ $heightPct }}%;"
                                     aria-hidden="true"
                                 ></span>

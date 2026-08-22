@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Budgets\Public\Enums\BudgetProgressStatus;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Internal\Support\CopyLine;
 use Modules\Notifications\Internal\Support\CopyParam;
@@ -45,7 +46,7 @@ final class PersistPositionDigest
                 occurrence: $event->occurrence,
                 copy: $copy,
                 params: ['target_kind' => 'dashboard'],
-                deepLinkRoute: $this->urls->route('dashboard'),
+                deepLinkRoute: Destination::Dashboard->urlFrom($this->urls),
             ));
             $this->writer->write($draft);
         } catch (Throwable $e) {

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     /pots page — savings pots grouped by account with per-account reconciliation
@@ -84,7 +85,7 @@
                 {{-- A pot lives on an account, so with none there is nothing
                      "Add pot" could attach to. The way forward is the wizard
                      that creates the first account. --}}
-                <x-core::neutral-button :href="route('imports.new')">{{ Lang::get('pots::messages.empty.no_accounts_cta') }}</x-core::neutral-button>
+                <x-core::neutral-button :href="Destination::Imports->url()">{{ Lang::get('pots::messages.empty.no_accounts_cta') }}</x-core::neutral-button>
             @endif
         </x-core::empty-state>
     @else

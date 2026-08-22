@@ -9,6 +9,7 @@ return [
     'copy' => 'Kopēt kodus',
     'copied' => 'Nokopēts',
     'copy_failed' => 'Neizdevās nokopēt. Pierakstiet kodus.',
+    'save_failed' => 'Failu neizdevās saglabāt. Pierakstiet kodus.',
     'download' => 'Lejupielādēt kā .txt',
 
     'saved_as' => 'Saglabāts kā beatrax-recovery-codes-:username.txt',

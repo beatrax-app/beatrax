@@ -7,6 +7,9 @@ return [
     'native_unlock_failed' => 'Avaaminen ei onnistunut. Anna PIN-koodi.',
     'page_title' => 'Avaa lukitus · Beatrax',
     'sign_out' => 'Kirjaudu ulos',
+    // i18n-review: fi · forgot_pin — "Tietoja ei häviä" is grammatical, with the
+    // partitive the negation wants. Whether a Finnish reader would sooner see
+    // "Tietoja ei katoa" or "Tiedot säilyvät" is the open question.
     'forgot_pin' => 'Unohditko PIN-koodin? Kirjaudu ulos — voit kirjautua takaisin sisään tilisi salasanalla ja asettaa uuden PIN-koodin. Tietoja ei häviä.',
 
     'digits_suffix' => 'numeroa syötetty',

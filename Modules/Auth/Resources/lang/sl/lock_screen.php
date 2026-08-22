@@ -20,6 +20,10 @@ return [
 
     'error_backoff' => 'Preveč poskusov — poskusi znova čez :wait.',
 
-    'error_incorrect_remaining' => 'Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.',
+    // i18n-review: sl · error_incorrect_remaining — rewritten from a count label to real dual
+    // agreement, so the verb now moves with the noun across all four arms. The
+    // grammar is checked against the rule table; the word order and the "še" want
+    // a native eye.
+    'error_incorrect_remaining' => 'Napačen PIN. Preostal je še :count poskus.|Napačen PIN. Preostala sta še :count poskusa.|Napačen PIN. Preostali so še :count poskusi.|Napačen PIN. Preostalo je še :count poskusov.',
     'error_incorrect' => 'Napačen PIN.',
 ];

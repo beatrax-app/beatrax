@@ -17,7 +17,7 @@ return [
     'net' => 'Neto',
 
     'status_tiles_aria' => 'Ploščice stanja',
-    'email_scan_health' => 'Stanje pregledovanja e-pošte — :count povezanih nabiralnik|Stanje pregledovanja e-pošte — :count povezanih nabiralnika|Stanje pregledovanja e-pošte — :count povezanih nabiralniki|Stanje pregledovanja e-pošte — :count povezanih nabiralnikov',
+    'email_scan_health' => 'Stanje pregledovanja e-pošte — :count povezan nabiralnik|Stanje pregledovanja e-pošte — :count povezana nabiralnika|Stanje pregledovanja e-pošte — :count povezani nabiralniki|Stanje pregledovanja e-pošte — :count povezanih nabiralnikov',
 
     'top_spending' => 'Največji odhodki',
     'no_expenses' => 'Kategoriziranih odhodkov še ni.',

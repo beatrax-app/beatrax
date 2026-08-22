@@ -25,6 +25,5 @@ return [
         'detail' => 'Bralnik je sporočil: :reason',
         'duplicate' => 'Vrstica :row je bila že v tvoji knjigi.',
         'more' => '+ :count ni navedenih',
-        'unknown_reason' => 'Razlog ni bil zabeležen.',
     ],
 ];

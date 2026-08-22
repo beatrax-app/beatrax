@@ -60,6 +60,7 @@
             <x-core::date-input
                 field-id="as-of-input-{{ $accountId }}"
                 wire:model="asOfInput"
+                :aria-label="Lang::get('forecasting::opening_balance.as_of_label')"
             />
         </div>
     </div>

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Forecasting\Internal\Http\Livewire\ForecastPage')
 {{--
@@ -38,7 +39,7 @@
             </p>
         </div>
         <a
-            href="{{ route('settings') }}#forecast-buffers"
+            href="{{ Destination::Settings->url() }}#forecast-buffers"
             class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
         >{{ Lang::get('forecasting::forecast.adjust_buffers') }} &rarr;</a>
     </header>
@@ -55,7 +56,7 @@
                  checked against the route table. --}}
             <p class="mt-3 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('forecasting::forecast.empty_start') }}
-                <a href="{{ route('imports.new') }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_import_link') }}</a>
+                <a href="{{ Destination::Imports->url() }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_import_link') }}</a>
                 {{ Lang::get('forecasting::forecast.empty_or') }}
                 <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_recurring_link') }}</a>.
             </p>

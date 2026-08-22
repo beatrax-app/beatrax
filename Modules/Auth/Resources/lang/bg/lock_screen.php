@@ -7,6 +7,9 @@ return [
     'native_unlock_failed' => 'Отключването не бе успешно. Въведи ПИН кода си вместо това.',
     'page_title' => 'Отключване · Beatrax',
     'sign_out' => 'Изход',
+    // i18n-review: bg · forgot_pin — the sentence says "Излез" and the button says
+    // "Изход". Same root, and twenty other locales pair an imperative with a noun
+    // label the same way, but a native should confirm the pairing reads.
     'forgot_pin' => 'Забрави ли ПИН кода? Излез — можеш да влезеш отново с паролата за профила и да зададеш нов ПИН код. Не се губят данни.',
 
     'digits_suffix' => 'въведени цифри',

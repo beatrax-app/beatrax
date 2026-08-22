@@ -24,4 +24,13 @@ enum ImportFailureReason: string
     {
         return Lang::get('import::preview.errors.'.$this->value);
     }
+
+    // A row that failed without recording why IS a row that could not be read,
+    // so the absent reason resolves here rather than at each screen. The two
+    // that rendered it had drifted onto different sentences, one of which
+    // described the record instead of the row.
+    public static function labelFor(?self $reason): string
+    {
+        return ($reason ?? self::RowUnreadable)->label();
+    }
 }

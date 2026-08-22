@@ -25,6 +25,5 @@ return [
         'detail' => 'Il lettore ha segnalato: :reason',
         'duplicate' => 'La riga :row era già nel tuo registro.',
         'more' => '+ :count non elencate',
-        'unknown_reason' => 'Non è stato registrato alcun motivo.',
     ],
 ];

@@ -17,7 +17,7 @@ return [
     'net' => 'Nettó',
 
     'status_tiles_aria' => 'Állapotcsempék',
-    'email_scan_health' => '{0} E-mail-vizsgálat állapota — :count csatlakoztatva postafiók|[1,1] E-mail-vizsgálat állapota — :count csatlakoztatva postafiók|[2,*] E-mail-vizsgálat állapota — :count csatlakoztatva postafiók',
+    'email_scan_health' => '{0} E-mail-vizsgálat állapota — nincs csatlakoztatott postafiók|[1,1] E-mail-vizsgálat állapota — :count csatlakoztatott postafiók|[2,*] E-mail-vizsgálat állapota — :count csatlakoztatott postafiók',
 
     'top_spending' => 'Legnagyobb kiadások',
     'no_expenses' => 'Még nincs kategorizált kiadás.',

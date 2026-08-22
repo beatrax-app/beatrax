@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Support\Collection;
+use Modules\Reports\Internal\Actions\TogglePin;
 use Modules\Reports\Internal\Dto\SavedReportIndexRow;
 
 afterEach(function (): void {
@@ -138,5 +139,5 @@ it('assembles the whole meta line from two independently chosen phrases', functi
 it('takes the cap in the tally from the constant the pin action enforces', function (): void {
     expect(file_get_contents(base_path('Modules/Reports/Resources/views/livewire/reports-index.blade.php')))
         ->toContain('TogglePin::MAX_PINS')
-        ->and(pinnedRatioHtml('en', 1))->toContain('1 of '.Modules\Reports\Internal\Actions\TogglePin::MAX_PINS.' pinned');
+        ->and(pinnedRatioHtml('en', 1))->toContain('1 of '.TogglePin::MAX_PINS.' pinned');
 });

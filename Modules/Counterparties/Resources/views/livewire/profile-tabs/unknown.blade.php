@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     Unknown-type Overview tab body — surfaces the prominent
@@ -13,7 +14,7 @@
             {{ Lang::get('counterparties::profile.unknown.not_labelled_body') }}
         </p>
         <a
-            href="{{ route('counterparties.triage', ['queue_first' => $profile->id]) }}"
+            href="{{ Destination::Triage->url(['queue_first' => $profile->id]) }}"
             class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
             style="display: inline-block;"
         >{{ Lang::get('counterparties::profile.unknown.label_cta') }}</a>

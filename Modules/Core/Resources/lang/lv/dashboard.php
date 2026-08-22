@@ -17,7 +17,11 @@ return [
     'net' => 'Neto',
 
     'status_tiles_aria' => 'Statusa elementi',
-    'email_scan_health' => 'E-pasta skenēšanas stāvoklis — pievienotas: :count pastkastu|E-pasta skenēšanas stāvoklis — pievienotas: :count pastkaste|E-pasta skenēšanas stāvoklis — pievienotas: :count pastkastes',
+    // i18n-review: lv · email_scan_health — the participle in a colon label still
+    // has to pick a number in Latvian, so it is inflected per arm; Czech and
+    // Polish reach for an impersonal here. A header shape ("Pievienotās
+    // pastkastes: :count") may read better and wants a native call.
+    'email_scan_health' => 'E-pasta skenēšanas stāvoklis — pievienotas: :count pastkastu|E-pasta skenēšanas stāvoklis — pievienota: :count pastkaste|E-pasta skenēšanas stāvoklis — pievienotas: :count pastkastes',
 
     'top_spending' => 'Lielākie tēriņi',
     'no_expenses' => 'Vēl nav kategorizētu izdevumu.',

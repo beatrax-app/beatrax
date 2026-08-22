@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Desktop\Internal\Native;
 
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 use Native\Desktop\Contracts\MenuItem;
 use Native\Desktop\Facades\Menu;
@@ -33,8 +34,8 @@ final class AppMenuBuilder
         $items = [
             Menu::app(),
             Menu::file()->submenu(
-                Menu::route('imports.new', Lang::get('desktop::native.menu.file_import')),
-                Menu::route('inboxes.index', Lang::get('desktop::native.menu.file_scan_email')),
+                Menu::route(Destination::Imports->routeName(), Lang::get('desktop::native.menu.file_import')),
+                Menu::route(Destination::Email->routeName(), Lang::get('desktop::native.menu.file_scan_email')),
             ),
             Menu::edit(),
             Menu::view(),
@@ -42,7 +43,7 @@ final class AppMenuBuilder
             Menu::help()->submenu(
                 Menu::link(self::GITHUB_REPO_URL, Lang::get('desktop::native.menu.help_github_repo'))->openInBrowser(),
                 Menu::link(self::REPORT_ISSUE_URL, Lang::get('desktop::native.menu.help_report_issue'))->openInBrowser(),
-                Menu::route('settings', Lang::get('desktop::native.menu.help_about')),
+                Menu::route(Destination::Settings->routeName(), Lang::get('desktop::native.menu.help_about')),
             ),
         ];
 

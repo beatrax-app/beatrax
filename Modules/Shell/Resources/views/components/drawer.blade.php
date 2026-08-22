@@ -19,7 +19,7 @@
     a keyboard dead end, but focus is no longer trapped inside it; restoring a
     trap needs one that does not walk the document marking siblings inert.
 
-    The Data & Devices entry (route('data-devices.index')) lives INSIDE the
+    The Data & Devices entry lives INSIDE the
     embedded core.app-sidebar component below, not as separate markup here —
     this drawer has exactly one content source, so any nav row or section added to
     app-sidebar.blade.php automatically surfaces in both the desktop static

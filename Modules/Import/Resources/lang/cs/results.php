@@ -25,6 +25,5 @@ return [
         'detail' => 'Čtečka ohlásila: :reason',
         'duplicate' => 'Řádek :row už byl v tvé knize.',
         'more' => '+ :count neuvedeno',
-        'unknown_reason' => 'Důvod nebyl zaznamenán.',
     ],
 ];

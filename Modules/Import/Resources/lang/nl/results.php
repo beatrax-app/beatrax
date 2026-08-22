@@ -25,6 +25,5 @@ return [
         'detail' => 'De lezer meldde: :reason',
         'duplicate' => 'Regel :row stond al in je grootboek.',
         'more' => '+ :count niet vermeld',
-        'unknown_reason' => 'Er is geen reden vastgelegd.',
     ],
 ];

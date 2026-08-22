@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 return [
     'title' => 'Unusual charges',
-    'aria_label' => 'Unusual charges — :count open',
+    'aria_label' => 'Unusual charges — :open',
 
-    'open' => 'open',
+    'open' => ':count open|:count open',
     'detectors' => [
-        'large' => 'large',
-        'first_time' => 'first-time',
-        'duplicate' => 'duplicate',
+        'large' => ':count large|:count large',
+        'first_time' => ':count first-time|:count first-time',
+        'duplicate' => ':count duplicate|:count duplicate',
     ],
 ];

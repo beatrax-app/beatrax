@@ -10,6 +10,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
@@ -23,11 +24,18 @@ use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Commands\SyncServeCommand;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Crypto\GdkRewrapContract;
+use Modules\Sync\Internal\Crypto\GdkRewrapService;
+use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Crypto\LibsodiumPrimitives;
+use Modules\Sync\Internal\Crypto\LocallyKeyedRowsProbe;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
+use Modules\Sync\Internal\Crypto\RewrapGdkOnPassphraseChange;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
+use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -40,12 +48,21 @@ use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
+use Modules\Sync\Internal\Pairing\LanPairingFrameCourier;
+use Modules\Sync\Internal\Pairing\LanPairingFramePuller;
+use Modules\Sync\Internal\Pairing\PairedDeviceAdmitter;
 use Modules\Sync\Internal\Pairing\PairingFrameApplier;
+use Modules\Sync\Internal\Pairing\PairingFrameCourier;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Pairing\PairingPeerOutbox;
 use Modules\Sync\Internal\Pairing\PairingPullAuthorizer;
+use Modules\Sync\Internal\Pairing\PairingStateMachine;
+use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Internal\Pairing\PeerConfirmVerifier;
+use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
+use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Discovery\CachedPeerDiscovery;
@@ -54,8 +71,10 @@ use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
+use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\SyncSession;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Modules\Sync\Public\Events\EntityMutated;
@@ -68,12 +87,15 @@ use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
+use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
+use Modules\Sync\Public\Http\Livewire\SyncStatusSection;
 use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
 use Modules\Sync\Public\Services\ImportSyncCapture;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
+use Modules\Sync\Public\Services\SyncStatusService;
 use Psr\Log\LoggerInterface;
 
 final class SyncServiceProvider extends ServiceProvider
@@ -115,51 +137,28 @@ final class SyncServiceProvider extends ServiceProvider
 
     private function registerCryptoServices(): void
     {
-        // GDK crypto primitives (class_exists-guarded so this provider
-        // stays clean at every intermediate commit — stateless/DI-resolved,
-        // safe to share).
-        if (class_exists(OpLogFieldCrypto::class)) {
-            $this->app->singleton(OpLogFieldCrypto::class);
-        }
-        if (class_exists(GdkKeyringService::class)) {
-            $this->app->singleton(GdkKeyringService::class);
-        }
-        if (class_exists(SensitiveColumnCodec::class)) {
-            $this->app->singleton(SensitiveColumnCodec::class);
-        }
-        if (class_exists(BlindIndexCodec::class)) {
-            $this->app->singleton(BlindIndexCodec::class);
-        }
+        $this->app->singleton(OpLogFieldCrypto::class);
+        $this->app->singleton(GdkKeyringService::class);
+        $this->app->singleton(SensitiveColumnCodec::class);
+        $this->app->singleton(BlindIndexCodec::class);
 
-        // Minimal Public wrapper EncryptionMigrationService consumes
-        // instead of reaching into Modules\Sync\Internal\Crypto directly.
-        // NOT a singleton — it caches one primed epoch's raw key material
-        // for the duration of a single migration pass.
-        if (class_exists(EncryptionMigrationSupport::class)) {
-            $this->app->bind(EncryptionMigrationSupport::class);
-        }
+        // The minimal Public wrapper EncryptionMigrationService consumes
+        // instead of reaching into Modules\Sync\Internal\Crypto directly. NOT a
+        // singleton — it caches one primed epoch's raw key material for the
+        // duration of a single migration pass.
+        $this->app->bind(EncryptionMigrationSupport::class);
 
-        // Single-owner forward registration: downstream classes are wired
-        // the moment they exist, referenced by runtime-built FQCN so
-        // PHPStan stays clean before each class exists.
-        $cryptoNamespace = 'Modules\Sync\Internal\Crypto\\';
-        // Device-removal rotation orchestration. The ctor takes no Session
-        // — every method that needs one takes it as a per-call parameter,
-        // so this singleton can never capture a stale session.
-        $this->singletonIfExists($cryptoNamespace.'GdkRotationService');
+        // Device-removal rotation orchestration. The ctor takes no Session —
+        // every method that needs one takes it as a per-call parameter, so this
+        // singleton can never capture a stale session.
+        $this->app->singleton(GdkRotationService::class);
 
-        // GdkRewrapService bound behind its own contract (the listener
-        // wire is registered in boot() below). GdkRewrapContract is an
-        // INTERFACE — class_exists() always returns false for interfaces,
-        // so the guard uses interface_exists() instead.
-        $gdkRewrapContract = $cryptoNamespace.'GdkRewrapContract';
-        $gdkRewrapService = $cryptoNamespace.'GdkRewrapService';
-        if (interface_exists($gdkRewrapContract) && class_exists($gdkRewrapService)) {
-            $this->app->bind($gdkRewrapContract, $gdkRewrapService);
-        }
+        // Behind its own contract, because the passphrase-change listener wired
+        // in boot() is the only caller and it names the contract.
+        $this->app->bind(GdkRewrapContract::class, GdkRewrapService::class);
 
-        $this->singletonIfExists($cryptoNamespace.'LocallyKeyedRowsProbe');
-        $this->singletonIfExists($cryptoNamespace.'GdkEpochControlHandler');
+        $this->app->singleton(LocallyKeyedRowsProbe::class);
+        $this->app->singleton(GdkEpochControlHandler::class);
     }
 
     private function registerReplayer(): void
@@ -170,9 +169,8 @@ final class SyncServiceProvider extends ServiceProvider
         $this->app->bind(
             OpLogReplayer::class,
             function () {
-                $deviceKeys = class_exists(DeviceRegistryService::class)
-                    ? $this->app->make(DeviceRegistryService::class)->deviceKeys($this->currentUserId())
-                    : [];
+                $deviceKeys = $this->app->make(DeviceRegistryService::class)
+                    ->deviceKeys($this->currentUserId());
 
                 return new OpLogReplayer(
                     $this->app->make(DatabaseManager::class),
@@ -185,81 +183,64 @@ final class SyncServiceProvider extends ServiceProvider
 
     private function registerIdentityServices(): void
     {
-        // Device-identity services (class_exists-guarded). Each is
-        // stateless / DI-resolved, safe to share.
-        if (class_exists(DeviceIdentityService::class)) {
-            $this->app->singleton(DeviceIdentityService::class);
-        }
+        $this->app->singleton(DeviceIdentityService::class);
+
         // Not a singleton: it holds no state, and caching one instance froze
         // whichever AppLockKeyService was bound at first resolve. A daemon
         // handoff now reads the identity during DeviceSyncEnabled, which is
         // early enough for that freeze to outlive a later rebind.
-        if (class_exists(DeviceIdentityLoader::class)) {
-            $this->app->bind(DeviceIdentityLoader::class);
-        }
-        if (class_exists(DeviceNameDetector::class)) {
-            $this->app->singleton(DeviceNameDetector::class);
-        }
-        if (class_exists(DeviceRegistryService::class)) {
-            $this->app->singleton(DeviceRegistryService::class);
-        }
+        $this->app->bind(DeviceIdentityLoader::class);
 
-        // SafetyNumberDeriver needs the BIP39 word list as its sole
-        // constructor arg; bind it explicitly so callers can resolve it
-        // without re-passing the list.
-        if (class_exists(SafetyNumberDeriver::class) && class_exists(Bip39WordList::class)) {
-            $this->app->singleton(
-                SafetyNumberDeriver::class,
-                fn () => new SafetyNumberDeriver(Bip39WordList::WORDS),
-            );
-        }
+        $this->app->singleton(DeviceNameDetector::class);
+        $this->app->singleton(DeviceRegistryService::class);
+
+        // SafetyNumberDeriver needs the BIP39 word list as its sole constructor
+        // arg; bind it explicitly so callers can resolve it without re-passing
+        // the list.
+        $this->app->singleton(
+            SafetyNumberDeriver::class,
+            fn () => new SafetyNumberDeriver(Bip39WordList::WORDS),
+        );
     }
 
     private function registerPairingServices(): void
     {
-        // Pairing classes auto-wire the moment they exist. Referenced by
-        // runtime-built FQCN (not `use` imports / `::class`) so this
-        // provider stays PHPStan-clean before they exist.
-        $pairingNamespace = 'Modules\Sync\Internal\Pairing\\';
-        foreach ([
-            'PairingTokenService',
-            'PairingStateMachine',
-            'WordCodeEncoder',
-            'QrPayloadBuilder',
-            // Collaborators PairingTokenService delegates to: device-registry
-            // admission and the relayed PAIR_CONFIRM anti-forgery gate. Each
-            // owns the crypto deps it uses so the host stays a thin orchestrator.
-            'PairedDeviceAdmitter',
-            'PeerConfirmVerifier',
-            // Applies an inbound frame whichever transport carried it, so the
-            // relay drain and the LAN route cannot drift apart.
-            'PairingFrameApplier',
-            'LanPairingFrameCourier',
-            'LanPairingFramePuller',
-            'PairingPeerOutbox',
-            'PairingPullAuthorizer',
-            // Relay courier for the cross-device both-confirm handshake
-            // (PairingFrame is static-only, no binding needed).
-            'PairingFrameCourier',
-        ] as $pairingClass) {
-            $this->singletonIfExists($pairingNamespace.$pairingClass);
-        }
+        $this->app->singleton(PairingTokenService::class);
+        $this->app->singleton(PairingStateMachine::class);
+        $this->app->singleton(WordCodeEncoder::class);
+        $this->app->singleton(QrPayloadBuilder::class);
 
-        // OpLogWriter takes four runtime primitives no autowiring can
-        // supply, so EVERY resolution threw "Unresolvable dependency".
-        // SyncCaptureListener swallowed that: nothing was ever captured,
-        // and a paired device received an empty database.
-        if (class_exists(OpLogWriter::class)) {
-            $this->app->bind(
-                OpLogWriter::class,
-                function (Container $app, array $parameters): OpLogWriter {
-                    /** @var array<string, mixed> $parameters */
-                    return $parameters === []
-                        ? $this->makeOpLogWriter($app)
-                        : $this->makeOpLogWriterWith($app, $parameters);
-                },
-            );
-        }
+        // Collaborators PairingTokenService delegates to: device-registry
+        // admission and the relayed PAIR_CONFIRM anti-forgery gate. Each owns
+        // the crypto deps it uses so the host stays a thin orchestrator.
+        $this->app->singleton(PairedDeviceAdmitter::class);
+        $this->app->singleton(PeerConfirmVerifier::class);
+
+        // Applies an inbound frame whichever transport carried it, so the relay
+        // drain and the LAN route cannot drift apart.
+        $this->app->singleton(PairingFrameApplier::class);
+        $this->app->singleton(LanPairingFrameCourier::class);
+        $this->app->singleton(LanPairingFramePuller::class);
+        $this->app->singleton(PairingPeerOutbox::class);
+        $this->app->singleton(PairingPullAuthorizer::class);
+
+        // Relay courier for the cross-device both-confirm handshake.
+        // PairingFrame itself is static-only and needs no binding.
+        $this->app->singleton(PairingFrameCourier::class);
+
+        // OpLogWriter takes four runtime primitives no autowiring can supply,
+        // so EVERY resolution threw "Unresolvable dependency". SyncCaptureListener
+        // swallowed that: nothing was ever captured, and a paired device
+        // received an empty database.
+        $this->app->bind(
+            OpLogWriter::class,
+            function (Container $app, array $parameters): OpLogWriter {
+                /** @var array<string, mixed> $parameters */
+                return $parameters === []
+                    ? $this->makeOpLogWriter($app)
+                    : $this->makeOpLogWriterWith($app, $parameters);
+            },
+        );
     }
 
     // Throws (not returns null) when no identity is available: an unlocked
@@ -341,28 +322,14 @@ final class SyncServiceProvider extends ServiceProvider
 
     private function registerTransportServices(): void
     {
-        // Transport services (class_exists-guarded), referenced by
-        // runtime-built FQCN strings so PHPStan stays clean before the
-        // classes exist. This provider is the single owner.
-        $transportNamespace = 'Modules\Sync\Internal\Transport\\';
-        $relayNamespace = $transportNamespace.'Relay\\';
-
-        // Noise state machine classes are NOT singletons — they hold
-        // mutable crypto state and must be constructed fresh per call;
-        // callers instantiate directly (no DI container resolution needed).
-
-        $syncStatusService = 'Modules\Sync\Public\Services\SyncStatusService';
-        $this->singletonIfExists($syncStatusService);
-
-        // SyncSession: per-peer session (mutable, not singleton — each
-        // connection gets its own). The guard lets the container resolve
-        // it directly, but in practice it's constructed by the WS handler.
-        $this->singletonIfExists($transportNamespace.'SyncSession');
-
-        $this->singletonIfExists($transportNamespace.'PeerCatchUpExchanger');
-
-        $this->singletonIfExists($relayNamespace.'RelayClient');
-        $this->singletonIfExists($relayNamespace.'RelayConfig');
+        // Noise state-machine classes are deliberately absent: they hold mutable
+        // crypto state and must be constructed fresh per call, so callers build
+        // them directly rather than resolving them here.
+        $this->app->singleton(SyncStatusService::class);
+        $this->app->singleton(SyncSession::class);
+        $this->app->singleton(PeerCatchUpExchanger::class);
+        $this->app->singleton(RelayClient::class);
+        $this->app->singleton(RelayConfig::class);
 
         $this->registerWebSocketHandler();
     }
@@ -373,10 +340,6 @@ final class SyncServiceProvider extends ServiceProvider
     // until the real host resolves them (see architecture doc).
     private function registerWebSocketHandler(): void
     {
-        if (! class_exists(SyncWebSocketHandler::class)) {
-            return;
-        }
-
         $this->app->bind(
             SyncWebSocketHandler::class,
             function (): SyncWebSocketHandler {
@@ -412,70 +375,51 @@ final class SyncServiceProvider extends ServiceProvider
 
     private function registerCommandsAndMailbox(): void
     {
-        if (class_exists(RelayServeCommand::class)) {
-            $this->app->singleton(RelayServeCommand::class);
-        }
+        $this->app->singleton(RelayServeCommand::class);
 
-        if (class_exists(SyncServeCommand::class)) {
-            // The handler is a factory, not an instance: registering a console
-            // command resolves it, and building it reaches the encrypted search
-            // writer — which made every artisan call need an application key,
-            // including the `key:generate` that mints one.
-            $this->app->singleton(SyncServeCommand::class, fn () => new SyncServeCommand(
-                logger: $this->app->make(LoggerInterface::class),
-                handler: fn () => $this->app->make(SyncWebSocketHandler::class),
-                advertiser: $this->app->make(MdnsAdvertiser::class),
-                shutdown: $this->app->make(DaemonShutdownSignal::class),
-                offers: $this->app->make(PairingOfferService::class),
-                offerRateLimiter: $this->app->make(PairingOfferRateLimiter::class),
-                frameApplier: $this->app->make(PairingFrameApplier::class),
-                peerOutbox: $this->app->make(PairingPeerOutbox::class),
-                pullAuthorizer: $this->app->make(PairingPullAuthorizer::class),
-            ));
-        }
+        // The handler is a factory, not an instance: registering a console
+        // command resolves it, and building it reaches the encrypted search
+        // writer — which made every artisan call need an application key,
+        // including the `key:generate` that mints one.
+        $this->app->singleton(SyncServeCommand::class, fn () => new SyncServeCommand(
+            logger: $this->app->make(LoggerInterface::class),
+            handler: fn () => $this->app->make(SyncWebSocketHandler::class),
+            advertiser: $this->app->make(MdnsAdvertiser::class),
+            shutdown: $this->app->make(DaemonShutdownSignal::class),
+            offers: $this->app->make(PairingOfferService::class),
+            offerRateLimiter: $this->app->make(PairingOfferRateLimiter::class),
+            frameApplier: $this->app->make(PairingFrameApplier::class),
+            peerOutbox: $this->app->make(PairingPeerOutbox::class),
+            pullAuthorizer: $this->app->make(PairingPullAuthorizer::class),
+        ));
 
-        // Relay mailbox + mDNS advertiser singletons. RelayConfig is
-        // already registered above via singletonIfExists().
-        if (class_exists(RelayMailbox::class)) {
-            $this->app->singleton(RelayMailbox::class);
-        }
-
-        if (class_exists(MdnsAdvertiser::class)) {
-            $this->app->singleton(MdnsAdvertiser::class);
-        }
+        $this->app->singleton(RelayMailbox::class);
+        $this->app->singleton(MdnsAdvertiser::class);
 
         // A singleton because the cache IS the point: one pairing poll asks the
         // network three times, and three separate instances would each pay the
         // full browse timeout for the same answer.
-        if (class_exists(CachedPeerDiscovery::class) && class_exists(MulticastMdnsQuery::class)) {
-            $this->app->singleton(
-                PeerDiscovery::class,
-                fn () => new CachedPeerDiscovery(new MulticastMdnsQuery),
-            );
-        }
+        $this->app->singleton(
+            PeerDiscovery::class,
+            fn () => new CachedPeerDiscovery(new MulticastMdnsQuery),
+        );
     }
 
-    public function boot(Dispatcher $events): void
+    public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
         $this->loadModuleResources('sync');
 
         $this->registerCaptureListeners($events);
         $this->registerCryptoListeners($events);
         $this->registerBackfillListener($events);
-        $this->registerLivewireComponents();
+        $this->registerLivewireComponents($livewire);
         $this->registerConsoleCommands();
     }
 
-    // Each mutation event maps to one SyncCaptureListener handler. Wired
-    // once the listener and event both exist — the single-owner forward-
-    // registration precedent used throughout. Referenced by ::class (the
-    // events are imported), still class_exists-guarded before they ship.
+    // Each mutation event maps to one SyncCaptureListener handler, and the
+    // listener is the single owner of that mapping.
     private function registerCaptureListeners(Dispatcher $events): void
     {
-        if (! class_exists(SyncCaptureListener::class)) {
-            return;
-        }
-
         $wirings = [
             [TransactionMutated::class, 'handle'],
             [TransactionSplitMutated::class, 'handleSplit'],
@@ -491,9 +435,7 @@ final class SyncServiceProvider extends ServiceProvider
         ];
 
         foreach ($wirings as [$eventClass, $method]) {
-            if (class_exists($eventClass)) {
-                $events->listen($eventClass, [SyncCaptureListener::class, $method]);
-            }
+            $events->listen($eventClass, [SyncCaptureListener::class, $method]);
         }
     }
 
@@ -502,80 +444,27 @@ final class SyncServiceProvider extends ServiceProvider
     // op log and would otherwise never reach a peer.
     private function registerBackfillListener(Dispatcher $events): void
     {
-        if (class_exists(BackfillOpLogOnSyncEnabled::class)) {
-            $events->listen(DeviceSyncEnabled::class, [BackfillOpLogOnSyncEnabled::class, 'handle']);
-        }
+        $events->listen(DeviceSyncEnabled::class, [BackfillOpLogOnSyncEnabled::class, 'handle']);
     }
 
     private function registerCryptoListeners(Dispatcher $events): void
     {
-        // Passphrase-change GDK re-wrap. Referenced by runtime-built FQCN
-        // so this provider stays PHPStan-clean before either class exists —
-        // the single-owner forward-registration precedent used throughout.
-        $authPassphraseChanged = 'Modules\Auth\Public\Events\AppLockPassphraseChanged';
-        $rewrapListener = 'Modules\Sync\Internal\Crypto\RewrapGdkOnPassphraseChange';
-        if (class_exists($authPassphraseChanged) && class_exists($rewrapListener)) {
-            $events->listen($authPassphraseChanged, [$rewrapListener, 'handle']);
-        }
+        $events->listen(AppLockPassphraseChanged::class, [RewrapGdkOnPassphraseChange::class, 'handle']);
     }
 
-    private function registerLivewireComponents(): void
+    private function registerLivewireComponents(LivewireManager $livewire): void
     {
-        if (! class_exists(LivewireManager::class)) {
-            return;
-        }
-
-        /** @var LivewireManager $livewire */
-        $livewire = $this->app->make(LivewireManager::class);
-
-        // Sync health-check Livewire component. Registered by runtime FQCN
-        // so PHPStan stays clean before the class exists.
-        if (class_exists(SyncHealthPage::class)) {
-            $livewire->component('sync.sync-health-page', SyncHealthPage::class);
-        }
-
-        // Devices & Sync settings section, pairing-flow modal, and sync-
-        // status surface. Referenced by runtime-built FQCN (not `use`
-        // imports / `::class`) so this provider stays PHPStan-clean before
-        // they exist; they register the moment they exist on disk.
-        $internal = 'Modules\Sync\Internal\Http\Livewire\\';
-        $public = 'Modules\Sync\Public\Http\Livewire\\';
-        $components = [
-            'sync.devices-and-sync-settings-section' => $public.'DevicesAndSyncSettingsSection',
-            'sync.pairing-flow-modal' => $internal.'PairingFlowModal',
-            'sync.sync-status-section' => $public.'SyncStatusSection',
-        ];
-
-        foreach ($components as $alias => $componentClass) {
-            if (class_exists($componentClass)) {
-                $livewire->component($alias, $componentClass);
-            }
-        }
+        $livewire->component('sync.sync-health-page', SyncHealthPage::class);
+        $livewire->component('sync.devices-and-sync-settings-section', DevicesAndSyncSettingsSection::class);
+        $livewire->component('sync.pairing-flow-modal', PairingFlowModal::class);
+        $livewire->component('sync.sync-status-section', SyncStatusSection::class);
     }
 
-    // Register sync:serve and relay:serve artisan daemons. Both are
-    // class_exists-guarded so the provider stays clean before they ship.
-    // Registered in boot() (not app/Console/Kernel.php) — per the module
-    // boundary rule.
+    // The sync:serve and relay:serve daemons register from boot() rather than
+    // app/Console/Kernel.php, per the module boundary rule.
     private function registerConsoleCommands(): void
     {
-        if (class_exists(SyncServeCommand::class)) {
-            $this->commands([SyncServeCommand::class]);
-        }
-
-        if (class_exists(RelayServeCommand::class)) {
-            $this->commands([RelayServeCommand::class]);
-        }
-    }
-
-    // Register a singleton for a class that may not exist yet (forward-
-    // looking wiring). The class name arrives as a runtime-built string so
-    // PHPStan does not fold the class_exists() guard to an impossible type.
-    private function singletonIfExists(string $class): void
-    {
-        if (class_exists($class)) {
-            $this->app->singleton($class);
-        }
+        $this->commands([SyncServeCommand::class, RelayServeCommand::class]);
     }
 
     // Resolve the authenticated user id for the OpLogReplayer device-key

@@ -17,7 +17,7 @@ return [
     'net' => 'Netto',
 
     'status_tiles_aria' => 'Statusfelter',
-    'email_scan_health' => 'Status for e-postskanning — :count tilkoblet innboks|Status for e-postskanning — :count tilkoblet innbokser',
+    'email_scan_health' => 'Status for e-postskanning — :count tilkoblet innboks|Status for e-postskanning — :count tilkoblede innbokser',
 
     'top_spending' => 'Største utgifter',
     'no_expenses' => 'Ingen kategoriserte utgifter ennå.',

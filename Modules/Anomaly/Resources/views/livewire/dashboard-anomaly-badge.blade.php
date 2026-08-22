@@ -14,34 +14,35 @@
     Blade default `{{ }}` escaping for every interpolation.
 --}}
 
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @php
     // Build the helper line: "{N} open · {L} large · {F} first-time · {D}
-    // duplicate", showing only the non-zero detector counts (UI-SPEC §4).
-    $labels = [
-        'large' => Lang::get('anomaly::dashboard.detectors.large'),
-        'first_time' => Lang::get('anomaly::dashboard.detectors.first_time'),
-        'duplicate' => Lang::get('anomaly::dashboard.detectors.duplicate'),
+    // duplicate", showing only the non-zero detector counts (UI-SPEC §4). Each
+    // part carries its own numeral so the locale, not this file, decides how
+    // the two agree.
+    $detectors = [
+        'large' => 'anomaly::dashboard.detectors.large',
+        'first_time' => 'anomaly::dashboard.detectors.first_time',
+        'duplicate' => 'anomaly::dashboard.detectors.duplicate',
     ];
-    $parts = [];
-    foreach ($labels as $key => $label) {
+    $openPhrase = Lang::choice('anomaly::dashboard.open', $openCount);
+    $parts = [$openPhrase];
+    foreach ($detectors as $key => $line) {
         $n = (int) ($breakdown[$key] ?? 0);
         if ($n > 0) {
-            $parts[] = $n.' '.$label;
+            $parts[] = Lang::choice($line, $n);
         }
     }
-    $helper = $openCount.' '.Lang::get('anomaly::dashboard.open');
-    if ($parts !== []) {
-        $helper .= ' · '.implode(' · ', $parts);
-    }
+    $helper = implode(' · ', $parts);
 @endphp
 
 <div>
     @if ($openCount > 0)
         <a
-            href="{{ route('drift.index', ['type' => 'anomaly']) }}"
+            href="{{ Destination::UnusualCharges->url() }}"
             class="block rounded-lg border border-slate-200 bg-white p-6 transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:hover:ring-slate-700"
-            aria-label="{{ Lang::get('anomaly::dashboard.aria_label', ['count' => $openCount]) }}"
+            aria-label="{{ Lang::get('anomaly::dashboard.aria_label', ['open' => $openPhrase]) }}"
         >
             <p class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('anomaly::dashboard.title') }}</p>
             <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $openCount }}</p>

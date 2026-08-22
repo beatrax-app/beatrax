@@ -25,6 +25,5 @@ return [
         'detail' => 'Lugeja teatas: :reason',
         'duplicate' => 'Rida :row oli juba sinu pearaamatus.',
         'more' => '+ :count pole loetletud',
-        'unknown_reason' => 'Põhjust ei salvestatud.',
     ],
 ];

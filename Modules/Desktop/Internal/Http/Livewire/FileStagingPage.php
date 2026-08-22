@@ -8,10 +8,11 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\PendingFileIntent;
 
-// Both .csv and .eml intents navigate to the same imports.new route —
+// Both .csv and .eml intents navigate to the same Imports destination —
 // the Import wizard owns the per-source-format branch internally (its
 // issuer/source-format selector picks the right step), so this page
 // never forks on extension.
@@ -62,6 +63,6 @@ final class FileStagingPage extends Component
     public function startImport(
         UrlGenerator $urls,
     ): mixed {
-        return $this->redirect($urls->route('imports.new'), navigate: true);
+        return $this->redirect(Destination::Imports->urlFrom($urls), navigate: true);
     }
 }

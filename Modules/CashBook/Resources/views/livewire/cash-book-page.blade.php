@@ -47,7 +47,7 @@
             />
             <div class="space-y-1">
                 <label for="cb-date" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.date') }}</label>
-                <x-core::date-input field-id="cb-date" wire:model="date" />
+                <x-core::date-input field-id="cb-date" wire:model="date" :aria-label="Lang::get('cashbook::cash-book.date')" />
             </div>
             <x-core::form-field
                 name="counterparty"

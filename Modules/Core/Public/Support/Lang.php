@@ -26,6 +26,30 @@ final class Lang
         return is_string($line) ? $line : $key;
     }
 
+    // The whole group as a flat key => line map, for a caller that has to ask
+    // which keys a group HOLDS rather than what one of them says. A group with
+    // no file behind it comes back from the translator as the key string, which
+    // is not a map and is reported here as the empty one.
+    /**
+     * @return array<string, string>
+     */
+    public static function group(string $key): array
+    {
+        $lines = Container::getInstance()->make(Translator::class)->get($key);
+        if (! is_array($lines)) {
+            return [];
+        }
+
+        $map = [];
+        foreach ($lines as $name => $line) {
+            if (is_string($line)) {
+                $map[(string) $name] = $line;
+            }
+        }
+
+        return $map;
+    }
+
     // Picks the plural form for $number from a `singular|plural` line,
     // applying the active locale's pluralisation rule. :count is filled with
     // $number automatically; the manual `$n === 1 ? a : b` at the view goes

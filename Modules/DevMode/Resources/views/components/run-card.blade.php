@@ -64,7 +64,6 @@
             @if ($status === 'running')
                 <x-core::secondary-button
                     size="sm"
-                    class="pill-btn"
                     wire:click="cancel('{{ $runId }}')"
                 >{{ Lang::get('dev::runner.cancel') }}</x-core::secondary-button>
             @else
@@ -73,12 +72,11 @@
                         type="button"
                         x-data
                         x-on:click="$dispatch('triple-gate:open', { command: @js($command), args: @js($args) })"
-                        class="pill-btn danger inline-flex items-center rounded border border-rose-300 bg-white px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
+                        class="inline-flex items-center rounded border border-rose-300 bg-white px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
                     >{{ Lang::get('dev::runner.rerun') }}</button>
                 @else
                     <x-core::secondary-button
                         size="sm"
-                        class="pill-btn"
                         wire:click="rerun('{{ $runId }}')"
                     >{{ Lang::get('dev::runner.rerun') }}</x-core::secondary-button>
                 @endif

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\DevMode\Internal\Enums\CommandTier')
 {{-- UI-SPEC §19: overflow-x-auto at the page root ensures no surface
@@ -180,7 +181,7 @@
                         <li class="text-sm flex items-start justify-between gap-2">
                             <span>{{ $alert->message }}</span>
                             @if ($alert->kind === 'oauth_reauth_required')
-                                <a href="{{ route('inboxes.index') }}" class="text-blue-600 hover:underline text-xs">
+                                <a href="{{ Destination::Email->url() }}" class="text-blue-600 hover:underline text-xs">
                                     {{ Lang::get('dev::overview.reauth') }}
                                 </a>
                             @endif

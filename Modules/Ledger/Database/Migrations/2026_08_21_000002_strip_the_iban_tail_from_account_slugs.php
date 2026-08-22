@@ -5,7 +5,8 @@ declare(strict_types=1);
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
+use Modules\Core\Public\Support\UniqueSlug;
+use Modules\Ledger\Public\Services\AccountSlugResolver;
 
 // Two account-creation paths appended the last 6 or 8 characters of the IBAN
 // to the slug to keep two accounts off one unique(user_id, slug) row. That put
@@ -73,7 +74,7 @@ return new class extends Migration
             }
 
             unset($taken[$row['slug']]);
-            $replacement = self::firstFree(self::baseSlug($row['name']), $taken);
+            $replacement = self::firstFree($row['name'], $taken);
             $taken[$replacement] = true;
 
             DB::table('accounts')->where('id', $row['id'])->update(['slug' => $replacement]);
@@ -123,27 +124,18 @@ return new class extends Migration
             && str_ends_with(strtolower($iban), $tail);
     }
 
+    // Through the ledger's own producer, not a copy of it: this writes into
+    // the same unique(user_id, slug) the runtime walk writes into, and a
+    // second spelling of the base or of the suffix would hand out a slug the
+    // other one believes is free.
     /**
      * @param  array<string, true>  $taken
      */
-    private static function firstFree(string $base, array $taken): string
+    private static function firstFree(string $name, array $taken): string
     {
-        if (! isset($taken[$base])) {
-            return $base;
-        }
-
-        $suffix = 2;
-        while (isset($taken[$base.'-'.$suffix])) {
-            $suffix++;
-        }
-
-        return $base.'-'.$suffix;
-    }
-
-    private static function baseSlug(string $name): string
-    {
-        $slug = Str::slug($name);
-
-        return $slug === '' ? 'account' : $slug;
+        return UniqueSlug::walk(
+            AccountSlugResolver::slugify($name),
+            static fn (string $slug): bool => ! isset($taken[$slug]),
+        );
     }
 };

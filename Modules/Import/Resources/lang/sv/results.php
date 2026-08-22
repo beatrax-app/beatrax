@@ -25,6 +25,5 @@ return [
         'detail' => 'Inläsaren rapporterade: :reason',
         'duplicate' => 'Rad :row fanns redan bland dina transaktioner.',
         'more' => '+ :count listas inte',
-        'unknown_reason' => 'Ingen orsak registrerades.',
     ],
 ];

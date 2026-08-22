@@ -9,6 +9,7 @@ return [
     'copy' => 'Kopioi koodit',
     'copied' => 'Kopioitu',
     'copy_failed' => 'Kopiointi ei onnistunut. Kirjoita koodit muistiin.',
+    'save_failed' => 'Tiedoston tallennus ei onnistunut. Kirjoita koodit muistiin.',
     'download' => 'Lataa .txt-tiedostona',
 
     'saved_as' => 'Tallennettu nimellä beatrax-recovery-codes-:username.txt',

@@ -83,7 +83,7 @@ final class GoalProgressQuery
 
     /**
      * @param  array<int, array{balance: int, currency: string, potId: int}>  $linkedPots
-     * @param  array<int, list<array{amountMinor: int, currency: string}>>  $attributed
+     * @param  array<int, list<array{amountMinor: int, currency: string, postedAt: string}>>  $attributed
      */
     private function buildRow(stdClass $row, array $linkedPots, array $attributed, User $user): GoalProgressRow
     {
@@ -106,7 +106,7 @@ final class GoalProgressQuery
         };
 
         ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon, 'stalled' => $stalled] =
-            $this->projection->project($goal, $contributedMinor, $user, $linkedPot);
+            $this->projection->project($goal, $contributedMinor, $user, $linkedPot, $attributed[$goalId] ?? []);
 
         return new GoalProgressRow(
             id: $goalId,
@@ -139,7 +139,7 @@ final class GoalProgressQuery
     }
 
     /**
-     * @param  list<array{amountMinor: int, currency: string}>  $contributions
+     * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $contributions
      */
     private function attributedContribution(array $contributions, string $targetCurrency): int
     {
@@ -157,7 +157,7 @@ final class GoalProgressQuery
     // projection's observation window, never the sum.
     /**
      * @param  list<int>  $goalIds
-     * @return array<int, list<array{amountMinor: int, currency: string}>>
+     * @return array<int, list<array{amountMinor: int, currency: string, postedAt: string}>>
      */
     private function attributedAmountsByGoalId(User $user, array $goalIds): array
     {
@@ -165,13 +165,14 @@ final class GoalProgressQuery
             ->join('transactions', 'goal_contributions.transaction_id', '=', 'transactions.id')
             ->where('goal_contributions.user_id', $user->id)
             ->whereIn('goal_contributions.goal_id', $goalIds)
-            ->get(['goal_contributions.goal_id', 'transactions.amount_minor', 'transactions.currency']);
+            ->get(['goal_contributions.goal_id', 'transactions.amount_minor', 'transactions.currency', 'transactions.posted_at']);
 
         $byGoal = [];
         foreach ($rows as $row) {
             $byGoal[self::toInt($row->goal_id)][] = [
                 'amountMinor' => self::toInt($row->amount_minor),
                 'currency' => self::toString($row->currency),
+                'postedAt' => self::toString($row->posted_at),
             ];
         }
 

@@ -100,10 +100,10 @@ final class TransferPairer implements PairsTransferLegs
      */
     private static function transferTypes(): array
     {
-        return array_values(array_map(
+        return array_map(
             static fn (string $value): TransactionType => TransactionType::from($value),
             TransactionType::transferValues(),
-        ));
+        );
     }
 
     private function resolvePartnerAccountId(string $plainIban, User $user): ?int

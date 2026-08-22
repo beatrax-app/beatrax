@@ -25,6 +25,5 @@ return [
         'detail' => 'A beolvasó jelentése: :reason',
         'duplicate' => 'A :row. sor már szerepelt a főkönyvedben.',
         'more' => '+ :count nincs felsorolva',
-        'unknown_reason' => 'Nem rögzítettünk okot.',
     ],
 ];

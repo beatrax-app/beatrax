@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
@@ -225,7 +226,7 @@
                     $emailScanCount = count($emailScanHealth->lines) + $emailScanHealth->overflowCount;
                 @endphp
                 <a
-                    href="{{ route('inboxes.index') }}"
+                    href="{{ Destination::Email->url() }}"
                     class="block rounded-lg transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                     aria-label="{{ Lang::choice('core::dashboard.email_scan_health', $emailScanCount) }}"
                 >
@@ -279,7 +280,7 @@
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.recent_transactions') }}</h2>
                 <a
-                    href="{{ route('transactions.index') }}"
+                    href="{{ Destination::Transactions->url() }}"
                     class="tap-link text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
                 >{{ Lang::get('core::dashboard.view_all') }}</a>
             </div>
@@ -349,7 +350,7 @@
                          {{ }} would escape it to &#039;. No user data flows here. --}}
                     <p class="text-xs text-slate-500 dark:text-slate-400">{!! Lang::get('core::dashboard.reauth.body') !!}</p>
                     <a
-                        href="{{ route('inboxes.index') }}"
+                        href="{{ Destination::Email->url() }}"
                         class="text-xs text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"
                     >{{ Lang::get('core::dashboard.reauth.link') }}</a>
                 </div>

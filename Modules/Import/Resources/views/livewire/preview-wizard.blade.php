@@ -276,7 +276,7 @@
                                      the reader's user id. --}}
                                 <span class="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20 dark:bg-rose-950 dark:text-rose-500">{{ Lang::get('import::preview.status.error') }}</span>
                                 <div class="mt-1 text-xs text-rose-700 dark:text-rose-400">
-                                    {{ ($row->errorReason ?? ImportFailureReason::RowUnreadable)->label() }}
+                                    {{ ImportFailureReason::labelFor($row->errorReason) }}
                                 </div>
                                 @if ($row->errorDetail !== null)
                                     <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $row->errorDetail }}</div>

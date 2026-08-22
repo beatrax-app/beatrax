@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Events\QueryExecuted;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Ledger\Models\Account;

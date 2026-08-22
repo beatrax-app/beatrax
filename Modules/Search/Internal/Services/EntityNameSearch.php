@@ -106,8 +106,9 @@ final class EntityNameSearch
     }
 
     // Matching the stored name alone inverts what the reader sees, because a
-    // default category stores English and displays a translation. Matching
-    // moves to PHP for that, and the cap moves with it.
+    // default category stores English and displays a translation. The reader's
+    // wording is not a column, so the slugs it matches are named in PHP first
+    // and the row match — and the cap with it — stays one bounded statement.
     /**
      * @link ../../../../.docs/features/ledger/category-display-names.md
      *
@@ -115,6 +116,8 @@ final class EntityNameSearch
      */
     private function categoryMatches(User $user, string $q): array
     {
+        $slugs = self::slugsDisplayingSubstring($q);
+
         $rows = $this->db->connection()
             ->table('categories')
             ->where(function (Builder $scope) use ($user): void {
@@ -122,27 +125,25 @@ final class EntityNameSearch
                 // every user sees the shared seeded set.
                 $scope->where('user_id', $user->id)->orWhereNull('user_id');
             })
+            ->where(function (Builder $match) use ($q, $slugs): void {
+                $match->where('name', 'LIKE', $this->likePattern($q));
+                if ($slugs !== []) {
+                    $match->orWhere(function (Builder $translated) use ($slugs): void {
+                        $translated->where('name_is_default', true)->whereIn('slug', $slugs);
+                    });
+                }
+            })
             ->orderBy('id')
+            ->limit(self::ENTITY_MATCH_LIMIT)
             ->get(['id', ...CategoryDisplayName::bareColumns()]);
 
-        $needle = mb_strtolower($q);
         $results = [];
         foreach ($rows as $row) {
-            if (count($results) >= self::ENTITY_MATCH_LIMIT) {
-                break;
-            }
-
-            $label = CategoryDisplayName::fromRow($row) ?? '';
-            $stored = is_string($row->name) ? $row->name : '';
-            if (! self::contains($label, $needle) && ! self::contains($stored, $needle)) {
-                continue;
-            }
-
             $id = $this->intField($row, 'id');
             $results[] = [
                 'id' => $id,
                 'type' => 'category',
-                'label' => $label,
+                'label' => CategoryDisplayName::fromRow($row) ?? '',
                 'url' => '/transactions?category='.$id,
             ];
         }
@@ -150,9 +151,21 @@ final class EntityNameSearch
         return $results;
     }
 
-    private static function contains(string $haystack, string $needle): bool
+    /**
+     * @return list<string>
+     */
+    private static function slugsDisplayingSubstring(string $q): array
     {
-        return $haystack !== '' && str_contains(mb_strtolower($haystack), $needle);
+        $needle = mb_strtolower($q);
+
+        $slugs = [];
+        foreach (CategoryDisplayName::displayNamesBySlug() as $slug => $displayed) {
+            if (str_contains(mb_strtolower($displayed), $needle)) {
+                $slugs[] = $slug;
+            }
+        }
+
+        return $slugs;
     }
 
     // Goals and pots share the same shape: own-rows-only, LIKE on `name`,

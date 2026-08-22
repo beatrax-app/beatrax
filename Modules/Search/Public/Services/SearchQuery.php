@@ -249,9 +249,10 @@ final class SearchQuery
         return self::toIntList($query->pluck('id')->all());
     }
 
-    // Matching the stored name alone inverts what the reader sees, because a
-    // default category stores English and displays a translation. The stored
-    // name is still tried, so the English and a rename both keep working.
+    // A default category stores English and displays a translation, so the
+    // reader's wording is not a column: the slugs it prefixes are named in PHP
+    // and the rows matched in SQL. The stored name is still tried, so the
+    // English and a rename both keep working.
     /**
      * @link ../../../../.docs/features/ledger/category-display-names.md
      *
@@ -261,21 +262,30 @@ final class SearchQuery
     {
         $needle = mb_strtolower($name);
 
-        $rows = $this->db->connection()
+        $slugs = [];
+        foreach (CategoryDisplayName::displayNamesBySlug() as $slug => $displayed) {
+            if (self::startsWith($displayed, $needle)) {
+                $slugs[] = $slug;
+            }
+        }
+
+        $like = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $name).'%';
+
+        $query = $this->db->connection()
             ->table('categories')
             ->where(function (Builder $scope) use ($user): void {
                 $scope->where('user_id', $user->id)->orWhereNull('user_id');
             })
-            ->get(['id', ...CategoryDisplayName::bareColumns()]);
+            ->where(function (Builder $match) use ($like, $slugs): void {
+                $match->whereRaw("LOWER(name) LIKE LOWER(?) ESCAPE '\\'", [$like]);
+                if ($slugs !== []) {
+                    $match->orWhere(function (Builder $translated) use ($slugs): void {
+                        $translated->where('name_is_default', true)->whereIn('slug', $slugs);
+                    });
+                }
+            });
 
-        $ids = [];
-        foreach ($rows as $row) {
-            if (self::startsWith(CategoryDisplayName::fromRow($row) ?? '', $needle) || self::startsWith(self::toString($row->name ?? null), $needle)) {
-                $ids[] = self::toInt($row->id ?? null);
-            }
-        }
-
-        return $ids;
+        return self::toIntList($query->pluck('id')->all());
     }
 
     /**

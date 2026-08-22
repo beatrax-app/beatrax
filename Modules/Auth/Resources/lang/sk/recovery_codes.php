@@ -9,6 +9,7 @@ return [
     'copy' => 'Kopírovať kódy',
     'copied' => 'Skopírované',
     'copy_failed' => 'Kopírovanie sa nepodarilo. Kódy si radšej opíšte.',
+    'save_failed' => 'Súbor sa nepodarilo uložiť. Kódy si radšej opíšte.',
     'download' => 'Stiahnuť ako .txt',
 
     'saved_as' => 'Uložené ako beatrax-recovery-codes-:username.txt',

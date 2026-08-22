@@ -9,6 +9,7 @@ return [
     'copy' => 'Kodları kopyala',
     'copied' => 'Kopyalandı',
     'copy_failed' => 'Kopyalanamadı. Kodları not edin.',
+    'save_failed' => 'Dosya kaydedilemedi. Kodları not edin.',
     'download' => '.txt olarak indir',
 
     'saved_as' => 'beatrax-recovery-codes-:username.txt olarak kaydedildi',

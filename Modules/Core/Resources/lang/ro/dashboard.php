@@ -17,7 +17,7 @@ return [
     'net' => 'Net',
 
     'status_tiles_aria' => 'Carduri de stare',
-    'email_scan_health' => 'Starea scanării e-mailului — :count conectate căsuță poștală|Starea scanării e-mailului — :count conectate căsuțe poștale|Starea scanării e-mailului — :count conectate de căsuțe poștale',
+    'email_scan_health' => 'Starea scanării e-mailului — :count căsuță poștală conectată|Starea scanării e-mailului — :count căsuțe poștale conectate|Starea scanării e-mailului — :count de căsuțe poștale conectate',
 
     'top_spending' => 'Cele mai mari cheltuieli',
     'no_expenses' => 'Încă nu există cheltuieli categorisite.',

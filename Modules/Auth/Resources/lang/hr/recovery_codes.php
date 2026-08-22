@@ -9,6 +9,7 @@ return [
     'copy' => 'Kopiraj kodove',
     'copied' => 'Kopirano',
     'copy_failed' => 'Kopiranje nije uspjelo. Zapišite kodove.',
+    'save_failed' => 'Datoteku nije bilo moguće spremiti. Zapišite kodove.',
     'download' => 'Preuzmi kao .txt',
 
     'saved_as' => 'Spremljeno kao beatrax-recovery-codes-:username.txt',

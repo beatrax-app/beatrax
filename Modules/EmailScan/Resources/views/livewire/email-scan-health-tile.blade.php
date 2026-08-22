@@ -4,7 +4,7 @@
        $tile — Modules\EmailScan\Public\Dto\EmailScanHealthTile DTO.
 
      The host dashboard view (`shell::livewire.dashboard`) wraps this
-     partial in an `<a href="{{ route('inboxes.index') }}">` so the whole
+     partial in an anchor to the Email destination so the whole
      card is clickable; the wrapper anchor owns the hover affordance. The
      partial body lists up to three per-inbox lines + an optional
      "+N more" footer when more inboxes are connected.
