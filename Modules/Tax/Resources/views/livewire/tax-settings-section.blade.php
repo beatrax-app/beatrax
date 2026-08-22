@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Tax\Public\Enums\TaxCategoryStatus')
 {{--
     Tax settings — deduction categories, plus a signpost to the country
     preference that decides which of them are offered.
@@ -40,8 +41,8 @@
     <div class="body-side">
         @php
             /** @var list<\stdClass> $categories */
-            $active   = array_filter((array) $categories, fn ($c) => ($c->status ?? '') === 'active');
-            $archived = array_filter((array) $categories, fn ($c) => ($c->status ?? '') === 'archived');
+            $active   = array_filter((array) $categories, fn ($c) => ($c->status ?? '') === TaxCategoryStatus::Active->value);
+            $archived = array_filter((array) $categories, fn ($c) => ($c->status ?? '') === TaxCategoryStatus::Archived->value);
         @endphp
 
         @if (empty($active) && $countryLabel === '')

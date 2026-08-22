@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter as InternalTaxCategoryWriter;
+use Modules\Tax\Public\Enums\TaxCategoryStatus;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class TaxCategoryWriter
@@ -61,7 +62,7 @@ final class TaxCategoryWriter
     {
         $this->writer->archive($userId, $categoryId);
 
-        $this->capture($userId, $categoryId, 'edit', ['status' => 'archived']);
+        $this->capture($userId, $categoryId, 'edit', ['status' => TaxCategoryStatus::Archived->value]);
     }
 
     /**
@@ -71,7 +72,7 @@ final class TaxCategoryWriter
     {
         $this->writer->unarchive($userId, $categoryId);
 
-        $this->capture($userId, $categoryId, 'edit', ['status' => 'active']);
+        $this->capture($userId, $categoryId, 'edit', ['status' => TaxCategoryStatus::Active->value]);
     }
 
     /**
