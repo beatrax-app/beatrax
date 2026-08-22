@@ -1357,6 +1357,70 @@ it resolves `OpLogWriter` inside each handler and treats a
 `BindingResolutionException` as "no writer yet, skip" — and it is asserted clean
 by the guard for that reason.
 
+## A class in a Blade template that matches no rule
+
+`tests/Contracts/BladeClassesResolveToARuleArchTest.php`
+
+A class name written in a template that no stylesheet defines renders
+**unstyled**. Nothing reports it: the element is in the DOM, the route answers
+200, and every assertion over the markup passes, because the markup is exactly
+what the template said. Only a reader looking at the screen can tell.
+
+Found on a real Android phone during round 5. The onboarding starting-balance
+card's amount field had no box around it — all eleven of its `balance-card-*`
+classes were used in the blade and defined nowhere. Sweeping the tree for the
+same shape turned up 56 classes across six modules, Onboarding and DevMode
+holding most of them.
+
+The check reads the **compiled** stylesheet under `public/build/assets/`, which
+carries every Tailwind utility actually generated for this tree alongside every
+custom rule, so a class absent from it is inert rather than merely absent from
+source. A class defined in the template's own `<style>` block counts as styled —
+the tax PDF is rendered by dompdf against its own sheet and legitimately does
+this. It fails loudly when `public/build` is missing rather than skipping,
+because an invariant that quietly does nothing is worse than none.
+
+It is deliberately narrow: only fully static `class="..."` attributes are read,
+since a Blade expression cannot be evaluated by a scan, and only lowercase
+hyphenated tokens are considered, which leaves single-word classes and Tailwind's
+own variant syntax out of scope. That narrowness has a cost worth knowing —
+`per-file-chip` is composed through `$attributes->class([$stateClass])`, so no
+scan of `class="..."` reaches it, and the connector chip was found unstyled by
+reading the component rather than by the guard. A class a test selects on but
+nothing paints is allowlisted in the test with its reason.
+
+The compiled sheet is read as-is, so the build must be current: a utility added
+to a template since the last `npm run build` has not been generated yet and
+reads here as though it matched nothing. The failure message says so, because
+that is where somebody meets it.
+
+## A validation rule declared but never run
+
+`tests/Contracts/DeclaredValidationIsEnforcedArchTest.php`
+
+Livewire enforces a `#[Validate]` rule only when the component actually calls
+`validate()`. The attribute alone does nothing. A component that declares a rule
+and never runs it reads as validated in review — the rule is right there above
+the property — and accepts anything at runtime.
+
+The app lock declared its PIN as `^[0-9]{6,10}$` on four properties and never
+validated any of them; the only validation call in the component was a
+`validateOnly()` for an unrelated timeout field. The real gate checked two
+things, that the PIN met a minimum length and that both boxes matched. So a PIN
+could contain letters and could exceed the declared maximum, while the unlock
+surface is a numeric keypad — a PIN that can be set and then never typed again.
+Found on an iPhone in round 5 by an agent that locked itself out and recovered
+through sign-out and a password reset.
+
+The rule that broke was declared in one place and enforced in another, which is
+how the two came to disagree; the fix shape is a single definition of what a PIN
+is, rather than a second copy kept in step by hand.
+
+Any `validate()` call at all exempts a component, including one passed explicit
+rules, so only a component that never validates anything is reported. That
+narrowness is deliberate — the guard exists to catch a rule nobody runs, not to
+adjudicate which rules a call covers.
+
 ## A Livewire redirect from `mount()`
 
 `$this->redirect()` calls `skipRender()`. On a Livewire *update* that is
