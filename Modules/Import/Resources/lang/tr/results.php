@@ -25,6 +25,5 @@ return [
         'detail' => 'Okuyucunun bildirdiği: :reason',
         'duplicate' => 'Satır :row zaten defterindeydi.',
         'more' => '+ :count listelenmedi',
-        'unknown_reason' => 'Herhangi bir neden kaydedilmedi.',
     ],
 ];

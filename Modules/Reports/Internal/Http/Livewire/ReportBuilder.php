@@ -336,11 +336,11 @@ final class ReportBuilder extends Component
      */
     private function availableCounterparties(CounterpartyDisplayName $counterpartyNames, int $userId): array
     {
-        return $counterpartyNames->forUser($userId)
+        return array_values($counterpartyNames->forUser($userId)
             ->map(static fn (stdClass $row): array => [
-                'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'name' => is_string($row->display_name) ? $row->display_name : '',
+                'id' => $row->id,
+                'name' => $row->display_name,
             ])
-            ->all();
+            ->all());
     }
 }

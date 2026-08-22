@@ -7,6 +7,7 @@
     full goals-page card. Tabular numerics throughout.
 --}}
 
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Goals\Internal\Enums\GoalProgressState')
 
@@ -15,7 +16,7 @@
     <div class="flex items-center justify-between">
         <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.page.title') }}</p>
         <a
-            href="{{ route('goals.index') }}"
+            href="{{ Destination::Goals->url() }}"
             class="tap-link text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
         >{{ Lang::get('goals::messages.summary.see_all') }}</a>
     </div>
@@ -25,7 +26,7 @@
         <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('goals::messages.summary.no_goals') }}
             <a
-                href="{{ route('goals.index') }}"
+                href="{{ Destination::Goals->url() }}"
                 class="text-slate-900 underline underline-offset-2 hover:no-underline dark:text-slate-100"
             >{{ Lang::get('goals::messages.summary.add_first') }}</a>
         </p>

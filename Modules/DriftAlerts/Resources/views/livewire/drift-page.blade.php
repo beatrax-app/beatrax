@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\DriftAlerts\Public\Enums\DriftPageTab')
 @use('Modules\DriftAlerts\Public\Enums\DriftPageType')
@@ -8,7 +9,7 @@
     `x-data="{ open: false }"` collapse toggle. Per-alert actions:
     Acknowledge (emerald primary on single-alert groups, slate
     secondary inside multi-alert groups), Snooze (slate, opens a
-    1w / 1m / 3m popover), "I cancelled this" (slate; dispatches the
+    SnoozeWindow popover), "I cancelled this" (slate; dispatches the
     DismissDriftAlertAsCancelled action and emits the corresponding
     Public event).
 
@@ -74,12 +75,12 @@
         </div>
         @if ($pageType === DriftPageType::Drift)
             <a
-                href="{{ route('settings') }}#drift-threshold"
+                href="{{ Destination::Settings->url() }}#drift-threshold"
                 class="shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
             >{{ Lang::get('drift-alerts::alerts.adjust_threshold') }}</a>
         @else
             <a
-                href="{{ route('settings') }}#anomaly-detection"
+                href="{{ Destination::Settings->url() }}#anomaly-detection"
                 class="shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
             >{{ Lang::get('drift-alerts::alerts.adjust_sensitivity') }}</a>
         @endif
@@ -195,7 +196,7 @@
                     <x-slot:body>
                         {{ Lang::get('drift-alerts::alerts.empty_open.body') }}
                         <a
-                            href="{{ route('settings') }}#drift-threshold"
+                            href="{{ Destination::Settings->url() }}#drift-threshold"
                             class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
                         >{{ Lang::get('drift-alerts::alerts.empty_open.link') }}</a>.
                     </x-slot:body>

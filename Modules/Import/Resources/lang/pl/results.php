@@ -25,6 +25,5 @@ return [
         'detail' => 'Czytnik zgłosił: :reason',
         'duplicate' => 'Wiersz :row był już w Twojej księdze.',
         'more' => '+ :count niewymienionych',
-        'unknown_reason' => 'Nie zapisano powodu.',
     ],
 ];

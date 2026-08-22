@@ -7,6 +7,7 @@ namespace Modules\Mobile\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 
@@ -17,7 +18,7 @@ final class MobileWelcomeScreen extends Component
     public function mount(MobileFirstLaunchBootstrap $bootstrap): void
     {
         if (! $bootstrap->isFreshInstall()) {
-            $this->redirectRoute('dashboard');
+            $this->redirectRoute(Destination::Dashboard->routeName());
         }
     }
 

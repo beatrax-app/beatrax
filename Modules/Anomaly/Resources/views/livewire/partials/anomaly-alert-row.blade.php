@@ -17,7 +17,7 @@
       - $tab : DriftPageTab
       - $fmt($money) : currency-aware Money formatter
       - $tintFor($alert) : direction-aware Tailwind text-color class
-      - $snoozeTargets : array<'1w'|'1m'|'3m', string ISO8601>
+      - $snoozeTargets : SnoozeWindow::targetsFrom() output
 
     Blade default `{{ }}` escaping for every interpolation.
 --}}

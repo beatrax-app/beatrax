@@ -7,7 +7,11 @@ return [
     'native_unlock_failed' => 'Neizdevās atbloķēt. Ievadiet PIN kodu.',
     'page_title' => 'Atbloķēt · Beatrax',
     'sign_out' => 'Atteikties',
-    'forgot_pin' => 'Aizmirsāt PIN kodu? Atsakieties — varat pieteikties atkārtoti ar konta paroli un iestatīt jaunu PIN kodu. Dati netiek zaudēti.',
+    // i18n-review: lv · forgot_pin — "Atteikties" now matches the button word for
+    // word, but the same verb is this app's word for cancelling a subscription
+    // (drift-alerts cancel_impact). A native reader should say whether all three
+    // sign_out labels want "Izrakstīties" instead.
+    'forgot_pin' => 'Aizmirsāt PIN kodu? Atteikties — varat pieteikties atkārtoti ar konta paroli un iestatīt jaunu PIN kodu. Dati netiek zaudēti.',
 
     'digits_suffix' => 'ievadīti cipari',
     'pad_label' => 'PIN koda tastatūra',

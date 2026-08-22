@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Notifications\Internal\Support\CopyLine;
@@ -40,7 +41,7 @@ final class PersistForecastShortfall
                 occurrence: $event->startsAt->toDateString(),
                 copy: $copy,
                 params: ['target_kind' => 'forecast'],
-                deepLinkRoute: $this->urls->route('forecast.index'),
+                deepLinkRoute: Destination::Forecasts->urlFrom($this->urls),
             ));
             $this->writer->write($draft);
         } catch (Throwable $e) {

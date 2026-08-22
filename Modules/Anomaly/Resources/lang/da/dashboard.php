@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 return [
     'title' => 'Usædvanlige posteringer',
-    'aria_label' => 'Usædvanlige posteringer — :count åbne',
+    'aria_label' => 'Usædvanlige posteringer — :open',
 
-    'open' => 'åbne',
+    'open' => ':count åben|:count åbne',
     'detectors' => [
-        'large' => 'stor',
-        'first_time' => 'første gang',
-        'duplicate' => 'dublet',
+        'large' => ':count stor|:count store',
+        'first_time' => ':count første gang|:count første gang',
+        'duplicate' => ':count dublet|:count dubletter',
     ],
 ];

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Navigation\Destination;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\Shell\Public\Navigation\AppNavigation;
-use Modules\Shell\Public\Navigation\Destination;
 
 // The sidebar and the command palette are two renderings of one roster. They
 // were two hand-kept lists, and the palette fell thirteen destinations behind

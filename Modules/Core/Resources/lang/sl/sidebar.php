@@ -82,7 +82,7 @@ return [
         'anomaly' => ':count odprta nenavadna bremenitev|:count odprti nenavadni bremenitvi|:count odprte nenavadne bremenitve|:count odprtih nenavadnih bremenitev',
         'notifications' => ':count neprebrano obvestilo|:count neprebrani obvestili|:count neprebrana obvestila|:count neprebranih obvestil',
         'budgets' => ':count proračun|:count proračuna|:count proračuni|:count proračunov',
-        'tax' => ':count postavka, označena kot davčno pomembna|:count postavki, označeni kot davčno pomembni|:count postavke, označene kot davčno pomembne|:count postavk, označenih kot davčno pomembne',
+        'tax' => ':count postavka, označena kot davčno pomembna|:count postavki, označeni kot davčno pomembni|:count postavke, označene kot davčno pomembne|:count postavk, označenih kot davčno pomembnih',
         'subscriptions' => ':count naročnina|:count naročnini|:count naročnine|:count naročnin',
         'imports' => ':count uvoz|:count uvoza|:count uvozi|:count uvozov',
         'chains' => ':count povezava verige čaka na pregled|:count povezavi verige čakata na pregled|:count povezave verige čakajo na pregled|:count povezav verige čaka na pregled',

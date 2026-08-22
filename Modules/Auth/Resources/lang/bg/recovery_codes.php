@@ -9,6 +9,7 @@ return [
     'copy' => 'Копирай кодовете',
     'copied' => 'Копирано',
     'copy_failed' => 'Копирането не бе успешно. Запишете кодовете.',
+    'save_failed' => 'Файлът не можа да бъде запазен. Запишете кодовете.',
     'download' => 'Изтегли като .txt',
 
     'saved_as' => 'Запазено като beatrax-recovery-codes-:username.txt',

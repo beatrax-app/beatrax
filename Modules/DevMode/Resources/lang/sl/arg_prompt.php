@@ -16,6 +16,10 @@ return [
         'unknown_command' => 'Neznan ukaz: :command',
         'missing' => 'Manjka :noun: :list',
         'invalid_args' => 'Eden ali več argumentov ni veljaven.',
-        'arg' => 'argument|argumentov|argumentov|argumentov',
+        // i18n-review: sl · errors.arg — the case is governed by "Manjka" over in
+        // errors.missing and no numeral ever reaches this noun, so the dual has to be
+        // carried by the noun alone. That verb cannot agree in number with what lands
+        // here; a native should say whether the pair reads at two and at five.
+        'arg' => 'argument|argumenta|argumenti|argumenti',
     ],
 ];

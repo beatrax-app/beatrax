@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     /recurring/series/{id} drill-in page — full amount-over-time chart
@@ -30,7 +31,7 @@
          The page title is the series display name, truncated to one line.
          Must live INSIDE the root div — Livewire allows only one root element. --}}
     <x-core::mobile-top-bar
-        :backUrl="route('recurring.index')"
+        :backUrl="Destination::Recurring->url()"
         :title="$series->displayName()"
     />
     <header class="mb-8 flex items-start justify-between gap-4">
@@ -91,7 +92,7 @@
             </div>
             {{-- Back link: visible at desktop (the mobile top bar handles phone) --}}
             <a
-                href="{{ route('recurring.index') }}"
+                href="{{ Destination::Recurring->url() }}"
                 class="hidden md:inline text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
             >{{ Lang::get('recurring::detail.back') }}</a>
         </div>

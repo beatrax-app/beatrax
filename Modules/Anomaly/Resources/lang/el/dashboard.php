@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 return [
     'title' => 'Ασυνήθιστες χρεώσεις',
-    'aria_label' => 'Ασυνήθιστες χρεώσεις — :count σε εκκρεμότητα',
+    'aria_label' => 'Ασυνήθιστες χρεώσεις — :open',
 
-    'open' => 'σε εκκρεμότητα',
+    'open' => ':count σε εκκρεμότητα|:count σε εκκρεμότητα',
     'detectors' => [
-        'large' => 'μεγάλη',
-        'first_time' => 'πρώτη φορά',
-        'duplicate' => 'διπλότυπη',
+        'large' => ':count μεγάλη|:count μεγάλες',
+        'first_time' => ':count πρώτη φορά|:count πρώτη φορά',
+        'duplicate' => ':count διπλότυπη|:count διπλότυπες',
     ],
 ];

@@ -25,6 +25,5 @@ return [
         'detail' => 'Cititorul a raportat: :reason',
         'duplicate' => 'Rândul :row era deja în registrul tău.',
         'more' => '+ :count nelistate',
-        'unknown_reason' => 'Nu a fost înregistrat niciun motiv.',
     ],
 ];

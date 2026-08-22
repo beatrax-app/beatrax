@@ -25,6 +25,5 @@ return [
         'detail' => 'The reader reported: :reason',
         'duplicate' => 'Row :row was already in your ledger.',
         'more' => '+ :count not listed',
-        'unknown_reason' => 'No reason was recorded.',
     ],
 ];

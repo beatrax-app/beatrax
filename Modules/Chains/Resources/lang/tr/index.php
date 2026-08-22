@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(karşı taraf yok)',
     'open_from_row' => 'Kaynak satırı aç',
     'open_to_row' => 'Hedef satırı aç',
-    'leg_count' => ':count ödeme|:count ödeme',
+    'leg_count' => ':count ödeme',
     'state_aria' => 'Durum: :state',
 
     'kind' => [

@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Modules\Goals\Public\Services;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Goals\Models\Goal;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -15,8 +13,6 @@ use Modules\Pots\Public\Services\PotBalanceQuery;
 
 final class GoalProjectionService
 {
-    use CoercesScalars;
-
     private const int TRAILING_WINDOW_DAYS = 90;
 
     private const int HORIZON_LIMIT_DAYS = 90;
@@ -33,7 +29,6 @@ final class GoalProjectionService
     private const array STALLED = ['date' => null, 'beyondHorizon' => false, 'stalled' => true];
 
     public function __construct(
-        private readonly DatabaseManager $db,
         private readonly ExchangeRateService $fx,
         private readonly PotBalanceQuery $potBalance,
     ) {}
@@ -44,9 +39,10 @@ final class GoalProjectionService
     // window has plenty of history and nothing recent in it.
     /**
      * @param  array{balance: int, currency: string, potId: int}|null  $linkedPot
+     * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed  every attribution on this goal, whenever it posted
      * @return array{date: ?string, beyondHorizon: bool, stalled: bool}
      */
-    public function project(Goal $goal, int $contributedMinor, User $user, ?array $linkedPot = null): array
+    public function project(Goal $goal, int $contributedMinor, User $user, ?array $linkedPot, array $attributed): array
     {
         if ($contributedMinor >= $goal->target_minor) {
             return self::NO_PROJECTION;
@@ -56,7 +52,7 @@ final class GoalProjectionService
             return self::NO_PROJECTION;
         }
 
-        $dailyRateMinor = $this->dailyContributionRate($goal, $user, $linkedPot);
+        $dailyRateMinor = $this->dailyContributionRate($goal, $user, $linkedPot, $attributed);
         if ($dailyRateMinor <= 0.0) {
             return self::STALLED;
         }
@@ -76,15 +72,16 @@ final class GoalProjectionService
     // the level can never describe different money.
     /**
      * @param  array{balance: int, currency: string, potId: int}|null  $linkedPot
+     * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed
      */
-    private function dailyContributionRate(Goal $goal, User $user, ?array $linkedPot): float
+    private function dailyContributionRate(Goal $goal, User $user, ?array $linkedPot, array $attributed): float
     {
         $effectiveStart = $this->effectiveStart($goal);
         $elapsedDays = $this->observedDays($goal);
 
         $windowSum = $linkedPot !== null
             ? $this->potWindowSum($linkedPot, $goal->target_currency, $effectiveStart, $user)
-            : $this->attributedWindowSum($goal, $effectiveStart, $user);
+            : $this->attributedWindowSum($goal, $effectiveStart, $attributed);
 
         return $windowSum / max(1, $elapsedDays);
     }
@@ -119,22 +116,22 @@ final class GoalProjectionService
         return $this->convert($minor, $linkedPot['currency'], $targetCurrency);
     }
 
-    private function attributedWindowSum(Goal $goal, string $since, User $user): int
+    // The caller has already read every attribution on this goal to total it,
+    // so the window is a filter over those rather than a second statement per
+    // goal. `posted_at` is a date column and the bound is a date string, which
+    // compare the same way here as they did in SQL.
+    /**
+     * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed
+     */
+    private function attributedWindowSum(Goal $goal, string $since, array $attributed): int
     {
-        $rows = $this->db->connection()->table('goal_contributions')
-            ->join('transactions', 'goal_contributions.transaction_id', '=', 'transactions.id')
-            ->where('goal_contributions.user_id', $user->id)
-            ->where('goal_contributions.goal_id', $goal->id)
-            ->where('transactions.posted_at', '>=', $since)
-            ->get(['transactions.amount_minor', 'transactions.currency']);
-
         $sum = 0;
-        foreach ($rows as $row) {
-            $sum += $this->convert(
-                self::toInt($row->amount_minor),
-                self::toString($row->currency),
-                $goal->target_currency,
-            );
+        foreach ($attributed as $contribution) {
+            if ($contribution['postedAt'] < $since) {
+                continue;
+            }
+
+            $sum += $this->convert($contribution['amountMinor'], $contribution['currency'], $goal->target_currency);
         }
 
         return $sum;

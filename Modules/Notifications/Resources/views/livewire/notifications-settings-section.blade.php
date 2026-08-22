@@ -108,6 +108,7 @@
                         <x-core::time-input
                             field-id="quietHoursFrom"
                             wire:model="quietHoursFrom"
+                            :aria-label="Lang::get('notifications::settings.quiet_hours.from')"
                         />
                     </div>
                     <div class="space-y-1">
@@ -115,6 +116,7 @@
                         <x-core::time-input
                             field-id="quietHoursTo"
                             wire:model="quietHoursTo"
+                            :aria-label="Lang::get('notifications::settings.quiet_hours.to')"
                         />
                     </div>
                 </div>

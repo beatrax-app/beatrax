@@ -45,6 +45,10 @@ return [
         'settings' => 'Ayarlar',
     ],
 
+    // i18n-review: tr · hint.* — these tooltips address the reader with the polite
+    // imperative while the rest of the locale uses "sen"; the source and every
+    // other locale's body copy are informal. Turkish UI convention pulls the
+    // other way, so which register wins is a native call.
     'hint' => [
         'dashboard' => 'Son etkinliğe genel bakış',
         'transactions' => 'Tüm işlemlere göz atın',

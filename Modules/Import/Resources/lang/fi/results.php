@@ -25,6 +25,5 @@ return [
         'detail' => 'Lukija ilmoitti: :reason',
         'duplicate' => 'Rivi :row oli jo kirjanpidossasi.',
         'more' => '+ :count ei lueteltu',
-        'unknown_reason' => 'Syytä ei kirjattu.',
     ],
 ];

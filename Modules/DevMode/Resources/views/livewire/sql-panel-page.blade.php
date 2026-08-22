@@ -64,12 +64,11 @@
                                 </ul>
                             </div>
                         @endif
-                        <button
-                            type="button"
-                            class="pill-btn text-xs"
+                        <x-core::secondary-button
+                            size="sm"
                             wire:click="browseTable('{{ $table['name'] }}')"
                             data-testid="schema-browse-{{ $table['name'] }}"
-                        >{{ Lang::get('dev::sql.browse') }}</button>
+                        >{{ Lang::get('dev::sql.browse') }}</x-core::secondary-button>
                     </div>
                 </li>
             @endforeach
@@ -106,12 +105,10 @@
             ></textarea>
 
             <div class="mt-3 flex items-center justify-between">
-                <button
-                    type="button"
-                    class="pill-btn primary"
+                <x-core::neutral-button
                     wire:click="run"
                     data-testid="sql-run-button"
-                >{{ Lang::get('dev::sql.run') }}</button>
+                >{{ Lang::get('dev::sql.run') }}</x-core::neutral-button>
                 @if ($rowcount !== null)
                     <span class="text-xs text-[var(--color-text-muted)]" style="font-variant-numeric: tabular-nums;">
                         {{ Lang::choice('dev::sql.rows_meta', $rowcount, ['rows' => $rowcount, 'duration' => $durationMs]) }}

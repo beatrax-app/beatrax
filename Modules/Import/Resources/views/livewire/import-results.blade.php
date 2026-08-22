@@ -46,7 +46,7 @@
                                     {{ Lang::get('import::results.issues.file_stopped', ['row' => $issue->rowIndex + 1]) }}
                                 @endif
                             @else
-                                {{ Lang::get('import::results.issues.row', ['row' => ($issue->rowIndex ?? 0) + 1, 'reason' => $issue->reasonLabel() ?? Lang::get('import::results.issues.unknown_reason')]) }}
+                                {{ Lang::get('import::results.issues.row', ['row' => ($issue->rowIndex ?? 0) + 1, 'reason' => $issue->reasonLabel()]) }}
                             @endif
                             {{-- The detail is additional to the reason, never a substitute for
                                  it. Substituted, a reason with no detail behind it explained

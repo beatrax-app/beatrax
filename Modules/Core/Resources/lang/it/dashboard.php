@@ -17,7 +17,7 @@ return [
     'net' => 'Netto',
 
     'status_tiles_aria' => 'Riquadri di stato',
-    'email_scan_health' => 'Stato della scansione email — :count collegate casella|Stato della scansione email — :count collegate caselle',
+    'email_scan_health' => 'Stato della scansione email — :count casella collegata|Stato della scansione email — :count caselle collegate',
 
     'top_spending' => 'Spese principali',
     'no_expenses' => 'Ancora nessuna spesa categorizzata.',

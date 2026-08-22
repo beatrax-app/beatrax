@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 return [
     'title' => 'Szokatlan terhelések',
-    'aria_label' => 'Szokatlan terhelések — :count nyitott',
+    'aria_label' => 'Szokatlan terhelések — :open',
 
-    'open' => 'nyitott',
+    'open' => ':count nyitott|:count nyitott',
     'detectors' => [
-        'large' => 'nagy összegű',
-        'first_time' => 'első alkalom',
-        'duplicate' => 'duplikátum',
+        'large' => ':count nagy összegű|:count nagy összegű',
+        'first_time' => ':count első alkalom|:count első alkalom',
+        'duplicate' => ':count duplikátum|:count duplikátum',
     ],
 ];

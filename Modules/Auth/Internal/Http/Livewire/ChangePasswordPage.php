@@ -14,6 +14,7 @@ use Livewire\Component;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 
 // ForcePasswordChangeMiddleware redirects a user carrying the
@@ -72,7 +73,7 @@ final class ChangePasswordPage extends Component
             ->where('id', '!=', $session->getId())
             ->delete();
 
-        $this->redirect($urls->route('dashboard'), navigate: false);
+        $this->redirect(Destination::Dashboard->urlFrom($urls), navigate: false);
     }
 
     public function render(ViewFactory $views): View

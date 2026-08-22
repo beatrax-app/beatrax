@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Notifications\Internal\Support\CopyLine;
@@ -48,7 +49,7 @@ final class PersistDriftAlert
                 occurrence: (string) $event->driftAlertId,
                 copy: $copy,
                 params: ['target_kind' => 'series', 'target_id' => $event->recurringSeriesId],
-                deepLinkRoute: $this->urls->route('drift.index'),
+                deepLinkRoute: Destination::DriftAlerts->urlFrom($this->urls),
             ));
             $this->writer->write($draft);
         } catch (Throwable $e) {

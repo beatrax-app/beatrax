@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Budgets\Public\Events\BudgetThresholdCrossed;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Internal\Support\CopyLine;
 use Modules\Notifications\Internal\Support\CopyParam;
@@ -51,7 +52,7 @@ final class PersistBudgetNudge
                 occurrence: $event->period,
                 copy: $copy,
                 params: ['target_kind' => 'budget', 'target_id' => $event->categoryId],
-                deepLinkRoute: $this->urls->route('budgets.index'),
+                deepLinkRoute: Destination::Budgets->urlFrom($this->urls),
             ));
             $this->writer->write($draft);
         } catch (Throwable $e) {

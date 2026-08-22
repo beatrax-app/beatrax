@@ -25,6 +25,5 @@ return [
         'detail' => 'Innleseren meldte: :reason',
         'duplicate' => 'Rad :row var allerede i hovedboken din.',
         'more' => '+ :count ikke listet',
-        'unknown_reason' => 'Ingen årsak ble registrert.',
     ],
 ];

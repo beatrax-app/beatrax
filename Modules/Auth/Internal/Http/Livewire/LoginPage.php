@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\LoginAction;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 
 final class LoginPage extends Component
@@ -36,7 +37,7 @@ final class LoginPage extends Component
             return;
         }
 
-        $this->redirect($urls->route('dashboard'), navigate: false);
+        $this->redirect(Destination::Dashboard->urlFrom($urls), navigate: false);
     }
 
     public function render(ViewFactory $views): View

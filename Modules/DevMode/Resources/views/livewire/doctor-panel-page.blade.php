@@ -9,9 +9,8 @@
                 {{ Lang::get('dev::doctor.subtitle') }}
             </p>
         </div>
-        <button
-            type="button"
-            class="pill-btn primary"
+        <x-core::neutral-button
+            class="disabled:cursor-not-allowed disabled:opacity-50"
             data-testid="doctor-rerun-button"
             x-data="{ running: false }"
             x-on:click="
@@ -21,7 +20,7 @@
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').getAttribute('content')
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=&quot;csrf-token&quot;]').getAttribute('content')
                     },
                     body: JSON.stringify({ command: 'Beatrax:doctor', args: {} })
                 }).then(r => r.json()).then(d => {
@@ -38,7 +37,7 @@
         >
             <span x-show="!running">{{ Lang::get('dev::doctor.rerun') }}</span>
             <span x-show="running" x-cloak>{{ Lang::get('dev::doctor.running') }}</span>
-        </button>
+        </x-core::neutral-button>
     </header>
 
     @if ($probeRows === [])

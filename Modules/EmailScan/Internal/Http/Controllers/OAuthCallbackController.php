@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
@@ -87,7 +88,7 @@ final class OAuthCallbackController
         // The text renders escaped, so the cap is about length rather than
         // XSS: this string is provider-supplied and attacker-influenced.
         return $this->redirector
-            ->route('inboxes.index')
+            ->route(Destination::Email->routeName())
             ->with('oauth_canceled', SafeMessage::cap($message));
     }
 
@@ -263,7 +264,7 @@ final class OAuthCallbackController
     private function connectedRedirect(int $existingInboxId, int $inboxId): RedirectResponse
     {
         $redirect = $this->redirector
-            ->route('inboxes.index')
+            ->route(Destination::Email->routeName())
             ->with('open_backfill_modal', $inboxId);
 
         if ($existingInboxId > 0) {
@@ -278,7 +279,7 @@ final class OAuthCallbackController
     private function failRedirect(string $message): RedirectResponse
     {
         return $this->redirector
-            ->route('inboxes.index')
+            ->route(Destination::Email->routeName())
             ->with('oauth_failed', $message);
     }
 

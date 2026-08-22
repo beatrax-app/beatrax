@@ -25,6 +25,5 @@ return [
         'detail' => 'Читач повідомив: :reason',
         'duplicate' => 'Рядок :row уже був у твоїй книзі.',
         'more' => '+ :count не наведено',
-        'unknown_reason' => 'Причину не записано.',
     ],
 ];

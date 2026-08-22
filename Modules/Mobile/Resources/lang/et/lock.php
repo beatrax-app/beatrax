@@ -12,6 +12,9 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — kinnita PIN-kood',
     'sign_out' => 'Logi välja',
+    // i18n-review: et · forgot_pin — "Andmeid ei lähe kaotsi" is grammatical and
+    // the negation takes the partitive correctly, but "kaotsi minema" is usually
+    // said of objects; whether a native would write "ei lähe kaduma" is open.
     'forgot_pin' => 'Unustasid PIN-koodi? Logi välja — saad konto parooliga uuesti sisse logida ja uue PIN-koodi määrata. Andmeid ei lähe kaotsi.',
 
     'errors' => [

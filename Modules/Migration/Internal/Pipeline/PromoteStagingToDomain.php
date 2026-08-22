@@ -65,6 +65,7 @@ final class PromoteStagingToDomain
         /** @var MigrationRun $run */
         $run = MigrationRun::query()->where('id', $runId)->where('user_id', $user->id)->firstOrFail();
         $sourceProduct = $run->source_product;
+        $this->importRunId = null;
 
         $categories = $this->promoteCategories($runId, $user, $sourceProduct);
         $this->promoteBudgetAssignments($runId, $user, $sourceProduct, $categories['idMap'], $skipBudgetAssignmentKeys);
@@ -670,8 +671,17 @@ final class PromoteStagingToDomain
         return $map;
     }
 
+    // Held for the length of ONE promote() and cleared at its head. Every
+    // promoted row files itself under the same run, and asking per row cost a
+    // statement each across a ledger the size of a life.
+    private ?int $importRunId = null;
+
     private function migrationImportRunId(User $user, string $sourceProduct): int
     {
+        if ($this->importRunId !== null) {
+            return $this->importRunId;
+        }
+
         $sourceFormat = 'migration_'.$sourceProduct;
         $connection = $this->db->connection();
 
@@ -681,12 +691,12 @@ final class PromoteStagingToDomain
             ->value('id');
 
         if (is_numeric($existingId)) {
-            return (int) $existingId;
+            return $this->importRunId = (int) $existingId;
         }
 
         $now = $this->clock->now();
 
-        return self::toInt($connection->table('import_runs')->insertGetId([
+        return $this->importRunId = self::toInt($connection->table('import_runs')->insertGetId([
             'user_id' => $user->id,
             'source_format' => $sourceFormat,
             'raw_file_path' => 'migration',

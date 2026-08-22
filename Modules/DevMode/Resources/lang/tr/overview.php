@@ -13,7 +13,10 @@ return [
     'batches' => 'batch',
     'queue_summary' => ':failed · :batches',
     'queue_summary_failed' => ':count başarısız iş',
-    'queue_summary_batches' => ':count aktif batch',
+    // i18n-review: tr · queue_summary_batches — "batch" had been left in English.
+    // "Toplu iş" is the term Turkish Laravel writing uses, but it sits close to
+    // the "iş" already standing for a job, so a native developer should confirm.
+    'queue_summary_batches' => ':count etkin toplu iş',
     'last_command' => 'Son komut',
     'waiting_for_logs' => 'Log satırları bekleniyor…',
     'recent_runs' => 'Son çalıştırmalar',

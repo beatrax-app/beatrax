@@ -16,6 +16,10 @@ return [
         'unknown_command' => 'Nepoznata naredba: :command',
         'missing' => 'Nedostaje :noun: :list',
         'invalid_args' => 'Jedan ili više argumenata nije valjan.',
-        'arg' => 'argument|argumenata|argumenata',
+        // i18n-review: hr · errors.arg — no numeral reaches this noun, so the arms
+        // are plain number forms rather than the case a numeral would govern.
+        // "Nedostaje" in errors.missing stays singular either way; a native should
+        // say whether that pair reads.
+        'arg' => 'argument|argumenti|argumenti',
     ],
 ];

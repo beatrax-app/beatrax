@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 return [
     'title' => 'Ebatavalised maksed',
-    'aria_label' => 'Ebatavalised maksed — :count lahtist',
+    'aria_label' => 'Ebatavalised maksed — :open',
 
-    'open' => 'lahtine',
+    'open' => ':count lahtine|:count lahtist',
     'detectors' => [
-        'large' => 'suur',
-        'first_time' => 'esmakordne',
-        'duplicate' => 'duplikaat',
+        'large' => ':count suur|:count suurt',
+        'first_time' => ':count esmakordne|:count esmakordset',
+        'duplicate' => ':count duplikaat|:count duplikaati',
     ],
 ];

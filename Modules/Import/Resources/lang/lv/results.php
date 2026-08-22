@@ -25,6 +25,5 @@ return [
         'detail' => 'Lasītājs ziņoja: :reason',
         'duplicate' => 'Rinda :row jau bija tavā virsgrāmatā.',
         'more' => '+ :count nav uzskaitīts',
-        'unknown_reason' => 'Iemesls netika reģistrēts.',
     ],
 ];

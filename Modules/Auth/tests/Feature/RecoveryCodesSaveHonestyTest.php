@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 
 uses(RefreshDatabase::class);
 
@@ -64,15 +65,56 @@ it('never reports a save it did not make', function (): void {
 
     $html = Livewire::test(RecoveryCodesDisplay::class)->html();
 
-    // `saved` and `failed` both come from the answer, so a refusal cannot read
-    // as a success. The blob path below it keeps its unconditional assignment
-    // on purpose: a real browser download manager either writes the file or
-    // raises, and that path is never reached on a phone.
+    // `saved` and `saveFailed` both come from the answer, so a refusal cannot
+    // read as a success. The blob path below it keeps its unconditional
+    // assignment on purpose: a real browser download manager either writes the
+    // file or raises, and that path is never reached on a phone.
     expect($html)->toContain('this.saved = result.saved === true;')
-        ->and($html)->toContain('this.failed = result.saved !== true;');
+        ->and($html)->toContain('this.saveFailed = result.saved !== true;');
 
     // The share sheet has to be tried first; reaching the blob fallback on a
     // phone is the bug.
     expect(strpos($html, 'result.saved === true'))
         ->toBeLessThan((int) strpos($html, 'URL.createObjectURL'));
 });
+
+it('tells a reader whose save failed that the save failed, not the copy', function (): void {
+    $user = recoveryCodesSaveUser('recovery-vocabulary');
+
+    $this->actingAs($user)->withSession([
+        RecoveryCodesDisplay::SESSION_KEY => ['ABCD-EFGH-JKLM-NPQR-STUV'],
+    ]);
+
+    $_SERVER['NATIVEPHP_PLATFORM'] = 'android';
+
+    try {
+        $html = Livewire::test(RecoveryCodesDisplay::class)->html();
+    } finally {
+        unset($_SERVER['NATIVEPHP_PLATFORM']);
+    }
+
+    // Copy and Save had one flag between them, so a refused save said "Could
+    // not copy" — and these codes are on screen exactly once, so a reader who
+    // reaches for the clipboard instead of a pen ends up with neither.
+    expect($html)->toContain('this.saveFailed = result.saved !== true;')
+        ->and($html)->not->toContain('this.failed = result.saved !== true;');
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+
+    $onSaveFailure = $xpath->query('//p[@x-show="saveFailed"]')->item(0);
+    $onCopyFailure = $xpath->query('//p[@x-show="failed"]')->item(0);
+
+    expect($onSaveFailure)->toBeInstanceOf(DOMElement::class, 'a failed save must have a line of its own')
+        ->and($onCopyFailure)->toBeInstanceOf(DOMElement::class, 'a failed copy keeps its own line');
+
+    /** @var DOMElement $onSaveFailure */
+    /** @var DOMElement $onCopyFailure */
+    expect(trim($onSaveFailure->textContent))->toBe((string) Lang::get('auth::recovery_codes.save_failed'))
+        ->and(trim($onCopyFailure->textContent))->toBe((string) Lang::get('auth::recovery_codes.copy_failed'))
+        ->and(trim($onSaveFailure->textContent))->not->toBe(trim($onCopyFailure->textContent));
+})->skip(
+    fn (): bool => ! app('router')->has('mobile.recovery-codes.export'),
+    'the mobile export route is not registered in this composer root',
+);

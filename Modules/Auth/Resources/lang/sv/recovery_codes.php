@@ -9,6 +9,7 @@ return [
     'copy' => 'Kopiera koder',
     'copied' => 'Kopierat',
     'copy_failed' => 'Det gick inte att kopiera. Skriv ner koderna i stället.',
+    'save_failed' => 'Det gick inte att spara filen. Skriv ner koderna i stället.',
     'download' => 'Ladda ner som .txt',
 
     'saved_as' => 'Sparad som beatrax-recovery-codes-:username.txt',

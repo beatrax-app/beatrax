@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
@@ -40,7 +41,7 @@
             </x-core::form-field>
             <div class="space-y-1">
                 <label for="rc-date" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::reconcile.statement_date') }}</label>
-                <x-core::date-input field-id="rc-date" wire:model.live="statementDate" />
+                <x-core::date-input field-id="rc-date" wire:model.live="statementDate" :aria-label="Lang::get('ledger::reconcile.statement_date')" />
             </div>
         </div>
 
@@ -92,7 +93,7 @@
 
             @if ($hasAccount && $hasTarget && ! $isMatched)
                 <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                    {!! Lang::get('ledger::reconcile.mismatch_html', ['url' => route('transactions.index')]) !!}
+                    {!! Lang::get('ledger::reconcile.mismatch_html', ['url' => Destination::Transactions->url()]) !!}
                 </p>
             @endif
         </div>

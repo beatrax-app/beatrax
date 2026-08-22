@@ -22,7 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Probabil: un comerciant fără nume.',
-        'seen_times' => 'Văzut de :count dată|Văzut de :count ori|Văzut de :count de ori',
+        'seen_times' => 'Văzut o dată|Văzut de :count ori|Văzut de :count de ori',
         'last_seen' => 'Văzut ultima dată pe :date',
         'suggest' => 'Sugerează un nume →',
     ],

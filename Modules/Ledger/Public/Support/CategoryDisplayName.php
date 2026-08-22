@@ -102,6 +102,26 @@ final class CategoryDisplayName
         return $translated === $key ? $storedName : $translated;
     }
 
+    // What a default row under each known slug SHOWS the reader, so a query can
+    // name the slugs a term matches instead of resolving every row that might
+    // have matched one. A slug whose line is missing resolves to the stored
+    // name, which is a column, so it is absent here and matched in SQL.
+    /**
+     * @return array<string, string>
+     */
+    public static function displayNamesBySlug(): array
+    {
+        $names = [];
+        foreach (array_keys(Lang::group(rtrim(self::KEY_PREFIX, '.'))) as $slug) {
+            $resolved = self::resolve('', $slug, true);
+            if ($resolved !== '') {
+                $names[$slug] = $resolved;
+            }
+        }
+
+        return $names;
+    }
+
     // A missing key and a NULL value are different answers: NULL is a row with
     // no category joined, an absent key is a read site whose alias does not
     // match the one its columns() call selected under. That mismatch used to

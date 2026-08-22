@@ -6,7 +6,6 @@ namespace Modules\Categorization\Public\Services;
 
 use DateTimeImmutable;
 use Exception;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Categorization\Public\Dto\CategorizationRuleDto;
@@ -15,8 +14,8 @@ use Modules\Categorization\Public\Dto\RuleConditionDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Counterparties\Public\Queries\CounterpartyDisplayName;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
-use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 // Rules are read `priority asc, id asc` — the same order RuleEngine::match()
@@ -28,8 +27,7 @@ final readonly class CategorizationRuleQuery
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
-        private SensitiveColumnCodec $codec,
-        private Session $session,
+        private CounterpartyDisplayName $counterpartyNames,
     ) {}
 
     /**
@@ -154,7 +152,7 @@ final readonly class CategorizationRuleQuery
         }
 
         $categoryPaths = $this->resolveCategoryPaths(self::uniqueInts($categoryIds), $userId);
-        $counterpartyNames = $this->resolveCounterpartyNames(self::uniqueInts($counterpartyIds), $userId);
+        $counterpartyNames = $this->counterpartyNames->forIds(self::uniqueInts($counterpartyIds), $userId);
 
         $byRule = [];
         foreach ($actionRows as $row) {
@@ -237,34 +235,6 @@ final readonly class CategorizationRuleQuery
             $categoryName = CategoryDisplayName::fromRow($row, 'category') ?? '';
             $parentName = CategoryDisplayName::fromRow($row, 'parent_category');
             $out[self::toInt($row->id)] = $parentName === null ? $categoryName : $parentName.' / '.$categoryName;
-        }
-
-        return $out;
-    }
-
-    /**
-     * @param  list<int>  $counterpartyIds
-     * @return array<int, string> counterparty id => display name
-     */
-    private function resolveCounterpartyNames(array $counterpartyIds, int $userId): array
-    {
-        if ($counterpartyIds === []) {
-            return [];
-        }
-
-        $rows = $this->db->connection()
-            ->table('counterparties')
-            ->whereIn('id', $counterpartyIds)
-            ->where('user_id', $userId)
-            ->select(['id', 'display_name'])
-            ->get();
-
-        $out = [];
-        foreach ($rows as $row) {
-            $stored = is_string($row->display_name ?? null) ? $row->display_name : '';
-            $out[self::toInt($row->id)] = $stored === ''
-                ? ''
-                : $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, $this->session)['value'];
         }
 
         return $out;

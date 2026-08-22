@@ -36,7 +36,10 @@ return [
     'toast' => [
         'unknown_command' => 'Neznan ukaz: :command',
         'missing_args' => 'Ukaza :command ni mogoče zagnati — potrebuje :noun: :list',
-        'arg' => 'argument|argumente|argumente|argumente',
+        // i18n-review: sl · toast.arg — "potrebuje" in toast.missing_args puts this
+        // noun in the accusative and no numeral reaches it, so the dual rests on the
+        // noun alone. Whether the singular verb reads beside it is a native call.
+        'arg' => 'argument|argumenta|argumente|argumente',
         'started' => 'Začeto :command (zagon :runId)',
         'run_expired' => 'Zapis o zagonu je potekel — ponovni zagon ni mogoč.',
         'reran' => 'Znova zagnano :command (zagon :runId)',

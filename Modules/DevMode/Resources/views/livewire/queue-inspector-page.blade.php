@@ -62,7 +62,6 @@
             @if ($tab === 'failed')
                 <x-core::secondary-button
                     size="sm"
-                    class="pill-btn"
                     x-data
                     x-on:click="$dispatch('modal-show', { name: 'bulk-retry-confirm' })"
                     data-testid="bulk-retry-button"
@@ -71,7 +70,7 @@
             <button
                 type="button"
                 wire:click="bulkDeleteRequest"
-                class="pill-btn danger inline-flex items-center rounded border border-rose-300 bg-white px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
+                class="inline-flex items-center rounded border border-rose-300 bg-white px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
                 data-testid="bulk-delete-button"
             >{{ Lang::choice('dev::queue.bulk_delete', count($selected)) }}</button>
         </div>
@@ -251,7 +250,6 @@
                     class="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                 >{{ Lang::get('dev::queue.cancel') }}</button>
                 <x-core::neutral-button
-                    class="pill-btn primary"
                     wire:click="bulkRetryConfirm"
                     x-data
                     x-on:click="$dispatch('modal-close', { name: 'bulk-retry-confirm' })"

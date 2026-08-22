@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Notifications\Internal\Support\CopyLine;
@@ -51,7 +52,7 @@ final class PersistCoalescedImport
                     occurrence: $occurrence,
                     copy: $copy,
                     params: ['target_kind' => 'inbox'],
-                    deepLinkRoute: $this->urls->route('inboxes.index'),
+                    deepLinkRoute: Destination::Email->urlFrom($this->urls),
                 ));
                 $this->writer->write($draft);
 
@@ -69,7 +70,7 @@ final class PersistCoalescedImport
                 occurrence: $occurrence,
                 copy: $copy,
                 params: ['target_kind' => 'import'],
-                deepLinkRoute: $this->urls->route('imports.new'),
+                deepLinkRoute: Destination::Imports->urlFrom($this->urls),
             ));
             $this->writer->write($draft);
         } catch (Throwable $e) {

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
@@ -37,7 +38,7 @@ final class SetupScreen extends Component
             // release on some later navigation left the screen polling a
             // finished state forever, and each tick was a request the page
             // had no use for.
-            $this->redirect($urls->route('dashboard'), navigate: false);
+            $this->redirect(Destination::Dashboard->urlFrom($urls), navigate: false);
 
             return;
         }

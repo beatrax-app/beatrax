@@ -25,6 +25,5 @@ return [
         'detail' => 'Čitač je prijavio: :reason',
         'duplicate' => 'Redak :row već je bio u tvojoj knjizi.',
         'more' => '+ :count nije navedeno',
-        'unknown_reason' => 'Razlog nije zabilježen.',
     ],
 ];

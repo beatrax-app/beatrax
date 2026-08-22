@@ -9,6 +9,7 @@ return [
     'copy' => 'Kopiér koder',
     'copied' => 'Kopieret',
     'copy_failed' => 'Kunne ikke kopiere. Skriv koderne ned i stedet.',
+    'save_failed' => 'Filen kunne ikke gemmes. Skriv koderne ned i stedet.',
     'download' => 'Hent som .txt',
 
     'saved_as' => 'Gemt som beatrax-recovery-codes-:username.txt',

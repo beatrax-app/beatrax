@@ -6,6 +6,7 @@ namespace Modules\Counterparties\Public\Queries;
 
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -44,7 +45,7 @@ final readonly class CounterpartyIndexRow
         $urls = Container::getInstance()->make(UrlGenerator::class);
         $this->href = match ($type) {
             CounterpartyType::SelfAccount->value => '/accounts/'.$slug,
-            CounterpartyType::Unknown->value => $urls->route('counterparties.triage', ['queue_first' => $id]),
+            CounterpartyType::Unknown->value => Destination::Triage->urlFrom($urls, ['queue_first' => $id]),
             default => $urls->route('counterparties.profile', ['slug' => $slug]),
         };
     }

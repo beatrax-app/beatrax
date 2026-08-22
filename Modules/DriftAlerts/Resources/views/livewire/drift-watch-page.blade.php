@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
 {{--
@@ -51,7 +52,7 @@
     <header class="mb-8">
         <div class="flex items-baseline justify-between gap-4">
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.heading') }}</h1>
-            <a href="{{ route('drift.index') }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::watch.drift_alerts_link') }}</a>
+            <a href="{{ Destination::DriftAlerts->url() }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::watch.drift_alerts_link') }}</a>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('drift-alerts::watch.intro') }}
@@ -77,7 +78,7 @@
                  sentence, and the prop escapes its value. --}}
             <x-slot:body>
                 {{ Lang::get('drift-alerts::watch.empty_body') }}
-                <a href="{{ route('recurring.index') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_link') }}</a>.
+                <a href="{{ Destination::Recurring->url() }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_link') }}</a>.
             </x-slot:body>
         </x-core::empty-state>
     @else
@@ -93,7 +94,7 @@
                                     class="truncate font-medium text-slate-900 hover:underline underline-offset-2 dark:text-slate-100"
                                 >{{ $row->name }}</a>
                                 @if ($row->hasOpenAlert)
-                                    <a href="{{ route('drift.index') }}" class="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300" style="background: color-mix(in srgb, currentColor 14%, transparent);">{{ Lang::get('drift-alerts::watch.open_alert') }}</a>
+                                    <a href="{{ Destination::DriftAlerts->url() }}" class="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300" style="background: color-mix(in srgb, currentColor 14%, transparent);">{{ Lang::get('drift-alerts::watch.open_alert') }}</a>
                                 @endif
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">

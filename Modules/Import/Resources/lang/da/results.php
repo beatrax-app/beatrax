@@ -25,6 +25,5 @@ return [
         'detail' => 'Indlæseren meldte: :reason',
         'duplicate' => 'Række :row var allerede i din hovedbog.',
         'more' => '+ :count ikke vist',
-        'unknown_reason' => 'Der blev ikke registreret nogen årsag.',
     ],
 ];

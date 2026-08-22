@@ -17,6 +17,7 @@ use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\AcceptsPairingCode;
@@ -132,7 +133,7 @@ final class MobilePairingScan extends Component
 
         if ($ceremonyFinished && $devices->otherDeviceNames($userId) !== []) {
             $this->redirect(
-                $urls->route($importIntent->isImporting($userId) ? 'mobile.setup' : 'data-devices.index'),
+                $urls->route($importIntent->isImporting($userId) ? 'mobile.setup' : Destination::DataDevices->routeName()),
                 navigate: false,
             );
 
@@ -657,7 +658,7 @@ final class MobilePairingScan extends Component
         // Cancelling mid-onboarding returns to the wizard: Devices & Sync
         // dropped an unfinished setup into settings with no route back.
         $this->redirect(
-            $urls->route($this->importMode ? 'mobile.import' : 'data-devices.index'),
+            $urls->route($this->importMode ? 'mobile.import' : Destination::DataDevices->routeName()),
             navigate: false,
         );
     }
@@ -666,7 +667,7 @@ final class MobilePairingScan extends Component
     // must pull its history before it can show a populated dashboard.
     public function finishPairing(UrlGenerator $urls): void
     {
-        $route = $this->importMode ? 'mobile.setup' : 'data-devices.index';
+        $route = $this->importMode ? 'mobile.setup' : Destination::DataDevices->routeName();
 
         $this->redirect($urls->route($route), navigate: false);
     }

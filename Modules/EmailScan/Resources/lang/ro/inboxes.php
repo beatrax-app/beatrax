@@ -49,7 +49,7 @@ return [
     'discovered_heading' => 'Expeditori descoperiți',
     'discovered_body' => 'Expeditori care par să trimită bonuri, dar nu sunt încă pe lista ta de expeditori cunoscuți. Adaugă-i pe cei pe care vrei ca Beatrax să îi scaneze; pe ceilalți închide-i.',
     'last_seen' => 'văzut ultima dată',
-    'seen_times' => 'Văzut de :count ori|Văzut de :count ori|Văzut de :count ori',
+    'seen_times' => 'Văzut o dată|Văzut de :count ori|Văzut de :count de ori',
     'add' => 'Adaugă',
     'add_aria' => 'Adaugă :email',
     'dismiss' => 'Închide',

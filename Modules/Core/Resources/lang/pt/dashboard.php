@@ -17,7 +17,7 @@ return [
     'net' => 'Líquido',
 
     'status_tiles_aria' => 'Mosaicos de estado',
-    'email_scan_health' => 'Estado da análise de e-mail — :count ligadas caixa de entrada|Estado da análise de e-mail — :count ligadas caixas de entrada',
+    'email_scan_health' => 'Estado da análise de e-mail — :count caixa de entrada ligada|Estado da análise de e-mail — :count caixas de entrada ligadas',
 
     'top_spending' => 'Principais gastos',
     'no_expenses' => 'Ainda não há despesas categorizadas.',

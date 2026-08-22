@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     Dashboard tax summary card (UI-SPEC Section 10).
@@ -15,7 +16,7 @@
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
 <a
-    href="{{ route('tax.index') }}"
+    href="{{ Destination::Tax->url() }}"
     class="card block transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-slate-800"
     style="padding: var(--space-4) var(--space-6); text-decoration: none;"
     aria-label="{{ Lang::choice('tax::summary.card_aria', $count, ['year' => $year]) }}"

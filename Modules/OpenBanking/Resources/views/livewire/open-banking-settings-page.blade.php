@@ -1,9 +1,10 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Illuminate\View\ComponentAttributeBag')
 @use('Modules\Core\Public\Support\Lang')
 {{-- `/settings/open-banking` trust surface (19-11, UI-SPEC Surface B). --}}
 
 <div class="max-w-2xl mx-auto space-y-6" data-testid="open-banking-settings-page">
-    <a href="{{ route('settings') }}" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; {{ Lang::get('openbanking::messages.page.back_link') }}</a>
+    <a href="{{ Destination::Settings->url() }}" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; {{ Lang::get('openbanking::messages.page.back_link') }}</a>
 
     <header class="space-y-1">
         <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.page.heading') }}</h1>

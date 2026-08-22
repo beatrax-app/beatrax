@@ -5,7 +5,10 @@ declare(strict_types=1);
 return [
     'page_title' => 'Ta naprava je sinhronizirana',
     'heading' => 'Ta naprava je sinhronizirana',
-    'records' => 'Kopiranih zapisov: :count. Izvorna naprava: :peer.|Kopiranih zapisov: :count. Izvorna naprava: :peer.|Kopiranih zapisov: :count. Izvorna naprava: :peer.|Kopiranih zapisov: :count. Izvorna naprava: :peer.',
+    // i18n-review: sl · records — rewritten from a count label so the dual is
+    // visible ("sta kopirana 2 zapisa"). Leading with :peer is a guess about what
+    // reads well when the device name is long.
+    'records' => 'Iz naprave :peer je kopiran :count zapis.|Iz naprave :peer sta kopirana :count zapisa.|Iz naprave :peer so kopirani :count zapisi.|Iz naprave :peer je kopiranih :count zapisov.',
     'records_none' => 'Vse je usklajeno — nič novega ni bilo za kopiranje. Izvorna naprava: :peer.',
     'how_it_works' => 'Od zdaj naprej',
     'automatic_title' => 'Vse se posodablja samo',

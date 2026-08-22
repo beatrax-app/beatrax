@@ -18,7 +18,11 @@ return [
         'pin_length' => 'PIN mora imeti vsaj 6 števke.',
 
         'too_many_attempts' => 'Preveč poskusov — poskusi znova čez :secondss.',
-        'incorrect_pin_remaining' => 'Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.',
+        // i18n-review: sl · errors.incorrect_pin_remaining — rewritten from a count label to real dual
+        // agreement, so the verb now moves with the noun across all four arms. The
+        // grammar is checked against the rule table; the word order and the "še" want
+        // a native eye.
+        'incorrect_pin_remaining' => 'Napačen PIN. Preostal je še :count poskus.|Napačen PIN. Preostala sta še :count poskusa.|Napačen PIN. Preostali so še :count poskusi.|Napačen PIN. Preostalo je še :count poskusov.',
         'incorrect_pin' => 'Napačen PIN.',
     ],
 ];

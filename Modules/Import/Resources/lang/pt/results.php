@@ -25,6 +25,5 @@ return [
         'detail' => 'O leitor reportou: :reason',
         'duplicate' => 'A linha :row já estava no teu livro-razão.',
         'more' => '+ :count não listadas',
-        'unknown_reason' => 'Não foi registado nenhum motivo.',
     ],
 ];

@@ -25,6 +25,5 @@ return [
         'detail' => 'Čítačka ohlásila: :reason',
         'duplicate' => 'Riadok :row už bol v tvojej knihe.',
         'more' => '+ :count neuvedených',
-        'unknown_reason' => 'Dôvod nebol zaznamenaný.',
     ],
 ];

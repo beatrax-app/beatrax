@@ -309,11 +309,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Tax/Public/Services/TaxCsvExporter.php',
         'Modules/Tax/Public/Services/TaxPdfRenderer.php',
         'Modules/Tax/Public/Services/TaxYearQuery.php',
-        // Its only consumer outside Transfers was a lint-appeasement stub on
-        // PaypalFundingResolver that read the property solely to satisfy
-        // PHPStan; deleting the stub left the read seam .docs still describes
-        // with no caller. Wire it up or retire it — see the round-3 report.
-        'Modules/Transfers/Public/Services/PairLookup.php',
     ];
 
     $sources = publicSurfaceSources();

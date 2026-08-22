@@ -16,6 +16,7 @@ use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
@@ -190,7 +191,7 @@ final class MobileLockScreen extends Component
         $target = match (true) {
             is_string($intended) && $intended !== '' => $intended,
             is_string($lastPage) && $lastPage !== '' => $lastPage,
-            default => $urls->route('dashboard'),
+            default => Destination::Dashboard->urlFrom($urls),
         };
 
         $this->redirect($target, navigate: false);

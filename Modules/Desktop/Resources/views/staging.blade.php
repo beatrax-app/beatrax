@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @php
     /**
@@ -58,7 +59,7 @@
                 </p>
             </header>
 
-            <x-core::primary-button href="{{ route('imports.new') }}">
+            <x-core::primary-button href="{{ Destination::Imports->url() }}">
                 {{ Lang::get('desktop::screens.staging.open_imports') }}
             </x-core::primary-button>
         @endif

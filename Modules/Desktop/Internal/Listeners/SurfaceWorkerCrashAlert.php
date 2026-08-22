@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
@@ -108,7 +109,7 @@ final class SurfaceWorkerCrashAlert
         Notification::title(Lang::get('desktop::native.worker_alert.os_title'))
             ->message(Lang::get('desktop::native.worker_alert.body'))
             ->event(NotificationDeepLink::class)
-            ->reference($this->urls->route('dashboard'))
+            ->reference(Destination::Dashboard->urlFrom($this->urls))
             ->show();
     }
 }

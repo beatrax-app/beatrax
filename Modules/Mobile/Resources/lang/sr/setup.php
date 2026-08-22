@@ -10,7 +10,7 @@ return [
         'reprojecting' => 'Ponovna izgradnja tvoje istorije…',
         'retrying' => 'Ponovno povezivanje sa drugim uređajem…',
         'locked' => 'Otključaj aplikaciju da nastaviš podešavanje.',
-        'revoked' => 'Овај уређај је уклоњен са вашег другог уређаја. Поново га упарите да бисте наставили синхронизацију.',
+        'revoked' => 'Ovaj uređaj je uklonjen sa vašeg drugog uređaja. Ponovo ga uparite da biste nastavili sinhronizaciju.',
     ],
     'step' => [
         'connect' => 'Povezivanje sa tvojim drugim uređajem',

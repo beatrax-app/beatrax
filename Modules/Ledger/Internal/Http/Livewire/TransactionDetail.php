@@ -20,7 +20,9 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
+use Modules\Counterparties\Public\Queries\CounterpartyDisplayName;
 use Modules\Goals\Public\Services\GoalContributionQuery;
 use Modules\Goals\Public\Services\GoalContributionWriter;
 use Modules\Ledger\Internal\Http\Livewire\Concerns\ManagesSplitEditor;
@@ -418,7 +420,7 @@ final class TransactionDetail extends Component
             ));
         }
 
-        $this->redirect($urls->route('transactions.index'), navigate: true);
+        $this->redirect(Destination::Transactions->urlFrom($urls), navigate: true);
     }
 
     public function updated(string $name, mixed $value, CurrentUser $currentUser, DatabaseManager $db): void
@@ -438,6 +440,7 @@ final class TransactionDetail extends Component
         GoalContributionQuery $goalContributions,
         SensitiveColumnCodec $codec,
         Session $session,
+        CounterpartyDisplayName $counterpartyNames,
     ): View {
         $userId = $currentUser->user()->id;
 
@@ -493,28 +496,12 @@ final class TransactionDetail extends Component
         $clearedState = $this->clearedStatusFor([$this->transactionId], $db, $currentUser);
         $clearedStatus = $clearedState[$this->transactionId] ?? ClearedStatus::Cleared->value;
 
-        // No ORDER BY: display_name is ciphertext at rest once encryption is
-        // on, so the DB would sort by ciphertext. Decrypt, then sort in PHP.
-        $counterparties = $db->connection()
-            ->table('counterparties')
-            ->where('user_id', $userId)
-            ->get(['id', 'display_name', 'slug'])
-            ->map(function (\stdClass $row) use ($codec, $userId, $session): \stdClass {
-                if (is_string($row->display_name)) {
-                    $row->display_name = $codec->decryptValue('counterparties', 'display_name', $row->display_name, $userId, $session)['value'];
-                }
-
-                return $row;
-            })
-            ->sortBy('display_name')
-            ->values();
-
         $view = $views->make('ledger::livewire.transaction-detail', [
             'transaction' => $transaction,
             'chainAvailable' => $chainAvailable,
             'txTaxRow' => $txTaxRow,
             'clearedStatus' => $clearedStatus,
-            'counterparties' => $counterparties,
+            'counterparties' => $counterpartyNames->forUser($userId),
             'isSplittable' => $isSplittable,
             'splitCategories' => $splitCategories,
             'goalOptions' => $goalContributions->attributableGoals($currentUser->user()),

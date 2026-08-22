@@ -9,6 +9,7 @@ return [
     'copy' => 'Kopeeri koodid',
     'copied' => 'Kopeeritud',
     'copy_failed' => 'Kopeerimine ebaõnnestus. Kirjutage koodid üles.',
+    'save_failed' => 'Faili ei õnnestunud salvestada. Kirjutage koodid üles.',
     'download' => 'Laadi alla .txt-failina',
 
     'saved_as' => 'Salvestatud kui beatrax-recovery-codes-:username.txt',

@@ -18,6 +18,19 @@
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
         ->format();
+
+    // target_currency is immutable and can diverge from the user's current base
+    // currency — when editing, label the amount field with the goal's own
+    // currency so the prefilled amount is not misread as a base-currency figure.
+    $amountCurrency = $baseCurrency;
+    if ($editGoalId !== 0) {
+        foreach ($rows as $goalRow) {
+            if ($goalRow->id === $editGoalId) {
+                $amountCurrency = $goalRow->currency;
+                break;
+            }
+        }
+    }
 @endphp
 
 {{--
@@ -328,22 +341,11 @@
                 @endif
             </div>
 
-            @php
-                $amountCurrencySheet = $baseCurrency;
-                if ($editGoalId !== 0) {
-                    foreach ($rows as $goalRow) {
-                        if ($goalRow->id === $editGoalId) {
-                            $amountCurrencySheet = $goalRow->currency;
-                            break;
-                        }
-                    }
-                }
-            @endphp
             <div>
                 <x-core::form-field
                     name="targetAmount"
                     field-id="goal-amount-sheet"
-                    :label="Lang::get('goals::messages.form.target_amount', ['currency' => $amountCurrencySheet])"
+                    :label="Lang::get('goals::messages.form.target_amount', ['currency' => $amountCurrency])"
                     size="base"
                     inputmode="decimal"
                     wire:model="targetAmount"
@@ -362,6 +364,7 @@
                 <x-core::date-input
                     field-id="goal-date-sheet"
                     wire:model="targetDate"
+                    :aria-label="Lang::get('goals::messages.form.target_date')"
                     :aria-invalid="$errorDate !== '' ? 'true' : null"
                     :aria-describedby="$errorDate !== '' ? 'goal-date-sheet-error' : null"
                 />
@@ -424,21 +427,6 @@
                 </div>
 
                 {{-- Target amount --}}
-                @php
-                    // target_currency is immutable and can diverge from the
-                    // user's current base currency — when editing, label the field
-                    // with the goal's own currency so the prefilled amount is not
-                    // misread as a base-currency figure.
-                    $amountCurrency = $baseCurrency;
-                    if ($editGoalId !== 0) {
-                        foreach ($rows as $goalRow) {
-                            if ($goalRow->id === $editGoalId) {
-                                $amountCurrency = $goalRow->currency;
-                                break;
-                            }
-                        }
-                    }
-                @endphp
                 <div>
                     <x-core::form-field
                         name="targetAmount"
@@ -473,6 +461,7 @@
                         <x-core::date-input
                             field-id="goal-date"
                             wire:model="targetDate"
+                            :aria-label="Lang::get('goals::messages.form.target_date')"
                             aria-invalid="true"
                             aria-describedby="goal-date-error"
                         />
@@ -480,6 +469,7 @@
                         <x-core::date-input
                             field-id="goal-date"
                             wire:model="targetDate"
+                            :aria-label="Lang::get('goals::messages.form.target_date')"
                         />
                     @endif
                     @if ($errorDate !== '')

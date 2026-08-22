@@ -9,6 +9,7 @@ return [
     'copy' => 'Copier les codes',
     'copied' => 'Copié',
     'copy_failed' => 'Copie impossible. Notez plutôt les codes.',
+    'save_failed' => 'Impossible d\'enregistrer le fichier. Notez plutôt les codes.',
     'download' => 'Télécharger en .txt',
 
     'saved_as' => 'Enregistré sous beatrax-recovery-codes-:username.txt',

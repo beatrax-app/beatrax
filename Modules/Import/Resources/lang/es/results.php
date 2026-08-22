@@ -25,6 +25,5 @@ return [
         'detail' => 'El lector informó: :reason',
         'duplicate' => 'La fila :row ya estaba en tu libro mayor.',
         'more' => '+ :count sin listar',
-        'unknown_reason' => 'No se registró ningún motivo.',
     ],
 ];

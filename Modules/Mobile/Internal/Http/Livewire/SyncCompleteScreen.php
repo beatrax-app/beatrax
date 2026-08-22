@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -49,7 +50,7 @@ final class SyncCompleteScreen extends Component
 
     public function continueToApp(UrlGenerator $urls): void
     {
-        $this->redirect($urls->route('dashboard'), navigate: false);
+        $this->redirect(Destination::Dashboard->urlFrom($urls), navigate: false);
     }
 
     public function render(ViewFactory $views): View

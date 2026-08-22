@@ -17,7 +17,10 @@ return [
     'net' => 'Neto',
 
     'status_tiles_aria' => 'Statusne pločice',
-    'email_scan_health' => 'Stanje skeniranja e-pošte — :count povezano pretinac|Stanje skeniranja e-pošte — :count povezano pretinca|Stanje skeniranja e-pošte — :count povezano pretinaca',
+    // i18n-review: hr · email_scan_health — agreement is fixed, the noun is not:
+    // this says "pretinac" where core sidebar badge.inboxes says "pristigla
+    // pošta" for the same thing. One of the two is what Croatian readers use.
+    'email_scan_health' => 'Stanje skeniranja e-pošte — :count povezan pretinac|Stanje skeniranja e-pošte — :count povezana pretinca|Stanje skeniranja e-pošte — :count povezanih pretinaca',
 
     'top_spending' => 'Najveći troškovi',
     'no_expenses' => 'Još nema kategoriziranih troškova.',

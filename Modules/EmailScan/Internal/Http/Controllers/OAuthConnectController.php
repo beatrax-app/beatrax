@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
@@ -40,7 +41,7 @@ final class OAuthConnectController
 
         if (! $this->secrets->hasProviderClient($provider)) {
             return $this->redirector
-                ->route('inboxes.index')
+                ->route(Destination::Email->routeName())
                 ->with('oauth_failed', 'Connect your email — finish the OAuth-client wizard first.');
         }
 

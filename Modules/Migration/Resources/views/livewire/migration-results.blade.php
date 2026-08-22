@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @php
     $stats = [
@@ -63,10 +64,10 @@
 
     <div class="flex flex-wrap gap-4 text-sm">
         @if ($run->transactions_inserted_count > 0)
-            <a href="{{ route('transactions.index') }}" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_transactions') }}</a>
+            <a href="{{ Destination::Transactions->url() }}" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_transactions') }}</a>
         @endif
         @if ($budgetMonthsCount > 0)
-            <a href="{{ route('budgets.index') }}" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_budgets') }}</a>
+            <a href="{{ Destination::Budgets->url() }}" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_budgets') }}</a>
         @endif
     </div>
 
