@@ -32,6 +32,27 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
 
     public function fetch(string $channel): ?array
     {
+        $manifestUrl = $this->manifestUrl($channel);
+        if ($manifestUrl === null) {
+            return null;
+        }
+
+        try {
+            return $this->fetchAndParse($manifestUrl);
+        } catch (Throwable $e) {
+            // Offline, DNS failure, malformed manifest, unparseable date: one
+            // answer to the caller, and never a throw into the update flow.
+            $this->logger->warning('HttpPublisherManifestFetcher: manifest fetch failed.', SafeExceptionContext::describe($e));
+
+            return null;
+        }
+    }
+
+    // Two unrelated ways to have no manifest — an unconfigured feed and an OS
+    // that publishes none — and only the second is worth a line in the log: a
+    // feed left unset is how the desktop ships with updates off.
+    private function manifestUrl(string $channel): ?string
+    {
         $base = $this->config->get('auto_update.manifest_feed_url');
         if (! is_string($base) || $base === '') {
             return null;
@@ -46,17 +67,7 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
             return null;
         }
 
-        $manifestUrl = rtrim($base, '/').'/'.$manifestName;
-
-        try {
-            return $this->fetchAndParse($manifestUrl);
-        } catch (Throwable $e) {
-            // Offline, DNS failure, malformed manifest, unparseable date: one
-            // answer to the caller, and never a throw into the update flow.
-            $this->logger->warning('HttpPublisherManifestFetcher: manifest fetch failed.', SafeExceptionContext::describe($e));
-
-            return null;
-        }
+        return rtrim($base, '/').'/'.$manifestName;
     }
 
     // Fetching another platform's manifest would check the binary against a

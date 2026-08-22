@@ -235,6 +235,20 @@ final readonly class PreMigrationSnapshot
             return null;
         }
 
+        $restored = self::projectRestorableColumns($table, $row);
+
+        return $restored === null ? null : [$table, $restored];
+    }
+
+    // Nothing but the id survives on its own: a line whose every other column
+    // was dropped by the filter above restores an id over a live row and
+    // blanks nothing, which is a write with no content and no reason.
+    /**
+     * @param  array<mixed, mixed>  $row
+     * @return array<string, mixed>|null
+     */
+    private static function projectRestorableColumns(string $table, array $row): ?array
+    {
         $id = $row['id'] ?? null;
         if (! is_int($id) && ! is_string($id)) {
             return null;
@@ -247,7 +261,7 @@ final readonly class PreMigrationSnapshot
             }
         }
 
-        return count($restored) > 1 ? [$table, $restored] : null;
+        return count($restored) > 1 ? $restored : null;
     }
 
     /**
