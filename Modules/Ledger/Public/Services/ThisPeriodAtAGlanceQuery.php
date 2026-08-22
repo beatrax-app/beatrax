@@ -9,6 +9,7 @@ use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Chains\Public\Dto\CardStatementForecastTile;
+use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
@@ -180,7 +181,10 @@ final class ThisPeriodAtAGlanceQuery
             ->join('accounts', 'accounts.id', '=', 'card_statements.account_id')
             ->where('card_statements.user_id', $user->id)
             ->where('accounts.kind', AccountKind::IcsCard->value)
-            ->whereIn('card_statements.state', ['open', 'partially_settled'])
+            ->whereIn('card_statements.state', [
+                CardStatementState::Open->value,
+                CardStatementState::PartiallySettled->value,
+            ])
             ->orderByDesc('card_statements.period_end')
             ->orderByDesc('card_statements.id')
             ->select(
