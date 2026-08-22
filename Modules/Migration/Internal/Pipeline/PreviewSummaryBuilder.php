@@ -17,6 +17,7 @@ use Modules\Migration\Internal\Dto\PreviewSummary;
 use Modules\Migration\Internal\Enums\ConflictResolution;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
+use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -96,10 +97,10 @@ final class PreviewSummaryBuilder
     {
         /** @var array<string, list<array{id: int, label: string, reason: string, resolution: string}>> $groups */
         $groups = [
-            'category' => [],
-            'payee' => [],
-            'extra' => [],
-            'conflict' => [],
+            UnmappedItemType::Category->value => [],
+            UnmappedItemType::Payee->value => [],
+            UnmappedItemType::Extra->value => [],
+            UnmappedItemType::Conflict->value => [],
         ];
 
         $rows = $connection->table('migration_staging_unmapped_items')
@@ -114,7 +115,7 @@ final class PreviewSummaryBuilder
                 continue;
             }
 
-            $groups[$itemType][] = $itemType === 'conflict'
+            $groups[$itemType][] = $itemType === UnmappedItemType::Conflict->value
                 ? $this->conflictItem($connection, $user, $sourceProduct, $row)
                 : [
                     'id' => self::toInt($row->id),

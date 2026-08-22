@@ -11,6 +11,7 @@ use Modules\Migration\Internal\Dto\MigrationConfirmResult;
 use Modules\Migration\Internal\Enums\ConflictResolution;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
+use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Exceptions\MigrationAlreadyDiscardedException;
 use Modules\Migration\Internal\Pipeline\ConflictRow;
 use Modules\Migration\Internal\Pipeline\ConflictValueCodec;
@@ -89,7 +90,7 @@ final class ConfirmMigration
         $rows = $this->db->connection()->table('migration_staging_unmapped_items')
             ->where('user_id', $user->id)
             ->where('migration_run_id', $migrationRunId)
-            ->where('item_type', 'conflict')
+            ->where('item_type', UnmappedItemType::Conflict->value)
             ->whereNotNull('entity_type')
             ->get(['entity_type', 'source_external_id', 'field_name', 'local_value', 'source_value', 'resolution']);
 

@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Migration\Internal\Dto\ConflictDto;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
+use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Pipeline\ConflictValueCodec;
 use Modules\Migration\Internal\Pipeline\EntityChangeApplier;
 use Modules\Migration\Internal\Pipeline\MergeDecision;
@@ -71,7 +72,7 @@ final class CheckForUpdates
         $this->db->connection()->table('migration_staging_unmapped_items')->insert([
             'user_id' => $user->id,
             'migration_run_id' => $runId,
-            'item_type' => 'conflict',
+            'item_type' => UnmappedItemType::Conflict->value,
             'source_external_id' => $conflict->sourceExternalId,
             'entity_type' => $conflict->entityType,
             'field_name' => $conflict->fieldName,
@@ -114,7 +115,7 @@ final class CheckForUpdates
         $this->db->connection()->table('migration_staging_unmapped_items')->insert([
             'user_id' => $user->id,
             'migration_run_id' => $runId,
-            'item_type' => 'extra',
+            'item_type' => UnmappedItemType::Extra->value,
             'source_external_id' => $sourceExternalId,
             'display_label' => 'Transaction amount update',
             'reason' => "The source's new amount could not be applied — it collides with another transaction's fingerprint (same account, date, currency and counterparty). Left unchanged.",

@@ -21,6 +21,7 @@ use Modules\Migration\Internal\Dto\MigrationScheduleDto;
 use Modules\Migration\Internal\Dto\MigrationTransactionDto;
 use Modules\Migration\Internal\Dto\UnmappedItemDto;
 use Modules\Migration\Internal\Enums\MigrationSourceProduct;
+use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Parsers\Support\ActualGoalDefInterpreter;
 use Modules\Migration\Internal\Services\ActualSqliteReader;
@@ -105,7 +106,7 @@ final class ActualParser implements ParsesMigrationSource
                 note: $note,
             ));
             $unmapped->push(new UnmappedItemDto(
-                itemType: 'extra',
+                itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: $row['id'],
                 displayLabel: $name,
                 reason: 'Scheduled/recurring transactions have no Beatrax create-from-external-source path yet — preserved as a note only, not a live Recurring series',
@@ -114,7 +115,7 @@ final class ActualParser implements ParsesMigrationSource
 
         foreach ($reader->customReports() as $row) {
             $unmapped->push(new UnmappedItemDto(
-                itemType: 'extra',
+                itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: $row['id'],
                 displayLabel: $row['name'],
                 reason: 'Saved reports/analysis configs have no Beatrax equivalent',
@@ -147,7 +148,7 @@ final class ActualParser implements ParsesMigrationSource
         if ($currency === null) {
             $currency = $user->base_currency;
             $unmapped->push(new UnmappedItemDto(
-                itemType: 'extra',
+                itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: null,
                 displayLabel: 'Budget-file currency',
                 reason: "assumed {$currency} — no 'preferences.currencyCode' row found in this export",
@@ -236,7 +237,7 @@ final class ActualParser implements ParsesMigrationSource
             }
 
             $unmapped->push(new UnmappedItemDto(
-                itemType: 'extra',
+                itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: $row['category_id'],
                 displayLabel: $categoryName.' goal',
                 reason: 'categories.goal_def uses an unsupported (non-flat) template shape — the goal was not imported',
