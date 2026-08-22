@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'Codul PIN trebuie să aibă cel puțin 6 cifre.',
     'error_pin_mismatch' => 'Codurile PIN nu coincid. Încearcă din nou.',
+    'error_pin_required' => 'Introdu codul PIN.',
     'error_pin_incorrect' => 'Cod PIN incorect.',
+    'error_account_password_required' => 'Introdu parola contului.',
     'error_account_password' => 'Parola contului este incorectă.',
     'change_pin_success' => 'Cheia ta de criptare a fost resecurizată cu noul cod PIN.',
     'error_forgot_failed' => 'Resetarea codului PIN a eșuat — cheia de recuperare nu este disponibilă.',
     'error_enable_first' => 'Activează mai întâi blocarea cu cod PIN, apoi înrolează biometria.',
+    'error_disable_blocked_by_encryption' => 'Notițele tale și datele contrapărților sunt criptate cu cheia pe care o păstrează această blocare a aplicației, așa că dezactivarea ei le-ar lăsa ilizibile. Blocarea rămâne activă — schimbă-ți mai bine PIN-ul.',
+    'error_key_material_lost' => 'Acest dispozitiv nu mai păstrează cheia care deschide datele tale criptate, așa că un PIN nou nu le va face din nou lizibile. Asociază acest dispozitiv cu unul care încă are cheia pentru a le recupera.',
+    'error_recovery_wrap_stale' => 'Parola contului nu mai deschide această blocare a aplicației — a fost schimbată după configurarea blocării. Codul PIN încă funcționează, dar în spatele lui nu mai rămâne nimic dacă îl uiți. Reconectează acum parola contului.',
+    'relink_recovery' => 'Reconectează parola contului',
+    'relink_modal_heading' => 'Reconectează parola contului — confirmă cu codul PIN',
+    'relink_recovery_success' => 'Parola contului poate recupera din nou această blocare a aplicației.',
 ];

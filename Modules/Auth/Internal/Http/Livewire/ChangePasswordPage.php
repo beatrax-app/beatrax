@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
@@ -35,8 +36,18 @@ final class ChangePasswordPage extends Component
         DatabaseManager $db,
         UrlGenerator $urls,
         Session $session,
+        AppLockProvisioner $provisioner,
     ): void {
         $user = $currentUser->user();
+
+        // An empty box is not a wrong answer. Reported as an incorrect password
+        // it sends the reader off to check a password manager, when what is
+        // wrong is the field in front of them.
+        if ($this->currentPassword === '') {
+            $this->flashMessage = Lang::get('auth::change_password.error_current_required');
+
+            return;
+        }
 
         if (! $hasher->check($this->currentPassword, $user->password)) {
             $this->flashMessage = Lang::get('auth::change_password.error_current_incorrect');
@@ -65,6 +76,11 @@ final class ChangePasswordPage extends Component
                 'password' => $hasher->make($this->newPassword),
                 'force_password_change_at_next_login' => false,
             ]);
+
+        // This is the only moment both passwords exist, and the app-lock
+        // recovery wrap is built from the old one — left alone it would stop
+        // opening, silently, until the day a forgotten PIN needed it.
+        $provisioner->rewrapRecoveryKey($user->id, $this->currentPassword, $this->newPassword);
 
         // A password changed after a suspected compromise must sever the other
         // sessions; this one survives only to finish the redirect.

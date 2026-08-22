@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Tot ce este mai sus se elimină de pe acest dispozitiv și ești deconectat. Nu există cale de întoarcere și nu rămâne nicio copie de siguranță.',
     'confirm' => 'Da, șterge tot',
     'cancel' => 'Păstrează contul meu',
+    'error_password_required' => 'Introdu parola.',
     'error_password' => 'Parola nu este corectă.',
     'error_failed' => 'Contul tău nu a fost șters. Nu s-a schimbat nimic — încearcă din nou.',
 ];

@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Kinnita uus parool',
     'submit' => 'Salvesta uus parool',
 
+    'error_current_required' => 'Sisesta oma praegune parool.',
     'error_current_incorrect' => 'Praegune parool on vale.',
     'error_mismatch' => 'Paroolid ei kattu.',
     'error_min_length' => 'Kasuta vähemalt 12 märki.',

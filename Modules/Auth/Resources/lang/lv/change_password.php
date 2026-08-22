@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Apstipriniet jauno paroli',
     'submit' => 'Saglabāt jauno paroli',
 
+    'error_current_required' => 'Ievadiet savu pašreizējo paroli.',
     'error_current_incorrect' => 'Pašreizējā parole ir nepareiza.',
     'error_mismatch' => 'Paroles nesakrīt.',
     'error_min_length' => 'Izmantojiet vismaz 12 rakstzīmes.',

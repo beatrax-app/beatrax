@@ -142,6 +142,72 @@
             </button>
         </div>
 
+        {{-- Recovery re-link — rendered only while the account-password wrap
+             is stale, because it is the only state it can repair. --}}
+        @if ($recoveryWrapStale)
+            <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950">
+                <p class="text-sm text-amber-900 dark:text-amber-200">
+                    {{ Lang::get('auth::app_lock.error_recovery_wrap_stale') }}
+                </p>
+                <x-core::secondary-button
+                    size="sm"
+                    class="mt-3 min-h-[44px]"
+                    wire:click="confirmRelinkRecovery"
+                >
+                    {{ Lang::get('auth::app_lock.relink_recovery') }}
+                </x-core::secondary-button>
+            </div>
+        @endif
+
+        {{-- Re-link confirmation modal: both credentials at once, which is what
+             rebuilding the recovery wrap costs. --}}
+        @if ($confirmingRelink)
+            <flux:modal wire:model="confirmingRelink" class="md:max-w-sm">
+                <div class="space-y-4 p-6">
+                    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+                        {{ Lang::get('auth::app_lock.relink_modal_heading') }}
+                    </h3>
+                    <x-core::form-field
+                        :label="Lang::get('auth::app_lock.current_pin_label')"
+                        name="currentPin"
+                        field-id="relink-pin-input"
+                        type="password"
+                        size="base"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        wire:model="currentPin"
+                        placeholder="········"
+                    />
+                    <x-core::form-field
+                        :label="Lang::get('auth::app_lock.account_password_label')"
+                        name="accountPassword"
+                        field-id="relink-account-password-input"
+                        type="password"
+                        size="base"
+                        autocomplete="current-password"
+                        wire:model="accountPassword"
+                        placeholder="{{ Lang::get('auth::app_lock.account_password_placeholder') }}"
+                    />
+                    <div class="flex gap-3">
+                        <x-core::neutral-button
+                            block="flex"
+                            class="min-h-[44px]"
+                            wire:click="relinkRecovery"
+                        >
+                            {{ Lang::get('auth::app_lock.relink_recovery') }}
+                        </x-core::neutral-button>
+                        <x-core::secondary-button
+                            block="flex"
+                            class="min-h-[44px]"
+                            wire:click="$set('confirmingRelink', false)"
+                        >
+                            {{ Lang::get('auth::app_lock.cancel') }}
+                        </x-core::secondary-button>
+                    </div>
+                </div>
+            </flux:modal>
+        @endif
+
         {{-- 3c: Biometric enrollment row
 
              Detects browser WebAuthn capability and tells the server.

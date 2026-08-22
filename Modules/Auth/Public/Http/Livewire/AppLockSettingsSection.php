@@ -15,6 +15,8 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
+use Modules\Auth\Internal\Lock\AppLockDisableResult;
+use Modules\Auth\Internal\Lock\AppLockKeyState;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PlatformDetector;
@@ -72,6 +74,12 @@ final class AppLockSettingsSection extends Component
 
     public bool $confirmingForgotPin = false;
 
+    // Rendered only in the state it repairs, so the ordinary screen never
+    // carries a control for a fault nobody has.
+    public bool $recoveryWrapStale = false;
+
+    public bool $confirmingRelink = false;
+
     public string $changePinSuccessMessage = '';
 
     public function mount(
@@ -82,6 +90,7 @@ final class AppLockSettingsSection extends Component
         Request $request,
         Clock $clock,
         ColdStartVault $vault,
+        AppLockProvisioner $provisioner,
     ): void {
         $user = $currentUser->user();
 
@@ -122,12 +131,77 @@ final class AppLockSettingsSection extends Component
         // Seeded server-side because lock.js's browser probe cannot see an
         // OS-owned biometric at all.
         $this->biometricCapable = $vault->isAvailable();
+
+        $this->applyKeyState($provisioner->keyState($user->id));
+    }
+
+    // Both faults are silent everywhere else — a stranded key renders columns
+    // empty, a stale recovery wrap waits until a forgotten PIN — so this screen
+    // is where each one is said out loud.
+    private function applyKeyState(AppLockKeyState $state): void
+    {
+        $this->recoveryWrapStale = $state === AppLockKeyState::RecoveryUnreadable;
+
+        $this->flashMessage = match ($state) {
+            AppLockKeyState::Stranded => Lang::get('auth::app_lock.error_key_material_lost'),
+            AppLockKeyState::RecoveryUnreadable => Lang::get('auth::app_lock.error_recovery_wrap_stale'),
+            AppLockKeyState::Absent, AppLockKeyState::Held => $this->flashMessage,
+        };
+    }
+
+    public function confirmRelinkRecovery(): void
+    {
+        $this->confirmingRelink = true;
+        $this->currentPin = '';
+        $this->accountPassword = '';
+    }
+
+    // Takes both credentials at once because that is what the repair costs: the
+    // PIN produces the data key, the account password becomes its new wrap.
+    public function relinkRecovery(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher): void
+    {
+        $user = $currentUser->user();
+
+        if ($this->currentPin === '') {
+            $this->flashMessage = Lang::get('auth::app_lock.error_pin_required');
+
+            return;
+        }
+
+        if ($this->accountPassword === '') {
+            $this->flashMessage = Lang::get('auth::app_lock.error_account_password_required');
+
+            return;
+        }
+
+        if (! $hasher->check($this->accountPassword, $user->password)) {
+            $this->flashMessage = Lang::get('auth::app_lock.error_account_password');
+
+            return;
+        }
+
+        $relinked = $provisioner->relinkRecoveryWrap($user->id, $this->currentPin, $this->accountPassword);
+
+        $this->accountPassword = '';
+        $this->currentPin = '';
+
+        if (! $relinked) {
+            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
+
+            return;
+        }
+
+        $this->recoveryWrapStale = false;
+        $this->confirmingRelink = false;
+        $this->flashMessage = '';
+
+        $this->toast(Lang::get('auth::app_lock.relink_recovery_success'));
     }
 
     public function setPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher, Session $session): void
     {
-        // enable() mints a new data key, so re-running it on an enabled lock
-        // would silently rotate it. PIN changes go through changePin().
+        // enable() re-provisions the whole lock, so re-running it on an enabled
+        // lock would rotate what a PIN change only re-wraps. Go via changePin().
         if ($this->lockEnabled) {
             return;
         }
@@ -140,6 +214,23 @@ final class AppLockSettingsSection extends Component
         }
 
         $user = $currentUser->user();
+
+        // Ahead of the password checks because no answer to them changes this
+        // one, and a form that asks first reads as though it could.
+        if ($provisioner->keyState($user->id) === AppLockKeyState::Stranded) {
+            $this->flashMessage = Lang::get('auth::app_lock.error_key_material_lost');
+
+            return;
+        }
+
+        // An empty box is not a wrong answer. Reported as an incorrect password
+        // it sends the reader off to check a password manager, when what is
+        // wrong is the field in front of them.
+        if ($this->accountPassword === '') {
+            $this->flashMessage = Lang::get('auth::app_lock.error_account_password_required');
+
+            return;
+        }
 
         if (! $hasher->check($this->accountPassword, $user->password)) {
             $this->flashMessage = Lang::get('auth::app_lock.error_account_password');
@@ -200,11 +291,27 @@ final class AppLockSettingsSection extends Component
 
     public function disable(CurrentUser $currentUser, AppLockProvisioner $provisioner): void
     {
+        if ($this->currentPin === '') {
+            $this->flashMessage = Lang::get('auth::app_lock.error_pin_required');
+
+            return;
+        }
+
         $user = $currentUser->user();
         $result = $provisioner->disable($user->id, $this->currentPin);
 
-        if ($result === false) {
+        if ($result === AppLockDisableResult::PinIncorrect) {
             $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
+
+            return;
+        }
+
+        // Closed, unlike a wrong PIN: no PIN typed into this box changes the
+        // answer, so leaving it open invites the user to keep trying.
+        if ($result === AppLockDisableResult::EncryptedDataDependsOnIt) {
+            $this->confirmingDisable = false;
+            $this->currentPin = '';
+            $this->flashMessage = Lang::get('auth::app_lock.error_disable_blocked_by_encryption');
 
             return;
         }
@@ -232,6 +339,12 @@ final class AppLockSettingsSection extends Component
         $error = $this->newPinValidationError();
         if ($error !== null) {
             $this->flashMessage = $error;
+
+            return;
+        }
+
+        if ($this->currentPin === '') {
+            $this->flashMessage = Lang::get('auth::app_lock.error_pin_required');
 
             return;
         }
@@ -271,6 +384,12 @@ final class AppLockSettingsSection extends Component
         $error = $this->newPinValidationError();
         if ($error !== null) {
             $this->flashMessage = $error;
+
+            return;
+        }
+
+        if ($this->accountPassword === '') {
+            $this->flashMessage = Lang::get('auth::app_lock.error_account_password_required');
 
             return;
         }
@@ -405,6 +524,12 @@ final class AppLockSettingsSection extends Component
         AppLockProvisioner $provisioner,
         ColdStartVault $vault,
     ): void {
+        if ($this->deenrollPin === '') {
+            $this->flashMessage = Lang::get('auth::app_lock.error_pin_required');
+
+            return;
+        }
+
         $user = $currentUser->user();
 
         if (! $provisioner->verifyPin($user->id, $this->deenrollPin)) {

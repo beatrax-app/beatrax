@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'Pincode moet minstens 6 cijfers bevatten.',
     'error_pin_mismatch' => 'Pincodes komen niet overeen. Probeer het opnieuw.',
+    'error_pin_required' => 'Voer je pincode in.',
     'error_pin_incorrect' => 'Onjuiste pincode.',
+    'error_account_password_required' => 'Voer je accountwachtwoord in.',
     'error_account_password' => 'Onjuist accountwachtwoord.',
     'change_pin_success' => 'Je encryptiesleutel is opnieuw beveiligd met je nieuwe pincode.',
     'error_forgot_failed' => 'Pincode opnieuw instellen mislukt — de herstelsleutel is niet beschikbaar.',
     'error_enable_first' => 'Schakel eerst de pincodevergrendeling in voordat je biometrie registreert.',
+    'error_disable_blocked_by_encryption' => 'Je notities en tegenpartijgegevens zijn versleuteld met de sleutel die deze app-vergrendeling bewaart, dus de vergrendeling uitzetten zou ze onleesbaar maken. De vergrendeling blijft aan — wijzig in plaats daarvan je pincode.',
+    'error_key_material_lost' => 'Dit apparaat heeft de sleutel die je versleutelde gegevens opent niet meer, dus een nieuwe pincode maakt ze niet weer leesbaar. Koppel dit apparaat aan een apparaat dat de sleutel nog wel heeft om ze terug te krijgen.',
+    'error_recovery_wrap_stale' => 'Je accountwachtwoord opent deze app-vergrendeling niet meer — het is gewijzigd nadat de vergrendeling was ingesteld. Je pincode werkt nog, maar er zit niets meer achter als je die vergeet. Koppel je accountwachtwoord nu opnieuw.',
+    'relink_recovery' => 'Accountwachtwoord opnieuw koppelen',
+    'relink_modal_heading' => 'Accountwachtwoord opnieuw koppelen — bevestig met pincode',
+    'relink_recovery_success' => 'Je accountwachtwoord kan deze app-vergrendeling weer herstellen.',
 ];

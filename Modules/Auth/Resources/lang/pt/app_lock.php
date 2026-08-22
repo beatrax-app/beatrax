@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'O PIN tem de ter pelo menos 6 dígitos.',
     'error_pin_mismatch' => 'Os PIN não coincidem. Tenta novamente.',
+    'error_pin_required' => 'Introduz o teu PIN.',
     'error_pin_incorrect' => 'PIN incorreto.',
+    'error_account_password_required' => 'Introduz a palavra-passe da tua conta.',
     'error_account_password' => 'Palavra-passe da conta incorreta.',
     'change_pin_success' => 'A tua chave de encriptação foi novamente protegida com o novo PIN.',
     'error_forgot_failed' => 'Não foi possível repor o PIN — a chave de recuperação não está disponível.',
     'error_enable_first' => 'Ativa primeiro o bloqueio por PIN antes de registares a biometria.',
+    'error_disable_blocked_by_encryption' => 'As tuas notas e os dados das contrapartes estão cifrados com a chave que este bloqueio da aplicação guarda, por isso desligá-lo deixaria tudo ilegível. O bloqueio fica ativo — muda antes o teu PIN.',
+    'error_key_material_lost' => 'Este dispositivo já não guarda a chave que abre os teus dados cifrados, por isso um PIN novo não os volta a tornar legíveis. Emparelha este dispositivo com um que ainda tenha a chave para os recuperares.',
+    'error_recovery_wrap_stale' => 'A palavra-passe da conta já não abre este bloqueio da aplicação — foi alterada depois de o bloqueio estar configurado. O teu PIN continua a funcionar, mas não fica nada por trás dele se o esqueceres. Volta a ligar a palavra-passe da conta agora.',
+    'relink_recovery' => 'Voltar a ligar a palavra-passe',
+    'relink_modal_heading' => 'Voltar a ligar a palavra-passe — confirma com o PIN',
+    'relink_recovery_success' => 'A palavra-passe da conta volta a poder recuperar este bloqueio da aplicação.',
 ];

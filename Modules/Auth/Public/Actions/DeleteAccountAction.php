@@ -38,6 +38,15 @@ final class DeleteAccountAction
 
     public function __invoke(User $user, string $password): void
     {
+        // An empty box is not a wrong answer. Reported as an incorrect password
+        // it sends the reader off to check a password manager, when what is
+        // wrong is the field in front of them.
+        if ($password === '') {
+            throw ValidationException::withMessages([
+                'password' => Lang::get('auth::delete_account.error_password_required'),
+            ]);
+        }
+
         if (! $this->hasher->check($password, $user->password)) {
             throw ValidationException::withMessages([
                 'password' => Lang::get('auth::delete_account.error_password'),

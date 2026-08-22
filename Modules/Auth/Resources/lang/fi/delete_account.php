@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Kaikki yllä oleva poistetaan tästä laitteesta ja sinut kirjataan ulos. Peruuttaa ei voi eikä varmuuskopiota jää.',
     'confirm' => 'Kyllä, poista kaikki',
     'cancel' => 'Säilytä tilini',
+    'error_password_required' => 'Kirjoita salasanasi.',
     'error_password' => 'Salasana ei ole oikein.',
     'error_failed' => 'Tiliäsi ei poistettu. Mitään ei muutettu — yritä uudelleen.',
 ];
