@@ -134,12 +134,20 @@ final class ConnectPaypalStep extends Component
     private function fatalParseMessage(ImportPreviewResult $result): ?string
     {
         // A file the parser cannot read at all comes back as a file-level
-        // failure carrying no rows, so the all-error-rows walk below never
-        // sees it. Its detail is the sentence naming the export to fetch.
+        // failure carrying no rows, so the all-error-rows walk never sees it.
+        // Its detail is the sentence naming the export to fetch.
         if ($result->fileFailureReason !== null) {
             return $result->fileFailureDetail ?? $result->fileFailureReason->label();
         }
 
+        return $this->everyRowFailedMessage($result);
+    }
+
+    // A file that parsed but yielded nothing importable, as distinct from one
+    // with a bad row in it. An unknown account to name is not that case: those
+    // rows are errors only until the account exists.
+    private function everyRowFailedMessage(ImportPreviewResult $result): ?string
+    {
         if ($result->rows === [] || $result->accountsToName !== []) {
             return null;
         }

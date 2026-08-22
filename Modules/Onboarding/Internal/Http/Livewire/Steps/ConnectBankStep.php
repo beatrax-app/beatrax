@@ -122,8 +122,8 @@ final class ConnectBankStep extends Component
             return;
         }
 
-        if ($result->accountsToName !== []) {
-            $this->ensureBankAccounts($result, $user, $db, $slugs, $importer, $formatHint, $logger, $app);
+        if ($this->createMissingBankAccounts($result, $user, $db, $slugs) > 0) {
+            $this->repreview($result->importRunId, $user, $importer, $formatHint, $logger, $app);
         }
 
         $this->stashRunId($user, $result->importRunId);
@@ -148,7 +148,10 @@ final class ConnectBankStep extends Component
         }
     }
 
-    private function ensureBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, AccountSlugResolver $slugs, RunsImports $importer, ?BankCsvFormatHint $formatHint, LoggerInterface $logger, Application $app): void
+    /**
+     * @return int how many accounts the preview needed that did not exist yet
+     */
+    private function createMissingBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, AccountSlugResolver $slugs): int
     {
         $bankLabel = $this->bankLabelFor($this->selectedFormat, $this->selectedBankFormatHint);
 
@@ -159,9 +162,7 @@ final class ConnectBankStep extends Component
             }
         }
 
-        if ($created > 0) {
-            $this->repreview($result->importRunId, $user, $importer, $formatHint, $logger, $app);
-        }
+        return $created;
     }
 
     private function createBankAccount(UnknownIban $unknown, string $bankLabel, User $user, DatabaseManager $db, AccountSlugResolver $slugs): bool

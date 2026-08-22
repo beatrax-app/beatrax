@@ -19,6 +19,7 @@ use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
 use Modules\Import\Internal\Pipeline\Stages\PaymentTypeClassifierStage;
 use Modules\Import\Public\Dto\EnrichedDisposition;
+use Modules\Import\Public\Dto\FingerprintDisposition;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Dto\UnknownIban;
@@ -134,27 +135,13 @@ final class ImportPipeline
         try {
             foreach ($sourceRows as $source) {
                 $resolution = $accounts->resolve($source->ownIban);
-                $rowDescription = self::trimToNull($source->description);
 
                 if ($resolution instanceof UnknownAccount) {
                     $unknownIbans[$source->ownIban] = new UnknownIban(
                         iban: $source->ownIban,
                         seenCounterpartyName: $source->counterpartyName,
                     );
-                    $preview[] = new PreviewRowDto(
-                        rowIndex: $source->sourceRowIndex,
-                        status: PreviewRowStatus::Error,
-                        accountId: null,
-                        bookedAt: Fmt::shortDate($source->bookedAt),
-                        counterpartyName: $source->counterpartyName,
-                        counterpartyIban: $source->counterpartyIban,
-                        description: $rowDescription,
-                        categoryName: null,
-                        amountMinor: $source->amountMinor,
-                        currency: $source->currency,
-                        error: ImportFailureReason::UnknownAccount->label(),
-                        errorReason: ImportFailureReason::UnknownAccount,
-                    );
+                    $preview[] = self::failedRow($source, null, ImportFailureReason::UnknownAccount);
 
                     continue;
                 }
@@ -163,104 +150,18 @@ final class ImportPipeline
                 $accountId = $resolution->accountId;
                 $lastResolvedAccountId = $accountId;
 
-                try {
-                    $normalized = $this->normalize->run($source, $accountId, $user, $importRunId, $sourceFormat);
-                    $normalized = $this->classifier->run($normalized, $user);
-                    $normalized = $this->paymentTypeClassifier->run($normalized, $user, $sourceFormat);
-                    $autoOutcome = $this->autoCategory->apply($normalized, $user);
-                    $normalized = $autoOutcome->canonical;
-                    // Before the fingerprint stage, so counterparty_id rides
-                    // the canonical row into RecordTransactions.
-                    $normalized = $this->resolveCounterparty->run($normalized, $user);
-                } catch (BlindIndexKeyUnavailableException $e) {
-                    // Its message names a class and the user's own id. Correct
-                    // for a log, wrong for a preview row, and it would repeat
-                    // once per row of the statement.
-                    $this->logger->warning('ImportPipeline: row refused — the app-lock key is not held.', [
-                        'source_format' => $sourceFormat,
-                        'import_run_id' => $importRunId,
-                        ...SafeExceptionContext::describe($e),
-                    ]);
-                    $preview[] = new PreviewRowDto(
-                        rowIndex: $source->sourceRowIndex,
-                        status: PreviewRowStatus::Error,
-                        accountId: $accountId,
-                        bookedAt: Fmt::shortDate($source->bookedAt),
-                        counterpartyName: $source->counterpartyName,
-                        counterpartyIban: $source->counterpartyIban,
-                        description: $rowDescription,
-                        categoryName: null,
-                        amountMinor: $source->amountMinor,
-                        currency: $source->currency,
-                        error: ImportFailureReason::AppLocked->label(),
-                        errorReason: ImportFailureReason::AppLocked,
-                    );
-
-                    continue;
-                } catch (Throwable $e) {
-                    // The preview row's message is short and loses the call
-                    // site, so the trace goes to the log instead.
-                    $this->logger->warning('ImportPipeline: row failed.', [
-                        'source_format' => $sourceFormat,
-                        'import_run_id' => $importRunId,
-                        'row_index' => $source->sourceRowIndex,
-                        ...SafeExceptionContext::describe($e),
-                        'exception_trace' => SafeTrace::cap($e, $this->app->basePath()),
-                    ]);
-                    $rowReason = self::reasonFor($e, ImportFailureReason::RowUnreadable);
-                    $preview[] = new PreviewRowDto(
-                        rowIndex: $source->sourceRowIndex,
-                        status: PreviewRowStatus::Error,
-                        accountId: $accountId,
-                        bookedAt: Fmt::shortDate($source->bookedAt),
-                        counterpartyName: $source->counterpartyName,
-                        counterpartyIban: $source->counterpartyIban,
-                        description: $rowDescription,
-                        categoryName: null,
-                        amountMinor: $source->amountMinor,
-                        currency: $source->currency,
-                        error: $rowReason->label(),
-                        errorReason: $rowReason,
-                        errorDetail: self::safeDetail($e),
-                    );
+                $enriched = $this->enrichRow($source, $accountId, $user, $importRunId, $sourceFormat);
+                if ($enriched instanceof PreviewRowDto) {
+                    $preview[] = $enriched;
 
                     continue;
                 }
 
-                $disposition = $this->fingerprint->classify($normalized, $user);
-                $diff = null;
-                if ($disposition instanceof EnrichedDisposition) {
-                    $diff = [
-                        'source_ref' => [
-                            'from' => $disposition->fromSourceRef,
-                            'to' => $disposition->toSourceRef,
-                        ],
-                    ];
-                }
-
-                $aliasFriendlyName = $rowDescription === null
-                    ? null
-                    : $this->merchantNameResolver->resolve($rowDescription, $user->id);
-
-                $preview[] = new PreviewRowDto(
-                    rowIndex: $source->sourceRowIndex,
-                    status: $disposition->status(),
-                    accountId: $accountId,
-                    bookedAt: Fmt::shortDate($source->bookedAt),
-                    counterpartyName: $source->counterpartyName,
-                    counterpartyIban: $source->counterpartyIban,
-                    description: $rowDescription,
-                    categoryName: null,
-                    amountMinor: $source->amountMinor,
-                    currency: $source->currency,
-                    error: null,
-                    diff: $diff,
-                    paymentType: $normalized->paymentType,
-                    aliasFriendlyName: $aliasFriendlyName,
-                );
+                $disposition = $this->fingerprint->classify($enriched, $user);
+                $preview[] = $this->acceptedRow($source, $accountId, $enriched, $disposition, $user);
 
                 if ($disposition->isNew()) {
-                    $canonical[] = $normalized;
+                    $canonical[] = $enriched;
                 } elseif ($disposition instanceof EnrichedDisposition) {
                     $enrichments[] = new PendingEnrichment(
                         existingTransactionId: $disposition->existingTransactionId,
@@ -302,6 +203,98 @@ final class ImportPipeline
             'fileFailureRowIndex' => $fileFailureRowIndex,
             'lastResolvedAccountId' => $lastResolvedAccountId,
         ];
+    }
+
+    // Every stage a row has to survive to become a transaction. One that fails
+    // any of them is not the file failing: it comes back as the preview row
+    // that says so, and the read carries on to the next row.
+    private function enrichRow(SourceTransactionDto $source, int $accountId, User $user, int $importRunId, string $sourceFormat): CanonicalTransaction|PreviewRowDto
+    {
+        try {
+            $normalized = $this->normalize->run($source, $accountId, $user, $importRunId, $sourceFormat);
+            $normalized = $this->classifier->run($normalized, $user);
+            $normalized = $this->paymentTypeClassifier->run($normalized, $user, $sourceFormat);
+            $normalized = $this->autoCategory->apply($normalized, $user)->canonical;
+
+            // Before the fingerprint stage, so counterparty_id rides the
+            // canonical row into RecordTransactions.
+            return $this->resolveCounterparty->run($normalized, $user);
+        } catch (BlindIndexKeyUnavailableException $e) {
+            // Its message names a class and the user's own id. Correct for a
+            // log, wrong for a preview row, and it would repeat once per row of
+            // the statement.
+            $this->logger->warning('ImportPipeline: row refused — the app-lock key is not held.', [
+                'source_format' => $sourceFormat,
+                'import_run_id' => $importRunId,
+                ...SafeExceptionContext::describe($e),
+            ]);
+
+            return self::failedRow($source, $accountId, ImportFailureReason::AppLocked);
+        } catch (Throwable $e) {
+            // The preview row's message is short and loses the call site, so
+            // the trace goes to the log instead.
+            $this->logger->warning('ImportPipeline: row failed.', [
+                'source_format' => $sourceFormat,
+                'import_run_id' => $importRunId,
+                'row_index' => $source->sourceRowIndex,
+                ...SafeExceptionContext::describe($e),
+                'exception_trace' => SafeTrace::cap($e, $this->app->basePath()),
+            ]);
+
+            return self::failedRow(
+                $source,
+                $accountId,
+                self::reasonFor($e, ImportFailureReason::RowUnreadable),
+                self::safeDetail($e),
+            );
+        }
+    }
+
+    private static function failedRow(SourceTransactionDto $source, ?int $accountId, ImportFailureReason $reason, ?string $detail = null): PreviewRowDto
+    {
+        return new PreviewRowDto(
+            rowIndex: $source->sourceRowIndex,
+            status: PreviewRowStatus::Error,
+            accountId: $accountId,
+            bookedAt: Fmt::shortDate($source->bookedAt),
+            counterpartyName: $source->counterpartyName,
+            counterpartyIban: $source->counterpartyIban,
+            description: self::trimToNull($source->description),
+            categoryName: null,
+            amountMinor: $source->amountMinor,
+            currency: $source->currency,
+            error: $reason->label(),
+            errorReason: $reason,
+            errorDetail: $detail,
+        );
+    }
+
+    private function acceptedRow(SourceTransactionDto $source, int $accountId, CanonicalTransaction $normalized, FingerprintDisposition $disposition, User $user): PreviewRowDto
+    {
+        $rowDescription = self::trimToNull($source->description);
+
+        $diff = $disposition instanceof EnrichedDisposition
+            ? ['source_ref' => ['from' => $disposition->fromSourceRef, 'to' => $disposition->toSourceRef]]
+            : null;
+
+        return new PreviewRowDto(
+            rowIndex: $source->sourceRowIndex,
+            status: $disposition->status(),
+            accountId: $accountId,
+            bookedAt: Fmt::shortDate($source->bookedAt),
+            counterpartyName: $source->counterpartyName,
+            counterpartyIban: $source->counterpartyIban,
+            description: $rowDescription,
+            categoryName: null,
+            amountMinor: $source->amountMinor,
+            currency: $source->currency,
+            error: null,
+            diff: $diff,
+            paymentType: $normalized->paymentType,
+            aliasFriendlyName: $rowDescription === null
+                ? null
+                : $this->merchantNameResolver->resolve($rowDescription, $user->id),
+        );
     }
 
     /**

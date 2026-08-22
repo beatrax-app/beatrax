@@ -54,18 +54,24 @@ final class ClassificationRuleProvider
             return $this->cache[$key];
         }
 
-        if ($wanted !== null) {
-            return $this->cache[$key] = array_values(array_filter(
+        return $this->cache[$key] = $wanted === null
+            ? $this->rulesFromCorpus($type)
+            : array_values(array_filter(
                 $this->rulesForType($type),
                 static fn (ClassificationRule $rule): bool => $rule->region === $wanted,
             ));
-        }
+    }
 
+    /**
+     * @return list<ClassificationRule>
+     */
+    private function rulesFromCorpus(string $type): array
+    {
         $dir = $this->reader->resolve('community.corpus.root', 'resources/corpus').'/'.$type;
         if (! is_dir($dir)) {
             $this->logger->warning('ClassificationRuleProvider: corpus directory is missing.', ['dir' => $dir]);
 
-            return $this->cache[$key] = [];
+            return [];
         }
 
         $files = glob($dir.'/*.yaml');
@@ -80,7 +86,7 @@ final class ClassificationRuleProvider
             }
         }
 
-        return $this->cache[$key] = $rules;
+        return $rules;
     }
 
     /**

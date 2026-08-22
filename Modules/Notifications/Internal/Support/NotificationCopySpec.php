@@ -37,20 +37,11 @@ final readonly class NotificationCopySpec
         return $this->title->render();
     }
 
-    // All or nothing: half a body in the reader's language and half missing is
-    // worse than the whole stored sentence the caller falls back to.
     public function body(): ?string
     {
-        $parts = [];
-        foreach ($this->body as $line) {
-            $part = $line->render();
-            if ($part === null) {
-                return null;
-            }
-            $parts[] = $part;
-        }
+        $parts = AllOrNothing::map($this->body, static fn (CopyLine $line): ?string => $line->render());
 
-        return implode(' ', $parts);
+        return $parts === null ? null : implode(' ', $parts);
     }
 
     // What the row's own title/body columns get: the OS push and any device on
@@ -96,15 +87,8 @@ final readonly class NotificationCopySpec
             return null;
         }
 
-        $body = [];
-        foreach ($rawBody as $rawLine) {
-            $line = CopyLine::fromArray($rawLine);
-            if ($line === null) {
-                return null;
-            }
-            $body[] = $line;
-        }
+        $body = AllOrNothing::map($rawBody, CopyLine::fromArray(...));
 
-        return new self($title, $body);
+        return $body === null ? null : new self($title, array_values($body));
     }
 }

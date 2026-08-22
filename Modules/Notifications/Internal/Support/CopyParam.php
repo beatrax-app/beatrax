@@ -108,18 +108,24 @@ final readonly class CopyParam
             return null;
         }
 
-        $parsed = CopyParamKind::tryFrom($kind);
+        $parsed = self::readableKind($kind, $value);
 
+        return $parsed === null ? null : new self($parsed, $value);
+    }
+
+    // A kind this release has no case for, or a stored value that does not
+    // carry the shape that kind packs into it, is a row written by a version
+    // that knew more. Refused here rather than half-parsed, so the reader is
+    // handed the sentence the row was written with.
+    private static function readableKind(string $kind, string $value): ?CopyParamKind
+    {
+        $parsed = CopyParamKind::tryFrom($kind);
         if ($parsed === null) {
             return null;
         }
 
         $pattern = $parsed->storedValuePattern();
 
-        if ($pattern !== null && preg_match($pattern, $value) !== 1) {
-            return null;
-        }
-
-        return new self($parsed, $value);
+        return $pattern !== null && preg_match($pattern, $value) !== 1 ? null : $parsed;
     }
 }

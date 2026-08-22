@@ -122,7 +122,8 @@ So the resolution is layered:
   itself.
 - `NotificationCopySpec::title()` / `body()` propagate that null.
   `body()` is all-or-nothing: half a body in the reader's language and
-  half missing reads worse than the whole stored sentence.
+  half missing reads worse than the whole stored sentence. It reaches
+  that decision through `AllOrNothing::map()`, below.
 - `NotificationQuery::hydrate()` falls back to the row's own `title` /
   `body` columns. Those are stale — they are in the language the row
   was written in — but they are a sentence, which a raw key is not.
@@ -183,6 +184,16 @@ written sentence rather than to a blank or a crash.
 
 Existing rows whose money is still a frozen plain string keep working
 untouched — a plain string is a legal replacement value and always was.
+
+`AllOrNothing::map()` is the single place that rule is spelled. It folds
+a collection through a decoder and answers `null` the moment one element
+does, which is what makes a bad replacement value fail its whole
+`CopyLine`, a bad `CopyLine` fail its whole spec, and an unrenderable
+body line fail its whole body. It is one rule in both directions: a spec
+with a hole in it is worse than no spec at all, because the fallback for
+no spec is a whole written sentence and the fallback for a hole is
+nothing. Anything else that decodes or renders part of this spec goes
+through it rather than writing the fold again.
 
 ## Related
 

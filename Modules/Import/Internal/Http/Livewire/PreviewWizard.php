@@ -281,21 +281,7 @@ final class PreviewWizard extends Component
         PreviewCache $cache,
         DatabaseManager $db,
     ): void {
-        // The blade's @disabled on Confirm is a DOM guard and devtools
-        // defeats it; this is the one that counts.
-        if ($this->needsIcsAccountName($currentUser, $db)
-            || $this->needsPaypalAccountName($currentUser, $db)) {
-            return;
-        }
-        $preview = $cache->getPreview($this->importRunId);
-        if ($preview !== null && count($preview->accountsToName) > 0) {
-            return;
-        }
-
-        // Nothing importable means nothing to confirm, and confirming it wrote
-        // a confirmed run whose own summary reported zero of everything. A
-        // missing preview is a different case and keeps its expired path.
-        if ($preview !== null && self::importableRowCount($preview) === 0) {
+        if ($this->confirmationIsBlocked($currentUser, $cache, $db)) {
             return;
         }
 
@@ -311,6 +297,25 @@ final class PreviewWizard extends Component
             $urls->route('imports.results', ['id' => $this->importRunId]),
             navigate: false,
         );
+    }
+
+    // The blade's @disabled on Confirm is a DOM guard and devtools defeats it;
+    // this is the one that counts. Nothing importable is blocked too, because
+    // confirming it wrote a confirmed run whose own summary reported zero of
+    // everything. A missing preview is a different case and stays expired.
+    private function confirmationIsBlocked(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
+    {
+        if ($this->needsIcsAccountName($currentUser, $db)
+            || $this->needsPaypalAccountName($currentUser, $db)) {
+            return true;
+        }
+
+        $preview = $cache->getPreview($this->importRunId);
+        if ($preview === null) {
+            return false;
+        }
+
+        return count($preview->accountsToName) > 0 || self::importableRowCount($preview) === 0;
     }
 
     public function discard(
