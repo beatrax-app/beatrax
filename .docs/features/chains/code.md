@@ -65,7 +65,8 @@ Modules/Chains/
     ├── Unit/
     ├── Feature/
     └── Contracts/
-        └── ChainResolutionIdempotencyTest.php
+        ├── ChainResolutionIdempotencyTest.php
+        └── PaypalFundingCounterLegParityTest.php
 ```
 
 ## Public API
@@ -127,7 +128,13 @@ Modules/Chains/
   - Deterministic — inspects the PayPal row's stored raw payload for
     `Bankstorting` / `General Withdrawal` / `Transfer to bank` events
     with an IBAN match. Equal-and-opposite `transfer_in` within
-    ±`DATE_WINDOW_DAYS` ⇒ confidence 1.0.
+    ±`DATE_WINDOW_DAYS` ⇒ confidence 1.0. The counter-leg query is
+    [`Transfers`](../transfers/code.md)'s
+    `PairLookup::counterLegOnAccount`, called with this resolver's
+    own window, direction and ordering
+    (`CounterLegOrder::NearestToCentre`), no currency predicate,
+    and no already-paired exclusion — the funding leg this arm
+    links is one the transfer matcher never pairs.
   - ASN-direct — handles the empirical case where the PayPal CSV
     ships outgoing merchant payments but NOT the SEPA-pull deposits
     that funded them. Pairs the PayPal `expense` directly against an

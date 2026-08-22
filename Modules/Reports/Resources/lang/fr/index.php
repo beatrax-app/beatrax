@@ -49,7 +49,7 @@ return [
         'not_found' => 'Rapport introuvable (il a peut-être été supprimé dans un autre onglet).',
         'deleted' => 'Rapport supprimé.',
     ],
-    'pin_cap' => 'Tu peux épingler jusqu\'à :max rapports. Détaches-en un pour ajouter celui-ci.',
+    'pin_cap' => 'Tu peux épingler :max rapport. Détache-le pour ajouter celui-ci.|Tu peux épingler jusqu\'à :max rapports. Détaches-en un pour ajouter celui-ci.',
 
     'summary' => [
         'metric' => [

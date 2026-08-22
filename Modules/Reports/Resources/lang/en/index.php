@@ -49,7 +49,7 @@ return [
         'not_found' => 'Report not found (it may have been deleted in another tab).',
         'deleted' => 'Report deleted.',
     ],
-    'pin_cap' => 'You can pin up to :max reports. Unpin one to add this.',
+    'pin_cap' => 'You can pin :max report. Unpin it to add this.|You can pin up to :max reports. Unpin one to add this.',
 
     'summary' => [
         'metric' => [

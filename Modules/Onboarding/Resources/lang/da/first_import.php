@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Gennemgå & bogfør',
     'h1' => 'Gennemgå alt, hvad vi fandt',
 
-    'lede_across' => 'transaktioner fra',
-    'source' => 'kilde|kilder',
+    'lede_counts' => ':transactions fra :sources.',
+    'source' => ':count kilde|:count kilder',
     'lede_confirm' => 'Bekræft dine startsaldi, og bogfør derefter.',
 
     'empty' => 'Intet at gennemgå endnu. Slip et kontoudtog i de tidligere trin for at se dine transaktioner her.',
 
     'sb_eyebrow_label' => '🧮 STARTSALDI ·',
-    'account_detected' => 'KONTO FUNDET|KONTI FUNDET',
+    'account_detected' => ':count KONTO FUNDET|:count KONTI FUNDET',
     'sb_lede' => 'Vi fandt startsaldoen for hver konto. Bekræft eller redigér, før vi bogfører.',
 
-    'txn' => 'transaktion|transaktioner',
+    'txn' => ':count transaktion|:count transaktioner',
     'to_commit' => 'at bogføre ·',
-    'already_imported' => 'allerede importeret',
+    'already_imported' => ':count allerede importeret|:count allerede importeret',
     'commit_committing' => 'Bogfører…',
     'commit_count' => 'Bogfør det hele (:count transaktion) →|Bogfør det hele (:count transaktioner) →',
     'commit_empty' => 'Bogfør det hele (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'FRA DIT KONTOUDTOG',
         'from_ics' => 'FRA DINE ICS-KORTUDTOG',
         'from_paypal' => 'FRA PAYPAL',
-        'row' => 'RÆKKE|RÆKKER',
+        'row' => ':count RÆKKE|:count RÆKKER',
         'badge_ready' => '✓ KLAR',
         'badge_empty' => 'TOM',
         'badge_error' => 'SKAL UPLOADES IGEN',

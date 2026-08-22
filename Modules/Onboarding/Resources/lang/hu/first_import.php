@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Áttekintés és véglegesítés',
     'h1' => 'Nézd át, amit találtunk',
 
-    'lede_across' => 'tranzakció',
-    'source' => '{0} forrásból|[1,1] forrásból|[2,*] forrásból',
+    'lede_counts' => ':transactions :sources.',
+    'source' => '{0} :count forrásból|[1,1] :count forrásból|[2,*] :count forrásból',
     'lede_confirm' => 'Erősítsd meg a nyitó egyenlegeket, majd véglegesíts.',
 
     'empty' => 'Még nincs mit átnézni. Húzz be egy számlakivonatot a korábbi lépéseknél, hogy itt lásd a tranzakcióidat.',
 
     'sb_eyebrow_label' => '🧮 NYITÓ EGYENLEGEK ·',
-    'account_detected' => '{0} FELISMERT SZÁMLA|[1,1] FELISMERT SZÁMLA|[2,*] FELISMERT SZÁMLA',
+    'account_detected' => '{0} :count FELISMERT SZÁMLA|[1,1] :count FELISMERT SZÁMLA|[2,*] :count FELISMERT SZÁMLA',
     'sb_lede' => 'Felismertük az egyes számlák nyitó egyenlegét. Erősítsd meg vagy módosítsd, mielőtt véglegesítünk.',
 
-    'txn' => '{0} tranzakció|[1,1] tranzakció|[2,*] tranzakció',
+    'txn' => '{0} :count tranzakció|[1,1] :count tranzakció|[2,*] :count tranzakció',
     'to_commit' => 'véglegesítendő ·',
-    'already_imported' => 'már importálva',
+    'already_imported' => ':count már importálva|:count már importálva',
     'commit_committing' => 'Véglegesítés…',
     'commit_count' => 'Minden véglegesítése (:count tranzakció) →|Minden véglegesítése (:count tranzakció) →',
     'commit_empty' => 'Minden véglegesítése (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'A BANKSZÁMLAKIVONATODBÓL',
         'from_ics' => 'AZ ICS KÁRTYAKIVONATAIDBÓL',
         'from_paypal' => 'A PAYPALRÓL',
-        'row' => '{0} SOR|[1,1] SOR|[2,*] SOR',
+        'row' => '{0} :count SOR|[1,1] :count SOR|[2,*] :count SOR',
         'badge_ready' => '✓ KÉSZ',
         'badge_empty' => 'ÜRES',
         'badge_error' => 'ÚJRA FEL KELL TÖLTENI',

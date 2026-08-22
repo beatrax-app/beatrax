@@ -148,31 +148,22 @@ is in the frame, not the noun: reword it to a case-free label.
 | `Modules/DevMode/Resources/lang/tr/overview.php` · `queue_summary_batches` | `batch` had been left in English. `Toplu iş` is the term Turkish Laravel writing uses, but it sits close to the `iş` already standing for a job. |
 | `Modules/Sync/Resources/lang/tr/health.php` · `skipped` | `Operasyon` reads as a military or surgical operation; `işlem` is the natural word but already carries "transaction" everywhere else in this locale. |
 
-### A noun whose form is bound to a cap's current value
+### A noun whose form is bound to a cap's current value — closed
 
 `reports::index.pin_cap` states the pin cap in a sentence: *"You can pin up to
 :max reports."* The cap used to be typed as `3` in all 26 strings and again in
-two PHP constants; it now has one home and reaches the sentence as `:max`.
+two PHP constants; it now has one home in `PinCap::MAX_PINS` and reaches the
+sentence as `:max`.
 
-That closes the drift between the number the code enforces and the number the
-reader is told. It does not close the grammar: in eight locales the noun after
-the numeral agrees with it, and every one of them is currently written for a
-cap of exactly 3.
+That alone would have left the grammar frozen at three — eight locales inflect
+the noun after the numeral, and every one of them was written for exactly that
+cap. The arch rule that forbids a count beside a bare plural caught it, which
+is the whole reason the rule exists.
 
-| Locale | Written for 3 | Wrong once the cap moves |
-|---|---|---|
-| `pl` | `raporty` | 5+ needs `raportów` |
-| `cs` | `sestavy` | 5+ needs `sestav` |
-| `sk` | `zostavy` | 5+ needs `zostáv` |
-| `uk` | `звіти` | 5+ needs `звітів` |
-| `hr` | `izvješća` | 5+ takes the genitive plural |
-| `sr` | `izveštaja` | reads as the 5-and-up form already |
-| `sl` | `poročila` | the dual and the plural are both different |
-| `lt` | `ataskaitų` | the genitive `iki` governs, not the numeral's own form |
-
-`Lang::choice` would carry it, at the cost of writing arms nobody can reach
-while the cap is a constant. The cheaper contract is this table: whoever moves
-`PinCap::MAX_PINS` has eight strings to re-read, and now knows which.
+The line is now read with `Lang::choice`, selecting on **the cap** rather than
+on how many reports are pinned. Whoever moves `PinCap::MAX_PINS` gets the right
+arm in every language without touching a string, and Slovenian's dual is
+reachable at a cap of two.
 
 ## Checked and deliberately left alone
 

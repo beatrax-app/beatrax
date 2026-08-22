@@ -52,9 +52,7 @@ return [
         'not_found' => 'Zostava sa nenašla (mohla byť zmazaná na inej karte).',
         'deleted' => 'Zostava zmazaná.',
     ],
-    // i18n-review: sk · pin_cap — the noun agrees with the cap, which now
-    // arrives as :max rather than as the digit. zostavy is the 2–4 form; a cap of 5 or more needs zostáv.
-    'pin_cap' => 'Pripnúť môžeš najviac :max zostavy. Ak chceš pridať túto, jednu odopni.',
+    'pin_cap' => 'Pripnúť môžeš :max zostavu. Ak chceš pridať túto, odopni ju.|Pripnúť môžeš najviac :max zostavy. Ak chceš pridať túto, jednu odopni.|Pripnúť môžeš najviac :max zostáv. Ak chceš pridať túto, jednu odopni.',
 
     'summary' => [
         'metric' => [

@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Rivedi e conferma',
     'h1' => 'Rivedi tutto quello che abbiamo trovato',
 
-    'lede_across' => 'transazioni da',
-    'source' => 'fonte|fonti',
+    'lede_counts' => ':transactions da :sources.',
+    'source' => ':count fonte|:count fonti',
     'lede_confirm' => 'Controlla i tuoi saldi iniziali, poi conferma tutto.',
 
     'empty' => "Non c'è ancora niente da rivedere. Trascina un estratto conto nei passaggi precedenti per vedere qui le tue transazioni.",
 
     'sb_eyebrow_label' => '🧮 SALDI INIZIALI ·',
-    'account_detected' => 'CONTO RILEVATO|CONTI RILEVATI',
+    'account_detected' => ':count CONTO RILEVATO|:count CONTI RILEVATI',
     'sb_lede' => 'Abbiamo rilevato il saldo iniziale di ogni conto. Confermalo o modificalo prima di procedere.',
 
-    'txn' => 'transazione|transazioni',
+    'txn' => ':count transazione|:count transazioni',
     'to_commit' => 'da confermare ·',
-    'already_imported' => 'già importate',
+    'already_imported' => ':count già importata|:count già importate',
     'commit_committing' => 'Conferma in corso…',
     'commit_count' => 'Conferma tutto (:count transazione) →|Conferma tutto (:count transazioni) →',
     'commit_empty' => 'Conferma tutto (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'DAL TUO ESTRATTO CONTO BANCARIO',
         'from_ics' => 'DAI TUOI ESTRATTI CONTO CARTA ICS',
         'from_paypal' => 'DA PAYPAL',
-        'row' => 'RIGA|RIGHE',
+        'row' => ':count RIGA|:count RIGHE',
         'badge_ready' => '✓ PRONTO',
         'badge_empty' => 'VUOTO',
         'badge_error' => 'DA RICARICARE',

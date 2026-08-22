@@ -145,6 +145,14 @@ What the module explicitly does NOT do:
     boundary.
 - **Dto/**
   - `UpdateManifestDto` — typed shape of the verified update manifest.
+- **Navigation/**
+  - `Destination` — the one enum naming every screen a user can be sent to,
+    with the route name and params behind each. It sits in the kernel rather
+    than beside the sidebar that renders it because every module already
+    depends on `Core`, so a feature module linking to another module's screen
+    gains no new edge; the chrome around a destination stays in
+    [`Shell`](../shell/architecture.md). See
+    [Navigation destinations](../../architecture/navigation-destinations.md).
 
 `Internal/` houses the implementation owners: the SQLite optimisations
 provider (WAL + busy_timeout + synchronous=NORMAL), the health-check

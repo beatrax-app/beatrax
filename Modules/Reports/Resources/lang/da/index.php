@@ -49,7 +49,7 @@ return [
         'not_found' => 'Rapporten blev ikke fundet (den kan være slettet i en anden fane).',
         'deleted' => 'Rapporten er slettet.',
     ],
-    'pin_cap' => 'Du kan fastgøre op til :max rapporter. Frigør en for at tilføje denne.',
+    'pin_cap' => 'Du kan fastgøre :max rapport. Frigør den for at tilføje denne.|Du kan fastgøre op til :max rapporter. Frigør en for at tilføje denne.',
 
     'summary' => [
         'metric' => [

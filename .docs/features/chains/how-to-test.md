@@ -65,6 +65,14 @@ Practical recipes for exercising the `Chains` module in isolation.
 - `tests/Contracts/ChainResolutionIdempotencyTest.php` — re-running
   the resolver against the same data produces zero new
   `chain_links` rows.
+- `tests/Contracts/PaypalFundingCounterLegParityTest.php` — the
+  deterministic arm's counter-leg query stays
+  [`Transfers`](../transfers/how-to-test.md)'s
+  `PairLookup::counterLegOnAccount`, and links the id that lookup
+  returns. Fails if the resolver grows a private partner lookup
+  again, which is how the two drifted apart the first time. The
+  same lookup now also answers `Transfers`' own pairer, so a
+  change to it is checked from both sides.
 - The repo-wide `crossModuleRawTableWrites` arch invariant — every
   raw-table write `Modules/Chains/` makes against a table it does not
   own is pinned by file, line, and table.
@@ -81,8 +89,8 @@ vendor/bin/pest Modules/Chains/tests
 # Just the resolver unit tests
 vendor/bin/pest Modules/Chains/tests/Unit/Resolvers
 
-# Just the idempotency contract
-vendor/bin/pest Modules/Chains/tests/Contracts/ChainResolutionIdempotencyTest.php
+# Just the contract suite
+vendor/bin/pest Modules/Chains/tests/Contracts
 
 # Stop on first failure for a focused debug session
 vendor/bin/pest Modules/Chains/tests --stop-on-failure
@@ -244,8 +252,11 @@ The behavioural contract for the `Chains` module.
     `ResolvesKnownCounterpartyIban` contract (alias bridge between
     institution IBANs and the user's account ids).
   - [`Transfers`](../transfers/how-to-test.md) — `PairsTransferLegs`
-    (self-transfer pair detection). The ASN-direct arm finds its own
-    partner row rather than reading `PairLookup`.
+    (self-transfer pair detection) and `PairLookup` (the transfer
+    counter-leg query) with `CounterLegOrder`.
+    `PaypalFundingResolver`'s deterministic arm
+    reads `PairLookup::counterLegOnAccount`; the ASN-direct and fuzzy
+    arms cannot, because neither starts from a known account id.
   - [`Receipts`](../receipts/how-to-test.md) — `ChainHintDetected` event
     raised by `RecordReceipt`.
 - **Depended on by**

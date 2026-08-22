@@ -80,7 +80,12 @@ final class TogglePin
                 ->count();
 
             if ($pinnedCount >= self::MAX_PINS) {
-                throw new InvalidArgumentException(Lang::get('reports::index.pin_cap', ['max' => self::MAX_PINS]));
+                // Chosen on the cap, not on how many are pinned: the noun after the
+                // numeral agrees with the cap in eight of the shipped locales,
+                // so the arm has to follow the cap wherever it is set.
+                throw new InvalidArgumentException(
+                    Lang::choice('reports::index.pin_cap', self::MAX_PINS, ['max' => self::MAX_PINS]),
+                );
             }
 
             $maxOrder = $this->db->connection()

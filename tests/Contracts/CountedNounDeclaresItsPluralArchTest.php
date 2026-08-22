@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Translation\MessageSelector;
+use Modules\Core\Public\Enums\Locale;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -265,5 +267,233 @@ it('never picks a plural form with a comparison in PHP', function (): void {
         'Collapse the two keys into one pluralised line and call Lang::choice($key, $n).',
         'The locale\'s own rule table then picks the segment, and the parity test can see',
         'that the line has as many segments as each locale needs.',
+    ]));
+});
+
+// Asked of Laravel's rule table rather than restated, for the same reason the
+// parity test asks it: the two numbers have to come from one authority or a
+// locale ends up with a floor and a ceiling that disagree.
+/** @return int how many `|` segments trans_choice can select in this locale */
+function countedNounSelectableForms(string $locale): int
+{
+    $selector = new MessageSelector;
+    $indexes = [];
+    foreach (range(0, 200) as $number) {
+        $indexes[$selector->getPluralIndex($locale, $number)] = true;
+    }
+
+    return max(array_keys($indexes)) + 1;
+}
+
+/** @return bool whether any segment pins itself to numbers with a {n} or [a,b] condition */
+function countedNounHasExplicitRange(string $line): bool
+{
+    foreach (explode('|', $line) as $segment) {
+        if (preg_match('/^\s*[\{\[]/', $segment) === 1) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+it('never ships a plural segment the locale can never select', function (): void {
+    $problems = [];
+
+    foreach (Locale::cases() as $case) {
+        $locale = $case->value;
+        $forms = countedNounSelectableForms($locale);
+
+        foreach (countedNounSourceFiles() as $enFile) {
+            $targetFile = str_replace('/lang/en/', '/lang/'.$locale.'/', $enFile);
+            if (! is_file($targetFile)) {
+                continue;
+            }
+
+            $translated = require $targetFile;
+            if (! is_array($translated)) {
+                continue;
+            }
+
+            $rel = str_replace(base_path().'/', '', $targetFile);
+            foreach (countedNounStrings($translated) as $path => $line) {
+                if (! str_contains($line, '|') || countedNounHasExplicitRange($line)) {
+                    continue;
+                }
+
+                $actual = substr_count($line, '|') + 1;
+                if ($actual > $forms) {
+                    $problems[] = $rel.' ['.$path.']: '.$actual.' segments, '.$locale.' selects between '.$forms;
+                }
+            }
+        }
+    }
+
+    expect($problems)->toBe([], implode("\n", [
+        'These lines carry a segment their locale has no number to reach it with:',
+        ...$problems,
+        '',
+        'trans_choice asks the rule table for an index and returns that segment.',
+        'Turkish always answers 0 and Hungarian only ever 0 or 1, so a third form',
+        'written for them is dead text: it renders for no count, no test below this',
+        'one reads it, and the reviewer who wrote it believes it shipped.',
+        '',
+        'The parity test guards the floor — too few segments and a locale silently',
+        'renders its singular for every "many". This is the ceiling, and the two',
+        'together say the segment count is the locale\'s to decide, not the',
+        'translator\'s. Delete the surplus segments.',
+        '',
+        'A form the rule table cannot select but the copy genuinely needs — a',
+        'distinct wording at zero, which no locale here selects on — is written as',
+        'an explicit {0} range instead. Those are matched by number before the rule',
+        'table is consulted at all, and this rule leaves such lines alone.',
+    ]));
+});
+
+// The lang-file rules above read a count token out of a translated line. This
+// one reads it out of a PHP variable name, off the last word so $openCount and
+// $rowCount qualify by the same vocabulary and $rows does not. A property is
+// read the same way: $preview->dedupedTotalCount names its count where it sits.
+function countedNounIsCountVariable(string $name): bool
+{
+    $reached = preg_split('/->|\?->/', $name) ?: [];
+    $words = preg_split('/(?=[A-Z])|_/', (string) end($reached)) ?: [];
+
+    return in_array(mb_strtolower((string) end($words)), COUNTED_NOUN_COUNT_TOKENS, true);
+}
+
+const COUNTED_NOUN_FLAT_CALL = '(?:Lang::get|(?<![\w:>])__|(?<![\w:>])trans)\(';
+
+const COUNTED_NOUN_CHOOSING_CALL = '(?:Lang::choice|(?<![\w:>])trans_choice)\(';
+
+// A method call and an array index reach a count too, and adding either finds
+// nothing on this tree — while an index would reach $navCounts['chains'], which
+// is the sanctioned badge. Unmeasured width is how a narrowing stops meaning
+// anything, so this stops at the two shapes a count is actually written in.
+const COUNTED_NOUN_NUMBER = '[A-Za-z_]\w*(?:(?:->|\?->)[A-Za-z_]\w*)*';
+
+// Between the number and the line: visible text, or the closing tag a numeral
+// in its own <span> ends with and nothing else. An opening tag would pair one
+// badge's count with the next badge's label, and a "·" would pair two colon
+// labels — both are shapes on this tree, and both are the reword, not the fault.
+const COUNTED_NOUN_GAP = '(?:[^<>"{}]{0,16}|[ \t\r\n]*<\/[a-zA-Z][a-zA-Z0-9]*>[ \t\r\n]*)';
+
+/** @return string a regex alternation of variables in this file that hold a line read with $call */
+function countedNounTranslatedVariables(string $source, string $call): string
+{
+    $names = [];
+    if (preg_match_all('/\$([A-Za-z_]\w*)\s*=\s*'.$call.'/', $source, $direct) !== false) {
+        $names = $direct[1];
+    }
+
+    // An array of translated lines walked by foreach is the same variable one
+    // hop later, and is how a breakdown line gets assembled a part at a time.
+    if (preg_match_all('/\$([A-Za-z_]\w*)\s*=\s*\[[^;]*?'.$call.'[^;]*?\];/s', $source, $arrays) !== false) {
+        foreach ($arrays[1] as $array) {
+            if (preg_match_all('/foreach\s*\(\s*\$'.preg_quote($array, '/').'\s+as\s+(?:\$\w+\s*=>\s*)?\$(\w+)\s*\)/', $source, $loops) !== false) {
+                $names = array_merge($names, $loops[1]);
+            }
+        }
+    }
+
+    $names = array_values(array_unique(array_filter($names)));
+
+    return $names === [] ? '(?!)' : implode('|', array_map(static fn (string $n): string => preg_quote($n, '/'), $names));
+}
+
+/** @return list<string> the fragments in this call site that set a number beside a $call line */
+function countedNounNumberBesideLine(string $source, string $call): array
+{
+    $held = countedNounTranslatedVariables($source, $call);
+
+    $patterns = [
+        '/\$('.COUNTED_NOUN_NUMBER.')\s*\.\s*(?:\'[^\']*\'\s*\.\s*)?(?:'.$call.'|\$(?:'.$held.')\b)/',
+        '/\{\{\s*\$('.COUNTED_NOUN_NUMBER.')\s*\}\}'.COUNTED_NOUN_GAP.'\{\{[^}]{0,140}'.$call.'/',
+        '/\{\{\s*\$('.COUNTED_NOUN_NUMBER.')\s*\}\}'.COUNTED_NOUN_GAP.'\{\{\s*\$(?:'.$held.')\s*\}\}/',
+    ];
+
+    $hits = [];
+    foreach ($patterns as $pattern) {
+        if (preg_match_all($pattern, $source, $matches, PREG_SET_ORDER) === false) {
+            continue;
+        }
+        foreach ($matches as $match) {
+            if (countedNounIsCountVariable($match[1])) {
+                $hits[] = trim(preg_replace('/\s+/', ' ', $match[0]) ?? '');
+            }
+        }
+    }
+
+    return array_values(array_unique($hits));
+}
+
+/** @return list<string> */
+function countedNounOffendingCallSites(string $call): array
+{
+    $offenders = [];
+
+    foreach (countedNounCallSites() as $file) {
+        foreach (countedNounNumberBesideLine((string) $file->getContents(), $call) as $hit) {
+            $offenders[] = $file->getRelativePathname().' — '.$hit;
+        }
+    }
+
+    return $offenders;
+}
+
+it('never sets a number beside a line that has no form to choose', function (): void {
+    $files = iterator_count(countedNounCallSites());
+    $offenders = countedNounOffendingCallSites(COUNTED_NOUN_FLAT_CALL);
+
+    expect($files)->toBeGreaterThan(0, 'No call site was scanned, so this rule checked nothing.');
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These put a number next to a line read with Lang::get(), which returns one form:',
+        ...$offenders,
+        '',
+        'The rules above catch a count beside a plural noun. This is the same defect one',
+        'word to the left: a count beside an adjective. English adjectives do not inflect,',
+        'so "2 large" and "3 open" read correctly and nothing looks wrong — but an',
+        'adjective agrees with its number in every Slavic locale the app ships, and Polish',
+        'needs "otwarte" at two and "otwartych" at five off one key that can only hold one',
+        'of them. A ratio is worse again: "2/3 pinned" agrees with neither number, and',
+        'several languages cannot assemble it from a bare adjective at all.',
+        '',
+        'The fix is the fix for a noun. Move the numeral inside the line, give it as many',
+        'segments as each locale selects between, and read it with Lang::choice($key, $n).',
+        'Where two numbers meet in one phrase, one key carries both — ":count of :max',
+        'pinned" — and the cap arrives as a replacement rather than a literal.',
+        '',
+        'This rule reads the number off the variable name, so it sees $openCount and $n',
+        'and leaves $rows alone. It looks only at the number-then-line order and only at',
+        'the non-choosing calls; a label whose number follows a colon is a reword, not an',
+        'offence, and that is why the reverse order is deliberately not matched.',
+    ]));
+});
+
+it('never sets a number beside the line that was given the number', function (): void {
+    $files = iterator_count(countedNounCallSites());
+    $offenders = countedNounOffendingCallSites(COUNTED_NOUN_CHOOSING_CALL);
+
+    expect($files)->toBeGreaterThan(0, 'No call site was scanned, so this rule checked nothing.');
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These print a number in the template beside a line read with Lang::choice():',
+        ...$offenders,
+        '',
+        'Every arm is there and the right one is selected, so the count is not the bug.',
+        'What the template has pinned is the order — numeral, space, word — and the arms',
+        'were written to fit it, which is why they read as finished. A translator handed',
+        '"row|rows" cannot put the numeral anywhere else, cannot decline it, and cannot',
+        'attach the counter word several of these locales want between the two.',
+        '',
+        'choice() fills :count from the number it was already passed, so the arms take it',
+        'for free: ":count row|:count rows" renders exactly what renders today and the',
+        'call site loses an interpolation rather than gaining one.',
+        '',
+        'Styling aimed at the numeral alone moves out to the element wrapping the whole',
+        'phrase — tabular-nums still only reaches digits there, and a weight or colour',
+        'that covered one number now covers the phrase it belongs to. That is a layout',
+        'change to make deliberately; leaving the numeral outside is not the way to dodge it.',
     ]));
 });

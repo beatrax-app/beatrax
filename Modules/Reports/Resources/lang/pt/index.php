@@ -49,7 +49,7 @@ return [
         'not_found' => 'Relatório não encontrado (pode ter sido eliminado noutro separador).',
         'deleted' => 'Relatório eliminado.',
     ],
-    'pin_cap' => 'Podes fixar até :max relatórios. Desafixa um para adicionares este.',
+    'pin_cap' => 'Podes fixar :max relatório. Desafixa-o para adicionares este.|Podes fixar até :max relatórios. Desafixa um para adicionares este.',
 
     'summary' => [
         'metric' => [

@@ -49,7 +49,7 @@ return [
         'not_found' => 'Aruannet ei leitud (see võidi kustutada teisel vahelehel).',
         'deleted' => 'Aruanne on kustutatud.',
     ],
-    'pin_cap' => 'Kinnitada saab kuni :max aruannet. Selle lisamiseks eemalda mõni teine.',
+    'pin_cap' => 'Kinnitada saab :max aruande. Selle lisamiseks eemalda see.|Kinnitada saab kuni :max aruannet. Selle lisamiseks eemalda mõni teine.',
 
     'summary' => [
         'metric' => [

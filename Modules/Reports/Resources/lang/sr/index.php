@@ -49,9 +49,7 @@ return [
         'not_found' => 'Izveštaj nije pronađen (možda je obrisan u drugoj kartici).',
         'deleted' => 'Izveštaj je obrisan.',
     ],
-    // i18n-review: sr · pin_cap — the noun agrees with the cap, which now
-    // arrives as :max rather than as the digit. izveštaja here reads as the 5-and-up form beside najviše :max.
-    'pin_cap' => 'Možeš da zakačiš najviše :max izveštaja. Otkači jedan da dodaš ovaj.',
+    'pin_cap' => 'Možeš da zakačiš :max izveštaj. Otkači ga da dodaš ovaj.|Možeš da zakačiš najviše :max izveštaja. Otkači jedan da dodaš ovaj.|Možeš da zakačiš najviše :max izveštaja. Otkači jedan da dodaš ovaj.',
 
     'summary' => [
         'metric' => [

@@ -52,7 +52,7 @@ return [
         'not_found' => 'Raportul nu a fost găsit (poate a fost șters în altă filă).',
         'deleted' => 'Raport șters.',
     ],
-    'pin_cap' => 'Poți fixa cel mult :max rapoarte. Anulează fixarea unuia ca să îl adaugi pe acesta.',
+    'pin_cap' => 'Poți fixa :max raport. Anulează fixarea lui ca să îl adaugi pe acesta.|Poți fixa cel mult :max rapoarte. Anulează fixarea unuia ca să îl adaugi pe acesta.|Poți fixa cel mult :max de rapoarte. Anulează fixarea unuia ca să îl adaugi pe acesta.',
 
     'summary' => [
         'metric' => [

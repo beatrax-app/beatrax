@@ -24,7 +24,7 @@ two decisions produced.
 | `Categorization` | Rule-based auto-categorization, per-user merchant memory, the categorization-rules CRUD surface, the receipt-vs-statement enrichment conflict resolver |
 | `Chains` | PayPal→funder + ICS bulk-iDEAL settlement chain resolution, the `chain_links` ledger, the per-user `ShouldBeUniqueUntilProcessing` resolver job |
 | `Community` | Optional community-merchant-mapping dataset opt-in toggles + corpus distribution |
-| `Core` | Users + sessions + system alerts + user preferences; the `BelongsToUser` trait; the `diederik:doctor` and `db:backup` console commands. The kernel every module depends on — it owns no screen that reads across modules (see `Shell`) |
+| `Core` | Users + sessions + system alerts + user preferences; the `BelongsToUser` trait; the `diederik:doctor` and `db:backup` console commands; the `Destination` vocabulary naming every screen the app can send a reader to. The kernel every module depends on — it owns no screen that reads across modules (see `Shell`) |
 | `Counterparties` | Counterparty resolution pipeline + index/profile/triage surfaces (`/counterparties`) |
 | `Desktop` | NativePHP shell glue — the entire `Native\Laravel\*` import surface lives here and nowhere else |
 | `DevMode` | Developer-mode gate + dev-console pages (logs, queue, audit, doctor, palette) |
@@ -47,7 +47,7 @@ two decisions produced.
 | `Recurring` | Recurring-series detection (any cadence), the always-suggest-never-auto-apply state machine, the per-series acknowledgement |
 | `Reports` | User-composable report builder (metric × dimension × period × filters × currency × viz) with saved/pinned reports |
 | `Search` | Full-text transaction search and entity-name navigation via an FTS5 trigram index and the ⌘K palette |
-| `Shell` | The application's own screens — the primary navigation, the dashboard, and the settings page, plus the net-worth and spending-trend cards. It composes every other module rather than owning a domain slice, which is why it is the one module nothing else depends on |
+| `Shell` | The application's own screens — the primary navigation, the dashboard, and the settings page, plus the net-worth and spending-trend cards, and the chrome (order, icon, label, keywords) around the destinations `Core` names. It composes every other module rather than owning a domain slice, which is why it is the one module nothing else depends on |
 | `Sync` | The CRDT op-log / HLC merge layer — append-only, per-device-signed ops with HLC ordering, LWW-per-field, tombstones, and import dedup over the migrated SQLite schema |
 | `Tax` | Tax-deductible tagging, per-year categorisation, and CSV/PDF export for Dutch IB/OB tax filing |
 | `Transfers` | Self-transfer detection across accounts, transfer-pair resolution |
@@ -123,6 +123,23 @@ module-boundary contract. Selected examples:
 - **`crossModuleSchemaAlterations`** — the same pin for a module adding columns
   to a table it does not own. Fourteen such pairs exist and they are accepted
   by design; the invariant makes a fifteenth a decision rather than a diff.
+- **`NothingDependsOnTheShellArchTest`** — the direction rule for the one
+  module that is allowed to depend on everything. `Shell` composes every other
+  module's screens, which is only cycle-free while nothing depends back on it,
+  so a production file outside `Modules/Shell/` may not name a `Modules\Shell\`
+  symbol. One crossing is pinned, with its reason: `DevMode` reads the sidebar
+  roster so the ⌘K palette offers the same screens the rail does.
+
+  This is why the destination vocabulary the feature modules share lives in
+  `Modules\Core\Public\Navigation\Destination` and not beside the sidebar
+  that renders it. A review that finds `route('imports.new')` written out by
+  hand in `Ledger` and `Forecasting` is right that the literal is duplicated,
+  and wrong if it proposes routing those modules through `Shell`: that trades a
+  string for a `Ledger → Shell` edge and reintroduces the cycles the
+  `Core`/`Shell` split removed. `Core` is the module everyone already depends
+  on, so the same seam costs no edge at all. `Shell` keeps the chrome — order,
+  icon, label, palette keywords — and consumes the `Core` seam like everyone
+  else. See [Navigation destinations](navigation-destinations.md).
 - **`noOtherInboxScanStateMutator`** — `inbox_scan_state` mutations go
   through `InboxScanStateMachine` only. Same shape applies to
   `recurring_series.state`, `drift_alerts.state`, and `card_statements.state`.
@@ -227,5 +244,8 @@ change.
 - [Table ownership](table-ownership.md) — which module owns which table, how
   that map is derived from the migrations, and the pinned cross-module writes
   and schema alterations.
+- [Navigation destinations](navigation-destinations.md) — the one vocabulary of
+  user-facing screens, why it sits in `Core` rather than beside the sidebar,
+  and how a Blade template and a service each reach it.
 - [Data model](https://github.com/beatrax-app/spec/blob/main/20-architecture/data-model.md) — the table-level ERD that the modules
   collectively own.

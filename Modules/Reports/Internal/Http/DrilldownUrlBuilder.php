@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Http;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Modules\Core\Public\Navigation\Destination;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Reports\Internal\Dto\ReportDefinition;
@@ -40,6 +41,6 @@ final class DrilldownUrlBuilder
             static fn (mixed $value): bool => $value !== null && $value !== '',
         );
 
-        return $this->urls->route('transactions.index', $params);
+        return Destination::Transactions->urlFrom($this->urls, $params);
     }
 }

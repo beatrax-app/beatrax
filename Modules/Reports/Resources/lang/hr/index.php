@@ -49,9 +49,7 @@ return [
         'not_found' => 'Izvješće nije pronađeno (možda je izbrisano u drugoj kartici).',
         'deleted' => 'Izvješće je izbrisano.',
     ],
-    // i18n-review: hr · pin_cap — the noun agrees with the cap, which now
-    // arrives as :max rather than as the digit. izvješća is the 2–4 form; a cap of 5 or more needs izvješćа.
-    'pin_cap' => 'Možeš prikvačiti najviše :max izvješća. Otkvači jedno da dodaš ovo.',
+    'pin_cap' => 'Možeš prikvačiti :max izvješće. Otkvači ga da dodaš ovo.|Možeš prikvačiti najviše :max izvješća. Otkvači jedno da dodaš ovo.|Možeš prikvačiti najviše :max izvješća. Otkvači jedno da dodaš ovo.',
 
     'summary' => [
         'metric' => [

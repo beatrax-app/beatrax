@@ -19,9 +19,23 @@ dashboard that aggregates nine modules imports nine modules. While both lived in
 a thing that depends on everyone, and the result was a dependency cycle against
 six other modules for no reason other than co-location.
 
-Splitting them removed those six cycles outright. `Shell` has in-degree 0: it is
-a sink, nothing imports it, and "the shell depends on features" needs no arch
-rule to defend because it is the direction dependencies are supposed to run.
+Splitting them removed those six cycles outright. `Shell` is a sink, and "the
+shell depends on features" needs no arch rule to defend because it is the
+direction dependencies are supposed to run. The other direction now does have
+one: `tests/Contracts/NothingDependsOnTheShellArchTest.php` fails when a
+production file outside this module names a `Modules\Shell\` symbol. Exactly
+one crossing is pinned — `DevMode` reads `AppNavigation::destinations()` so the
+⌘K palette offers the same screens the rail does.
+
+That invariant is why the destination vocabulary is not here. `Destination`
+named every screen the app can send a reader to, which is what a feature module
+wants when it links to `/imports/new` — and pointing `Ledger` at it would have
+created the very edge above. It moved to
+`Modules\Core\Public\Navigation\Destination`, which every module already
+depends on; what stayed is the chrome around it, `AppNavigation` and
+`ResolvedDestination` — sidebar order, icons, translation keys, palette
+keywords. See
+[Navigation destinations](../../architecture/navigation-destinations.md).
 
 The four `Core` outbound edges that remain (`Auth`, `Desktop`, `Search`, `Sync`)
 are kernel services rather than screens — the encryption-migration service, the

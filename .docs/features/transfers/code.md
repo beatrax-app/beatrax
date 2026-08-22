@@ -9,6 +9,8 @@ Modules/Transfers/
 ├── Public/
 │   ├── Contracts/
 │   │   └── PairsTransferLegs.php
+│   ├── Enums/
+│   │   └── CounterLegOrder.php
 │   └── Services/
 │       └── PairLookup.php
 ├── Internal/
@@ -29,17 +31,37 @@ No `Models/`, `Database/Migrations/`, `Routes/`, or
 ## Public API
 
 - **Contracts/**
-  - `PairsTransferLegs::pair(int $transactionId, User $user):
-    void` — single sanctioned entry point.
+  - `PairsTransferLegs::pairOne(Transaction $tx, User $user):
+    ?int` — single sanctioned write entry point; returns the
+    partner id when a pair was formed.
+  - `PairsTransferLegs::pairOrphansForUser(User $user): int` —
+    bulk sweep; returns the number of NEW pair links written.
 - **Services/**
-  - `PairLookup::partnerFor(int $transactionId, User $user):
-    ?Transaction` — read-side query consumed by Chains.
+  - `PairLookup::isPaired(int $txId, User $user): bool` and
+    `PairLookup::partnerId(int $txId, User $user): ?int` — read
+    the persisted `pair_transaction_id` for a row.
+  - `PairLookup::counterLegOnAccount(int $accountId, int
+    $amountMinor, list<TransactionType> $types, CarbonImmutable
+    $bookedAt, int $windowDays, ?string $currency, bool
+    $unpairedOnly, ?int $excludeTransactionId, CounterLegOrder
+    $order, User $user): ?int` — the single counter-leg search.
+    Every predicate is a required parameter, so neither caller
+    inherits a bound it did not ask for. Consumed by
+    [`Chains`](../chains/code.md)'s `PaypalFundingResolver`
+    deterministic arm and by this module's own `TransferPairer`
+    forward arm.
+- **Enums/**
+  - `CounterLegOrder` — `NearestToCentre` (chain resolution) /
+    `EarliestBooked` (the pairer). Both run out through
+    `booked_at` then `id`, so the ordering is total either way.
 
 ## Internal services
 
 - `Internal/Services/TransferPairer` — concrete
   `PairsTransferLegs`. Singleton-bound; deterministic;
-  no per-instance state.
+  no per-instance state. Its forward arm holds no query of its
+  own: it resolves the partner account, then asks
+  `PairLookup::counterLegOnAccount`.
 - `Internal/Listeners/PairTransferCandidates::handle($event)`
   — per-row listener auto-resolved via constructor DI.
 

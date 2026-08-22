@@ -52,9 +52,7 @@ return [
         'not_found' => 'Sestava nenalezena (mohla být smazána na jiné kartě).',
         'deleted' => 'Sestava smazána.',
     ],
-    // i18n-review: cs · pin_cap — the noun agrees with the cap, which now
-    // arrives as :max rather than as the digit. sestavy is the 2–4 form; a cap of 5 or more needs sestav.
-    'pin_cap' => 'Připnout můžeš nejvýš :max sestavy. Jednu odepni a tuhle přidáš.',
+    'pin_cap' => 'Připnout můžeš :max sestavu. Odepni ji a tuhle přidáš.|Připnout můžeš nejvýš :max sestavy. Jednu odepni a tuhle přidáš.|Připnout můžeš nejvýš :max sestav. Jednu odepni a tuhle přidáš.',
 
     'summary' => [
         'metric' => [

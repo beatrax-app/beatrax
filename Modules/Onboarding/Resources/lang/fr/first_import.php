@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Vérifier et valider',
     'h1' => 'Vérifie tout ce que nous avons trouvé',
 
-    'lede_across' => 'transactions réparties sur',
-    'source' => 'source|sources',
+    'lede_counts' => ':transactions provenant de :sources.',
+    'source' => ':count source|:count sources',
     'lede_confirm' => 'Confirme tes soldes de départ, puis valide.',
 
     'empty' => 'Rien à vérifier pour l\'instant. Dépose un relevé aux étapes précédentes pour voir tes transactions ici.',
 
     'sb_eyebrow_label' => '🧮 SOLDES DE DÉPART ·',
-    'account_detected' => 'COMPTE DÉTECTÉ|COMPTES DÉTECTÉS',
+    'account_detected' => ':count COMPTE DÉTECTÉ|:count COMPTES DÉTECTÉS',
     'sb_lede' => 'Nous avons détecté le solde de départ de chaque compte. Confirme-le ou modifie-le avant que nous validions.',
 
-    'txn' => 'transaction|transactions',
+    'txn' => ':count transaction|:count transactions',
     'to_commit' => 'à valider ·',
-    'already_imported' => 'déjà importées',
+    'already_imported' => ':count déjà importée|:count déjà importées',
     'commit_committing' => 'Validation…',
     'commit_count' => 'Tout valider (:count transaction) →|Tout valider (:count transactions) →',
     'commit_empty' => 'Tout valider (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'DE TON RELEVÉ BANCAIRE',
         'from_ics' => 'DE TES RELEVÉS DE CARTE ICS',
         'from_paypal' => 'DE PAYPAL',
-        'row' => 'LIGNE|LIGNES',
+        'row' => ':count LIGNE|:count LIGNES',
         'badge_ready' => '✓ PRÊT',
         'badge_empty' => 'VIDE',
         'badge_error' => 'À RENVOYER',

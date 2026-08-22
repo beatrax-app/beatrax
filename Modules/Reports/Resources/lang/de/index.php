@@ -49,7 +49,7 @@ return [
         'not_found' => 'Bericht nicht gefunden (er wurde möglicherweise in einem anderen Tab gelöscht).',
         'deleted' => 'Bericht gelöscht.',
     ],
-    'pin_cap' => 'Du kannst bis zu :max Berichte anheften. Löse einen, um diesen hinzuzufügen.',
+    'pin_cap' => 'Du kannst :max Bericht anheften. Löse ihn, um diesen hinzuzufügen.|Du kannst bis zu :max Berichte anheften. Löse einen, um diesen hinzuzufügen.',
 
     'summary' => [
         'metric' => [

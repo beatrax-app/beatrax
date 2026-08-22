@@ -92,6 +92,8 @@ pass for a clean one.
 
 - [Copy that carries a count](counted-nouns-in-copy.md) — how a number and a
   noun are written together across 26 locales
+- [Translations awaiting a native reader](translations-awaiting-a-native-reader.md)
+  — the `i18n-review:` marker, and the standing work-list of strings carrying it
 - [Architecture](../architecture/00-index.md) — the system's shape
 - [40-quality/code-standards.md](https://github.com/beatrax-app/spec/blob/main/40-quality/code-standards.md)
 - [50-governance/ai-contributors.md](https://github.com/beatrax-app/spec/blob/main/50-governance/ai-contributors.md) — the judgment rules bind AI contributions identically

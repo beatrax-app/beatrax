@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Pregled i potvrda',
     'h1' => 'Pregledaj sve što smo pronašli',
 
-    'lede_across' => 'transakcija iz',
-    'source' => 'izvor|izvora|izvora',
+    'lede_counts' => ':transactions iz :sources.',
+    'source' => ':count izvora|:count izvora|:count izvora',
     'lede_confirm' => 'Potvrdi svoja početna stanja, a zatim potvrdi uvoz.',
 
     'empty' => 'Još nema ničega za pregled. Ispusti izvod u ranijim koracima da ovdje vidiš svoje transakcije.',
 
     'sb_eyebrow_label' => '🧮 POČETNA STANJA ·',
-    'account_detected' => 'PRONAĐEN RAČUN|PRONAĐENA RAČUNA|PRONAĐENIH RAČUNA',
+    'account_detected' => ':count PRONAĐEN RAČUN|:count PRONAĐENA RAČUNA|:count PRONAĐENIH RAČUNA',
     'sb_lede' => 'Otkrili smo početno stanje za svaki račun. Potvrdi ga ili uredi prije potvrde uvoza.',
 
-    'txn' => 'transakcija|transakcije|transakcija',
+    'txn' => ':count transakcija|:count transakcije|:count transakcija',
     'to_commit' => 'za potvrdu ·',
-    'already_imported' => 'već uvezeno',
+    'already_imported' => ':count već uvezeno|:count već uvezeno|:count već uvezeno',
     'commit_committing' => 'Potvrđivanje…',
     'commit_count' => 'Potvrdi sve (:count transakcija) →|Potvrdi sve (:count transakcije) →|Potvrdi sve (:count transakcija) →',
     'commit_empty' => 'Potvrdi sve (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'S TVOJEG BANKOVNOG IZVODA',
         'from_ics' => 'S TVOJIH ICS IZVODA KARTICE',
         'from_paypal' => 'IZ PAYPALA',
-        'row' => 'REDAK|RETKA|REDAKA',
+        'row' => ':count REDAK|:count RETKA|:count REDAKA',
         'badge_ready' => '✓ SPREMNO',
         'badge_empty' => 'PRAZNO',
         'badge_error' => 'TREBA PONOVNI PRIJENOS',

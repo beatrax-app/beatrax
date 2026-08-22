@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Review & commit',
     'h1' => 'Review everything we found',
 
-    'lede_across' => 'transactions across',
-    'source' => 'source|sources',
+    'lede_counts' => ':transactions across :sources.',
+    'source' => ':count source|:count sources',
     'lede_confirm' => 'Confirm your starting balances, then commit.',
 
     'empty' => 'Nothing to review yet. Drop a statement on the earlier steps to see your transactions here.',
 
     'sb_eyebrow_label' => '🧮 STARTING BALANCES ·',
-    'account_detected' => 'ACCOUNT DETECTED|ACCOUNTS DETECTED',
+    'account_detected' => ':count ACCOUNT DETECTED|:count ACCOUNTS DETECTED',
     'sb_lede' => 'We detected the starting balance for each account. Confirm or edit before we commit.',
 
-    'txn' => 'transaction|transactions',
+    'txn' => ':count transaction|:count transactions',
     'to_commit' => 'to commit ·',
-    'already_imported' => 'already imported',
+    'already_imported' => ':count already imported|:count already imported',
     'commit_committing' => 'Committing…',
     'commit_count' => 'Commit everything (:count transaction) →|Commit everything (:count transactions) →',
     'commit_empty' => 'Commit everything (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'FROM YOUR BANK STATEMENT',
         'from_ics' => 'FROM YOUR ICS CARD STATEMENTS',
         'from_paypal' => 'FROM PAYPAL',
-        'row' => 'ROW|ROWS',
+        'row' => ':count ROW|:count ROWS',
         'badge_ready' => '✓ READY',
         'badge_empty' => 'EMPTY',
         'badge_error' => 'NEEDS RE-UPLOAD',

@@ -162,9 +162,9 @@
                 @if ($periodPreset === ReportPeriodPreset::Custom->value)
                     <div class="srch-date-range mt-2">
                         <label for="report-custom-from" class="srch-filter-label">{{ Lang::get('reports::builder.period.from') }}</label>
-                        <x-core::date-input field-id="report-custom-from" wire:model.live="customFrom" />
+                        <x-core::date-input field-id="report-custom-from" wire:model.live="customFrom" :aria-label="Lang::get('reports::builder.period.from')" />
                         <label for="report-custom-to" class="srch-filter-label mt-1">{{ Lang::get('reports::builder.period.to') }}</label>
-                        <x-core::date-input field-id="report-custom-to" wire:model.live="customTo" />
+                        <x-core::date-input field-id="report-custom-to" wire:model.live="customTo" :aria-label="Lang::get('reports::builder.period.to')" />
                     </div>
                 @endif
             </div>

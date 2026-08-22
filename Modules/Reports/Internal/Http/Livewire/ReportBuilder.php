@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Routing\ResponseFactory;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -17,6 +16,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\LocaleCollator;
+use Modules\Counterparties\Public\Queries\CounterpartyDisplayName;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Reports\Internal\Actions\SaveReport;
@@ -30,7 +30,6 @@ use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
 use Modules\Reports\Models\SavedReport;
-use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -197,9 +196,8 @@ final class ReportBuilder extends Component
         DatabaseManager $db,
         DrilldownUrlBuilder $drilldownUrlBuilder,
         PeriodPresetResolver $periodPresetResolver,
-        SensitiveColumnCodec $codec,
-        Session $session,
         BaseCurrency $baseCurrency,
+        CounterpartyDisplayName $counterpartyNames,
     ): View {
         $user = $currentUser->user();
         $definition = $this->currentDefinition();
@@ -234,7 +232,7 @@ final class ReportBuilder extends Component
             'showGranularity' => $definition->metric === 'net_worth' || $definition->dimension === 'time_bucket',
             'availableAccounts' => $this->availableAccounts($db, $user->id, $baseCurrency->code()),
             'availableCategories' => $this->availableCategories($db, $user->id),
-            'availableCounterparties' => $this->availableCounterparties($db, $user->id, $codec, $session),
+            'availableCounterparties' => $this->availableCounterparties($counterpartyNames, $user->id),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -336,32 +334,13 @@ final class ReportBuilder extends Component
     /**
      * @return list<array{id: int, name: string}>
      */
-    private function availableCounterparties(DatabaseManager $db, int $userId, SensitiveColumnCodec $codec, Session $session): array
+    private function availableCounterparties(CounterpartyDisplayName $counterpartyNames, int $userId): array
     {
-        // SQL order over the ciphertext display_name is meaningless once
-        // encryption is on, so orderBy('id') only keeps iteration deterministic;
-        // the user-facing order is the post-decrypt usort() below.
-        $rows = $db->connection()
-            ->table('counterparties')
-            ->where('user_id', $userId)
-            ->orderBy('id')
-            ->get(['id', 'display_name'])
-            ->all();
-
-        $result = array_values(array_map(static function (object $row) use ($codec, $session, $userId): array {
-            $stored = is_string($row->display_name ?? null) ? $row->display_name : '';
-            $name = $stored === ''
-                ? ''
-                : $codec->decryptValue('counterparties', 'display_name', $stored, $userId, $session)['value'];
-
-            return [
+        return $counterpartyNames->forUser($userId)
+            ->map(static fn (stdClass $row): array => [
                 'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'name' => $name,
-            ];
-        }, $rows));
-
-        usort($result, static fn (array $a, array $b): int => $a['name'] <=> $b['name']);
-
-        return $result;
+                'name' => is_string($row->display_name) ? $row->display_name : '',
+            ])
+            ->all();
     }
 }

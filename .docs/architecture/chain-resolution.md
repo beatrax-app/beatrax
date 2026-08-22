@@ -48,7 +48,14 @@ first that matches:
    `Bankstorting` / `Transfer to bank` events whose memo cells carry an
    IBAN matching one of the user's accounts. When an equal-and-opposite
    `transfer_in` exists on that account within ±`DATE_WINDOW_DAYS` (3),
-   writes a confirmed chain_link with confidence 1.000.
+   writes a confirmed chain_link with confidence 1.000. That last query
+   is not this module's: it is
+   `Modules\Transfers\Public\Services\PairLookup::counterLegOnAccount`,
+   which owns the transfer counter-leg search for this arm and for
+   `Transfers`' own pairer. The window, the direction, the amount, the
+   currency predicate, the already-paired exclusion and the ordering are
+   all passed in from here, so widening the arm never widens the shared
+   query — and nothing the other caller asks for reaches this one.
 2. **ASN-direct arm.** Handles the shape where the funding-leg
    `Bankstorting` row is absent from the PayPal CSV entirely — the
    user's export ships only outgoing merchant payments, not the

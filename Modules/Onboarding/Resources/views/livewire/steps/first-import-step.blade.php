@@ -68,10 +68,11 @@
         <h1 id="wiz-first-import-h1" class="wiz-h1">
             {{ Lang::get('onboarding::first_import.h1') }}
         </h1>
-        <p class="wiz-lede">
-            <span class="tabular-nums">{{ $preview->dedupedTotalCount }}</span> {{ Lang::get('onboarding::first_import.lede_across') }}
-            <span class="tabular-nums">{{ $sourceCount }}</span>
-            {{ Lang::choice('onboarding::first_import.source', $sourceCount) }}.
+        <p class="wiz-lede tabular-nums">
+            {{ Lang::get('onboarding::first_import.lede_counts', [
+                'transactions' => Lang::choice('onboarding::first_import.txn', $preview->dedupedTotalCount),
+                'sources' => Lang::choice('onboarding::first_import.source', $sourceCount),
+            ]) }}
             {{ Lang::get('onboarding::first_import.lede_confirm') }}
         </p>
 
@@ -90,9 +91,8 @@
         @if ($detectedCount > 0)
             <section class="balance-section-subcard">
                 <p class="preview-section-eyebrow">
-                    {{ Lang::get('onboarding::first_import.sb_eyebrow_label') }}
-                    <span class="tabular-nums">{{ $detectedCount }}</span>
-                    {{ Lang::choice('onboarding::first_import.account_detected', $detectedCount) }}
+                    <span>{{ Lang::get('onboarding::first_import.sb_eyebrow_label') }}</span>
+                    <span class="tabular-nums">{{ Lang::choice('onboarding::first_import.account_detected', $detectedCount) }}</span>
                 </p>
                 <p class="starting-balance-lede">
                     {{ Lang::get('onboarding::first_import.sb_lede') }}
@@ -149,12 +149,10 @@
         @endif
 
         <div class="commit-footer">
-            <p class="commit-counter" aria-atomic="true" aria-live="polite">
-                <strong class="tabular-nums">{{ $preview->dedupedTotalCount }}</strong>
-                {{ Lang::choice('onboarding::first_import.txn', $preview->dedupedTotalCount) }}
+            <p class="commit-counter tabular-nums" aria-atomic="true" aria-live="polite">
+                <strong>{{ Lang::choice('onboarding::first_import.txn', $preview->dedupedTotalCount) }}</strong>
                 {{ Lang::get('onboarding::first_import.to_commit') }}
-                <span class="tabular-nums">{{ $preview->alreadyImportedCount }}</span>
-                {{ Lang::get('onboarding::first_import.already_imported') }}
+                {{ Lang::choice('onboarding::first_import.already_imported', $preview->alreadyImportedCount) }}
             </p>
             {{-- The commit button is disabled whenever nothing is ready, which
                  is the ordinary state for someone who skipped the connectors.

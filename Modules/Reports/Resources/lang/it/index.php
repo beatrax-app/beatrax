@@ -49,7 +49,7 @@ return [
         'not_found' => "Report non trovato (potrebbe essere stato eliminato in un'altra scheda).",
         'deleted' => 'Report eliminato.',
     ],
-    'pin_cap' => 'Puoi fissare fino a :max report. Rimuovine uno per aggiungere questo.',
+    'pin_cap' => 'Puoi fissare :max report. Rimuovilo per aggiungere questo.|Puoi fissare fino a :max report. Rimuovine uno per aggiungere questo.',
 
     'summary' => [
         'metric' => [

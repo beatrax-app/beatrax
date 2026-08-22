@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Rever e confirmar',
     'h1' => 'Revê tudo o que encontrámos',
 
-    'lede_across' => 'transações em',
-    'source' => 'origem|origens',
+    'lede_counts' => ':transactions em :sources.',
+    'source' => ':count origem|:count origens',
     'lede_confirm' => 'Verifica os teus saldos iniciais e depois confirma.',
 
     'empty' => 'Ainda não há nada para rever. Larga um extrato nos passos anteriores para veres aqui as tuas transações.',
 
     'sb_eyebrow_label' => '🧮 SALDOS INICIAIS ·',
-    'account_detected' => 'CONTA DETETADA|CONTAS DETETADAS',
+    'account_detected' => ':count CONTA DETETADA|:count CONTAS DETETADAS',
     'sb_lede' => 'Detetámos o saldo inicial de cada conta. Confirma ou edita antes de gravarmos.',
 
-    'txn' => 'transação|transações',
+    'txn' => ':count transação|:count transações',
     'to_commit' => 'por confirmar ·',
-    'already_imported' => 'já importadas',
+    'already_imported' => ':count já importada|:count já importadas',
     'commit_committing' => 'A confirmar…',
     'commit_count' => 'Confirmar tudo (:count transação) →|Confirmar tudo (:count transações) →',
     'commit_empty' => 'Confirmar tudo (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'DO TEU EXTRATO BANCÁRIO',
         'from_ics' => 'DOS TEUS EXTRATOS DE CARTÃO ICS',
         'from_paypal' => 'DO PAYPAL',
-        'row' => 'LINHA|LINHAS',
+        'row' => ':count LINHA|:count LINHAS',
         'badge_ready' => '✓ PRONTO',
         'badge_empty' => 'VAZIO',
         'badge_error' => 'CARREGAR DE NOVO',
