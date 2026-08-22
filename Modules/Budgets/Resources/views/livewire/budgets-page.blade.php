@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     /budgets — the rebuilt zero-based envelope grid.
 
@@ -14,7 +15,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (int $minor, string $currency = 'EUR'): string => Money::ofMinor($minor, $currency)
+    $fmt = static fn (int $minor, ?string $currency = null): string => Money::ofMinor($minor, $currency ?? BaseCurrency::value())
         ->format();
 @endphp
 

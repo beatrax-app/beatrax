@@ -23,6 +23,7 @@ use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -210,6 +211,7 @@ final class ForecastPage extends Component
         DatabaseManager $db,
         ViewFactory $views,
         ForecastDtoMapper $mapper,
+        BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
 
@@ -229,8 +231,8 @@ final class ForecastPage extends Component
         $this->assertScenarioOwnership($scenarios);
 
         $viewData = array_merge(
-            $this->selectedAccountView($selectedAccountId, $forecastQuery, $db, $user, $mapper),
-            $this->aggregateView($accountList, $isAllAccountsView, $isEmpty, $forecastQuery, $db, $user),
+            $this->selectedAccountView($selectedAccountId, $forecastQuery, $db, $user, $mapper, $baseCurrency->code()),
+            $this->aggregateView($accountList, $isAllAccountsView, $isEmpty, $forecastQuery, $db, $user, $baseCurrency->code()),
             [
                 'accounts' => $accountList,
                 'selectedAccountId' => $selectedAccountId,
@@ -330,6 +332,7 @@ final class ForecastPage extends Component
         DatabaseManager $db,
         User $user,
         ForecastDtoMapper $mapper,
+        string $baseCurrency,
     ): array {
         /** @var array<int, int> $netDiff */
         $netDiff = [];
@@ -339,7 +342,7 @@ final class ForecastPage extends Component
 
         $defaults = [
             'selectedAccountName' => '',
-            'selectedAccountCurrency' => 'EUR',
+            'selectedAccountCurrency' => $baseCurrency,
             'baseline' => null,
             'apexOptions' => null,
             'chartElementId' => null,
@@ -351,7 +354,7 @@ final class ForecastPage extends Component
             'todayBalanceMinor' => 0,
             'horizonLowMinor' => 0,
             'horizonHighMinor' => 0,
-            'defaultCurrency' => 'EUR',
+            'defaultCurrency' => $baseCurrency,
             'effectiveBufferMinor' => null,
             'shortfallWindows' => [],
         ];
@@ -432,13 +435,14 @@ final class ForecastPage extends Component
         ForecastQuery $forecastQuery,
         DatabaseManager $db,
         User $user,
+        string $baseCurrency,
     ): array {
         if (! $isAllAccountsView || $isEmpty) {
             return [
                 'aggregatePoints' => [],
                 'aggregateBufferFloor' => 0,
                 'aggregateChartElementId' => null,
-                'aggregateCurrency' => 'EUR',
+                'aggregateCurrency' => $baseCurrency,
             ];
         }
 
@@ -454,7 +458,7 @@ final class ForecastPage extends Component
             'aggregatePoints' => $aggregatePoints,
             'aggregateBufferFloor' => $aggregateBufferFloor,
             'aggregateChartElementId' => 'forecast-chart-aggregate-'.$this->horizon,
-            'aggregateCurrency' => 'EUR',
+            'aggregateCurrency' => $baseCurrency,
         ];
     }
 }

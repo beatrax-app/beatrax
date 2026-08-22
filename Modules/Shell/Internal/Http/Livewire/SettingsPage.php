@@ -23,6 +23,7 @@ use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
 
 final class SettingsPage extends Component
@@ -59,7 +60,7 @@ final class SettingsPage extends Component
     public bool $saved = false;
 
     #[Validate('nullable|string|size:3|exists:currencies,code')]
-    public string $baseCurrency = 'EUR';
+    public string $baseCurrency = Currency::Eur->value;
 
     public bool $fxOnlineEnabled = false;
 

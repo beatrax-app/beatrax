@@ -11,6 +11,7 @@ use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
@@ -23,6 +24,7 @@ final readonly class FixedPaymentsViewQuery
     public function __construct(
         private DatabaseManager $db,
         private MerchantMemoryQuery $merchantMemory,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -257,7 +259,7 @@ final readonly class FixedPaymentsViewQuery
             }
         }
 
-        return RecurringSeriesDtoMapper::hydrate($row, $chainLinkId);
+        return RecurringSeriesDtoMapper::hydrate($row, $chainLinkId, $this->baseCurrency->code());
     }
 
     /**

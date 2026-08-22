@@ -14,6 +14,7 @@ use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\SeriesConfidenceDto;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -37,6 +38,7 @@ final readonly class ForecastQuery
         private Clock $clock,
         private ForecastDtoMapper $mapper,
         private RecurringSeriesQuery $seriesQuery,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function forUser(int $accountId, int $horizonDays, ?int $scenarioId, User $user): ForecastDto
@@ -52,7 +54,7 @@ final readonly class ForecastQuery
         $accountName = self::toString($account->name ?? null);
         $defaultCurrency = self::toString($account->default_currency ?? null);
         if ($defaultCurrency === '') {
-            $defaultCurrency = 'EUR';
+            $defaultCurrency = $this->baseCurrency->code();
         }
 
         $runQuery = $this->db->connection()->table('forecast_runs')

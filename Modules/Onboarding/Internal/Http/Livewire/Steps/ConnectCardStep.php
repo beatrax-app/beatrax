@@ -23,6 +23,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -88,6 +89,7 @@ final class ConnectCardStep extends Component
         Application $app,
         DatabaseManager $db,
         AccountSlugResolver $slugs,
+        BaseCurrency $baseCurrency,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -109,7 +111,7 @@ final class ConnectCardStep extends Component
             return;
         }
 
-        $this->ensureIcsAccount($newRunIds, $user, $db, $importer, $logger, $app, $slugs);
+        $this->ensureIcsAccount($newRunIds, $user, $db, $importer, $logger, $app, $slugs, $baseCurrency);
         $this->stashRunIds($user, $newRunIds);
 
         $this->dispatch('wizard.step.completed');
@@ -147,7 +149,7 @@ final class ConnectCardStep extends Component
     /**
      * @param  list<int>  $newRunIds
      */
-    private function ensureIcsAccount(array $newRunIds, User $user, DatabaseManager $db, RunsImports $importer, LoggerInterface $logger, Application $app, AccountSlugResolver $slugs): void
+    private function ensureIcsAccount(array $newRunIds, User $user, DatabaseManager $db, RunsImports $importer, LoggerInterface $logger, Application $app, AccountSlugResolver $slugs, BaseCurrency $baseCurrency): void
     {
         $hasIcsAccount = $db->connection()
             ->table('accounts')
@@ -164,7 +166,7 @@ final class ConnectCardStep extends Component
             'slug' => $slugs->resolveUnique($user->id, self::ICS_ACCOUNT_NAME),
             'kind' => AccountKind::IcsCard->value,
             'iban' => self::ICS_OWN_IBAN,
-            'default_currency' => 'EUR',
+            'default_currency' => $baseCurrency->code(),
         ]);
 
         foreach ($newRunIds as $runId) {

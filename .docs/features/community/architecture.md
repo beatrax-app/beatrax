@@ -340,8 +340,13 @@ with the row's verbatim raw description so the single globally-mounted
 `SuggestMappingModal` is mounted once at the layout level so `suggest-mapping:open`
 can open it from anywhere (the triage CTA, a mystery card, the Settings
 "Browse mystery merchants" link). On submit it builds a `SuggestMappingDto`
-(region defaults to `'NL'` since the bundled corpus targets Dutch banks; the
-modal's dropdown lets the user override), resolves the Compare URL via
+(region defaults to the reader's own country from `UserCountry::current()`,
+upper-cased to match how the corpus stores it, and the dropdown offers the
+`Country` enum so every reader can pick their own; a reader who has named no
+country defaults to the empty region, which `CommunityCorpusQuery::memoKey()`
+reads as every region rather than as the Netherlands — a suggestion filed
+under a region the reader does not read is one they never see resolve),
+resolves the Compare URL via
 `GitHubCompareUrlBuilder`, and hands it to `OpenExternalUrlAction`; if that
 action throws (e.g. a tampered config value pointing at a non-allow-listed
 host), the modal stays open with the error rendered inline rather than losing

@@ -33,6 +33,7 @@ use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
@@ -61,7 +62,7 @@ final class TransactionDetail extends Component
 
     public bool $noteSaved = false;
 
-    public function mount(int $transactionId, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session): void
+    public function mount(int $transactionId, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session, BaseCurrency $baseCurrency): void
     {
         $this->transactionId = $transactionId;
         $userId = $currentUser->user()->id;
@@ -85,7 +86,7 @@ final class TransactionDetail extends Component
             ? $codec->decryptValue('transactions', 'note', $row->note, $userId, $session)['value']
             : '';
 
-        $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session);
+        $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session, self::readerCurrency($currentUser, $baseCurrency));
     }
 
     public function reclassify(
@@ -423,10 +424,10 @@ final class TransactionDetail extends Component
         $this->redirect(Destination::Transactions->urlFrom($urls), navigate: true);
     }
 
-    public function updated(string $name, mixed $value, CurrentUser $currentUser, DatabaseManager $db): void
+    public function updated(string $name, mixed $value, CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): void
     {
         if (str_starts_with($name, 'legs.') && str_ends_with($name, '.amount')) {
-            $this->recomputeRemaining($currentUser, $db);
+            $this->recomputeRemaining($currentUser, $db, self::readerCurrency($currentUser, $baseCurrency));
         }
     }
 

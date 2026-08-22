@@ -11,11 +11,14 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Core\Public\Support\LocaleCollator;
+use Modules\Ledger\Internal\Services\TransactionFilterOptions;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
+use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\TransactionListQuery;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Search\Public\Dto\SearchFilters;
@@ -24,7 +27,6 @@ use Modules\Search\Public\Services\SearchQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
-use stdClass;
 
 final class TransactionsList extends Component
 {
@@ -34,6 +36,11 @@ final class TransactionsList extends Component
     // ~200-400 bytes JSON-encoded per row, so 500 rows stays well below
     // Livewire 4's 4MB snapshot limit. Oldest rows are trimmed past it.
     private const MAX_ACCUMULATED_ROWS = 500;
+
+    // The stored preference token, not a currency code. It spells the euro for
+    // history: the toggle it drives means "base currency only", and the value is
+    // persisted per user, so renaming it would silently reset everyone's choice.
+    private const string BASE_CURRENCY_ONLY = 'eur';
 
     public bool $fullHistory = false;
 
@@ -73,8 +80,8 @@ final class TransactionsList extends Component
     #[Url(as: 'amount_max', except: '')]
     public string $filterAmountMax = '';
 
-    #[Url(as: 'amount_dir', except: 'both')]
-    public string $filterAmountDir = 'both';
+    #[Url(as: 'amount_dir', except: AmountDirection::Both->value)]
+    public string $filterAmountDir = AmountDirection::Both->value;
 
     public ?bool $preSearchFullHistory = null;
 
@@ -97,7 +104,7 @@ final class TransactionsList extends Component
     {
         if ($this->currency === '') {
             $pref = $currentUser->user()->default_currency_view;
-            $this->currency = $pref === 'eur_only' ? 'eur' : 'original';
+            $this->currency = $pref === 'eur_only' ? self::BASE_CURRENCY_ONLY : 'original';
         }
     }
 
@@ -111,7 +118,7 @@ final class TransactionsList extends Component
             || $this->filterBefore !== ''
             || $this->filterAmountMin !== ''
             || $this->filterAmountMax !== ''
-            || $this->filterAmountDir !== 'both';
+            || $this->filterAmountDir !== AmountDirection::Both->value;
     }
 
     public function clearSearch(): void
@@ -124,7 +131,7 @@ final class TransactionsList extends Component
         $this->filterBefore = '';
         $this->filterAmountMin = '';
         $this->filterAmountMax = '';
-        $this->filterAmountDir = 'both';
+        $this->filterAmountDir = AmountDirection::Both->value;
 
         if ($this->preSearchFullHistory !== null) {
             $this->fullHistory = $this->preSearchFullHistory;
@@ -170,12 +177,14 @@ final class TransactionsList extends Component
         SearchQuery $searchQuery,
         SensitiveColumnCodec $codec,
         Session $session,
+        TransactionFilterOptions $filterOptions,
+        BaseCurrency $baseCurrency,
     ): View {
         $this->normaliseFilterIds();
 
         return $this->isSearchActive()
-            ? $this->renderSearch($currentUser, $views, $db, $taxTagQuery, $searchQuery, $codec, $session)
-            : $this->renderList($currentUser, $listQuery, $views, $db, $taxTagQuery, $codec, $session);
+            ? $this->renderSearch($currentUser, $views, $db, $taxTagQuery, $searchQuery, $codec, $session, $filterOptions, $baseCurrency)
+            : $this->renderList($currentUser, $listQuery, $views, $db, $taxTagQuery, $codec, $session, $filterOptions, $baseCurrency);
     }
 
     // Livewire hands a #[Url] array to the view as well as to the query, so
@@ -199,8 +208,15 @@ final class TransactionsList extends Component
         SearchQuery $searchQuery,
         SensitiveColumnCodec $codec,
         Session $session,
+        TransactionFilterOptions $filterOptions,
+        BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
+        // The reader's own setting, not config('currency.base'): the /settings
+        // picker writes users.base_currency, and nothing wires the config value
+        // to an env, so reading it here would be inert and would print € over a
+        // total counted in pounds.
+        $readerCurrency = $user->base_currency ?? $baseCurrency->code();
 
         if ($this->preSearchFullHistory === null) {
             $this->preSearchFullHistory = $this->fullHistory;
@@ -224,7 +240,7 @@ final class TransactionsList extends Component
         $this->nextCursorPostedAt = $page->nextCursorPostedAt;
 
         $rowIds = array_map(static fn (SearchRowDto $row): int => $row->id, $page->rows);
-        $state = $this->decorateAccumulatedRows($rowIds, $db, $taxTagQuery, $currentUser, $codec, $session);
+        $state = $this->decorateAccumulatedRows($rowIds, $db, $taxTagQuery, $currentUser, $codec, $session, $readerCurrency);
 
         // Rebuilt per render, never accumulated: a stale highlight must not
         // outlive the query that produced it.
@@ -234,7 +250,7 @@ final class TransactionsList extends Component
         }
 
         return $views->make('ledger::livewire.transactions-list', [
-            ...$this->sharedViewData($state, $db, $user->id),
+            ...$this->sharedViewData($state, $filterOptions, $user, $readerCurrency),
             'page' => $page,
             'chainTxIds' => [],
             'isSearchMode' => true,
@@ -255,9 +271,18 @@ final class TransactionsList extends Component
         TaxTagQuery $taxTagQuery,
         SensitiveColumnCodec $codec,
         Session $session,
+        TransactionFilterOptions $filterOptions,
+        BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
-        $queryCurrency = $this->currency === 'eur' ? 'EUR' : null;
+        // The reader's own setting, not config('currency.base'): the /settings
+        // picker writes users.base_currency, and nothing wires the config value
+        // to an env, so reading it here would be inert and would print € over a
+        // total counted in pounds.
+        $readerCurrency = $user->base_currency ?? $baseCurrency->code();
+        // 'eur' is the stored preference token, not a currency: the toggle means
+        // "base currency only", so it resolves to the reader's, not to the euro.
+        $queryCurrency = $this->currency === self::BASE_CURRENCY_ONLY ? $readerCurrency : null;
 
         $page = $this->fullHistory
             ? $listQuery->fullHistory($user, cursorId: $this->cursorId, cursorPostedAt: $this->cursorPostedAt, currency: $queryCurrency)
@@ -273,10 +298,10 @@ final class TransactionsList extends Component
         $this->nextCursorPostedAt = $page->nextCursorPostedAt;
 
         $rowIds = array_values(array_map(static fn ($row): int => $row->id, $page->rows));
-        $state = $this->decorateAccumulatedRows($rowIds, $db, $taxTagQuery, $currentUser, $codec, $session);
+        $state = $this->decorateAccumulatedRows($rowIds, $db, $taxTagQuery, $currentUser, $codec, $session, $readerCurrency);
 
         return $views->make('ledger::livewire.transactions-list', [
-            ...$this->sharedViewData($state, $db, $user->id),
+            ...$this->sharedViewData($state, $filterOptions, $user, $readerCurrency),
             'page' => $page,
             'chainTxIds' => $this->chainTxIdsFor($rowIds, $db, $user->id),
             'isSearchMode' => false,
@@ -368,12 +393,13 @@ final class TransactionsList extends Component
         CurrentUser $currentUser,
         SensitiveColumnCodec $codec,
         Session $session,
+        string $readerCurrency,
     ): array {
         $accIds = array_map(static fn (array $r): int => $r['id'], $this->accumulatedRows);
         $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
 
         $taxState = $this->taxTagStateFor($stateIds, $taxTagQuery, $currentUser);
-        $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $currentUser->user()->id, $codec, $session);
+        $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $currentUser->user()->id, $codec, $session, $readerCurrency);
         $clearedState = $this->clearedStatusFor($stateIds, $db, $currentUser);
 
         foreach ($this->accumulatedRows as &$accRow) {
@@ -427,9 +453,10 @@ final class TransactionsList extends Component
      * @param  array{taxState: array<int, array<string, mixed>>, splitLegs: array<int, mixed>, clearedState: array<int, string>}  $state
      * @return array<string, mixed>
      */
-    private function sharedViewData(array $state, DatabaseManager $db, int $userId): array
+    private function sharedViewData(array $state, TransactionFilterOptions $filterOptions, User $user, string $readerCurrency): array
     {
         return [
+            'baseCurrency' => $readerCurrency,
             'accumulatedRows' => $this->accumulatedRows,
             'fullHistory' => $this->fullHistory,
             'currency' => $this->currency,
@@ -437,8 +464,8 @@ final class TransactionsList extends Component
             'splitLegs' => $state['splitLegs'],
             'clearedState' => $state['clearedState'],
             'searchQuery' => $this->searchQuery,
-            'availableAccounts' => $this->availableAccounts($db, $userId),
-            'availableCategories' => $this->availableCategories($db, $userId),
+            'availableAccounts' => $filterOptions->accounts($user->id),
+            'availableCategories' => $filterOptions->categories($user->id),
         ];
     }
 
@@ -457,61 +484,11 @@ final class TransactionsList extends Component
         if ($this->filterAfter !== '' || $this->filterBefore !== '') {
             $count++;
         }
-        if ($this->filterAmountMin !== '' || $this->filterAmountMax !== '' || $this->filterAmountDir !== 'both') {
+        if ($this->filterAmountMin !== '' || $this->filterAmountMax !== '' || $this->filterAmountDir !== AmountDirection::Both->value) {
             $count++;
         }
 
         return $count;
-    }
-
-    /** @return list<array{id: int, name: string, currency: string}> */
-    private function availableAccounts(DatabaseManager $db, int $userId): array
-    {
-        $rows = $db->connection()
-            ->table('accounts')
-            ->where('user_id', $userId)
-            ->orderBy('name')
-            ->get(['id', 'name', 'default_currency'])
-            ->all();
-
-        return array_values(array_map(static function (object $row): array {
-            return [
-                'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'name' => is_string($row->name) ? $row->name : '',
-                'currency' => is_string($row->default_currency) ? $row->default_currency : 'EUR',
-            ];
-        }, $rows));
-    }
-
-    /** @return list<array{id: int, name: string}> */
-    private function availableCategories(DatabaseManager $db, int $userId): array
-    {
-        // Global (user_id IS NULL) OR user-owned: filtering on user_id alone
-        // hid the chip on installs using only the seeded default tree.
-        $rows = $db->connection()
-            ->table('categories')
-            ->where(static function (Builder $query) use ($userId): void {
-                $query->whereNull('user_id')->orWhere('user_id', $userId);
-            })
-            ->get(['id', ...CategoryDisplayName::bareColumns()])
-            ->all();
-
-        $options = array_values(array_map(static function (stdClass $row): array {
-            return [
-                'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'name' => CategoryDisplayName::fromRow($row) ?? '',
-            ];
-        }, $rows));
-
-        // Sorted on what the reader sees; the stored English orders a
-        // translated picker by a word that is not on screen.
-        usort($options, static function (array $a, array $b): int {
-            $byName = LocaleCollator::compare($a['name'], $b['name']);
-
-            return $byName !== 0 ? $byName : $a['id'] <=> $b['id'];
-        });
-
-        return $options;
     }
 
     // Money is not Livewire-dehydratable, so a row carries the minor integer
@@ -560,7 +537,7 @@ final class TransactionsList extends Component
      * @param  array<int>  $transactionIds
      * @return array<int, list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>>
      */
-    private function legsFor(array $transactionIds, DatabaseManager $db, TaxTagQuery $taxTagQuery, int $userId, SensitiveColumnCodec $codec, Session $session): array
+    private function legsFor(array $transactionIds, DatabaseManager $db, TaxTagQuery $taxTagQuery, int $userId, SensitiveColumnCodec $codec, Session $session, string $readerCurrency): array
     {
         if ($transactionIds === []) {
             return [];
@@ -600,7 +577,7 @@ final class TransactionsList extends Component
                 'id' => $legId,
                 'categoryName' => CategoryDisplayName::fromRow($row, 'category') ?? '—',
                 'amountMinor' => is_numeric($row->settled_amount_minor) ? (int) $row->settled_amount_minor : 0,
-                'amountCurrency' => is_string($row->settled_currency) ? $row->settled_currency : 'EUR',
+                'amountCurrency' => is_string($row->settled_currency) ? $row->settled_currency : $readerCurrency,
                 'note' => $legNote,
                 'taxTagged' => $legTag !== null,
                 'taxCategoryShortName' => $legTag->deductionCategoryShortName ?? null,

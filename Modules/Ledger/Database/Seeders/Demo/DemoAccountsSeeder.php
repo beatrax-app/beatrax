@@ -7,6 +7,7 @@ namespace Modules\Ledger\Database\Seeders\Demo;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Enums\Currency;
 
 // updateOrCreate on (user_id, slug) keeps account ids stable across runs, so
 // transactions seeded in a prior run still point at the same account_id.
@@ -20,7 +21,7 @@ final class DemoAccountsSeeder
                 'slug' => 'asn-demo-1',
                 'kind' => AccountKind::Bank->value,
                 'iban' => 'NL57ASNB0123456789',
-                'default_currency' => 'EUR',
+                'default_currency' => Currency::Eur->value,
                 'starting_balance_minor' => 285000,
             ],
             [
@@ -30,7 +31,7 @@ final class DemoAccountsSeeder
                 // leave the demo's reconcile pre-fill and chains dormant.
                 'kind' => AccountKind::IcsCard->value,
                 'iban' => 'ICS-DEMO-1-CARD',
-                'default_currency' => 'EUR',
+                'default_currency' => Currency::Eur->value,
                 'starting_balance_minor' => -15000,
             ],
             [
@@ -38,7 +39,7 @@ final class DemoAccountsSeeder
                 'slug' => 'paypal-demo-1',
                 'kind' => AccountKind::Paypal->value,
                 'iban' => 'PAYPAL-DEMO-1',
-                'default_currency' => 'EUR',
+                'default_currency' => Currency::Eur->value,
                 'starting_balance_minor' => 4200,
             ],
         ],
@@ -48,7 +49,7 @@ final class DemoAccountsSeeder
                 'slug' => 'asn-demo-2',
                 'kind' => AccountKind::Bank->value,
                 'iban' => 'NL09ASNB0987654321',
-                'default_currency' => 'EUR',
+                'default_currency' => Currency::Eur->value,
                 'starting_balance_minor' => 168000,
             ],
             [
@@ -56,7 +57,7 @@ final class DemoAccountsSeeder
                 'slug' => 'paypal-demo-2',
                 'kind' => AccountKind::Paypal->value,
                 'iban' => 'PAYPAL-DEMO-2',
-                'default_currency' => 'EUR',
+                'default_currency' => Currency::Eur->value,
                 'starting_balance_minor' => 0,
             ],
         ],

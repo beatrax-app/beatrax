@@ -231,8 +231,9 @@ first would report a wait the same mount had already ended.
 
 ### When it runs, and what was rejected
 
-`RecoverSealedLedger` is a `web`-group middleware on the desktop root, and it does its work in
-`terminate()`, after the response has been sent.
+`RecoverSealedLedger` is a `web`-group middleware on the desktop root, and it does its work
+after the response has been sent — in the `afterResponse()` hook its `AfterResponseMiddleware`
+base calls from `terminate()`.
 
 - **On unlock alone** is incomplete, not merely unavailable. `AppLockUnlocked` now exists and
   Sync already listens to it, so it could be hung there — but the desktop case that produces

@@ -10,6 +10,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
@@ -175,7 +176,7 @@ final class PotsPage extends Component
         $this->toast(Lang::get('pots::messages.toast.pot_updated'));
     }
 
-    public function fundPot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query): void
+    public function fundPot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query, BaseCurrency $baseCurrency): void
     {
         $this->clearErrors();
 
@@ -202,7 +203,7 @@ final class PotsPage extends Component
                 }
             }
             $unallocated = 0;
-            $currency = 'EUR';
+            $currency = $baseCurrency->code();
             if ($pot !== null) {
                 $rec = $query->reconciliationForAccount($pot->accountId, $user);
                 $unallocated = $rec->unallocatedMinor;
@@ -229,7 +230,7 @@ final class PotsPage extends Component
         $this->toast(Lang::get('pots::messages.toast.pot_funded'));
     }
 
-    public function withdrawPot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query): void
+    public function withdrawPot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query, BaseCurrency $baseCurrency): void
     {
         $this->clearErrors();
 
@@ -258,7 +259,7 @@ final class PotsPage extends Component
         } catch (InsufficientUnallocatedException) {
             $potName = Lang::get('pots::messages.pot_fallback');
             $balance = 0;
-            $currency = 'EUR';
+            $currency = $baseCurrency->code();
             if ($pot !== null) {
                 $potName = $pot->name;
                 $balance = $pot->balanceMinor;
@@ -285,7 +286,7 @@ final class PotsPage extends Component
         $this->toast(Lang::get('pots::messages.toast.withdrawn'));
     }
 
-    public function movePot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query): void
+    public function movePot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query, BaseCurrency $baseCurrency): void
     {
         $this->clearErrors();
 
@@ -315,7 +316,7 @@ final class PotsPage extends Component
         } catch (InsufficientUnallocatedException) {
             $potName = Lang::get('pots::messages.pot_fallback');
             $balance = 0;
-            $currency = 'EUR';
+            $currency = $baseCurrency->code();
             if ($sourcePot !== null) {
                 $potName = $sourcePot->name;
                 $balance = $sourcePot->balanceMinor;

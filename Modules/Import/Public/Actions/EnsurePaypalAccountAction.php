@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
+use Modules\Ledger\Public\Services\BaseCurrency;
 
 // Without this synthetic-IBAN account every imported PayPal row is an
 // unknown-IBAN error, the statement_summaries writer never fires, and the
@@ -22,6 +23,7 @@ final readonly class EnsurePaypalAccountAction
     public function __construct(
         private DatabaseManager $db,
         private AccountSlugResolver $slugs,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function __invoke(
@@ -48,7 +50,7 @@ final readonly class EnsurePaypalAccountAction
             'slug' => $this->slugs->resolveUnique($user->id, $name),
             'kind' => AccountKind::Paypal->value,
             'iban' => self::PAYPAL_OWN_IBAN,
-            'default_currency' => 'EUR',
+            'default_currency' => $this->baseCurrency->code(),
         ]);
 
         return true;

@@ -6,6 +6,7 @@ namespace Modules\Recurring\Internal\Mapping;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\SeriesCadence;
@@ -23,20 +24,22 @@ final class RecurringSeriesDtoMapper
      *                                         wants on the DTO. RecurringSeriesQuery passes the raw column
      *                                         value; FixedPaymentsViewQuery passes the result of its
      *                                         occurrence-walk fallback.
+     * @param  string  $baseCurrency  BaseCurrency::code(), supplied by the caller
+     *                                because a static mapper cannot inject it
      */
-    public static function hydrate(stdClass $row, ?int $resolvedChainLinkId): RecurringSeriesDto
+    public static function hydrate(stdClass $row, ?int $resolvedChainLinkId, string $baseCurrency): RecurringSeriesDto
     {
         $latestCurrency = self::toString($row->latest_currency);
         $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor), $latestCurrency);
 
         $eurEquivalent = null;
-        if ($latestCurrency !== 'EUR' && isset($row->monthly_equivalent_minor)) {
-            $eurEquivalent = Money::ofMinor(self::toInt($row->monthly_equivalent_minor), 'EUR');
+        if ($latestCurrency !== Currency::Eur->value && isset($row->monthly_equivalent_minor)) {
+            $eurEquivalent = Money::ofMinor(self::toInt($row->monthly_equivalent_minor), Currency::Eur->value);
         }
 
         $monthlyEquivalent = Money::ofMinor(
             isset($row->monthly_equivalent_minor) ? self::toInt($row->monthly_equivalent_minor) : 0,
-            $latestCurrency !== '' ? $latestCurrency : 'EUR',
+            $latestCurrency !== '' ? $latestCurrency : $baseCurrency,
         );
 
         $nextExpectedAt = null;

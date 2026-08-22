@@ -7,12 +7,14 @@ namespace Modules\Budgets\Public\Services;
 use Modules\Budgets\Models\CategoryBudget;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 final class BudgetWriter
 {
     public function __construct(
         private readonly BudgetProgressQuery $query,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function save(User $user, int $categoryId, int $minor): bool
@@ -26,7 +28,7 @@ final class BudgetWriter
         // (user_id, category_id) unique constraint.
         CategoryBudget::query()->withoutGlobalScope(UserScope::class)->updateOrCreate(
             ['user_id' => $user->id, 'category_id' => $categoryId],
-            ['budget_minor' => $minor, 'currency' => 'EUR', 'period_type' => 'monthly'],
+            ['budget_minor' => $minor, 'currency' => $this->baseCurrency->code(), 'period_type' => 'monthly'],
         );
 
         return true;

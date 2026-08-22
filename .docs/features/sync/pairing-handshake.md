@@ -683,7 +683,7 @@ peer the pairing.
 | Device | Driver | Can it sign? |
 |---|---|---|
 | Desktop | a `DaemonTimer` tick inside `sync:serve` | **no** |
-| Any device, any screen | `CarriesPendingPairingFrames`, at `terminate()` on the `web` group | yes, when unlocked |
+| Any device, any screen | `CarriesPendingPairingFrames`, after the response on the `web` group | yes, when unlocked |
 
 `DaemonTimer` is an interface with one implementation, `DaemonTicker`, which is the only place
 in the tree that names Revolt's event loop — the same containment `DaemonShutdownSignal`

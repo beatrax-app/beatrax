@@ -9,6 +9,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Enums\AmountDirection;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\TransactionCursor;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
@@ -42,6 +44,7 @@ final class SearchQuery
         private readonly DidYouMeanSuggester $suggester,
         private readonly FtsCandidateResolver $ftsResolver,
         private readonly SearchRowMapper $rowMapper,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function search(
@@ -94,14 +97,16 @@ final class SearchQuery
 
         $this->applyFilters($query, $user, $filters);
 
-        // The strip totals are labelled "€", so the SUMs must only
-        // aggregate rows whose settlement leg is actually EUR — a
-        // non-EUR-settled or unsettled row would otherwise be summed
-        // into a number shown under a € label.
+        // The reader's own reporting currency, not the app-wide fallback: the
+        // strip labels these totals with it, so a row settled in anything else
+        // would be summed into a figure shown under the wrong symbol.
+        $base = $user->base_currency ?? $this->baseCurrency->code();
+
         $summary = (clone $query)->selectRaw(
-            "COUNT(*) as total_count,
-             SUM(CASE WHEN settled_currency = 'EUR' AND settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
-             SUM(CASE WHEN settled_currency = 'EUR' AND settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in",
+            'COUNT(*) as total_count,
+             SUM(CASE WHEN settled_currency = ? AND settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
+             SUM(CASE WHEN settled_currency = ? AND settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in',
+            [$base, $base],
         )->first();
 
         $totalCount = is_numeric($summary?->total_count) ? (int) $summary->total_count : 0;
@@ -457,9 +462,9 @@ final class SearchQuery
             $query->whereRaw('ABS(transactions.settled_amount_minor) <= ?', [$maxMinor]);
         }
 
-        if ($filters->amountDirection === 'in') {
+        if ($filters->amountDirection === AmountDirection::In->value) {
             $query->where('transactions.amount_minor', '>', 0);
-        } elseif ($filters->amountDirection === 'out') {
+        } elseif ($filters->amountDirection === AmountDirection::Out->value) {
             $query->where('transactions.amount_minor', '<', 0);
         }
     }

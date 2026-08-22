@@ -1,6 +1,7 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Forecasting\Public\Services\ForecastHighlightsQuery')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     Dashboard "Forecast highlights" tile.
 
@@ -24,11 +25,11 @@
     // is the whole point of the "lowest projected balance" tile — without
     // it the user cannot distinguish "the account is at €100 and dips no
     // further" from "the account hits −€100".
-    $fmtMinor = static function (?int $minor, string $currency = 'EUR'): string {
+    $fmtMinor = static function (?int $minor, ?string $currency = null): string {
         if ($minor === null) {
             return '';
         }
-        return Money::ofMinor($minor, $currency)->format();
+        return Money::ofMinor($minor, $currency ?? BaseCurrency::value())->format();
     };
     $lowestFormatted = $fmtMinor($dto->lowestProjectedBalanceMinor);
     $nextSettlementFormatted = $dto->nextIcsSettlement !== null

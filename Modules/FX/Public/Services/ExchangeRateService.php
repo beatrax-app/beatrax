@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\FX\Public\Dto\ConversionResult;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\RateTable;
 
@@ -15,7 +16,7 @@ final class ExchangeRateService
 {
     private const int STALE_DAYS_THRESHOLD = 3;
 
-    private const string BASE_CURRENCY = 'EUR';
+    private const string BASE_CURRENCY = Currency::Eur->value;
 
     public function __construct(private readonly DatabaseManager $db) {}
 

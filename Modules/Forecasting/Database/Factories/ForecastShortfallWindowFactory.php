@@ -6,6 +6,7 @@ namespace Modules\Forecasting\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Forecasting\Models\ForecastShortfallWindow;
+use Modules\Ledger\Public\Enums\Currency;
 
 /**
  * @extends Factory<ForecastShortfallWindow>
@@ -28,7 +29,7 @@ final class ForecastShortfallWindowFactory extends Factory
             'starts_at' => $start,
             'ends_at' => $end,
             'lowest_balance_minor' => 12000,
-            'currency' => 'EUR',
+            'currency' => Currency::Eur->value,
             'buffer_used_minor' => 50000,
         ];
     }
