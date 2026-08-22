@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Atbloķējiet lietotni, lai importētu: tirgotāja atslēgu nevar aprēķināt, kamēr tā ir bloķēta.',
+        'app_locked' => 'Atbloķējiet lietotni, lai importētu: šifrēšanas atslēgas nevar izmantot, kamēr tā ir bloķēta.',
         'file_unreadable' => 'Šo failu neizdevās nolasīt.',
         'iban_not_in_preview' => 'Šis IBAN nav daļa no pašreizējā priekšskatījuma.',
         'row_unreadable' => 'Šo rindu neizdevās nolasīt.',

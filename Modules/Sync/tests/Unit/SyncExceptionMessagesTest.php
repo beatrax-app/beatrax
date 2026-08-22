@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Sync\Internal\Exceptions\BlindIndexKeyMalformedException;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
+use Modules\Sync\Internal\Exceptions\DeviceIdentityUnreadableException;
 use Modules\Sync\Internal\Exceptions\KeyringStateException;
 use Modules\Sync\Internal\Exceptions\NoiseDecryptionFailedException;
 use Modules\Sync\Internal\Exceptions\NoiseNonceExhaustedException;
@@ -46,6 +47,18 @@ it('says which user and epoch the keyring could not satisfy', function (): void 
         ->toBe('Corrupt GDK keyring payload for user 42.');
 });
 
+// The refusal has to name the user whose key-file was left alone, because the
+// two branches leave the filesystem in opposite states: one wrote nothing at
+// all, the other moved a file and named where it went.
+it('says which identity key-file was left alone, and which one could not be moved', function (): void {
+    expect(DeviceIdentityUnreadableException::willNotOverwrite(42)->getMessage())
+        ->toContain('user 42')
+        ->and(DeviceIdentityUnreadableException::willNotOverwrite(42)->getMessage())
+        ->toContain('not overwritten')
+        ->and(DeviceIdentityUnreadableException::couldNotRetire('/data/sync/identity/42.enc')->getMessage())
+        ->toContain('/data/sync/identity/42.enc');
+});
+
 it('says which path the secret material could not reach', function (): void {
     expect(SecretFileException::couldNotStage('/tmp/x.key')->getMessage())
         ->toContain('/tmp/x.key')
@@ -65,6 +78,7 @@ it('keeps every failure catchable as a RuntimeException', function (string $clas
 })->with([
     BlindIndexKeyMalformedException::class,
     CryptoOperationFailedException::class,
+    DeviceIdentityUnreadableException::class,
     KeyringStateException::class,
     SecretFileException::class,
     RelayUnavailableException::class,

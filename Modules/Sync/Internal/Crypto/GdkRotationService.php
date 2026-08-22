@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Clock\ZuluTimestamp;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
@@ -44,7 +45,7 @@ final class GdkRotationService
     public function rotateAndRevoke(int $userId, int $deviceRegistryId, Session $session): void
     {
         $connection = $this->db->connection();
-        $now = $this->clock->now()->toIso8601String();
+        $now = ZuluTimestamp::stamp($this->clock->now());
 
         // Livewire actions are client-invokable, so a crafted
         // removeDevice(selfRowId) is refused authoritatively here rather than

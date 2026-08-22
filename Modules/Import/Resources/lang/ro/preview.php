@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Deblocați aplicația pentru a importa: cheia comerciantului nu poate fi calculată cât timp este blocată.',
+        'app_locked' => 'Deblocați aplicația pentru a importa: cheile de criptare nu pot fi folosite cât timp este blocată.',
         'file_unreadable' => 'Acest fișier nu a putut fi citit.',
         'iban_not_in_preview' => 'Acest IBAN nu face parte din previzualizarea curentă.',
         'row_unreadable' => 'Acest rând nu a putut fi citit.',

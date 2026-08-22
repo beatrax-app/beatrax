@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Sblocca l\'app per importare: la chiave dell\'esercente non può essere calcolata mentre è bloccata.',
+        'app_locked' => 'Sblocca l\'app per importare: le chiavi di crittografia non possono essere usate mentre è bloccata.',
         'file_unreadable' => 'Non è stato possibile leggere questo file.',
         'iban_not_in_preview' => "Questo IBAN non fa parte dell'anteprima attuale.",
         'row_unreadable' => 'Non è stato possibile leggere questa riga.',

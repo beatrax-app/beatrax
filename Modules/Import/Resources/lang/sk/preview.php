@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Odomknite aplikáciu na import: kľúč obchodníka sa nedá vypočítať, kým je zamknutá.',
+        'app_locked' => 'Odomknite aplikáciu na import: šifrovacie kľúče sa nedajú použiť, kým je zamknutá.',
         'file_unreadable' => 'Tento súbor sa nepodarilo načítať.',
         'iban_not_in_preview' => 'Tento IBAN nie je súčasťou aktuálneho náhľadu.',
         'row_unreadable' => 'Tento riadok sa nepodarilo načítať.',
