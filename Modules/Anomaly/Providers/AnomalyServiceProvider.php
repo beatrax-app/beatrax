@@ -61,14 +61,10 @@ final class AnomalyServiceProvider extends ServiceProvider
 
         $this->registerNavBadgeComposer();
 
-        // class_exists-guarded so a partially-booted module never wires
-        // detection before the evaluator and job exist.
-        if (class_exists(EvaluateAnomaliesOnTransactionImport::class)) {
-            $events->listen(
-                TransactionImported::class,
-                [EvaluateAnomaliesOnTransactionImport::class, 'handle'],
-            );
-        }
+        $events->listen(
+            TransactionImported::class,
+            [EvaluateAnomaliesOnTransactionImport::class, 'handle'],
+        );
     }
 
     // The per-boot `$cache` collapses repeated sidebar renders in one boot

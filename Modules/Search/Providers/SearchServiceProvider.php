@@ -24,78 +24,53 @@ use Modules\Search\Public\Http\Livewire\PaletteSearchEndpoint;
 use Modules\Search\Public\Services\FtsHealthCheck;
 use Modules\Search\Public\Services\SearchQuery;
 
-// Single owner of every Search module binding + registration; every
-// class here is wired via class_exists()-guarded blocks so no
-// downstream change ever needs to edit this file directly.
 final class SearchServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
 
     public function register(): void
     {
-        if (class_exists(SearchIndexWriter::class)) {
-            $this->app->singleton(
-                SearchIndexWriterContract::class,
-                SearchIndexWriter::class,
-            );
-        }
+        $this->app->singleton(
+            SearchIndexWriterContract::class,
+            SearchIndexWriter::class,
+        );
 
-        if (class_exists(FtsHealthCheck::class)) {
-            $this->app->singleton(FtsHealthCheck::class);
-        }
+        $this->app->singleton(FtsHealthCheck::class);
 
-        if (class_exists(SearchResultsProviderImpl::class)) {
-            $this->app->singleton(
-                SearchResultsProvider::class,
-                SearchResultsProviderImpl::class,
-            );
-        }
+        $this->app->singleton(
+            SearchResultsProvider::class,
+            SearchResultsProviderImpl::class,
+        );
 
-        if (class_exists(FtsCandidateResolver::class)) {
-            $this->app->singleton(FtsCandidateResolver::class);
-        }
+        $this->app->singleton(FtsCandidateResolver::class);
 
-        if (class_exists(SearchRowMapper::class)) {
-            $this->app->singleton(SearchRowMapper::class);
-        }
+        $this->app->singleton(SearchRowMapper::class);
 
-        if (class_exists(SearchQuery::class)) {
-            $this->app->singleton(SearchQuery::class);
-        }
+        $this->app->singleton(SearchQuery::class);
 
-        if (class_exists(QueryParser::class)) {
-            $this->app->singleton(QueryParser::class);
-        }
+        $this->app->singleton(QueryParser::class);
 
-        if (class_exists(EntityNameSearch::class)) {
-            $this->app->singleton(EntityNameSearch::class);
-        }
+        $this->app->singleton(EntityNameSearch::class);
 
-        if (class_exists(DidYouMeanSuggester::class)) {
-            $this->app->singleton(DidYouMeanSuggester::class);
-        }
+        $this->app->singleton(DidYouMeanSuggester::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
         $this->loadModuleResources('search');
 
-        if (class_exists(IndexTransactionOnImport::class)) {
-            $events->listen(
-                TransactionImported::class,
-                [IndexTransactionOnImport::class, 'handle'],
-            );
-        }
+        $events->listen(
+            TransactionImported::class,
+            [IndexTransactionOnImport::class, 'handle'],
+        );
 
-        if (class_exists(ReindexSearchCommand::class) && $this->app->runningInConsole()) {
+        if ($this->app->runningInConsole()) {
             $this->commands([ReindexSearchCommand::class]);
         }
 
-        if (class_exists(PaletteSearchEndpoint::class)) {
-            $livewire->component(
-                'search.palette-search-endpoint',
-                PaletteSearchEndpoint::class,
-            );
-        }
+        $livewire->component(
+            'search.palette-search-endpoint',
+            PaletteSearchEndpoint::class,
+        );
     }
 }

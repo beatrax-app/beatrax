@@ -12,6 +12,10 @@ use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
+use Modules\Import\Internal\Detectors\Camt053StartingBalanceDetector;
+use Modules\Import\Internal\Detectors\IcsPdfStartingBalanceDetector;
+use Modules\Import\Internal\Detectors\Mt940StartingBalanceDetector;
+use Modules\Import\Internal\Detectors\PaypalCsvStartingBalanceDetector;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Import\Internal\Http\Livewire\ImportResults;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
@@ -19,6 +23,12 @@ use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Import\Internal\Listeners\HandleFileOpenedFromOs;
 use Modules\Import\Internal\Listeners\SeedDefaultKnownCounterpartyIbans;
+use Modules\Import\Internal\Parsers\Asn\AsnCsvPaymentTypeHinter;
+use Modules\Import\Internal\Parsers\Banking\Camt053PaymentTypeHinter;
+use Modules\Import\Internal\Parsers\Banking\Mt940PaymentTypeHinter;
+use Modules\Import\Internal\Parsers\DescriptionKeywordFallbackHinter;
+use Modules\Import\Internal\Parsers\Ics\IcsPdfPaymentTypeHinter;
+use Modules\Import\Internal\Parsers\Paypal\PaypalCsvPaymentTypeHinter;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Pipeline\Stages\PaymentTypeClassifierStage;
@@ -53,22 +63,24 @@ final class ImportServiceProvider extends ServiceProvider
 
     // Source-specific hinters lead so their higher-confidence verdicts win;
     // the fallback must stay last.
+    /** @var list<class-string> */
     private const PAYMENT_TYPE_HINTER_FQNS = [
-        'Modules\\Import\\Internal\\Parsers\\Banking\\Camt053PaymentTypeHinter',
-        'Modules\\Import\\Internal\\Parsers\\Banking\\Mt940PaymentTypeHinter',
-        'Modules\\Import\\Internal\\Parsers\\Asn\\AsnCsvPaymentTypeHinter',
-        'Modules\\Import\\Internal\\Parsers\\Ics\\IcsPdfPaymentTypeHinter',
-        'Modules\\Import\\Internal\\Parsers\\Paypal\\PaypalCsvPaymentTypeHinter',
-        'Modules\\Import\\Internal\\Parsers\\DescriptionKeywordFallbackHinter',
+        Camt053PaymentTypeHinter::class,
+        Mt940PaymentTypeHinter::class,
+        AsnCsvPaymentTypeHinter::class,
+        IcsPdfPaymentTypeHinter::class,
+        PaypalCsvPaymentTypeHinter::class,
+        DescriptionKeywordFallbackHinter::class,
     ];
 
     // Detector priority: canonical CAMT.053 first, legacy MT940 next, then
     // ICS PDF, then PayPal CSV, which always declines.
+    /** @var list<class-string> */
     private const STARTING_BALANCE_DETECTOR_FQNS = [
-        'Modules\\Import\\Internal\\Detectors\\Camt053StartingBalanceDetector',
-        'Modules\\Import\\Internal\\Detectors\\Mt940StartingBalanceDetector',
-        'Modules\\Import\\Internal\\Detectors\\IcsPdfStartingBalanceDetector',
-        'Modules\\Import\\Internal\\Detectors\\PaypalCsvStartingBalanceDetector',
+        Camt053StartingBalanceDetector::class,
+        Mt940StartingBalanceDetector::class,
+        IcsPdfStartingBalanceDetector::class,
+        PaypalCsvStartingBalanceDetector::class,
     ];
 
     public function register(): void
@@ -102,17 +114,13 @@ final class ImportServiceProvider extends ServiceProvider
         $this->app->singleton(MergeMerchantAliases::class);
 
         foreach (self::PAYMENT_TYPE_HINTER_FQNS as $fqn) {
-            if (class_exists($fqn)) {
-                $this->app->singleton($fqn);
-                $this->app->tag([$fqn], 'import.payment_type_hinter');
-            }
+            $this->app->singleton($fqn);
+            $this->app->tag([$fqn], 'import.payment_type_hinter');
         }
 
         foreach (self::STARTING_BALANCE_DETECTOR_FQNS as $fqn) {
-            if (class_exists($fqn)) {
-                $this->app->singleton($fqn);
-                $this->app->tag([$fqn], 'starting-balance.detector');
-            }
+            $this->app->singleton($fqn);
+            $this->app->tag([$fqn], 'starting-balance.detector');
         }
 
         $this->app->singleton(
