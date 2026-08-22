@@ -143,9 +143,10 @@ it('renders Cancel this → save €X/yr inline on each open alert row', functio
     $response->assertOk();
 
     $response->assertSeeText('Cancel this');
-    // Split in two: nl_NL puts an NBSP between the symbol and the amount.
+    // Split in two: the symbol and the amount are separated by a space whose
+    // width and breaking behaviour are the reader's, not this test's.
     $response->assertSee('€');
-    $response->assertSee('180,00');
+    $response->assertSee('180.00');
     $response->assertSeeText('/yr');
 });
 

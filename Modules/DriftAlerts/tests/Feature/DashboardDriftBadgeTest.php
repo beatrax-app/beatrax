@@ -164,9 +164,10 @@ it('sums annualized impact across open alerts and renders an EUR-roll-up helper 
     $total = $component->viewData('totalAnnualizedImpact');
     expect((int) $total)->toBe(-2400);
 
-    // Asserted in halves: the Dutch rendering of -2400 puts an NBSP between
-    // the symbol and the amount, which survives Blade escaping as raw bytes.
-    $component->assertSee('24,00');
+    // Asserted in halves: the symbol and the amount are separated by a space
+    // whose bytes survive Blade escaping, so the two are matched apart. The
+    // marks are the reader's, and this suite reads in English.
+    $component->assertSee('24.00');
     $component->assertSee('€');
 });
 
