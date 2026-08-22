@@ -206,6 +206,53 @@ Anyone reproducing on a desktop will conclude the code is fine. Only the device
 shows it, which is why the guard is a test that sends a *stale* header at an
 ordinary page request and asserts it is still treated as one.
 
+### The session store outlives the request that filled it
+
+The same shape, one layer up. `session.store` is a container singleton and
+`Manager::driver()` memoises what it builds, so a single `Illuminate\Session\Store`
+object serves every request in the process. `StartSession` does not replace it —
+it calls `setId()` on it with the incoming cookie and then `start()`.
+
+That would be harmless if starting a session replaced its contents. It does not:
+
+```php
+// Illuminate\Session\Store::loadSession()
+$this->attributes = array_replace($this->attributes, $this->readFromHandler());
+```
+
+`array_replace`, not assignment — and `save()` writes the attributes out and
+clears the started flag without clearing the attributes. So on this runtime the
+session a request sees is the *union* of the row storage holds for the incoming
+id and whatever the previous request left in memory. Two consequences, both
+demonstrated in `ForgetStaleSessionBetweenRequestsTest`:
+
+- a request arriving under a **different** session id is served the previous
+  id's data, including `login_web_*` and the app lock's `beatrax_locked` and
+  `beatrax_data_key`. A fresh session is authenticated and unlocked;
+- **destroying a session does not destroy it.** `ResetPasswordAction` deletes
+  every `sessions` row for the user and `ChangePasswordPage` deletes every row
+  but the caller's, both to sever a session after a suspected compromise. The
+  row goes, `readFromHandler()` returns `[]`, and `array_replace` merges nothing
+  over a session that is still entirely in memory.
+
+The seam is `ForgetStaleSessionBetweenRequests`, prepended at this root so it
+runs in the global stack before the `web` group reaches `StartSession`. It
+empties the store when the store is not started. `isStarted()` is the whole
+discriminator and is load-bearing in both directions: `Store::save()` ends a
+request cycle by clearing that flag, which is what makes leftover attributes
+recognisable as stale; and a session filled *before* a request — which is how
+`withSession()` signs a caller in — is started, so emptying unconditionally
+would blank every seeded session in this root's own suite.
+
+Nothing here rebuilds the session driver. `forgetGuards()` does, and rebuilding
+registers a rebound callback the container never prunes, which on a process that
+never restarts grows without bound.
+
+**Off the device this is invisible for the same reason as the header leak.**
+PHP-FPM and `php -S` — which is what the desktop shell runs — build a fresh
+container per request, so the store is constructed and destroyed inside one
+request and the merge can never see a second one.
+
 The `post-update-cmd` invocation is `native:install --with-icu --quiet`, and both
 flags are load-bearing. v4 inverted `--force`: overwriting the generated tree is
 now the default (`--no-force` opts out) and `--force` means "re-download the PHP
@@ -760,11 +807,18 @@ can be repaired.
 `prepend()` reverses: the last call is the first to run. `TrustedHostGuard` is
 prepended last so it gates the `Host` the client asked for before `LoopbackOnly`
 gates the interface the connection arrived on — the webview is loopback-served,
-so it needs both. `ForgetGuardsBetweenRequests` is prepended first so it runs
-after `RestoreFrameworkRedirector` has repaired the container binding it depends
-on, and before anything reads the authenticated user: this runtime keeps one
-container for the life of the process, so the guard otherwise still holds the
+so it needs both. `ForgetGuardsBetweenRequests` is prepended second-to-first so
+it runs after `RestoreFrameworkRedirector` has repaired the container binding it
+depends on, and before anything reads the authenticated user: this runtime keeps
+one container for the life of the process, so the guard otherwise still holds the
 `User` model resolved at sign-in and every preference on it is stale.
+
+`ForgetStaleSessionBetweenRequests` is prepended first, so of the two it runs
+last, and that pairing is not free choice. The guard drop decides from the
+session the previous request left in memory — `getSession()->has($guard->getName())`
+— and the session drop is what empties it. Prepend them the other way round and
+the guard sees an empty session on every request, concludes there is nobody to
+refresh, and the stale `User` it exists to drop survives.
 
 It drops that user only when the session still names them, and that condition is
 load-bearing rather than defensive. Dropping is a *refresh*: `SessionGuard::user()`
