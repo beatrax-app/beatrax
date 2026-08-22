@@ -7,6 +7,7 @@ namespace Modules\DevMode\Internal\Console;
 use Illuminate\Console\Command;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DevMode\Internal\Audit\DevModeActivity;
+use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 
 // Manual-only: audit history is retained forever by policy, so this is never
 // scheduled and `--older-than` has no default — the operator names the cutoff.
@@ -34,7 +35,7 @@ final class PruneDevAuditCommand extends Command
         $cutoff = $this->clock->now()->subDays($days);
 
         $deletedRaw = DevModeActivity::query()
-            ->where('log_name', 'dev_mode')
+            ->where('log_name', SpatieAuditWriter::LOG_NAME)
             ->where('created_at', '<', $cutoff)
             ->delete();
         /** @var int|mixed $deletedRaw */

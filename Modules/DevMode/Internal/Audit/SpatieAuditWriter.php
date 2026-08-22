@@ -19,6 +19,8 @@ final readonly class SpatieAuditWriter implements AuditWriter
 {
     private const AUDIT_TABLE = 'dev_mode_audit';
 
+    public const LOG_NAME = 'dev_mode';
+
     public function __construct(
         private CurrentUser $currentUser,
         private Clock $clock,
@@ -95,7 +97,7 @@ final readonly class SpatieAuditWriter implements AuditWriter
     private function locateEagerRow(string $runId): ?array
     {
         $row = $this->db->connection()->table(self::AUDIT_TABLE)
-            ->where('log_name', 'dev_mode')
+            ->where('log_name', self::LOG_NAME)
             ->where('properties->run_id', $runId)
             ->orderByDesc('id')
             ->first();
@@ -165,7 +167,7 @@ final readonly class SpatieAuditWriter implements AuditWriter
         $causer = $this->resolveCauser($callerUserId);
 
         $logger = $this->logger
-            ->useLog('dev_mode')
+            ->useLog(self::LOG_NAME)
             ->withProperties($properties);
 
         if ($causer !== null) {
