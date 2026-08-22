@@ -57,6 +57,7 @@ final readonly class DeepLinkResolver
             targetKind: $renderedTargetKind,
             glyph: $dto->glyph,
             typeWord: $dto->typeWord,
+            unreadable: $dto->unreadable,
         );
     }
 
@@ -92,7 +93,11 @@ final readonly class DeepLinkResolver
         }
 
         $decrypted = $this->codec->decryptRow('notifications', ['params' => $raw], $user->id, $this->session);
-        $paramsJson = $decrypted['params'] ?? null;
+        if ($decrypted->isUnreadable('params')) {
+            return null;
+        }
+
+        $paramsJson = $decrypted['params'];
         if (! is_string($paramsJson) || $paramsJson === '') {
             return null;
         }
