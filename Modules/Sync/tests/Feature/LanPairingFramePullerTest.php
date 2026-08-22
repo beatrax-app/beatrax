@@ -7,6 +7,7 @@ use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Pairing\LanPairingFramePuller;
+use Modules\Sync\Internal\Pairing\LanPeerBrowser;
 use Modules\Sync\Internal\Pairing\PairingFrame;
 use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
@@ -43,8 +44,7 @@ function framePuller(array $peers): LanPairingFramePuller
     };
 
     return new LanPairingFramePuller(
-        app(HttpFactory::class),
-        $discovery,
+        new LanPeerBrowser(app(HttpFactory::class), $discovery),
         app(PairingFrameApplier::class),
         app(DeviceKeySigner::class),
     );

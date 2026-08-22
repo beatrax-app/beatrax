@@ -72,13 +72,16 @@ out-of-band channel the network cannot touch, so the key it names is the only on
 in turn — at most eight, so a hostile peer answering a browse many times over cannot cost
 one request per answer — whether it holds this token.
 
-All three LAN roads run that browse through one seam, `Pairing\Concerns\BrowsesLanPeers`,
-which owns the browse timeout, the connect and request timeouts, and the peer bound. Eight
-belongs to this road alone and is passed in rather than declared: a typed code names no
-device, so any peer might be the one holding it and asking too few asks the wrong ones. The
-seam's own default is four, which is what a road spends when it already names the device it
-wants (`LanPairingFrameCourier`, whose bound counts only peers advertising that id) or when
-it runs on every three-second poll (`LanPairingFramePuller`). Both numbers are pinned in
+All three LAN roads run that browse through one seam, `Pairing\LanPeerBrowser`, which owns
+the browse timeout, the connect and request timeouts, and the peer bound. It is a
+collaborator each road is given, not a trait each road mixes in: mixed in, it reached for
+`$this->http` and `$this->discovery` on whatever class used it, so all three roads declared
+two constructor dependencies their own bodies never named. Eight belongs to this road alone
+and is passed in rather than declared: a typed code names no device, so any peer might be
+the one holding it and asking too few asks the wrong ones. The seam's own default is four,
+which is what a road spends when it already names the device it wants
+(`LanPairingFrameCourier`, whose bound counts only peers advertising that id) or when it
+runs on every three-second poll (`LanPairingFramePuller`). Both numbers are pinned in
 `LanBrowseBoundsTest`, because a merge that flattened them would either halve the reach of a
 typed code or double the blocking work inside a poll.
 

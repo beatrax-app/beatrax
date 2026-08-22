@@ -2,17 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Modules\Sync\Internal\Pairing\Concerns;
+namespace Modules\Sync\Internal\Pairing;
 
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\PendingRequest;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
+use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 
 // The browse-and-dial every LAN pairing road runs. Discovery authenticates
 // nothing, so the bounds below are the whole defence: a responder can answer
 // one browse many times over, and each answer would otherwise cost another
 // request from a device that has no way to tell the answers apart.
-trait BrowsesLanPeers
+
+// Injected, not mixed in. As a trait this reached into $this->http and
+// $this->discovery on whichever class used it, so each of the three roads
+// declared two collaborators its own body never named — which reads, to a
+// reader and to a static analyser alike, as two dependencies nothing uses.
+final readonly class LanPeerBrowser
 {
     // Long enough for a desktop on the same subnet to answer, short enough
     // that a phone with nothing to find says so rather than hanging.
@@ -28,11 +35,16 @@ trait BrowsesLanPeers
     // own bound.
     private const int MAX_PEERS_TRIED = 4;
 
+    public function __construct(
+        private HttpFactory $http,
+        private PeerDiscovery $discovery,
+    ) {}
+
     /**
      * @param  ?string  $deviceId  Only peers advertising this id count against $max.
      * @return iterable<int, DiscoveredPeer>
      */
-    private function eachConnectablePeer(int $max = self::MAX_PEERS_TRIED, ?string $deviceId = null): iterable
+    public function eachConnectablePeer(int $max = self::MAX_PEERS_TRIED, ?string $deviceId = null): iterable
     {
         $tried = 0;
 
@@ -56,7 +68,7 @@ trait BrowsesLanPeers
     // Plaintext http as the listener speaks it: everything these roads carry
     // is either signed or worthless to an eavesdropper, and the safety-number
     // comparison — never the transport — is the trust gate.
-    private function peerRequest(): PendingRequest
+    public function peerRequest(): PendingRequest
     {
         return $this->http->createPendingRequest()
             ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)

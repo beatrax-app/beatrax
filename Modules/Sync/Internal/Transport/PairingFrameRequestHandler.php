@@ -57,27 +57,29 @@ final readonly class PairingFrameRequestHandler implements RequestHandler
 
         $frame = $this->decodeBody($request);
 
-        // Compared against the case, never coerced: an enum instance is always
-        // truthy, so negating it silently answered "applied" to every body that
-        // merely parsed — refusals included.
         $outcome = $frame === null
             ? PairingFrameOutcome::Refused
             : $this->applier->apply($this->userId, $frame);
 
-        if ($outcome === PairingFrameOutcome::Refused) {
-            return $this->notFound();
-        }
+        return $this->answerFor($outcome);
+    }
 
-        // A deferred frame is held, not done: the local human has not compared
-        // the words yet. Answering 204 told the sender it was applied, which is
-        // the one thing Deferred exists to deny.
-        if ($outcome === PairingFrameOutcome::Deferred) {
-            return new Response(HttpStatus::ACCEPTED);
-        }
-
-        // Nothing to say beyond "applied". The initiator learns the outcome by
-        // reading its own row, never from a body this could put words in.
-        return new Response(HttpStatus::NO_CONTENT);
+    // Matched case by case, never coerced: an enum instance is always truthy,
+    // so negating it silently answered "applied" to every body that merely
+    // parsed — refusals included. A match also leaves a fourth outcome nowhere
+    // to land quietly, where the chain of ifs it replaced answered 204.
+    private function answerFor(PairingFrameOutcome $outcome): Response
+    {
+        return match ($outcome) {
+            PairingFrameOutcome::Refused => $this->notFound(),
+            // A deferred frame is held, not done: the local human has not
+            // compared the words yet. Answering 204 told the sender it was
+            // applied, which is the one thing Deferred exists to deny.
+            PairingFrameOutcome::Deferred => new Response(HttpStatus::ACCEPTED),
+            // Nothing to say beyond "applied". The initiator learns the outcome
+            // by reading its own row, never from a body this could put words in.
+            PairingFrameOutcome::Applied => new Response(HttpStatus::NO_CONTENT),
+        };
     }
 
     /**

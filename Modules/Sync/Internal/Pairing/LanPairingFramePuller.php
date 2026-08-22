@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-use Illuminate\Http\Client\Factory as HttpFactory;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
-use Modules\Sync\Internal\Pairing\Concerns\BrowsesLanPeers;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
-use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\PairingFramePullHandler;
 use SodiumException;
 use Throwable;
@@ -21,15 +18,12 @@ use Throwable;
  */
 final readonly class LanPairingFramePuller
 {
-    use BrowsesLanPeers;
-
     // One answer cannot hand this device an unbounded amount of work: whoever
     // answers the browse chooses how many frames the reply carries.
     private const int MAX_FRAMES_APPLIED = 8;
 
     public function __construct(
-        private HttpFactory $http,
-        private PeerDiscovery $discovery,
+        private LanPeerBrowser $peers,
         private PairingFrameApplier $applier,
         private DeviceKeySigner $signer,
     ) {}
@@ -47,7 +41,7 @@ final readonly class LanPairingFramePuller
 
         $applied = 0;
 
-        foreach ($this->eachConnectablePeer() as $peer) {
+        foreach ($this->peers->eachConnectablePeer() as $peer) {
             foreach ($this->framesFrom($peer->host, $peer->port, $ownDeviceId, $proof) as $frame) {
                 if ($applied >= self::MAX_FRAMES_APPLIED) {
                     break 2;
@@ -82,25 +76,46 @@ final readonly class LanPairingFramePuller
      */
     private function framesFrom(string $host, int $port, string $ownDeviceId, string $proof): array
     {
+        $body = $this->askPeerForFrames($host, $port, $ownDeviceId, $proof);
+
+        return $body === null ? [] : self::framesIn($body);
+    }
+
+    // Null covers every way this peer gave nothing to read, which the caller
+    // treats as the empty answer it also gets from a peer holding no frames:
+    // both mean "keep asking the next one".
+    /**
+     * @return array<mixed>|null
+     */
+    private function askPeerForFrames(string $host, int $port, string $ownDeviceId, string $proof): ?array
+    {
         $url = "http://{$host}:{$port}".PairingFramePullHandler::PULL_PATH;
 
         try {
-            $response = $this->peerRequest()
+            $response = $this->peers->peerRequest()
                 ->get($url, ['device' => $ownDeviceId, 'proof' => $proof]);
 
-            if (! $response->successful()) {
-                return [];
-            }
-
-            $body = $response->json();
+            $body = $response->successful() ? $response->json() : null;
         } catch (Throwable) {
             // Refused, timed out, or not answering with JSON. Nothing is
             // logged: the device id is in the request and pairing material in
             // the reply, and neither belongs in a log file.
-            return [];
+            return null;
         }
 
-        if (! is_array($body) || ! isset($body['frames']) || ! is_array($body['frames'])) {
+        return is_array($body) ? $body : null;
+    }
+
+    // The answer's shape is chosen by whoever answered, so a frame that is not
+    // an object is dropped rather than carried to the applier as something it
+    // has to defend against.
+    /**
+     * @param  array<mixed>  $body
+     * @return list<array<string, mixed>>
+     */
+    private static function framesIn(array $body): array
+    {
+        if (! isset($body['frames']) || ! is_array($body['frames'])) {
             return [];
         }
 

@@ -87,13 +87,18 @@ final readonly class PairingPeerOutbox
             return null;
         }
 
-        if (! is_array($decoded)) {
-            return null;
-        }
+        return is_array($decoded) ? self::frameOfKnownType($decoded) : null;
+    }
 
-        // Rebuilt key by key rather than passed through: a JSON array decodes
-        // to a list with integer keys, which is not a frame, and refusing it
-        // here means nothing downstream has to wonder.
+    // Rebuilt key by key rather than passed through: a JSON array decodes to a
+    // list with integer keys, which is not a frame, and refusing it here means
+    // nothing downstream has to wonder.
+    /**
+     * @param  array<mixed>  $decoded
+     * @return array<string, mixed>|null
+     */
+    private static function frameOfKnownType(array $decoded): ?array
+    {
         $frame = [];
 
         foreach ($decoded as $key => $value) {
