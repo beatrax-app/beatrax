@@ -11,7 +11,7 @@ final class SuggestMappingDto extends Data
     public function __construct(
         public readonly string $pattern,
         public readonly string $name,
+        public readonly string $region,
         public readonly ?string $category = null,
-        public readonly string $region = 'NL',
     ) {}
 }

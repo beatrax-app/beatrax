@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\Country;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
@@ -21,13 +23,18 @@ use RuntimeException;
 
 final class OpenBankingConnectController
 {
-    private const ASPSP_COUNTRY = 'NL';
+    // Enable Banking resolves an ASPSP by name AND country, so a reader who has
+    // named no country still needs one sent. The two banks the wizard curates
+    // are Dutch, so that is the country to fall back to — never the one to
+    // assume over a reader who has said otherwise.
+    private const FALLBACK_ASPSP_COUNTRY = 'NL';
 
     public function __construct(
         private readonly OpenBankingSecretsRepository $secrets,
         private readonly EnableBankingHttpClient $client,
         private readonly OpenBankingStateRepository $oauthState,
         private readonly CurrentUser $currentUser,
+        private readonly UserCountry $countries,
         private readonly Clock $clock,
         private readonly Redirector $redirector,
         private readonly LoopbackRedirectUri $loopback,
@@ -77,7 +84,7 @@ final class OpenBankingConnectController
 
         $response = $this->client->initiateAuth(
             institutionId: $institutionId,
-            country: self::ASPSP_COUNTRY,
+            country: $this->aspspCountry(),
             redirectUrl: $redirectUri,
             scope: new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
             validUntil: $this->clock->now()->addDays(ConsentWindow::VALID_FOR_DAYS),
@@ -89,6 +96,15 @@ final class OpenBankingConnectController
         }
 
         return $consentUrl;
+    }
+
+    private function aspspCountry(): string
+    {
+        $country = Country::tryFrom($this->countries->current($this->currentUser->id()));
+
+        return $country === null
+            ? self::FALLBACK_ASPSP_COUNTRY
+            : strtoupper($country->value);
     }
 
     private function resolveScaHost(string $consentUrl): string
