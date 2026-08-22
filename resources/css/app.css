@@ -2365,6 +2365,17 @@ td.date,
         gap: var(--space-2);
     }
 
+    /* The card's headline, beside the type chip. Carries the same min-width
+       release as .cp-card, for the same reason: it is the flex item the
+       unbroken counterparty token actually lands in. */
+    .cp-head-name {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        font-size: var(--text-md);
+        font-weight: 600;
+        color: var(--color-text);
+    }
+
     .cp-stats {
         display: flex;
         align-items: baseline;
@@ -2694,6 +2705,18 @@ td.date,
         letter-spacing: 0.4em;
         color: var(--color-text-faint);
         font-size: var(--text-sm);
+    }
+
+    /* Same size as the placeholder it replaces, so the row does not resize
+       when the reader clicks Show. An IBAN is one unbroken token in a flex
+       row, hence the wrap release. */
+    .iban-revealed {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-sm);
+        color: var(--color-text);
     }
 
     /* ─── Tax-year cards (government profile) ────────────────────── */
