@@ -179,10 +179,6 @@ final class TransactionsList extends Component
             : $this->renderList($currentUser, $listQuery, $views, $rows, $filterOptions, $baseCurrency);
     }
 
-    // Livewire hands a #[Url] array to the view as well as to the query, so
-    // cleaning it on the way to the query alone left the chip partial
-    // subscripting [0] on a shape the address bar chose. Coerced on the
-    // property instead, both readers see the same list.
     // The reader's own setting, not config('currency.base'): the /settings
     // picker writes users.base_currency, and nothing wires the config value to
     // an env — so reading it would be inert and would print € over a total
@@ -192,6 +188,10 @@ final class TransactionsList extends Component
         return $user->base_currency ?? $baseCurrency->code();
     }
 
+    // Livewire hands a #[Url] array to the view as well as to the query, so
+    // cleaning it on the way to the query alone left the chip partial
+    // subscripting [0] on a shape the address bar chose. Coerced on the
+    // property instead, both readers see the same list.
     private function normaliseFilterIds(): void
     {
         $this->filterAccounts = self::positiveIds($this->filterAccounts);

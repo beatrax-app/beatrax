@@ -155,9 +155,6 @@ final class ConnectCardStep extends Component
 
     // Raw query builder rather than Account::query()->exists(), which trips
     // PHPStan strict-rules staticMethod.dynamicCall.
-    /**
-     * @param  list<int>  $newRunIds
-     */
     // Answers whether it created one, because the caller's re-preview is only
     // worth running when the account it needs did not exist a moment ago.
     private function ensureIcsAccount(User $user, DatabaseManager $db, AccountSlugResolver $slugs, BaseCurrency $baseCurrency): bool
