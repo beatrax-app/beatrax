@@ -17,6 +17,8 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use Modules\Transfers\Public\Enums\CounterLegOrder;
 use Modules\Transfers\Public\Services\PairLookup;
+use Modules\Transfers\Public\Support\CounterLegMatch;
+use Modules\Transfers\Public\Support\CounterLegWindow;
 use stdClass;
 
 final class TransferPairer implements PairsTransferLegs
@@ -82,15 +84,15 @@ final class TransferPairer implements PairsTransferLegs
         // The id guard covers a row whose counterparty IBAN is its own
         // account's; without it a zero-amount leg answers its own search.
         return $this->pairs->counterLegOnAccount(
-            $partnerAccountId,
-            -$tx->amount_minor,
-            self::transferTypes(),
-            $tx->booked_at,
-            self::WINDOW_DAYS,
-            $tx->currency,
-            true,
-            $tx->id,
-            CounterLegOrder::EarliestBooked,
+            new CounterLegMatch(
+                accountId: $partnerAccountId,
+                amountMinor: -$tx->amount_minor,
+                types: self::transferTypes(),
+                currency: $tx->currency,
+                unpairedOnly: true,
+                excludeTransactionId: $tx->id,
+            ),
+            new CounterLegWindow($tx->booked_at, self::WINDOW_DAYS, CounterLegOrder::EarliestBooked),
             $user,
         );
     }
