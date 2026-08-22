@@ -5542,6 +5542,17 @@ mark {
     label:has(> input[type='radio']) {
         min-height: 44px;
     }
+
+    /*
+     * A box the reader types into is tapped before it is typed into, and the
+     * floor above names only buttons. Measured on an iPhone 12 mini: 34px on
+     * every /budgets amount cell, 42px on the signup and login boxes. The
+     * checkbox and radio branches are excluded — the label above carries them.
+     */
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+    textarea {
+        min-height: 44px;
+    }
 }
 
 /*

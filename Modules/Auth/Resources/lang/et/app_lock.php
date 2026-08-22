@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Jäta PIN-kood alles',
 
     'error_pin_too_short' => 'PIN-kood peab olema vähemalt 6 numbrit.',
+    'error_pin_digits' => 'PIN-kood peab olema 6–10 numbrit — ainult numbrid.',
     'error_pin_mismatch' => 'PIN-koodid ei kattu. Proovi uuesti.',
     'error_pin_required' => 'Sisesta oma PIN-kood.',
     'error_pin_incorrect' => 'Vale PIN-kood.',

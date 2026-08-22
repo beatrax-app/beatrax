@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Pincode behouden',
 
     'error_pin_too_short' => 'Pincode moet minstens 6 cijfers bevatten.',
+    'error_pin_digits' => 'Pincode moet 6 tot 10 cijfers zijn — alleen cijfers.',
     'error_pin_mismatch' => 'Pincodes komen niet overeen. Probeer het opnieuw.',
     'error_pin_required' => 'Voer je pincode in.',
     'error_pin_incorrect' => 'Onjuiste pincode.',

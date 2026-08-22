@@ -172,7 +172,7 @@
                                             type="text"
                                             inputmode="decimal"
                                             id="split-leg-amount-{{ $index }}"
-                                            placeholder="0,00"
+                                            placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                                             wire:model.live.debounce.300ms="legs.{{ $index }}.amount"
                                             data-testid="split-leg-amount-{{ $index }}"
                                         >

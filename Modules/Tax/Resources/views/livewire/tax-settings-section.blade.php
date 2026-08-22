@@ -112,8 +112,10 @@
             <p class="mt-1 text-xs text-[var(--color-rose)]" data-testid="rename-category-error">{{ $renameError }}</p>
         @endif
 
-        {{-- Add category form --}}
-        <div class="mt-3 flex gap-2" data-testid="add-category-form">
+        {{-- Add category form. The row wraps rather than squeezing: at 375pt
+             the button had nothing holding its width, shrank onto the 44px
+             touch floor and printed its label off the edge of the card. --}}
+        <div class="mt-3 flex flex-wrap gap-2" data-testid="add-category-form">
             <label for="new-category-name" class="sr-only">{{ Lang::get('tax::settings.new_category_label') }}</label>
             <input
                 id="new-category-name"
@@ -126,7 +128,7 @@
             <button
                 type="button"
                 wire:click="addCategory"
-                class="pill-btn-ghost text-sm"
+                class="pill-btn-ghost shrink-0 whitespace-nowrap text-sm"
                 data-testid="add-category-btn"
             >{{ Lang::get('tax::settings.add_category') }}</button>
         </div>

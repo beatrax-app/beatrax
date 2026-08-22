@@ -19,11 +19,6 @@ use Modules\Core\Public\Services\SystemAlertWriter;
  */
 final class AppLockProvisioner
 {
-    // A PIN's only entropy is its length, so a short one is offline-brute-
-    // forceable from a stolen database. Enforced here, below every UI-layer
-    // validator, so no caller can provision a data key beneath the floor.
-    private const MIN_PIN_LENGTH = 6;
-
     private const STRANDED_ALERT_KIND = 'auth.lock.key_material_stranded';
 
     private const STALE_RECOVERY_ALERT_KIND = 'auth.lock.recovery_wrap_stale';
@@ -41,11 +36,18 @@ final class AppLockProvisioner
         private readonly SystemAlertWriter $alerts,
     ) {}
 
+    // A PIN's only entropy is its length, so a short one is offline-brute-
+    // forceable from a stolen database, and one the numeric keypad cannot type
+    // is a lockout. Enforced here, below every UI-layer gate, so no caller —
+    // settings screen, mobile import, console — can provision a key beneath it.
     private function assertPinMeetsFloor(string $pin): void
     {
-        if (mb_strlen($pin) < self::MIN_PIN_LENGTH) {
+        if (! AppLockPinShape::isWellFormed($pin)) {
             throw ValidationException::withMessages([
-                'pin' => ['The app lock PIN must be at least '.self::MIN_PIN_LENGTH.' digits.'],
+                'pin' => [
+                    'The app lock PIN must be '
+                    .AppLockPinShape::MINIMUM_LENGTH.' to '.AppLockPinShape::MAXIMUM_LENGTH.' digits.',
+                ],
             ]);
         }
     }

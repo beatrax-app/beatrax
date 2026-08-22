@@ -16,7 +16,10 @@
 @use('Modules\Categorization\Public\Enums\RuleCombinator')
 <div class="space-y-6">
     <header class="mb-12 space-y-1">
-        <div class="flex items-start justify-between gap-4">
+        {{-- Stacked until there is room for both: on a 375pt phone the one-row
+             header left the title 141px and squeezed "Re-apply rules to
+             history" into a four-line column of single words. --}}
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('categorization::rules.heading') }}</h1>
                 <p class="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
@@ -29,7 +32,7 @@
                     {{ Lang::get('categorization::rules.device_local_note') }}
                 </p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <button
                     type="button"
                     wire:click="triggerReapply"

@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'PIN-kód megtartása',
 
     'error_pin_too_short' => 'A PIN-kódnak legalább 6 számjegyűnek kell lennie.',
+    'error_pin_digits' => 'A PIN-kódnak 6–10 számjegyből kell állnia — csak számok.',
     'error_pin_mismatch' => 'A PIN-kódok nem egyeznek. Próbáld újra.',
     'error_pin_required' => 'Add meg a PIN-kódodat.',
     'error_pin_incorrect' => 'Hibás PIN-kód.',

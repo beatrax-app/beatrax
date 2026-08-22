@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
+@use('Modules\EmailScan\Public\Enums\InboxScanStatus')
 {{-- /inboxes page.
 
      Renders the empty-state hero when no inboxes are connected and
@@ -100,28 +101,28 @@
                     // Status Badge Matrix — UI-SPEC § Status Badge Matrix.
                     // Six variants matching inbox_scan_state.status enum.
                     $badgeColor = [
-                        'idle' => 'slate',
-                        'backfilling' => 'sky',
-                        'scanning' => 'sky',
-                        'rate_limited' => 'amber',
-                        'needs_reauth' => 'rose',
-                        'error' => 'slate',
+                        InboxScanStatus::Idle->value => 'slate',
+                        InboxScanStatus::Backfilling->value => 'sky',
+                        InboxScanStatus::Scanning->value => 'sky',
+                        InboxScanStatus::RateLimited->value => 'amber',
+                        InboxScanStatus::NeedsReauth->value => 'rose',
+                        InboxScanStatus::Error->value => 'slate',
                     ][$inbox->status] ?? 'slate';
 
                     $badgeLabel = [
-                        'idle' => Lang::get('email-scan::inboxes.badge.idle'),
-                        'backfilling' => Lang::get('email-scan::inboxes.badge.backfilling'),
-                        'scanning' => Lang::get('email-scan::inboxes.badge.scanning'),
-                        'rate_limited' => Lang::get('email-scan::inboxes.badge.rate_limited'),
-                        'needs_reauth' => Lang::get('email-scan::inboxes.badge.needs_reauth'),
-                        'error' => Lang::get('email-scan::inboxes.badge.error'),
+                        InboxScanStatus::Idle->value => Lang::get('email-scan::inboxes.badge.idle'),
+                        InboxScanStatus::Backfilling->value => Lang::get('email-scan::inboxes.badge.backfilling'),
+                        InboxScanStatus::Scanning->value => Lang::get('email-scan::inboxes.badge.scanning'),
+                        InboxScanStatus::RateLimited->value => Lang::get('email-scan::inboxes.badge.rate_limited'),
+                        InboxScanStatus::NeedsReauth->value => Lang::get('email-scan::inboxes.badge.needs_reauth'),
+                        InboxScanStatus::Error->value => Lang::get('email-scan::inboxes.badge.error'),
                     ][$inbox->status] ?? Lang::get('email-scan::inboxes.badge.idle');
 
-                    $scanDisabled = in_array($inbox->status, [\Modules\EmailScan\Public\Enums\InboxScanStatus::Backfilling->value, \Modules\EmailScan\Public\Enums\InboxScanStatus::Scanning->value], strict: true);
+                    $scanDisabled = in_array($inbox->status, [InboxScanStatus::Backfilling->value, InboxScanStatus::Scanning->value], strict: true);
 
                     // Inline retry-after detail for rate_limited rows.
                     $retryDetail = null;
-                    if ($inbox->status === \Modules\EmailScan\Public\Enums\InboxScanStatus::RateLimited->value && $inbox->retryAttempts > 0) {
+                    if ($inbox->status === InboxScanStatus::RateLimited->value && $inbox->retryAttempts > 0) {
                         // Mirror InboxScanStateMachine::BACKOFF_SCHEDULE [60,300,900,3600].
                         $schedule = [60, 300, 900, 3600];
                         $idx = max(0, min(count($schedule) - 1, $inbox->retryAttempts - 1));
@@ -135,7 +136,7 @@
                         }
                     }
 
-                    $errorTooltipId = $inbox->status === \Modules\EmailScan\Public\Enums\InboxScanStatus::Error->value && $inbox->errorMessage !== null
+                    $errorTooltipId = $inbox->status === InboxScanStatus::Error->value && $inbox->errorMessage !== null
                         ? 'inbox-error-'.$inbox->inboxId
                         : null;
                 @endphp
@@ -169,7 +170,7 @@
                             <span class="text-xs text-amber-700 dark:text-amber-300">{{ $retryDetail }}</span>
                         @endif
 
-                        @if ($inbox->status === \Modules\EmailScan\Public\Enums\InboxScanStatus::NeedsReauth->value)
+                        @if ($inbox->status === InboxScanStatus::NeedsReauth->value)
                             <a
                                 href="{{ route('oauth.connect', ['provider' => $inbox->provider]) }}?inbox_id={{ $inbox->inboxId }}"
                                 class="tap-chip inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-sm font-medium text-rose-600 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"

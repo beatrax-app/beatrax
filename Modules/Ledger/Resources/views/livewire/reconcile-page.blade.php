@@ -53,7 +53,7 @@
             :hint="Lang::get('ledger::reconcile.balance_help')"
             inputmode="decimal"
             wire:model.live="statementBalance"
-            placeholder="0,00"
+            :placeholder="Lang::get('core::components.amount_placeholder')"
         />
 
         @if ($error !== '')

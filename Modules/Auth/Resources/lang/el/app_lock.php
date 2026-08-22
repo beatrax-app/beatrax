@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Διατήρηση PIN',
 
     'error_pin_too_short' => 'Το PIN πρέπει να έχει τουλάχιστον 6 ψηφία.',
+    'error_pin_digits' => 'Το PIN πρέπει να έχει 6 έως 10 ψηφία — μόνο αριθμούς.',
     'error_pin_mismatch' => 'Τα PIN δεν ταιριάζουν. Δοκίμασε ξανά.',
     'error_pin_required' => 'Δώσε το PIN σου.',
     'error_pin_incorrect' => 'Λανθασμένο PIN.',

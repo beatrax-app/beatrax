@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Obdrži PIN',
 
     'error_pin_too_short' => 'PIN mora imeti vsaj 6 števke.',
+    'error_pin_digits' => 'PIN mora imeti 6 do 10 števk — samo številke.',
     'error_pin_mismatch' => 'PIN-a se ne ujemata. Poskusi znova.',
     'error_pin_required' => 'Vnesi svoj PIN.',
     'error_pin_incorrect' => 'Napačen PIN.',
