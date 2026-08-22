@@ -3757,8 +3757,14 @@ td.date,
         color: var(--color-text-faint);
     }
 
+    /* flex-shrink, because the coarse-pointer floor further down sets
+       min-width: 44px on every button, and that REPLACES the min-width: auto
+       a flex item relies on to refuse to shrink below its own label. Measured
+       on a phone: this one squeezed to 44px and printed "Filters" through its
+       right border. */
     .filter-trigger-btn {
         display: inline-flex;
+        flex-shrink: 0;
         align-items: center;
         gap: var(--space-2);
         padding: 6px var(--space-3);
