@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Livewire\Features\SupportTesting\Testable;
@@ -114,7 +115,14 @@ it('holds the reader on the pairing screen rather than showing an empty corpus',
         ->get('/__test/unfinished-import', static fn (): string => 'REACHED-THE-APP')
         ->name('unfinished-import-probe');
 
+    // Seeded, not merely acted as: this runtime boots once per process, so
+    // ForgetGuardsBetweenRequests drops the in-memory user on every request and
+    // lets the session name it again. A sign-up through the screen writes that
+    // session key, so the drop fires — and a user bound only in memory has
+    // nothing behind it and arrives at /login. The device carries the id in its
+    // cookie; this is that cookie.
     test()->actingAs($user)
+        ->withSession([Auth::guard()->getName() => $user->id])
         ->get('/__test/unfinished-import')
         ->assertRedirect(route('mobile.pair', ['mode' => 'import']));
 
