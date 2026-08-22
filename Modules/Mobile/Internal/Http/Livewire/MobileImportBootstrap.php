@@ -16,8 +16,10 @@ use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\AnnouncesStepChanges;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Http\Livewire\Concerns\ReportsFieldRejections;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\ImportBootstrapStep;
@@ -29,6 +31,7 @@ use Throwable;
 
 final class MobileImportBootstrap extends Component
 {
+    use AnnouncesStepChanges;
     use HoldsFlashMessage;
     use ReportsFieldRejections;
 
@@ -44,7 +47,7 @@ final class MobileImportBootstrap extends Component
 
     private const MINIMUM_PIN_LENGTH = 6;
 
-    // The five boxes on the form, read by ReportsFieldRejections rather than
+    // The five credential boxes, read by ReportsFieldRejections rather than
     // by anything here. SignupAction also rejects under `signup` when the
     // device gained an owner mid-submit, and that has no box to sit under, so
     // it stays on the form-level line.
@@ -98,6 +101,12 @@ final class MobileImportBootstrap extends Component
 
     public string $confirmPin = '';
 
+    // Asked here because this is the second way an account is made and `users`
+    // does not sync, so a country left unset on this phone stays unset. Not
+    // choosing is still a real answer: it widens classification to every
+    // region rather than pinning the device to a guessed one.
+    public string $country = '';
+
     public function submit(
         SignupAction $signup,
         MobileLockGateway $lockGateway,
@@ -119,7 +128,12 @@ final class MobileImportBootstrap extends Component
         try {
             // This screen JOINS a desktop's account: its starter rules arrive
             // over sync, and a local set would collide id-for-id with them.
-            $userId = $signup->__invoke($this->username, $this->password, seedsStarterData: false)['user']->id;
+            $userId = $signup->__invoke(
+                $this->username,
+                $this->password,
+                seedsStarterData: false,
+                countryCode: $this->country,
+            )['user']->id;
         } catch (ValidationException $e) {
             $this->reportRejection($e, 'mobile::import.errors.account_failed');
 
@@ -144,9 +158,9 @@ final class MobileImportBootstrap extends Component
 
         if ($this->provisionDeviceLocally($credentials, $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
             $session->forget(self::PENDING_CREDENTIALS_SESSION_KEY);
-            $this->step = ImportBootstrapStep::RecoveryCodes->value;
+            $this->moveTo(ImportBootstrapStep::RecoveryCodes);
         } else {
-            $this->step = ImportBootstrapStep::ProvisioningFailed->value;
+            $this->moveTo(ImportBootstrapStep::ProvisioningFailed);
         }
     }
 
@@ -208,7 +222,7 @@ final class MobileImportBootstrap extends Component
             // re-entry through collect_pin so the user re-types real
             // credentials.
             $this->flashMessage = Lang::get('mobile::import.errors.session_expired');
-            $this->step = ImportBootstrapStep::CollectPin->value;
+            $this->moveTo(ImportBootstrapStep::CollectPin);
 
             return;
         }
@@ -227,7 +241,17 @@ final class MobileImportBootstrap extends Component
         $this->password = '';
         $this->passwordConfirmation = '';
         $this->flashMessage = '';
-        $this->step = ImportBootstrapStep::RecoveryCodes->value;
+        $this->moveTo(ImportBootstrapStep::RecoveryCodes);
+    }
+
+    // The one way a step changes without the page being reloaded, so the
+    // announcement cannot be left off a later branch. mount() sets the
+    // property directly and deliberately: that IS a page load, which starts
+    // at the top on its own and carries its own restored offset.
+    private function moveTo(ImportBootstrapStep $step): void
+    {
+        $this->step = $step->value;
+        $this->announceStepChange();
     }
 
     private function currentStep(): ImportBootstrapStep
@@ -252,6 +276,7 @@ final class MobileImportBootstrap extends Component
         CurrentUser $currentUser,
         RecoveryCodeFormatter $formatter,
         RecoveryCodesExportBridge $exportBridge,
+        UserCountry $countries,
     ): View {
         // Only the recovery step has an authenticated user: every earlier step
         // renders before signup completes, so resolving the user up front
@@ -271,6 +296,7 @@ final class MobileImportBootstrap extends Component
             // property, and the view needs the resolved enum rather than the
             // raw string the client last put on the wire.
             'bootstrapStep' => $this->currentStep(),
+            'countryOptions' => $countries->options(),
             'codes' => $showingCodes ? $this->recoveryCodesFromSession($session) : [],
             // The browser saves the file itself and navigates by link, so the
             // one-shot recovery screen needs no Livewire round-trip at all —

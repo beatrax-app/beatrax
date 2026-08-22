@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Events\UserCountryChanged;
+use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
@@ -57,6 +58,12 @@ final class TaxServiceProvider extends ServiceProvider
         // wizard — none of which knows Tax exists. Without this listener every
         // one of those routes leaves the deduction categories empty.
         $events->listen(UserCountryChanged::class, [SeedDeductionCategoriesForCountry::class, 'handle']);
+
+        // Tax was the one seeding module not on this event, because its corpus
+        // hangs off the country rather than off the install. That left the
+        // install-time heal InstallCommand documents — and the phone's own way
+        // out of an abandoned import — with no way to make this corpus good.
+        $events->listen(UserInstalled::class, [SeedDeductionCategoriesForCountry::class, 'handleInstall']);
 
         $this->loadModuleResources('tax');
 
