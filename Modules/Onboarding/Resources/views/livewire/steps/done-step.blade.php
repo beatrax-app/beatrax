@@ -8,7 +8,7 @@
     The action row uses the `<x-onboarding::wiz-actions>` primitive so
     the right-aligned spacing matches every other wizard step.
 --}}
-<section class="wiz-step wiz-step-done" aria-labelledby="wiz-done-h1">
+<section class="wiz-step" aria-labelledby="wiz-done-h1">
     <p class="wiz-eyebrow">{{ Lang::get('onboarding::done.eyebrow') }}</p>
     <h1 id="wiz-done-h1" class="wiz-h1">
         {{ Lang::get('onboarding::done.h1') }}

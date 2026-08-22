@@ -113,7 +113,7 @@
                             : Money::ofMinor($row->amountMinor, $row->currency ?? BaseCurrency::value())->format();
                     @endphp
                     <tr>
-                        <td class="preview-row-date">{{ $row->bookedAt ?? '—' }}</td>
+                        <td>{{ $row->bookedAt ?? '—' }}</td>
                         <td>
                             <span class="ptype-chip {{ $chipClass }}">{{ $chipLabel }}</span>
                         </td>
@@ -127,7 +127,7 @@
                                 <span class="funding-tag">{{ $row->counterpartyIban }}</span>
                             @endif
                         </td>
-                        <td class="preview-row-amount">{{ $amountFormatted }}</td>
+                        <td>{{ $amountFormatted }}</td>
                     </tr>
                 @endforeach
             </tbody>
