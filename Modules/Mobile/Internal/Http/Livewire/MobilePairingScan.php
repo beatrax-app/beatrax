@@ -75,10 +75,12 @@ final class MobilePairingScan extends Component
     // overwritten by (or confused with) the amber camera notice.
     public bool $cameraUnavailableNotice = false;
 
-    // Set from ?mode=import at mount(). UI-only: the self-mint decision reads
-    // MobileImportIntentGate instead, which survives a re-entry without it.
+    // Whether this READER is mid-import, read from MobileImportIntentGate and
+    // never from ?mode=import: the phone is killed and relaunched mid-flow as a
+    // matter of course, and a re-entry that lost the query string is the same
+    // import. #[Locked] so no client may claim to be one.
     #[Locked]
-    public bool $importMode = false;
+    public bool $importing = false;
 
     // PAIR_RESPONDER_ACCEPT addressing stashed at submitCode(), so the poll
     // can re-emit the frame idempotently while awaiting the desktop's confirm.
@@ -115,13 +117,14 @@ final class MobilePairingScan extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
-        $this->importMode = $request->query('mode') === 'import';
-
-        // Echo the param into the durable marker the moment it is observed:
-        // a re-entry without it (back button, relaunch) must still defer.
-        if ($this->importMode) {
+        // Echo the param into the durable marker the moment it is observed, then
+        // read the marker back: it is the only one of the two a back button or
+        // a relaunch cannot lose.
+        if ($request->query('mode') === 'import') {
             $importIntent->markImporting($userId);
         }
+
+        $this->importing = $importIntent->isImporting($userId);
 
         // Resume the ceremony the SERVER is in: component state dies with a
         // reload or an app-lock while the pairing row carries on, and
@@ -135,7 +138,7 @@ final class MobilePairingScan extends Component
 
         if ($ceremonyFinished && $devices->otherDeviceNames($userId) !== []) {
             $this->redirect(
-                $urls->route($importIntent->isImporting($userId) ? 'mobile.setup' : Destination::DataDevices->routeName()),
+                $urls->route($this->importing ? 'mobile.setup' : Destination::DataDevices->routeName()),
                 navigate: false,
             );
 
@@ -227,12 +230,12 @@ final class MobilePairingScan extends Component
         // component's property sent the user to a PIN pad with no explanation.
         $session->flash(self::LOCKED_IDENTITY_FLASH, Lang::get('mobile::pairing.errors.identity_locked'));
 
-        // Come back to the arm they were on: the dashboard default dropped
-        // mode=import, returning an importing device to a pairing screen
-        // offering the arm import deliberately hides.
+        // Come back carrying the import: the bare route is the spelling a device
+        // that is NOT importing gets, and the gate that guards an unfinished
+        // import redirects to the other one, so returning here loses the flow.
         $session->put(
             MobileLockGateway::SESSION_INTENDED_URL,
-            $this->importMode
+            $this->importing
                 ? $urls->route('mobile.pair').'?mode=import'
                 : $urls->route('mobile.pair'),
         );
@@ -591,7 +594,7 @@ final class MobilePairingScan extends Component
         // Cancelling mid-onboarding returns to the wizard: Devices & Sync
         // dropped an unfinished setup into settings with no route back.
         $this->redirect(
-            $urls->route($this->importMode ? 'mobile.import' : Destination::DataDevices->routeName()),
+            $urls->route($this->importing ? 'mobile.import' : Destination::DataDevices->routeName()),
             navigate: false,
         );
     }
@@ -600,7 +603,7 @@ final class MobilePairingScan extends Component
     // must pull its history before it can show a populated dashboard.
     public function finishPairing(UrlGenerator $urls): void
     {
-        $route = $this->importMode ? 'mobile.setup' : Destination::DataDevices->routeName();
+        $route = $this->importing ? 'mobile.setup' : Destination::DataDevices->routeName();
 
         $this->redirect($urls->route($route), navigate: false);
     }
