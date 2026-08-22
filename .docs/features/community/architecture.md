@@ -109,15 +109,26 @@ NativePHP shell fallback:
 
 ## Key services + events
 
-- `CorpusLoader::load()` — entry point for the seeder. Streams
-  validated `CorpusEntryDto` instances; the loader never throws on
-  per-entry failure (logs at `warning`, continues).
+- `CorpusLoader::loadBundled()` — entry point for the seeder. Returns
+  the validated `CorpusEntryDto` list read from every YAML file under
+  the bundled merchants corpus; the loader never throws on per-entry
+  failure (logs at `warning`, continues).
 - `SeedCommunityCorpus::handle($event)` — runs at every signup AND at
   every install command re-run, so the upsert must be idempotent.
   Mirrors `Categorization::SeedDefaultCategoryTree` in shape.
-- `CommunityCorpusQuery::findFor($pattern, $user)` — returns the
-  matched corpus entry (per-user override beats global) or `null`.
-  Pure read; never writes.
+- `CommunityCorpusQuery::lookupExact($rawDescription, $region)`,
+  `lookupGeneralized(...)`, `lookupRegex(...)` — the three read arms,
+  each returning the matched merchant name or `null`. Pure reads; they
+  never write. The scope is the REGION, not the user: every arm filters
+  `user_id IS NULL`, so only the global tier is ever consulted. The
+  per-user override tier that the table's `unique(['user_id',
+  'pattern'])` index anticipates has neither a write path nor a read
+  path today, and the query has read the global tier alone since the
+  module shipped — treat the column as reserved, not as a resolution
+  rule. Region scoping is what earns its keep: consulting every
+  country's corpus at once resolved a Dutch `Albert Heijn 1042` to the
+  Czech chain ALBERT, because `cz.yaml` seeds before `nl.yaml` and won
+  the first-match scan on the lower id.
 - `GitHubCompareUrlBuilder::build($dto)` — composes the Compare URL;
   branch slug is a deterministic hash of the pattern; body fields are
   YAML-double-quote-escaped so a name like `"Bob's Burgers"` round-
@@ -137,12 +148,13 @@ The seed-at-signup flow:
 ```
 UserInstalled
   → SeedCommunityCorpus::handle
-       → CorpusLoader::load
-            → read resources/corpus/merchant-mappings.yaml
-            → read resources/corpus/built-in-heuristics.yaml
+       → CorpusLoader::loadBundled
+            → glob resources/corpus/merchants/*.yaml, sorted by filename
+              (the filename is the region code the entries default to)
             → per entry: validate + PatternGeneralizer + CorpusEntryDto
-       → for each DTO: updateOrInsert community_merchant_mappings
-           keyed on (pattern, user_id IS NULL)
+       → one id map over the global tier, then per DTO either an
+           UPDATE of the existing row or a batched INSERT
+           (500 rows per chunk) into community_merchant_mappings
 ```
 
 The suggest-a-mapping flow:

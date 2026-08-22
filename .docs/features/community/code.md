@@ -69,10 +69,15 @@ the module. The module reads them via `CorpusLoader`.
   - `MysteryMerchantSubmitted` — `(SuggestMappingDto $dto, int $userId)`.
     No listener today; reserved.
 - **Services/**
-  - `CommunityCorpusQuery::findFor($pattern, $user)` — returns a
-    matched corpus row (per-user override beats global) or `null`.
-  - `CommunityCorpusQuery::count($user)` — total visible entries for
-    a user.
+  - `CommunityCorpusQuery::lookupExact(string $rawDescription,
+    ?string $region = null)`, `lookupGeneralized(...)`,
+    `lookupRegex(...)` — each returns the matched merchant name or
+    `null`. Region-scoped, not user-scoped: all three filter
+    `user_id IS NULL` and read only the global tier.
+  - `CommunityCorpusQuery::contactForMerchant(string $name)` — the
+    `MerchantContactDto` for a merchant, or `null`.
+  - `CommunityCorpusQuery::mappingsCount()` /
+    `contributorsCount()` — corpus totals; neither takes a user.
 
 ## Internal services
 

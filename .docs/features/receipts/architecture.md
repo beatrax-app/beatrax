@@ -43,40 +43,50 @@ What the module explicitly does NOT do:
 `Public/` exposes the cross-module surface:
 
 - **Contracts/**
-  - `SenderMatcher::matches($input)`, `match($input):
-    MatchOutcomeDto`, `priority(): int`. Tag
+  - `SenderMatcher::canHandle($msg)`, `match($emlRaw):
+    MatchOutcomeDto`, `key(): string`, `priority(): int`. Tag
     `receipts.matcher`; matchers run highest-priority first.
 - **Actions/**
-  - `RecordReceipt::__invoke($input, $user): MatchOutcomeDto`
-    — the single entry point. Dispatches the matcher;
+  - `RecordReceipt::__invoke($emlBytes, $user,
+    $sourceFilename): MatchOutcomeDto` — the single entry
+    point, taking the raw RFC 822 bytes. Dispatches the matcher;
     on hit, calls `ApplyEnrichments` (Import) and
     `RecordsStatementSummary` (Ledger).
-  - `ApplyReceiptConflictResolution::__invoke($conflictId,
-    $resolution, $user)` — the first-conflict toast handler.
+  - `ApplyReceiptConflictResolution::__invoke($user, $choice)` —
+    the first-conflict toast handler. It takes the user's chosen
+    policy, not a conflict id, and returns how many pending
+    conflicts that policy resolved: the toast asks once and the
+    answer applies to the whole backlog.
 - **DTOs/**
-  - `MatcherInputDto` — `(emlBytes, headers, senderHints,
-    messageId, ...)`.
-  - `MatchOutcomeDto` — `(matched, parsedReceipt, enrichments,
-    chainHints, statementSummary)`.
+  - `MatcherInputDto` — `(id, userId, source, providerMessageId,
+    senderEmail, senderName, subject, internalDate, emlPath)`. It
+    carries a PATH, not bytes; `toInboxMessageDto()` is what the
+    registry hands `canHandle()`.
+  - `MatchOutcomeDto` — `(kind, parsed, skipReason,
+    unmatchedReason)`, a sum type with `parsed()`, `skipped()`
+    and `unmatched()` constructors.
   - `ParsedReceiptDto` — the matcher's structured output.
   - `ChainHintPayload/FundedByCardPayload`,
     `ChainHintPayload/RefundOfPayload` — typed chain-hint
     payloads.
 - **Events/**
-  - `ChainHintDetected` — `(transactionId, payload, userId)`.
-    Consumed by `Chains::CreateChainLinkFromHint`.
-  - `ReceiptConflictDetected` — `(conflictId, userId)`.
-    Consumed by the in-app toast.
+  - `ChainHintDetected` — `(sourceTransactionId, hintType,
+    hintPayload, evidence, userId)`. Consumed by
+    `Chains`' `CreateChainLinkFromHint`.
+  - `ReceiptConflictDetected` — `(transactionId, userId, field,
+    receiptValue, csvValue, importRunId)`. Consumed by the in-app
+    toast, which renders straight off the event rather than
+    re-reading a row.
 - **Pipeline/**
-  - `EmlMimeReader::parse($bytes)`, `EmlHeaderProfile`,
-    `MboxIterator::iter($file)`, `MboxHeaderProfile`,
-    `FileDropEmlBlobStore::store($path)`,
+  - `EmlMimeReader::read($bytes)`, `EmlHeaderProfile`,
+    `MboxIterator::iterate($file)`, `MboxHeaderProfile`,
+    `FileDropEmlBlobStore::put($path, $bytes)`,
     `ReceiptSourceAdapter` — the per-source / per-format
     pre-parse layer.
   - `ParsedMimeMessage` — typed MIME parse result.
 - **Services/**
-  - `ReceiptConflictQuery::pending($user)` — pending
-    conflicts.
+  - `ReceiptConflictQuery::latestForUser($user)` — the most
+    recent pending conflict, or null.
 
 `Internal/` houses the implementation:
 
@@ -100,19 +110,23 @@ What the module explicitly does NOT do:
 
 ## Key services + events
 
-- `RecordReceipt::__invoke($input, $user)` — the single
+- `RecordReceipt::__invoke($emlBytes, $user)` — the single
   sanctioned entry point.
-  1. `MatcherRegistry::for($input)` — returns the
-     highest-priority matcher that `matches($input)`.
+  1. `MatcherRegistry::dispatch($input, $emlBytes)` — walks
+     the priority-sorted list and returns the outcome of the
+     first matcher whose `canHandle($msg)` claims the message.
   2. Matcher emits `MatchOutcomeDto`.
   3. If matched: `ApplyEnrichments` (Import) strengthens
      `source_ref` on the matched transactions;
      `RecordsStatementSummary` (Ledger) writes the per-period
      summary; per-hint, raise `ChainHintDetected`.
-  4. If no matcher: log + return `MatchOutcomeDto::miss()`.
-- `MatcherRegistry::for($input)` — iterates the
-  priority-sorted matcher list; first `matches($input)` true
-  wins.
+  4. If no matcher claims it: `dispatch` returns
+     `MatchOutcomeDto::unmatched()` and `RecordReceipt` stamps
+     the `file_imports` row `status = unmatched`, leaving
+     `matcher_key` NULL. Nothing is logged and nothing throws.
+- `MatcherRegistry::dispatch($input, $emlBytes)` — iterates the
+  priority-sorted matcher list; the first `canHandle($msg)` true
+  wins and its `match($emlRaw)` outcome is returned verbatim.
 - `DispatchChainHintsFromReceipt::handle($event)` — listens
   for `TransactionImported`; raises one `ChainHintDetected`
   per attached hint. The chain-link FK on the from-side is
@@ -126,7 +140,7 @@ The inbox-fetched receipt path:
 ```
 EmailScan::IncrementalScanJob persists InboxMessage
   → call RecordReceipt with MatcherInputDto
-       → MatcherRegistry::for picks PayPal / ICS / Google Play
+       → MatcherRegistry::dispatch picks PayPal / ICS / Google Play
        → matcher returns MatchOutcomeDto
        → ApplyEnrichments (Import)
        → RecordsStatementSummary (Ledger)
@@ -145,7 +159,7 @@ User drops .eml onto the app
   → user logs in (if needed) → /desktop/file-staging
   → user clicks "Start import" → Desktop::FileStagingPage
      redirects to the import wizard
-       → FileDropEmlBlobStore::store($path)
+       → FileDropEmlBlobStore::put($path, $bytes)
             → ReceiptSourceAdapter parses bytes
             → call RecordReceipt
 ```

@@ -387,6 +387,18 @@ having lost:
   `open-sheet {name:'pot-withdraw'}` when the only thing carrying that name was
   a `flux:modal`, which the phone never opens. The button was inert and the page
   looked complete, so money could go into a pot and not come out.
+- **A floor a native control ignores.** The 44px floor was extended to `select`
+  after the pre-auth language picker measured 29px, and the picker stayed 29pt on
+  iOS with the new rule applying — its padding, radius and colours all landing.
+  WebKit sizes a select that keeps its NATIVE APPEARANCE from the font it renders
+  and ignores height on it entirely, so the declaration was inert rather than
+  lost, and every select in the app was the same 29pt. Dropping the appearance is
+  what lets the height land, and it takes the platform's own arrow with it — a
+  select cannot carry a pseudo-element, so the mark has to be redrawn as the
+  element's background, which is why the guard requires all three together and
+  why the chevron is a token defined once per colour scheme. It is scoped to
+  coarse pointers like every rule in that block, which is also what keeps a drawn
+  chevron from ever appearing beside a native one on desktop.
 
 ## Plaintext staged in the shared temp dir
 
@@ -668,6 +680,55 @@ under it that pads the top inset again reserves the status bar twice.
 `recovery-codes-display` did exactly that: on a 59px inset its content box
 started 107px into `<main>` where the design asked for 48px, a whole second
 status bar of empty space above the heading, invisible anywhere but a device.
+
+The sixth arm is the half none of the five covered: `.safe-screen` *reserves*
+the top strip and nothing was *painting* it. Under `viewport-fit=cover` the
+system bars are drawn over the page, so the reserve is only ever correct at
+scroll 0 — a screen taller than the viewport scrolls its own heading up under
+the clock, and the two render on top of each other. `.top-bar` never had this
+problem because it is `sticky` and opaque: it covers the strip as well as
+standing in it. `.safe-screen` now generates a fixed strip of `var(--safe-top)`
+painted in `var(--color-bg)`, and the arm pins that declaration the way the
+second arm pins the seam. Losing it fails nothing else, and the resting
+screenshot stays correct.
+
+That cover is switched off, along with the top reserve, by
+`body:has(.top-bar) .safe-screen` — a document carrying a bar has already
+reserved and painted the strip, and this is what keeps a screen from doing
+either a second time. The question is asked of the *document* rather than of
+the screen for the reason below.
+
+The seventh arm bans a bar's height standing in for the status bar's. The import
+bootstrap reserved `var(--top-bar-h)` plus its own padding at the top of the
+page, and that number is wrong in both directions: a screen under `.top-bar`
+needs no top reserve at all, because the bar is sticky and already stands in the
+flow, and a screen with no bar over it needs the inset, which is a device
+measurement and not 48px. It was only ever right by coincidence, on the phone it
+was checked on.
+
+The eighth arm is the fourth arm's other half, and it is the reason the import
+bootstrap had a bar's height in it at all. `layouts.app` renders the drawer and
+`.top-bar` under `@auth`; under `@guest` it yields straight into `<body>` with no
+chrome whatsoever, which puts a signed-out screen in exactly the position a
+`layouts.lock` consumer is in. Five of the six screens a signed-out reader can
+reach reserved nothing at all.
+
+The trap underneath it is that the screen cannot decide this for itself.
+Livewire re-renders the component and never the layout, so the chrome a document
+carries is settled at page load and stays settled: the mobile import bootstrap
+creates the account *mid-flow*, and every step after that — the recovery codes
+among them — still renders inside the markup the signed-out branch produced,
+with `auth()->check()` now true and no bar anywhere on the page. A conditional
+in the view reads the wrong state by construction.
+
+So the arm asks the rendered document instead of the template: it walks every
+parameterless `web` GET route that is not behind `Authenticate`, fetches it, and
+requires any 200 that came back with a full-screen root to carry `.safe-screen`.
+It sweeps twice, once on a fresh install and once with an account present,
+because the first-run gate answers `/login` with a redirect to `/welcome` until
+a user exists and `/signup` and `/welcome` stop answering once one does —
+sweeping either state alone leaves half of them unvisited. `/mobile/welcome`
+answers under the phone shell only and is out of this root's reach.
 
 One caveat about this page itself: Tailwind v4 scans the project root, `.docs/`
 included, so a utility name written in a sentence here is a real candidate for
@@ -1054,6 +1115,247 @@ run in it. And a cache entry that a render reads is shaped to what the render
 asks: `PreviewCache` writes the section summary with the preview payload,
 refreshes it with the payload, drops it with the payload, and anything writing
 the preview key directly drops the summary key beside it.
+
+## An explanation the analyser cannot see
+
+`tests/Contracts/EmptyBodyExplainsItselfWhereSonarLooksArchTest.php`
+
+An empty method body is allowed here — a null object, a Livewire poll target, a
+test seam — provided it says why it is empty, and sixteen of them do. The rule
+is not "write a comment". It is "write it in one of the two places `S1186`
+actually reads", and nothing in this repository knew where those were.
+
+The check takes the *last* comment between the braces, or the *last* comment
+above the declaration ending on the line directly before it, and asks only
+whether it holds three consecutive word characters. Every other thing about the
+comment is invisible to it. Three consequences follow, and not one of them is
+guessable from outside:
+
+- **A blank line between the comment and the signature turns the comment off.**
+  The distance is measured to the declaration's first token — the attribute,
+  where there is one, not `function` — so a single blank line puts a correct
+  explanation out of range and the method reads as unexplained.
+- **Only the final `//` line counts.** Each line is a separate comment to the
+  analyser, so a four-line explanation ending on an em dash, a closing bracket
+  or a bare URL is read as no explanation at all. That is the one that shipped:
+  `NullKeyCustodian::forget()` carried a careful three-sentence paragraph and
+  was reported empty because the last sentence happened to end on `it.`
+- **The rule reports main sources only.** Forty-six empty fakes and spies live
+  in the test roots. None is a finding, and a guard sweeping them would have
+  failed on its first run against work that was never wrong.
+
+What it cost was a round-trip per occurrence, and the round-trip is slow in the
+worst way: the failure arrives from the hosted analysis after the branch is
+pushed, naming a file and a line with a message about a *nested comment* that
+reads — to anyone looking at a thoroughly commented method — as though the
+analyser is simply mistaken. The guard replicates the check so that failure
+lands on the machine that caused it, and pins all three behaviours above against
+fixtures, because a replication of someone else's rule is the kind of thing that
+drifts into quietly agreeing with itself.
+
+## A poll that stops when the reader looks away
+
+`tests/Contracts/PollSurvivesABackgroundedWindowArchTest.php`
+
+Livewire throttles a poll whose tab is hidden to roughly one tick in twenty — a
+mean interval of a minute against a stated two or three seconds. It is a
+deliberate and sensible default, it is undocumented at the call site, and
+`wire:poll.3s` reads on the page as a promise of three seconds.
+
+Cross-device pairing is where it surfaced, because that ceremony *instructs* the
+reader to pick up the other device: the window that has to notice the peer is
+the one guaranteed not to be in front. The desktop's own daemon log shows the
+poll running on the dot every three seconds for twenty-one consecutive ticks,
+then gaps of **87 and 110 seconds** — and the phone's acceptance landed in one
+of them. Three rounds of device testing had blamed the handshake.
+
+The rule is tree-wide rather than ceremony-specific, and the second case is the
+one that argues for it. A pairing ceremony is watched by someone standing
+between two devices; a progress strip — an import, a rules re-apply, a mailbox
+backfill — is watched by someone who started it and *went to do something else*.
+That reader is the normal case, not the exception, and a frozen bar is what they
+come back to.
+
+Two things the guard has to get right, and both were wrong in the first draft:
+
+- **A poll described in prose is not a poll written in markup.** Seven of these
+  views explain the poll in a `{{-- --}}` block directly above it, and eight of
+  the twenty-five matches in the tree are that prose. The scan blanks comment
+  spans while preserving their newlines, so the offenders it reports still carry
+  the line number the contributor has to open.
+- **A comment that quotes an attribute goes stale when the attribute changes.**
+  Two of them did — one backticked the full attribute, one claimed to reuse
+  another page's idiom *verbatim* — and both were corrected in the same pass.
+  A comment naming exact markup is a copy, and the copy is what goes stale.
+
+## A timestamp stored as text, written at the local offset
+
+`tests/Contracts/TextTimestampsAreZuluArchTest.php`
+
+The sync tables store their timestamps as TEXT, so SQL compares them byte-wise
+rather than as instants. `->toIso8601String()` renders the *writer's* local
+offset, and `2026-06-15T20:30:00+02:00` reads as "20:30" against a
+`2026-06-15T19:00:00Z` sibling it actually predates by half an hour. Two forms
+in one column therefore sort wrongly, and neither one looks wrong on its own.
+
+`pairing_tokens.expires_at` had earned `ZuluTimestamp::stamp()` already,
+because it is compared in SQL and a stretched or refused TTL is visible. What
+that fix left behind was the more dangerous half: the columns beside it kept
+`->toIso8601String()`, so a single row carried a Zulu expiry next to a `+02:00`
+`created_at`, and a reader could not tell which form it had. `device_registry`
+was the same shape and worse placed — `confirmedDevices()` orders by
+`paired_at`, so the Devices & Sync list was already sorting on it, and the
+registry is long-lived: the rows sat on both of the user's devices for as long
+as the pairing lasted, where a pairing token expires in ten minutes.
+
+Nothing caught it because nothing was *wrong* while one format held the column.
+The bug arrives the moment a second one does — a device that crosses a DST
+boundary or a timezone, or the fix itself landing without rewriting the rows it
+found. That is why the accompanying migration rewrites rather than deletes, and
+why the guard exists at all: the failure mode is a column with two conventions
+in it, and the guard is what keeps a column to one.
+
+The list is derived, not written down. It walks the migrated schema for columns
+named `*_at` whose storage type is TEXT, which is the precise definition of "a
+timestamp SQL will sort as a string", then scans the production writers of those
+tables. A table added tomorrow is covered by its own migration. Three writers
+are pinned rather than converted, each with the reason it could not be: two live
+in `Modules\Mobile`, which may not import `Modules\Sync\Internal` where
+`ZuluTimestamp` sits, and the pin is compared with `toBe()` so it can only
+shrink.
+
+## A step change announced under a name nothing listens for
+
+`tests/Contracts/StepChangeEventNameArchTest.php`
+
+A wizard's steps share one page, so advancing is a re-render and never a
+navigation: the browser keeps the offset the previous step was left at, and the
+new step opens with its top already above the viewport. It has now been measured
+twice — the setup wizard handed step 3 a `scrollY` of 424, and the mobile import
+bootstrap handed its recovery codes 107, far enough under `viewport-fit=cover` to
+put a heading behind the status-bar clock.
+
+Nothing reports it. The page returns 200, the step renders completely, every test
+that asserts on the rendered step passes, and scrolling up once makes the screen
+correct — which is exactly why the first fix was written for one screen and the
+identical defect went on shipping on two others.
+
+The fix is a re-render that says so: the component announces through
+`Modules\Core\Public\Http\Livewire\Concerns\AnnouncesStepChanges`, and one
+listener in `resources/js/app.js` returns the page to the top. The listener is
+registered before any component mounts and lives outside the DOM Livewire morphs,
+so it cannot be lost, duplicated or re-bound by a morph — which the per-screen
+Alpine handler it replaced could be. It also has to be announced *only* where the
+step actually changes: the listener moves the viewport, so announcing an ordinary
+re-render would take a half-filled form away from the reader mid-typing, a worse
+defect than the one it fixes.
+
+What the guard checks is the seam between the two halves, because that is the
+part nothing else can see. A Livewire dispatch names a browser event and no
+compiler checks that anything is listening — the first arm scans every string
+literal in backend PHP and Blade for a *second spelling* of "a step changed"
+(`wizard-step-changed` was one), rather than scanning the dispatch call sites,
+which name a constant and would report nothing. The second arm keeps the other
+half honest: the bundle must still bind that exact name and still move the
+viewport when it arrives. The third pins the name to one home, since a second
+literal is how a pair like this drifts — one of them gets renamed.
+
+A modal wizard is deliberately outside this. Its steps change inside an overlay
+the page behind does not scroll with, so scrolling the document under it would
+move something the reader is not looking at.
+
+## A service graph frozen at the moment it was registered
+
+`tests/Contracts/RegistrationPointsResolveOnDemandArchTest.php`
+
+This is the only entry on this page written after the *fourth* time. The other
+rules here each answer one shipped screen; this one answers a shape that has
+been fixed, class by class, four separate times, each fix written as if it were
+about that class.
+
+The shape is ordinary constructor injection at a place that is registered once
+and kept. A console command is not built when it runs — Artisan builds **every**
+registered command merely to assemble its list, which is what happens on every
+artisan invocation. An event listener is built on the first dispatch of its
+event, which can be arbitrarily earlier than the work it does: an app unlock
+comes long before a pairing. Whatever that construction reaches is built at that
+moment and held for the life of the process, along with every singleton created
+on the way down. Configuration written afterwards is invisible to it.
+
+It has cost, in order:
+
+- **`SyncServeCommand` and the WebSocket handler.** Building the handler at
+  command registration reached the encrypted search writer, so every artisan
+  call needed an application key — including the `key:generate` that mints one.
+  The handler became a `Closure` the command calls from `handle()`.
+- **`StartSyncListenerOnEnable` and the identity reader.** Taking
+  `SyncDaemonIdentity` in the constructor pulled `DeviceIdentityLoader` into the
+  container the moment sync was enabled, freezing whichever `AppLockKeyService`
+  was bound at that instant. The daemon handoff then read the sealed identity
+  through a key service from before the unlock. Fixed on both sides: the
+  listener resolves the reader on demand, and the provider stopped binding
+  `DeviceIdentityLoader` as a singleton.
+- **`HoldPairingCeremonyOpenOnUnlock` and `PairingGateway`.** The gateway
+  reaches `PairingPeerLink`, `PairingFrameCourier` and `RelayClient`, and those
+  are singletons: the first unlock of the process built all of them. A relay
+  configured later in the same run — which is exactly what scanning a pairing QR
+  does — was invisible to the courier that had already captured the previous
+  transport. `PairingFrameCourierTest` went from 5 failed / 2 passed to 7 passed
+  once the listener resolved the gateway on demand.
+- **`SyncServeCommand` and `PendingPairingCourier`.** The same command, a
+  different parameter, the same freeze at Artisan registration — which is before
+  almost anything. It became a `Closure` too, matching how the command already
+  handled its handler.
+
+Nothing caught any of them because none of them looks wrong. Constructor
+injection is the recommended shape everywhere else in this tree, the object the
+container hands over is real and fully built, and no exception is raised: the
+first symptom was a hard failure at a moment nothing should have been built, and
+the other three were a correct-looking object that was merely old. Unit tests
+resolve the collaborator themselves and get a fresh one, so they pass. Only a
+test that reconfigures the container mid-run — or a device — sees it, and the
+four sat far enough apart in the tree that each was read as a local mistake.
+
+The guard's discriminator is the container's own answer rather than a list of
+class names. A provider that writes `bind(SomeConcreteClass::class, …)` has
+stated, in a reviewable line, that a shared instance of that class is wrong —
+each caller must get one built from the bindings and the configuration in force
+when the call happens. Capturing one at a registration point contradicts exactly
+that. An *interface* binding says something else entirely (which implementation),
+so only concrete abstracts seed the scan; without that split,
+`bind(CurrentUser::class, CurrentUserService::class)` would make every listener
+that reads the current user an offender. The registration points come from the
+framework's own registries — the console kernel's command list and the event
+dispatcher's raw listeners — so a module added tomorrow is in scope with no list
+to edit. Two alternatives were tried and dropped: a hand-written "pairing/relay
+graph", which catches the four and nothing else, and "any class with a setter",
+which reads `RelayConfig` correctly but misses `DeviceIdentityLoader` and
+`OpLogWriter`.
+
+Against the whole tree this reports three constructor parameters, all pinned:
+two accepted (a per-resolve service whose staleness cannot matter, reached from
+a one-shot command) and one that is **not** accepted — `MobilePullCommand` holds
+`MobileSyncTriggerService`, which holds `DeviceIdentityLoader`, `RelayClient` and
+`RelayConfig`, on a phone, in a background process. It is pinned only so the fix
+can be sequenced with the rest of the work in `Modules/Sync`; the pin is compared
+with `toBe()` in both directions, so the line has to be deleted in the same
+commit as the fix.
+
+The guard is deliberately narrower than the hazard, and says so in its own
+failure message rather than here, because that is where a contributor reads it.
+It reads constructor parameter types only, so a graph reached through `make()` in
+a constructor body, a captured `Closure`, or a facade is invisible — which is
+also, deliberately, the shape of every fix. It knows a class is late-configured
+only where a provider said so; a hazardous class nobody bound at all looks
+neutral and is followed only as a path to one that was. And it covers console
+commands and class-name event listeners: a closure listener, a middleware, a
+queue worker, a Livewire component and a provider closure that captures a
+resolved object have the same hazard with no coverage at all.
+
+`SyncCaptureListener` is the one place that had the shape right from the start —
+it resolves `OpLogWriter` inside each handler and treats a
+`BindingResolutionException` as "no writer yet, skip" — and it is asserted clean
+by the guard for that reason.
 
 ## Related
 
