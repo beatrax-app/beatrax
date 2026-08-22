@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\BatchTagSuggestion;
 use Modules\Tax\Public\Dto\TaxTagData;
@@ -142,7 +143,10 @@ final class TaxTagQuery
                 'COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) = ?',
                 [$year],
             )
-            ->selectRaw("COUNT(*) AS cnt, SUM(CASE WHEN t.type = 'income' THEN 0 ELSE ABS(t.settled_amount_minor) END) AS total_minor")
+            ->selectRaw(
+                'COUNT(*) AS cnt, SUM(CASE WHEN t.type = ? THEN 0 ELSE ABS(t.settled_amount_minor) END) AS total_minor',
+                [TransactionType::Income->value],
+            )
             ->first();
 
         return new TaxYearSummary(

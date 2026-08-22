@@ -127,8 +127,9 @@ final readonly class FixedPaymentsViewQuery
         $row = $this->db->connection()
             ->table('recurring_series')
             ->selectRaw(
-                "COALESCE(SUM(CASE WHEN direction = 'expense' THEN monthly_equivalent_minor ELSE 0 END), 0) AS expense_eur_minor, ".
-                "COALESCE(SUM(CASE WHEN direction = 'income' THEN monthly_equivalent_minor ELSE 0 END), 0) AS income_eur_minor"
+                'COALESCE(SUM(CASE WHEN direction = ? THEN monthly_equivalent_minor ELSE 0 END), 0) AS expense_eur_minor, '.
+                'COALESCE(SUM(CASE WHEN direction = ? THEN monthly_equivalent_minor ELSE 0 END), 0) AS income_eur_minor',
+                [Direction::Expense->value, Direction::Income->value],
             )
             ->where('user_id', $user->id)
             ->where('state', RecurringSeriesState::Approved->value)

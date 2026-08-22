@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Generator;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
@@ -178,7 +179,7 @@ final class ActualParser implements ParsesMigrationSource
                 name: $group['name'],
                 sourceGroupName: null,
                 parentSourceExternalId: null,
-                kind: $group['is_income'] ? 'income' : 'expense',
+                kind: $group['is_income'] ? CategoryKind::Income->value : CategoryKind::Expense->value,
             ));
         }
 
@@ -189,7 +190,7 @@ final class ActualParser implements ParsesMigrationSource
                 name: $row['name'],
                 sourceGroupName: $row['group'] !== null ? ($categoryGroupNames[$row['group']] ?? null) : null,
                 parentSourceExternalId: $row['group'],
-                kind: $row['is_income'] ? 'income' : 'expense',
+                kind: $row['is_income'] ? CategoryKind::Income->value : CategoryKind::Expense->value,
             ));
         }
 
