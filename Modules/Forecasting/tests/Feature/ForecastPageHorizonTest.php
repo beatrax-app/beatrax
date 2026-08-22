@@ -84,3 +84,28 @@ it('renders all five HORIZON_DAYS options in the segmented control', function ()
 it('HORIZON_DAYS constant contains exactly [30, 60, 90, 180, 365]', function (): void {
     expect(ProjectForecastJob::HORIZON_DAYS)->toBe([30, 60, 90, 180, 365]);
 });
+
+it('falls back to the opening horizon when the address bar names one the rail does not offer', function (): void {
+    $user = fphUser('fph-tampered');
+    fphAccount((int) $user->id);
+    test()->actingAs($user);
+
+    // 999 is not merely absent from the segmented control — it reached
+    // ForecastQuery and drew a 999-day projection with no chip lit, so the
+    // reader had no way back to a horizon the rail does offer.
+    Livewire::withQueryParams(['horizon' => 999])
+        ->test(ForecastPage::class)
+        ->assertSet('horizon', 30);
+});
+
+it('keeps a horizon the rail does offer', function (): void {
+    $user = fphUser('fph-listed');
+    fphAccount((int) $user->id);
+    test()->actingAs($user);
+
+    expect(ProjectForecastJob::HORIZON_DAYS)->toContain(90);
+
+    Livewire::withQueryParams(['horizon' => 90])
+        ->test(ForecastPage::class)
+        ->assertSet('horizon', 90);
+});

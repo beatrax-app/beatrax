@@ -63,7 +63,7 @@
             complete the next Livewire diff unmounts this node and
             polling halts automatically.
         --}}
-        <div wire:poll.2s="refreshProjectionStatus" class="absolute right-2 top-2 z-10">
+        <div wire:poll.2s.keep-alive="refreshProjectionStatus" class="absolute right-2 top-2 z-10">
             <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('forecasting::forecast.updating') }}&hellip;</p>
         </div>
     @endif

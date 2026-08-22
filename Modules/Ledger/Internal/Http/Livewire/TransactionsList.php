@@ -171,9 +171,22 @@ final class TransactionsList extends Component
         SensitiveColumnCodec $codec,
         Session $session,
     ): View {
+        $this->normaliseFilterIds();
+
         return $this->isSearchActive()
             ? $this->renderSearch($currentUser, $views, $db, $taxTagQuery, $searchQuery, $codec, $session)
             : $this->renderList($currentUser, $listQuery, $views, $db, $taxTagQuery, $codec, $session);
+    }
+
+    // Livewire hands a #[Url] array to the view as well as to the query, so
+    // cleaning it on the way to the query alone left the chip partial
+    // subscripting [0] on a shape the address bar chose. Coerced on the
+    // property instead, both readers see the same list.
+    private function normaliseFilterIds(): void
+    {
+        $this->filterAccounts = self::positiveIds($this->filterAccounts);
+        $this->filterCategories = self::positiveIds($this->filterCategories);
+        $this->filterCounterparties = self::positiveIds($this->filterCounterparties);
     }
 
     // Captures $fullHistory on entry so clearSearch() can restore the view
@@ -276,20 +289,44 @@ final class TransactionsList extends Component
         ]);
     }
 
-    // Only ids above zero reach the query: a filter array can hold a 0 from
-    // an unselected option, which would otherwise narrow to nothing.
     private function searchFilters(): SearchFilters
     {
         return new SearchFilters(
-            accounts: array_values(array_filter($this->filterAccounts, static fn (int $id): bool => $id > 0)),
-            categories: array_values(array_filter($this->filterCategories, static fn (int $id): bool => $id > 0)),
-            counterparties: array_values(array_filter($this->filterCounterparties, static fn (int $id): bool => $id > 0)),
+            accounts: $this->filterAccounts,
+            categories: $this->filterCategories,
+            counterparties: $this->filterCounterparties,
             after: $this->filterAfter !== '' ? $this->filterAfter : null,
             before: $this->filterBefore !== '' ? $this->filterBefore : null,
             amountMin: $this->filterAmountMin !== '' ? $this->filterAmountMin : null,
             amountMax: $this->filterAmountMax !== '' ? $this->filterAmountMax : null,
             amountDirection: $this->filterAmountDir,
         );
+    }
+
+    // array<array-key, mixed> deliberately: ?account[]= is reader-supplied, so
+    // the declared list<int> describes what the rail sends, not what arrives.
+    // A non-numeric member is dropped rather than cast, since (int) 'abc' is
+    // the same 0 an unselected option sends, which would narrow to nothing.
+    /**
+     * @param  array<array-key, mixed>  $ids
+     * @return list<int>
+     */
+    private static function positiveIds(array $ids): array
+    {
+        $clean = [];
+
+        foreach ($ids as $id) {
+            if (! is_numeric($id)) {
+                continue;
+            }
+
+            $numeric = (int) $id;
+            if ($numeric > 0) {
+                $clean[] = $numeric;
+            }
+        }
+
+        return $clean;
     }
 
     // appendedCursorIds stops a re-render at the same cursor appending the
