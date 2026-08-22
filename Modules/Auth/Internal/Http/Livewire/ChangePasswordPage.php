@@ -49,22 +49,10 @@ final class ChangePasswordPage extends Component
             return;
         }
 
-        if (! $hasher->check($this->currentPassword, $user->password)) {
-            $this->flashMessage = Lang::get('auth::change_password.error_current_incorrect');
-            $this->resetPasswordFields();
+        $rejection = $this->passwordRejection($hasher, $user->password);
 
-            return;
-        }
-
-        if ($this->newPassword !== $this->newPasswordConfirmation) {
-            $this->flashMessage = Lang::get('auth::change_password.error_mismatch');
-            $this->resetPasswordFields();
-
-            return;
-        }
-
-        if (strlen($this->newPassword) < PasswordPolicy::MINIMUM_LENGTH) {
-            $this->flashMessage = Lang::get('auth::change_password.error_min_length');
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
             $this->resetPasswordFields();
 
             return;
@@ -100,6 +88,19 @@ final class ChangePasswordPage extends Component
         $view->extends('layouts.app', ['title' => Lang::get('auth::change_password.page_title')]);
 
         return $view;
+    }
+
+    // The empty-current-password answer above is deliberately not one of these:
+    // every rejection here wipes what was typed, and that one must not — the
+    // reader has a full form in front of them and one empty box to fill.
+    private function passwordRejection(Hasher $hasher, string $currentHash): ?string
+    {
+        return match (true) {
+            ! $hasher->check($this->currentPassword, $currentHash) => Lang::get('auth::change_password.error_current_incorrect'),
+            $this->newPassword !== $this->newPasswordConfirmation => Lang::get('auth::change_password.error_mismatch'),
+            strlen($this->newPassword) < PasswordPolicy::MINIMUM_LENGTH => Lang::get('auth::change_password.error_min_length'),
+            default => null,
+        };
     }
 
     private function resetPasswordFields(): void

@@ -74,6 +74,16 @@ final class DeviceIdentityLoader
             return [DeviceIdentityState::Locked, null];
         }
 
+        return $this->open($encPath, $kek);
+    }
+
+    /**
+     * @return array{DeviceIdentityState, ?DeviceIdentityDto}
+     *
+     * @throws SecretFileException on an I/O failure reading an EXISTING key-file.
+     */
+    private function open(string $encPath, string $kek): array
+    {
         // Stage the decrypted plaintext inside the identity directory itself
         // — NEVER sys_get_temp_dir(), which is world-traversable (e.g. /tmp
         // at mode 1777).

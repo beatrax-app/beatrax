@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Http\Middleware;
 
-use Closure;
-use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Middleware\AfterResponseMiddleware;
 use Modules\Core\Public\Services\SealedLedgerRecovery;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 // A web request is the only place on this device where the app-lock key is
@@ -21,7 +19,7 @@ use Throwable;
 /**
  * @link ../../../../../.docs/features/sync/sensitive-columns-at-rest.md#getting-back-inside-the-guarantee
  */
-final readonly class RecoverSealedLedger
+final readonly class RecoverSealedLedger extends AfterResponseMiddleware
 {
     public function __construct(
         private CurrentUser $currentUser,
@@ -30,17 +28,9 @@ final readonly class RecoverSealedLedger
         private LoggerInterface $log,
     ) {}
 
-    public function handle(Request $request, Closure $next): Response
-    {
-        /** @var Response $response */
-        $response = $next($request);
-
-        return $response;
-    }
-
-    // terminate(), so a full history re-projection is paid after the response
-    // has gone out rather than in front of a page the user is waiting for.
-    public function terminate(Request $request, Response $response): void
+    // After the response rather than in front of it, so a full history
+    // re-projection is not paid ahead of a page the user is waiting for.
+    protected function afterResponse(): void
     {
         if (! $this->currentUser->isAuthenticated()) {
             return;

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Sync\Providers;
 
 use Illuminate\Contracts\Config\Repository;
-use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
@@ -16,7 +15,6 @@ use Modules\Auth\Public\Events\AppLockUnlocked;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
-use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
@@ -35,7 +33,6 @@ use Modules\Sync\Internal\Crypto\LibsodiumPrimitives;
 use Modules\Sync\Internal\Crypto\LocallyKeyedRowsProbe;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\RewrapGdkOnPassphraseChange;
-use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
@@ -50,6 +47,7 @@ use Modules\Sync\Internal\Merge\Strategies\GCounterStrategy;
 use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Internal\OpLog\OpLogWriterFactory;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\HeldPeerConfirm;
 use Modules\Sync\Internal\Pairing\LanPairingFrameCourier;
@@ -252,87 +250,8 @@ final class SyncServiceProvider extends ServiceProvider
             OpLogWriter::class,
             function (Container $app, array $parameters): OpLogWriter {
                 /** @var array<string, mixed> $parameters */
-                return $parameters === []
-                    ? $this->makeOpLogWriter($app)
-                    : $this->makeOpLogWriterWith($app, $parameters);
+                return (new OpLogWriterFactory($app))->make($parameters);
             },
-        );
-    }
-
-    // Throws (not returns null) when no identity is available: an unlocked
-    // key is a precondition for signing, and callers already treat a failed
-    // resolution as "capture is not possible right now".
-    /**
-     * @throws BindingResolutionException when sync is off, locked, or the
-     *                                    request has no authenticated user.
-     */
-    private function makeOpLogWriter(Container $app): OpLogWriter
-    {
-        $currentUser = $app->make(CurrentUser::class);
-
-        if (! $currentUser->isAuthenticated()) {
-            throw new BindingResolutionException('OpLogWriter: no authenticated user to capture for.');
-        }
-
-        $userId = $currentUser->id();
-        $sessionFactory = $app->make(SessionFactory::class);
-        $identity = $app->make(DeviceIdentityLoader::class)->load($userId, $sessionFactory());
-
-        if ($identity === null) {
-            throw new BindingResolutionException('OpLogWriter: no usable device identity (sync off or locked).');
-        }
-
-        return $this->buildOpLogWriter(
-            $app,
-            $identity->deviceId,
-            $userId,
-            sodium_hex2bin($identity->ed25519SecretKeyHex),
-            sodium_hex2bin($identity->ed25519PublicKeyHex),
-        );
-    }
-
-    // Callers that already hold credentials (tests, and any future
-    // multi-identity caller) pass them explicitly to app(); honouring that
-    // keeps the make-with-parameters contract this binding replaced.
-    /**
-     * @param  array<string, mixed>  $parameters
-     *
-     * @throws BindingResolutionException when a credential is missing or the wrong type.
-     */
-    private function makeOpLogWriterWith(Container $app, array $parameters): OpLogWriter
-    {
-        $deviceId = $parameters['deviceId'] ?? null;
-        $userId = $parameters['userId'] ?? null;
-        $secretKey = $parameters['secretKey'] ?? null;
-        $publicKey = $parameters['publicKey'] ?? null;
-
-        if (! is_string($deviceId) || ! is_int($userId) || ! is_string($secretKey) || ! is_string($publicKey)) {
-            throw new BindingResolutionException('OpLogWriter: explicit credentials are incomplete.');
-        }
-
-        return $this->buildOpLogWriter($app, $deviceId, $userId, $secretKey, $publicKey);
-    }
-
-    private function buildOpLogWriter(
-        Container $app,
-        string $deviceId,
-        int $userId,
-        string $secretKey,
-        string $publicKey,
-    ): OpLogWriter {
-        return new OpLogWriter(
-            clock: $app->make(HybridLogicalClock::class),
-            db: $app->make(DatabaseManager::class),
-            signer: $app->make(DeviceKeySigner::class),
-            wallClock: $app->make(Clock::class),
-            deviceId: $deviceId,
-            userId: $userId,
-            secretKey: $secretKey,
-            publicKey: $publicKey,
-            sensitiveFields: $app->make(SensitiveFieldRegistry::class),
-            fieldCrypto: $app->make(OpLogFieldCrypto::class),
-            keyring: $app->make(GdkKeyringService::class),
-            session: $app->make(SessionFactory::class),
         );
     }
 

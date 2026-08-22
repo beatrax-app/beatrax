@@ -435,25 +435,11 @@ final class AppLockProvisioner
             return;
         }
 
-        if (! is_string($row->kdf_salt) || ! is_string($row->password_wrapped_key)) {
-            $this->lockState->lock($session);
+        $dataKey = $this->unwrapWithAccountPassword($userId, $row, $accountPassword);
 
-            return;
-        }
-
-        $pwWrapKey = $this->kdf->deriveWrapKey($accountPassword, $row->kdf_salt);
-        $dataKey = $this->keyWrap->unwrap($row->password_wrapped_key, $pwWrapKey);
-        sodium_memzero($pwWrapKey);
-
-        if ($dataKey === false) {
-            // Proof, not inference: whatever replaced the password — one of the
-            // three known writers or one nobody has written yet — this is the
-            // sign-in where it stops opening, so stamp it here as well and the
-            // enumeration above stops being the thing correctness rests on.
-            $this->markRecoveryWrapStale($userId);
-
-            // Fail closed: corrupted/stale wrap → start locked; the PIN wrap
-            // is still intact and unlocks via the lock screen.
+        if ($dataKey === null) {
+            // Fail closed: no wrap this password opens → start locked; the PIN
+            // wrap is still intact and unlocks via the lock screen.
             $this->lockState->lock($session);
 
             return;
@@ -461,6 +447,28 @@ final class AppLockProvisioner
 
         $this->lockState->unlock($session, $dataKey);
         sodium_memzero($dataKey);
+    }
+
+    // Both ways the password road can be shut answer null: columns a half
+    // written row never filled, and a wrap this password no longer opens. Only
+    // the second is stamped — proof, not inference, that whatever replaced the
+    // password stranded the recovery wrap, taken where it stops opening.
+    private function unwrapWithAccountPassword(int $userId, object $row, string $accountPassword): ?string
+    {
+        $salt = self::stringColumn($row, 'kdf_salt');
+        $wrapped = self::stringColumn($row, 'password_wrapped_key');
+
+        if ($salt === null || $wrapped === null) {
+            return null;
+        }
+
+        $dataKey = $this->unwrapDataKey($accountPassword, $salt, $wrapped);
+
+        if ($dataKey === null) {
+            $this->markRecoveryWrapStale($userId);
+        }
+
+        return $dataKey;
     }
 
     // A sign-in is the moment such an install would otherwise come up blank:

@@ -82,6 +82,25 @@ final readonly class DeepLinkResolver
      */
     private function decodeParams(string $notificationId, User $user): ?array
     {
+        $paramsJson = $this->readParamsJson($notificationId, $user);
+        if ($paramsJson === null) {
+            return null;
+        }
+
+        try {
+            $params = json_decode($paramsJson, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
+
+        return is_array($params) ? $params : null;
+    }
+
+    // Every unreadable shape answers null: a row that is gone, a column no key
+    // opens, and a blank payload are the same answer to the only question the
+    // caller asks, which is whether there is a target to resolve.
+    private function readParamsJson(string $notificationId, User $user): ?string
+    {
         $row = $this->db->connection()->table('notifications')
             ->where('id', $notificationId)
             ->where('user_id', $user->id)
@@ -98,17 +117,8 @@ final readonly class DeepLinkResolver
         }
 
         $paramsJson = $decrypted['params'];
-        if (! is_string($paramsJson) || $paramsJson === '') {
-            return null;
-        }
 
-        try {
-            $params = json_decode($paramsJson, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            $params = null;
-        }
-
-        return is_array($params) ? $params : null;
+        return is_string($paramsJson) && $paramsJson !== '' ? $paramsJson : null;
     }
 
     /**

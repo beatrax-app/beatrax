@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Http\Middleware;
 
-use Closure;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Container\Container;
-use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Middleware\AfterResponseMiddleware;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Pairing\PairingTokenRowReader;
 use Modules\Sync\Internal\Pairing\PendingPairingCourier;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 // The courier's driver on a device that runs no daemon. A phone has no cron, no
@@ -25,7 +23,7 @@ use Throwable;
 /**
  * @link ../../../../../.docs/features/sync/pairing-handshake.md#redelivery-must-not-depend-on-an-open-screen
  */
-final readonly class CarriesPendingPairingFrames
+final readonly class CarriesPendingPairingFrames extends AfterResponseMiddleware
 {
     // Matches the pairing screen's own poll, so a ceremony costs what it always
     // cost. The window is what stops a screen polling several times a second
@@ -47,18 +45,10 @@ final readonly class CarriesPendingPairingFrames
         private LoggerInterface $log,
     ) {}
 
-    public function handle(Request $request, Closure $next): Response
-    {
-        /** @var Response $response */
-        $response = $next($request);
-
-        return $response;
-    }
-
-    // terminate(), so a browse that burns its full timeout and a relay round
-    // trip are paid after the response has gone out rather than in front of a
-    // page somebody is waiting for.
-    public function terminate(Request $request, Response $response): void
+    // After the response rather than in front of it, so a browse that burns
+    // its full timeout and a relay round trip are not paid ahead of a page
+    // somebody is waiting for.
+    protected function afterResponse(): void
     {
         try {
             $this->carry();

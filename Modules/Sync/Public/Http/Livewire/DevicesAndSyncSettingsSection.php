@@ -26,12 +26,9 @@ use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceIdentityState;
 use Modules\Sync\Internal\OpLog\SyncBacklogState;
+use Modules\Sync\Internal\Support\DevicesScreenOpening;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
-use Modules\Sync\Public\Enums\PairingSide;
 use Modules\Sync\Public\Services\DeviceRegistryService;
-use Modules\Sync\Public\Services\EncryptionRecoveryMarkers;
-use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
-use Modules\Sync\Public\Services\HistoryReprojector;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Public\Services\SyncStatusService;
 use Psr\Log\LoggerInterface;
@@ -115,11 +112,9 @@ final class DevicesAndSyncSettingsSection extends Component
         DeviceRegistryService $registry,
         RelayConfig $relayConfig,
         PairingGateway $pairing,
-        GdkEpochDeliveryGateway $epochDelivery,
         DeviceIdentityLoader $identityLoader,
         Session $session,
-        HistoryReprojector $reprojector,
-        EncryptionRecoveryMarkers $markers,
+        DevicesScreenOpening $opening,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -147,92 +142,14 @@ final class DevicesAndSyncSettingsSection extends Component
         // ceremony that lapsed behind the lock would report as no ceremony and
         // the extension would never reach the row it exists for.
         $pairing->holdCeremonyOpenAcrossLock($userId, $session);
-        $this->pairingWaitingOnPeer = $this->peerWaitingOnThisDevice($pairing, $session, $userId);
+        $this->pairingWaitingOnPeer = $opening->peerWaitingOnThisDevice($userId, $session);
 
-        $this->applyHeldKeyWraps($pairing, $epochDelivery, $session, $userId);
+        $opening->applyHeldKeyWraps($userId, $session);
 
         // After the inbox drain, never before it: that drain is what installs
         // a wrap this device was holding, and asking first reports a wait that
         // the same mount had already ended.
-        $this->syncBacklog = $this->readBacklog($reprojector, $markers, $session, $userId)->value;
-    }
-
-    // Read here rather than in render(): render runs on every poll, and the
-    // question costs an index seek plus a keyring read. The recovery pass runs
-    // after this response, so a Deferred reported here is gone by the next one
-    // — which is the transient the reader is being shown.
-    private function readBacklog(
-        HistoryReprojector $reprojector,
-        EncryptionRecoveryMarkers $markers,
-        Session $session,
-        int $userId,
-    ): SyncBacklogState {
-        if (! $markers->isEnrolled($userId)) {
-            return SyncBacklogState::None;
-        }
-
-        try {
-            return $reprojector->backlogState(
-                $userId,
-                $session,
-                $markers->historyReprojectedAt($userId),
-                $markers->reprojectedKeyringFingerprint($userId),
-            );
-        } catch (\Throwable) {
-            return SyncBacklogState::None;
-        }
-    }
-
-    // A ceremony lives on the row, not in the modal that started it, so an
-    // auto-lock or a navigation loses the screen and not the handshake. The
-    // page has to say so: the token expires in minutes, and the modal's own
-    // resume is behind a button that reads as starting a new pairing.
-    /**
-     * @link ../../../../../.docs/features/sync/pairing-handshake.md#a-ceremony-outlives-the-screen-that-started-it
-     */
-    private function peerWaitingOnThisDevice(PairingGateway $pairing, Session $session, int $userId): string
-    {
-        $inFlight = $pairing->inFlightFor($userId);
-
-        if ($inFlight === null || $inFlight['state'] === PairingGateway::STATE_CONFIRMED) {
-            return '';
-        }
-
-        $side = $pairing->sideOwnedBySelf(
-            $inFlight['initiator_device_id'],
-            $inFlight['responder_device_id'],
-            $userId,
-            $session,
-        );
-
-        if ($side === null) {
-            return '';
-        }
-
-        $names = $pairing->deviceNamesFor($inFlight['id'], $userId);
-
-        return match ($side->peer()) {
-            PairingSide::Initiator => $names['initiator'],
-            PairingSide::Responder => $names['responder'],
-        } ?? Lang::get('sync::devices.peer_default_name');
-    }
-
-    // The listener that receives these can never open one: it resolves a
-    // session no middleware ever started, so its app-lock key is absent by
-    // construction. This mount is the unlocked pass that comes back for what
-    // it had to leave in the mailbox.
-    private function applyHeldKeyWraps(
-        PairingGateway $pairing,
-        GdkEpochDeliveryGateway $epochDelivery,
-        Session $session,
-        int $userId,
-    ): void {
-        $deviceId = $pairing->currentDeviceId($userId, $session);
-        if ($deviceId === null) {
-            return;
-        }
-
-        $epochDelivery->drainInbox($userId, $deviceId, $session);
+        $this->syncBacklog = $opening->backlog($userId, $session)->value;
     }
 
     // Enable sync: generate + persist the device identity and show the self
@@ -262,21 +179,7 @@ final class DevicesAndSyncSettingsSection extends Component
 
         $userId = $currentUser->user()->id;
 
-        try {
-            $identityService->generateAndPersist($userId, $session);
-        } catch (\LogicException) {
-            // The KEK was unavailable despite the configured-lock check (the app
-            // is locked, or the session is keyless) — surface the recovery copy.
-            $this->flashMessage = Lang::get('sync::devices.flash.enable_failed');
-
-            return;
-        } catch (DeviceIdentityUnreadableException) {
-            // Refused rather than minted over: this device already has a
-            // key-file, it just cannot open it. Raising the flag puts the
-            // notice and its explicit replacement action on screen.
-            $this->identityUnreadable = true;
-            $this->flashMessage = Lang::get('sync::devices.identity_unreadable');
-
+        if (! $this->mintIdentity($identityService, $userId, $session)) {
             return;
         }
 
@@ -299,6 +202,32 @@ final class DevicesAndSyncSettingsSection extends Component
         }
 
         $this->encryptionOn = $this->encryptionEnabled($db, $userId);
+    }
+
+    // Two refusals, not one: each leaves the screen in a different state, and
+    // the second one is the difference between refusing and minting over an
+    // identity whose history a peer already carries.
+    private function mintIdentity(DeviceIdentityService $identityService, int $userId, Session $session): bool
+    {
+        try {
+            $identityService->generateAndPersist($userId, $session);
+        } catch (\LogicException) {
+            // The KEK was unavailable despite the configured-lock check (the app
+            // is locked, or the session is keyless) — surface the recovery copy.
+            $this->flashMessage = Lang::get('sync::devices.flash.enable_failed');
+
+            return false;
+        } catch (DeviceIdentityUnreadableException) {
+            // Refused rather than minted over: this device already has a
+            // key-file, it just cannot open it. Raising the flag puts the
+            // notice and its explicit replacement action on screen.
+            $this->identityUnreadable = true;
+            $this->flashMessage = Lang::get('sync::devices.identity_unreadable');
+
+            return false;
+        }
+
+        return true;
     }
 
     // The only route out of an identity key-file this device cannot open, and
@@ -510,12 +439,12 @@ final class DevicesAndSyncSettingsSection extends Component
     public function onPairingClosed(
         CurrentUser $currentUser,
         DeviceRegistryService $registry,
-        PairingGateway $pairing,
+        DevicesScreenOpening $opening,
         Session $session,
     ): void {
         $userId = $currentUser->user()->id;
         $this->devices = $this->loadDevices($registry, $userId);
-        $this->pairingWaitingOnPeer = $this->peerWaitingOnThisDevice($pairing, $session, $userId);
+        $this->pairingWaitingOnPeer = $opening->peerWaitingOnThisDevice($userId, $session);
     }
 
     // A peer was just confirmed in the pairing modal: refresh the device

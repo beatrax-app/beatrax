@@ -38,12 +38,17 @@ final class NativePhpBridge implements NativeBridge
 
         $encoded = json_encode($parameters);
 
-        if ($encoded === false) {
-            return null;
-        }
+        return $encoded === false ? null : self::decode(nativephp_call($function, $encoded));
+    }
 
-        $answer = nativephp_call($function, $encoded);
-
+    // Typed mixed, not ?string: off the stub the answer comes from a C
+    // extension, and a value that is not a string is exactly the case the
+    // caller reads as "nothing readable" rather than a TypeError.
+    /**
+     * @return array<mixed>|null
+     */
+    private static function decode(mixed $answer): ?array
+    {
         if (! is_string($answer) || $answer === '') {
             return null;
         }

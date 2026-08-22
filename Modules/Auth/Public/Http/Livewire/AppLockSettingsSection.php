@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Auth\Public\Http\Livewire;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
-use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
@@ -15,6 +14,7 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
+use Modules\Auth\Internal\Lock\AppLockCredentialRejections;
 use Modules\Auth\Internal\Lock\AppLockDisableResult;
 use Modules\Auth\Internal\Lock\AppLockKeyState;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
@@ -158,24 +158,15 @@ final class AppLockSettingsSection extends Component
 
     // Takes both credentials at once because that is what the repair costs: the
     // PIN produces the data key, the account password becomes its new wrap.
-    public function relinkRecovery(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher): void
+    public function relinkRecovery(CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections): void
     {
         $user = $currentUser->user();
 
-        if ($this->currentPin === '') {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_required');
+        $rejection = $rejections->pinRequired($this->currentPin)
+            ?? $rejections->accountPassword($this->accountPassword, $user->password);
 
-            return;
-        }
-
-        if ($this->accountPassword === '') {
-            $this->flashMessage = Lang::get('auth::app_lock.error_account_password_required');
-
-            return;
-        }
-
-        if (! $hasher->check($this->accountPassword, $user->password)) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_account_password');
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
 
             return;
         }
@@ -198,7 +189,7 @@ final class AppLockSettingsSection extends Component
         $this->toast(Lang::get('auth::app_lock.relink_recovery_success'));
     }
 
-    public function setPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher, Session $session): void
+    public function setPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections, Session $session): void
     {
         // enable() re-provisions the whole lock, so re-running it on an enabled
         // lock would rotate what a PIN change only re-wraps. Go via changePin().
@@ -206,34 +197,21 @@ final class AppLockSettingsSection extends Component
             return;
         }
 
-        $error = $this->newPinValidationError();
-        if ($error !== null) {
-            $this->flashMessage = $error;
-
-            return;
-        }
-
         $user = $currentUser->user();
 
-        // Ahead of the password checks because no answer to them changes this
-        // one, and a form that asks first reads as though it could.
-        if ($provisioner->keyState($user->id) === AppLockKeyState::Stranded) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_key_material_lost');
+        // The key-state read sits between the two, ahead of the password checks
+        // because no answer to them changes it, and a form that asks first
+        // reads as though it could.
+        $rejection = $rejections->newPin($this->newPin, $this->confirmPin);
 
-            return;
+        if ($rejection === null && $provisioner->keyState($user->id) === AppLockKeyState::Stranded) {
+            $rejection = Lang::get('auth::app_lock.error_key_material_lost');
         }
 
-        // An empty box is not a wrong answer. Reported as an incorrect password
-        // it sends the reader off to check a password manager, when what is
-        // wrong is the field in front of them.
-        if ($this->accountPassword === '') {
-            $this->flashMessage = Lang::get('auth::app_lock.error_account_password_required');
+        $rejection ??= $rejections->accountPassword($this->accountPassword, $user->password);
 
-            return;
-        }
-
-        if (! $hasher->check($this->accountPassword, $user->password)) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_account_password');
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
 
             return;
         }
@@ -289,10 +267,12 @@ final class AppLockSettingsSection extends Component
         $this->currentPin = '';
     }
 
-    public function disable(CurrentUser $currentUser, AppLockProvisioner $provisioner): void
+    public function disable(CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections): void
     {
-        if ($this->currentPin === '') {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_required');
+        $rejection = $rejections->pinRequired($this->currentPin);
+
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
 
             return;
         }
@@ -334,17 +314,17 @@ final class AppLockSettingsSection extends Component
 
     // The keyring re-wrap is not done here: AppLockProvisioner::changePin()
     // dispatches AppLockPassphraseChanged and that does the work.
-    public function changePin(CurrentUser $currentUser, AppLockProvisioner $provisioner, EncryptionMigrationService $migrationService): void
-    {
-        $error = $this->newPinValidationError();
-        if ($error !== null) {
-            $this->flashMessage = $error;
+    public function changePin(
+        CurrentUser $currentUser,
+        AppLockProvisioner $provisioner,
+        EncryptionMigrationService $migrationService,
+        AppLockCredentialRejections $rejections,
+    ): void {
+        $rejection = $rejections->newPin($this->newPin, $this->confirmPin)
+            ?? $rejections->pinRequired($this->currentPin);
 
-            return;
-        }
-
-        if ($this->currentPin === '') {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_required');
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
 
             return;
         }
@@ -379,25 +359,15 @@ final class AppLockSettingsSection extends Component
 
     // Reachable via: sign out from the lock screen -> password login
     // (which primes the session) -> Settings -> "Forgot PIN?".
-    public function resetForgottenPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher): void
+    public function resetForgottenPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections): void
     {
-        $error = $this->newPinValidationError();
-        if ($error !== null) {
-            $this->flashMessage = $error;
-
-            return;
-        }
-
-        if ($this->accountPassword === '') {
-            $this->flashMessage = Lang::get('auth::app_lock.error_account_password_required');
-
-            return;
-        }
-
         $user = $currentUser->user();
 
-        if (! $hasher->check($this->accountPassword, $user->password)) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_account_password');
+        $rejection = $rejections->newPin($this->newPin, $this->confirmPin)
+            ?? $rejections->accountPassword($this->accountPassword, $user->password);
+
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
 
             return;
         }
@@ -523,9 +493,12 @@ final class AppLockSettingsSection extends Component
         BiometricDeviceStore $biometricStore,
         AppLockProvisioner $provisioner,
         ColdStartVault $vault,
+        AppLockCredentialRejections $rejections,
     ): void {
-        if ($this->deenrollPin === '') {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_required');
+        $rejection = $rejections->pinRequired($this->deenrollPin);
+
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
 
             return;
         }
@@ -545,15 +518,6 @@ final class AppLockSettingsSection extends Component
         $this->confirmingDeenroll = false;
         $this->deenrollPin = '';
         $this->flashMessage = '';
-    }
-
-    private function newPinValidationError(): ?string
-    {
-        return match (true) {
-            strlen($this->newPin) < 6 => Lang::get('auth::app_lock.error_pin_too_short'),
-            $this->newPin !== $this->confirmPin => Lang::get('auth::app_lock.error_pin_mismatch'),
-            default => null,
-        };
     }
 
     public function render(ViewFactory $views): View
