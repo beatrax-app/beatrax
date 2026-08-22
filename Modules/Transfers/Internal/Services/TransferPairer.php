@@ -15,6 +15,8 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
+use Modules\Transfers\Public\Enums\CounterLegOrder;
+use Modules\Transfers\Public\Services\PairLookup;
 use stdClass;
 
 final class TransferPairer implements PairsTransferLegs
@@ -30,6 +32,7 @@ final class TransferPairer implements PairsTransferLegs
         private readonly SensitiveColumnCodec $codec,
         private readonly SessionFactory $session,
         private readonly EncryptionMigrationService $encryptionService,
+        private readonly PairLookup $pairs,
     ) {}
 
     public function pairOne(Transaction $tx, User $user): ?int
@@ -38,21 +41,14 @@ final class TransferPairer implements PairsTransferLegs
             return null;
         }
 
-        // Whole-day boundaries keep the window symmetric in calendar days;
-        // adapters book at different times (ASN at 12:00:00, PayPal at
-        // startOfDay), which otherwise skews it.
-        $windowStart = $tx->booked_at->copy()->startOfDay()->subDays(self::WINDOW_DAYS)->toDateTimeString();
-        $windowEnd = $tx->booked_at->copy()->endOfDay()->addDays(self::WINDOW_DAYS)->toDateTimeString();
+        $partnerId = ($tx->counterparty_iban === null || $tx->counterparty_iban === '')
+            ? $this->findPartnerByReverseLookup($tx, $user->id)
+            : $this->findPartnerForward($tx, $user);
 
-        $partnerRow = ($tx->counterparty_iban === null || $tx->counterparty_iban === '')
-            ? $this->findPartnerByReverseLookup($tx, $user->id, $windowStart, $windowEnd)
-            : $this->findPartnerForward($tx, $user, $windowStart, $windowEnd);
-
-        if ($partnerRow === null) {
+        if ($partnerId === null) {
             return null;
         }
 
-        $partnerId = self::toInt($partnerRow->id ?? null);
         $this->linkPair($tx, $user, $partnerId);
 
         return $partnerId;
@@ -61,7 +57,7 @@ final class TransferPairer implements PairsTransferLegs
     // Two arms: a literal match against the user's own Account.iban rows, and
     // an alias bridge resolving institution IBANs. The ciphertext IBAN is
     // decrypted once, before either.
-    private function findPartnerForward(Transaction $tx, User $user, string $windowStart, string $windowEnd): ?stdClass
+    private function findPartnerForward(Transaction $tx, User $user): ?int
     {
         $ibanResult = $this->codec->decryptValue(
             'transactions',
@@ -83,20 +79,31 @@ final class TransferPairer implements PairsTransferLegs
             return null;
         }
 
-        // Hits transactions_unpaired_transfer_idx. The id guard covers a row
-        // whose counterparty IBAN is its own account's.
-        return $this->db->connection()
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('account_id', $partnerAccountId)
-            ->where('amount_minor', -$tx->amount_minor)
-            ->where('currency', $tx->currency)
-            ->whereBetween('booked_at', [$windowStart, $windowEnd])
-            ->whereNull('pair_transaction_id')
-            ->whereIn('type', TransactionType::transferValues())
-            ->where('id', '!=', $tx->id)
-            ->orderBy('booked_at')
-            ->first(['id']);
+        // The id guard covers a row whose counterparty IBAN is its own
+        // account's; without it a zero-amount leg answers its own search.
+        return $this->pairs->counterLegOnAccount(
+            $partnerAccountId,
+            -$tx->amount_minor,
+            self::transferTypes(),
+            $tx->booked_at,
+            self::WINDOW_DAYS,
+            $tx->currency,
+            true,
+            $tx->id,
+            CounterLegOrder::EarliestBooked,
+            $user,
+        );
+    }
+
+    /**
+     * @return list<TransactionType>
+     */
+    private static function transferTypes(): array
+    {
+        return array_values(array_map(
+            static fn (string $value): TransactionType => TransactionType::from($value),
+            TransactionType::transferValues(),
+        ));
     }
 
     private function resolvePartnerAccountId(string $plainIban, User $user): ?int
@@ -180,13 +187,15 @@ final class TransferPairer implements PairsTransferLegs
         return $paired;
     }
 
-    private function findPartnerByReverseLookup(
-        Transaction $tx,
-        int $userId,
-        string $windowStart,
-        string $windowEnd,
-    ): ?stdClass {
+    private function findPartnerByReverseLookup(Transaction $tx, int $userId): ?int
+    {
         $connection = $this->db->connection();
+
+        // Whole-day boundaries keep the window symmetric in calendar days;
+        // adapters book at different times (ASN at 12:00:00, PayPal at
+        // startOfDay), which otherwise skews it.
+        $windowStart = $tx->booked_at->copy()->startOfDay()->subDays(self::WINDOW_DAYS)->toDateTimeString();
+        $windowEnd = $tx->booked_at->copy()->endOfDay()->addDays(self::WINDOW_DAYS)->toDateTimeString();
 
         $accountRow = $connection
             ->table('accounts')
@@ -216,10 +225,17 @@ final class TransferPairer implements PairsTransferLegs
             ->whereNull('pair_transaction_id')
             ->whereIn('type', TransactionType::transferValues())
             ->where('id', '!=', $tx->id)
+            // Two legs of one transfer routinely book on the same day, and the
+            // first row that decrypts to a match is the one written into
+            // pair_transaction_id. Ordering on booked_at alone left which of
+            // them that is to the engine, and it persists the answer.
             ->orderBy('booked_at')
+            ->orderBy('id')
             ->get(['id', 'counterparty_iban']);
 
-        return $this->matchDecryptedCandidate($candidates, $candidateIbans, $userId);
+        $match = $this->matchDecryptedCandidate($candidates, $candidateIbans, $userId);
+
+        return $match === null ? null : self::toInt($match->id ?? null);
     }
 
     /**

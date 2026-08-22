@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Przegląd i zatwierdzenie',
     'h1' => 'Przejrzyj wszystko, co znaleźliśmy',
 
-    'lede_across' => 'transakcji z',
-    'source' => 'źródła|źródeł|źródeł',
+    'lede_counts' => ':transactions z :sources.',
+    'source' => ':count źródła|:count źródeł|:count źródeł',
     'lede_confirm' => 'Potwierdź salda początkowe, a potem zatwierdź.',
 
     'empty' => 'Nie ma jeszcze nic do przejrzenia. Upuść wyciąg we wcześniejszych krokach, aby zobaczyć tu swoje transakcje.',
 
     'sb_eyebrow_label' => '🧮 SALDA POCZĄTKOWE ·',
-    'account_detected' => 'WYKRYTE KONTO|WYKRYTE KONTA|WYKRYTYCH KONT',
+    'account_detected' => ':count WYKRYTE KONTO|:count WYKRYTE KONTA|:count WYKRYTYCH KONT',
     'sb_lede' => 'Wykryliśmy saldo początkowe dla każdego konta. Potwierdź je lub popraw, zanim zatwierdzimy.',
 
-    'txn' => 'transakcja|transakcje|transakcji',
+    'txn' => ':count transakcja|:count transakcje|:count transakcji',
     'to_commit' => 'do zatwierdzenia ·',
-    'already_imported' => 'już zaimportowano',
+    'already_imported' => ':count już zaimportowano|:count już zaimportowano|:count już zaimportowano',
     'commit_committing' => 'Zatwierdzanie…',
     'commit_count' => 'Zatwierdź wszystko (:count transakcja) →|Zatwierdź wszystko (:count transakcje) →|Zatwierdź wszystko (:count transakcji) →',
     'commit_empty' => 'Zatwierdź wszystko (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'Z TWOJEGO WYCIĄGU BANKOWEGO',
         'from_ics' => 'Z TWOICH WYCIĄGÓW KARTY ICS',
         'from_paypal' => 'Z PAYPAL',
-        'row' => 'WIERSZ|WIERSZE|WIERSZY',
+        'row' => ':count WIERSZ|:count WIERSZE|:count WIERSZY',
         'badge_ready' => '✓ GOTOWE',
         'badge_empty' => 'PUSTE',
         'badge_error' => 'WYMAGA PONOWNEGO WGRANIA',

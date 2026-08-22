@@ -49,9 +49,7 @@ return [
         'not_found' => 'Nie znaleziono raportu (mógł zostać usunięty w innej karcie).',
         'deleted' => 'Raport usunięty.',
     ],
-    // i18n-review: pl · pin_cap — the noun agrees with the cap, which now
-    // arrives as :max rather than as the digit. raporty is the 2–4 form, so a cap outside that range needs raportów.
-    'pin_cap' => 'Możesz przypiąć maksymalnie :max raporty. Odepnij jeden, aby dodać ten.',
+    'pin_cap' => 'Możesz przypiąć :max raport. Odepnij go, aby dodać ten.|Możesz przypiąć maksymalnie :max raporty. Odepnij jeden, aby dodać ten.|Możesz przypiąć maksymalnie :max raportów. Odepnij jeden, aby dodać ten.',
 
     'summary' => [
         'metric' => [

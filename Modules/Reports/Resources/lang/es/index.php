@@ -49,7 +49,7 @@ return [
         'not_found' => 'Informe no encontrado (puede que se haya eliminado en otra pestaña).',
         'deleted' => 'Informe eliminado.',
     ],
-    'pin_cap' => 'Puedes fijar hasta :max informes. Quita uno para añadir este.',
+    'pin_cap' => 'Puedes fijar :max informe. Quítalo para añadir este.|Puedes fijar hasta :max informes. Quita uno para añadir este.',
 
     'summary' => [
         'metric' => [

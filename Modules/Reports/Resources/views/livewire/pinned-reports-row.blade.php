@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     Dashboard "pinned reports" mini-card row. Up to 3 chart-only
@@ -32,7 +33,7 @@
                     }
                 @endphp
                 <a
-                    href="{{ route('reports.index', ['report' => $card['id']]) }}"
+                    href="{{ Destination::Reports->url(['report' => $card['id']]) }}"
                     class="block rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-slate-600"
                 >
                     <div class="flex items-center justify-between gap-2">

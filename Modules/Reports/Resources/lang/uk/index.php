@@ -49,9 +49,7 @@ return [
         'not_found' => 'Звіт не знайдено (можливо, його видалили в іншій вкладці).',
         'deleted' => 'Звіт видалено.',
     ],
-    // i18n-review: uk · pin_cap — the noun agrees with the cap, which now
-    // arrives as :max rather than as the digit. звіти is the 2–4 form; a cap of 5 or more needs звітів.
-    'pin_cap' => 'Можна закріпити щонайбільше :max звіти. Відкріпи один, щоб додати цей.',
+    'pin_cap' => 'Можна закріпити :max звіт. Відкріпи його, щоб додати цей.|Можна закріпити щонайбільше :max звіти. Відкріпи один, щоб додати цей.|Можна закріпити щонайбільше :max звітів. Відкріпи один, щоб додати цей.',
 
     'summary' => [
         'metric' => [

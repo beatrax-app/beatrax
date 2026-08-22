@@ -15,8 +15,21 @@ isolation.
 
 - **Location:** `Modules/Transfers/tests/Feature/`
 - **What they test:**
-  - `PairLookupTest` — the read-side query under various
+  - `PairLookupTest` — `isPaired` / `partnerId` under various
     paired / unpaired / cross-user states.
+  - `CounterLegSearchTest` — the shared counter-leg search from
+    both sides: the pairer's candidate set row by row (currency,
+    already-paired, non-transfer type, either transfer
+    direction, the self-pair id guard, the window edge), that
+    the pairer links exactly the id `counterLegOnAccount`
+    returns for the same ask, and that both orderings are total.
+    The pin cases were written and run green against the
+    hand-rolled query the forward arm used to carry, so a
+    regression in WHICH leg pairs fails here.
+    `counterLegOnAccount` is also covered from its other
+    caller's side, in
+    [`Chains`](../chains/how-to-test.md)'s
+    `PaypalFundingCounterLegParityTest`.
   - `PairTransferCandidatesTest` — the per-row listener
     end-to-end (firing on `TransactionImported`,
     bidirectional write).
@@ -73,11 +86,18 @@ composer test
   `ResolveChainLinksJob::handle` is load-bearing). Confirm
   the re-type ran (check the matching transactions's `type`
   column after the chain job).
-- **`PairLookup::partnerFor` returns null but the
-  `pair_transaction_id` column on the row is populated** —
-  the partner row was deleted (cascadeOnDelete from the
-  user side wiped it). The lookup returns null because the
-  joined row is missing; the column FK target is stale.
+- **`PairLookup::counterLegOnAccount` finds nothing while
+  `PairLookup::partnerId` returns an id (or the reverse)** —
+  expected, not a bug. They answer different questions:
+  `partnerId` reads the persisted `pair_transaction_id`,
+  `counterLegOnAccount` searches account + types + amount +
+  date window, and only consults that column when the caller
+  passed `unpairedOnly: true` (the pairer does, chain
+  resolution does not).
+- **Two callers of `counterLegOnAccount` disagreeing about
+  which leg is right** — also expected. The predicates and the
+  ordering are all required parameters; read the call site
+  before assuming the query is wrong.
 - **The alias-bridge reverse direction not firing** — the
   partner's IBAN must resolve through
   `Import::ResolvesKnownCounterpartyIban` to the user's own
@@ -129,10 +149,24 @@ The behavioural contract for the `Transfers` module.
   re-typed before the pair sweep runs; this is why the
   resolver order in `ResolveChainLinksJob::handle` is
   load-bearing.
-- **`PairLookup::partnerFor` returns `null` for an unpaired
-  row.** Callers (e.g.
-  `Chains::PaypalFundingResolver::asnDirectArm`) branch on
-  null without inspecting the DB column directly.
+- **`PairLookup::partnerId` returns `null` for an unpaired
+  row.** Callers branch on null without inspecting the DB
+  column directly.
+- **`PairLookup::counterLegOnAccount` takes every bound from
+  its caller** — no default window, no assumed direction, no
+  assumed currency, no assumed view on already-paired rows, no
+  default ordering, and the amount is used as given rather than
+  negated inside the query. Held by
+  `Modules/Chains/tests/Contracts/PaypalFundingCounterLegParityTest.php`
+  and `Modules/Transfers/tests/Feature/CounterLegSearchTest.php`,
+  either of which fails if a caller grows its own copy of the
+  query again.
+- **Both counter-leg orderings are total.** `NearestToCentre`
+  and `EarliestBooked` alike run out through `booked_at` then
+  `id`, so two equidistant legs — or two legs booked at the
+  same instant — resolve by rule and not by whichever index
+  SQLite chose. Held by the two ordering cases in
+  `CounterLegSearchTest`.
 - **Cross-user reads / writes are invisible.** Every query
   filters by `$user->id`; a foreign user's transfer cannot
   pair with the current user's.
@@ -176,10 +210,11 @@ The behavioural contract for the `Transfers` module.
   - [`Import`](../import/how-to-test.md) — `TransactionImported`
     event, `ResolvesKnownCounterpartyIban` contract.
 - **Depended on by**
-  - [`Chains`](../chains/how-to-test.md) — `PairLookup` (read)
-    and `PairsTransferLegs` (write) both invoked by
-    `ResolveChainLinksJob` for the orphan-sweep + the
-    PayPal ASN-direct arm.
+  - [`Chains`](../chains/how-to-test.md) — `PairsTransferLegs`
+    (write) invoked by `ResolveChainLinksJob` for the
+    orphan-sweep, and `PairLookup::counterLegOnAccount` (read)
+    by `PaypalFundingResolver`'s deterministic arm, which also
+    names `CounterLegOrder::NearestToCentre`.
 
 ## Configuration + feature flags
 

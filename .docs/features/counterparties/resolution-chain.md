@@ -333,3 +333,6 @@ in depth.
   `unknown` rows step 7 produces.
 - [Garbage collection](garbage-collection.md) — the retention rules
   that decide when a resolved row is pruned again.
+- [`counterparties.slug` is a cross-platform key](slug-is-a-cross-platform-key.md)
+  — why the slugifier transliterates in PHP rather than through the C
+  library, and which stored slugs change with it.

@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Granska & bokför',
     'h1' => 'Granska allt vi hittade',
 
-    'lede_across' => 'transaktioner från',
-    'source' => 'källa|källor',
+    'lede_counts' => ':transactions från :sources.',
+    'source' => ':count källa|:count källor',
     'lede_confirm' => 'Bekräfta dina ingående saldon och bokför sedan.',
 
     'empty' => 'Inget att granska ännu. Släpp ett kontoutdrag i de tidigare stegen för att se dina transaktioner här.',
 
     'sb_eyebrow_label' => '🧮 INGÅENDE SALDON ·',
-    'account_detected' => 'KONTO HITTAT|KONTON HITTADE',
+    'account_detected' => ':count KONTO HITTAT|:count KONTON HITTADE',
     'sb_lede' => 'Vi hittade det ingående saldot för varje konto. Bekräfta eller redigera innan vi bokför.',
 
-    'txn' => 'transaktion|transaktioner',
+    'txn' => ':count transaktion|:count transaktioner',
     'to_commit' => 'att bokföra ·',
-    'already_imported' => 'redan importerade',
+    'already_imported' => ':count redan importerad|:count redan importerade',
     'commit_committing' => 'Bokför…',
     'commit_count' => 'Bokför allt (:count transaktion) →|Bokför allt (:count transaktioner) →',
     'commit_empty' => 'Bokför allt (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'FRÅN DITT KONTOUTDRAG',
         'from_ics' => 'FRÅN DINA ICS-KORTUTDRAG',
         'from_paypal' => 'FRÅN PAYPAL',
-        'row' => 'RAD|RADER',
+        'row' => ':count RAD|:count RADER',
         'badge_ready' => '✓ KLAR',
         'badge_empty' => 'TOM',
         'badge_error' => 'MÅSTE LADDAS UPP IGEN',

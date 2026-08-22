@@ -1,4 +1,6 @@
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Reports\Internal\Actions\TogglePin')
 {{--
     `/reports/library` saved-report index — Cards|List CRUD:
     list/open/edit/delete + pin toggle. Cards-default grid mirroring
@@ -17,7 +19,7 @@
             {{ Lang::get('reports::index.title') }}
         </h1>
         <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0; font-variant-numeric: tabular-nums;">
-            {{ Lang::choice('reports::index.saved_report', $rows->count()) }} · {{ $pinnedCount }}/3 {{ Lang::get('reports::index.pinned_count') }}
+            {{ Lang::choice('reports::index.saved_report', $rows->count()) }} · {{ Lang::choice('reports::index.pinned_count', $pinnedCount, ['max' => TogglePin::MAX_PINS]) }}
         </p>
     </header>
 
@@ -38,7 +40,7 @@
 
     {{-- Toolbar: New report link + Cards|List toggle ---------------- --}}
     <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap;">
-        <a href="{{ route('reports.index') }}" class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">
+        <a href="{{ Destination::Reports->url() }}" class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">
             {{ Lang::get('reports::index.build_new') }}
         </a>
 
@@ -66,7 +68,7 @@
             :heading="Lang::get('reports::index.empty.heading')"
             :body="Lang::get('reports::index.empty.body')"
         >
-            <a href="{{ route('reports.index') }}" class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="display: inline-block; text-decoration: none;">
+            <a href="{{ Destination::Reports->url() }}" class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="display: inline-block; text-decoration: none;">
                 {{ Lang::get('reports::index.empty.cta') }}
             </a>
         </x-core::empty-state>
@@ -107,8 +109,8 @@
                             class="opacity-0 group-hover:opacity-100 transition-opacity"
                             style="display: flex; align-items: center; gap: var(--space-2); margin-top: auto; padding-top: var(--space-2);"
                         >
-                            <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
-                            <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
+                            <a href="{{ Destination::Reports->url(['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
+                            <a href="{{ Destination::Reports->url(['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
 
                             <button
                                 type="button"
@@ -138,7 +140,7 @@
                     @foreach ($rows as $row)
                         <tr style="border-top: 1px solid var(--color-border);">
                             <td style="padding: var(--space-2) var(--space-3);">
-                                <a href="{{ route('reports.index', ['report' => $row->id]) }}" style="color: var(--color-text); text-decoration: none; font-weight: 600;">
+                                <a href="{{ Destination::Reports->url(['report' => $row->id]) }}" style="color: var(--color-text); text-decoration: none; font-weight: 600;">
                                     {{ $row->name }}
                                 </a>
                             </td>
@@ -168,8 +170,8 @@
                             @else
                                 <td style="padding: var(--space-2) var(--space-3); text-align: right;">
                                     <div style="display: inline-flex; align-items: center; gap: var(--space-2);">
-                                        <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
-                                        <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
+                                        <a href="{{ Destination::Reports->url(['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
+                                        <a href="{{ Destination::Reports->url(['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
 
                                         <button
                                             type="button"

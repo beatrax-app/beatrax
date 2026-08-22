@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Peržiūra ir įrašymas',
     'h1' => 'Peržiūrėk viską, ką radome',
 
-    'lede_across' => 'operacijų iš',
-    'source' => 'šaltinio|šaltinių|šaltinių',
+    'lede_counts' => ':transactions iš :sources.',
+    'source' => ':count šaltinio|:count šaltinių|:count šaltinių',
     'lede_confirm' => 'Patvirtink pradinius likučius ir įrašyk.',
 
     'empty' => 'Kol kas nėra ko peržiūrėti. Ankstesniuose žingsniuose įkelk išrašą, kad čia matytum savo operacijas.',
 
     'sb_eyebrow_label' => '🧮 PRADINIAI LIKUČIAI ·',
-    'account_detected' => 'APTIKTA SĄSKAITA|APTIKTOS SĄSKAITOS|APTIKTA SĄSKAITŲ',
+    'account_detected' => ':count APTIKTA SĄSKAITA|:count APTIKTOS SĄSKAITOS|:count APTIKTA SĄSKAITŲ',
     'sb_lede' => 'Nustatėme kiekvienos sąskaitos pradinį likutį. Prieš įrašydamas patvirtink arba pataisyk.',
 
-    'txn' => 'operacija|operacijos|operacijų',
+    'txn' => ':count operacija|:count operacijos|:count operacijų',
     'to_commit' => 'bus įrašyta ·',
-    'already_imported' => 'jau importuota',
+    'already_imported' => ':count jau importuota|:count jau importuota|:count jau importuota',
     'commit_committing' => 'Įrašoma…',
     'commit_count' => 'Įrašyti viską (:count operacija) →|Įrašyti viską (:count operacijos) →|Įrašyti viską (:count operacijų) →',
     'commit_empty' => 'Įrašyti viską (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'IŠ TAVO BANKO IŠRAŠO',
         'from_ics' => 'IŠ TAVO ICS KORTELĖS IŠRAŠŲ',
         'from_paypal' => 'IŠ PAYPAL',
-        'row' => 'EILUTĖ|EILUTĖS|EILUČIŲ',
+        'row' => ':count EILUTĖ|:count EILUTĖS|:count EILUČIŲ',
         'badge_ready' => '✓ PARUOŠTA',
         'badge_empty' => 'TUŠČIA',
         'badge_error' => 'REIKIA ĮKELTI IŠ NAUJO',

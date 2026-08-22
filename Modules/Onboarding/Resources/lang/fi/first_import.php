@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Tarkista ja kirjaa',
     'h1' => 'Tarkista kaikki löytämämme',
 
-    'lede_across' => 'tapahtumaa',
-    'source' => 'lähteestä|lähteestä',
+    'lede_counts' => ':transactions :sources.',
+    'source' => ':count lähteestä|:count lähteestä',
     'lede_confirm' => 'Vahvista alkusaldot ja kirjaa sitten.',
 
     'empty' => 'Ei vielä tarkistettavaa. Pudota tiliote aiemmissa vaiheissa, niin tapahtumasi näkyvät tässä.',
 
     'sb_eyebrow_label' => '🧮 ALKUSALDOT ·',
-    'account_detected' => 'TILI TUNNISTETTU|TILIÄ TUNNISTETTU',
+    'account_detected' => ':count TILI TUNNISTETTU|:count TILIÄ TUNNISTETTU',
     'sb_lede' => 'Tunnistimme kunkin tilin alkusaldon. Vahvista tai muokkaa ennen kirjausta.',
 
-    'txn' => 'tapahtuma|tapahtumaa',
+    'txn' => ':count tapahtuma|:count tapahtumaa',
     'to_commit' => 'kirjattavana ·',
-    'already_imported' => 'jo tuotu',
+    'already_imported' => ':count jo tuotu|:count jo tuotu',
     'commit_committing' => 'Kirjataan…',
     'commit_count' => 'Kirjaa kaikki (:count tapahtuma) →|Kirjaa kaikki (:count tapahtumaa) →',
     'commit_empty' => 'Kirjaa kaikki (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'PANKKITILIOTTEESTASI',
         'from_ics' => 'ICS-KORTTITILIOTTEISTASI',
         'from_paypal' => 'PAYPALISTA',
-        'row' => 'RIVI|RIVIÄ',
+        'row' => ':count RIVI|:count RIVIÄ',
         'badge_ready' => '✓ VALMIS',
         'badge_empty' => 'TYHJÄ',
         'badge_error' => 'VAATII UUDELLEENLÄHETYKSEN',

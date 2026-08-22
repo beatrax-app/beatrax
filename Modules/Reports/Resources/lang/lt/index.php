@@ -49,9 +49,7 @@ return [
         'not_found' => 'Ataskaita nerasta (galbūt ji ištrinta kitoje kortelėje).',
         'deleted' => 'Ataskaita ištrinta.',
     ],
-    // i18n-review: lt · pin_cap — the noun agrees with the cap, which now
-    // arrives as :max rather than as the digit. ataskaitų is the genitive iki takes; a bare numeral would need ataskaitos.
-    'pin_cap' => 'Gali prisegti iki :max ataskaitų. Kad pridėtum šią, vieną atsek.',
+    'pin_cap' => 'Gali prisegti :max ataskaitą. Kad pridėtum šią, ją atsek.|Gali prisegti iki :max ataskaitų. Kad pridėtum šią, vieną atsek.|Gali prisegti iki :max ataskaitų. Kad pridėtum šią, vieną atsek.',
 
     'summary' => [
         'metric' => [

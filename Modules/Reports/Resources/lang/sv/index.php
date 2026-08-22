@@ -49,7 +49,7 @@ return [
         'not_found' => 'Rapporten hittades inte (den kan ha tagits bort i en annan flik).',
         'deleted' => 'Rapporten borttagen.',
     ],
-    'pin_cap' => 'Du kan fästa upp till :max rapporter. Lossa en för att lägga till den här.',
+    'pin_cap' => 'Du kan fästa :max rapport. Lossa den för att lägga till den här.|Du kan fästa upp till :max rapporter. Lossa en för att lägga till den här.',
 
     'summary' => [
         'metric' => [

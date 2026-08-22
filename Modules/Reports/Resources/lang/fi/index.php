@@ -49,7 +49,7 @@ return [
         'not_found' => 'Raporttia ei löytynyt (se on ehkä poistettu toisessa välilehdessä).',
         'deleted' => 'Raportti poistettu.',
     ],
-    'pin_cap' => 'Voit kiinnittää enintään :max raporttia. Poista jonkin kiinnitys, niin voit lisätä tämän.',
+    'pin_cap' => 'Voit kiinnittää :max raportin. Poista sen kiinnitys, niin voit lisätä tämän.|Voit kiinnittää enintään :max raporttia. Poista jonkin kiinnitys, niin voit lisätä tämän.',
 
     'summary' => [
         'metric' => [

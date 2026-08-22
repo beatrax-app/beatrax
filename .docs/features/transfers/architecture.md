@@ -6,7 +6,8 @@ treats the pair as a single internal movement, not as two
 independent transactions. It owns the deterministic matcher behind
 `transactions.pair_transaction_id` (the column itself is owned by
 [`Ledger`](../ledger/architecture.md)'s migration) and the read-side
-`PairLookup` query.
+`PairLookup` queries — both the persisted-pair read and the
+counter-leg search a neighbour runs before any pair exists.
 
 ## What this module is for
 
@@ -50,8 +51,18 @@ What the module explicitly does NOT do:
     the wizard's interleaved upload flow left mis-typed.
 - **Services/**
   - `PairLookup::isPaired($txId, $user): bool` and
-    `PairLookup::partnerId($txId, $user): ?int` — read-side
-    queries consumed by `Chains::PaypalFundingResolver::asnDirectArm`.
+    `PairLookup::partnerId($txId, $user): ?int` — read the
+    persisted `pair_transaction_id` for a row.
+  - `PairLookup::counterLegOnAccount($accountId, $amountMinor,
+    $types, $bookedAt, $windowDays, $currency, $unpairedOnly,
+    $excludeTransactionId, $order, $user): ?int` — the
+    counter-leg SEARCH, for a caller holding the far side's
+    account and amount rather than a paired row's id. Two
+    callers: `Chains::PaypalFundingResolver`'s deterministic
+    arm, and this module's own `TransferPairer` forward arm.
+  - `CounterLegOrder` — which of several counter-legs wins.
+    `NearestToCentre` for chain resolution, `EarliestBooked`
+    for the pairer.
 
 `Internal/` houses the matcher + listener:
 
@@ -66,6 +77,10 @@ What the module explicitly does NOT do:
   leg has a `counterparty_iban` matching the user's own
   account; reverse = firing leg has no IBAN, partner's IBAN
   resolves through `Import::ResolvesKnownCounterpartyIban`).
+  The forward arm reconciles the IBAN and then hands the
+  candidate search to `PairLookup::counterLegOnAccount`; only
+  the reverse arm still runs a SELECT of its own, because it
+  reads back ciphertext to match in PHP rather than in SQL.
 - **Internal/Listeners/PairTransferCandidates** — listens for
   `Import::TransactionImported`; calls
   `TransferPairer::pairOne()` per row inside the import
@@ -106,9 +121,20 @@ signal and the returned value is valid plaintext.
   `pair_transaction_id` columns are written bidirectionally
   inside the same transaction frame.
 - `PairLookup::isPaired($txId, $user)` / `PairLookup::partnerId($txId, $user)`
-  — the read-side pair query. Nothing outside this module calls it:
-  `Chains::PaypalFundingResolver` computes the ASN-direct funding arm
-  from its own `findPartnerOnAccount()` lookup instead.
+  — the read-side pair query, over the persisted
+  `pair_transaction_id` column. Both answer "what is this row
+  already paired to"; neither searches.
+- `PairLookup::counterLegOnAccount(...)` — the search that answers
+  "which row on THIS account, of THESE types, for THIS amount, in
+  THIS window". It writes nothing, and whether an existing
+  `pair_transaction_id` disqualifies a row is the caller's call:
+  the pairer says yes, chain resolution says no, because a PayPal
+  funding leg the matcher will never pair is still a valid answer.
+- The two callers also disagree on which of several candidates
+  wins, so `CounterLegOrder` is a parameter rather than a default.
+  Both orderings end in `booked_at` then `id`: an equidistant or
+  same-day pair used to resolve on whichever index SQLite picked,
+  which made the chosen leg an accident of the query planner.
 
 The module raises no events; it persists in response to the
 upstream `TransactionImported`.
@@ -122,9 +148,14 @@ Import::ConfirmImport persists transaction
   → dispatch TransactionImported($transactionId)
        → PairTransferCandidates::handle($event)
             → TransferPairer::pairOne($tx, $user)
-                 → SELECT candidate partner (amount opposite,
-                                              ±WINDOW_DAYS,
-                                              both legs unpaired)
+                 → forward arm: resolve the partner account, then
+                      PairLookup::counterLegOnAccount(
+                        $partnerAccountId, -$amountMinor,
+                        [TransferOut, TransferIn], $bookedAt,
+                        WINDOW_DAYS, $currency, unpairedOnly: true,
+                        exclude: $tx->id, EarliestBooked, $user)
+                 → reverse arm: SELECT the narrow candidate set,
+                      then decrypt-and-match in PHP
                  → if match found:
                       UPDATE transactions SET pair_transaction_id = ?
                         WHERE id IN (a, b)  (bidirectional)
@@ -145,9 +176,23 @@ Chains::ResolveChainLinksJob::handle
 The read-side from chain resolution:
 
 ```
-Chains::PaypalFundingResolver::asnDirectArm
-  → for each unfunded PayPal expense:
-       → PairLookup::partnerId($candidateAsnLeg, $user)
-       → confirm partner is the PayPal leg expected
+Chains::PaypalFundingResolver deterministic arm
+  → for each unfunded PayPal transfer_out / expense:
+       → read the destination IBAN out of the stored PayPal event
+       → resolve it to one of the user's accounts
+       → PairLookup::counterLegOnAccount($accountId,
+                                         -$amountMinor,
+                                         [TransferIn],
+                                         $bookedAt,
+                                         DATE_WINDOW_DAYS,
+                                         currency: null,
+                                         unpairedOnly: false,
+                                         exclude: null,
+                                         NearestToCentre,
+                                         $user)
        → write chain_links row
 ```
+
+The resolver's other two arms (ASN-direct, fuzzy) do not go
+through `PairLookup`: neither starts from a known account id, so
+neither can ask this question.

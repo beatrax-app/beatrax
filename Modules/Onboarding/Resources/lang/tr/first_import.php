@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Gözden geçir ve kaydet',
     'h1' => 'Bulduğumuz her şeyi gözden geçir',
 
-    'lede_across' => 'işlem —',
-    'source' => 'kaynaktan',
+    'lede_counts' => ':transactions — :sources.',
+    'source' => ':count kaynaktan',
     'lede_confirm' => 'Açılış bakiyelerini onayla, sonra hepsini kaydet.',
 
     'empty' => 'Gözden geçirilecek bir şey yok. İşlemlerini burada görmek için önceki adımlarda bir hesap ekstresi bırak.',
 
     'sb_eyebrow_label' => '🧮 AÇILIŞ BAKİYELERİ ·',
-    'account_detected' => 'HESAP ALGILANDI',
+    'account_detected' => ':count HESAP ALGILANDI',
     'sb_lede' => 'Her hesabın açılış bakiyesini algıladık. Kaydetmeden önce onayla veya düzenle.',
 
-    'txn' => 'işlem',
+    'txn' => ':count işlem',
     'to_commit' => 'kaydedilecek ·',
-    'already_imported' => 'zaten içe aktarıldı',
+    'already_imported' => ':count zaten içe aktarıldı',
     'commit_committing' => 'Kaydediliyor…',
     'commit_count' => 'Hepsini kaydet (:count işlem) →',
     'commit_empty' => 'Hepsini kaydet (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'BANKA EKSTRENDEN',
         'from_ics' => 'ICS KART EKSTRELERİNDEN',
         'from_paypal' => "PAYPAL'DAN",
-        'row' => 'SATIR',
+        'row' => ':count SATIR',
         'badge_ready' => '✓ HAZIR',
         'badge_empty' => 'BOŞ',
         'badge_error' => 'YENİDEN YÜKLENMELİ',

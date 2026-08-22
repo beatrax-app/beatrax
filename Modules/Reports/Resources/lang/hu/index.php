@@ -49,7 +49,7 @@ return [
         'not_found' => 'A jelentés nem található (lehet, hogy egy másik lapon törölték).',
         'deleted' => 'Jelentés törölve.',
     ],
-    'pin_cap' => 'Legfeljebb :max jelentést rögzíthetsz. Vegyél le egyet, hogy ezt hozzáadhasd.',
+    'pin_cap' => 'Legfeljebb :max jelentést rögzíthetsz. Vedd le azt, hogy ezt hozzáadhasd.|Legfeljebb :max jelentést rögzíthetsz. Vegyél le egyet, hogy ezt hozzáadhasd.',
 
     'summary' => [
         'metric' => [

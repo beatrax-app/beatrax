@@ -49,7 +49,7 @@ return [
         'not_found' => 'Rapporten ble ikke funnet (den kan ha blitt slettet i en annen fane).',
         'deleted' => 'Rapporten er slettet.',
     ],
-    'pin_cap' => 'Du kan feste opptil :max rapporter. Løsne en for å legge til denne.',
+    'pin_cap' => 'Du kan feste :max rapport. Løsne den for å legge til denne.|Du kan feste opptil :max rapporter. Løsne en for å legge til denne.',
 
     'summary' => [
         'metric' => [

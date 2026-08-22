@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Revisar y confirmar',
     'h1' => 'Revisa todo lo que hemos encontrado',
 
-    'lede_across' => 'transacciones repartidas en',
-    'source' => 'fuente|fuentes',
+    'lede_counts' => ':transactions en :sources.',
+    'source' => ':count fuente|:count fuentes',
     'lede_confirm' => 'Comprueba tus saldos iniciales y confirma.',
 
     'empty' => 'Aún no hay nada que revisar. Suelta un extracto en los pasos anteriores para ver aquí tus transacciones.',
 
     'sb_eyebrow_label' => '🧮 SALDOS INICIALES ·',
-    'account_detected' => 'CUENTA DETECTADA|CUENTAS DETECTADAS',
+    'account_detected' => ':count CUENTA DETECTADA|:count CUENTAS DETECTADAS',
     'sb_lede' => 'Hemos detectado el saldo inicial de cada cuenta. Confírmalo o modifícalo antes de continuar.',
 
-    'txn' => 'transacción|transacciones',
+    'txn' => ':count transacción|:count transacciones',
     'to_commit' => 'por confirmar ·',
-    'already_imported' => 'ya importadas',
+    'already_imported' => ':count ya importada|:count ya importadas',
     'commit_committing' => 'Confirmando…',
     'commit_count' => 'Confirmarlo todo (:count transacción) →|Confirmarlo todo (:count transacciones) →',
     'commit_empty' => 'Confirmarlo todo (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'DE TU EXTRACTO BANCARIO',
         'from_ics' => 'DE TUS EXTRACTOS DE TARJETA ICS',
         'from_paypal' => 'DE PAYPAL',
-        'row' => 'FILA|FILAS',
+        'row' => ':count FILA|:count FILAS',
         'badge_ready' => '✓ LISTO',
         'badge_empty' => 'VACÍO',
         'badge_error' => 'VUELVE A SUBIRLO',

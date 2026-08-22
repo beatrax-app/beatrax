@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Bekijken & vastleggen',
     'h1' => 'Bekijk alles wat we vonden',
 
-    'lede_across' => 'transacties over',
-    'source' => 'bron|bronnen',
+    'lede_counts' => ':transactions over :sources.',
+    'source' => ':count bron|:count bronnen',
     'lede_confirm' => 'Bevestig je beginsaldo’s en leg dan vast.',
 
     'empty' => 'Nog niets om te bekijken. Zet een afschrift neer bij de vorige stappen om je transacties hier te zien.',
 
     'sb_eyebrow_label' => '🧮 BEGINSALDO’S ·',
-    'account_detected' => 'REKENING GEDETECTEERD|REKENINGEN GEDETECTEERD',
+    'account_detected' => ':count REKENING GEDETECTEERD|:count REKENINGEN GEDETECTEERD',
     'sb_lede' => 'We hebben het beginsaldo voor elke rekening gedetecteerd. Bevestig of bewerk het voordat we vastleggen.',
 
-    'txn' => 'transactie|transacties',
+    'txn' => ':count transactie|:count transacties',
     'to_commit' => 'om vast te leggen ·',
-    'already_imported' => 'al geïmporteerd',
+    'already_imported' => ':count al geïmporteerd|:count al geïmporteerd',
     'commit_committing' => 'Bezig met vastleggen…',
     'commit_count' => 'Leg alles vast (:count transactie) →|Leg alles vast (:count transacties) →',
     'commit_empty' => 'Leg alles vast (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'VAN JE BANKAFSCHRIFT',
         'from_ics' => 'VAN JE ICS-KAARTAFSCHRIFTEN',
         'from_paypal' => 'VAN PAYPAL',
-        'row' => 'RIJ|RIJEN',
+        'row' => ':count RIJ|:count RIJEN',
         'badge_ready' => '✓ KLAAR',
         'badge_empty' => 'LEEG',
         'badge_error' => 'OPNIEUW UPLOADEN NODIG',

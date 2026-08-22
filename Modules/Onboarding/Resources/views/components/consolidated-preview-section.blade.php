@@ -54,7 +54,6 @@
     };
 @endphp
 <section
-    class="preview-section"
     aria-labelledby="preview-section-{{ $section->sourceFormat }}-eyebrow"
 >
     <p
@@ -62,7 +61,7 @@
         class="preview-section-eyebrow"
     >
         <span class="preview-section-label">{{ $eyebrowLabel }}</span>
-        <span class="preview-section-count">· {{ $rowCount }} {{ Lang::choice('onboarding::first_import.section.row', $rowCount) }}</span>
+        <span class="preview-section-count">· {{ Lang::choice('onboarding::first_import.section.row', $rowCount) }}</span>
         <span class="{{ $badgeClass }}">· {{ $statusBadge }}</span>
     </p>
 

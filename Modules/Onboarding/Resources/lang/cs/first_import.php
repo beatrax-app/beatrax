@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Kontrola a zápis',
     'h1' => 'Zkontroluj všechno, co jsme našli',
 
-    'lede_across' => 'transakcí z',
-    'source' => 'zdroje|zdrojů|zdrojů',
+    'lede_counts' => ':transactions z :sources.',
+    'source' => ':count zdroje|:count zdrojů|:count zdrojů',
     'lede_confirm' => 'Potvrď počáteční zůstatky a pak vše zapiš.',
 
     'empty' => 'Zatím není co kontrolovat. Vlož v předchozích krocích výpis z účtu a uvidíš tu své transakce.',
 
     'sb_eyebrow_label' => '🧮 POČÁTEČNÍ ZŮSTATKY ·',
-    'account_detected' => 'NALEZENÝ ÚČET|NALEZENÉ ÚČTY|NALEZENÝCH ÚČTŮ',
+    'account_detected' => ':count NALEZENÝ ÚČET|:count NALEZENÉ ÚČTY|:count NALEZENÝCH ÚČTŮ',
     'sb_lede' => 'U každého účtu jsme zjistili počáteční zůstatek. Před zápisem ho potvrď nebo uprav.',
 
-    'txn' => 'transakce|transakce|transakcí',
+    'txn' => ':count transakce|:count transakce|:count transakcí',
     'to_commit' => 'k zápisu ·',
-    'already_imported' => 'už naimportováno',
+    'already_imported' => ':count už naimportováno|:count už naimportováno|:count už naimportováno',
     'commit_committing' => 'Zapisuje se…',
     'commit_count' => 'Zapsat vše (:count transakce) →|Zapsat vše (:count transakce) →|Zapsat vše (:count transakcí) →',
     'commit_empty' => 'Zapsat vše (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'Z TVÉHO BANKOVNÍHO VÝPISU',
         'from_ics' => 'Z TVÝCH VÝPISŮ KARTY ICS',
         'from_paypal' => 'Z PAYPAL',
-        'row' => 'ŘÁDEK|ŘÁDKY|ŘÁDKŮ',
+        'row' => ':count ŘÁDEK|:count ŘÁDKY|:count ŘÁDKŮ',
         'badge_ready' => '✓ PŘIPRAVENO',
         'badge_empty' => 'PRÁZDNÉ',
         'badge_error' => 'NUTNO NAHRÁT ZNOVU',

@@ -49,7 +49,7 @@ return [
         'not_found' => 'Atskaite nav atrasta (iespējams, tā ir izdzēsta citā cilnē).',
         'deleted' => 'Atskaite izdzēsta.',
     ],
-    'pin_cap' => 'Varat piespraust līdz :max atskaitēm. Atspraužiet kādu, lai pievienotu šo.',
+    'pin_cap' => 'Varat piespraust :max atskaiti. Atspraudiet to, lai pievienotu šo.|Varat piespraust līdz :max atskaitēm. Atspraužiet kādu, lai pievienotu šo.|Varat piespraust līdz :max atskaitēm. Atspraužiet kādu, lai pievienotu šo.',
 
     'summary' => [
         'metric' => [

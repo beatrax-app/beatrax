@@ -48,7 +48,7 @@ return [
         'not_found' => 'Rapport niet gevonden (het is mogelijk in een ander tabblad verwijderd).',
         'deleted' => 'Rapport verwijderd.',
     ],
-    'pin_cap' => 'Je kunt maximaal :max rapporten vastzetten. Maak er een los om dit toe te voegen.',
+    'pin_cap' => 'Je kunt :max rapport vastzetten. Maak dat los om dit toe te voegen.|Je kunt maximaal :max rapporten vastzetten. Maak er een los om dit toe te voegen.',
 
     'summary' => [
         'metric' => [

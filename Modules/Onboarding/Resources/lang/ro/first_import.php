@@ -6,19 +6,19 @@ return [
     'eyebrow' => 'Verificare și finalizare',
     'h1' => 'Verifică tot ce am găsit',
 
-    'lede_across' => 'tranzacții din',
-    'source' => 'sursă|surse|de surse',
+    'lede_counts' => ':transactions din :sources.',
+    'source' => ':count sursă|:count surse|:count de surse',
     'lede_confirm' => 'Confirmă soldurile inițiale, apoi finalizează.',
 
     'empty' => 'Încă nu e nimic de verificat. Trage un extras de cont la pașii anteriori ca să îți vezi tranzacțiile aici.',
 
     'sb_eyebrow_label' => '🧮 SOLDURI INIȚIALE ·',
-    'account_detected' => 'CONT DETECTAT|CONTURI DETECTATE|DE CONTURI DETECTATE',
+    'account_detected' => ':count CONT DETECTAT|:count CONTURI DETECTATE|:count DE CONTURI DETECTATE',
     'sb_lede' => 'Am detectat soldul inițial pentru fiecare cont. Confirmă-l sau modifică-l înainte să finalizăm.',
 
-    'txn' => 'tranzacție|tranzacții|de tranzacții',
+    'txn' => ':count tranzacție|:count tranzacții|:count de tranzacții',
     'to_commit' => 'de finalizat ·',
-    'already_imported' => 'deja importate',
+    'already_imported' => ':count deja importată|:count deja importate|:count de deja importate',
     'commit_committing' => 'Se finalizează…',
     'commit_count' => 'Finalizează tot (:count tranzacție) →|Finalizează tot (:count tranzacții) →|Finalizează tot (:count de tranzacții) →',
     'commit_empty' => 'Finalizează tot (—) →',
@@ -34,7 +34,7 @@ return [
         'from_bank' => 'DIN EXTRASUL TĂU DE CONT',
         'from_ics' => 'DIN EXTRASELE TALE DE CARD ICS',
         'from_paypal' => 'DIN PAYPAL',
-        'row' => 'RÂND|RÂNDURI|DE RÂNDURI',
+        'row' => ':count RÂND|:count RÂNDURI|:count DE RÂNDURI',
         'badge_ready' => '✓ GATA',
         'badge_empty' => 'GOL',
         'badge_error' => 'NECESITĂ REÎNCĂRCARE',

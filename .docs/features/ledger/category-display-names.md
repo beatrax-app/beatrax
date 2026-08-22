@@ -47,6 +47,7 @@ CategoryDisplayName::columns($table, $alias = 'category'): list<string>
 CategoryDisplayName::bareColumns($table = ''): list<string>
 CategoryDisplayName::fromRow($row, $alias = ''): ?string
 CategoryDisplayName::isDefaultRow($row, $alias = ''): bool
+CategoryDisplayName::displayNamesBySlug(): array<string, string>
 ```
 
 - **`resolve()`** is the rule itself. A rename or a row with no slug
@@ -74,6 +75,12 @@ CategoryDisplayName::isDefaultRow($row, $alias = ''): bool
   here — copy resolved in the reader's language rather than the queue
   worker's. `BudgetProgressQuery` and `DemoNotificationsSeeder` read it
   to keep a name resolvable at display time.
+- **`displayNamesBySlug()`** inverts the question: instead of "what does
+  this row show", "which slugs show what". It walks the keys of
+  `categorization::categories` in the reader's language and resolves each
+  through `resolve()`, so a slug with no line for the reader is absent —
+  such a row shows its stored `name`, which is a column and matches in
+  SQL. It exists for the search sites below, and it reads no database.
 
 `Modules\Ledger\Models\Category` exposes the same answer as a
 `displayName` attribute for Eloquent reads.
@@ -89,11 +96,24 @@ Two shapes work, and which is cheaper depends on the query:
 
 1. **Resolve, then compare in PHP.** Select
    `CategoryDisplayName::columns(...)` for the candidate rows, resolve
-   each, and match. The category set is small — the seeded tree plus
-   whatever the user added — so this is what both Search sites do.
-2. **Compare against the slug's translation.** Only worth it where the
-   candidate set is genuinely large, which no category query in this
-   repo currently is.
+   each, and match. Simple, and right for a query that was going to read
+   the rows anyway — a picker listing every category, say.
+2. **Name the matching slugs first, then match in SQL.**
+   `displayNamesBySlug()` says which slugs a term matches without touching
+   the database; the row match is then
+   `name LIKE ? OR (name_is_default AND slug IN (…))`, which is one
+   bounded statement and keeps whatever `LIMIT` the query had.
+
+Shape 1 costs the whole visible category set per call, so it belongs
+nowhere a keystroke reaches. **Both Search sites use shape 2**: matching
+moved to PHP when this seam landed and took their `LIMIT 3` with it, and
+the ⌘K palette went from reading three category rows to reading every one
+the user can see, on every character typed. The two arms are exactly the
+union the PHP loop computed — a default row matches on its translation, a
+row of any provenance matches on its stored `name` — with the one
+difference that SQL's `LIKE` folds case for ASCII only, which is what
+every other branch of `EntityNameSearch` and `resolveAccountNamesToIds`
+already do.
 
 **Keep matching the stored name as well.** Someone who has seen the
 English name, or who types a slug-ish term, should not suddenly fail;
@@ -111,9 +131,13 @@ the shape to recognise:
   `category:Boodschappen` found nothing while `category:Groceries`
   worked — the exact inversion of what was on their screen.
 - `EntityNameSearch::categoryMatches()` backs the ⌘K palette's
-  category section. Same inversion, and it also had to move its result
-  cap from SQL to PHP once matching moved there, exactly as the
-  counterparty branch above it already had.
+  category section. Same inversion.
+
+Both were first repaired by resolving every visible row in PHP, which
+fixed the inversion and cost the reader a whole-table read per keystroke.
+They resolve the slugs first now and match in SQL, which is shape 2
+above; `CategorySearchStaysBoundedTest` counts the rows each site reads
+and pins the answers either side of it unchanged.
 
 Both are pinned by
 [`CategoryNameSearchFollowsTheReaderTest`](../../../Modules/Search/tests/Feature/CategoryNameSearchFollowsTheReaderTest.php),
@@ -130,7 +154,9 @@ spreads `columns($table, $alias)` and reads it back with the matching
 `CashBookPage`, `ReportBuilder`, `EntityNameSearch`, `SearchQuery`,
 `CategorySpendTrendQuery`, `CategoryAncestry`, `TransactionsList` —
 spreads `bareColumns()` and reads it back with the default
-`fromRow($row)`.
+`fromRow($row)`. The two Search sites do both: they select the bare
+columns for the rows SQL narrowed to, and they call
+`displayNamesBySlug()` to do the narrowing.
 
 `bareColumns()` exists because the seam used to cover only half its own
 read sites: `columns($table, '')` emitted the `_name`, `_slug`,
