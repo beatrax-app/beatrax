@@ -79,7 +79,7 @@ it('submitCode() import branch sends PAIR_RESPONDER_ACCEPT to the desktop\'s own
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
 
     Livewire::test(MobilePairingScan::class)
-        ->assertSet('importMode', true)
+        ->assertSet('importing', true)
         ->call('submitCode', $qrPayload)
         ->assertSet('step', 'confirm')
         ->assertSet('flashMessage', '');
@@ -140,7 +140,7 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
 
     // The phone scans and accepts, which sends PAIR_RESPONDER_ACCEPT.
     $component = Livewire::test(MobilePairingScan::class)
-        ->assertSet('importMode', true)
+        ->assertSet('importing', true)
         ->call('submitCode', $qrPayload)
         ->assertSet('step', 'confirm');
 

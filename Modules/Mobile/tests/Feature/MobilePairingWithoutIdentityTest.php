@@ -177,7 +177,7 @@ it('pairs from the plain scan screen too, the only sync entry point a phone has'
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
 
     Livewire::test(MobilePairingScan::class)
-        ->assertSet('importMode', false)
+        ->assertSet('importing', false)
         ->call('submitCode', $qr['payload'])
         ->assertSet('flashMessage', '')
         ->assertSet('step', 'confirm');

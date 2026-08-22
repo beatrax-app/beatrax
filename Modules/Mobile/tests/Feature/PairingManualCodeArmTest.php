@@ -2,17 +2,22 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
+use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
+use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Enums\PairingWizardStep;
 
 uses(RefreshDatabase::class);
 
@@ -51,6 +56,29 @@ function manualArmUser(string $prefix): User
     ]);
 }
 
+function manualArmUnlockedIdentity(User $user, Session $session): void
+{
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $identityService->generateAndPersist((int) $user->id, $session);
+}
+
+/** @return string the word code a desktop on this network is now answering for */
+function manualArmDesktopOffering(): string
+{
+    manualArmDiscovers([new DiscoveredPeer('desktop-lan', '192.0.2.44', 51337, DiscoveryMode::Mdns)]);
+    Http::fake(['*' => Http::response([
+        'device_id' => 'desktop-initiator',
+        'ed25519' => bin2hex(random_bytes(32)),
+        'x25519' => bin2hex(random_bytes(32)),
+        'name' => 'The desktop',
+    ])]);
+
+    return (new WordCodeEncoder)->encode(bin2hex(random_bytes(16)));
+}
+
 function manualArmBlade(): string
 {
     return (string) file_get_contents(
@@ -70,15 +98,27 @@ it('submits a typed code without asking the container for the QR payload', funct
         ->and($blade)->not->toContain('wire:click="submitCode"');
 });
 
-it('reads the import mode off the request that opened the screen', function (): void {
+// The query param is recorded, never trusted: mount() writes it into the durable
+// marker and reads the marker back, so a relaunch that drops ?mode=import still
+// mounts a screen that knows it is mid-import.
+it('records the import intent durably from the request that opened the screen', function (): void {
     $user = manualArmUser('armgate');
     test()->actingAs($user);
 
+    /** @var MobileImportIntentGate $importIntent */
+    $importIntent = app(MobileImportIntentGate::class);
+
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
-    Livewire::test(MobilePairingScan::class)->assertSet('importMode', false);
+    Livewire::test(MobilePairingScan::class)->assertSet('importing', false);
+    expect($importIntent->isImporting((int) $user->id))->toBeFalse();
 
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
-    Livewire::test(MobilePairingScan::class)->assertSet('importMode', true);
+    Livewire::test(MobilePairingScan::class)->assertSet('importing', true);
+    expect($importIntent->isImporting((int) $user->id))->toBeTrue();
+
+    // The re-entry the marker exists for: same device, same flow, no query string.
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
+    Livewire::test(MobilePairingScan::class)->assertSet('importing', true);
 });
 
 // The arm was once hidden from the import flow, because a typed code carries the
@@ -108,7 +148,7 @@ it('offers the typed-code arm while importing, not only outside import', functio
         }
     }
 
-    expect(in_array('$importMode', $stack, true))->toBeFalse(
+    expect(in_array('$importing', $stack, true))->toBeFalse(
         'a phone whose camera is unusable must still have a route into the import',
     );
 });
@@ -127,7 +167,7 @@ it('answers a typed code in import mode by looking for the other device on the n
     $wordCode = (new WordCodeEncoder)->encode(bin2hex(random_bytes(16)));
 
     Livewire::test(MobilePairingScan::class)
-        ->assertSet('importMode', true)
+        ->assertSet('importing', true)
         ->set('wordCode', $wordCode)
         ->call('submitCode', null)
         ->assertSet('step', 'enter_code')
@@ -208,4 +248,29 @@ it('leaves no reference to the removed dead-end copy', function (): void {
     $en = require base_path('Modules/Mobile/Resources/lang/en/pairing.php');
 
     expect($en['errors'] ?? [])->not->toHaveKey('import_needs_qr');
+});
+
+// A phone holds its own database, so the row a typed code names exists only on
+// the desktop that issued it: without the LAN lookup that seeds a local one,
+// acceptWordCode() has nothing to accept against and every code reads as
+// expired. The QR arm was ungated for the same reason one round earlier.
+it('pairs from a typed code entered outside import mode', function (): void {
+    $user = manualArmUser('armplain');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    manualArmUnlockedIdentity($user, $session);
+
+    $wordCode = manualArmDesktopOffering();
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
+
+    Livewire::test(MobilePairingScan::class)
+        ->assertSet('importing', false)
+        ->set('wordCode', $wordCode)
+        ->call('submitCode', null)
+        ->assertSet('flashMessage', '')
+        ->assertSet('step', PairingWizardStep::Confirm->value)
+        ->assertSet('pairingTokenId', fn (string $id): bool => $id !== '');
 });

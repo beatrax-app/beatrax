@@ -32,7 +32,7 @@ trait AcceptsPairingCode
      * @return InitiatorIdentity|false|null `false` when the code named an
      *                                      identity that could not be read,
      *                                      the reason already flashed; `null`
-     *                                      when a typed code carries none.
+     *                                      when the entry box was empty.
      */
     private function initiatorIdentity(?string $scannedPayload, QrScanBridge $qrBridge, PairingGateway $gateway): array|false|null
     {
@@ -49,6 +49,10 @@ trait AcceptsPairingCode
         return $this->typedCodeIdentity($gateway);
     }
 
+    // Asked for EVERY typed code, not just an import, for the reason the QR is
+    // read on every scan: a typed code names a row that only ever existed on the
+    // desktop that issued it, so with nothing seeded here accept() has nothing
+    // to bind and a good code comes back "invalid or expired".
     /**
      * @return InitiatorIdentity|false|null `false` when the LAN was asked and
      *                                      answered no usable identity, the
@@ -57,7 +61,10 @@ trait AcceptsPairingCode
      */
     private function typedCodeIdentity(PairingGateway $gateway): array|false|null
     {
-        if (! $this->importMode) {
+        // An empty box is not a code the network refused, and answering it with
+        // a code error buries the real blocker: a phone with no app lock can
+        // mint no identity at all, and that is what it needs to be told.
+        if ($this->wordCode === '') {
             return null;
         }
 

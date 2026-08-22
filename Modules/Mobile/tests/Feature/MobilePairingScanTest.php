@@ -7,7 +7,10 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -20,6 +23,9 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
+use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
+use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
+use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Public\Enums\PairingWizardStep;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\PairingSafetyDigest;
@@ -73,6 +79,38 @@ function pairingScanIssueToken(User $user): array
     $qrPayload = $qrBuilder->buildUri($initiatorDeviceId, $initiatorEd, $initiatorKx, $token);
 
     return ['token' => $token, 'qrPayload' => $qrPayload, 'initiatorDeviceId' => $initiatorDeviceId];
+}
+
+// A typed code carries the token alone, and the row it names was issued on the
+// desktop — a phone holds its own database and never has one. So every word-code
+// test stands up a desktop ANSWERING on the network, rather than issuing the
+// token into the phone's own database, which is the row no device ever holds.
+/**
+ * @return array{token: string, initiatorDeviceId: string}
+ */
+function pairingScanDesktopOnLan(): array
+{
+    $initiatorDeviceId = 'desktop-on-lan-'.bin2hex(random_bytes(4));
+
+    app()->instance(PeerDiscovery::class, new class implements PeerDiscovery
+    {
+        /**
+         * @return list<DiscoveredPeer>
+         */
+        public function browse(string $serviceType, float $timeoutSeconds = 2.0): array
+        {
+            return [new DiscoveredPeer('desktop-lan', '192.0.2.44', 51337, DiscoveryMode::Mdns)];
+        }
+    });
+
+    Http::fake(['*' => Http::response([
+        'device_id' => $initiatorDeviceId,
+        'ed25519' => bin2hex(random_bytes(32)),
+        'x25519' => bin2hex(random_bytes(32)),
+        'name' => 'The desktop',
+    ])]);
+
+    return ['token' => bin2hex(random_bytes(16)), 'initiatorDeviceId' => $initiatorDeviceId];
 }
 
 it('QrScanBridge isAvailable() returns false without the native facade — never fatal in tests/web', function (): void {
@@ -200,11 +238,11 @@ it('the typed word-code fallback also auto-advances to the confirm step', functi
     /** @var Session $session */
     $session = app(Session::class);
     pairingScanSetUpIdentity($user, $session);
-    $issued = pairingScanIssueToken($user);
+    $offered = pairingScanDesktopOnLan();
 
     /** @var WordCodeEncoder $encoder */
     $encoder = app(WordCodeEncoder::class);
-    $wordCode = $encoder->encode($issued['token']);
+    $wordCode = $encoder->encode($offered['token']);
 
     Livewire::test(MobilePairingScan::class)
         ->set('wordCode', $wordCode)
@@ -213,7 +251,7 @@ it('the typed word-code fallback also auto-advances to the confirm step', functi
         ->assertSet('flashMessage', '');
 });
 
-it('a bad typed word-code stays on enter_code with the invalid-code flash', function (): void {
+it('a bad typed word-code stays on enter_code with the code-not-accepted flash', function (): void {
     $user = pairingScanTestUser('mobile-pair-wordcode-bad');
     test()->actingAs($user);
 
@@ -225,7 +263,7 @@ it('a bad typed word-code stays on enter_code with the invalid-code flash', func
         ->set('wordCode', 'ZZZZ-ZZZZ-ZZZZ-ZZZZ')
         ->call('submitCode', null)
         ->assertSet('step', 'enter_code')
-        ->assertSee('This code is invalid or has expired.');
+        ->assertSee(Lang::get('mobile::pairing.errors.code_not_accepted'));
 });
 
 it('BOTH the QR path and the word-code path resolve to the identical PairingGateway::confirm() trust gate', function (): void {
@@ -261,7 +299,7 @@ it('BOTH the QR path and the word-code path resolve to the identical PairingGate
     /** @var Session $wcSession */
     $wcSession = app(Session::class);
     pairingScanSetUpIdentity($wcUser, $wcSession);
-    $wcIssued = pairingScanIssueToken($wcUser);
+    $wcIssued = pairingScanDesktopOnLan();
 
     /** @var WordCodeEncoder $encoder */
     $encoder = app(WordCodeEncoder::class);
@@ -323,7 +361,7 @@ it('import mode reads ?mode=import at mount() and seeds a local token from the s
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
 
     Livewire::test(MobilePairingScan::class)
-        ->assertSet('importMode', true)
+        ->assertSet('importing', true)
         ->call('submitCode', $qrPayload)
         ->assertSet('step', 'confirm')
         ->assertSet('flashMessage', '');
@@ -364,7 +402,7 @@ it('import mode defers self-mint on both-confirm — sync_encryption_state stays
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
 
     $component = Livewire::test(MobilePairingScan::class)
-        ->assertSet('importMode', true)
+        ->assertSet('importing', true)
         ->call('submitCode', $qrPayload)
         ->assertSet('step', 'confirm');
 
@@ -433,12 +471,12 @@ it('a re-entry to /mobile/pair WITHOUT ?mode=import still defers self-mint once 
     $qrPayload = $qrBuilder->buildUri($initiatorDeviceId, $initiatorEd, $initiatorKx, $token);
 
     // No ?mode=import on THIS request: a re-entry that lost the query param.
-    // Following the false importMode here would self-mint and strand the
-    // desktop's delivered epoch-1 history.
+    // Reading the query string here would self-mint and strand the desktop's
+    // delivered epoch-1 history, so the screen reads the durable marker.
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
 
     $component = Livewire::test(MobilePairingScan::class)
-        ->assertSet('importMode', false)
+        ->assertSet('importing', true)
         ->call('submitCode', $qrPayload)
         ->assertSet('step', 'confirm');
 
@@ -471,7 +509,7 @@ it('non-import mode (CREATE-ACCOUNT path) is UNCHANGED — both-confirm still se
     $issued = pairingScanIssueToken($user);
 
     $component = Livewire::test(MobilePairingScan::class)
-        ->assertSet('importMode', false)
+        ->assertSet('importing', false)
         ->call('submitCode', $issued['qrPayload'])
         ->assertSet('step', 'confirm');
 
@@ -522,7 +560,7 @@ it('returns a word-code reader to the keypad after a reset, not to the camera', 
     /** @var Session $session */
     $session = app(Session::class);
     pairingScanSetUpIdentity($user, $session);
-    $issued = pairingScanIssueToken($user);
+    $offered = pairingScanDesktopOnLan();
 
     /** @var WordCodeEncoder $encoder */
     $encoder = app(WordCodeEncoder::class);
@@ -530,7 +568,7 @@ it('returns a word-code reader to the keypad after a reset, not to the camera', 
     Livewire::test(MobilePairingScan::class)
         ->call('useWordCode')
         ->assertSet('entryStep', 'enter_code')
-        ->set('wordCode', $encoder->encode($issued['token']))
+        ->set('wordCode', $encoder->encode($offered['token']))
         ->call('submitCode', null)
         ->assertSet('step', 'confirm')
         // The ceremony ends out of sight — the token expires — and the next
@@ -554,13 +592,13 @@ it('shows a delivery failure on the confirm step instead of only a spinner', fun
     /** @var Session $session */
     $session = app(Session::class);
     pairingScanSetUpIdentity($user, $session);
-    $issued = pairingScanIssueToken($user);
+    $offered = pairingScanDesktopOnLan();
 
     /** @var WordCodeEncoder $encoder */
     $encoder = app(WordCodeEncoder::class);
 
     $html = (string) Livewire::test(MobilePairingScan::class)
-        ->set('wordCode', $encoder->encode($issued['token']))
+        ->set('wordCode', $encoder->encode($offered['token']))
         ->call('submitCode', null)
         ->assertSet('step', 'confirm')
         ->set('flashMessage', 'Cannot reach the other device.')
@@ -644,13 +682,13 @@ it('returns a reset to the camera when entryStep names a step past the two entry
     /** @var Session $session */
     $session = app(Session::class);
     pairingScanSetUpIdentity($user, $session);
-    $issued = pairingScanIssueToken($user);
+    $offered = pairingScanDesktopOnLan();
 
     /** @var WordCodeEncoder $encoder */
     $encoder = app(WordCodeEncoder::class);
 
     Livewire::test(MobilePairingScan::class)
-        ->set('wordCode', $encoder->encode($issued['token']))
+        ->set('wordCode', $encoder->encode($offered['token']))
         ->call('submitCode', null)
         ->assertSet('step', 'confirm')
         ->set('entryStep', PairingWizardStep::Success->value)
@@ -777,4 +815,66 @@ it('renders without the app navigation chrome', function (): void {
 
     expect($source)->toContain("extends('layouts.lock'")
         ->and($source)->not->toContain("extends('layouts.app'");
+});
+
+// The phone is killed and relaunched mid-flow as a matter of course, so an
+// import that re-enters /mobile/pair without ?mode=import is the ordinary case
+// and not an edge one. Everything below is that re-entry: the durable marker
+// stands, the query string is gone.
+
+it('sends a re-entered import on to the blocking initial-sync gate, never to the dashboard', function (): void {
+    $user = pairingScanTestUser('mobile-pair-finish-reentry');
+    test()->actingAs($user);
+
+    /** @var MobileImportIntentGate $importIntent */
+    $importIntent = app(MobileImportIntentGate::class);
+    $importIntent->markImporting((int) $user->id);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
+
+    Livewire::test(MobilePairingScan::class)
+        ->call('finishPairing')
+        ->assertRedirect(route('mobile.setup'));
+});
+
+it('returns a re-entered import that cancels to the import wizard, not into settings', function (): void {
+    $user = pairingScanTestUser('mobile-pair-cancel-reentry');
+    test()->actingAs($user);
+
+    /** @var MobileImportIntentGate $importIntent */
+    $importIntent = app(MobileImportIntentGate::class);
+    $importIntent->markImporting((int) $user->id);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
+
+    Livewire::test(MobilePairingScan::class)
+        ->call('cancelPairing')
+        ->assertRedirect(route('mobile.import'));
+});
+
+it('brings a re-entered import back from the PIN pad into the import, not into a bare pairing screen', function (): void {
+    $user = pairingScanTestUser('mobile-pair-unlock-reentry');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    // An identity that exists but cannot be opened is what sends this screen to
+    // the lock pad, and it can only exist where an app lock does.
+    app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'whatever-password', $session);
+    app(DeviceIdentityService::class)->generateAndPersist((int) $user->id, $session);
+    AppLockTestHarness::lock($session);
+
+    /** @var MobileImportIntentGate $importIntent */
+    $importIntent = app(MobileImportIntentGate::class);
+    $importIntent->markImporting((int) $user->id);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
+
+    Livewire::test(MobilePairingScan::class)
+        ->call('submitCode', 'beatrax://pair?v=1&token='.bin2hex(random_bytes(16)).'&ed='.str_repeat('a', 64).'&kx='.str_repeat('b', 64).'&device=x')
+        ->assertRedirect(route('mobile.lock'));
+
+    expect($session->get(MobileLockGateway::SESSION_INTENDED_URL))
+        ->toBe(route('mobile.pair').'?mode=import');
 });
