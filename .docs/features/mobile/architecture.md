@@ -766,6 +766,14 @@ on, and before anything reads the authenticated user: this runtime keeps one
 container for the life of the process, so the guard otherwise still holds the
 `User` model resolved at sign-in and every preference on it is stale.
 
+It drops that user only when the session still names them, and that condition is
+load-bearing rather than defensive. Dropping is a *refresh*: `SessionGuard::user()`
+re-reads the row from the session key, so a user bound straight onto the guard —
+`actingAs()`, or any `Auth::setUser()` — has nothing behind it and is signed out
+instead. Unconditional, this middleware answered every authenticated request in
+the mobile root's own suite as a guest, and only there: no other root registers
+it, so the same tests stayed green from the repo root.
+
 `MobileEnsureDatabaseReady` is prepended to the `web` group rather than appended,
 and that is not a style choice. List order is not run order: `SortedMiddleware`
 re-sorts the group against the framework priority list, and `Authenticate`
