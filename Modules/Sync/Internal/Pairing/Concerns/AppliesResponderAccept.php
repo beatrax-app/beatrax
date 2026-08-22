@@ -210,4 +210,5 @@ trait AppliesResponderAccept
             ->first();
 
         return $accepted ?? false;
-    }}
+    }
+}
