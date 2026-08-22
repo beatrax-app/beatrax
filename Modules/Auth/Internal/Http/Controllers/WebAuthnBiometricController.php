@@ -12,6 +12,7 @@ use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Navigation\Destination;
@@ -102,6 +103,23 @@ final class WebAuthnBiometricController
         $ua = $request->userAgent() ?? '';
         $deviceLabel = $detector->detectLabel($ua);
 
+        return $this->recordEnrolment($service, $user, $credentialResponse, $dataKey, $deviceLabel, $session);
+    }
+
+    // Every failure leaves as `enrolled: false` rather than as a throw: the
+    // browser half reads that field and nothing else, so an exception escaping
+    // here is a button that does nothing instead of a message.
+    /**
+     * @param  array<string, mixed>  $credentialResponse
+     */
+    private function recordEnrolment(
+        WebAuthnBiometricService $service,
+        User $user,
+        array $credentialResponse,
+        string $dataKey,
+        string $deviceLabel,
+        Session $session,
+    ): JsonResponse {
         try {
             $service->completeEnrollment(
                 $user->id,

@@ -167,8 +167,17 @@ final class MobileLockScreen extends Component
         }
     }
 
+    /**
+     * @link ../../../../../.docs/design/cold-start-biometric-unlock.md
+     */
     #[On('cold-start-failed')]
-    public function onColdStartFailed(): void {}
+    public function onColdStartFailed(): void
+    {
+        // Registered so the native prompt's failure lands somewhere, and
+        // deliberately changing nothing: the PIN pad is already on screen, and
+        // a failed authentication stashed no blob, so any write here would be
+        // state the failure did not earn.
+    }
 
     public function render(ViewFactory $views): View
     {

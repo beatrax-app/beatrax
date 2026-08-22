@@ -44,10 +44,11 @@ final class MobileImportBootstrap extends Component
 
     private const MINIMUM_PIN_LENGTH = 6;
 
-    // The five boxes on the form. SignupAction also rejects under `signup` when
-    // the device gained an owner mid-submit, and that has no box to sit under,
-    // so it stays on the form-level line.
-    private const array FIELD_KEYS = ['username', 'password', 'passwordConfirmation', 'pin', 'confirmPin'];
+    // The five boxes on the form, read by ReportsFieldRejections rather than
+    // by anything here. SignupAction also rejects under `signup` when the
+    // device gained an owner mid-submit, and that has no box to sit under, so
+    // it stays on the form-level line.
+    protected const array FIELD_KEYS = ['username', 'password', 'passwordConfirmation', 'pin', 'confirmPin'];
 
     // Stays a string on the wire: a public property is rehydrated straight from
     // the client payload with no enum coercion, so typing it would turn a
