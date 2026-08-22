@@ -101,6 +101,17 @@ ND = "ND"
 SMAL = "SMAL"
 Caf = "Caf"
 
+# Words from the shipped locales, quoted verbatim by tests that assert on
+# rendered translated copy. The lang trees themselves are excluded below for
+# the same reason; a test naming the string it renders sits outside them.
+iz = "iz"          # hr/sr/sl: "from"
+Iz = "Iz"
+sur = "sur"        # fr: "on", as in "1 sur 3"
+cours = "cours"    # fr: "cours" in en cours
+collegate = "collegate"    # it: "connected", feminine plural
+duplicat = "duplicat"      # ro: "duplicate"
+importerad = "importerad"  # sv: "imported"
+
 [files]
 # Vendored, generated, and fixture trees are not ours to spell-check. Bank
 # statement fixtures and the merchant corpus carry real-world strings in a
