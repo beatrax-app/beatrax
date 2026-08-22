@@ -16,11 +16,10 @@ use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxQuery;
 
-// The candidates panel and the review badge both select on
-// discovered_senders.state, the column DiscoveredSenderState owns and the
-// table's CHECK trigger enforces. Spelled as a bare string they fail silently:
-// the query stays valid, nothing matches, and a badge that has stopped
-// counting looks the same as an inbox with nothing to review.
+// The candidates panel and the review badge select on discovered_senders.state,
+// which DiscoveredSenderState owns and a CHECK trigger enforces. As a bare
+// string they fail silently: the query stays valid, nothing matches, and a badge
+// at zero looks like an inbox with nothing left to review.
 
 function dsvSeedInbox(User $owner): int
 {

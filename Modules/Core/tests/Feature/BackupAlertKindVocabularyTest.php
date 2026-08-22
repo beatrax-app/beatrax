@@ -11,8 +11,7 @@ use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 
 // system_alerts.kind carries no CHECK trigger and every module mints its own
 // values, so a kind is a private contract between one raiser and the surfaces
-// that read the row back. The backup raisers and this banner had four copies
-// of the same two strings between them.
+// that read the row back.
 
 // The lang keys and the rows in databases already on disk both spell these,
 // so the enum is pinned to the literals rather than only to itself.

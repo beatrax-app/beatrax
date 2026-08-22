@@ -9,10 +9,9 @@ use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Public\Enums\TaxCategoryStatus;
 use Modules\Tax\Public\Http\Livewire\TaxSettingsSection;
 
-// tax_deduction_categories.status carried no enum at all: the writer, the
-// archive/unarchive pair, the list filter and the settings partial each spelled
-// the same two values by hand. The column has no CHECK trigger, so its only
-// schema-side anchor is the column default.
+// tax_deduction_categories.status has no CHECK trigger, so the column default
+// is its only schema-side anchor: nothing else rejects a status the writer and
+// the readers no longer agree on.
 
 function taxVocabUser(string $username): User
 {

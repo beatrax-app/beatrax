@@ -16,10 +16,9 @@ use Modules\Migration\Models\MigrationRun;
 
 uses(RefreshDatabase::class);
 
-// migration_staging_unmapped_items.item_type had no enum: preview, confirm,
-// the summary grouper, two writers and the Actual parser each spelled its
-// values by hand. The column has no CHECK trigger, so nothing catches a
-// spelling that drifts — the conflict toggle just stops saving.
+// migration_staging_unmapped_items.item_type has no CHECK trigger, so nothing
+// rejects a spelling the writers and the readers no longer share — the conflict
+// toggle simply stops saving.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([

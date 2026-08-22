@@ -38,10 +38,9 @@ it('declares the AuditEvent enum taxonomy (locks audit-action strings as enum ca
     expect(AuditEvent::SqlSelect->value)->toBe('sql.select');
 });
 
-// Every dev-mode reader narrows dev_mode_audit by log_name, and eight copies
-// of the value spread across the writer, four pages and the prune command. The
-// column is a plain string with no constraint, so a drifted spelling empties
-// the audit page while the rows sit in the table.
+// Every dev-mode reader narrows dev_mode_audit by log_name, on a plain string
+// column with no constraint: a spelling the writer and the readers no longer
+// share empties the audit pages while the rows sit in the table.
 it('locks the audit log name to the value the rows already on disk carry', function (): void {
     expect(SpatieAuditWriter::LOG_NAME)->toBe('dev_mode');
 });

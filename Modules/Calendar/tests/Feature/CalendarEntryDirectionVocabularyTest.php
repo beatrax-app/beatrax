@@ -12,11 +12,10 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 
-// The month grid and the day panel both decide sign and colour by comparing a
-// calendar entry's direction, which is recurring_series.direction carried
-// through unchanged. The column is a real schema enum, so a spelling that
-// drifts renders every inflow as an outflow — a minus sign on a salary, with
-// no error anywhere.
+// The month grid and the day panel decide sign and colour from an entry's
+// direction — recurring_series.direction carried through unchanged. The column
+// is a schema enum, so a drifted spelling renders every inflow as an outflow:
+// a minus sign on a salary, with no error anywhere.
 
 function cedvSeries(User $user, Direction $direction, int $amountMinor, string $name): RecurringSeries
 {
