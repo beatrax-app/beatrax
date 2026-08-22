@@ -42,11 +42,13 @@ What the module explicitly does NOT do:
 `Public/` exposes the cross-module surface:
 
 - **Services/**
-  - `ForecastQuery::baseline($user, $accountId, $horizon)` /
-    `forScenario($user, $scenarioId, $accountId, $horizon)` — the
-    read-side queries that return `ForecastDto` instances.
-  - `ScenarioQuery::list($user)`, `forId($id, $user)` — scenario
-    metadata reads.
+  - `ForecastQuery::forUser($accountId, $horizonDays, $scenarioId,
+    $user): ForecastDto` — one read, not two. The baseline and the
+    scenario-applied projection differ only in whether `$scenarioId`
+    is null, so they are the same query rather than a `baseline()`
+    and a `forScenario()` that had to be kept in step.
+  - `ScenarioQuery::forUser($user)`, `find($scenarioId, $user)`,
+    `mutationsFor($scenarioId, $user)` — scenario metadata reads.
   - `ForecastHighlightsQuery::activeShortfallCountForUser($user)` /
     `tileFor($user)` — the dashboard tile + sidebar badge reads.
 - **Actions/**
@@ -128,7 +130,7 @@ What the module explicitly does NOT do:
 
 - `ProjectionPipeline::run($user, $scenarioId, $accountId,
   $horizonDays)` — the orchestrator. Steps:
-  1. `BalanceAnchorResolver::resolve` — pick the starting balance.
+  1. `BalanceAnchorResolver::forAccount` — pick the starting balance.
   2. `RangeProjector::project` — build `ForecastContribution`
      instances from recurring series + scheduled exceptions.
   3. `ChainAwareForecastRouter::route` — apply chain-aware

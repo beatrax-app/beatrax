@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
@@ -16,6 +17,8 @@ use Livewire\Component;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Events\UserInstalled;
+use Modules\Core\Public\Http\Livewire\Concerns\AnnouncesStepChanges;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\EncryptionMigrationService;
@@ -34,6 +37,7 @@ use Throwable;
 final class MobilePairingScan extends Component
 {
     use AcceptsPairingCode;
+    use AnnouncesStepChanges;
     use ChoosesCodeEntryArm;
     use HoldsFlashMessage;
 
@@ -163,9 +167,9 @@ final class MobilePairingScan extends Component
             $this->pairingTokenId = (string) $inFlight['id'];
             $this->safetyWords = $inFlight['safety_words'];
             $this->side = $side->value;
-            $this->step = ($inFlight['state'] === PairingGateway::STATE_CONFIRMED
+            $this->moveTo($inFlight['state'] === PairingGateway::STATE_CONFIRMED
                 ? PairingWizardStep::Success
-                : PairingWizardStep::Confirm)->value;
+                : PairingWizardStep::Confirm);
             $this->awaitingPeer = $inFlight['responder_confirmed']
                 && $inFlight['state'] !== PairingGateway::STATE_CONFIRMED;
 
@@ -184,6 +188,20 @@ final class MobilePairingScan extends Component
     private function currentStep(): PairingWizardStep
     {
         return PairingWizardStep::tryFrom($this->step) ?? PairingWizardStep::Scan;
+    }
+
+    // The only mid-flow writer of $step, so a later branch cannot advance the
+    // wizard without the page being told. Guarded on a real change because the
+    // poll re-derives the same step every three seconds, and announcing that
+    // would haul the reader back to the top while they read.
+    private function moveTo(PairingWizardStep $step): void
+    {
+        if ($this->step === $step->value) {
+            return;
+        }
+
+        $this->step = $step->value;
+        $this->announceStepChange();
     }
 
     // Dependencies lead so the optional payload fields can carry defaults;
@@ -297,7 +315,7 @@ final class MobilePairingScan extends Component
         $this->hydrateDeviceNames($gateway, $devices, $userId);
         $this->flashMessage = '';
         $this->cameraUnavailableNotice = false;
-        $this->step = PairingWizardStep::Confirm->value;
+        $this->moveTo(PairingWizardStep::Confirm);
 
         // Best-effort: a relay failure never dead-ends the confirm step
         // already rendered above; the desktop's poll simply does not advance.
@@ -380,7 +398,7 @@ final class MobilePairingScan extends Component
         }
 
         if ($state === PairingGateway::STATE_CONFIRMED && $this->currentStep() !== PairingWizardStep::Success) {
-            $this->step = PairingWizardStep::Success->value;
+            $this->moveTo(PairingWizardStep::Success);
 
             $this->settleConfirmedPairing($currentUser, $gateway, $session, $migrationService, $importIntent, $db, $logger);
         }
@@ -459,7 +477,7 @@ final class MobilePairingScan extends Component
     {
         // Keep the entry method the reader chose: someone typing a word code
         // lands back on the keypad, not thrown to the camera.
-        $this->step = $this->entryArm()->value;
+        $this->moveTo($this->entryArm());
         $this->pairingTokenId = '';
         $this->safetyWords = [];
         $this->importResponderTokenHash = '';
@@ -521,7 +539,7 @@ final class MobilePairingScan extends Component
         $this->awaitingPeer = $state !== PairingGateway::STATE_CONFIRMED;
 
         if ($state === PairingGateway::STATE_CONFIRMED) {
-            $this->step = PairingWizardStep::Success->value;
+            $this->moveTo(PairingWizardStep::Success);
 
             $this->settleConfirmedPairing($currentUser, $gateway, $session, $migrationService, $importIntent, $db, $logger);
         }
@@ -580,6 +598,36 @@ final class MobilePairingScan extends Component
             ->where('is_self', 0)
             ->whereNotNull('confirmed_at')
             ->exists();
+    }
+
+    // The way out of a first-run choice. layouts.lock draws no navigation and
+    // MobileEnsureImportCompleted returns every gated route to this screen
+    // while the marker stands, so without this the only exit is a reinstall.
+    public function abandonImport(
+        CurrentUser $currentUser,
+        PairingGateway $gateway,
+        MobileImportIntentGate $importIntent,
+        Dispatcher $events,
+        UrlGenerator $urls,
+    ): void {
+        $userId = $currentUser->user()->id;
+
+        if ($this->pairingTokenId !== '') {
+            $gateway->expire((int) $this->pairingTokenId, $userId);
+        }
+
+        // Retiring the marker is the gate's OWN convergence move, so the exit
+        // satisfies the invariant rather than punching a hole in the exempt
+        // list: past here this device is indistinguishable from one that never
+        // chose to import.
+        $importIntent->clearImporting($userId);
+
+        // The import path signs up with seedsStarterData: false, because those
+        // rules were to arrive over sync. Nothing will now send them, and this
+        // is the same re-dispatch InstallCommand uses to heal a missing seed.
+        $events->dispatch(new UserInstalled($userId));
+
+        $this->redirect($urls->route(Destination::Dashboard->routeName()), navigate: false);
     }
 
     public function cancelPairing(

@@ -54,7 +54,7 @@ it('renders the backfill progress strip when an inbox has an active backfill_pro
     $response->assertSee('Backfilling Gmail (progress@example.com):', false);
     $response->assertSee('100 / ~300', false);
     $response->assertSee('messages', false);
-    $response->assertSee('wire:poll.2s="refreshBackfillProgress"', false);
+    $response->assertSee('wire:poll.2s.keep-alive="refreshBackfillProgress"', false);
 });
 
 it('hides the backfill progress strip once backfill_progress returns to NULL', function (): void {
@@ -88,7 +88,7 @@ it('hides the backfill progress strip once backfill_progress returns to NULL', f
 
     $response->assertStatus(200);
     $response->assertDontSee('Backfilling Gmail', false);
-    $response->assertDontSee('wire:poll.2s="refreshBackfillProgress"', false);
+    $response->assertDontSee('wire:poll.2s.keep-alive="refreshBackfillProgress"', false);
 });
 
 it('stacks one line per active backfill when multiple inboxes are mid-backfill', function (): void {

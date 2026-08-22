@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Zadej slovní kód z druhého zařízení',
     'submit_code' => 'Odeslat kód',
     'cancel' => 'Zrušit',
+    'skip_import' => 'Pokračovat bez importu',
 
     'confirm_heading' => 'Porovnej tato slova s druhým zařízením',
     'safety_words_aria' => 'Slova bezpečnostního čísla: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Druhé zařízení není dostupné. Zkontroluj, že jsou obě ve stejné síti a že je na počítači zapnutá synchronizace.',
         'invalid_code' => 'Tento kód je neplatný nebo vypršel. Nech na druhém zařízení vygenerovat nový.',
         'code_not_accepted' => 'Žádné zařízení v této síti tento kód nepřijalo. Zkontroluj kód a jestli ho druhé zařízení stále zobrazuje.',
+        'no_peer_answered' => 'Na této síti na tento kód nic neodpovědělo. Zkontroluj, že na druhém zařízení běží synchronizace, nebo naskenuj jeho kód fotoaparátem — ten síť prohledávat nemusí.',
+        'no_peer_answered_ios' => 'Na této síti na tento kód nic neodpovědělo. Vyhledání druhého zařízení v síti na iPhonu zatím nefunguje, takže naskenuj jeho kód fotoaparátem.',
         'rate_limited' => 'Příliš mnoho pokusů. Počkej minutu a zkus to znovu.',
         'identity_locked' => 'Identita tvého zařízení je zamčená. Odemkni aplikaci a zkus to znovu.',
         'identity_needs_lock' => 'Nejprve nastavte zámek aplikace — chrání identitu vašeho zařízení.',

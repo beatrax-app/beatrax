@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Tutto quanto sopra viene rimosso da questo dispositivo e la sessione si chiude. Non si torna indietro e non resta alcun backup.',
     'confirm' => 'Sì, elimina tutto',
     'cancel' => 'Tieni il mio account',
+    'error_password_required' => 'Inserisci la tua password.',
     'error_password' => 'Questa password non è corretta.',
     'error_failed' => 'Il tuo account non è stato eliminato. Non è cambiato nulla — riprova.',
 ];

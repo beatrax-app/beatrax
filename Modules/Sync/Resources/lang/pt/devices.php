@@ -6,10 +6,14 @@ return [
     'heading' => 'Dispositivos e sincronização',
 
     'enable_sync' => 'Ativar a sincronização',
-    'enable_sync_help' => 'Partilha os teus dados em segurança entre dispositivos de confiança. Requer um bloqueio da aplicação.',
+    'enable_sync_help' => 'Partilha os teus dados em segurança entre dispositivos de confiança. Requer um bloqueio da aplicação. Uma vez ativo, os teus dados ficam cifrados e o bloqueio da aplicação já não pode ser desligado.',
 
     'app_lock_notice' => 'Define primeiro um bloqueio da aplicação para ativares a sincronização.',
     'go_to_app_lock' => 'Ir para Bloqueio da aplicação',
+
+    'identity_unreadable' => 'A identidade de sincronização deste dispositivo foi criada com outro bloqueio da app e já não abre. Enquanto for assim, este dispositivo não consegue sincronizar nem emparelhar. Restaurar a cópia de segurança da base de dados com que foi criada torna-a legível de novo.',
+    'identity_unreadable_replace_help' => 'Também podes começar de novo: este dispositivo recebe uma identidade nova, a antiga fica guardada sem uso e os dispositivos que emparelhaste antes têm de ser emparelhados outra vez.',
+    'identity_unreadable_replace' => 'Criar uma identidade nova para este dispositivo',
 
     'encrypted_at_rest' => 'Dados encriptados em repouso',
     'encrypted_at_rest_scope' => 'As notas, as descrições das transações e os nomes e IBAN de quem pagas estão encriptados no livro de registos com a palavra-passe do bloqueio da app. Os valores, as datas e o nome e IBAN da tua própria conta não estão. O índice de pesquisa guarda a sua própria cópia legível de a quem pagas, das descrições das tuas transações e das tuas notas fiscais, e alguns nomes de comerciantes continuam legíveis noutras partes do ficheiro da base de dados.',
@@ -37,6 +41,11 @@ return [
     'remove_aria' => 'Remover :name',
     'remove' => 'Remover',
     'pair_new_device' => 'Emparelhar um novo dispositivo',
+
+    'pairing_waiting' => 'Conclua o emparelhamento com :name',
+    'pairing_waiting_help' => 'Os dois ecrãs têm de mostrar as mesmas seis palavras para o emparelhamento contar. Reabra para as comparar.',
+    'pairing_waiting_resume' => 'Continuar o emparelhamento',
+    'pairing_waiting_lock_override' => 'Desbloquear reabre este emparelhamento em vez de o deixar expirar, por isso dura mais do que o tempo de bloqueio que definiu. Termina quando o concluir ou cancelar.',
 
     'relay_endpoint' => 'Endpoint do relay',
     'relay_endpoint_help' => 'Opcional. Quando definido, os dispositivos offline sincronizam através deste relay. Deixa vazio para usares apenas LAN&#8209;direta.',
@@ -68,6 +77,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Define primeiro um bloqueio da aplicação para ativares a sincronização.',
         'enable_failed' => 'Não foi possível ativar a sincronização. Confirma que o bloqueio da aplicação está ativo e tenta de novo.',
+        'identity_replaced' => 'Este dispositivo tem uma nova identidade de sincronização. Emparelha os teus outros dispositivos outra vez.',
+        'identity_replace_failed' => 'Não foi possível pôr de parte a identidade antiga do dispositivo. Tenta novamente.',
         'cannot_remove_self' => 'Não podes remover este dispositivo — é o que estás a usar.',
         'remove_failed' => 'Não foi possível remover o dispositivo. Tenta de novo.',
         'app_lock_first_settings' => 'Define primeiro um bloqueio da aplicação para alterares as definições de sincronização.',
@@ -75,4 +86,8 @@ return [
         'relay_saved' => 'Endpoint do relay guardado.',
         'relay_save_failed' => 'Não foi possível guardar o endpoint do relay: :message',
     ],
+    'app_lock_permanent' => 'Depois de os dados estarem cifrados, o bloqueio da aplicação já não pode ser desligado — guarda a única chave, e não há regresso a dados não cifrados.',
+    'backlog_heading' => 'À espera de ser adicionado',
+    'backlog_deferred' => 'Este dispositivo recebeu dados de outro dispositivo e ainda não os adicionou às suas contas. Nada se perde — são aplicados automaticamente, normalmente num instante.',
+    'backlog_awaiting_key' => 'Este dispositivo recebeu dados para os quais ainda não tem a chave. Nada se perde. Abra a aplicação no dispositivo emparelhado enquanto este está aberto, para que os dois possam ligar-se e a chave possa ser enviada.',
 ];

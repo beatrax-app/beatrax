@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Routing\Router;
 use Illuminate\View\Factory as ViewFactory;
+use Modules\Core\Models\User;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -134,6 +137,59 @@ it('keeps the seam those templates depend on', function (): void {
         'Every template padding through var(--safe-*) depends on this rule to be',
         'correct on both platforms. Losing an arm of the max() does not fail here',
         'or anywhere else — it just stops padding on the platform it dropped.',
+    ]));
+});
+
+// Padding reserves the strip; nothing was painting it. Under viewport-fit=cover
+// the system bars are drawn OVER the page, so a screen taller than the viewport
+// slid its own heading up under the clock and the two rendered on top of each
+// other — at rest the same screen measured correctly.
+it('paints the strip .safe-screen only reserves', function (): void {
+    $collapsed = preg_replace(
+        '/\s+/',
+        '',
+        (string) file_get_contents(base_path('resources/css/app.css')),
+    ) ?? '';
+
+    $missing = array_values(array_filter(
+        ['.safe-screen::before{', 'position:fixed', 'height:var(--safe-top)'],
+        static fn (string $fragment): bool => ! str_contains($collapsed, $fragment),
+    ));
+
+    expect($missing)->toBe([], implode("\n", [
+        'resources/css/app.css no longer covers the top seam on .safe-screen:',
+        ...$missing,
+        '',
+        'The four paddings hold content clear of the system bars at scroll 0 and',
+        'nowhere else. A screen that scrolls needs something standing over the',
+        'strip as well — .top-bar does it for the screens that have one, and this',
+        'pseudo-element does it for the screens that do not. Losing it fails no',
+        'other rule here: the resting screenshot stays correct.',
+    ]));
+});
+
+// A bar's height is not the status bar's height, and on the screen that typed
+// it there was no bar at all: a first run reaches every step of the import
+// bootstrap inside the markup layouts.app produced for a signed-out reader,
+// because Livewire re-renders the component and never the layout.
+it('never reserves the top bar height in place of the status-bar inset', function (): void {
+    $offenders = [];
+
+    foreach (safeAreaTemplates() as $file) {
+        if (preg_match('/(?:padding-top|\bpt-\[)[^;"\']*var\(--top-bar-h\)/', safeAreaMarkup((string) $file->getContents())) === 1) {
+            $offenders[] = $file->getRelativePathname();
+        }
+    }
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These templates reserve --top-bar-h at the top of the page:',
+        ...$offenders,
+        '',
+        'A screen standing under .top-bar needs no top reserve at all — the bar is',
+        'sticky, so it already stands in the flow and pads var(--safe-top) itself.',
+        'A screen with no bar over it needs the inset, which is a device',
+        'measurement and not 48px. Either way --top-bar-h is the wrong number, and',
+        'it is only ever right by coincidence on the phone it was checked on.',
     ]));
 });
 
@@ -273,5 +329,92 @@ it('takes all four edges from .safe-screen rather than typing them onto an eleme
         'different case and must NOT wear it: the .top-bar above it already',
         'pads var(--safe-top) and stands in the flow, so a top inset there',
         'reserves the status bar twice.',
+    ]));
+});
+
+// Arm 4's other half. layouts.app draws its drawer and its .top-bar under
+// @auth and yields straight into <body> under @guest, so a signed-out document
+// is chromeless in exactly the way a layouts.lock one is — and five of the six
+// screens a signed-out reader can reach reserved nothing at all. Asked of the
+// rendered document rather than of the template, because the closure routes the
+// mobile shell registers name their component only inside the closure body.
+/**
+ * @return array{checked: int, offenders: list<string>}
+ */
+function safeAreaSignedOutSweep(): array
+{
+    $offenders = [];
+    $checked = 0;
+
+    /** @var Router $router */
+    $router = app('router');
+
+    foreach ($router->getRoutes() as $route) {
+        $middleware = $route->gatherMiddleware();
+
+        if (! in_array('GET', $route->methods(), true)
+            || str_contains($route->uri(), '{')
+            || ! in_array('web', $middleware, true)
+            || in_array(Authenticate::class, $middleware, true)) {
+            continue;
+        }
+
+        $response = test()->get('/'.ltrim($route->uri(), '/'));
+
+        // A full-screen page and nothing else: the icon, manifest and
+        // service-worker routes beside these answer 200 with no markup, and a
+        // redirect answers with somebody else's.
+        $html = $response->getStatusCode() === 200 ? (string) $response->getContent() : '';
+
+        if (! str_contains($html, 'min-h-screen')) {
+            continue;
+        }
+
+        $checked++;
+
+        if (! str_contains($html, 'safe-screen')) {
+            $offenders[] = $route->uri();
+        }
+    }
+
+    return ['checked' => $checked, 'offenders' => $offenders];
+}
+
+it('reserves the seam on every full-screen surface a signed-out reader reaches', function (): void {
+    // Twice, because a fresh install and a populated one expose different
+    // screens: the first-run gate answers /login with a redirect to /welcome
+    // until an account exists, and /signup and /welcome stop answering once
+    // one does. Sweeping either state alone leaves half of them unvisited.
+    $fresh = safeAreaSignedOutSweep();
+
+    User::query()->create([
+        'username' => 'safe-area-sweep',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+
+    $populated = safeAreaSignedOutSweep();
+
+    $offenders = array_values(array_unique([...$fresh['offenders'], ...$populated['offenders']]));
+    sort($offenders);
+
+    expect($fresh['checked'] + $populated['checked'])
+        ->toBeGreaterThan(0, 'No signed-out full-screen surface answered, so this rule checked nothing.');
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These signed-out screens render with no seam reserved anywhere:',
+        ...$offenders,
+        '',
+        'layouts.app renders the drawer and the .top-bar under @auth only. Under',
+        '@guest it yields into <body> with no chrome at all, which leaves the',
+        'screen as the only thing between its content and the system bars — the',
+        'same position a layouts.lock consumer is in, and .safe-screen is the',
+        'answer in both. The component cannot decide this for itself: Livewire',
+        're-renders the component and never the layout, so a screen that signs',
+        'its reader in mid-flow still sits in the signed-out markup.',
+        '',
+        'Only what this Composer root can route is swept. /mobile/welcome answers',
+        'under the phone shell alone and is checked by eye there.',
     ]));
 });

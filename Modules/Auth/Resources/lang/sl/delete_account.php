@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Vse zgoraj našteto se odstrani s te naprave in odjavljen boš. Poti nazaj ni in varnostna kopija ne ostane.',
     'confirm' => 'Da, izbriši vse',
     'cancel' => 'Obdrži moj račun',
+    'error_password_required' => 'Vnesi svoje geslo.',
     'error_password' => 'To geslo ni pravilno.',
     'error_failed' => 'Tvoj račun ni bil izbrisan. Nič se ni spremenilo — poskusi znova.',
 ];

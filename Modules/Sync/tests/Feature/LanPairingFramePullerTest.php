@@ -14,6 +14,7 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Enums\LanDiscoveryReach;
 
 uses(RefreshDatabase::class);
 
@@ -33,6 +34,11 @@ function framePuller(array $peers): LanPairingFramePuller
          * @param  list<DiscoveredPeer>  $peers
          */
         public function __construct(private readonly array $peers) {}
+
+        public function reach(): LanDiscoveryReach
+        {
+            return LanDiscoveryReach::Available;
+        }
 
         /**
          * @return list<DiscoveredPeer>

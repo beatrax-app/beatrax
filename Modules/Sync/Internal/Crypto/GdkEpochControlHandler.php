@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Crypto;
 
 use Illuminate\Contracts\Session\Session;
+use Modules\Core\Public\Exceptions\BackupDecryptionException;
+use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
@@ -65,15 +67,16 @@ final class GdkEpochControlHandler
             : $this->admitAndApply($wrap, $userId, $session);
     }
 
-    // A key-file that exists but will not open is a locked device, not an
-    // un-enrolled one. Folding the two into one null is what made a
-    // deferrable wrap indistinguishable from a permanently foreign one.
+    // A key-file that exists but yields no identity — locked, or written under
+    // a key this device no longer holds — is not an un-enrolled one. Folding
+    // the two into one null is what made a deferrable wrap indistinguishable
+    // from a permanently foreign one.
     private function admitAndApply(GdkWrapEnvelope $wrap, int $userId, Session $session): GdkWrapOutcome
     {
         $identity = $this->identityLoader->load($userId, $session);
         if ($identity === null) {
             return $this->identityLoader->exists($userId)
-                ? $this->deferred('no app-lock key in this process, so the sealed box cannot be opened')
+                ? $this->deferred('the local key-file yields no identity here, so the sealed box cannot be opened')
                 : $this->refused('sync was never enabled for this user');
         }
 
@@ -299,6 +302,12 @@ final class GdkEpochControlHandler
             $existing = $this->keyringService->loadKeyring($userId, $session);
         } catch (\LogicException) {
             return $this->deferred('the app-lock is not unlocked, so the keyring cannot be read');
+        } catch (BackupDecryptionException|BackupFormatException) {
+            // A keyring file the held KEK does not open. Deferred, not refused:
+            // the wrap must survive a database restore that brings the key
+            // back, and this drain runs from a settings mount, where an escape
+            // is a 500 on the page that reaches pairing.
+            return $this->deferred('the keyring file does not open under the key this device holds');
         }
 
         return $this->decryptAndStore($wrap, $identity, $userId, $existing->keyFor($wrap->epochId), $session);

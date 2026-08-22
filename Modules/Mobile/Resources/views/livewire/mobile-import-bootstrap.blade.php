@@ -1,18 +1,19 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Mobile\Internal\Identity\ImportBootstrapStep')
 {{-- Anchored to the top rather than centred: ten recovery codes are taller
-     than a phone viewport, and centring pushed the heading up underneath the
-     sticky app bar, clipping the one instruction on the screen. --}}
+     than a phone viewport, and centring pushed the heading up off the top of
+     it, clipping the one instruction on the screen. --}}
 {{-- The system bars are painted over this screen, not beside it: the button
      that ends each step sat under the Android navigation bar, tappable only
      in its upper half. The insets come from the --safe-* seam in app.css,
      never a bare env() — Android leaves that at zero and pads by nothing. --}}
-{{-- Sides and bottom only, so not .safe-screen: reached again once an
-     identity exists, this page loads inside layouts.app's <main> under a
-     .top-bar that already pads var(--safe-top), and a top inset here would
-     reserve the status bar a second time. The top reserve is the bar. --}}
-<div class="min-h-screen flex items-start justify-center bg-white pl-[var(--safe-left)] pr-[var(--safe-right)] dark:bg-slate-950">
-    <div class="w-full max-w-md mx-auto px-6 space-y-6 pb-[calc(2.5rem+var(--safe-bottom))] pt-[calc(var(--top-bar-h)+1.5rem)]">
+{{-- .safe-screen, because a first run reaches every step of this page in the
+     markup layouts.app produced for a signed-out reader — the account is made
+     mid-flow, but Livewire re-renders this component and never the layout, so
+     no .top-bar ever appears. A bar's height was standing in for the status
+     bar here and is neither the same measurement nor on the same screen. --}}
+<div class="safe-screen min-h-screen flex items-start justify-center bg-white dark:bg-slate-950">
+    <div class="w-full max-w-md mx-auto px-6 space-y-6 pb-10 pt-6">
 
         {{-- ===== Step: collect_pin ===== --}}
         @if ($bootstrapStep === ImportBootstrapStep::CollectPin && ! $alreadyProvisioned)
@@ -101,6 +102,21 @@
                     wire:model="confirmPin"
                     autocomplete="off"
                 />
+
+                {{-- Below the credentials, not above them: those five boxes are
+                     one group and the checklist inside it describes the pair it
+                     sits under. The placeholder stays choosable, because naming
+                     no country is a real answer on this screen too. --}}
+                <x-core::form-field
+                    field-id="import-country"
+                    name="country"
+                    type="select"
+                    :label="Lang::get('core::settings.country.label')"
+                    :hint="Lang::get('core::settings.country.help')"
+                    wire:model="country"
+                >
+                    <x-core::country-options :options="$countryOptions" :selected="$country" />
+                </x-core::form-field>
 
                 @if ($flashMessage !== '')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>

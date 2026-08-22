@@ -31,6 +31,7 @@ parameters:
     scanFiles:
         - tools/phpstan-stubs/native-mobile-scanner.php
         - tools/phpstan-stubs/native-mobile-edge.php
+        - tools/phpstan-stubs/native-mobile-bridge.php
     paths:
         - Modules
         - app

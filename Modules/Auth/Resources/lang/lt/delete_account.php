@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Viskas, kas išvardyta aukščiau, pašalinama iš šio įrenginio ir tu atsijungi. Atšaukti nebegalima, atsarginė kopija neišliks.',
     'confirm' => 'Taip, ištrinti viską',
     'cancel' => 'Palikti mano paskyrą',
+    'error_password_required' => 'Įvesk savo slaptažodį.',
     'error_password' => 'Šis slaptažodis neteisingas.',
     'error_failed' => 'Tavo paskyra nebuvo ištrinta. Niekas nepasikeitė — bandyk dar kartą.',
 ];

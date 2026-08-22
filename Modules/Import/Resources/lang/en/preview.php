@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Unlock the app to import: the merchant key cannot be computed while it is locked.',
+        'app_locked' => 'Unlock the app to import: the encryption keys cannot be used while it is locked.',
         'file_unreadable' => 'This file could not be read.',
         'iban_not_in_preview' => 'This IBAN is not part of the current preview.',
         'row_unreadable' => 'This row could not be read.',

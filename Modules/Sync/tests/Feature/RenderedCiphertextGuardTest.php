@@ -441,11 +441,11 @@ function rcgSeedWorld(User $user): void
     ]);
 }
 
-// notifications is in SensitiveFieldRegistry but NOT in
-// PreMigrationSnapshot::PROJECTION_COLUMNS, so the enable-time sweep never
-// touches it — the rows are encrypted by NotificationWriter on write instead.
-// Seeding after the sweep, through the same codec that writer uses, is what a
-// notification raised on an already-encrypted device actually looks like.
+// notifications IS in PreMigrationSnapshot::PROJECTION_COLUMNS, so the
+// enable-time sweep does reach it — EncryptionSweepCoversEveryRegisteredColumnTest
+// covers that half. Seeding AFTER the sweep instead, through the same codec
+// NotificationWriter uses, covers the other half: a notification raised on an
+// already-encrypted device, which is the row the sweep will never see again.
 function rcgSeedNotification(User $user, Session $session): void
 {
     /** @var SensitiveColumnCodec $codec */
@@ -1096,4 +1096,72 @@ it('goes RED on the _no_counterparty sentinel reaching a body (negative probe, i
     expect($sentinelKey)->not->toBeFalse();
     expect(rcgLeaks('<span class="primary">'.SensitiveFieldRegistry::blindIndexSentinel().'</span>', $this->rcgCensus))
         ->toContain("{$sentinelKey}: the whole stored value");
+});
+
+// Every case above renders UNLOCKED, which is right for the question they ask
+// but leaves the other branch of SensitiveColumnCodec unrendered: when no epoch
+// opens a registered column, safeUndecrypted() substitutes '' so base64 cannot
+// reach a reader. A keyring that no longer opens under the key the session
+// holds is an ordinary state of a real install, not corruption, and it is how
+// /notifications returned 500 for a whole inbox on a device this week while
+// every other screen returned 200 with quietly blank fields.
+function rcgStrandTheKeyring(Session $session): void
+{
+    AppLockTestHarness::unlock($session, str_repeat("\x5b", 32));
+}
+
+/** @return list<string> */
+function rcgStrandedRoutes(int $userId): array
+{
+    $connection = app(DatabaseManager::class)->connection();
+    $transactionId = $connection->table('transactions')
+        ->where('user_id', $userId)->where('source_row_index', 1)->value('id');
+    $seriesId = $connection->table('recurring_series')
+        ->where('user_id', $userId)->where('detected_name', RCG_SERIES_NAME)->value('id');
+
+    return [
+        '/counterparties/triage', '/counterparties', '/counterparties/rcg-sentinel-unknown',
+        '/community/mystery-merchants', '/transactions', "/transactions/{$transactionId}",
+        '/uncategorized', '/notifications', '/recurring', '/recurring/review',
+        "/recurring/series/{$seriesId}", '/tax', '/reports', '/cash', '/calendar',
+    ];
+}
+
+// The plaintext half is deliberately not asserted here: stranded is exactly the
+// state in which a registered column has nothing readable to show. What must
+// still hold is that the screen answers at all, and that '' is what a reader
+// gets rather than the stored bytes.
+it('still answers on every screen when the keyring no longer opens under the held key', function (): void {
+    rcgStrandTheKeyring($this->rcgSession);
+
+    $broken = [];
+    $leaked = [];
+    foreach (rcgStrandedRoutes((int) $this->rcgUser->id) as $route) {
+        $response = $this->get($route);
+        if ($response->getStatusCode() !== 200) {
+            $broken[] = "{$route}: {$response->getStatusCode()}";
+
+            continue;
+        }
+        foreach (rcgLeaks(rcgSearchableBody($response->getContent()), $this->rcgCensus) as $leak) {
+            $leaked[] = "{$route} -> {$leak}";
+        }
+    }
+
+    expect($broken)->toBe([]);
+    expect($leaked)->toBe([]);
+});
+
+// Without this the case above could pass on a fixture that quietly stayed
+// readable: stranding has to actually strand, or "200 with blank fields" is
+// just "200".
+it('really is stranded: a registered column reads back empty and undecrypted', function (): void {
+    rcgStrandTheKeyring($this->rcgSession);
+
+    /** @var SensitiveColumnCodec $codec */
+    $codec = $this->app->make(SensitiveColumnCodec::class);
+    $stored = $this->rcgCensus['transactions.description#0'];
+
+    expect($codec->decryptValue('transactions', 'description', $stored, (int) $this->rcgUser->id, $this->rcgSession))
+        ->toBe(['value' => '', 'decrypted' => false]);
 });

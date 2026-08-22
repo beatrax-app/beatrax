@@ -41,7 +41,8 @@ it('provisions a local user + app-lock + sync identity (no epoch) and advances t
         ->set('confirmPin', '426900')
         ->call('submit')
         ->assertSet('step', 'recovery_codes')
-        ->assertSet('flashMessage', '');
+        ->assertSet('flashMessage', '')
+        ->assertDispatched(MobileImportBootstrap::STEP_CHANGED_EVENT);
 
     expect(User::query()->count())->toBe(1, 'SignupAction must have created exactly one user');
 
@@ -287,10 +288,10 @@ it('ticks the password requirements live, off the same binding the server valida
         ->and($html)->toContain(sprintf("passwordStrength(%d, 'password', 'passwordConfirmation')", PasswordPolicy::MINIMUM_LENGTH));
 });
 
-// Android paints the navigation bar over the page rather than beside it, so
-// the button that ends each step was drawn under it and could be tapped only
-// in its upper half. env(safe-area-inset-*) reads zero on Android; the --safe-*
-// seam in app.css is the value that is right on both platforms.
+// Android paints its bars over the page, so the button ending each step sat
+// under the navigation bar and the heading scrolled under the clock. All four
+// insets come from .safe-screen: a first run reaches every step of this page in
+// the signed-out branch's markup, so no .top-bar is ever above it.
 
 it('keeps the button that ends each step clear of the system navigation bar', function (): void {
     $this->withoutMiddleware(EnsureDatabaseReady::class);
@@ -305,9 +306,8 @@ it('keeps the button that ends each step clear of the system navigation bar', fu
         ->assertSet('step', 'recovery_codes')
         ->html();
 
-    expect($html)->toContain('pb-[calc(2.5rem+var(--safe-bottom))]')
-        ->and($html)->toContain('pl-[var(--safe-left)]')
-        ->and($html)->toContain('pr-[var(--safe-right)]')
+    expect($html)->toContain('safe-screen')
+        ->and($html)->not->toContain('var(--top-bar-h)')
         ->and($html)->not->toContain('env(safe-area-inset-')
         ->and($html)->not->toContain('px-[var(--safe-');
 });
@@ -368,4 +368,45 @@ it('renders the first step when a step outside the wizard arrives from the wire'
         ->html();
 
     expect($html)->toContain(route('mobile.welcome'));
+});
+
+// Every step of the first run is one Livewire component re-rendering, so the
+// browser hands the next step the offset the last one was left at: measured on
+// an iPhone, the recovery codes opened at a scrollY of 107, their heading
+// behind the status-bar clock.
+it('announces the step change the signup form ends on', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    $user = User::query()->create([
+        'username' => 'phone-owner-announce-back',
+        'password' => bcrypt('a-genuinely-long-password'),
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+    test()->actingAs($user);
+
+    // The way back to the form is a step change like any other, and the screen
+    // it lands on is the tallest one here.
+    Livewire::test(MobileImportBootstrap::class)
+        ->set('step', 'provisioning_failed')
+        ->call('retryProvisioning')
+        ->assertSet('step', 'collect_pin')
+        ->assertDispatched(MobileImportBootstrap::STEP_CHANGED_EVENT);
+});
+
+it('says nothing when a rejected submit leaves the reader on the step they were on', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    // The listener returns the page to the top, so announcing a re-render that
+    // changed no step would take a half-filled form away from the reader mid-
+    // typing — a worse defect than the one this fixes.
+    Livewire::test(MobileImportBootstrap::class)
+        ->set('username', 'phone-owner')
+        ->set('password', 'short')
+        ->set('passwordConfirmation', 'short')
+        ->set('pin', '12')
+        ->set('confirmPin', '12')
+        ->call('submit')
+        ->assertSet('step', 'collect_pin')
+        ->assertNotDispatched(MobileImportBootstrap::STEP_CHANGED_EVENT);
 });

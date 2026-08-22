@@ -66,12 +66,13 @@ Modules/Forecasting/
 ## Public API
 
 - **Services/**
-  - `ForecastQuery::baseline($user, $accountId, $horizonDays):
-    ForecastDto` — the baseline (scenario-free) projection.
-  - `ForecastQuery::forScenario($user, $scenarioId, $accountId,
-    $horizonDays): ForecastDto` — a scenario-applied projection.
-  - `ScenarioQuery::list($user): list<ScenarioDto>`,
-    `forId($id, $user): ?ScenarioDto`.
+  - `ForecastQuery::forUser($accountId, $horizonDays, $scenarioId,
+    $user): ForecastDto` — the projection. A null `$scenarioId` is
+    the baseline; a non-null one is the scenario-applied run. Throws
+    `NotFoundHttpException` for an account the user does not own.
+  - `ScenarioQuery::forUser($user): list<ScenarioDto>`,
+    `find($scenarioId, $user): ?ScenarioDto`,
+    `mutationsFor($scenarioId, $user)`.
   - `ForecastHighlightsQuery::activeShortfallCountForUser($user)`
     — the sidebar badge query (single COUNT).
   - `ForecastHighlightsQuery::tileFor($user):
@@ -109,7 +110,7 @@ Modules/Forecasting/
 
 ## Internal services
 
-- `Internal/Pipeline/BalanceAnchorResolver::resolve($accountId,
+- `Internal/Pipeline/BalanceAnchorResolver::forAccount($accountId,
   $user): BalanceAnchorDto` — picks the anchor balance.
 - `Internal/Pipeline/RangeProjector::project($contributions,
   $horizonDays): list<ForecastContribution>` — produces per-day
@@ -124,8 +125,11 @@ Modules/Forecasting/
 - `Internal/Pipeline/ShortfallDetector::detect($curve, $buffer)`
   — finds windows below buffer; writes
   `forecast_shortfall_windows` rows.
-- `Internal/Pipeline/Percentile::compute($values, $level)` —
-  percentile fan computation.
+- `Internal/Pipeline/Percentile::p10($values)` / `p50(...)` /
+  `p90(...)` — the percentile fan. Three named methods over a closed
+  set, not a `compute($values, $level)` that would accept a level the
+  bands have no meaning for; the interpolating maths is private.
+  Throws `InvalidArgumentException` on an empty list.
 - `Internal/Pipeline/ProjectionPipeline::run($user, $scenarioId,
   $accountId, $horizonDays)` — orchestrator.
 - `Internal/StateMachines/ForecastRunStateMachine::transition` —

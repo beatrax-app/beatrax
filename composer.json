@@ -37,6 +37,7 @@
         "amphp/websocket": "^2.0.4",
         "amphp/websocket-client": "*",
         "amphp/websocket-server": "*",
+        "revolt/event-loop": "^1.0.9",
         "bacon/bacon-qr-code": "^3.1.1",
         "brick/math": "^0.18",
         "brick/money": "^0.14",

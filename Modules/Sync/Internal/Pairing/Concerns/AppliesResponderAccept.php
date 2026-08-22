@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Pairing\Concerns;
 
 use Carbon\CarbonImmutable;
 use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Sync\Internal\Pairing\HeldPeerConfirm;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
 use Modules\Sync\Internal\Pairing\PairingRowGuards;
 use Modules\Sync\Internal\Pairing\PairingState;
@@ -200,8 +201,12 @@ trait AppliesResponderAccept
                 // see the migration for why it rides on this row.
                 'responder_name' => $responderName !== '' ? $responderName : null,
                 'state' => PairingState::AwaitingConfirm->value,
-                'accepted_at' => $now->toIso8601String(),
+                'accepted_at' => ZuluTimestamp::stamp($now),
                 'expires_at' => ZuluTimestamp::stamp($newExpiry),
+                // A confirm held for the responder this replaces was signed
+                // over keys the row no longer binds, so the replay would refuse
+                // it anyway; dropping it keeps dead key material off the row.
+                HeldPeerConfirm::COLUMN => null,
             ]);
 
         $accepted = $this->db->connection()->table('pairing_tokens')

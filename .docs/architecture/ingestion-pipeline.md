@@ -115,7 +115,7 @@ adapter already classified as `refund`/`fee`/`adjustment`. Its algorithm:
    `transfer_out`/`transfer_in` by amount sign.
 3. PayPal source-format event-type map (`PaypalCsvEventTypeMap`) — reads
    the first event's `type` from `rawPayload.events` and maps it to a
-   `Transaction::TYPES` value, unless step 2 already flagged a transfer.
+   `TransactionType` value, unless step 2 already flagged a transfer.
    An unmapped parent event type falls through to step 4 (a genuinely
    unknown PayPal event is a user-data condition, not a bug — the adapter
    already raises a typed exception for anything genuinely unmappable at

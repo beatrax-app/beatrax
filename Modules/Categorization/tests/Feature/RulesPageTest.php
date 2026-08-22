@@ -295,8 +295,8 @@ it('the re-apply button uses .pill-btn-ghost, never the emerald primary style', 
         ->assertSeeHtml('pill-btn-ghost');
 });
 
-it('grep guard: the blade carries a wire:poll.2s progress strip', function (): void {
+it('grep guard: the blade carries a keep-alive wire:poll progress strip', function (): void {
     $contents = (string) file_get_contents(base_path('Modules/Categorization/Resources/views/livewire/rules-page.blade.php'));
 
-    expect($contents)->toContain('wire:poll.2s="refreshReapplyProgress"');
+    expect($contents)->toContain('wire:poll.2s.keep-alive="refreshReapplyProgress"');
 });

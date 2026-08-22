@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Voer de woordcode van het andere apparaat in',
     'submit_code' => 'Code versturen',
     'cancel' => 'Annuleren',
+    'skip_import' => 'Doorgaan zonder importeren',
 
     'confirm_heading' => 'Vergelijk deze woorden met het andere apparaat',
     'safety_words_aria' => 'Veiligheidswoorden: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Kan het andere apparaat niet bereiken. Zorg dat beide op hetzelfde netwerk zitten en synchronisatie op de desktop aanstaat.',
         'invalid_code' => 'Deze code is ongeldig of verlopen. Vraag het andere apparaat om een nieuwe te genereren.',
         'code_not_accepted' => 'Geen enkel apparaat in dit netwerk accepteerde die code. Controleer de code en of het andere apparaat hem nog toont.',
+        'no_peer_answered' => 'Niets in dit netwerk reageerde op die code. Controleer of synchronisatie op het andere apparaat draait, of scan zijn code met de camera — de camera hoeft niet in het netwerk te zoeken.',
+        'no_peer_answered_ios' => 'Niets in dit netwerk reageerde op die code. Zoeken naar het andere apparaat in het netwerk werkt nog niet op de iPhone, dus scan zijn code met de camera.',
         'rate_limited' => 'Te veel pogingen. Wacht een minuut en probeer het opnieuw.',
         'identity_locked' => 'De identiteit van je apparaat is vergrendeld. Ontgrendel de app en probeer het opnieuw.',
         'identity_needs_lock' => 'Stel eerst de app-vergrendeling in — die beschermt de identiteit van je apparaat.',

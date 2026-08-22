@@ -34,13 +34,16 @@
         <span class="type-chip" aria-hidden="true">{{ $notification->glyph }} {{ $notification->typeWord }}</span>
         <div class="min-w-0 flex-1">
             <p class="text-sm {{ $notification->readAt ? 'font-normal text-slate-700 dark:text-slate-300' : 'font-semibold text-slate-900 dark:text-slate-100' }}">
-                {{ $notification->title }}
+                {{ $notification->unreadable ? Lang::get('notifications::row.unreadable') : $notification->title }}
                 @if ($notification->resolved())
                     <span class="status-pill muted ml-1">{{ Lang::get('notifications::row.resolved') }}</span>
                 @endif
             </p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $notification->body }}</p>
-            @if ($notification->deepLinkDisabled)
+            {{-- An unreadable row has no readable params either, so the deep
+                 link resolves to nothing and the dead-link line would tell the
+                 reader the item is gone when it is only sealed. --}}
+            @if ($notification->deepLinkDisabled && ! $notification->unreadable)
                 <p class="mt-1 text-xs text-rose-700 dark:text-rose-400">{{ Lang::get('notifications::row.dead_link', ['kind' => $notification->targetKind]) }}</p>
             @endif
         </div>

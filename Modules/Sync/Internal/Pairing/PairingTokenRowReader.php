@@ -89,6 +89,46 @@ final readonly class PairingTokenRowReader
             ->exists();
     }
 
+    // The live ceremony this device owns a side of, answered as the few facts a
+    // driver with no screen needs. Null is the courier's stop signal, so every
+    // way a ceremony ends has to arrive here as null: confirming and cancelling
+    // both leave the live states, and a lapsed TTL fails the comparison.
+    /**
+     * @return array{id: int, state: string, token_hash: string, peer_device_id: string|null, self_confirmed: bool, peer_confirmed: bool}|null
+     */
+    public function liveCeremonyOwnedBy(int $userId, string $selfDeviceId): ?array
+    {
+        $row = $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->whereIn('state', [PairingState::Pending->value, PairingState::AwaitingConfirm->value])
+            ->where('expires_at', '>', ZuluTimestamp::stamp($this->clock->now()))
+            ->orderByDesc('id')
+            ->first();
+
+        if ($row === null || ! is_numeric($row->id) || ! is_string($row->state) || ! is_string($row->token_hash)) {
+            return null;
+        }
+
+        $side = PairingRowGuards::sideOwnedBy($row, $selfDeviceId);
+
+        if ($side === null) {
+            return null;
+        }
+
+        $peerDeviceId = $row->{$side->peerPrefix().'device_id'};
+
+        return [
+            'id' => (int) $row->id,
+            'state' => $row->state,
+            'token_hash' => $row->token_hash,
+            // Null while the row still binds one side only, which is exactly
+            // when there is no peer to re-emit anything to.
+            'peer_device_id' => is_string($peerDeviceId) && $peerDeviceId !== '' ? $peerDeviceId : null,
+            'self_confirmed' => is_string($row->{$side->confirmedAtColumn()}),
+            'peer_confirmed' => is_string($row->{$side->peerConfirmedAtColumn()}),
+        ];
+    }
+
     // The live ceremony for this user, newest first. Answers for the ACCOUNT,
     // so a caller still has to establish which side it owns.
     /**

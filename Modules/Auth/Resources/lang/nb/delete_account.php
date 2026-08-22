@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Alt over fjernes fra denne enheten, og du blir logget ut. Det finnes ingen angreknapp og ingen sikkerhetskopi.',
     'confirm' => 'Ja, slett alt',
     'cancel' => 'Behold kontoen min',
+    'error_password_required' => 'Skriv inn passordet ditt.',
     'error_password' => 'Det passordet er ikke riktig.',
     'error_failed' => 'Kontoen din ble ikke slettet. Ingenting ble endret — prøv igjen.',
 ];

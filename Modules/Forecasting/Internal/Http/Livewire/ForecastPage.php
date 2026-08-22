@@ -40,8 +40,13 @@ final class ForecastPage extends Component
     #[Url(as: 'account', except: self::ALL_ACCOUNTS)]
     public string $account = self::ALL_ACCOUNTS;
 
-    #[Url(as: 'horizon', except: 30)]
-    public int $horizon = 30;
+    // The rail offers only ProjectForecastJob::HORIZON_DAYS; this is the one it
+    // opens on, named once so the property, the URL default and the fallback
+    // for an unlisted ?horizon= cannot drift apart.
+    private const DEFAULT_HORIZON = 30;
+
+    #[Url(as: 'horizon', except: self::DEFAULT_HORIZON)]
+    public int $horizon = self::DEFAULT_HORIZON;
 
     #[Url(as: 'scenarioId', except: null)]
     public ?int $scenarioId = null;
@@ -207,6 +212,13 @@ final class ForecastPage extends Component
         ForecastDtoMapper $mapper,
     ): View {
         $user = $currentUser->user();
+
+        // setHorizon() refuses an unlisted value, but the address bar reaches the
+        // property directly: ?horizon=999 rendered a 999-day projection with no
+        // chip lit and no way back to a horizon the rail offers.
+        if (! in_array($this->horizon, ProjectForecastJob::HORIZON_DAYS, true)) {
+            $this->horizon = self::DEFAULT_HORIZON;
+        }
 
         $accountList = $this->resolveAccountList($db, $user);
         $selectedAccountId = $this->normaliseAndResolveAccount($accountList);

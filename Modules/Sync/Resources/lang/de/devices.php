@@ -6,10 +6,14 @@ return [
     'heading' => 'Geräte & Synchronisierung',
 
     'enable_sync' => 'Synchronisierung aktivieren',
-    'enable_sync_help' => 'Teile deine Daten sicher zwischen vertrauenswürdigen Geräten. Erfordert eine App-Sperre.',
+    'enable_sync_help' => 'Teile deine Daten sicher zwischen vertrauenswürdigen Geräten. Erfordert eine App-Sperre. Sobald sie an ist, sind deine Daten verschlüsselt und die App-Sperre lässt sich nicht mehr ausschalten.',
 
     'app_lock_notice' => 'Richte zuerst eine App-Sperre ein, um die Synchronisierung zu aktivieren.',
     'go_to_app_lock' => 'Zur App-Sperre',
+
+    'identity_unreadable' => 'Die Sync-Identität dieses Geräts wurde unter einer anderen App-Sperre erstellt und lässt sich nicht mehr öffnen. Solange das so ist, kann dieses Gerät weder synchronisieren noch koppeln. Stellst du die Datenbanksicherung wieder her, mit der sie erstellt wurde, ist sie wieder lesbar.',
+    'identity_unreadable_replace_help' => 'Du kannst auch neu anfangen: Dieses Gerät bekommt eine neue Identität, die alte bleibt ungenutzt erhalten, und zuvor gekoppelte Geräte musst du erneut koppeln.',
+    'identity_unreadable_replace' => 'Neue Identität für dieses Gerät anlegen',
 
     'encrypted_at_rest' => 'Daten im Ruhezustand verschlüsselt',
     'encrypted_at_rest_scope' => 'Notizen, Buchungstexte und die Namen und IBANs deiner Zahlungsempfänger sind im Buchungsbestand mit der Passphrase deiner App-Sperre verschlüsselt. Beträge, Daten sowie dein eigener Kontoname und deine eigene IBAN sind es nicht. Der Suchindex behält eine eigene lesbare Kopie davon, wen du bezahlst, deiner Buchungstexte und deiner Steuernotizen, und einige Händlernamen stehen im Klartext an anderer Stelle in der Datenbankdatei.',
@@ -37,6 +41,11 @@ return [
     'remove_aria' => ':name entfernen',
     'remove' => 'Entfernen',
     'pair_new_device' => 'Neues Gerät koppeln',
+
+    'pairing_waiting' => 'Kopplung mit :name abschließen',
+    'pairing_waiting_help' => 'Beide Bildschirme müssen dieselben sechs Wörter zeigen, bevor die Kopplung zählt. Erneut öffnen, um sie zu vergleichen.',
+    'pairing_waiting_resume' => 'Kopplung fortsetzen',
+    'pairing_waiting_lock_override' => 'Das Entsperren öffnet diese Kopplung erneut, statt sie ablaufen zu lassen — sie überdauert also die von dir eingestellte App-Sperrzeit. Sie endet, sobald du sie abschließt oder abbrichst.',
 
     'relay_endpoint' => 'Relay-Endpunkt',
     'relay_endpoint_help' => 'Optional. Wenn gesetzt, synchronisieren Offline-Geräte über dieses Relay. Leer lassen, wenn nur LAN&#8209;direkt genutzt werden soll.',
@@ -68,6 +77,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Richte zuerst eine App-Sperre ein, um die Synchronisierung zu aktivieren.',
         'enable_failed' => 'Synchronisierung konnte nicht aktiviert werden. Prüfe, ob deine App-Sperre aktiv ist, und versuche es erneut.',
+        'identity_replaced' => 'Dieses Gerät hat eine neue Sync-Identität. Kopple deine anderen Geräte erneut.',
+        'identity_replace_failed' => 'Die alte Geräteidentität konnte nicht beiseitegelegt werden. Bitte versuche es erneut.',
         'cannot_remove_self' => 'Du kannst dieses Gerät nicht entfernen — es ist das Gerät, das du gerade nutzt.',
         'remove_failed' => 'Gerät konnte nicht entfernt werden. Versuche es erneut.',
         'app_lock_first_settings' => 'Richte zuerst eine App-Sperre ein, um die Synchronisierungseinstellungen zu ändern.',
@@ -75,4 +86,8 @@ return [
         'relay_saved' => 'Relay-Endpunkt gespeichert.',
         'relay_save_failed' => 'Relay-Endpunkt konnte nicht gespeichert werden: :message',
     ],
+    'app_lock_permanent' => 'Sobald deine Daten verschlüsselt sind, lässt sich die App-Sperre nicht mehr ausschalten — sie hält den einzigen Schlüssel, und zurück zu unverschlüsselt geht es nicht.',
+    'backlog_heading' => 'Wartet auf Übernahme',
+    'backlog_deferred' => 'Dieses Gerät hat Daten von einem anderen Gerät empfangen und noch nicht in deine Buchhaltung übernommen. Es geht nichts verloren — die Übernahme erfolgt automatisch, in der Regel innerhalb eines Augenblicks.',
+    'backlog_awaiting_key' => 'Dieses Gerät hat Daten empfangen, für die es noch keinen Schlüssel hat. Es geht nichts verloren. Öffne die App auf dem gekoppelten Gerät, während dieses geöffnet ist, damit sich beide verbinden können und der Schlüssel gesendet wird.',
 ];

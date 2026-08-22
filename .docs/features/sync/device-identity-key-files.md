@@ -36,15 +36,61 @@ together.
 Raw keypair buffers are zeroed as soon as the hex form is extracted, and the KEK is zeroed in
 a `finally` on every path.
 
-## Three states, not two
+## Four states, not two
 
-`DeviceIdentityLoader::load()` returns `null` for two very different situations: sync was
-never enabled for this user (no key file), or the app is locked (no KEK to decrypt with).
-Callers that merely need "is there a usable identity right now" can treat both the same.
+`DeviceIdentityLoader::load()` returns `null` for three very different situations: sync was
+never enabled for this user (no key file), the app is locked (no KEK to decrypt with), or
+the key file is there and does not open under the key this device holds. Callers that merely
+need "is there a usable identity right now" can treat all three the same.
 
 A caller that would *mint* on null cannot. `exists()` answers the file question **without**
 needing the KEK, precisely so a locked device is never mistaken for a fresh one and
-overwritten. Separating the two is what makes minting safe.
+overwritten. `state()` names all four — `Absent`, `Locked`, `Unreadable`, `Usable` — for the
+callers that must tell the user which one it is, or must refuse to write.
+
+## The key file outlives the database that holds its key
+
+The key file is on the filesystem; the KEK that opens it is wrapped in
+`user_app_lock_configs`, in the database. The two have independent lifetimes, and only the
+app-lock side of that is guarded:
+
+- `AppLockProvisioner::enable()` mints a new random data key only where nothing is encrypted
+  under an existing one, and `disable()` refuses while at-rest encryption is active, so
+  switching the lock off and on again cannot leave `sync/identity/<id>.enc` and
+  `sync/gdk/<id>.enc` wrapped under a key nothing holds. See
+  [the app-lock data key's lifetime](../auth/app-lock-data-key-lifetime.md).
+- Restoring a backup, or replacing the database for any other reason, strands the key files
+  from the other direction, with nothing to guard it — and can equally *restore* a KEK that
+  opens a file which did not open a moment ago.
+- `AppLockProvisioner::rewrapForNewPin()`, which is what the "Forgot your PIN?" reset calls,
+  re-wraps the **same** data key and is safe. So is `changePin()`, which additionally
+  dispatches `AppLockPassphraseChanged` so the keyring is re-wrapped.
+
+An unopenable key file is therefore an ordinary state of a real install, not a corruption. It
+is read on a settings mount and on a poll tick, so it must never be an exception: an escape
+there is a 500 on Data & Devices, which is the only route to pairing.
+
+## An unopenable key file is retired, never deleted
+
+Two things must not happen to it, and both are tempting:
+
+- **Deleting it on sight.** A page render must not destroy key material. The database that
+  wraps the KEK may still be restored, and that is the whole recovery path for a file this
+  device cannot currently open.
+- **Minting over it.** That is what a bare `null` from `load()` would cause the next
+  "enable sync" to do, silently. `generateAndPersist()` refuses instead, with
+  `DeviceIdentityUnreadableException`.
+
+So the settings section names the state, and offers one explicit action — and only when no
+`device_registry` self row exists, i.e. when nothing was ever registered under the old
+identity. `retireUnreadableIdentity()` **renames** the file to
+`<id>.enc.unreadable-<timestamp>-<random>` and the ordinary enable path mints beside it. Every
+reader looks for the exact `<id>.enc` name, so the retired sibling is invisible to all of
+them, and a support session can still put it back.
+
+With a self row present the notice appears without the action. Retiring an identity peers
+were told about, and a history signed under it, needs the registry row and every pairing
+retired with it — more than one settings button may decide.
 
 ## Staging plaintext secrets
 

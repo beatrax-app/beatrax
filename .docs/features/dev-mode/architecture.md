@@ -52,10 +52,13 @@ layout to render the ⌘K palette and the sidebar nav-list:
     `CommandTier`. `find()` throws `InvalidArgumentException` rather
     than returning null, so an unregistered name never reaches a
     caller as a value.
-  - `NavigationRegistry::entries()` — the canonical nav list both
+  - `NavigationRegistry::all()` — the canonical nav list both
     the sidebar and the palette consume.
-  - `AppActionRegistry::actions()` — the named palette actions
-    (`Run import`, `Scan email now`, `Toggle theme`, `Open profile`).
+  - `AppActionRegistry::all()` — the named palette actions
+    (`Run import`, `Scan email now`, `Open profile`, `Toggle theme`).
+    Both contracts name the accessor `all()` and both have a Null
+    implementation for the non-dev build, so the layout can resolve
+    them unconditionally.
   - `AuditWriter::recordCommandRun()`, `finalizeCommandRun()`,
     `recordDestructiveQueueAction()`, `recordSelectQuery()` — the
     single sanctioned write path for `dev_mode_audit` rows.
@@ -211,11 +214,19 @@ and `noUnsanctionedAuditWriter` are anchored here.
   `ArgType`, writes the opening audit row, spawns the process,
   returns the run id. `$tier` is a `CommandTier`, so the two spawn
   controllers cannot hand it a value the registry does not know.
-- `RunRegistry::record($run)` / `find($id)` — per-run state cache
-  in the cache store (`Run` rows live in cache, not the DB; the
-  closing audit row in `dev_mode_audit` is the durable trace).
-- `FileTailer::stream($file)` — yields lines from the live log
-  file. The Livewire log tailer consumes it.
+- `RunRegistry::store($record)` / `find($runId)` /
+  `markFinished($runId, $exitCode, $finishedAt)` /
+  `markCancelled($runId)` — per-run state cache in the cache store
+  (`RunRecord` rows live in cache, not the DB). The durable trace is
+  the OPENING `dev_mode_audit` row, which `CommandSpawner` writes
+  eagerly and deliberately incomplete; `FinalizeRunAudit` updates that
+  same row in place, keyed on `properties.run_id`.
+- `FileTailer::tailOnce($path, $fromOffset)` — one bounded read, not
+  a stream: it returns `{chunk, newOffset}` for at most 64 KiB from
+  the caller's offset, and the Livewire log tailer polls it. Every
+  failure mode — missing, rotated, truncated, caught up, unreadable —
+  hands back the caller's offset unchanged, which is what makes a
+  re-poll idempotent.
 - `WriteWorkerHeartbeat::__invoke()` — bumps the
   `queue.worker_heartbeat` cache key with the current
   `Clock::now()`. The boot-health probe reads it.
@@ -241,9 +252,11 @@ The ⌘K command-palette flow:
 user presses ⌘K from anywhere in the app
   → palette modal mounts via Livewire
   → CommandPaletteModal builds the entry list
-       → NavigationRegistry::entries (filtered by is_developer)
-       → AppActionRegistry::actions
-       → DevCommandRegistry::all (only for developers)
+       → NavigationRegistry::all (filtered by is_developer)
+       → AppActionRegistry::all
+       → DevCommandRegistry::safe (developers only; the destructive
+         tier never enters the palette — it stays behind the Re-run
+         affordance's triple gate)
   → user picks one
        → if URL action: window.location to URL
        → if handlerEvent: dispatch browser event ('email-scan.run' etc.)

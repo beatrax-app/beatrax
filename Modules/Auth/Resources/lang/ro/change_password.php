@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Confirmă parola nouă',
     'submit' => 'Salvează parola nouă',
 
+    'error_current_required' => 'Introdu parola actuală.',
     'error_current_incorrect' => 'Parola actuală este incorectă.',
     'error_mismatch' => 'Parolele nu coincid.',
     'error_min_length' => 'Folosește cel puțin 12 caractere.',

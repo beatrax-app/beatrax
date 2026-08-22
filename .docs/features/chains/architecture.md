@@ -227,22 +227,22 @@ The post-import resolver pass:
 
 ```
 ConfirmImport (Modules/Import) — outer TX commits
-  → UpsertsCardStatements::upsert($importRunId, $user)
+  → UpsertsCardStatements::upsertForImportRun($importRunId, $user)
        (creates / refreshes card_statements rows per ICS PDF)
-  → DispatchesChainResolution::dispatch($user)
+  → DispatchesChainResolution::dispatchForUser($user->id)
        → INSERT chain_resolution_runs (pending, started_at=null)
        → Bus::dispatch(new ResolveChainLinksJob($user->id))
 
 ResolveChainLinksJob (queue worker) — uniqueId() = user->id
   → flip audit row to running
   → three healing passes (see below), then:
-  → IcsSettlementResolver::resolve($user)
+  → IcsSettlementResolver::resolveForUser($user)
        (for each ASN transfer_out matching an open card_statements,
         insert chain_links and let the state machine drive the row
         toward settled / overpaid / partially_settled)
-  → PaypalFundingResolver::resolve($user)
+  → PaypalFundingResolver::resolveForUser($user)
        (three arms: deterministic, asn-direct, fuzzy fallback)
-  → RetypeByAliasResolver::resolve($user)
+  → RetypeByAliasResolver::resolveForUser($user)
        (re-type rows once known_counterparty_ibans resolves them)
   → flip audit row to complete with linked_count
 ```

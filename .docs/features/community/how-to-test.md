@@ -140,10 +140,15 @@ The behavioural contract for the `Community` module.
   visible in the dev console. (`tests/Feature/CorpusUnknownCategoryWarningTest.php`)
 - **The corpus migration runs cleanly on a fresh database.**
   (`tests/Feature/CommunityCorpusMigrationTest.php`)
-- **A per-user override beats the global corpus row at the same
-  pattern.** `CommunityCorpusQuery::findFor` returns the user's row
-  first, falling back to `user_id IS NULL`.
-  (`tests/Feature/MysteryMerchantsPageTest.php`)
+- **A per-user override beats the global corpus row that matches the
+  same description.** The precedence does not live inside a corpus
+  method: `Import`'s `MerchantNameResolver::resolve` consults the
+  reader's own `merchant_aliases` — exact first, then
+  longest-needle-first generalized — before it asks the corpus at all.
+  `CommunityCorpusQuery` never sees a per-user row to prefer: every one
+  of its lookups filters `user_id IS NULL`, and `SeedCommunityCorpus`
+  is the only writer, so the table holds global rows only.
+  (`Modules/Import/tests/Feature/MerchantNameResolverCommunityTest.php`)
 - **The suggest modal does not open the browser without an explicit
   click.** `SuggestMappingModal::submit` is the only entry point that
   calls `OpenExternalUrlAction`; the modal mounts in a closed state
@@ -191,9 +196,13 @@ The behavioural contract for the `Community` module.
   reads do not change (the corpus is always consultable; the
   share toggle only governs outbound suggestions).
 - **A corpus row whose `generalized_pattern` collides with another
-  row's `pattern`** — `CommunityCorpusQuery::findFor` evaluates the
-  exact-pattern match first, the generalized-pattern fuzzy match
-  second; the exact match wins.
+  row's `pattern`** — the exact match wins, because
+  `MerchantNameResolver::resolve` chains the three corpus lookups with
+  `??` in that order: `CommunityCorpusQuery::lookupExact`, then
+  `lookupGeneralized`, then `lookupRegex`. Each is a separate query;
+  no single method evaluates both tiers. Within the generalized tier
+  the rows are scanned longest-needle-first, so the first hit is also
+  the most specific one.
 
 ## Cross-module collaborators
 

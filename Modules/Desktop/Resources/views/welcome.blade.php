@@ -1,5 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
-<div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
+{{-- .safe-screen: layouts.app draws no bar for a signed-out reader, so this
+     screen is the only thing between its own content and the system bars. --}}
+<div class="safe-screen min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-md mx-auto px-6 space-y-6 text-center">
         <div class="flex justify-center">
             {{-- Brand mark — same surface the welcome / login screens use. --}}

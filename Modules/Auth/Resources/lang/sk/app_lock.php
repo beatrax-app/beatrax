@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN musí mať aspoň 6 číslice.',
     'error_pin_mismatch' => 'PIN-y sa nezhodujú. Skús to znova.',
+    'error_pin_required' => 'Zadaj svoj PIN.',
     'error_pin_incorrect' => 'Nesprávny PIN.',
+    'error_account_password_required' => 'Zadaj svoje heslo k účtu.',
     'error_account_password' => 'Nesprávne heslo k účtu.',
     'change_pin_success' => 'Tvoj šifrovací kľúč je znova zabezpečený novým PIN-om.',
     'error_forgot_failed' => 'Obnovenie PIN-u zlyhalo — obnovovací kľúč nie je dostupný.',
     'error_enable_first' => 'Najprv zapni zámok PIN-om, až potom registruj biometriu.',
+    'error_disable_blocked_by_encryption' => 'Tvoje poznámky a údaje o protistranách sú šifrované kľúčom, ktorý drží tento zámok aplikácie, takže jeho vypnutie by ich nechalo nečitateľné. Zámok zostáva zapnutý — radšej si zmeň PIN.',
+    'error_key_material_lost' => 'Toto zariadenie už nedrží kľúč, ktorý otvára tvoje šifrované údaje, takže nový PIN ich znova čitateľnými neurobí. Spáruj toto zariadenie s takým, ktoré kľúč ešte má, a obnov ich.',
+    'error_recovery_wrap_stale' => 'Heslo k účtu už tento zámok aplikácie neotvorí — bolo zmenené až po jeho nastavení. Tvoj PIN stále funguje, ale ak ho zabudneš, nezostane za ním nič. Prepoj heslo k účtu znova.',
+    'relink_recovery' => 'Znova prepojiť heslo k účtu',
+    'relink_modal_heading' => 'Znova prepojiť heslo k účtu — potvrď PINom',
+    'relink_recovery_success' => 'Heslo k účtu môže tento zámok aplikácie opäť obnoviť.',
 ];

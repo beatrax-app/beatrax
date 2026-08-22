@@ -22,6 +22,7 @@ return [
     'word_code_aria' => 'Įvesk žodinį kodą iš kito įrenginio',
     'submit_code' => 'Pateikti kodą',
     'cancel' => 'Atšaukti',
+    'skip_import' => 'Tęsti neimportuojant',
 
     'confirm_heading' => 'Palygink šiuos žodžius su kitu įrenginiu',
     'safety_words_aria' => 'Saugos numerio žodžiai: :words',
@@ -37,6 +38,8 @@ return [
         'relay_unreachable' => 'Nepavyksta pasiekti kito įrenginio. Įsitikink, kad abu yra tame pačiame tinkle ir kad kompiuteryje įjungtas sinchronizavimas.',
         'invalid_code' => 'Šis kodas neteisingas arba nebegalioja. Paprašyk kitame įrenginyje sugeneruoti naują.',
         'code_not_accepted' => 'Nė vienas šio tinklo įrenginys nepriėmė šio kodo. Patikrink kodą ir ar kitas įrenginys jį vis dar rodo.',
+        'no_peer_answered' => 'Šiame tinkle į šį kodą niekas neatsakė. Patikrink, ar kitame įrenginyje veikia sinchronizavimas, arba nuskaityk jo kodą kamera — kamerai tinkle ieškoti nereikia.',
+        'no_peer_answered_ios' => 'Šiame tinkle į šį kodą niekas neatsakė. Kito įrenginio paieška tinkle „iPhone“ dar neveikia, tad nuskaityk jo kodą kamera.',
         'rate_limited' => 'Per daug bandymų. Palauk minutę ir bandyk dar kartą.',
         'identity_locked' => 'Tavo įrenginio tapatybė užrakinta. Atrakink programėlę ir bandyk dar kartą.',
         'identity_needs_lock' => 'Pirmiausia nustatykite programėlės užraktą — jis saugo įrenginio tapatybę.',

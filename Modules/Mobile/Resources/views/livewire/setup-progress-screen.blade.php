@@ -18,7 +18,7 @@
 <div
     class="safe-screen min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
             motion-reduce:transition-none"
-    wire:poll.2s="poll"
+    wire:poll.2s.keep-alive="poll"
 >
     <div class="w-full max-w-sm px-6 space-y-6 text-center">
 

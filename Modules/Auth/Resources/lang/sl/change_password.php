@@ -11,6 +11,7 @@ return [
     'confirm_new_password' => 'Potrdi novo geslo',
     'submit' => 'Shrani novo geslo',
 
+    'error_current_required' => 'Vnesi svoje trenutno geslo.',
     'error_current_incorrect' => 'Trenutno geslo ni pravilno.',
     'error_mismatch' => 'Gesli se ne ujemata.',
     'error_min_length' => 'Uporabi vsaj 12 znakov.',

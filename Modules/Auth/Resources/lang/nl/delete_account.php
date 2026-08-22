@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Alles hierboven verdwijnt van dit apparaat en je wordt uitgelogd. Er is geen weg terug en er blijft geen back-up achter.',
     'confirm' => 'Ja, verwijder alles',
     'cancel' => 'Mijn account houden',
+    'error_password_required' => 'Voer je wachtwoord in.',
     'error_password' => 'Dat wachtwoord klopt niet.',
     'error_failed' => 'Je account is niet verwijderd. Er is niets veranderd — probeer het opnieuw.',
 ];

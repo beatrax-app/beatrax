@@ -16,6 +16,7 @@ return [
     'confirm_body' => 'Wszystko powyższe znika z tego urządzenia, a ty zostajesz wylogowany. Nie ma powrotu ani kopii zapasowej.',
     'confirm' => 'Tak, usuń wszystko',
     'cancel' => 'Zachowaj moje konto',
+    'error_password_required' => 'Podaj swoje hasło.',
     'error_password' => 'To hasło jest nieprawidłowe.',
     'error_failed' => 'Twoje konto nie zostało usunięte. Nic się nie zmieniło — spróbuj ponownie.',
 ];

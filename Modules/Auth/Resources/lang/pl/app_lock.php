@@ -60,9 +60,17 @@ return [
 
     'error_pin_too_short' => 'PIN musi mieć co najmniej 6 cyfry.',
     'error_pin_mismatch' => 'Kody PIN nie są zgodne. Spróbuj ponownie.',
+    'error_pin_required' => 'Wpisz swój PIN.',
     'error_pin_incorrect' => 'Nieprawidłowy PIN.',
+    'error_account_password_required' => 'Wpisz swoje hasło do konta.',
     'error_account_password' => 'Nieprawidłowe hasło do konta.',
     'change_pin_success' => 'Klucz szyfrowania został ponownie zabezpieczony nowym PIN-em.',
     'error_forgot_failed' => 'Reset PIN-u nie powiódł się — klucz odzyskiwania jest niedostępny.',
     'error_enable_first' => 'Najpierw włącz blokadę PIN, zanim zarejestrujesz biometrię.',
+    'error_disable_blocked_by_encryption' => 'Twoje notatki i dane kontrahentów są zaszyfrowane kluczem, który przechowuje ta blokada aplikacji, więc jej wyłączenie uczyniłoby je nieczytelnymi. Blokada zostaje włączona — zamiast tego zmień PIN.',
+    'error_key_material_lost' => 'To urządzenie nie przechowuje już klucza otwierającego Twoje zaszyfrowane dane, więc nowy PIN nie sprawi, że staną się znowu czytelne. Sparuj to urządzenie z takim, które wciąż ma klucz, aby je odzyskać.',
+    'error_recovery_wrap_stale' => 'Hasło do konta nie otwiera już tej blokady aplikacji — zostało zmienione po jej skonfigurowaniu. PIN nadal działa, ale jeśli go zapomnisz, nic za nim nie zostanie. Połącz hasło do konta na nowo.',
+    'relink_recovery' => 'Połącz hasło do konta na nowo',
+    'relink_modal_heading' => 'Połącz hasło do konta na nowo — potwierdź PIN-em',
+    'relink_recovery_success' => 'Hasło do konta znów może odzyskać tę blokadę aplikacji.',
 ];

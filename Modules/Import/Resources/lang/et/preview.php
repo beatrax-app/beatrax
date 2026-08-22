@@ -58,7 +58,7 @@ return [
     ],
 
     'errors' => [
-        'app_locked' => 'Importimiseks avage rakendus: kaupmehe võtit ei saa lukustatuna arvutada.',
+        'app_locked' => 'Importimiseks avage rakendus: krüpteerimisvõtmeid ei saa lukustatuna kasutada.',
         'file_unreadable' => 'Seda faili ei õnnestunud lugeda.',
         'iban_not_in_preview' => 'See IBAN ei kuulu praegusesse eelvaatesse.',
         'row_unreadable' => 'Seda rida ei õnnestunud lugeda.',

@@ -6,10 +6,14 @@ return [
     'heading' => 'Zariadenia a synchronizácia',
 
     'enable_sync' => 'Zapnúť synchronizáciu',
-    'enable_sync_help' => 'Zdieľaj svoje údaje bezpečne medzi dôveryhodnými zariadeniami. Vyžaduje zámok aplikácie.',
+    'enable_sync_help' => 'Zdieľaj svoje údaje bezpečne medzi dôveryhodnými zariadeniami. Vyžaduje zámok aplikácie. Keď je zapnutý, údaje sa zašifrujú a zámok aplikácie sa už nedá vypnúť.',
 
     'app_lock_notice' => 'Ak chceš zapnúť synchronizáciu, najprv nastav zámok aplikácie.',
     'go_to_app_lock' => 'Prejsť na Zámok aplikácie',
+
+    'identity_unreadable' => 'Synchronizačná identita tohto zariadenia vznikla s iným zámkom aplikácie a už sa neotvorí. Kým to platí, zariadenie nemôže synchronizovať ani sa párovať. Obnovením zálohy databázy, s ktorou vznikla, bude opäť čitateľná.',
+    'identity_unreadable_replace_help' => 'Môžeš tiež začať odznova: zariadenie dostane novú identitu, stará zostane nepoužitá bokom a predtým spárované zariadenia bude treba spárovať znova.',
+    'identity_unreadable_replace' => 'Vytvoriť pre toto zariadenie novú identitu',
 
     'encrypted_at_rest' => 'Údaje šifrované v pokoji',
     'encrypted_at_rest_scope' => 'Poznámky, popisy transakcií a mená a IBAN príjemcov sú v účtovnej knihe šifrované prístupovou frázou zámku aplikácie. Sumy, dátumy a názov a IBAN tvojho vlastného účtu nie sú. Vyhľadávací index si drží vlastnú čitateľnú kópiu toho, komu platíš, popisov tvojich transakcií a tvojich daňových poznámok, a niektoré mená obchodníkov zostávajú čitateľné inde v súbore databázy.',
@@ -37,6 +41,11 @@ return [
     'remove_aria' => 'Odstrániť: :name',
     'remove' => 'Odstrániť',
     'pair_new_device' => 'Spárovať nové zariadenie',
+
+    'pairing_waiting' => 'Dokončite párovanie so zariadením :name',
+    'pairing_waiting_help' => 'Oba displeje musia zobrazovať rovnakých šesť slov, kým párovanie začne platiť. Otvorte ho znova a porovnajte ich.',
+    'pairing_waiting_resume' => 'Pokračovať v párovaní',
+    'pairing_waiting_lock_override' => 'Odomknutie toto párovanie znovu otvorí, namiesto aby ho nechalo vypršať, takže pretrvá dlhšie než nastavený časový limit zámku aplikácie. Skončí, keď ho dokončíte alebo zrušíte.',
 
     'relay_endpoint' => 'Adresa relé',
     'relay_endpoint_help' => 'Voliteľné. Keď je nastavená, zariadenia offline sa synchronizujú cez toto relé. Nechaj prázdne, ak chceš iba priame LAN&#8209;spojenie.',
@@ -68,6 +77,8 @@ return [
     'flash' => [
         'app_lock_first' => 'Ak chceš zapnúť synchronizáciu, najprv nastav zámok aplikácie.',
         'enable_failed' => 'Synchronizáciu sa nepodarilo zapnúť. Skontroluj, či je zámok aplikácie aktívny, a skús to znova.',
+        'identity_replaced' => 'Toto zariadenie má novú synchronizačnú identitu. Spáruj ostatné zariadenia znova.',
+        'identity_replace_failed' => 'Starú identitu zariadenia sa nepodarilo odložiť bokom. Skús to znova.',
         'cannot_remove_self' => 'Toto zariadenie odstrániť nemôžeš — práve ho používaš.',
         'remove_failed' => 'Zariadenie sa nepodarilo odstrániť. Skús to znova.',
         'app_lock_first_settings' => 'Ak chceš zmeniť nastavenia synchronizácie, najprv nastav zámok aplikácie.',
@@ -75,4 +86,8 @@ return [
         'relay_saved' => 'Adresa relé uložená.',
         'relay_save_failed' => 'Adresu relé sa nepodarilo uložiť: :message',
     ],
+    'app_lock_permanent' => 'Len čo sú údaje šifrované, zámok aplikácie sa už nedá vypnúť — drží jediný kľúč a cesta späť k nešifrovaným údajom neexistuje.',
+    'backlog_heading' => 'Čaká na pridanie',
+    'backlog_deferred' => 'Toto zariadenie prijalo údaje z iného zariadenia a zatiaľ ich nepridalo do tvojej evidencie. Nič sa nestráca — pridajú sa automaticky, zvyčajne v priebehu okamihu.',
+    'backlog_awaiting_key' => 'Toto zariadenie prijalo údaje, ku ktorým zatiaľ nemá kľúč. Nič sa nestráca. Otvor aplikáciu na spárovanom zariadení, kým je toto otvorené, aby sa obe mohli spojiť a kľúč sa mohol odoslať.',
 ];

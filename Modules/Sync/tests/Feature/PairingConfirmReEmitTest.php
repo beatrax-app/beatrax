@@ -16,6 +16,7 @@ use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Enums\LanDiscoveryReach;
 
 uses(RefreshDatabase::class);
 
@@ -48,6 +49,11 @@ function reEmitDiscoversNothing(): void
 {
     app()->instance(PeerDiscovery::class, new class implements PeerDiscovery
     {
+        public function reach(): LanDiscoveryReach
+        {
+            return LanDiscoveryReach::Available;
+        }
+
         /**
          * @return list<DiscoveredPeer>
          */
