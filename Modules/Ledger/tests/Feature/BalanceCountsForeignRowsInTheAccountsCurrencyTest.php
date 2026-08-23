@@ -49,6 +49,8 @@ function settledRow(
     int $amountMinor,
     string $currency,
     int $settledMinor,
+    string $postedAt = '2026-05-10',
+    ?string $settledCurrency = null,
 ): void {
     static $row = 0;
     $row++;
@@ -70,13 +72,13 @@ function settledRow(
         'account_id' => $accountId,
         'import_run_id' => $runId,
         'fingerprint' => hash('sha256', 'set-fp-'.$hex),
-        'posted_at' => '2026-05-10',
-        'booked_at' => '2026-05-10 12:00:00',
-        'value_date' => '2026-05-10',
+        'posted_at' => $postedAt,
+        'booked_at' => $postedAt.' 12:00:00',
+        'value_date' => $postedAt,
         'amount_minor' => $amountMinor,
         'currency' => $currency,
         'settled_amount_minor' => $settledMinor,
-        'settled_currency' => Currency::Eur->value,
+        'settled_currency' => $settledCurrency ?? Currency::Eur->value,
         'counterparty_normalized' => 'set',
         'counterparty_name' => 'SET',
         'normalization_version' => 1,
@@ -108,4 +110,22 @@ it('uses the settled figure for the cleared balance too', function (): void {
     settledRow($this->db, $this->user->id, $accountId, -3_695, Currency::Usd->value, -3_399);
 
     expect(app(AccountBalanceQuery::class)->clearedBalance($accountId, $this->user)->in(Currency::Eur->value))->toBe(-3_399);
+});
+
+// The baseline names one currency and one date: what the account held in THAT
+// currency on that day. Applied to every row it deleted money outright -- a
+// dollar charge older than a euro baseline had no line at all, not even zero.
+it('bounds the baseline date on its own currency and leaves a foreign row alone', function (): void {
+    $accountId = settledAccount($this->db, $this->user->id);
+    $this->db->connection()->table('accounts')->where('id', $accountId)->update([
+        'starting_balance_minor' => 10_000,
+        'starting_balance_date' => '2026-06-01',
+    ]);
+
+    settledRow($this->db, $this->user->id, $accountId, -1_000, Currency::Eur->value, -1_000, '2026-05-01');
+    settledRow($this->db, $this->user->id, $accountId, -5_000, Currency::Usd->value, -5_000, '2026-05-01', Currency::Usd->value);
+    settledRow($this->db, $this->user->id, $accountId, -2_000, Currency::Eur->value, -2_000, '2026-06-15');
+
+    expect(app(AccountBalanceQuery::class)->currentBalance($accountId, $this->user)->lines())
+        ->toBe([Currency::Eur->value => 8_000, Currency::Usd->value => -5_000]);
 });

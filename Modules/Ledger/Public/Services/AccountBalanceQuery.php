@@ -6,6 +6,7 @@ namespace Modules\Ledger\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\ClearedStatus;
@@ -76,8 +77,13 @@ final class AccountBalanceQuery
 
         // The baseline is the position BEFORE its own day's rows, so a row
         // posted exactly on that date lands on top of it rather than inside it.
-        if ($baseline['date'] !== null) {
-            $query->where('posted_at', '>=', $baseline['date']->toDateString());
+        // Bounded on the baseline's OWN currency only: it says what the account
+        // held in that one, and a row in another has no baseline covering it.
+        if ($baseline['date'] !== null && $baseline['currency'] !== '') {
+            $query->where(static function (Builder $unbaselined) use ($baseline): void {
+                $unbaselined->where('settled_currency', '!=', $baseline['currency'])
+                    ->orWhere('posted_at', '>=', $baseline['date']->toDateString());
+            });
         }
 
         // The baseline opens the account's own default_currency line even at
