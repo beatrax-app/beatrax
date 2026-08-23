@@ -14,6 +14,7 @@ use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\SeriesConfidenceDto;
+use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
@@ -39,6 +40,7 @@ final readonly class ForecastQuery
         private ForecastDtoMapper $mapper,
         private RecurringSeriesQuery $seriesQuery,
         private BaseCurrency $baseCurrency,
+        private AccountBalanceQuery $balances,
     ) {}
 
     public function forUser(int $accountId, int $horizonDays, ?int $scenarioId, User $user): ForecastDto
@@ -212,7 +214,7 @@ final readonly class ForecastQuery
         CarbonImmutable $asOf,
         User $user,
     ): ForecastDto {
-        $anchorMinor = $this->resolveAnchorFromTransactionsSum($accountId, $user->id);
+        $anchorMinor = $this->balances->currentBalanceAsOf($accountId, $user, $asOf);
 
         $points = [];
         for ($day = 0; $day <= $horizonDays; $day++) {
@@ -237,13 +239,5 @@ final readonly class ForecastQuery
             seriesConfidence: [],
             isComputing: false,
         );
-    }
-
-    private function resolveAnchorFromTransactionsSum(int $accountId, int $userId): int
-    {
-        return (int) $this->db->connection()->table('transactions')
-            ->where('user_id', $userId)
-            ->where('account_id', $accountId)
-            ->sum('amount_minor');
     }
 }
