@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Identity;
 
 use Beatrax\BiometricVault\Facades\BiometricVault;
+use Illuminate\Support\Facades\Log;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -39,7 +40,16 @@ class BiometricKeyVault
 
         $blob = $this->codec->wrap($dataKey);
 
-        return $this->vaultSet($this->slot(), base64_encode($blob));
+        if ($this->vaultSet($this->slot(), base64_encode($blob))) {
+            return true;
+        }
+
+        // The reader is told the device declined and nothing else. Found on an
+        // iPhone 12 mini where enrolment failed every time and left no trace at
+        // all: the only way to learn why was to patch this file onto the phone.
+        $this->logRefusal($this->lastNativeError());
+
+        return false;
     }
 
     // Presents the biometric prompt (iOS) or dispatches it (Android).
@@ -157,6 +167,22 @@ class BiometricKeyVault
         }
 
         BiometricVault::delete($key);
+    }
+
+    protected function lastNativeError(): ?string
+    {
+        if (! class_exists(BiometricVault::class)) {
+            return null;
+        }
+
+        return BiometricVault::lastError();
+    }
+
+    protected function logRefusal(?string $reason): void
+    {
+        Log::warning('BiometricKeyVault: the enclave refused to store the cold-start key.', [
+            'reason' => $reason ?? 'the native side gave none',
+        ]);
     }
 
     // Reads the base64 blob the async (Android) BiometricPrompt callback

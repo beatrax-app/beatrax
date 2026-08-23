@@ -85,7 +85,12 @@ enum BiometricVaultFunctions {
 
 // MARK: - Biometric-gated Keychain helper
 
-private enum BiometricKeychainError: Error {
+// LocalizedError, not a bare `var localizedDescription`. The throw sites catch
+// `Error`, and on that existential Swift's own NSError bridging wins over a
+// plain property of the same name — so every message below was unreachable.
+// Read off an iPhone 12 mini: "The operation couldn't be completed.
+// (NativePHP.(unknown context at $1062cdb7c).BiometricKeychainError error 0.)".
+private enum BiometricKeychainError: Error, LocalizedError {
     case encodingError
     case decodingError
     case accessControlCreateFailed
@@ -95,7 +100,7 @@ private enum BiometricKeychainError: Error {
     case loadFailed(OSStatus)
     case deleteFailed(OSStatus)
 
-    var localizedDescription: String {
+    var errorDescription: String? {
         switch self {
         case .encodingError: return "Failed to encode value"
         case .decodingError: return "Failed to decode value"
