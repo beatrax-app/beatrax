@@ -51,7 +51,7 @@ beforeEach(function (): void {
     );
 });
 
-function spendCatTx(int $userId, int $accountId, int $runId, int $settledMinor, ?int $categoryId, string $currency = 'EUR'): Transaction
+function spendCatTx(int $userId, int $accountId, int $runId, int $settledMinor, ?int $categoryId, string $currency = 'EUR', ?string $type = null): Transaction
 {
     static $i = 200000;
     $i++;
@@ -61,7 +61,7 @@ function spendCatTx(int $userId, int $accountId, int $runId, int $settledMinor, 
     $tx = Transaction::create([
         'user_id' => $userId,
         'account_id' => $accountId,
-        'type' => $settledMinor < 0 ? 'expense' : 'income',
+        'type' => $type ?? ($settledMinor < 0 ? 'expense' : 'income'),
         'posted_at' => $postedAt,
         'booked_at' => $postedAt.' 12:00:00',
         'value_date' => $postedAt,
@@ -188,4 +188,41 @@ it('surfaces uncategorized unsplit spend under id 0 only when includeUncategoriz
 
     $included = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR', includeUncategorized: true);
     expect($included[0])->toBe(1000);
+});
+
+// Spend is `type = expense`, the definition Reports and the dashboard's OUT
+// tile both hold. Selecting on the amount's sign instead let a transfer to the
+// reader's own card sit in "Top spending" as EUR325.00, and made "This month
+// vs last" read EUR2,818.11 against the EUR2,459.11 the OUT tile on the same
+// page reported for the same month.
+it('leaves an internal transfer out of category spend', function (): void {
+    $transfers = Modules\Ledger\Models\Category::create(['user_id' => null, 'name' => 'Transfers (internal)', 'slug' => 'sbc-transfers', 'kind' => 'transfer', 'display_order' => 3]);
+    spendCatTx($this->user->id, $this->account->id, $this->run->id, -5000, $this->groceries->id);
+    spendCatTx($this->user->id, $this->account->id, $this->run->id, -22500, $transfers->id, 'EUR', 'transfer_out');
+
+    $result = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR', includeUncategorized: true);
+
+    expect($result)->not->toHaveKey($transfers->id)
+        ->and(array_sum($result))->toBe(5000);
+});
+
+it('leaves a fee and an adjustment out of category spend', function (): void {
+    spendCatTx($this->user->id, $this->account->id, $this->run->id, -5000, $this->groceries->id);
+    spendCatTx($this->user->id, $this->account->id, $this->run->id, -150, null, 'EUR', 'fee');
+    spendCatTx($this->user->id, $this->account->id, $this->run->id, -750, null, 'EUR', 'adjustment');
+
+    $result = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR', includeUncategorized: true);
+
+    expect(array_sum($result))->toBe(5000);
+});
+
+it('leaves an internal transfer out of the per-currency map too', function (): void {
+    $transfers = Modules\Ledger\Models\Category::create(['user_id' => null, 'name' => 'Transfers (internal)', 'slug' => 'sbc-transfers-cur', 'kind' => 'transfer', 'display_order' => 4]);
+    spendCatTx($this->user->id, $this->account->id, $this->run->id, -5000, $this->groceries->id);
+    spendCatTx($this->user->id, $this->account->id, $this->run->id, -22500, $transfers->id, 'EUR', 'transfer_out');
+
+    $result = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period);
+
+    expect($result)->not->toHaveKey($transfers->id.'|EUR')
+        ->and($result[$this->groceries->id.'|EUR'])->toBe(5000);
 });

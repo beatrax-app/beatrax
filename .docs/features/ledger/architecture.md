@@ -608,12 +608,67 @@ printed on a statement, and that number counts the whole life of the
 account, not only the part Beatrax has imported. A cleared balance that
 started at zero could only ever match by coincidence.
 
+## `BaseCurrency` — the reader's reporting currency
+
+`BaseCurrency` (`Ledger\Public\Services`) is the one place the currency
+a roll-up renders in resolves. `/settings` writes the reader's choice to
+`users.base_currency`; about a hundred call sites across twenty-two
+Blade templates format money through this service, and none of them pass
+a user, so the service is what has to know who is reading.
+
+Three entry points, and which one a caller wants is a real decision:
+
+- `forUser(User $user)` — the reader's choice, for code that already
+  holds the user: background jobs, and every query that takes a `User`
+  argument. It reads the model attribute and issues no query.
+- `code()` — the same answer for the reader of the current request. It
+  resolves `CurrentUser` and delegates to `forUser()`.
+- `installDefault()` — `config('currency.base')`, what an install ships
+  with. Not a reader's answer, and named so a caller has to mean it.
+
+`code()` fails closed on the split `Core\Public\Scopes\UserScope`
+already draws. A **web** request with no authenticated reader gets a
+`NotAuthenticatedException` rather than a guessed code, because the
+figure standing next to the sign is somebody's real total and a wrong
+sign over a right number is worse than no page. The **console** — the
+install bootstrap, queue workers, the test suite — has no reader to have
+a preference and takes `installDefault()`. Guest chrome that legitimately
+has no reader, such as the chart-axis currency the login shell stamps on
+`<html data-base-currency>`, asks for `installDefault()` outright.
+
+A background job acting *for* a reader must carry that reader rather than
+land in the console branch: either bind them to the guard for the
+duration (`Position\Internal\Jobs\EmitPositionDigestJob` and
+`Budgets\Internal\Jobs\EmitBudgetNudgesJob` both do, and
+`Core\Internal\Listeners\ClearGuardBetweenJobs` unbinds between jobs),
+or call `forUser()` with the user the job was queued for.
+
+`users.base_currency` is nullable with no backfill and no DB default —
+`User`'s Eloquent `$attributes` owns `EUR` for rows created through the
+model, and two competing defaults would drift — so every user row older
+than the column carries NULL. That is not an error state: it is a reader
+who has never opened the picker, and `installDefault()` is the answer.
+Reading the column raw instead of through `forUser()` handed NULL to
+`Money::ofMinor()` and to `ExchangeRateService::convertToBase()`, which
+is a `TypeError` on exactly the oldest installs.
+
+The service is bound `scoped()`, not `singleton()`: one render reaches it
+once per money figure, so a fresh instance per call site is waste, and
+the queue worker drops scoped instances between jobs so the next job's
+reader is resolved afresh rather than frozen from the first.
+
+**Resolving is not converting.** `BaseCurrency` answers *which* code a
+figure should be labelled in; turning an amount into it is `FX`'s job,
+and an amount with no rate available is excluded from the total and named
+rather than added one-to-one (`NetWorthQuery` is the reference).
+
 ## Changing an account's currency
 
 `accounts.default_currency` is the account's own denomination (`B1-R17`).
-Every creation site writes it from `BaseCurrency->code()` — app config,
-one value for the install — and `/settings` now carries a per-account
-picker beside the opening-balance editor so the reader can correct it:
+Every creation site writes it from `BaseCurrency->code()` — the reader's
+own reporting currency, which `/settings` lets them change — and
+`/settings` also carries a per-account picker beside the opening-balance
+editor so the reader can correct an individual account:
 `Ledger\Public\Http\Livewire\AccountCurrencyEditor`, over
 `Ledger\Internal\Actions\SetAccountCurrency`. The offered set is the
 `currencies` reference table, the same one the base-currency picker
@@ -814,7 +869,15 @@ so a lost race never fires a spurious event.
 
 ## `SpendByCategoryQuery` — the split-aware spend read model
 
-`Public/Services/SpendByCategoryQuery` is the single place that
+`Public/Services/SpendByCategoryQuery` selects `type = expense`, the
+same definition as `ThisPeriodAtAGlanceQuery`'s outflow and Reports'
+spend metric — never the amount's sign. A `transfer_out` to the reader's
+own card is negative and is not money spent; selecting on the sign put
+one in the dashboard's "Top spending" as EUR325.00 and made "this month
+vs last" read EUR2,818.11 against the EUR2,459.11 the OUT tile on the
+same page gave for the same month.
+
+It is also the single place that
 decides how a split transaction's spend is attributed: a split parent
 contributes zero directly to any category total — only its
 `transaction_splits` legs do — while an unsplit transaction still rolls
@@ -840,7 +903,8 @@ single-currency map for `TopCategoriesByPeriodQuery`/
 `BudgetProgressQuery`'s `(category_id, currency)` grouping (which
 always excludes uncategorized spend, since it cannot match a budget).
 Both compute in the codebase's established "group in SQL, merge in
-PHP" style rather than a raw SQL UNION.
+PHP" style rather than a raw SQL UNION, and both carry the same type
+filter.
 
 ## `ThisPeriodAtAGlanceQuery` — the dashboard composer
 
