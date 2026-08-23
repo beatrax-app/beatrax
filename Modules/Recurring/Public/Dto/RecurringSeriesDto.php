@@ -13,10 +13,15 @@ final class RecurringSeriesDto extends Data
 {
     /**
      * @param  Money  $latestAmount  denominated in the original transaction currency
-     * @param  Money|null  $eurEquivalent  null when the original amount is already EUR;
-     *                                     otherwise the settled-EUR amount (Google Play in USD, ICS cross-currency settlements)
-     * @param  Money  $monthlyEquivalent  always EUR so the dashboard "this month" total sums
-     *                                    cleanly across mixed currencies
+     * @param  Money|null  $eurEquivalent  $latestAmount in the reader's reporting currency:
+     *                                     null when it is already denominated in it, and null again when the rate
+     *                                     table cannot reach the pair, so a renderer never prints an unconverted
+     *                                     figure under the reader's sign
+     * @param  Money  $monthlyEquivalent  denominated in the series' own latest_currency —
+     *                                    the detector derives it from latest_amount_minor, so a dollar series'
+     *                                    integer is dollar cents. A total across series converts each first
+     * @param  Money|null  $monthlyEquivalentInBase  $monthlyEquivalent in the reader's
+     *                                               reporting currency, null when the rate table cannot reach the pair
      * @param  string|null  $displayNameOverride  user-supplied override; see displayName()
      */
     public function __construct(
@@ -35,6 +40,7 @@ final class RecurringSeriesDto extends Data
         public readonly int $varianceTolerancePercent,
         public readonly ?CarbonImmutable $snoozedUntil,
         public readonly ?float $latestFxRateUsed = null,
+        public readonly ?Money $monthlyEquivalentInBase = null,
     ) {}
 
     public function displayName(): string

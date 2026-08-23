@@ -183,10 +183,10 @@ it('sums monthly_equivalent_minor by direction in monthlyEquivalentTotals', func
     $query = $this->app->make(FixedPaymentsViewQuery::class);
     $totals = $query->monthlyEquivalentTotals($this->user);
 
-    expect($totals)->toHaveKeys(['expense_eur_minor', 'income_eur_minor', 'net_eur_minor']);
-    expect($totals['expense_eur_minor'])->toBe(-5432); // -4333 + -1099
-    expect($totals['income_eur_minor'])->toBe(350000);
-    expect($totals['net_eur_minor'])->toBe(344568); // 350000 + (-5432)
+    expect($totals->expense->toMinor())->toBe(-5432); // -4333 + -1099
+    expect($totals->income->toMinor())->toBe(350000);
+    expect($totals->net->toMinor())->toBe(344568); // 350000 + (-5432)
+    expect($totals->isPartial())->toBeFalse();
 })->group('monthly-equivalent-multiplier');
 
 it('topByMonthlyEquivalent applies the month-window filter BEFORE the limit so this-month-only returns matching rows even when the unfiltered top-N falls outside the window', function (): void {

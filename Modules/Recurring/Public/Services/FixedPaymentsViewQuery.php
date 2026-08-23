@@ -10,9 +10,11 @@ use Modules\Categorization\Public\Services\MerchantMemoryQuery;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
+use Modules\Recurring\Public\Dto\MonthlyEquivalentTotals;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use stdClass;
@@ -25,6 +27,7 @@ final readonly class FixedPaymentsViewQuery
         private DatabaseManager $db,
         private MerchantMemoryQuery $merchantMemory,
         private BaseCurrency $baseCurrency,
+        private CrossCurrencyTotal $fx,
     ) {}
 
     /**
@@ -38,6 +41,8 @@ final readonly class FixedPaymentsViewQuery
         }
 
         $fallbackMap = $this->resolveFallbackChainIds($user, $rows);
+        $baseCurrency = $this->baseCurrency->forUser($user);
+        $rates = $this->fx->ratesTo($this->currenciesIn($rows), $baseCurrency);
 
         // The merchant-memory result is deliberately discarded: keeping the
         // cross-module read on the happy path is what lets the boundary arch
@@ -66,7 +71,7 @@ final readonly class FixedPaymentsViewQuery
         foreach ($rows as $row) {
             /** @var stdClass $row */
             $direction = self::toString($row->direction);
-            $dto = $this->toDto($row, $fallbackMap);
+            $dto = $this->toDto($row, $fallbackMap, $baseCurrency, $rates);
             if ($direction === Direction::Income->value) {
                 $income[] = $dto;
             } else {
@@ -119,30 +124,50 @@ final readonly class FixedPaymentsViewQuery
         return array_slice($combined, 0, $limit);
     }
 
-    /**
-     * @return array{expense_eur_minor: int, income_eur_minor: int, net_eur_minor: int}
-     */
-    public function monthlyEquivalentTotals(User $user): array
+    // Grouped by latest_currency rather than added straight across it: a dollar
+    // series' monthly_equivalent_minor is dollar cents. Each bucket goes through
+    // its own rate before the two sides meet.
+    public function monthlyEquivalentTotals(User $user): MonthlyEquivalentTotals
     {
-        $row = $this->db->connection()
+        $rows = $this->db->connection()
             ->table('recurring_series')
-            ->selectRaw(
-                'COALESCE(SUM(CASE WHEN direction = ? THEN monthly_equivalent_minor ELSE 0 END), 0) AS expense_eur_minor, '.
-                'COALESCE(SUM(CASE WHEN direction = ? THEN monthly_equivalent_minor ELSE 0 END), 0) AS income_eur_minor',
-                [Direction::Expense->value, Direction::Income->value],
-            )
             ->where('user_id', $user->id)
             ->where('state', RecurringSeriesState::Approved->value)
-            ->first();
+            ->groupBy('direction', 'latest_currency')
+            ->selectRaw('direction, latest_currency, COALESCE(SUM(monthly_equivalent_minor), 0) AS bucket_minor')
+            ->get();
 
-        $expense = $row !== null ? self::toInt($row->expense_eur_minor) : 0;
-        $income = $row !== null ? self::toInt($row->income_eur_minor) : 0;
+        /** @var array<string, array<string, int>> $byDirection */
+        $byDirection = [Direction::Expense->value => [], Direction::Income->value => []];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $direction = self::toString($row->direction);
+            $currency = self::toString($row->latest_currency);
+            if (! array_key_exists($direction, $byDirection) || $currency === '') {
+                continue;
+            }
 
-        return [
-            'expense_eur_minor' => $expense,
-            'income_eur_minor' => $income,
-            'net_eur_minor' => $income + $expense,
-        ];
+            $byDirection[$direction][$currency] = ($byDirection[$direction][$currency] ?? 0) + self::toInt($row->bucket_minor);
+        }
+
+        $baseCurrency = $this->baseCurrency->forUser($user);
+        $rates = $this->fx->ratesTo(
+            array_merge(array_keys($byDirection[Direction::Expense->value]), array_keys($byDirection[Direction::Income->value])),
+            $baseCurrency,
+        );
+
+        $expense = $this->fx->withRates($byDirection[Direction::Expense->value], $baseCurrency, $rates);
+        $income = $this->fx->withRates($byDirection[Direction::Income->value], $baseCurrency, $rates);
+
+        $unconverted = array_values(array_unique([...$expense->unconverted, ...$income->unconverted]));
+        sort($unconverted);
+
+        return new MonthlyEquivalentTotals(
+            expense: $expense->money(),
+            income: $income->money(),
+            net: $income->money()->plus($expense->money()),
+            unconverted: $unconverted,
+        );
     }
 
     /**
@@ -237,9 +262,27 @@ final readonly class FixedPaymentsViewQuery
     }
 
     /**
-     * @param  array<int, int>  $fallbackMap
+     * @param  list<stdClass>  $rows
+     * @return list<string>
      */
-    private function toDto(stdClass $row, array $fallbackMap): RecurringSeriesDto
+    private function currenciesIn(array $rows): array
+    {
+        $seen = [];
+        foreach ($rows as $row) {
+            $currency = self::toString($row->latest_currency);
+            if ($currency !== '') {
+                $seen[$currency] = true;
+            }
+        }
+
+        return array_keys($seen);
+    }
+
+    /**
+     * @param  array<int, int>  $fallbackMap
+     * @param  array<string, string>  $rates
+     */
+    private function toDto(stdClass $row, array $fallbackMap, string $baseCurrency, array $rates): RecurringSeriesDto
     {
         // Falls back to walking the series' occurrences for the first usable
         // chain. RecurringSeriesQuery skips that walk; its callers don't need
@@ -260,16 +303,28 @@ final readonly class FixedPaymentsViewQuery
             }
         }
 
-        return RecurringSeriesDtoMapper::hydrate($row, $chainLinkId, $this->baseCurrency->code());
+        return RecurringSeriesDtoMapper::hydrate($row, $chainLinkId, $baseCurrency, $this->fx, $rates);
     }
 
+    // "The six biggest fixed payments" is a race between currencies, run in the
+    // reader's: on raw minor units a USD200.00 subscription beat a EUR150.00 one
+    // while being the smaller. A series with no rate has no size in the reader's
+    // currency, so it sorts after every series that does.
     /**
      * @param  list<RecurringSeriesDto>  $rows
      */
     private static function sortByAbsoluteMonthlyEquivalentDesc(array &$rows): void
     {
         usort($rows, static function (RecurringSeriesDto $a, RecurringSeriesDto $b): int {
-            return abs($b->monthlyEquivalent->toMinor()) <=> abs($a->monthlyEquivalent->toMinor());
+            $rankable = ($b->monthlyEquivalentInBase !== null) <=> ($a->monthlyEquivalentInBase !== null);
+            if ($rankable !== 0) {
+                return $rankable;
+            }
+
+            $left = $a->monthlyEquivalentInBase ?? $a->monthlyEquivalent;
+            $right = $b->monthlyEquivalentInBase ?? $b->monthlyEquivalent;
+
+            return abs($right->toMinor()) <=> abs($left->toMinor());
         });
     }
 }

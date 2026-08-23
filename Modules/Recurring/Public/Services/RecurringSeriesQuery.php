@@ -203,9 +203,8 @@ final readonly class RecurringSeriesQuery
             ->get();
 
         $map = [];
-        foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $map[self::toInt($row->id)] = $this->projector->toDto($row);
+        foreach ($this->projector->toDtos($rows) as $dto) {
+            $map[$dto->seriesId] = $dto;
         }
 
         return $map;
@@ -558,13 +557,7 @@ final readonly class RecurringSeriesQuery
             ->orderByDesc('id')
             ->get();
 
-        $result = [];
-        foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $result[] = $this->projector->toDto($row);
-        }
-
-        return $result;
+        return $this->projector->toDtos($rows);
     }
 
     /**

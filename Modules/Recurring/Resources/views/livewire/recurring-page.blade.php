@@ -1,14 +1,14 @@
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Ledger\Public\Enums\Currency')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     /recurring page — grouped expense + income + transfers sections
     with the net-flow header at the top of the page.
 
     Each row carries the latest amount (original currency primary,
-    EUR shadow when the original currency is not EUR), the EUR
-    monthly equivalent (the detector applies the per-cadence
-    multiplier at write time so this read site only formats), a
+    a shadow in the reader's currency when the two differ), the
+    monthly equivalent in the series' own currency (the detector
+    applies the per-cadence multiplier at write time so this read
+    site only formats), a
     chain badge when a confirmed/candidate funding chain is attached,
     a category badge (read-only via MerchantMemoryQuery), and the
     next-expected-charge text — rendered dim/italic via
@@ -24,11 +24,7 @@
 
     $fmt = static fn (Money $money): string => $money->format();
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
-
-    $expenseTotal = (int) ($totals['expense_eur_minor'] ?? 0);
-    $incomeTotal = (int) ($totals['income_eur_minor'] ?? 0);
-    $netTotal = (int) ($totals['net_eur_minor'] ?? 0);
+    $baseCurrency = BaseCurrency::value();
 
     $expenses = $sections['expenses'] ?? [];
     $income = $sections['income'] ?? [];
@@ -53,14 +49,17 @@
 
         @unless ($sectionEmpty)
             <div class="mt-6 flex flex-wrap items-baseline gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300">
-                <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($expenseTotal) }}</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totals->expense) }}</span>
                 <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.expenses') }}</span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">+</span>
-                <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($incomeTotal) }}</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totals->income) }}</span>
                 <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.income') }}</span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">=</span>
-                <span class="font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($netTotal) }}</span>
+                <span class="font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($totals->net) }}</span>
                 <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.net_per_month') }}</span>
+                @if ($totals->isPartial())
+                    <span class="text-slate-400 dark:text-slate-500" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $totals->unconvertedList()]) }}</span>
+                @endif
             </div>
         @endunless
     </header>
@@ -104,7 +103,7 @@
                                     @endif
                                 </p>
                             </div>
-                            <span class="amount" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
+                            <span class="amount" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->monthlyEquivalent) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                         </a>
                     @endforeach
                 </div>
@@ -124,7 +123,7 @@
                                             class="font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                                         >{{ $row->displayName() }}</a>
                                         <span class="ml-2 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
-                                        @if ($row->latestAmount->currency() !== Currency::Eur->value && $row->eurEquivalent !== null)
+                                        @if ($row->latestAmount->currency() !== $baseCurrency && $row->eurEquivalent !== null)
                                             <span class="ml-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
                                         @endif
                                     </p>
@@ -147,7 +146,7 @@
                                             aria-label="{{ Lang::get('recurring::index.chain_aria') }}"
                                         >{{ Lang::get('recurring::index.chain') }}</span>
                                     @endif
-                                    <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
+                                    <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->monthlyEquivalent) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                                 </div>
                             </div>
                         </x-core::card>
@@ -179,7 +178,7 @@
                                     @endif
                                 </p>
                             </div>
-                            <span class="amount positive" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
+                            <span class="amount positive" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->monthlyEquivalent) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                         </a>
                     @endforeach
                 </div>
@@ -199,7 +198,7 @@
                                             class="font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                                         >{{ $row->displayName() }}</a>
                                         <span class="ml-2 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
-                                        @if ($row->latestAmount->currency() !== Currency::Eur->value && $row->eurEquivalent !== null)
+                                        @if ($row->latestAmount->currency() !== $baseCurrency && $row->eurEquivalent !== null)
                                             <span class="ml-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
                                         @endif
                                     </p>
@@ -222,7 +221,7 @@
                                             aria-label="{{ Lang::get('recurring::index.chain_aria') }}"
                                         >{{ Lang::get('recurring::index.chain') }}</span>
                                     @endif
-                                    <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
+                                    <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->monthlyEquivalent) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                                 </div>
                             </div>
                         </x-core::card>

@@ -6,7 +6,7 @@ namespace Modules\Recurring\Internal\Mapping;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Ledger\Public\Enums\Currency;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\SeriesCadence;
@@ -24,23 +24,33 @@ final class RecurringSeriesDtoMapper
      *                                         wants on the DTO. RecurringSeriesQuery passes the raw column
      *                                         value; FixedPaymentsViewQuery passes the result of its
      *                                         occurrence-walk fallback.
-     * @param  string  $baseCurrency  BaseCurrency::code(), supplied by the caller
-     *                                because a static mapper cannot inject it
+     * @param  string  $baseCurrency  the reader's reporting currency, supplied by
+     *                                the caller because a static mapper cannot inject it
+     * @param  array<string, string>  $rates  CrossCurrencyTotal::ratesTo() for the
+     *                                        currencies on the page, fetched once per render
      */
-    public static function hydrate(stdClass $row, ?int $resolvedChainLinkId, string $baseCurrency): RecurringSeriesDto
-    {
+    public static function hydrate(
+        stdClass $row,
+        ?int $resolvedChainLinkId,
+        string $baseCurrency,
+        CrossCurrencyTotal $fx,
+        array $rates,
+    ): RecurringSeriesDto {
         $latestCurrency = self::toString($row->latest_currency);
         $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor), $latestCurrency);
-
-        $eurEquivalent = null;
-        if ($latestCurrency !== Currency::Eur->value && isset($row->monthly_equivalent_minor)) {
-            $eurEquivalent = Money::ofMinor(self::toInt($row->monthly_equivalent_minor), Currency::Eur->value);
-        }
 
         $monthlyEquivalent = Money::ofMinor(
             isset($row->monthly_equivalent_minor) ? self::toInt($row->monthly_equivalent_minor) : 0,
             $latestCurrency !== '' ? $latestCurrency : $baseCurrency,
         );
+
+        // The shadow beside a foreign row is the same amount in the reader's
+        // currency, so it has to have been through a rate. It carried the raw
+        // monthly-equivalent integer relabelled instead, which read USD100.00
+        // as EUR100.00 whatever the pair was actually worth.
+        $baseEquivalent = $latestAmount->currency() === $baseCurrency
+            ? null
+            : $fx->convert($latestAmount, $baseCurrency, $rates);
 
         $nextExpectedAt = null;
         $rawNext = $row->next_expected_at ?? null;
@@ -75,7 +85,7 @@ final class RecurringSeriesDtoMapper
             // is a broken database and a silent fallback would hide it.
             cadence: SeriesCadence::from(self::toString($row->cadence)),
             latestAmount: $latestAmount,
-            eurEquivalent: $eurEquivalent,
+            eurEquivalent: $baseEquivalent,
             monthlyEquivalent: $monthlyEquivalent,
             latestFundingChainLinkId: $resolvedChainLinkId,
             nextExpectedAt: $nextExpectedAt,
@@ -83,6 +93,9 @@ final class RecurringSeriesDtoMapper
             varianceTolerancePercent: self::toInt($row->variance_tolerance_percent ?? 25),
             snoozedUntil: $snoozedUntil,
             latestFxRateUsed: $latestFxRateUsed,
+            monthlyEquivalentInBase: $monthlyEquivalent->currency() === $baseCurrency
+                ? $monthlyEquivalent
+                : $fx->convert($monthlyEquivalent, $baseCurrency, $rates),
         );
     }
 }
