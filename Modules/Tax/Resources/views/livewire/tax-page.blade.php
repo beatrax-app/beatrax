@@ -183,7 +183,7 @@
                     @endif
                     <a
                         href="{{ Destination::Transactions->url() }}"
-                        class="font-medium underline-offset-2 hover:underline"
+                        class="tap-link font-medium underline-offset-2 hover:underline"
                         style="display: inline-block; margin-top: var(--space-4); font-size: var(--text-base); color: var(--color-text);"
                     >{{ Lang::get('tax::page.go_to_transactions') }}</a>
                 </div>

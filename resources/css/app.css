@@ -5591,6 +5591,11 @@ mark {
  * The file picker is matched through the input it wraps: the real control is
  * hidden inside the label, so the label IS the button to a finger.
  *
+ * The pill classes are listed by name because an action drawn as a button is
+ * sometimes marked up as a link: the report library's own primary CTA measured
+ * 36px on the phone while the identical control one screen away, a <button>,
+ * measured 44.
+ *
  * Coarse pointers only and unlayered, for the same two reasons as the rule
  * above: the desktop density the design specifies is untouched, and `h-10` is
  * a utility that would otherwise win.
@@ -5602,7 +5607,9 @@ mark {
     input[type='button'],
     input[type='submit'],
     input[type='reset'],
-    label:has(> input[type='file']) {
+    label:has(> input[type='file']),
+    .pill-btn-primary,
+    .pill-btn-ghost {
         min-height: 44px;
         min-width: 44px;
     }
@@ -5690,6 +5697,24 @@ mark {
      */
     .srch-chip-close::after {
         width: 24px;
+    }
+
+    /*
+     * A halo is only 44px when nothing else's halo is stacked against it.
+     * Measured on an iPhone 12 mini: the filter chips wrap into rows 37px
+     * apart, and a table row of links is 37px tall, so each band was cut to
+     * its neighbour's edge and every chip on /reports and /counterparties
+     * answered over 37px, and the search chips over 38. The pitch is what has
+     * to clear 44, so the wrapped rows get the gap and the cell gets real
+     * height — `height`, because min-height does nothing to a table cell.
+     */
+    .filter-chips,
+    .srch-chips {
+        row-gap: var(--space-4);
+    }
+
+    td:has(> a:only-child) {
+        height: 44px;
     }
 
     /*

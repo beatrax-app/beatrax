@@ -21,7 +21,7 @@
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('chains::hints.heading') }}</h1>
             <a
                 href="{{ route('chains.review') }}"
-                class="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                class="tap-link text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             >{{ Lang::get('chains::hints.back_to_review') }}</a>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
