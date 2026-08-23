@@ -9,6 +9,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Internal\Enums\BackfillPass;
 use Modules\Ledger\Internal\Support\SweptRowSummary;
+use stdClass;
 
 /**
  * @link ../../../../.docs/features/ingestion/asn-description-delimiters.md#knowing-there-is-nothing-to-do-cheaply
@@ -30,7 +31,6 @@ final readonly class BackfillCompletionMarkers
     // and building the whole codec graph.
     public function completedSummary(int $userId, BackfillPass $pass): ?SweptRowSummary
     {
-        /** @var object{swept_rows: mixed, swept_id_sum: mixed}|null $row */
         $row = $this->db->connection()
             ->table(self::TABLE)
             ->where('user_id', $userId)
@@ -41,6 +41,7 @@ final readonly class BackfillCompletionMarkers
             return null;
         }
 
+        /** @var stdClass $row */
         return new SweptRowSummary(
             self::toInt($row->swept_rows),
             self::toInt($row->swept_id_sum),

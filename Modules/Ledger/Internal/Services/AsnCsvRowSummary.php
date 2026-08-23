@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Internal\Support\SweptRowSummary;
+use stdClass;
 
 /**
  * @link ../../../../.docs/features/ingestion/asn-description-delimiters.md#knowing-there-is-nothing-to-do-cheaply
@@ -26,7 +27,6 @@ final readonly class AsnCsvRowSummary
     // an open one.
     public function for(int $userId): SweptRowSummary
     {
-        /** @var object{row_count: mixed, id_sum: mixed}|null $row */
         $row = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $userId)
@@ -37,6 +37,8 @@ final readonly class AsnCsvRowSummary
         if ($row === null) {
             return new SweptRowSummary(0, 0);
         }
+
+        /** @var stdClass $row */
 
         return new SweptRowSummary(
             self::toInt($row->row_count),
