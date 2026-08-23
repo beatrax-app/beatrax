@@ -59,7 +59,14 @@ final class ClientSideRedirect
     // navigation sends it, an <img> and a default fetch() do not.
     private function isDocumentNavigation(Request $request): bool
     {
-        if ($request->expectsJson() || $request->hasHeader('X-Livewire')) {
+        // wire:navigate is a fetch that names itself with its own header, and
+        // it swaps whatever comes back into the page — so a shim would be
+        // rendered as the destination. Sec-Fetch-Dest already catches it where
+        // the engine sends one; this is the case where it does not.
+        if ($request->expectsJson()
+            || $request->hasHeader('X-Livewire')
+            || $request->hasHeader('X-Livewire-Navigate')
+        ) {
             return false;
         }
 
