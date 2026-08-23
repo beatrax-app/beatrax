@@ -125,7 +125,28 @@
                     Inserts before <main> so it stacks above the main content column on mobile.
                 --}}
                 <x-core::mobile-top-bar class="top-bar-global" />
-                <main class="flex-1 min-w-0 overflow-auto">
+                {{--
+                    inert while the drawer is open. The drawer is role=dialog
+                    aria-modal=true, but nothing made the page behind it
+                    unreachable: read off an iPhone 12 mini with VoiceOver's own
+                    tree, the open drawer still exposed "August 2026",
+                    "This period totals" and the €3,202.14 behind it, and left
+                    15 controls focusable outside the dialog.
+
+                    One attribute on one element, which is what x-shell::drawer
+                    asks for — x-trap.inert walked the document marking siblings
+                    inert and killed the Android renderer.
+
+                    `|| null` is load-bearing: inert is a BOOLEAN attribute, so
+                    inert="false" is still inert. Measured in WebKit — "", "true"
+                    and "false" all give 0 focusable descendants. null is the
+                    only value that removes it.
+
+                    The top bar stays reachable on purpose: the scrim is
+                    aria-hidden, so the hamburger is a screen reader's only way
+                    back out of the drawer.
+                --}}
+                <main class="flex-1 min-w-0 overflow-auto" x-bind:inert="$store.mobileNav.drawerOpen || null">
                     @livewire('core.system-alerts-banner')
                     @livewire('categorization.rule-form-modal')
                     @livewire('categorization.correction-divergence-toast')
