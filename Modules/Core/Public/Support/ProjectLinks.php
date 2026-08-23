@@ -20,6 +20,8 @@ final class ProjectLinks
 
     public const string COMPARE_BASE_URL = self::REPO_URL.'/compare/main';
 
+    public const string CONTRIBUTING_URL = self::REPO_URL.'/blob/main/CONTRIBUTING.md';
+
     // The tag arrives from alert metadata rather than from a fixed list, so it
     // is encoded instead of interpolated: a `/` in a tag name would otherwise
     // re-point the href at a different path under the repository.

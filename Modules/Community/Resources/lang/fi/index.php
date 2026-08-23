@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'Suurin osa käännöksistä on toistaiseksi tekoälyn tuottamia — Beatrax on avointa lähdekoodia ja aika on vähissä, joten konekäännös voitti tyhjäksi jäävät kielet. Jos jokin kuulostaa sinusta väärältä, se todennäköisesti on väärin, ja yhden rivin korjaus auttaa kaikkia sen käyttäjiä.',
     'translations_how' => 'Jokainen kieli on kansiollinen tavallisia PHP-tiedostoja polussa Modules/*/Resources/lang. Kopioi englanninkielinen kansio, käännä merkkijonot ja avaa pull request — ei käännösvaihetta, ei asennettavia työkaluja.',
     'translations_cta' => 'Lue osallistumisohje',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Jaettu kauppiaslista',
 ];

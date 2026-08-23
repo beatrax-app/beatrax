@@ -17,6 +17,14 @@ const PROJECT_LINKS_CLASS = 'Modules/Core/Public/Support/ProjectLinks.php';
 // into app code cannot slip past the scheme-anchored form.
 const PROJECT_LINKS_ORIGIN_PATTERN = '#github\.com[/:]beatrax-app/beatrax#';
 
+// The org half is what drifts, and it drifts silently: a link can name
+// github.com and the right repository while pointing at an org that does not
+// host it. Twenty-six locale files shipped `beatrax/beatrax`, so the
+// Translations button 404'd in every language while reading as correct.
+const PROJECT_LINKS_ORG = 'beatrax-app';
+
+const PROJECT_LINKS_ANY_ORG_PATTERN = '#github\.com[/:]([A-Za-z0-9._-]+)/beatrax\b#';
+
 /**
  * @return list<string> repo-relative paths, tests and build output excluded
  */
@@ -126,4 +134,32 @@ it('finds the file it scans from either Composer root', function (): void {
     expect(projectLinksScannedFiles())
         ->toContain(PROJECT_LINKS_CLASS)
         ->toContain('config/community.php');
+});
+
+it('never points a beatrax link at an org that does not host it', function (): void {
+    $repoRoot = dirname((string) realpath(base_path('Modules')));
+
+    $offenders = [];
+    foreach (projectLinksScannedFiles() as $relative) {
+        $source = (string) file_get_contents($repoRoot.'/'.$relative);
+        if (preg_match_all(PROJECT_LINKS_ANY_ORG_PATTERN, $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
+            continue;
+        }
+
+        foreach ($matches[1] as $index => [$org]) {
+            if ($org === PROJECT_LINKS_ORG) {
+                continue;
+            }
+
+            [, $offset] = $matches[0][$index];
+            $offenders[] = $relative.':'.(substr_count(substr($source, 0, $offset), "\n") + 1).'  → '.$org.'/beatrax';
+        }
+    }
+
+    expect($offenders)->toBe([], implode("\n", [
+        'A GitHub link naming this repository under another org resolves to a 404, and',
+        'it reads as correct at a glance. The only org that hosts Beatrax is',
+        PROJECT_LINKS_ORG.'. These name a different one:',
+        ...$offenders,
+    ]));
 });

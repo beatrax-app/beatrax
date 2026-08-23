@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\ProjectLinks')
 @extends('layouts.app', ['title' => Lang::get('community::index.page_title').' · Beatrax'])
 
 {{--
@@ -62,7 +63,7 @@
                         {{ Lang::get('community::index.translations_how') }}
                     </p>
                     <x-core::secondary-button
-                        :href="Lang::get('community::index.translations_url')"
+                        :href="ProjectLinks::CONTRIBUTING_URL"
                         class="mt-4 min-h-[44px]"
                         target="_blank"
                         rel="noopener noreferrer"
