@@ -223,9 +223,7 @@ final class GenericCsvAdapter implements SourceAdapter
             }
         }
 
-        // Single-account fintech exports (N26, Revolut, Wise) carry no own
-        // IBAN; use a stable synthetic so the wizard maps it to one account.
-        return strtoupper(str_replace('-csv', '', $this->preset->format));
+        return $this->preset->ownAccountIdentifier();
     }
 
     /**

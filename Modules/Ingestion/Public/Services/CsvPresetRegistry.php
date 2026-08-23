@@ -41,6 +41,19 @@ final class CsvPresetRegistry
         return isset($this->all()[$format]);
     }
 
+    // True when this is a placeholder a preset issued because its export
+    // carries no own-IBAN column, and so must not be held to an IBAN's shape.
+    public function issuesOwnAccountIdentifier(string $value): bool
+    {
+        foreach ($this->all() as $preset) {
+            if ($preset->ownAccountIdentifier() === $value) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @return array<string, CsvPreset>
      */
