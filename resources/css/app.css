@@ -926,6 +926,32 @@ td.date,
         font-size: var(--text-sm);
     }
 
+    /* Sits at the head of .wiz-brand rather than as a fourth child of the
+       .wiz-top row: that row already collides below 640px with three items,
+       and this one has to survive the longest word in 26 languages. */
+    .wiz-back {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        min-height: 44px;
+        padding: 6px var(--space-2);
+        margin-left: calc(var(--space-2) * -1);
+        border-radius: var(--radius-md);
+        background: transparent;
+        border: 0;
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .wiz-back:hover {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+    }
+
     .wiz-resume-later {
         padding: 6px var(--space-3);
         border-radius: var(--radius-md);
@@ -5760,8 +5786,9 @@ mark {
         display: block;
     }
 
-    /* Every cell below is self-describing once stacked, so the column labels
-       stop earning their line. */
+    /* The column labels stop earning their line once stacked — every cell
+       says what it is, except priority and hits, which are bare numbers and
+       carry their own `md:hidden` label in the markup instead. */
     .rules-table thead {
         display: none;
     }
