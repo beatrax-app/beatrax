@@ -20,6 +20,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
@@ -70,8 +71,13 @@ final class ReconcilePage extends Component
 
     // A discrepancy performs no write and creates no balancing transaction —
     // it surfaces as an error for the user to resolve.
-    public function confirmReconcile(ReconciliationWriter $writer, CurrentUser $currentUser, AccountBalanceQuery $balances): void
-    {
+    public function confirmReconcile(
+        ReconciliationWriter $writer,
+        CurrentUser $currentUser,
+        AccountBalanceQuery $balances,
+        DatabaseManager $db,
+        BaseCurrency $baseCurrency,
+    ): void {
         $this->error = '';
 
         $target = MoneyInput::tryToMinor($this->statementBalance);
@@ -92,7 +98,8 @@ final class ReconcilePage extends Component
         // uses the same posted_at <= $date window completeReconcile()
         // locks — the unbounded balance would flag a spurious
         // discrepancy whenever a cleared row posts after the date.
-        $cleared = $balances->clearedBalanceAsOf($this->accountId, $user, $date);
+        $cleared = $balances->clearedBalanceAsOf($this->accountId, $user, $date)
+            ->in($this->statementCurrency($db->connection(), $user->id, $baseCurrency));
 
         if ($target - $cleared !== 0) {
             $this->error = Lang::get('ledger::reconcile.errors.mismatch');
@@ -117,8 +124,13 @@ final class ReconcilePage extends Component
         $this->toast($message);
     }
 
-    public function render(CurrentUser $currentUser, DatabaseManager $db, ViewFactory $views, AccountBalanceQuery $balances): View
-    {
+    public function render(
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        ViewFactory $views,
+        AccountBalanceQuery $balances,
+        BaseCurrency $baseCurrency,
+    ): View {
         $user = $currentUser->user();
         $connection = $db->connection();
 
@@ -133,8 +145,10 @@ final class ReconcilePage extends Component
         // confirmReconcile() must all agree on posted_at <= statementDate.
         $statementDate = SafeDate::parseDayOrNull($this->statementDate);
 
+        $statementCurrency = $this->statementCurrency($connection, $user->id, $baseCurrency);
+
         $clearedBalanceMinor = ($ownedAccountId !== null && $statementDate !== null)
-            ? $balances->clearedBalanceAsOf($ownedAccountId, $user, $statementDate)
+            ? $balances->clearedBalanceAsOf($ownedAccountId, $user, $statementDate)->in($statementCurrency)
             : 0;
 
         $hasTarget = trim($this->statementBalance) !== '';
@@ -151,6 +165,7 @@ final class ReconcilePage extends Component
             'statementTargetMinor' => $statementTargetMinor,
             'differenceMinor' => $differenceMinor,
             'isMatched' => $isMatched,
+            'statementCurrency' => $statementCurrency,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -233,6 +248,22 @@ final class ReconcilePage extends Component
         if (is_string($row->period_end) && $row->period_end !== '') {
             $this->statementDate = CarbonImmutable::parse($row->period_end)->toDateString();
         }
+    }
+
+    // A printed statement is denominated in one currency, the account's own,
+    // so that is the line a multi-currency account is reconciled against —
+    // never the reader's base currency, which the figure was labelled with
+    // while being read off a different account's ledger.
+    private function statementCurrency(ConnectionInterface $connection, int $userId, BaseCurrency $baseCurrency): string
+    {
+        $currency = $this->accountId === null
+            ? null
+            : $connection->table('accounts')
+                ->where('id', $this->accountId)
+                ->where('user_id', $userId)
+                ->value('default_currency');
+
+        return is_string($currency) && $currency !== '' ? $currency : $baseCurrency->code();
     }
 
     // Never trusts the URL-bound $accountId without re-checking: a foreign

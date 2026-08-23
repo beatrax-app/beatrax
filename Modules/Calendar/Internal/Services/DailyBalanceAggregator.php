@@ -202,13 +202,13 @@ final readonly class DailyBalanceAggregator
             ->whereIn('transactions.account_id', $effectiveBalance)
             ->where('transactions.posted_at', '<', $gridStart->toDateString())
             ->whereRaw(AccountStartingBalanceQuery::AT_OR_AFTER_BASELINE_SQL)
-            ->groupBy('accounts.default_currency')
-            ->selectRaw('accounts.default_currency as currency, SUM(transactions.settled_amount_minor) as sum_minor')
+            ->groupBy('transactions.settled_currency')
+            ->selectRaw('transactions.settled_currency as currency, SUM(transactions.settled_amount_minor) as sum_minor')
             ->get();
 
-        // The baseline opens the bucket of the ACCOUNT's default currency, so
-        // the rows have to arrive in that same bucket or the two are added
-        // across currencies.
+        // The baseline opens the bucket of the ACCOUNT's default currency and
+        // each row the bucket of the currency it settled in, so an account
+        // holding two currencies keeps them apart all the way to the rate.
         $cumByCurrency = $this->startingBalances->bucketedByDefaultCurrency($effectiveBalance, $user);
         foreach ($rows as $row) {
             /** @var stdClass $row */
@@ -235,8 +235,8 @@ final readonly class DailyBalanceAggregator
             ->whereIn('transactions.account_id', $effectiveBalance)
             ->whereBetween('transactions.posted_at', [$gridStart->toDateString(), $pastEnd->toDateString()])
             ->whereRaw(AccountStartingBalanceQuery::AT_OR_AFTER_BASELINE_SQL)
-            ->groupBy('transactions.posted_at', 'accounts.default_currency')
-            ->selectRaw('transactions.posted_at as posted_at, accounts.default_currency as currency, SUM(transactions.settled_amount_minor) as sum_minor')
+            ->groupBy('transactions.posted_at', 'transactions.settled_currency')
+            ->selectRaw('transactions.posted_at as posted_at, transactions.settled_currency as currency, SUM(transactions.settled_amount_minor) as sum_minor')
             ->get();
 
         $deltaByDateCurrency = [];

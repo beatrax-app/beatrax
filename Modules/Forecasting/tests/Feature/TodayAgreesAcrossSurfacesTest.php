@@ -148,7 +148,9 @@ it('opens the forecast on the same figure the dashboard, pots and reconcile show
     app(ProjectionPipeline::class)->project($this->user, null, TAAS_HORIZON_DAYS);
 
     $forecast = app(ForecastQuery::class)->forUser($accountId, TAAS_HORIZON_DAYS, null, $this->user);
-    $ledger = app(AccountBalanceQuery::class)->currentBalanceAsOf($accountId, $this->user, CarbonImmutable::now()->startOfDay());
+    $ledger = app(AccountBalanceQuery::class)
+        ->currentBalanceAsOf($accountId, $this->user, CarbonImmutable::now()->startOfDay())
+        ->in(Currency::Eur->value);
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
     $pots = app(PotBalanceQuery::class)->reconciliationForAccount($accountId, $this->user);
 
@@ -235,8 +237,8 @@ it('draws a past day carrying foreign rows at the balance the account was debite
     );
 
     $balances = app(AccountBalanceQuery::class);
-    $ledgerYesterday = $balances->currentBalanceAsOf($accountId, $this->user, $yesterday);
-    $ledgerToday = $balances->currentBalanceAsOf($accountId, $this->user, $today);
+    $ledgerYesterday = $balances->currentBalanceAsOf($accountId, $this->user, $yesterday)->in(Currency::Eur->value);
+    $ledgerToday = $balances->currentBalanceAsOf($accountId, $this->user, $today)->in(Currency::Eur->value);
 
     expect($ledgerYesterday)->toBe(90_000)
         ->and($ledgerToday)->toBe(88_000)

@@ -52,7 +52,7 @@ final readonly class AccountStartingBalanceQuery
             ]);
 
         if ($row === null) {
-            return self::absent();
+            return self::zeroIn('');
         }
 
         /** @var stdClass $row */
@@ -60,9 +60,10 @@ final readonly class AccountStartingBalanceQuery
         $minor = $override ? $row->opening_balance_minor : $row->starting_balance_minor;
 
         // A date without an amount is not a baseline: honouring its lower
-        // bound would drop every earlier row and add nothing back.
+        // bound would drop every earlier row and add nothing back. The account
+        // still names the currency the zero is denominated in.
         if (! is_numeric($minor)) {
-            return self::absent();
+            return self::zeroIn(self::toString($row->default_currency));
         }
 
         $rawDate = self::toStringOrNull($override ? $row->opening_balance_as_of_date : $row->starting_balance_date);
@@ -108,8 +109,8 @@ final readonly class AccountStartingBalanceQuery
     /**
      * @return array{minorUnits: int, currency: string, date: CarbonImmutable|null}
      */
-    private static function absent(): array
+    private static function zeroIn(string $currency): array
     {
-        return ['minorUnits' => 0, 'currency' => '', 'date' => null];
+        return ['minorUnits' => 0, 'currency' => $currency, 'date' => null];
     }
 }

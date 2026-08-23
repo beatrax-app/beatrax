@@ -1,6 +1,5 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Ledger\Public\Services\BaseCurrency')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -11,8 +10,9 @@
      * @var int|null $statementTargetMinor
      * @var int|null $differenceMinor
      * @var bool $isMatched
+     * @var string $statementCurrency
      */
-    $fmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
+    $fmt = static fn (int $minor): string => Money::ofMinor($minor, $statementCurrency)->format();
 
     $hasTarget = $statementTargetMinor !== null;
     $pillVariant = ! $hasAccount || ! $hasTarget ? 'muted' : ($isMatched ? 'ok' : 'fail');

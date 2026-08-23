@@ -97,12 +97,12 @@
                         @endif
                     </p>
 
-                    @php($accountCount = count($netWorth->accounts))
+                    @php($accountCount = $netWorth->accountCount())
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {{ Lang::choice('core::net_worth.across', $accountCount, ['count' => $accountCount]) }}
-                        @if ($netWorth->accountsWithoutRate > 0)
+                        @if ($netWorth->balancesWithoutRate > 0)
                             {{-- No-rate fallback (§7.4 UI-SPEC) — replaces old "excludes non-EUR balances" span --}}
-                            <span style="color: var(--color-amber);">{{ Lang::choice('core::net_worth.not_converted', $netWorth->accountsWithoutRate, ['count' => $netWorth->accountsWithoutRate]) }}</span>
+                            <span style="color: var(--color-amber);">{{ Lang::choice('core::net_worth.not_converted', $netWorth->balancesWithoutRate, ['count' => $netWorth->balancesWithoutRate]) }}</span>
                         @endif
                     </p>
 
@@ -123,6 +123,10 @@
             @if ($expanded)
                 <ul class="mt-4 space-y-1.5 border-t border-slate-100 pt-4 dark:border-slate-800">
                     @foreach ($netWorth->accounts as $account)
+                        {{-- One account can hold several currencies and yields a
+                             line each, so the popover anchor, id and x-ref are
+                             keyed by account AND currency or the two collide. --}}
+                        @php($lineKey = $account->accountId . $account->currency)
                         <li class="flex items-center justify-between gap-3 text-sm">
                             <span class="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-300">
                                 {{ $account->name }}
@@ -140,13 +144,13 @@
                                         ≈ {{ $fmt($account->baseEquivalentMinor) }}
                                         <button type="button"
                                                 class="fx-disclosure-trigger fx-disclosure-trigger--inline"
-                                                style="anchor-name: --fx-a{{ $account->accountId }};"
+                                                style="anchor-name: --fx-a{{ $lineKey }};"
                                                 aria-label="{{ Lang::get('core::net_worth.rate_details_for', ['name' => $account->name]) }}"
                                                 x-data
-                                                x-on:click="$refs.{{ 'fxPop'.$account->accountId }}.showPopover()">
+                                                x-on:click="$refs.{{ 'fxPop'.$lineKey }}.showPopover()">
                                             <span class="fx-icon {{ $account->fxIsStale ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
                                         </button>
-                                        <div popover id="fx-pop-{{ $account->accountId }}" x-ref="{{ 'fxPop'.$account->accountId }}" class="fx-popover" style="position-anchor: --fx-a{{ $account->accountId }}; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
+                                        <div popover id="fx-pop-{{ $lineKey }}" x-ref="{{ 'fxPop'.$lineKey }}" class="fx-popover" style="position-anchor: --fx-a{{ $lineKey }}; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
                                             @php($accountRate = $fmtRate($account->fxRate))
                                             @if ($accountRate !== null)
                                                 <p class="fx-rate">{{ Lang::get('core::net_worth.rate_line', ['from' => $account->currency, 'rate' => $accountRate, 'to' => $baseCurrency]) }}</p>

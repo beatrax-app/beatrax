@@ -61,11 +61,14 @@ final readonly class BalanceAnchorResolver
     private function fromLedgerBalance(int $accountId, User $user, string $defaultCurrency): BalanceAnchorDto
     {
         $asOf = $this->clock->now()->startOfDay();
+        $currency = $defaultCurrency !== '' ? $defaultCurrency : $this->baseCurrency->code();
 
+        // A projection runs in one currency, so it opens on the line the
+        // account is denominated in and leaves any other line it holds out.
         return new BalanceAnchorDto(
             accountId: $accountId,
-            openingBalanceMinor: $this->balances->currentBalanceAsOf($accountId, $user, $asOf),
-            currency: $defaultCurrency !== '' ? $defaultCurrency : $this->baseCurrency->code(),
+            openingBalanceMinor: $this->balances->currentBalanceAsOf($accountId, $user, $asOf)->in($currency),
+            currency: $currency,
             source: 'sum_of_transactions',
         );
     }
@@ -105,23 +108,26 @@ final readonly class BalanceAnchorResolver
             ? CarbonImmutable::parse($rawPeriodEnd)
             : $this->clock->now();
 
+        $currency = $defaultCurrency !== '' ? $defaultCurrency : Currency::Eur->value;
+
         return new BalanceAnchorDto(
             accountId: $accountId,
-            openingBalanceMinor: -$openBalance + $this->chargedSince($accountId, $user->id, $closedOn),
-            currency: $defaultCurrency !== '' ? $defaultCurrency : Currency::Eur->value,
+            openingBalanceMinor: -$openBalance + $this->chargedSince($accountId, $user->id, $closedOn, $currency),
+            currency: $currency,
             source: 'ics_card_statement',
         );
     }
 
     // What the card has run up since its statement closed. Without it the
     // forecast opens on the balance the card carried at close and every charge
-    // made since is missing from the curve. Bounded at today for the same
-    // reason the ledger balance is: a charge dated ahead is not owed yet.
-    private function chargedSince(int $accountId, int $userId, CarbonImmutable $closedOn): int
+    // made since is missing from the curve. Bounded at today because a charge
+    // dated ahead is not owed yet, and to one currency because the anchor is.
+    private function chargedSince(int $accountId, int $userId, CarbonImmutable $closedOn, string $currency): int
     {
         return (int) $this->db->connection()->table('transactions')
             ->where('user_id', $userId)
             ->where('account_id', $accountId)
+            ->where('settled_currency', $currency)
             ->where('posted_at', '>', $closedOn->toDateString())
             ->where('posted_at', '<=', $this->clock->now()->startOfDay()->toDateString())
             ->sum('settled_amount_minor');

@@ -546,34 +546,53 @@ toast and no write, before any read of the "next" value.
 ## `AccountBalanceQuery` — caveats shared by all four methods
 
 `currentBalance()`, `currentBalanceAsOf()`, `clearedBalance()`, and
-`clearedBalanceAsOf()` all open on the account's starting balance and add
-`settled_amount_minor` (never the native `amount_minor`) scoped by
-`(account_id, user_id)` on top of it — see
+`clearedBalanceAsOf()` all return an `AccountBalance` — a **line per
+currency**, never one int. Each opens on the account's starting balance
+and adds `settled_amount_minor` (never the native `amount_minor`) scoped
+by `(account_id, user_id)`, grouped by `settled_currency` — see
 [the baseline section below](#accountstartingbalancequery--the-baseline-every-balance-starts-from)
 for what the baseline is and how its date bounds the sum. All four
-share two caveats:
+share three caveats:
 
 - **Information disclosure guard**: the explicit `where('user_id', ...)`
   ensures a foreign `account_id` returns the caller's own (empty)
   balance, never another user's transactions — and, since the baseline
   read is scoped the same way, none of the owner's starting balance
-  either.
-- **Single currency, by the settled pair**: the sum has no currency
-  filter and does not need one. It adds `settled_amount_minor`, which is
-  the row as the ACCOUNT was debited — an ICS account's USD Google Play
+  either. An unreadable account has no lines at all, which is not the
+  same answer as zero in some assumed currency.
+- **The settled pair, not the native one**: `settled_amount_minor` is
+  the row as the ACCOUNT holds it — an ICS account's USD Google Play
   charge carries its dollar figure in `amount_minor` and the euro one
-  here — so an account holding several transaction currencies still
-  totals in its own. The baseline is added in the account's
-  `default_currency` on the same footing. Forecasting's
-  `BalanceAnchorResolver` calls `currentBalanceAsOf()` itself for every
-  non-card account, so the pot reconciliation header, the net-worth
-  figure and the forecast's opening balance are one number, not three
-  that happen to agree. The calendar's past-day line adds the same
-  column bucketed by the same `default_currency`
-  ([balance aggregation](../calendar/architecture.md#balance-aggregation));
-  while it re-derived each foreign row from `amount_minor` at today's
-  rate its yesterday sat €1.46 above this figure and its line stepped at
-  today.
+  here — so a bank that converts on the reader's behalf lands one
+  currency and one line.
+- **One account, several currencies**: a bank that does *not* convert
+  lands several. The Revolut CSV preset carries a `currencyHeader`, so
+  `settled_currency` varies row to row and one account genuinely holds
+  euro beside dollar. Summing across them produced 328885 for an account
+  holding €3,509.85 and −$221.00, and the dashboard printed it as a euro
+  net worth. The baseline opens the line of the account's own
+  `default_currency`, at zero when there is no baseline, so an account
+  with no rows still names the currency it is denominated in.
+
+Consumers decide what to do with the set, and each states which
+currency it answers in:
+
+| Caller | Rule |
+| --- | --- |
+| `Forecasting`'s `NetWorthQuery` | every line, each converted at its own rate; a line with no rate is listed and left out of the total (`balancesWithoutRate`), never counted at par |
+| `Reports`' `NetWorthSeriesQuery` | the same, at each bucket's `asOf` date |
+| `Pots`' `PotBalanceQuery` | `default_currency` — pots and `pot_movements` are denominated in it, so only that line can be allocated |
+| `/reconcile` | `default_currency` — a printed statement carries one denomination, and it is the account's own |
+| `Forecasting`'s `BalanceAnchorResolver` / `ForecastQuery` | `default_currency` — a projection runs in one currency |
+
+`BalanceAnchorResolver` calls `currentBalanceAsOf()` for every non-card
+account, so the pot reconciliation header, the net-worth line, and the
+forecast's opening balance are one number rather than three that happen
+to agree. The calendar's past-day line adds the same column bucketed by
+the same `settled_currency`
+([balance aggregation](../calendar/architecture.md#balance-aggregation));
+while it re-derived each foreign row from `amount_minor` at today's rate
+its yesterday sat €1.46 above this figure and its line stepped at today.
 
 `clearedBalance()` additionally restricts to `cleared`/`reconciled`
 rows (excluding `uncleared` manual cash-book entries not yet confirmed
@@ -626,7 +645,10 @@ balance = starting_balance_minor + SUM(transactions bounded below by starting_ba
 
 `forAccount()` returns `minorUnits` / `currency` / `date` — never a bare
 int, because the amount is denominated in the account's
-`default_currency` and is meaningless without it.
+`default_currency` and is meaningless without it. An account with no
+baseline amount still reports that currency, at zero: `AccountBalanceQuery`
+opens the account's own line from it, and a blank currency there would
+leave a rowless account with no line to name.
 
 `bucketedByDefaultCurrency()` exists for the one caller that cannot reach
 a per-account date in PHP: `Calendar`'s `DailyBalanceAggregator` groups

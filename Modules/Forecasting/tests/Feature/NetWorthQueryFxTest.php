@@ -57,7 +57,7 @@ it('includes a non-EUR account in the total after FX conversion', function (): v
     expect($netWorth->totalMinor)->toBeGreaterThan(200_000);
     expect($netWorth->currency)->toBe('EUR');
     expect($netWorth->hasExcludedAccounts)->toBeFalse();
-    expect($netWorth->accountsWithoutRate)->toBe(0);
+    expect($netWorth->balancesWithoutRate)->toBe(0);
 });
 
 it('preserves the original currency on each account balance line', function (): void {
@@ -72,7 +72,7 @@ it('preserves the original currency on each account balance line', function (): 
     expect($usdLine->balanceMinor)->toBe(10_000);
 });
 
-it('sets hasExcludedAccounts=false and accountsWithoutRate=0 when all accounts have a rate', function (): void {
+it('sets hasExcludedAccounts=false and balancesWithoutRate=0 when all accounts have a rate', function (): void {
     nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwAccount($this->db, $this->user->id, 'GBP wallet', 'paypal', 50_000, 'GBP');
     fxRate($this->db, 'GBP', '0.86');
@@ -80,7 +80,7 @@ it('sets hasExcludedAccounts=false and accountsWithoutRate=0 when all accounts h
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
 
     expect($netWorth->hasExcludedAccounts)->toBeFalse();
-    expect($netWorth->accountsWithoutRate)->toBe(0);
+    expect($netWorth->balancesWithoutRate)->toBe(0);
 });
 
 it('excludes an account and sets hasExcludedAccounts=true when no rate exists for the pair', function (): void {
@@ -90,7 +90,7 @@ it('excludes an account and sets hasExcludedAccounts=true when no rate exists fo
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
 
     expect($netWorth->hasExcludedAccounts)->toBeTrue();
-    expect($netWorth->accountsWithoutRate)->toBe(1);
+    expect($netWorth->balancesWithoutRate)->toBe(1);
     expect($netWorth->totalMinor)->toBe(200_000);
 });
 

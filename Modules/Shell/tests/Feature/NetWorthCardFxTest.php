@@ -103,7 +103,7 @@ it('does NOT add fx-icon--stale when rates are fresh', function (): void {
         ->assertDontSee('fx-icon--stale', escape: false);
 })->group('phase-1');
 
-it('renders the no-rate fallback copy when accountsWithoutRate > 0', function (): void {
+it('renders the no-rate fallback copy when a balance could not be converted', function (): void {
     nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwCardAccount($this->db, $this->user->id, 'JPY wallet', 'paypal', 5_000_000, 'JPY'); // no JPY rate seeded
 

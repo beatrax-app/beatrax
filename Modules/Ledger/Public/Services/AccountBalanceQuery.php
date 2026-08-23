@@ -7,13 +7,18 @@ namespace Modules\Ledger\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\ClearedStatus;
+use Modules\Ledger\Public\ValueObjects\AccountBalance;
+use stdClass;
 
 /**
  * @link ../../../../.docs/features/ledger/architecture.md#accountbalancequery--caveats-shared-by-all-four-methods
  */
 final class AccountBalanceQuery
 {
+    use CoercesScalars;
+
     /** @var list<string> */
     private const array CLEARED_STATUSES = [ClearedStatus::Cleared->value, ClearedStatus::Reconciled->value];
 
@@ -22,12 +27,12 @@ final class AccountBalanceQuery
         private readonly AccountStartingBalanceQuery $startingBalances,
     ) {}
 
-    public function currentBalance(int $accountId, User $user): int
+    public function currentBalance(int $accountId, User $user): AccountBalance
     {
         return $this->sumFromBaseline($accountId, $user, null, null);
     }
 
-    public function clearedBalance(int $accountId, User $user): int
+    public function clearedBalance(int $accountId, User $user): AccountBalance
     {
         return $this->sumFromBaseline($accountId, $user, self::CLEARED_STATUSES, null);
     }
@@ -36,7 +41,7 @@ final class AccountBalanceQuery
     // not currentBalance(), which counts a future-dated row as money already
     // in hand, nor the forecast anchor, which answers where a projection
     // starts rather than where the account stands.
-    public function currentBalanceAsOf(int $accountId, User $user, CarbonImmutable $asOf): int
+    public function currentBalanceAsOf(int $accountId, User $user, CarbonImmutable $asOf): AccountBalance
     {
         return $this->sumFromBaseline($accountId, $user, null, $asOf);
     }
@@ -44,7 +49,7 @@ final class AccountBalanceQuery
     // /reconcile checks "matched" over the same posted_at <= $asOf window
     // ReconciliationWriter::completeReconcile() locks, so it never counts
     // rows the write correctly leaves untouched.
-    public function clearedBalanceAsOf(int $accountId, User $user, CarbonImmutable $asOf): int
+    public function clearedBalanceAsOf(int $accountId, User $user, CarbonImmutable $asOf): AccountBalance
     {
         return $this->sumFromBaseline($accountId, $user, self::CLEARED_STATUSES, $asOf);
     }
@@ -52,7 +57,7 @@ final class AccountBalanceQuery
     /**
      * @param  list<string>|null  $statuses
      */
-    private function sumFromBaseline(int $accountId, User $user, ?array $statuses, ?CarbonImmutable $asOf): int
+    private function sumFromBaseline(int $accountId, User $user, ?array $statuses, ?CarbonImmutable $asOf): AccountBalance
     {
         $baseline = $this->startingBalances->forAccount($accountId, $user);
 
@@ -75,10 +80,26 @@ final class AccountBalanceQuery
             $query->where('posted_at', '>=', $baseline['date']->toDateString());
         }
 
-        // settled_amount_minor, not amount_minor: the settled pair is the row
-        // as the ACCOUNT holds it, so a USD purchase on a euro account adds
-        // euro cents. Summing the native amount added the dollar figure
-        // straight into the euro total.
-        return $baseline['minorUnits'] + (int) $query->sum('settled_amount_minor');
+        // The baseline opens the account's own default_currency line even at
+        // zero, so an account with no rows yet still reports the currency it
+        // is denominated in rather than nothing at all.
+        $byCurrency = $baseline['currency'] === '' ? [] : [$baseline['currency'] => $baseline['minorUnits']];
+
+        // settled_amount_minor grouped by settled_currency, never summed
+        // across it: the settled pair is the row as the ACCOUNT holds it, and
+        // a Revolut account holds euro and dollar rows side by side. One total
+        // over both added euro cents to dollar cents and called it net worth.
+        $rows = $query
+            ->groupBy('settled_currency')
+            ->selectRaw('settled_currency, sum(settled_amount_minor) as sum_minor')
+            ->get();
+
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $currency = self::toString($row->settled_currency);
+            $byCurrency[$currency] = ($byCurrency[$currency] ?? 0) + self::toInt($row->sum_minor);
+        }
+
+        return AccountBalance::of($byCurrency);
     }
 }

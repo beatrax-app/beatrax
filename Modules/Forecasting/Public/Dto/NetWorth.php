@@ -24,11 +24,18 @@ final class NetWorth extends Data
         public readonly ?string $ratesSource = null,
         public readonly ?CarbonImmutable $ratesAsOf = null,
         public readonly bool $hasStaleRates = false,
-        public readonly int $accountsWithoutRate = 0,
+        public readonly int $balancesWithoutRate = 0,
     ) {}
 
     public function hasAccounts(): bool
     {
         return $this->accounts !== [];
+    }
+
+    // One account holding two currencies contributes two breakdown lines, so
+    // the count the card prints has to be of accounts, not of lines.
+    public function accountCount(): int
+    {
+        return count(array_unique(array_column($this->accounts, 'accountId')));
     }
 }

@@ -83,7 +83,7 @@ it('adds a dateless baseline — the demo-seeder shape — to every row it holds
     sbbTransaction($user, $account, $run->id, '2020-01-01', -1_000);
     sbbTransaction($user, $account, $run->id, '2026-05-20', -2_000);
 
-    expect(app(AccountBalanceQuery::class)->currentBalance($account->id, $user))->toBe(282_000);
+    expect(app(AccountBalanceQuery::class)->currentBalance($account->id, $user)->in(Currency::Eur->value))->toBe(282_000);
 });
 
 it('does not count a row posted before a dated baseline twice', function (): void {
@@ -97,7 +97,7 @@ it('does not count a row posted before a dated baseline twice', function (): voi
     sbbTransaction($user, $account, $run->id, '2026-05-05', -5_000);
     sbbTransaction($user, $account, $run->id, '2026-05-20', -2_000);
 
-    expect(app(AccountBalanceQuery::class)->currentBalance($account->id, $user))->toBe(98_000);
+    expect(app(AccountBalanceQuery::class)->currentBalance($account->id, $user)->in(Currency::Eur->value))->toBe(98_000);
 });
 
 it('counts a row posted exactly on the baseline date, which is the position before that day', function (): void {
@@ -110,7 +110,7 @@ it('counts a row posted exactly on the baseline date, which is the position befo
 
     sbbTransaction($user, $account, $run->id, '2026-05-10', -1_000);
 
-    expect(app(AccountBalanceQuery::class)->currentBalance($account->id, $user))->toBe(99_000);
+    expect(app(AccountBalanceQuery::class)->currentBalance($account->id, $user)->in(Currency::Eur->value))->toBe(99_000);
 });
 
 it('leaves an account carrying no baseline at the bare transaction sum', function (): void {
@@ -120,7 +120,7 @@ it('leaves an account carrying no baseline at the bare transaction sum', functio
 
     sbbTransaction($user, $account, $run->id, '2026-05-12', -1_500);
 
-    expect(app(AccountBalanceQuery::class)->currentBalance($account->id, $user))->toBe(-1_500);
+    expect(app(AccountBalanceQuery::class)->currentBalance($account->id, $user)->in(Currency::Eur->value))->toBe(-1_500);
 });
 
 it('adds the baseline to the cleared balance while still excluding uncleared rows', function (): void {
@@ -132,7 +132,7 @@ it('adds the baseline to the cleared balance while still excluding uncleared row
     sbbTransaction($user, $account, $run->id, '2026-05-13', -2_000, ClearedStatus::Reconciled);
     sbbTransaction($user, $account, $run->id, '2026-05-14', -9_000, ClearedStatus::Uncleared);
 
-    expect(app(AccountBalanceQuery::class)->clearedBalance($account->id, $user))->toBe(47_000);
+    expect(app(AccountBalanceQuery::class)->clearedBalance($account->id, $user)->in(Currency::Eur->value))->toBe(47_000);
 });
 
 it('adds the baseline to the as-of balance the reconcile screen compares against a statement', function (): void {
@@ -149,7 +149,7 @@ it('adds the baseline to the as-of balance the reconcile screen compares against
 
     $asOf = CarbonImmutable::parse('2026-05-15');
 
-    expect(app(AccountBalanceQuery::class)->clearedBalanceAsOf($account->id, $user, $asOf))->toBe(99_000);
+    expect(app(AccountBalanceQuery::class)->clearedBalanceAsOf($account->id, $user, $asOf)->in(Currency::Eur->value))->toBe(99_000);
 });
 
 it('gives a foreign user none of the account owner\'s baseline', function (): void {
@@ -160,5 +160,5 @@ it('gives a foreign user none of the account owner\'s baseline', function (): vo
 
     sbbTransaction($owner, $account, $run->id, '2026-05-12', -1_000);
 
-    expect(app(AccountBalanceQuery::class)->currentBalance($account->id, $intruder))->toBe(0);
+    expect(app(AccountBalanceQuery::class)->currentBalance($account->id, $intruder)->in(Currency::Eur->value))->toBe(0);
 });

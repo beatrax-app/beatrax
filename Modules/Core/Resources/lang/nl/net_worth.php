@@ -11,7 +11,7 @@ return [
 
     'across' => 'over :count rekening|over :count rekeningen',
 
-    'not_converted' => '· :count rekening niet omgerekend — geen koers beschikbaar|· :count rekeningen niet omgerekend — geen koers beschikbaar',
+    'not_converted' => '· :count saldo niet omgerekend — geen koers beschikbaar|· :count saldi niet omgerekend — geen koers beschikbaar',
     'no_rate_available' => '· geen koers beschikbaar',
 
     'toggle_hide' => 'Verbergen',

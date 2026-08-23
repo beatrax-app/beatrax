@@ -36,9 +36,11 @@ final class PotBalanceQuery
     // a future-dated row made a pot read as funded by a payment still to
     // arrive, and left isOverAllocated false while the account could not cover
     // what its pots claimed.
-    private function realBalance(int $accountId, User $user): int
+    private function realBalance(int $accountId, User $user, string $currency): int
     {
-        return $this->accountBalance->currentBalanceAsOf($accountId, $user, $this->clock->now()->startOfDay());
+        return $this->accountBalance
+            ->currentBalanceAsOf($accountId, $user, $this->clock->now()->startOfDay())
+            ->in($currency);
     }
 
     public function balanceForPot(int $potId, User $user): int
@@ -52,10 +54,6 @@ final class PotBalanceQuery
 
     public function reconciliationForAccount(int $accountId, User $user): ReconciliationRow
     {
-        $allocated = $this->allocatedForAccount($accountId, $user);
-        $real = $this->realBalance($accountId, $user);
-        $unallocated = $real - $allocated;
-
         $accountRow = $this->db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
@@ -68,6 +66,10 @@ final class PotBalanceQuery
         $currency = ($accountRow !== null && is_string($accountRow->default_currency))
             ? $accountRow->default_currency
             : $this->baseCurrency->code();
+
+        $allocated = $this->allocatedForAccount($accountId, $user);
+        $real = $this->realBalance($accountId, $user, $currency);
+        $unallocated = $real - $allocated;
 
         return new ReconciliationRow(
             accountId: $accountId,
@@ -82,9 +84,23 @@ final class PotBalanceQuery
 
     public function currentUnallocatedForAccount(int $accountId, User $user): int
     {
-        $real = $this->realBalance($accountId, $user);
+        $real = $this->realBalance($accountId, $user, $this->accountCurrency($accountId, $user));
 
         return $real - $this->allocatedForAccount($accountId, $user);
+    }
+
+    // Pots are denominated in the account's own currency, so a multi-currency
+    // account answers "what is unallocated" in that one line and leaves the
+    // rest of what it holds out of the arithmetic entirely.
+    private function accountCurrency(int $accountId, User $user): string
+    {
+        $currency = $this->db->connection()
+            ->table('accounts')
+            ->where('user_id', $user->id)
+            ->where('id', $accountId)
+            ->value('default_currency');
+
+        return is_string($currency) && $currency !== '' ? $currency : $this->baseCurrency->code();
     }
 
     /**

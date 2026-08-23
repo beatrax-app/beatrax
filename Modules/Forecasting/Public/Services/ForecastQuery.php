@@ -214,7 +214,7 @@ final readonly class ForecastQuery
         CarbonImmutable $asOf,
         User $user,
     ): ForecastDto {
-        $anchorMinor = $this->balances->currentBalanceAsOf($accountId, $user, $asOf);
+        $anchorMinor = $this->balances->currentBalanceAsOf($accountId, $user, $asOf)->in($defaultCurrency);
 
         $points = [];
         for ($day = 0; $day <= $horizonDays; $day++) {

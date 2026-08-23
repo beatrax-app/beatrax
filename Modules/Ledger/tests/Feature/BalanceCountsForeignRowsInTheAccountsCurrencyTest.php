@@ -97,7 +97,7 @@ it('counts a foreign-currency row at what the account was actually debited', fun
     settledRow($this->db, $this->user->id, $accountId, 10_000, Currency::Eur->value, 10_000);
     settledRow($this->db, $this->user->id, $accountId, -3_695, Currency::Usd->value, -3_399);
 
-    expect(app(AccountBalanceQuery::class)->currentBalance($accountId, $this->user))->toBe(6_601);
+    expect(app(AccountBalanceQuery::class)->currentBalance($accountId, $this->user)->in(Currency::Eur->value))->toBe(6_601);
 });
 
 // The cleared figures reconcile against a printed bank statement, which is
@@ -107,5 +107,5 @@ it('uses the settled figure for the cleared balance too', function (): void {
 
     settledRow($this->db, $this->user->id, $accountId, -3_695, Currency::Usd->value, -3_399);
 
-    expect(app(AccountBalanceQuery::class)->clearedBalance($accountId, $this->user))->toBe(-3_399);
+    expect(app(AccountBalanceQuery::class)->clearedBalance($accountId, $this->user)->in(Currency::Eur->value))->toBe(-3_399);
 });
