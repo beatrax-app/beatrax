@@ -180,10 +180,11 @@ it('syncs the boxes it must not contradict before the next submit', function ():
         base_path('Modules/Pots/Resources/views/livewire/pots-page.blade.php')
     );
 
-    // A deferred binding reaches the server only on submit, so the hook that
-    // re-tests the refusal would not run until the refusal was already gone.
-    expect($blade)->toContain('wire:model.blur="operationAmount"')
-        ->and($blade)->toContain('wire:model.blur="amount"')
-        ->and($blade)->toContain('wire:model.blur="name"')
-        ->and($blade)->toContain('wire:model.blur="accountId"');
+    // Without .live the modifier is ephemeral: the box syncs to the client-side
+    // proxy on blur and no request is sent, so the hook that re-tests the
+    // refusal does not run until the refusal is already gone.
+    expect($blade)->toContain('wire:model.live.blur="operationAmount"')
+        ->and($blade)->toContain('wire:model.live.blur="amount"')
+        ->and($blade)->toContain('wire:model.live.blur="name"')
+        ->and($blade)->toContain('wire:model.live.blur="accountId"');
 });

@@ -1527,6 +1527,35 @@ A second assertion runs over `SourceFormat::cases()` directly. That is the one
 that would have caught `IngCsv` on the day it was added, before any picker
 offered it.
 
+## `wire:model.blur` never reaches the server
+
+Two shipped fixes were inert in the browser while their tests passed. Both had
+the same shape: a refusal shown after a rejected submit, and an `updated()` hook
+whose job was to re-test that refusal as the reader corrected the box under it.
+Pots printed "Amount exceeds unallocated balance." and kept printing it after the
+amount was corrected; signup left "Passwords do not match." standing over a
+ticked "Both passwords match".
+
+Livewire 4 changed what `wire:model`'s modifiers mean. A modifier is EPHEMERAL
+unless `.live` appears before it: `wire:model.blur` syncs the client-side `$wire`
+proxy when the field loses focus and sends no request at all. The value is not
+lost — it rides along with the next commit — but no `updated()` hook runs at the
+moment of the blur, which is the moment the whole feature is about.
+
+Measured on the device: with a network probe installed over `fetch` and
+`XMLHttpRequest`, a real focus, a real edit and a real blur on a
+`wire:model.blur` field produced zero requests, both bound inputs showed the new
+value, and the server's snapshot still held the old one.
+
+`Livewire::test()` does not catch it. It calls `set()` on the server, which
+triggers the hook directly, so the hook is exercised and the binding that can
+never invoke it is not.
+
+The invariant pairs the two sides: a component that declares an `updated`
+lifecycle hook may not have a view binding a field with `.blur` unless `.live`
+comes first. A component with no such hook is left alone — there the modifier
+only delays a client-side sync, which is a real if rare intent.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

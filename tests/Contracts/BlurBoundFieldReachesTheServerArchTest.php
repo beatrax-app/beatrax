@@ -1,0 +1,90 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#wiremodelblur-never-reaches-the-server
+ */
+
+/** @return list<string> */
+function livewireComponentFiles(): array
+{
+    $files = [];
+    $dir = base_path('Modules');
+
+    /** @var iterable<SplFileInfo> $it */
+    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
+
+    foreach ($it as $file) {
+        if (! $file->isFile() || ! str_ends_with($file->getFilename(), '.php')) {
+            continue;
+        }
+        if (! str_contains($file->getPathname(), '/Http/Livewire/')) {
+            continue;
+        }
+        $files[] = $file->getPathname();
+    }
+
+    sort($files);
+
+    return $files;
+}
+
+// A component names its view; the view lives under some module's
+// Resources/views/livewire, and which module is not derivable from the
+// namespace alias, so the file is looked up by name.
+/** @return list<string> */
+function viewsRenderedBy(string $componentPath): array
+{
+    $source = (string) file_get_contents($componentPath);
+
+    if (preg_match_all("/'[a-z0-9\-]+::livewire\.([a-z0-9\-.]+)'/", $source, $matches) === false) {
+        return [];
+    }
+
+    $paths = [];
+    foreach ($matches[1] as $name) {
+        foreach (glob(base_path('Modules/*/Resources/views/livewire/'.str_replace('.', '/', $name).'.blade.php')) ?: [] as $found) {
+            $paths[] = $found;
+        }
+    }
+
+    return array_values(array_unique($paths));
+}
+
+it('never binds a field with wire:model.blur in a component whose updated() hook has to see it', function (): void {
+    $offenders = [];
+
+    foreach (livewireComponentFiles() as $componentPath) {
+        $source = (string) file_get_contents($componentPath);
+
+        if (preg_match('/function\s+updated[A-Za-z]*\s*\(/', $source) !== 1) {
+            continue;
+        }
+
+        foreach (viewsRenderedBy($componentPath) as $viewPath) {
+            $view = (string) file_get_contents($viewPath);
+
+            if (preg_match_all('/wire:model((?:\.[\w]+)*)\.blur/', $view, $matches) === false) {
+                continue;
+            }
+
+            foreach ($matches[1] as $leading) {
+                if (str_contains($leading, 'live')) {
+                    continue;
+                }
+
+                $offenders[] = str_replace(base_path().'/', '', $viewPath)
+                    .' ← '.str_replace(base_path().'/', '', $componentPath);
+            }
+        }
+    }
+
+    expect(array_values(array_unique($offenders)))->toBe(
+        [],
+        "In Livewire 4 `wire:model.blur` is an EPHEMERAL modifier: it syncs the client-side\n".
+        "\$wire proxy on blur and sends no request, so an updated() hook on the server never\n".
+        "runs. Spell it `wire:model.live.blur` where the hook has to see the new value.\n  "
+        .implode("\n  ", array_unique($offenders)),
+    );
+});
