@@ -96,6 +96,34 @@ brick/money — rate values are never represented as float anywhere in
 this module, since floating-point representation silently corrupts FX
 conversion precision.
 
+## Roll-ups that span currencies
+
+`CrossCurrencyTotal` is the one collaborator every roll-up that adds
+figures from more than one currency goes through. A Revolut import
+carries a currency per row, so a single account — and therefore a single
+counterparty, tax year, recurring series or drift watchlist — can hold
+euro and dollar side by side. Adding those minor units is the arithmetic
+`AccountBalance` deliberately has no `total()` to prevent, and every
+surface that did it printed the sum under one symbol.
+
+The collaborator takes buckets keyed by currency, converts each at its
+own rate, and returns a `ConvertedTotal` carrying the figure, the
+currency it is denominated in, and the codes it could not reach. A
+currency with no rate is **left out and named**, never added at one to
+one — the rule `NetWorthQuery` already applies to a balance line it has
+no rate for. `ConvertedTotal::isPartial()` is what a renderer gates the
+"not converted" line on, so a reader can tell a partial total from a
+whole one.
+
+`ratesTo()` fetches one rate per currency for the whole render rather
+than one per bucket: `convertToBase()` reads the entire `exchange_rates`
+table on every call, and a twelve-month sparkline across a few hundred
+counterparties would otherwise ask for the same pair thousands of times.
+The rate is probed with a zero amount, because the rate a zero converts
+at is the rate any amount converts at. Callers holding many buckets call
+`ratesTo()` once and then `withRates()` per bucket group; callers with a
+single group call `of()`, which does both.
+
 ## Wiring
 
 `FXServiceProvider::register()` tags and registers the three rate
