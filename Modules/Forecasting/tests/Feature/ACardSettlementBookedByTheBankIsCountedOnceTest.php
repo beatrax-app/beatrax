@@ -163,7 +163,7 @@ function csbCurve(User $user, int $bankId): array
 
 /**
  * @param  list<ForecastPointDto>  $points
- * @return int  everything the curve gives up between the eve of the due date and $through
+ * @return int everything the curve gives up between the eve of the due date and $through
  */
 function csbFallThrough(array $points, string $through): int
 {
