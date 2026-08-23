@@ -561,10 +561,12 @@
                     inputmode="decimal"
                     wire:model.blur="operationAmount"
                     :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                    :aria-describedby="$errorAmount !== '' ? 'fund-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                 />
                 @if ($errorAmount !== '')
-                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                    <p id="fund-amount-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                 @endif
             </div>
             <x-core::form-field
@@ -603,10 +605,12 @@
                     inputmode="decimal"
                     wire:model.blur="operationAmount"
                     :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                    :aria-describedby="$errorAmount !== '' ? 'withdraw-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                 />
                 @if ($errorAmount !== '')
-                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                    <p id="withdraw-amount-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                 @endif
                 @if ($withdrawPot !== null)
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -669,10 +673,12 @@
                     inputmode="decimal"
                     wire:model.blur="operationAmount"
                     :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                    :aria-describedby="$errorAmount !== '' ? 'move-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                 />
                 @if ($errorAmount !== '')
-                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                    <p id="move-amount-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                 @endif
             </div>
             <div class="flex gap-3 pt-2">

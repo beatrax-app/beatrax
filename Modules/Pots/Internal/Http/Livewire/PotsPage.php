@@ -51,9 +51,42 @@ final class PotsPage extends Component
 
     public string $errorAmount = '';
 
+    // The ceiling the refusal quoted, so a corrected amount can be re-tested
+    // against the same claim instead of dismissing it. Null where the refusal
+    // was about the amount parsing at all rather than about a balance.
+    public ?int $errorAmountLimitMinor = null;
+
     public bool $showArchived = false;
 
-    public function createPot(CurrentUser $currentUser, PotWriter $writer): void
+    // A refusal names the figure printed beside the box, and the box goes on
+    // being edited underneath it. Typing 300 against 241,09 available and then
+    // correcting to 100 left the message standing over a number it no longer
+    // described. Re-tested rather than cleared: 500 is still refused.
+    public function updated(string $property, mixed $value, PotWriter $writer): void
+    {
+        if ($property === 'name' || $property === 'accountId') {
+            $this->errorName = '';
+        }
+
+        // A different account has a different unallocated balance, so the
+        // quoted ceiling stops describing anything at all.
+        if ($property === 'accountId') {
+            $this->clearAmountError();
+
+            return;
+        }
+
+        if ($property !== 'amount' && $property !== 'operationAmount') {
+            return;
+        }
+
+        $typed = $property === 'amount' ? $this->amount : $this->operationAmount;
+        if (! $this->amountStillRefused($typed, blankIsAllowed: $property === 'amount', writer: $writer)) {
+            $this->clearAmountError();
+        }
+    }
+
+    public function createPot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query): void
     {
         $this->clearErrors();
 
@@ -90,6 +123,7 @@ final class PotsPage extends Component
         } catch (InsufficientUnallocatedException|\InvalidArgumentException $e) {
             if ($e instanceof InsufficientUnallocatedException) {
                 $this->errorAmount = Lang::get('pots::messages.errors.amount_exceeds_unallocated');
+                $this->errorAmountLimitMinor = max(0, $query->currentUnallocatedForAccount($accountId, $currentUser->user()));
             } else {
                 $this->errorName = $e->getMessage();
             }
@@ -209,8 +243,9 @@ final class PotsPage extends Component
                 $unallocated = $rec->unallocatedMinor;
                 $currency = $pot->currency;
             }
+            $this->errorAmountLimitMinor = max(0, $unallocated);
             $availableFormatted = Money::ofMinor(
-                max(0, $unallocated),
+                $this->errorAmountLimitMinor,
                 $currency
             )->format();
             $this->errorAmount = Lang::get(
@@ -265,8 +300,9 @@ final class PotsPage extends Component
                 $balance = $pot->balanceMinor;
                 $currency = $pot->currency;
             }
+            $this->errorAmountLimitMinor = max(0, $balance);
             $availableFormatted = Money::ofMinor(
-                max(0, $balance),
+                $this->errorAmountLimitMinor,
                 $currency
             )->format();
             $this->errorAmount = Lang::get(
@@ -322,8 +358,9 @@ final class PotsPage extends Component
                 $balance = $sourcePot->balanceMinor;
                 $currency = $sourcePot->currency;
             }
+            $this->errorAmountLimitMinor = max(0, $balance);
             $availableFormatted = Money::ofMinor(
-                max(0, $balance),
+                $this->errorAmountLimitMinor,
                 $currency
             )->format();
             $this->errorAmount = Lang::get(
@@ -449,7 +486,31 @@ final class PotsPage extends Component
     private function clearErrors(): void
     {
         $this->errorName = '';
+        $this->clearAmountError();
+    }
+
+    private function clearAmountError(): void
+    {
         $this->errorAmount = '';
+        $this->errorAmountLimitMinor = null;
+    }
+
+    private function amountStillRefused(string $typed, bool $blankIsAllowed, PotWriter $writer): bool
+    {
+        if ($this->errorAmount === '') {
+            return false;
+        }
+
+        if (trim($typed) === '') {
+            return ! $blankIsAllowed;
+        }
+
+        $minor = $writer->parseAmount($typed);
+        if ($minor === null) {
+            return true;
+        }
+
+        return $this->errorAmountLimitMinor !== null && $minor > $this->errorAmountLimitMinor;
     }
 
     private function resetForm(): void
