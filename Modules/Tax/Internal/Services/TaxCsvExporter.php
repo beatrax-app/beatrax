@@ -37,7 +37,8 @@ final class TaxCsvExporter
             'description',
             'deduction_category',
             'note',
-            'settled_eur_amount',
+            'settled_amount',
+            'settled_currency',
             'original_amount',
             'original_currency',
             'transaction_type',
@@ -86,7 +87,7 @@ final class TaxCsvExporter
         $rawOriginal = $row['amountMinor'] ?? 0;
         $originalMinor = is_numeric($rawOriginal) ? (int) $rawOriginal : 0;
 
-        $settledEurAmount = MoneyInput::toDecimalString(abs($settledMinor));
+        $settledAmount = MoneyInput::toDecimalString(abs($settledMinor));
         $originalAmount = MoneyInput::toDecimalString(abs($originalMinor));
 
         return [
@@ -98,7 +99,8 @@ final class TaxCsvExporter
             self::str($row['description'] ?? null),
             self::str($row['categoryName'] ?? null),
             self::str($row['note'] ?? null),
-            $settledEurAmount,
+            $settledAmount,
+            self::str($row['settledCurrency'] ?? null),
             $originalAmount,
             self::str($row['currency'] ?? null),
             self::str($row['transactionType'] ?? null),

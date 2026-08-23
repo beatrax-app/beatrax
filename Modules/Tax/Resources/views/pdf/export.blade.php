@@ -1,4 +1,3 @@
-@use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Core\Public\Support\Lang')
 @inject('container', \Illuminate\Contracts\Container\Container::class)
@@ -146,11 +145,14 @@
         </tr>
         <tr>
             <th scope="row" class="summary-label">{{ Lang::get('tax::pdf.total_deductions_label') }}</th>
-            <td>{{ Money::ofMinor($data->deductionsTotalMinor, BaseCurrency::value())->format() }}</td>
+            <td>{{ Money::ofMinor($data->deductionsTotalMinor, $data->currency)->format() }}</td>
             <th scope="row" class="summary-label">{{ Lang::get('tax::pdf.total_income_label') }}</th>
-            <td>{{ Money::ofMinor($data->incomeTotalMinor, BaseCurrency::value())->format() }}</td>
+            <td>{{ Money::ofMinor($data->incomeTotalMinor, $data->currency)->format() }}</td>
         </tr>
     </table>
+    @if ($data->isPartial())
+        <p data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $data->unconvertedList()]) }}</p>
+    @endif
 </div>
 
 @if($data->itemCount === 0)
@@ -189,7 +191,8 @@
                             $description = is_string($row['description'] ?? null) ? $row['description'] : '';
                             $note = is_string($row['note'] ?? null) ? $row['note'] : '';
                             $settledMinor = is_numeric($row['settledAmountMinor'] ?? 0) ? (int) $row['settledAmountMinor'] : 0;
-                            $amountStr = Money::ofMinor(abs($settledMinor), BaseCurrency::value())->format();
+                            $settledCurrency = is_string($row['settledCurrency'] ?? null) && $row['settledCurrency'] !== '' ? $row['settledCurrency'] : $data->currency;
+                            $amountStr = Money::ofMinor(abs($settledMinor), $settledCurrency)->format();
                         @endphp
                         <tr>
                             <td>{{ $bookedAt }}</td>
@@ -201,7 +204,7 @@
                     @endforeach
                     <tr class="subtotal-row">
                         <td colspan="4">{{ Lang::get('tax::pdf.subtotal') }}</td>
-                        <td class="amount">{{ Money::ofMinor(abs($subtotalMinor), BaseCurrency::value())->format() }}</td>
+                        <td class="amount">{{ Money::ofMinor(abs($subtotalMinor), $data->currency)->format() }}</td>
                     </tr>
                 </tbody>
             </table>

@@ -8,7 +8,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\BatchTagSuggestion;
 use Modules\Tax\Public\Dto\TaxTagData;
@@ -26,6 +28,8 @@ final class TaxTagQuery
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
         private readonly SessionFactory $session,
+        private readonly CrossCurrencyTotal $fx,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     // Whole-transaction tags only; callers that need leg-aware state use
@@ -132,10 +136,11 @@ final class TaxTagQuery
     }
 
     // totalMinor is the deductions total only; count covers every tagged
-    // item regardless of type.
+    // item regardless of type. Grouped by settled_currency and converted per
+    // bucket: a dollar receipt's cents are not the reader's.
     public function summaryForUser(int $userId, int $year): TaxYearSummary
     {
-        $row = $this->db->connection()
+        $rows = $this->db->connection()
             ->table(self::TAX_TAGS_ALIAS)
             ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'tag.transaction_id')
             ->where('tag.user_id', $userId)
@@ -143,16 +148,28 @@ final class TaxTagQuery
                 'COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) = ?',
                 [$year],
             )
+            ->groupBy('t.settled_currency')
             ->selectRaw(
-                'COUNT(*) AS cnt, SUM(CASE WHEN t.type = ? THEN 0 ELSE ABS(t.settled_amount_minor) END) AS total_minor',
+                't.settled_currency, COUNT(*) AS cnt, SUM(CASE WHEN t.type = ? THEN 0 ELSE ABS(t.settled_amount_minor) END) AS bucket_minor',
                 [TransactionType::Income->value],
             )
-            ->first();
+            ->get();
+
+        $byCurrency = [];
+        $count = 0;
+        foreach ($rows as $row) {
+            $byCurrency[self::toString($row->settled_currency)] = self::toInt($row->bucket_minor);
+            $count += self::toInt($row->cnt);
+        }
+
+        $total = $this->fx->of($byCurrency, $this->baseCurrency->code());
 
         return new TaxYearSummary(
             year: $year,
-            totalMinor: $row !== null ? self::toInt($row->total_minor) : 0,
-            count: $row !== null ? self::toInt($row->cnt) : 0,
+            totalMinor: $total->minor,
+            count: $count,
+            currency: $total->currency,
+            unconvertedCurrencies: $total->unconverted,
         );
     }
 

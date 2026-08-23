@@ -42,11 +42,14 @@ conflated.
 the exported CSV and the on-screen cockpit share the same
 COALESCE year-override resolution and can never diverge; the export is
 therefore automatically user-scoped by construction. The CSV emits a
-fixed, tested 16-column order (`tax_year`, `booked_date`, `account`,
+fixed, tested 17-column order (`tax_year`, `booked_date`, `account`,
 `counterparty`, `counterparty_iban`, `description`,
-`deduction_category`, `note`, `settled_eur_amount`, `original_amount`,
-`original_currency`, `transaction_type`, `transaction_id`,
-`source_format`, `import_run_id`, `fingerprint`) — an audit-extra shape
+`deduction_category`, `note`, `settled_amount`, `settled_currency`,
+`original_amount`, `original_currency`, `transaction_type`,
+`transaction_id`, `source_format`, `import_run_id`, `fingerprint`).
+`settled_amount` was `settled_eur_amount` until a Revolut import proved
+the column could hold dollars: a per-row currency needs a per-row code
+beside it, not a currency in the header — an audit-extra shape
 richer than the on-screen cockpit, meant to be opened directly by an
 accountant. Every cell is passed through `League\Csv\EscapeFormula` to
 mitigate spreadsheet formula injection (a cell starting with `=`, `+`,

@@ -107,7 +107,7 @@ function tceTag(DatabaseManager $db, int $userId, int $txId, ?int $catId = null,
     ], $overrides));
 }
 
-it('first row of CSV is the exact 16-column header', function (): void {
+it('first row of CSV is the exact 17-column header', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = tceUser($db, 'tce-header-user');
@@ -122,7 +122,7 @@ it('first row of CSV is the exact 16-column header', function (): void {
     expect($header)->toBe([
         'tax_year', 'booked_date', 'account', 'counterparty',
         'counterparty_iban', 'description', 'deduction_category',
-        'note', 'settled_eur_amount', 'original_amount',
+        'note', 'settled_amount', 'settled_currency', 'original_amount',
         'original_currency', 'transaction_type', 'transaction_id',
         'source_format', 'import_run_id', 'fingerprint',
     ]);
@@ -142,7 +142,7 @@ it('empty year yields a header-only CSV with no data rows', function (): void {
     expect(count($lines))->toBe(1);
 });
 
-it('one data row per tagged transaction; settled_eur_amount is a 2-decimal string', function (): void {
+it('one data row per tagged transaction; settled_amount is a 2-decimal string', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = tceUser($db, 'tce-money-format-user');
@@ -166,7 +166,7 @@ it('one data row per tagged transaction; settled_eur_amount is a 2-decimal strin
     $row1 = str_getcsv($lines[1]);
     $row2 = str_getcsv($lines[2]);
 
-    // settled_eur_amount is column index 8
+    // settled_amount is column index 8
     expect($row1[8])->toMatch('/^\d+\.\d{2}$/');
     expect($row2[8])->toMatch('/^\d+\.\d{2}$/');
 
@@ -200,20 +200,24 @@ it('includes audit-extra columns: original_amount, original_currency, transactio
     $dataRow = str_getcsv($lines[1]);
 
     // Columns by index:
-    // 9=original_amount, 10=original_currency, 12=transaction_id,
-    // 13=source_format, 14=import_run_id, 15=fingerprint
+    // 9=settled_currency, 10=original_amount, 11=original_currency,
+    // 13=transaction_id, 14=source_format, 15=import_run_id, 16=fingerprint
+
+    // The settled figure carries its own code: a Revolut row settles in
+    // whatever the file names, so a currency in the header would be a guess.
+    expect($dataRow[9])->toBe('EUR');
 
     // original_amount is formatted from amount_minor: -8800 becomes "88.00".
-    expect($dataRow[9])->toMatch('/^\d+\.\d{2}$/');
-    expect($dataRow[9])->toBe('88.00');
+    expect($dataRow[10])->toMatch('/^\d+\.\d{2}$/');
+    expect($dataRow[10])->toBe('88.00');
 
-    expect($dataRow[10])->toBe('USD');
+    expect($dataRow[11])->toBe('USD');
 
-    expect($dataRow[12])->toBe((string) $txId);
+    expect($dataRow[13])->toBe((string) $txId);
 
-    expect($dataRow[13])->toBe('paypal-csv');
+    expect($dataRow[14])->toBe('paypal-csv');
 
-    expect($dataRow[15])->toBe($fingerprintVal);
+    expect($dataRow[16])->toBe($fingerprintVal);
 
     // note is column 7
     expect($dataRow[7])->toBe('course fee');
