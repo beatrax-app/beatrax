@@ -100,7 +100,7 @@
             @endif
         >
             <div class="mb-4 flex flex-wrap items-center gap-3">
-                <div class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white p-1 dark:bg-slate-950 dark:border-slate-700" role="radiogroup" aria-label="{{ Lang::get('forecasting::forecast.horizon_label') }}">
+                <div class="inline-flex flex-wrap items-center gap-1 rounded-md border border-slate-200 bg-white p-1 dark:bg-slate-950 dark:border-slate-700" role="radiogroup" aria-label="{{ Lang::get('forecasting::forecast.horizon_label') }}">
                     @foreach (\Modules\Forecasting\Internal\Jobs\ProjectForecastJob::HORIZON_DAYS as $option)
                         <button
                             type="button"

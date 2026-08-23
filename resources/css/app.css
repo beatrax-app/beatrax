@@ -4441,8 +4441,12 @@ td.date,
     pointer-events: none;
 }
 
+/* A flex item's default min-width is auto, so at the phone's largest display
+   size the box kept the intrinsic width of its own twenty characters and took
+   the page 44px sideways. */
 .srch-input {
     flex: 1;
+    min-width: 0;
     height: 36px;
     padding: 0 var(--space-2, 8px);
     border: 1px solid var(--color-border, oklch(93% 0 0));
