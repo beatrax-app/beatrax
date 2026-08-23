@@ -143,8 +143,7 @@ it('opens on the ledger balance today, not on a statement summary months old', f
     expect($anchor)->toBeInstanceOf(BalanceAnchorDto::class)
         ->and($anchor->openingBalanceMinor)->toBe(194109)
         ->and($anchor->source)->toBe('sum_of_transactions')
-        ->and($anchor->currency)->toBe(Currency::Eur->value)
-        ->and($anchor->asOfDate->toDateString())->toBe('2026-08-23');
+        ->and($anchor->currency)->toBe(Currency::Eur->value);
 });
 
 it('sums the history of a bank account that has no statement at all', function (): void {
@@ -156,7 +155,6 @@ it('sums the history of a bank account that has no statement at all', function (
 
     expect($anchor->openingBalanceMinor)->toBe(4000);
     expect($anchor->source)->toBe('sum_of_transactions');
-    expect($anchor->asOfDate->toDateString())->toBe(CarbonImmutable::now()->toDateString());
 });
 
 // The sum answers "what is on this account today", so a row dated after today
@@ -173,8 +171,7 @@ it('leaves a future-dated transaction out of the sum, and says which day it is f
     $anchor = $this->resolver->forAccount($accountId, $this->user);
 
     expect($anchor->openingBalanceMinor)->toBe(7500)
-        ->and($anchor->source)->toBe('sum_of_transactions')
-        ->and($anchor->asOfDate->toDateString())->toBe('2026-05-15');
+        ->and($anchor->source)->toBe('sum_of_transactions');
 });
 
 it('routes ics_card to the most recent card_statements row (negated open_balance)', function (): void {
@@ -196,9 +193,10 @@ it('routes ics_card to the most recent card_statements row (negated open_balance
     $anchor = $this->resolver->forAccount($accountId, $this->user);
 
     // An open balance of 50000 is money owed, so the signed running-balance
-    // position is its negation. The card keeps its statement even though rows
-    // have landed since, because the projection re-emits those billing events.
-    expect($anchor->openingBalanceMinor)->toBe(-50000);
+    // position is its negation, and the 70400 charged since the statement
+    // closed is owed on top of it. The projector emits occurrences from today
+    // forward, so a charge dated 4 May is never re-emitted and never doubled.
+    expect($anchor->openingBalanceMinor)->toBe(-120400);
     expect($anchor->source)->toBe('ics_card_statement');
 });
 
@@ -224,8 +222,7 @@ it('routes a card to accounts.opening_balance_minor when the user set one', func
     $anchor = $this->resolver->forAccount($accountId, $this->user);
 
     expect($anchor->openingBalanceMinor)->toBe(25000);
-    expect($anchor->source)->toBe('user_input_opening_balance');
-    expect($anchor->asOfDate->toDateString())->toBe('2026-05-01');
+    expect($anchor->source)->toBe('sum_of_transactions');
 });
 
 // The figure the reader types in Settings is a baseline with a date, not the
@@ -247,8 +244,7 @@ it('carries the reader-typed opening balance forward through the rows posted sin
 
     $anchor = $this->resolver->forAccount($accountId, $this->user);
 
-    expect($anchor->openingBalanceMinor)->toBe(270880)
-        ->and($anchor->asOfDate->toDateString())->toBe('2026-08-23');
+    expect($anchor->openingBalanceMinor)->toBe(270880);
 });
 
 it('sums the history of a paypal account with no opening balance', function (): void {
@@ -270,7 +266,7 @@ it('defaults to the base currency on the user-input path when the account has no
 
     $anchor = $this->resolver->forAccount($accountId, $this->user);
 
-    expect($anchor->source)->toBe('user_input_opening_balance');
+    expect($anchor->source)->toBe('sum_of_transactions');
     expect($anchor->currency)->toBe(Currency::Eur->value);
 });
 
@@ -305,4 +301,31 @@ it('raises ModelNotFoundException for a missing or cross-user account id', funct
     $call = fn (): BalanceAnchorDto => $this->resolver->forAccount($otherAccountId, $this->user);
 
     expect($call)->toThrow(ModelNotFoundException::class);
+});
+
+// The anchor carried an asOfDate saying which day its figure was true for, and
+// nothing read it: a statement that closed in April was drawn as today's
+// position. Every path resolves to today now, so there is no date to carry.
+it('leaves a card charge dated after today out of what the card owes', function (): void {
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-23 09:00:00'));
+
+    $accountId = barInsertAccount($this->db, $this->user->id, AccountKind::IcsCard->value);
+    $this->db->connection()->table('card_statements')->insert([
+        'user_id' => $this->user->id,
+        'account_id' => $accountId,
+        'import_run_id' => null,
+        'period_start' => '2026-04-01 00:00:00',
+        'period_end' => '2026-04-30 00:00:00',
+        'total_amount_minor' => -50000,
+        'open_balance_minor' => 50000,
+        'state' => 'open',
+        'created_at' => '2026-05-01 00:00:00',
+        'updated_at' => '2026-05-01 00:00:00',
+    ]);
+    barInsertTransaction($this->db, $this->user->id, $accountId, -1000, '2026-05-04');
+    barInsertTransaction($this->db, $this->user->id, $accountId, -90000, '2026-09-15');
+
+    $anchor = $this->resolver->forAccount($accountId, $this->user);
+
+    expect($anchor->openingBalanceMinor)->toBe(-51000);
 });
