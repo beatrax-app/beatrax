@@ -96,7 +96,12 @@ FK, via four steps:
    currency, the canonical row carries both legs verbatim AND derives
    `fxRateUsed = settled / native` via `Brick\Math\BigDecimal` at scale 8
    with HALF_UP rounding — float arithmetic is forbidden on the money
-   path since the `decimal(18,8)` column requires exact precision.
+   path since the `decimal(18,8)` column requires exact precision. The
+   two legs can also differ at the SAME currency, which carries no rate:
+   a bank fee charged on top of the merchant's amount leaves the native
+   figure as what was charged and the settled figure as what the account
+   paid. See
+   [Generic CSV (bank presets)](../features/ingestion/architecture.md#generic-csv-bank-presets).
 
 ### 4. Transaction-type classification (`ClassifyTransactionType`)
 

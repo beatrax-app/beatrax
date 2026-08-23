@@ -24,7 +24,6 @@ final class CsvPreset
     public function __construct(
         public readonly string $format,
         public readonly string $label,
-        public readonly string $issuer,
         public readonly array $headerSignature,
         public readonly string $dateHeader,
         public readonly string $dateFormat,

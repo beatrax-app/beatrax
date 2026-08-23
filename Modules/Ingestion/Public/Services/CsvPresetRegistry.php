@@ -63,7 +63,6 @@ final class CsvPresetRegistry
             new CsvPreset(
                 format: self::N26,
                 label: 'N26',
-                issuer: self::ISSUER,
                 headerSignature: ['Booking Date', 'Partner Name', 'Amount (EUR)'],
                 dateHeader: 'Booking Date',
                 dateFormat: 'Y-m-d',
@@ -81,7 +80,6 @@ final class CsvPresetRegistry
             new CsvPreset(
                 format: self::REVOLUT,
                 label: 'Revolut',
-                issuer: self::ISSUER,
                 headerSignature: ['Type', 'Started Date', 'Completed Date', 'Amount', 'Currency', 'State'],
                 dateHeader: 'Completed Date',
                 dateFormat: 'Y-m-d H:i:s',
@@ -104,7 +102,6 @@ final class CsvPresetRegistry
             new CsvPreset(
                 format: self::ING_NL,
                 label: 'ING (Netherlands)',
-                issuer: self::ISSUER,
                 headerSignature: ['Datum', 'Naam/Omschrijving', 'Af Bij', 'Bedrag (EUR)'],
                 dateHeader: 'Datum',
                 dateFormat: 'Ymd',
