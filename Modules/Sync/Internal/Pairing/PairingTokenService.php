@@ -19,10 +19,6 @@ final class PairingTokenService
 {
     use AppliesResponderAccept;
 
-    // Not a PairingState: the row does not move, and saying so with a state
-    // value would put a fourth member on an enum the column is written from.
-    public const string DEFERRED = 'deferred';
-
     private const int TTL_MINUTES = 10;
 
     private const int ACCEPT_GRACE_MINUTES = 5;
@@ -237,7 +233,7 @@ final class PairingTokenService
 
         $stamped = $this->stampSideConfirmation($tokenId, $userId, $side, $comparedKeys);
 
-        return $stamped === null ? null : $this->stateAfterAnyHeldPeerConfirm($stamped, $userId);
+        return $stamped === null ? null : $this->stateAfterAnyHeldPeerConfirm($stamped, $userId)->value;
     }
 
     // The tap is what makes a held peer confirm actionable, so this is where it
@@ -247,7 +243,7 @@ final class PairingTokenService
     /**
      * @link ../../../../.docs/features/sync/pairing-handshake.md#a-deferred-confirm-is-held-not-dropped
      */
-    private function stateAfterAnyHeldPeerConfirm(\stdClass $stamped, int $userId): string
+    private function stateAfterAnyHeldPeerConfirm(\stdClass $stamped, int $userId): PairingState
     {
         $held = $this->heldPeerConfirm->on($stamped);
         $tokenHash = is_string($stamped->token_hash) ? $stamped->token_hash : '';
@@ -263,9 +259,7 @@ final class PairingTokenService
             $held['sig_hex'],
         );
 
-        return $replayed === null || $replayed === self::DEFERRED
-            ? $this->finalizeIfBothConfirmed($stamped, $userId)
-            : $replayed;
+        return $replayed?->stateApplied() ?? $this->finalizeIfBothConfirmed($stamped, $userId);
     }
 
     // Stamping and reading back are one step: the stamp is conditional on the
@@ -350,20 +344,13 @@ final class PairingTokenService
     // peer identity — the anti-forgery gate the whole cross-device
     // propagation rests on (full gate sequence documented at @link,
     // including the load-bearing local-human-confirmed-first gate).
-    /**
-     * @return string|null Returns the resulting pairing state
-     *                     (`'awaiting_confirm'`/`'confirmed'`) on success,
-     *                     the literal string `'deferred'` when the frame is
-     *                     valid but the local side has not yet confirmed, or
-     *                     `null` on any fail-closed rejection.
-     */
     public function applyPeerConfirm(
         int $userId,
         string $tokenHash,
         string $confirmingDeviceId,
         string $peerDeviceId,
         string $sigHex,
-    ): ?string {
+    ): ?PeerConfirmResult {
         $context = $this->peerConfirmVerifier->authenticatePeerConfirm(
             $userId,
             $tokenHash,
@@ -393,16 +380,16 @@ final class PairingTokenService
         string $confirmingDeviceId,
         string $peerDeviceId,
         string $sigHex,
-    ): string {
+    ): PeerConfirmResult {
         $this->heldPeerConfirm->hold($context->rowId, $userId, $confirmingDeviceId, $peerDeviceId, $sigHex);
 
-        return self::DEFERRED;
+        return PeerConfirmResult::deferred();
     }
 
     // Stamps the peer's confirmation if it is not already recorded, then
     // re-reads the row so the state decision is made against what is actually
     // persisted rather than against the pre-update copy.
-    private function recordPeerConfirmAndFinalize(PeerConfirmContext $context, int $userId): ?string
+    private function recordPeerConfirmAndFinalize(PeerConfirmContext $context, int $userId): ?PeerConfirmResult
     {
         $peerConfirmedAt = is_string($context->row->{$context->peerConfirmedColumn})
             ? $context->row->{$context->peerConfirmedColumn}
@@ -426,7 +413,9 @@ final class PairingTokenService
             ->where('user_id', $userId)
             ->first();
 
-        return $freshRow === null ? null : $this->finalizeIfBothConfirmed($freshRow, $userId);
+        return $freshRow === null
+            ? null
+            : PeerConfirmResult::applied($this->finalizeIfBothConfirmed($freshRow, $userId));
     }
 
     // The side this device may confirm on this token, or null when the token
@@ -444,13 +433,17 @@ final class PairingTokenService
     // Shared tail of confirm() and applyPeerConfirm(): both reach the exact
     // same admission semantics — bothConfirmed() -> set CONFIRMED ->
     // admitResponderDevice() -> conditional admitInitiatorDevice() (see @link).
-    private function finalizeIfBothConfirmed(\stdClass $row, int $userId): string
+    private function finalizeIfBothConfirmed(\stdClass $row, int $userId): PairingState
     {
         $initiatorConfirmedAt = is_string($row->initiator_confirmed_at) ? $row->initiator_confirmed_at : null;
         $responderConfirmedAt = is_string($row->responder_confirmed_at) ? $row->responder_confirmed_at : null;
 
         if (! $this->stateMachine->bothConfirmed($initiatorConfirmedAt, $responderConfirmedAt)) {
-            return is_string($row->state) ? $row->state : PairingState::AwaitingConfirm->value;
+            // tryFrom, never from(): a `state` column this build cannot read
+            // must not throw out of the confirm path, and a row still short of
+            // one side is awaiting_confirm whatever the column happens to say.
+            return (is_string($row->state) ? PairingState::tryFrom($row->state) : null)
+                ?? PairingState::AwaitingConfirm;
         }
 
         $rowId = is_numeric($row->id) ? (int) $row->id : 0;
@@ -470,7 +463,7 @@ final class PairingTokenService
             $this->admitter->admitInitiatorDevice($row, $userId);
         }
 
-        return PairingState::Confirmed->value;
+        return PairingState::Confirmed;
     }
 
     // Gives a ceremony the reader has come back to enough window left to make

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Sync\Internal\Pairing\PairingFrame;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Internal\Pairing\PeerConfirmResult;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
@@ -133,7 +134,7 @@ it('completes on the initiator from its own tap alone, with the phone never send
     $sigFromPhone = dpcConfirmSignature($phone, $desktop, $tokenHash);
     $deferred = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(DPC_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
-    expect($deferred)->toBe(PairingTokenService::DEFERRED);
+    expect($deferred)->toEqual(PeerConfirmResult::deferred());
 
     // The desktop's human finally compares the words and taps. Nothing else
     // arrives from the phone after this point.
@@ -217,7 +218,7 @@ it('still refuses to complete on a held confirm alone — the local human remain
 
         foreach (range(1, 3) as $ignored) {
             expect($service->applyPeerConfirm(DPC_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone))
-                ->toBe(PairingTokenService::DEFERRED);
+                ->toEqual(PeerConfirmResult::deferred());
         }
 
         $row = dpcRow($tokenHash);
@@ -225,4 +226,42 @@ it('still refuses to complete on a held confirm alone — the local human remain
         expect($row->responder_confirmed_at)->toBeNull();
         expect(app(DeviceRegistryService::class)->deviceKeys(DPC_USER_ID))->not->toHaveKey($phone['deviceId']);
     });
+});
+
+it('answers with a type rather than a string in the pairing states own space, so a deferral can never be read as one', function (): void {
+    $this->crossDevicePairingSetUp();
+
+    $desktop = dpcDevice('desktop-held-4');
+    $phone = dpcDevice('phone-held-4');
+    $tokenHash = dpcHandshakeUpToBothScreens($this->asDevice(...), $desktop, $phone);
+
+    // The union this replaced returned 'deferred' out of the same string space
+    // as 'confirmed', so nothing but a reader's care told a control answer
+    // from a state. The declared type is what tells them apart now.
+    $applyPeerConfirm = new ReflectionMethod(PairingTokenService::class, 'applyPeerConfirm');
+    expect((string) $applyPeerConfirm->getReturnType())->toBe('?'.PeerConfirmResult::class);
+
+    $this->asDevice('phone', function () use ($tokenHash, $phone): void {
+        $row = dpcRow($tokenHash);
+        app(PairingTokenService::class)->confirm((int) $row->id, DPC_USER_ID, $phone['deviceId'], PairingSafetyDigest::forToken((int) $row->id, DPC_USER_ID));
+    });
+
+    $sigFromPhone = dpcConfirmSignature($phone, $desktop, $tokenHash);
+    $deferred = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
+        ->applyPeerConfirm(DPC_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
+
+    expect($deferred->isDeferred())->toBeTrue()
+        ->and($deferred->stateApplied())->toBeNull();
+
+    $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
+        $row = dpcRow($tokenHash);
+        app(PairingTokenService::class)->confirm((int) $row->id, DPC_USER_ID, $desktop['deviceId'], PairingSafetyDigest::forToken((int) $row->id, DPC_USER_ID));
+    });
+
+    $applied = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
+        ->applyPeerConfirm(DPC_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
+
+    expect($applied->isDeferred())->toBeFalse()
+        ->and($applied->stateApplied())->toBe(PairingState::Confirmed)
+        ->and($applied)->not->toEqual($deferred);
 });
