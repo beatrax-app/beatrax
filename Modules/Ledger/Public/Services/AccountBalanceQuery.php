@@ -32,6 +32,15 @@ final class AccountBalanceQuery
         return $this->sumFromBaseline($accountId, $user, self::CLEARED_STATUSES, null);
     }
 
+    // What the account actually holds on a given day. Net worth asks this and
+    // not currentBalance(), which counts a future-dated row as money already
+    // in hand, nor the forecast anchor, which answers where a projection
+    // starts rather than where the account stands.
+    public function currentBalanceAsOf(int $accountId, User $user, CarbonImmutable $asOf): int
+    {
+        return $this->sumFromBaseline($accountId, $user, null, $asOf);
+    }
+
     // /reconcile checks "matched" over the same posted_at <= $asOf window
     // ReconciliationWriter::completeReconcile() locks, so it never counts
     // rows the write correctly leaves untouched.

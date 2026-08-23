@@ -6,6 +6,7 @@ namespace Modules\Ledger\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeDate;
@@ -18,10 +19,18 @@ final readonly class AccountStartingBalanceQuery
 {
     use CoercesScalars;
 
+    // The balance the reader typed in Settings outranks the one an import
+    // detected: it is the only number they entered deliberately, and an
+    // override that diverges warns rather than yields. Amount and date move
+    // together, so a row is answered by one pair or the other, never a mix.
+    private const string EFFECTIVE_MINOR_SQL = 'case when accounts.opening_balance_minor is not null then accounts.opening_balance_minor else accounts.starting_balance_minor end';
+
+    private const string EFFECTIVE_DATE_SQL = 'case when accounts.opening_balance_minor is not null then accounts.opening_balance_as_of_date else accounts.starting_balance_date end';
+
     // The one spelling of the lower bound for a grouped, multi-account sum
     // that cannot reach a per-account date in PHP. Both sides must be joined
     // in under these exact table names; a NULL date bounds nothing.
-    public const string AT_OR_AFTER_BASELINE_SQL = '(accounts.starting_balance_date is null or transactions.posted_at >= accounts.starting_balance_date)';
+    public const string AT_OR_AFTER_BASELINE_SQL = '('.self::EFFECTIVE_DATE_SQL.' is null or transactions.posted_at >= '.self::EFFECTIVE_DATE_SQL.')';
 
     public function __construct(
         private DatabaseManager $db,
@@ -36,23 +45,30 @@ final readonly class AccountStartingBalanceQuery
             ->table('accounts')
             ->where('id', $accountId)
             ->where('user_id', $user->id)
-            ->first(['starting_balance_minor', 'starting_balance_date', 'default_currency']);
+            ->first([
+                'starting_balance_minor', 'starting_balance_date',
+                'opening_balance_minor', 'opening_balance_as_of_date',
+                'default_currency',
+            ]);
 
         if ($row === null) {
             return self::absent();
         }
 
         /** @var stdClass $row */
+        $override = is_numeric($row->opening_balance_minor);
+        $minor = $override ? $row->opening_balance_minor : $row->starting_balance_minor;
+
         // A date without an amount is not a baseline: honouring its lower
         // bound would drop every earlier row and add nothing back.
-        if (! is_numeric($row->starting_balance_minor)) {
+        if (! is_numeric($minor)) {
             return self::absent();
         }
 
-        $rawDate = self::toStringOrNull($row->starting_balance_date);
+        $rawDate = self::toStringOrNull($override ? $row->opening_balance_as_of_date : $row->starting_balance_date);
 
         return [
-            'minorUnits' => self::toInt($row->starting_balance_minor),
+            'minorUnits' => self::toInt($minor),
             'currency' => self::toString($row->default_currency),
             'date' => $rawDate === null ? null : SafeDate::parseDayOrNull($rawDate),
         ];
@@ -72,9 +88,12 @@ final readonly class AccountStartingBalanceQuery
             ->table('accounts')
             ->where('user_id', $user->id)
             ->whereIn('id', $accountIds)
-            ->whereNotNull('starting_balance_minor')
+            ->where(static function (Builder $either): void {
+                $either->whereNotNull('opening_balance_minor')
+                    ->orWhereNotNull('starting_balance_minor');
+            })
             ->groupBy('default_currency')
-            ->selectRaw('default_currency, SUM(starting_balance_minor) as sum_minor')
+            ->selectRaw('default_currency, SUM('.self::EFFECTIVE_MINOR_SQL.') as sum_minor')
             ->get();
 
         $byCurrency = [];

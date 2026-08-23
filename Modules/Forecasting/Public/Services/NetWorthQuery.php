@@ -8,16 +8,21 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\AccountBalanceLine;
 use Modules\Forecasting\Public\Dto\NetWorth;
 use Modules\FX\Public\Dto\ConversionResult;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 
+// Net worth is what the reader holds today, so it reads the ledger balance as
+// of today rather than the forecast anchor. The anchor answers a different
+// question -- where a projection starts -- and answered it with a statement
+// closing balance months old, and with zero for a card carrying a real debt.
 /**
- * @see BalanceAnchorResolver
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class NetWorthQuery
 {
@@ -26,7 +31,8 @@ final class NetWorthQuery
     private const EXCLUDED_KINDS = [AccountKind::PaypalFunding->value];
 
     public function __construct(
-        private readonly BalanceAnchorResolver $anchor,
+        private readonly AccountBalanceQuery $balances,
+        private readonly Clock $clock,
         private readonly DatabaseManager $db,
         private readonly ExchangeRateService $fx,
     ) {}
@@ -37,7 +43,7 @@ final class NetWorthQuery
             ->where('user_id', $user->id)
             ->whereNotIn('kind', self::EXCLUDED_KINDS)
             ->orderBy('id')
-            ->get(['id', 'name', 'kind']);
+            ->get(['id', 'name', 'kind', 'default_currency']);
 
         $lines = [];
         $total = 0;
@@ -47,13 +53,18 @@ final class NetWorthQuery
         $fxMeta = ['stale' => false, 'source' => null, 'asOf' => null];
 
         $baseCurrency = $user->base_currency;
+        $today = $this->clock->now()->startOfDay();
 
         foreach ($accounts as $account) {
             $accountId = self::toInt($account->id);
-            $anchor = $this->anchor->forAccount($accountId, $user);
             $kind = is_string($account->kind) ? $account->kind : '';
+            $balanceMinor = $this->balances->currentBalanceAsOf($accountId, $user, $today);
+            $currency = self::toString($account->default_currency);
+            if ($currency === '') {
+                $currency = $baseCurrency;
+            }
 
-            $money = Money::ofMinor($anchor->openingBalanceMinor, $anchor->currency);
+            $money = Money::ofMinor($balanceMinor, $currency);
             $result = $this->fx->convertToBase($money, $baseCurrency);
 
             // With no rate the conversion returns the native currency untouched.
@@ -64,8 +75,8 @@ final class NetWorthQuery
                 accountId: $accountId,
                 name: is_string($account->name) ? $account->name : '',
                 kind: $kind,
-                balanceMinor: $anchor->openingBalanceMinor,
-                currency: $anchor->currency,
+                balanceMinor: $balanceMinor,
+                currency: $currency,
                 isLiability: $kind === AccountKind::IcsCard->value,
                 baseEquivalentMinor: $rateAvailable && ! $result->isPassthrough
                     ? $result->converted->toMinor()

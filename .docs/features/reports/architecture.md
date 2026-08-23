@@ -106,15 +106,24 @@ another module.
   series; no table stores historical net worth. Every point repeats
   Forecasting's `NetWorthQuery::forUser()` exclude+count algorithm once
   per `TimeBucketGenerator` sample date instead of once for "today".
-  **Scope limitation:** the most-recent point in this series is NOT
-  guaranteed to be byte-identical to the dashboard net-worth card's
-  "today" figure — that card sources its balance from Forecasting's
-  arch-fenced `BalanceAnchorResolver`, which may apply a richer
-  statement-anchor + delta strategy than this class's
-  `AccountBalanceQuery::clearedBalanceAsOf()` (the only Public,
-  point-in-time-capable balance query). The never-silent-1:1-fallback
-  guarantee still holds exactly; only byte-parity with "today" is out
-  of scope. Each bucket samples at its last actual day
+  **Scope limitation (C7-R8):** the most-recent point in this series is
+  NOT guaranteed to equal the dashboard net-worth card's "today" figure.
+  Both now read `AccountBalanceQuery` as of a date, so the anchor is no
+  longer the difference — the remaining one is cleared status. The series
+  samples `clearedBalanceAsOf()`, which counts only cleared and reconciled
+  rows, because a historical point should not move as old manual entries
+  are confirmed; the card reads `currentBalanceAsOf()`, which counts every
+  row, because an uncleared entry is still money the reader has. An
+  account with pending rows therefore reads higher on the card than on the
+  series' last point, by exactly the uncleared amount.
+
+  The card previously sourced its balance from Forecasting's
+  `BalanceAnchorResolver`. That resolver answers where a *projection*
+  starts, not what an account holds: it returned a statement closing
+  balance with no delta for the months since, and zero for a card with no
+  statement at all. Measured on the desktop, the card read EUR 1,238.04
+  against a true position of EUR 5,065.53. The never-silent-1:1-fallback
+  guarantee is unchanged. Each bucket samples at its last actual day
   (`endExclusive->subDay()`), e.g. a "Jul 2025" bucket samples the
   end-of-month balance on 2025-07-31.
 - `TimeBucketGenerator::generate()` — splits a `Period` into an ordered

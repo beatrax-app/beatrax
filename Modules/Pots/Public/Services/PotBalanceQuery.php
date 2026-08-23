@@ -8,6 +8,7 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -28,7 +29,17 @@ final class PotBalanceQuery
         private readonly AccountBalanceQuery $accountBalance,
         private readonly PeriodQuery $periods,
         private readonly BaseCurrency $baseCurrency,
+        private readonly Clock $clock,
     ) {}
+
+    // Only money the account already holds can be put in an envelope. Counting
+    // a future-dated row made a pot read as funded by a payment still to
+    // arrive, and left isOverAllocated false while the account could not cover
+    // what its pots claimed.
+    private function realBalance(int $accountId, User $user): int
+    {
+        return $this->accountBalance->currentBalanceAsOf($accountId, $user, $this->clock->now()->startOfDay());
+    }
 
     public function balanceForPot(int $potId, User $user): int
     {
@@ -42,7 +53,7 @@ final class PotBalanceQuery
     public function reconciliationForAccount(int $accountId, User $user): ReconciliationRow
     {
         $allocated = $this->allocatedForAccount($accountId, $user);
-        $real = $this->accountBalance->currentBalance($accountId, $user);
+        $real = $this->realBalance($accountId, $user);
         $unallocated = $real - $allocated;
 
         $accountRow = $this->db->connection()
@@ -71,7 +82,7 @@ final class PotBalanceQuery
 
     public function currentUnallocatedForAccount(int $accountId, User $user): int
     {
-        $real = $this->accountBalance->currentBalance($accountId, $user);
+        $real = $this->realBalance($accountId, $user);
 
         return $real - $this->allocatedForAccount($accountId, $user);
     }
