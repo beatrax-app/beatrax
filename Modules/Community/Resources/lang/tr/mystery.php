@@ -21,7 +21,6 @@ return [
     'footer' => "Paylaşılan liste, Beatrax ile birlikte gelen bir YAML dosyasıdır. Bir öneri göndermek tarayıcında GitHub'ı açar; bunun dışında hiçbir şey bu cihazdan çıkmaz.",
 
     'card' => [
-        'likely' => 'Muhtemelen: adı olmayan bir işyeri.',
         'seen_times' => 'Görülme :count kez',
         'last_seen' => 'Son görülme :date',
         'suggest' => 'Bir ad öner →',
