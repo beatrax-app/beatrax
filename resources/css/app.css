@@ -5532,8 +5532,15 @@ mark {
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 44px;
-        height: 44px;
+
+        /*
+         * max(), because a fixed 44px square is SMALLER than a wide control and
+         * shrinks the reach to a strip at its centre. Measured on an iPhone 12
+         * mini: the two 324x36 welcome links answered a tap 3px above them at
+         * 1 of 11 x positions. Never below the element, never below 44.
+         */
+        width: max(100%, 44px);
+        height: max(100%, 44px);
         transform: translate(-50%, -50%);
     }
 
