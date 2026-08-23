@@ -7,15 +7,12 @@ namespace Modules\Desktop\Internal\Native;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\ProjectLinks;
 use Native\Desktop\Contracts\MenuItem;
 use Native\Desktop\Facades\Menu;
 
 final class AppMenuBuilder
 {
-    public const GITHUB_REPO_URL = 'https://github.com/beatrax-app/beatrax';
-
-    public const REPORT_ISSUE_URL = 'https://github.com/beatrax-app/beatrax/issues/new';
-
     public function __construct(
         private readonly CurrentUser $currentUser,
     ) {}
@@ -41,8 +38,8 @@ final class AppMenuBuilder
             Menu::window(),
             new SubmenuItem(
                 Lang::get('desktop::native.menu.help'),
-                Menu::link(self::GITHUB_REPO_URL, Lang::get('desktop::native.menu.help_github_repo'))->openInBrowser(),
-                Menu::link(self::REPORT_ISSUE_URL, Lang::get('desktop::native.menu.help_report_issue'))->openInBrowser(),
+                Menu::link(ProjectLinks::REPO_URL, Lang::get('desktop::native.menu.help_github_repo'))->openInBrowser(),
+                Menu::link(ProjectLinks::NEW_ISSUE_URL, Lang::get('desktop::native.menu.help_report_issue'))->openInBrowser(),
                 Menu::route(Destination::Settings->routeName(), Lang::get('desktop::native.menu.help_about')),
             ),
         ];

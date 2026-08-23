@@ -22,6 +22,7 @@ use Modules\Core\Public\Services\LocaleNegotiator;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\ProjectLinks;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -180,7 +181,7 @@ final class SettingsPage extends Component
 
     public function openReleasesPage(OpenExternalUrlAction $opener): void
     {
-        $opener('https://github.com/beatrax-app/beatrax/releases/latest');
+        $opener(ProjectLinks::LATEST_RELEASE_URL);
     }
 
     public function toggleFxOnline(CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
