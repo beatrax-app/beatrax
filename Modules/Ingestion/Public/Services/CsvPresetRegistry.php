@@ -78,12 +78,6 @@ final class CsvPresetRegistry
                 fixedCurrency: Currency::Eur->value,
             ),
 
-            // A pending Revolut row ships an empty Completed Date; the adapter's
-            // no-booking-date branch skips it before acceptedStates is consulted.
-            //
-            // Description is the counterparty, not a payment reference: it is
-            // the export's only text column and it holds the merchant or the
-            // person. Read as a description it left every row nameless.
             new CsvPreset(
                 format: self::REVOLUT,
                 label: 'Revolut',
@@ -95,10 +89,15 @@ final class CsvPresetRegistry
                 decimalSeparator: '.',
                 delimiter: ',',
                 amountHeader: 'Amount',
+                // Description is the counterparty, not a payment reference: it
+                // is the export's only text column and it holds the merchant or
+                // the person. Read as a description it left every row nameless.
                 counterpartyNameHeader: 'Description',
                 currencyHeader: 'Currency',
                 feeHeader: 'Fee',
                 stateHeader: 'State',
+                // A pending row ships an empty Completed Date, and the adapter's
+                // no-booking-date branch skips it before this is consulted.
                 acceptedStates: ['COMPLETED'],
             ),
 
