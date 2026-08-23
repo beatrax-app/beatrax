@@ -129,11 +129,10 @@ class BiometricKeyVault
     // Native seam (overridable in tests; facade confined here)
     // -------------------------------------------------------------------------
 
-    // Android's half of the vault is a skeleton by design: a Keystore key with
-    // setUserAuthenticationRequired(true) gates every Cipher operation behind an
-    // asynchronous BiometricPrompt, so Set answers `async_required` and writes
-    // nothing. Offering enrolment there produced "Your device declined to store
-    // the key" on a phone that authenticates other apps all day.
+    // Android's half is a skeleton by design: a Keystore key with
+    // setUserAuthenticationRequired(true) gates every Cipher call behind an
+    // async BiometricPrompt, so Set answers `async_required` and writes nothing.
+    // Offering enrolment there said the device declined to store the key.
     /**
      * @link ../../../../../mobile-app/nativephp-plugins/biometric-vault/resources/android/BiometricVaultFunctions.kt
      */
