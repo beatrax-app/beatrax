@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Http\Livewire\ColdStartBiometricSettingsSection;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -18,14 +19,15 @@ uses(RefreshDatabase::class);
 // the orchestration and component wiring are exercised.
 function settingsVault(bool $available = true): BiometricKeyVault
 {
-    return new class($available, app(BiometricKeyBlobCodec::class), app(CurrentUser::class)) extends BiometricKeyVault
+    return new class($available, app(BiometricKeyBlobCodec::class), app(CurrentUser::class), app(LoggerInterface::class)) extends BiometricKeyVault
     {
         public function __construct(
             private readonly bool $avail,
             BiometricKeyBlobCodec $codec,
             CurrentUser $currentUser,
+            LoggerInterface $log,
         ) {
-            parent::__construct($codec, $currentUser);
+            parent::__construct($codec, $currentUser, $log);
         }
 
         protected function runtimeAvailable(): bool

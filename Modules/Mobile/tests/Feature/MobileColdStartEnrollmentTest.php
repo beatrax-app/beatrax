@@ -16,6 +16,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\ColdStartEnrollmentService;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -23,7 +24,7 @@ uses(RefreshDatabase::class);
 // here and only the orchestration around it is exercised.
 function fakeEnclaveVault(): BiometricKeyVault
 {
-    return new class(app(BiometricKeyBlobCodec::class), app(CurrentUser::class)) extends BiometricKeyVault
+    return new class(app(BiometricKeyBlobCodec::class), app(CurrentUser::class), app(LoggerInterface::class)) extends BiometricKeyVault
     {
         public bool $enrolled = false;
 

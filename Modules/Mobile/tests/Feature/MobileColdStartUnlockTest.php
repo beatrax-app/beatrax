@@ -17,6 +17,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricRecoverResult;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -53,14 +54,15 @@ function lockedColdStartUser(string $username, bool $enrolled = true, int $floor
 // The enclave is unreachable in the repo toolchain, so its outcome is dictated.
 function bindVaultRecover(BiometricRecoverResult $result): void
 {
-    app()->bind(BiometricKeyVault::class, fn ($app) => new class($app->make(BiometricKeyBlobCodec::class), $app->make(CurrentUser::class), $result) extends BiometricKeyVault
+    app()->bind(BiometricKeyVault::class, fn ($app) => new class($app->make(BiometricKeyBlobCodec::class), $app->make(CurrentUser::class), $app->make(LoggerInterface::class), $result) extends BiometricKeyVault
     {
         public function __construct(
             BiometricKeyBlobCodec $codec,
             CurrentUser $currentUser,
+            LoggerInterface $log,
             private readonly BiometricRecoverResult $result,
         ) {
-            parent::__construct($codec, $currentUser);
+            parent::__construct($codec, $currentUser, $log);
         }
 
         public function recover(string $reason = 'Unlock Beatrax'): BiometricRecoverResult

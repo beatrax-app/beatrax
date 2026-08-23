@@ -176,7 +176,9 @@ class BiometricKeyVault
             return null;
         }
 
-        return BiometricVault::lastError();
+        $value = BiometricVault::lastError();
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     protected function logRefusal(?string $reason): void
