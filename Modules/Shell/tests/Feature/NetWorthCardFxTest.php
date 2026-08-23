@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Support\BundledRates;
 use Modules\Shell\Internal\Http\Livewire\NetWorthCard;
 
 // Guarded against a redeclaration fatal when several test files load together.
@@ -38,6 +39,13 @@ if (! function_exists('nwCardFxRate')) {
 }
 
 beforeEach(function (): void {
+    // This suite builds its own rate world, so the bundled baseline the install
+    // seeds is cleared first: several cases turn on a pair having no rate at
+    // all, and one on a hand-dated rate being the newest there is.
+    app(DatabaseManager::class)->connection()
+        ->table('exchange_rates')
+        ->where('source', BundledRates::SOURCE)
+        ->delete();
     $this->db = app(DatabaseManager::class);
     $this->user = User::create([
         'username' => 'nwcard-fx-fixture',

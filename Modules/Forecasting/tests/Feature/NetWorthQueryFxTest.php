@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Services\NetWorthQuery;
+use Modules\FX\Public\Support\BundledRates;
 
 // NetWorthQueryTest.php declares the same helper, so the two files running
 // together would be a redeclaration fatal without this guard.
@@ -29,6 +30,13 @@ function fxRate(DatabaseManager $db, string $quote, string $rate, string $date =
 }
 
 beforeEach(function (): void {
+    // This suite builds its own rate world, so the bundled baseline the install
+    // seeds is cleared first: several cases turn on a pair having no rate at
+    // all, and one on a hand-dated rate being the newest there is.
+    app(DatabaseManager::class)->connection()
+        ->table('exchange_rates')
+        ->where('source', BundledRates::SOURCE)
+        ->delete();
     $this->db = app(DatabaseManager::class);
     $this->user = User::create([
         'username' => 'fx-networth-fixture',
