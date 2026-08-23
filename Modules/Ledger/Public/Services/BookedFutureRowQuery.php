@@ -137,7 +137,7 @@ final readonly class BookedFutureRowQuery
             ($this->session)(),
         )['value'];
 
-        return is_string($decrypted) && $decrypted !== '' ? $decrypted : null;
+        return $decrypted === '' ? null : $decrypted;
     }
 
     private function counterpartySlug(stdClass $row): ?string

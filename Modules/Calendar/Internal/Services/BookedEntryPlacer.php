@@ -116,6 +116,10 @@ final readonly class BookedEntryPlacer
                 : array_values(array_filter(
                     $entries,
                     static function (CalendarEntryDto $entry) use ($bookedDatesBySeries, $date): bool {
+                        if ($entry->seriesId === null) {
+                            return true;
+                        }
+
                         foreach ($bookedDatesBySeries[$entry->seriesId] ?? [] as $bookedDate) {
                             if (abs($bookedDate->diffInDays($date)) <= MatchWindow::DAYS) {
                                 return false;
