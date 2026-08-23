@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Головне з прогнозу',
     'highlights_shortfall_aria' => ':count активне вікно дефіциту в наступні :days днів|:count активні вікна дефіциту в наступні :days днів|:count активних вікон дефіциту в наступні :days днів',
-    'dips_to' => ':name опускається до :amount',
     'on_date_suffix' => ' (:date)',
     'shortfall_window' => ':count активне вікно дефіциту|:count активні вікна дефіциту|:count активних вікон дефіциту',
-    'lowest_in_30' => 'Найнижчий за 30 днів: :amount',
+    'lowest_in_30_label' => 'Найнижчий за 30 днів',
     'next_ics' => 'Наступне врегулювання ICS: :amount — :date',
 ];

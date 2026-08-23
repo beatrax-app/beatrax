@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Előrejelzés kiemelt pontjai',
     'highlights_shortfall_aria' => ':count aktív hiányidőszak a következő :days napban|:count aktív hiányidőszak a következő :days napban',
-    'dips_to' => 'A(z) :name eddig csökken: :amount',
     'on_date_suffix' => ' ekkor: :date',
     'shortfall_window' => '{0} nincs aktív hiányidőszak|[1,1] :count aktív hiányidőszak|[2,*] :count aktív hiányidőszak',
-    'lowest_in_30' => 'Legalacsonyabb 30 napon belül: :amount',
+    'lowest_in_30_label' => 'Legalacsonyabb 30 napon belül',
     'next_ics' => 'Következő ICS-elszámolás: :amount ekkor: :date',
 ];

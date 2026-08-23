@@ -338,3 +338,48 @@ it('does not surface another user shortfall in the tile (cross-user isolation)',
         ->assertDontSeeText('active shortfall')
         ->assertDontSeeText('999,99');
 });
+
+it('keeps the display line to the figure and moves the words beneath it', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $db->connection()->table('forecast_runs')->insert([
+        'user_id' => $this->user->id,
+        'scenario_id' => null,
+        'horizon_days' => 30,
+        'status' => 'complete',
+        'result_json' => json_encode([
+            'as_of' => '2026-05-19',
+            'horizon_days' => 30,
+            'accounts' => [
+                (string) $this->asn->id => [
+                    'account_id' => $this->asn->id,
+                    'account_name' => $this->asn->name,
+                    'default_currency' => 'EUR',
+                    'today_balance_minor' => 50000,
+                    'anchor_source' => 'user_input_opening_balance',
+                    'points' => [
+                        ['date' => '2026-05-19', 'low_minor' => 50000, 'point_minor' => 50000, 'high_minor' => 50000, 'currency' => 'EUR'],
+                        ['date' => '2026-05-20', 'low_minor' => 30000, 'point_minor' => 30000, 'high_minor' => 30000, 'currency' => 'EUR'],
+                    ],
+                ],
+            ],
+        ]),
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $response = $this->actingAs($this->user)->get('/');
+    $response->assertOk();
+    $body = (string) $response->getContent();
+
+    // A whole sentence in the figure slot is 34px type: on a 375pt phone the
+    // tile grew to five lines and 200px, one word of "Lowest in 30 days"
+    // per line, beside a net-worth card that shows label, figure, meta.
+    $tile = mb_substr($body, (int) mb_strpos($body, 'Forecast highlights'));
+    preg_match('/<p class="[^"]*text-3xl[^"]*"[^>]*>\s*(.*?)\s*<\/p>/s', $tile, $matches);
+    expect(trim(html_entity_decode($matches[1] ?? '')))->toBe('€300.00');
+
+    $response->assertSeeText('Lowest in 30 days');
+    $response->assertSeeText('fht bank');
+});

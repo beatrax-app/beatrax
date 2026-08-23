@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Points clés de la prévision',
     'highlights_shortfall_aria' => ':count fenêtre de déficit active dans les :days prochains jours|:count fenêtres de déficit actives dans les :days prochains jours',
-    'dips_to' => ':name descend à :amount',
     'on_date_suffix' => ' le :date',
     'shortfall_window' => ':count fenêtre de déficit active|:count fenêtres de déficit actives',
-    'lowest_in_30' => 'Point le plus bas sur 30 jours : :amount',
+    'lowest_in_30_label' => 'Point le plus bas sur 30 jours',
     'next_ics' => 'Prochain règlement ICS : :amount le :date',
 ];

@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Repere ale previziunii',
     'highlights_shortfall_aria' => ':count fereastră de deficit activă în următoarele :days de zile|:count ferestre de deficit active în următoarele :days de zile|:count de ferestre de deficit active în următoarele :days de zile',
-    'dips_to' => ':name scade la :amount',
     'on_date_suffix' => ' pe :date',
     'shortfall_window' => 'o fereastră de deficit activă|:count ferestre de deficit active|:count de ferestre de deficit active',
-    'lowest_in_30' => 'Minimul în 30 de zile: :amount',
+    'lowest_in_30_label' => 'Minimul în 30 de zile',
     'next_ics' => 'Următoarea decontare ICS: :amount pe :date',
 ];

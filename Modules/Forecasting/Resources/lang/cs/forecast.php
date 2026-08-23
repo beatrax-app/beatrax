@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Hlavní body předpovědi',
     'highlights_shortfall_aria' => ':count aktivní okno se schodkem v příštích :days dnech|:count aktivní okna se schodkem v příštích :days dnech|:count aktivních oken se schodkem v příštích :days dnech',
-    'dips_to' => ':name klesá na :amount',
     'on_date_suffix' => ' dne :date',
     'shortfall_window' => ':count aktivní okno se schodkem|:count aktivní okna se schodkem|:count aktivních oken se schodkem',
-    'lowest_in_30' => 'Nejnižší za 30 dní: :amount',
+    'lowest_in_30_label' => 'Nejnižší za 30 dní',
     'next_ics' => 'Příští vypořádání ICS: :amount dne :date',
 ];

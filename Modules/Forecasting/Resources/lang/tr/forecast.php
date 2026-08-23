@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Tahmin öne çıkanları',
     'highlights_shortfall_aria' => 'Önümüzdeki :days günde :count etkin açık dönemi',
-    'dips_to' => ':name :amount seviyesine düşüyor',
     'on_date_suffix' => ' :date tarihinde',
     'shortfall_window' => ':count etkin açık dönemi',
-    'lowest_in_30' => '30 gündeki en düşük: :amount',
+    'lowest_in_30_label' => '30 gündeki en düşük',
     'next_ics' => 'Sonraki ICS tahsilatı: :date tarihinde :amount',
 ];

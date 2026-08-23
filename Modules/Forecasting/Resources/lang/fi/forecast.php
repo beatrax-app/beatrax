@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Ennusteen kohokohdat',
     'highlights_shortfall_aria' => ':count aktiivinen vajejakso seuraavien :days päivän aikana|:count aktiivista vajejaksoa seuraavien :days päivän aikana',
-    'dips_to' => ':name laskee arvoon :amount',
     'on_date_suffix' => ' päivänä :date',
     'shortfall_window' => ':count aktiivinen vajejakso|:count aktiivista vajejaksoa',
-    'lowest_in_30' => 'Alin 30 päivän aikana: :amount',
+    'lowest_in_30_label' => 'Alin 30 päivän aikana',
     'next_ics' => 'Seuraava ICS-tilitys: :amount päivänä :date',
 ];

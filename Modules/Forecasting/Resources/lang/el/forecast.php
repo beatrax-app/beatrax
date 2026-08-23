@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Κύρια σημεία πρόβλεψης',
     'highlights_shortfall_aria' => ':count ενεργό παράθυρο ελλείμματος τις επόμενες :days ημέρες|:count ενεργά παράθυρα ελλείμματος τις επόμενες :days ημέρες',
-    'dips_to' => ':name πέφτει στα :amount',
     'on_date_suffix' => ' στις :date',
     'shortfall_window' => ':count ενεργό παράθυρο ελλείμματος|:count ενεργά παράθυρα ελλείμματος',
-    'lowest_in_30' => 'Χαμηλότερο σε 30 ημέρες: :amount',
+    'lowest_in_30_label' => 'Χαμηλότερο σε 30 ημέρες',
     'next_ics' => 'Επόμενος διακανονισμός ICS: :amount στις :date',
 ];

@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Izdvojeno iz prognoze',
     'highlights_shortfall_aria' => ':count aktivan period manjka u narednih :days dana|:count aktivna perioda manjka u narednih :days dana|:count aktivnih perioda manjka u narednih :days dana',
-    'dips_to' => ':name pada na :amount',
     'on_date_suffix' => ' na dan :date',
     'shortfall_window' => ':count aktivan period manjka|:count aktivna perioda manjka|:count aktivnih perioda manjka',
-    'lowest_in_30' => 'Najniže u 30 dana: :amount',
+    'lowest_in_30_label' => 'Najniže u 30 dana',
     'next_ics' => 'Sledeće ICS namirenje: :amount na dan :date',
 ];

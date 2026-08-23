@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Poudarki napovedi',
     'highlights_shortfall_aria' => ':count aktivno obdobje primanjkljaja v naslednjih :days dneh|:count aktivni obdobji primanjkljaja v naslednjih :days dneh|:count aktivna obdobja primanjkljaja v naslednjih :days dneh|:count aktivnih obdobij primanjkljaja v naslednjih :days dneh',
-    'dips_to' => ':name pade na :amount',
     'on_date_suffix' => ' na dan :date',
     'shortfall_window' => ':count aktivno obdobje primanjkljaja|:count aktivni obdobji primanjkljaja|:count aktivna obdobja primanjkljaja|:count aktivnih obdobij primanjkljaja',
-    'lowest_in_30' => 'Najnižje v 30 dneh: :amount',
+    'lowest_in_30_label' => 'Najnižje v 30 dneh',
     'next_ics' => 'Naslednja poravnava ICS: :amount na dan :date',
 ];

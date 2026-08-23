@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Prognosen i korthet',
     'highlights_shortfall_aria' => ':count aktiv underskottsperiod under de kommande :days dagarna|:count aktiva underskottsperioder under de kommande :days dagarna',
-    'dips_to' => ':name sjunker till :amount',
     'on_date_suffix' => ' den :date',
     'shortfall_window' => ':count aktiv underskottsperiod|:count aktiva underskottsperioder',
-    'lowest_in_30' => 'Lägst på 30 dagar: :amount',
+    'lowest_in_30_label' => 'Lägst på 30 dagar',
     'next_ics' => 'Nästa ICS-avräkning: :amount den :date',
 ];

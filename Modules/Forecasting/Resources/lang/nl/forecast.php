@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Prognose-highlights',
     'highlights_shortfall_aria' => ':count actief tekortvenster in de komende :days dagen|:count actieve tekortvensters in de komende :days dagen',
-    'dips_to' => ':name zakt naar :amount',
     'on_date_suffix' => ' op :date',
     'shortfall_window' => ':count actief tekortvenster|:count actieve tekortvensters',
-    'lowest_in_30' => 'Laagste in 30 dagen: :amount',
+    'lowest_in_30_label' => 'Laagste in 30 dagen',
     'next_ics' => 'Volgende ICS-afwikkeling: :amount op :date',
 ];

@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Prognozes svarīgākais',
     'highlights_shortfall_aria' => ':count aktīvu iztrūkuma periodu nākamajās :days dienās|:count aktīvs iztrūkuma periods nākamajās :days dienās|:count aktīvi iztrūkuma periodi nākamajās :days dienās',
-    'dips_to' => ':name nokrītas līdz :amount',
     'on_date_suffix' => ' — :date',
     'shortfall_window' => ':count aktīvu iztrūkuma periodu|:count aktīvs iztrūkuma periods|:count aktīvi iztrūkuma periodi',
-    'lowest_in_30' => 'Zemākais 30 dienās: :amount',
+    'lowest_in_30_label' => 'Zemākais 30 dienās',
     'next_ics' => 'Nākamais ICS norēķins: :amount — :date',
 ];

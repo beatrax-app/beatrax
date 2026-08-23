@@ -67,9 +67,8 @@ return [
 
     'highlights_title' => 'Prognozės akcentai',
     'highlights_shortfall_aria' => ':count aktyvus trūkumo laikotarpis per artimiausias :days dienas|:count aktyvūs trūkumo laikotarpiai per artimiausias :days dienas|:count aktyvių trūkumo laikotarpių per artimiausias :days dienas',
-    'dips_to' => ':name nukrenta iki :amount',
     'on_date_suffix' => ' :date',
     'shortfall_window' => ':count aktyvus trūkumo laikotarpis|:count aktyvūs trūkumo laikotarpiai|:count aktyvių trūkumo laikotarpių',
-    'lowest_in_30' => 'Mažiausias per 30 dienų: :amount',
+    'lowest_in_30_label' => 'Mažiausias per 30 dienų',
     'next_ics' => 'Kitas ICS atsiskaitymas: :amount :date',
 ];
