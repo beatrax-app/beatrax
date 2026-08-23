@@ -13,7 +13,7 @@ use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Dto\BookedFutureRowDto;
 use Modules\Ledger\Public\Services\BookedFutureRowQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
-use Modules\Recurring\Public\Support\MatchWindow;
+use Modules\Recurring\Public\Support\OccurrenceSupersession;
 
 // A payment the ledger already holds, dated ahead. SeriesEntryPlacer answers
 // what a cadence expects; this answers what is already booked, and where both
@@ -104,31 +104,19 @@ final readonly class BookedEntryPlacer
                 $bookedDatesBySeries[$seriesId][] = $row->postedAt;
             }
         }
+        if ($bookedDatesBySeries === []) {
+            return $seriesEntries;
+        }
+
+        $superseded = $this->supersededDatesBySeries($seriesEntries, $bookedDatesBySeries, $today);
 
         $kept = [];
         foreach ($seriesEntries as $dateStr => $entries) {
-            $date = SafeDate::parseDayOrNull($dateStr);
-            // Only ahead of today: the window reaches back a week, and a day
-            // behind today owes the reader its paid-or-missed verdict rather
-            // than a row silently removed from it.
-            $survivors = $date === null || $date->lessThanOrEqualTo($today)
-                ? $entries
-                : array_values(array_filter(
-                    $entries,
-                    static function (CalendarEntryDto $entry) use ($bookedDatesBySeries, $date): bool {
-                        if ($entry->seriesId === null) {
-                            return true;
-                        }
-
-                        foreach ($bookedDatesBySeries[$entry->seriesId] ?? [] as $bookedDate) {
-                            if (abs($bookedDate->diffInDays($date)) <= MatchWindow::DAYS) {
-                                return false;
-                            }
-                        }
-
-                        return true;
-                    },
-                ));
+            $survivors = array_values(array_filter(
+                $entries,
+                static fn (CalendarEntryDto $entry): bool => $entry->seriesId === null
+                    || ! isset($superseded[$entry->seriesId][$dateStr]),
+            ));
 
             if ($survivors !== []) {
                 $kept[$dateStr] = $survivors;
@@ -136,5 +124,42 @@ final readonly class BookedEntryPlacer
         }
 
         return $kept;
+    }
+
+    /**
+     * @param  array<string, list<CalendarEntryDto>>  $seriesEntries
+     * @param  array<int, list<CarbonImmutable>>  $bookedDatesBySeries
+     * @return array<int, array<string, true>>
+     */
+    private function supersededDatesBySeries(array $seriesEntries, array $bookedDatesBySeries, CarbonImmutable $today): array
+    {
+        /** @var array<int, array<string, CarbonImmutable>> $expectedBySeries */
+        $expectedBySeries = [];
+        foreach ($seriesEntries as $dateStr => $entries) {
+            $date = SafeDate::parseDayOrNull($dateStr);
+            // Only ahead of today: the window reaches back a week, and a day
+            // behind today owes the reader its paid-or-missed verdict rather
+            // than a row silently removed from it. Withholding those days from
+            // the pairing is also what stops one spending a booked row.
+            if ($date === null || $date->lessThanOrEqualTo($today)) {
+                continue;
+            }
+
+            foreach ($entries as $entry) {
+                if ($entry->seriesId !== null && isset($bookedDatesBySeries[$entry->seriesId])) {
+                    $expectedBySeries[$entry->seriesId][$dateStr] = $date;
+                }
+            }
+        }
+
+        $superseded = [];
+        foreach ($expectedBySeries as $seriesId => $expectedDates) {
+            $superseded[$seriesId] = OccurrenceSupersession::supersededDates(
+                $bookedDatesBySeries[$seriesId],
+                array_values($expectedDates),
+            );
+        }
+
+        return $superseded;
     }
 }

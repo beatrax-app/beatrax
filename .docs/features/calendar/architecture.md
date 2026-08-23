@@ -77,14 +77,22 @@ a known, dated payment, and leaving it off the grid left a day panel reading
 Both placers feed one entry map, and the same supersession rule the
 [projection](../forecasting/architecture.md#booked-future-dated-rows) applies
 runs here: where a series occurrence and a booked row are the same payment, the
-booked row is the one that happens and the estimate steps aside.
+booked row is the one that happens and the estimate steps aside. Literally the
+same rule — both placers call `OccurrenceSupersession::supersededDates()`,
+which pairs booked dates to expected ones
+[one-to-one](../forecasting/architecture.md#one-booked-row-retires-one-occurrence)
+rather than clearing the whole window. A weekly series' next occurrence is
+exactly `MatchWindow::DAYS` from the one the ledger has already booked, and
+clearing the window took that week's entry off the grid entirely.
 
 Booked entries are placed **only ahead of today**. A past day already draws its
 balance from the transactions themselves and gives its entries a paid-or-missed
 verdict, so a booked row behind today is a payment that pass has covered — and
 the supersession is likewise skipped on those days, because the tolerance
 window reaches a week back and would otherwise silently remove an entry the
-reader is owed a verdict on.
+reader is owed a verdict on. Those days are withheld from the pairing itself
+rather than filtered afterwards: an entry that cannot be removed must not spend
+the booked row that would otherwise have retired a day ahead.
 
 ## The empty state
 

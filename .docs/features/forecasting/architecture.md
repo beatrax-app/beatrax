@@ -254,10 +254,39 @@ A monthly rent is exactly the shape that can be both. Emitting both drew
 −€2,900.00 for one €1,450.00 rent.
 
 The **booked row wins**: one is what the account will be charged, the other is
-what a cadence suggests it might be. `BookedRowProjector` drops any series
-contribution falling within `MatchWindow::DAYS` of a booked row belonging to
-that series — a window, not an equality, because a bank that moves a direct
-debit off a weekend still charges the rent once.
+what a cadence suggests it might be. Sameness is decided on a window rather
+than an equality — `MatchWindow::DAYS` either side of the booked date — because
+a bank that moves a direct debit off a weekend still charges the rent once.
+
+#### One booked row retires one occurrence
+
+The window on its own made the rule many-to-one: every estimate inside it was
+dropped, while exactly one contribution was added back per booked row. A
+monthly series never noticed, its next occurrence being about thirty days out.
+A **weekly** one is exactly `MatchWindow::DAYS` out, so a single row on day
+seven retired the day-seven estimate *and* the day-fourteen one, and a week's
+amount left the curve: four €100.00 weekly charges projected as −€300.00.
+
+`OccurrenceSupersession::supersededDates()` pairs the two sides one-to-one
+instead. Booked dates and expected dates are ranked by how far apart they are
+and claimed nearest-first; a booked row claims at most one expected date, an
+expected date is claimed at most once, and one left unpaired survives as an
+estimate. Ranking on the distance and then on the two dates' positions settles
+a tie the same way on every run, so the result does not depend on the order the
+rows came back in.
+
+What is claimed is an **occurrence**, not a contribution. `CadenceJitter`
+smears a percentile-tier series across consecutive days, each carrying a
+fraction of one charge, so retiring a single one of those would leave six
+sevenths of the estimate standing beside the booked row it belongs to
+(−€2,692.84 drawn for one €1,450.00 rent). The claimed date therefore takes the
+run of consecutive days around it with it. A gap of more than a day says the
+next day is a separate occurrence and ends the run, and `MatchWindow::DAYS`
+bounds it, so a run that never breaks — a weekly series that is also smeared,
+whose neighbouring occurrences overlap — cannot swallow the horizon.
+
+`BookedEntryPlacer` reads the same helper for the calendar, where entries sit on
+the occurrence dates themselves and the run is therefore always a single day.
 
 Membership is answered by `RecurringSeriesQuery::seriesIdsForTransactionIds()`,
 which resolves in two steps, and the second is the one that matters:

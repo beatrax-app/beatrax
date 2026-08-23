@@ -9,7 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\BookedFutureRowDto;
 use Modules\Ledger\Public\Services\BookedFutureRowQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
-use Modules\Recurring\Public\Support\MatchWindow;
+use Modules\Recurring\Public\Support\OccurrenceSupersession;
 
 /**
  * @link ../../../../.docs/features/forecasting/architecture.md#booked-future-dated-rows
@@ -106,21 +106,46 @@ final readonly class BookedRowProjector
                 $bookedDatesBySeries[$seriesId][] = $row->postedAt;
             }
         }
+        if ($bookedDatesBySeries === []) {
+            return $seriesContributions;
+        }
+
+        $superseded = $this->supersededDatesBySeries($seriesContributions, $bookedDatesBySeries);
 
         // The booked row wins over the estimate that guessed at it: one is what
         // the account will be charged, the other is what a cadence suggests it
         // might be. Emitting both drew one rent twice.
         return array_values(array_filter(
             $seriesContributions,
-            static function (ForecastContribution $contribution) use ($bookedDatesBySeries): bool {
-                foreach ($bookedDatesBySeries[$contribution->seriesId] ?? [] as $bookedDate) {
-                    if (abs($bookedDate->diffInDays($contribution->date)) <= MatchWindow::DAYS) {
-                        return false;
-                    }
-                }
-
-                return true;
-            },
+            static fn (ForecastContribution $contribution): bool => ! isset(
+                $superseded[$contribution->seriesId][$contribution->date->toDateString()]
+            ),
         ));
+    }
+
+    /**
+     * @param  list<ForecastContribution>  $seriesContributions
+     * @param  array<int, list<CarbonImmutable>>  $bookedDatesBySeries
+     * @return array<int, array<string, true>>
+     */
+    private function supersededDatesBySeries(array $seriesContributions, array $bookedDatesBySeries): array
+    {
+        /** @var array<int, array<string, CarbonImmutable>> $expectedBySeries */
+        $expectedBySeries = [];
+        foreach ($seriesContributions as $contribution) {
+            if (isset($bookedDatesBySeries[$contribution->seriesId])) {
+                $expectedBySeries[$contribution->seriesId][$contribution->date->toDateString()] = $contribution->date;
+            }
+        }
+
+        $superseded = [];
+        foreach ($expectedBySeries as $seriesId => $expectedDates) {
+            $superseded[$seriesId] = OccurrenceSupersession::supersededDates(
+                $bookedDatesBySeries[$seriesId],
+                array_values($expectedDates),
+            );
+        }
+
+        return $superseded;
     }
 }

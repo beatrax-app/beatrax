@@ -24,6 +24,8 @@ const ABR_RENT_DATE = '2026-09-01';
 
 const ABR_RENT_MINOR = -145_000;
 
+const ABR_DAYS_PER_WEEK = 7;
+
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(ABR_TODAY.' 09:00:00');
     $this->db = app(DatabaseManager::class);
@@ -101,14 +103,18 @@ function abrRent(DatabaseManager $db, int $userId, int $accountId, string $poste
     ]);
 }
 
-function abrSeries(DatabaseManager $db, int $userId, string $nextExpectedAt): int
-{
+function abrSeries(
+    DatabaseManager $db,
+    int $userId,
+    string $nextExpectedAt,
+    SeriesCadence $cadence = SeriesCadence::Monthly,
+): int {
     return $db->connection()->table('recurring_series')->insertGetId([
         'user_id' => $userId,
         'direction' => 'expense',
         'detected_name' => 'Woonstichting Delta',
         'state' => RecurringSeriesState::Approved->value,
-        'cadence' => SeriesCadence::Monthly->value,
+        'cadence' => $cadence->value,
         'latest_amount_minor' => ABR_RENT_MINOR,
         'latest_currency' => Currency::Eur->value,
         'monthly_equivalent_minor' => ABR_RENT_MINOR,
@@ -202,4 +208,38 @@ it('honours the accounts the reader chose to see entries for', function (): void
     }
 
     expect($entries)->toBe([]);
+});
+
+// A weekly series' next occurrence is exactly MatchWindow::DAYS from the one
+// the ledger has already booked, so the booked row retired both and the reader
+// lost a week's payment off the calendar.
+it('keeps the week after the one a booked row supersedes', function (): void {
+    $accountId = abrAccount($this->db, $this->user->id);
+    abrSeries($this->db, $this->user->id, ABR_RENT_DATE, SeriesCadence::Weekly);
+    abrRent($this->db, $this->user->id, $accountId, ABR_RENT_DATE);
+
+    $nextWeek = CarbonImmutable::parse(ABR_RENT_DATE)->addDays(ABR_DAYS_PER_WEEK)->toDateString();
+
+    expect(abrEntryNamesOn($this->user, $nextWeek))->toBe(['Woonstichting Delta']);
+});
+
+it('still lists the booked week once', function (): void {
+    $accountId = abrAccount($this->db, $this->user->id);
+    abrSeries($this->db, $this->user->id, ABR_RENT_DATE, SeriesCadence::Weekly);
+    abrRent($this->db, $this->user->id, $accountId, ABR_RENT_DATE);
+
+    expect(abrEntryNamesOn($this->user, ABR_RENT_DATE))->toBe(['Woonstichting Delta']);
+});
+
+// The monthly claim, measured: 30 days between occurrences never reached the
+// next one, so a monthly series was never the case that broke.
+it('leaves a monthly series unaffected', function (): void {
+    $accountId = abrAccount($this->db, $this->user->id);
+    abrSeries($this->db, $this->user->id, ABR_RENT_DATE);
+    abrRent($this->db, $this->user->id, $accountId, ABR_RENT_DATE);
+
+    $nextMonth = CarbonImmutable::parse(ABR_RENT_DATE)->addMonthNoOverflow()->toDateString();
+
+    expect(abrEntryNamesOn($this->user, ABR_RENT_DATE))->toBe(['Woonstichting Delta'])
+        ->and(abrEntryNamesOn($this->user, $nextMonth))->toBe(['Woonstichting Delta']);
 });

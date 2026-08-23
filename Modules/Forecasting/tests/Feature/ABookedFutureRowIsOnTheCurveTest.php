@@ -29,6 +29,27 @@ const BFR_RENT_DATE = '2026-09-01';
 
 const BFR_RENT_MINOR = -145_000;
 
+const BFR_WEEKLY_DATE = '2026-08-30';
+
+const BFR_WEEKLY_MINOR = -10_000;
+
+// 23 August through 22 September: four weekly occurrences from 30 August, or
+// the single monthly one on 1 September.
+const BFR_SHORT_HORIZON_DAYS = 30;
+
+const BFR_WEEKLY_OCCURRENCES = 4;
+
+// 23 August through 2 October: 1 September and 1 October.
+const BFR_MONTHLY_HORIZON_DAYS = 40;
+
+const BFR_MONTHLY_OCCURRENCES = 2;
+
+const BFR_JITTER_TOLERANCE_PERCENT = 50;
+
+const BFR_JITTER_OCCURRENCE_COUNT = 6;
+
+const BFR_DAYS_PER_WEEK = 7;
+
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(BFR_TODAY.' 09:00:00');
     $this->db = app(DatabaseManager::class);
@@ -114,18 +135,25 @@ function bfrTransaction(
     ]);
 }
 
-function bfrMonthlySeries(DatabaseManager $db, int $userId, string $nextExpectedAt, string $clusterCounterpartyKey = 'woonstichting-delta'): int
-{
+function bfrSeries(
+    DatabaseManager $db,
+    int $userId,
+    string $nextExpectedAt,
+    SeriesCadence $cadence = SeriesCadence::Monthly,
+    int $amountMinor = BFR_RENT_MINOR,
+    string $clusterCounterpartyKey = 'woonstichting-delta',
+    int $varianceTolerancePercent = 0,
+): int {
     return $db->connection()->table('recurring_series')->insertGetId([
         'user_id' => $userId,
         'direction' => 'expense',
         'detected_name' => 'Woonstichting Delta',
         'state' => RecurringSeriesState::Approved->value,
-        'cadence' => SeriesCadence::Monthly->value,
-        'latest_amount_minor' => BFR_RENT_MINOR,
+        'cadence' => $cadence->value,
+        'latest_amount_minor' => $amountMinor,
         'latest_currency' => Currency::Eur->value,
-        'monthly_equivalent_minor' => BFR_RENT_MINOR,
-        'variance_tolerance_percent' => 0,
+        'monthly_equivalent_minor' => $amountMinor,
+        'variance_tolerance_percent' => $varianceTolerancePercent,
         'cluster_key' => 'bfr::'.bin2hex(random_bytes(4)),
         'cluster_counterparty_key' => $clusterCounterpartyKey,
         'next_expected_at' => $nextExpectedAt,
@@ -146,6 +174,37 @@ function bfrPointOn(array $points, string $date): int
     }
 
     throw new RuntimeException('No forecast point on '.$date);
+}
+
+function bfrHorizonMovement(User $user, int $accountId, int $horizonDays): int
+{
+    app(ProjectionPipeline::class)->project($user, null, $horizonDays);
+    $points = app(ForecastQuery::class)->forUser($accountId, $horizonDays, null, $user)->points;
+
+    $horizonEnd = CarbonImmutable::parse(BFR_TODAY)->addDays($horizonDays)->toDateString();
+
+    return bfrPointOn($points, $horizonEnd) - bfrPointOn($points, BFR_TODAY);
+}
+
+// Enough observed charges to put the series on the percentile tier, which is
+// the only tier CadenceJitter smears.
+function bfrPastOccurrences(DatabaseManager $db, int $userId, int $accountId, int $seriesId): void
+{
+    for ($month = 1; $month <= BFR_JITTER_OCCURRENCE_COUNT; $month++) {
+        $observedAt = CarbonImmutable::parse(BFR_RENT_DATE)->subMonthsNoOverflow($month)->toDateString();
+        $transactionId = bfrTransaction($db, $userId, $accountId, $observedAt, BFR_RENT_MINOR);
+
+        $db->connection()->table('recurring_series_occurrences')->insert([
+            'user_id' => $userId,
+            'recurring_series_id' => $seriesId,
+            'transaction_id' => $transactionId,
+            'observed_at' => $observedAt,
+            'observed_amount_minor' => BFR_RENT_MINOR,
+            'observed_currency' => Currency::Eur->value,
+            'created_at' => '2026-01-01 00:00:00',
+            'updated_at' => '2026-01-01 00:00:00',
+        ]);
+    }
 }
 
 // /transactions listed the rent, the ledger held it with a posted_at of 1
@@ -192,7 +251,7 @@ it('leaves today alone on every surface that answers for today', function (): vo
 // the next detection sweep has run.
 it('counts a booked row that is also a projected occurrence once', function (): void {
     $accountId = bfrAccount($this->db, $this->user->id);
-    bfrMonthlySeries($this->db, $this->user->id, BFR_RENT_DATE);
+    bfrSeries($this->db, $this->user->id, BFR_RENT_DATE);
     bfrTransaction($this->db, $this->user->id, $accountId, BFR_RENT_DATE, BFR_RENT_MINOR);
 
     app(ProjectionPipeline::class)->project($this->user, null, BFR_HORIZON_DAYS);
@@ -208,7 +267,7 @@ it('counts a booked row that is also a projected occurrence once', function (): 
 // on it too rather than only on the cluster identity.
 it('counts it once when the occurrence link is the only thing relating the two', function (): void {
     $accountId = bfrAccount($this->db, $this->user->id);
-    $seriesId = bfrMonthlySeries($this->db, $this->user->id, BFR_RENT_DATE, 'a-key-the-row-does-not-carry');
+    $seriesId = bfrSeries($this->db, $this->user->id, BFR_RENT_DATE, clusterCounterpartyKey: 'a-key-the-row-does-not-carry');
     $transactionId = bfrTransaction($this->db, $this->user->id, $accountId, BFR_RENT_DATE, BFR_RENT_MINOR);
 
     $this->db->connection()->table('recurring_series_occurrences')->insert([
@@ -233,7 +292,7 @@ it('counts it once when the occurrence link is the only thing relating the two',
 // A bank that moves a direct debit off a weekend still charges the rent once.
 it('counts it once when the bank booked it a few days off the expected date', function (): void {
     $accountId = bfrAccount($this->db, $this->user->id);
-    bfrMonthlySeries($this->db, $this->user->id, BFR_RENT_DATE);
+    bfrSeries($this->db, $this->user->id, BFR_RENT_DATE);
     $bookedOn = CarbonImmutable::parse(BFR_RENT_DATE)->addDays(2)->toDateString();
     bfrTransaction($this->db, $this->user->id, $accountId, $bookedOn, BFR_RENT_MINOR);
 
@@ -249,7 +308,7 @@ it('counts it once when the bank booked it a few days off the expected date', fu
 // A different merchant on the same day is a second payment, not the same one.
 it('keeps a series estimate a booked row of another counterparty does not cover', function (): void {
     $accountId = bfrAccount($this->db, $this->user->id);
-    bfrMonthlySeries($this->db, $this->user->id, BFR_RENT_DATE);
+    bfrSeries($this->db, $this->user->id, BFR_RENT_DATE);
     bfrTransaction($this->db, $this->user->id, $accountId, BFR_RENT_DATE, -1_099, Currency::Eur->value, 'some-other-merchant');
 
     app(ProjectionPipeline::class)->project($this->user, null, BFR_HORIZON_DAYS);
@@ -283,4 +342,93 @@ it('lands a foreign-currency row on the account line it is denominated in', func
         ->and(bfrPointOn($dollar->points, BFR_RENT_DATE) - bfrPointOn($dollar->points, $dayBefore))->toBe(-20_000)
         ->and($euro->defaultCurrency)->toBe(Currency::Eur->value)
         ->and(bfrPointOn($euro->points, BFR_RENT_DATE) - bfrPointOn($euro->points, $dayBefore))->toBe(0);
+});
+
+// A weekly series is the case a monthly one cannot show: its next occurrence
+// is exactly MatchWindow::DAYS out, so a single booked row sat within the
+// window of two estimates and retired both while adding one row back.
+it('retires one weekly estimate per booked row, not every estimate in the window', function (): void {
+    $accountId = bfrAccount($this->db, $this->user->id);
+    bfrSeries($this->db, $this->user->id, BFR_WEEKLY_DATE, SeriesCadence::Weekly, BFR_WEEKLY_MINOR);
+    bfrTransaction($this->db, $this->user->id, $accountId, BFR_WEEKLY_DATE, BFR_WEEKLY_MINOR);
+
+    expect(bfrHorizonMovement($this->user, $accountId, BFR_SHORT_HORIZON_DAYS))
+        ->toBe(BFR_WEEKLY_OCCURRENCES * BFR_WEEKLY_MINOR);
+});
+
+it('keeps the surviving weekly estimate on its own date', function (): void {
+    $accountId = bfrAccount($this->db, $this->user->id);
+    bfrSeries($this->db, $this->user->id, BFR_WEEKLY_DATE, SeriesCadence::Weekly, BFR_WEEKLY_MINOR);
+    bfrTransaction($this->db, $this->user->id, $accountId, BFR_WEEKLY_DATE, BFR_WEEKLY_MINOR);
+
+    app(ProjectionPipeline::class)->project($this->user, null, BFR_SHORT_HORIZON_DAYS);
+    $points = app(ForecastQuery::class)->forUser($accountId, BFR_SHORT_HORIZON_DAYS, null, $this->user)->points;
+
+    $second = CarbonImmutable::parse(BFR_WEEKLY_DATE)->addDays(BFR_DAYS_PER_WEEK)->toDateString();
+    $before = CarbonImmutable::parse($second)->subDay()->toDateString();
+
+    expect(bfrPointOn($points, $second) - bfrPointOn($points, $before))->toBe(BFR_WEEKLY_MINOR);
+});
+
+it('retires both weekly estimates when both weeks are already booked', function (): void {
+    $accountId = bfrAccount($this->db, $this->user->id);
+    bfrSeries($this->db, $this->user->id, BFR_WEEKLY_DATE, SeriesCadence::Weekly, BFR_WEEKLY_MINOR);
+    bfrTransaction($this->db, $this->user->id, $accountId, BFR_WEEKLY_DATE, BFR_WEEKLY_MINOR);
+    bfrTransaction($this->db, $this->user->id, $accountId, CarbonImmutable::parse(BFR_WEEKLY_DATE)->addDays(BFR_DAYS_PER_WEEK)->toDateString(), BFR_WEEKLY_MINOR);
+
+    expect(bfrHorizonMovement($this->user, $accountId, BFR_SHORT_HORIZON_DAYS))
+        ->toBe(BFR_WEEKLY_OCCURRENCES * BFR_WEEKLY_MINOR);
+});
+
+// The monthly claim, measured rather than assumed: 30 days between occurrences
+// is far enough outside the window that no booked row ever reached the next one.
+it('leaves a monthly series unaffected', function (): void {
+    $accountId = bfrAccount($this->db, $this->user->id);
+    bfrSeries($this->db, $this->user->id, BFR_RENT_DATE);
+    bfrTransaction($this->db, $this->user->id, $accountId, BFR_RENT_DATE, BFR_RENT_MINOR);
+
+    expect(bfrHorizonMovement($this->user, $accountId, BFR_MONTHLY_HORIZON_DAYS))
+        ->toBe(BFR_MONTHLY_OCCURRENCES * BFR_RENT_MINOR);
+});
+
+// A high-variance series is smeared across a jitter window, so one occurrence
+// reaches the fold as several contributions carrying a fraction each. The
+// booked row retires the occurrence, which means every one of them and no more.
+it('retires the whole jitter smear of the occurrence it booked', function (): void {
+    $accountId = bfrAccount($this->db, $this->user->id);
+    $seriesId = bfrSeries(
+        $this->db,
+        $this->user->id,
+        BFR_RENT_DATE,
+        varianceTolerancePercent: BFR_JITTER_TOLERANCE_PERCENT,
+    );
+    bfrPastOccurrences($this->db, $this->user->id, $accountId, $seriesId);
+    bfrTransaction($this->db, $this->user->id, $accountId, BFR_RENT_DATE, BFR_RENT_MINOR);
+
+    expect(bfrHorizonMovement($this->user, $accountId, BFR_SHORT_HORIZON_DAYS))
+        ->toBe(BFR_RENT_MINOR);
+});
+
+// Without this the case above would hold for a series that was never smeared,
+// and would prove nothing about what a booked row has to retire.
+it('smears a high-variance occurrence over several days rather than one', function (): void {
+    $accountId = bfrAccount($this->db, $this->user->id);
+    $seriesId = bfrSeries(
+        $this->db,
+        $this->user->id,
+        BFR_RENT_DATE,
+        varianceTolerancePercent: BFR_JITTER_TOLERANCE_PERCENT,
+    );
+    bfrPastOccurrences($this->db, $this->user->id, $accountId, $seriesId);
+
+    app(ProjectionPipeline::class)->project($this->user, null, BFR_SHORT_HORIZON_DAYS);
+    $points = app(ForecastQuery::class)->forUser($accountId, BFR_SHORT_HORIZON_DAYS, null, $this->user)->points;
+
+    $dayBefore = CarbonImmutable::parse(BFR_RENT_DATE)->subDay()->toDateString();
+    $onTheDay = bfrPointOn($points, BFR_RENT_DATE) - bfrPointOn($points, $dayBefore);
+    $horizonEnd = CarbonImmutable::parse(BFR_TODAY)->addDays(BFR_SHORT_HORIZON_DAYS)->toDateString();
+
+    expect($onTheDay)->toBeLessThan(0)
+        ->and($onTheDay)->toBeGreaterThan(BFR_RENT_MINOR)
+        ->and(bfrPointOn($points, $horizonEnd) - bfrPointOn($points, BFR_TODAY))->toBeLessThan($onTheDay);
 });
