@@ -75,6 +75,10 @@ final class AccountBalanceQuery
             $query->where('posted_at', '>=', $baseline['date']->toDateString());
         }
 
-        return $baseline['minorUnits'] + (int) $query->sum('amount_minor');
+        // settled_amount_minor, not amount_minor: the settled pair is the row
+        // as the ACCOUNT holds it, so a USD purchase on a euro account adds
+        // euro cents. Summing the native amount added the dollar figure
+        // straight into the euro total.
+        return $baseline['minorUnits'] + (int) $query->sum('settled_amount_minor');
     }
 }

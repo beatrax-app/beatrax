@@ -184,7 +184,7 @@ final readonly class BalanceAnchorResolver
             $rows->where('posted_at', '>=', $baseline['date']->toDateString());
         }
 
-        $sum = $baseline['minorUnits'] + (int) $rows->sum('amount_minor');
+        $sum = $baseline['minorUnits'] + (int) $rows->sum('settled_amount_minor');
 
         if ($defaultCurrency === '') {
             $defaultCurrency = $this->baseCurrency->code();

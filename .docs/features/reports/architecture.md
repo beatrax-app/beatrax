@@ -122,7 +122,8 @@ another module.
   starts, not what an account holds: it returned a statement closing
   balance with no delta for the months since, and zero for a card with no
   statement at all. Measured on the desktop, the card read EUR 1,238.04
-  against a true position of EUR 5,065.53. The never-silent-1:1-fallback
+  against a true position of EUR 1,457.53 (EUR 5,065.53 is that reader's
+  all-time sum, which counts money not yet received). The never-silent-1:1-fallback
   guarantee is unchanged. Each bucket samples at its last actual day
   (`endExclusive->subDay()`), e.g. a "Jul 2025" bucket samples the
   end-of-month balance on 2025-07-31.

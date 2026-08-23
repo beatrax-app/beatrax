@@ -546,8 +546,8 @@ toast and no write, before any read of the "next" value.
 ## `AccountBalanceQuery` — caveats shared by all three methods
 
 `currentBalance()`, `clearedBalance()`, and `clearedBalanceAsOf()` all
-open on the account's starting balance and add raw `amount_minor`
-(never `settled_amount_minor`) scoped by `(account_id, user_id)` on top
+open on the account's starting balance and add `settled_amount_minor`
+(never the native `amount_minor`) scoped by `(account_id, user_id)` on top
 of it — see
 [the baseline section below](#accountstartingbalancequery--the-baseline-every-balance-starts-from)
 for what the baseline is and how its date bounds the sum. All three
@@ -558,14 +558,15 @@ share two caveats:
   balance, never another user's transactions — and, since the baseline
   read is scoped the same way, none of the owner's starting balance
   either.
-- **Single-currency assumption**: the sum has no currency filter — for
-  an account holding more than one transaction currency (e.g. an ICS
-  account with USD Google Play settlements) the result mixes units. The
-  baseline is added in the account's `default_currency` without
-  conversion, on the same assumption. This deliberately mirrors the
-  `BalanceAnchorResolver` fallback so the pot reconciliation header and
-  the net-worth figure stay consistent; an FX-aware per-currency balance
-  is a future improvement that must change both call paths together.
+- **Single currency, by the settled pair**: the sum has no currency
+  filter and does not need one. It adds `settled_amount_minor`, which is
+  the row as the ACCOUNT was debited — an ICS account's USD Google Play
+  charge carries its dollar figure in `amount_minor` and the euro one
+  here — so an account holding several transaction currencies still
+  totals in its own. The baseline is added in the account's
+  `default_currency` on the same footing. `BalanceAnchorResolver`'s
+  fallback sums the same column, so the pot reconciliation header, the
+  net-worth figure and the forecast anchor stay consistent.
 
 `clearedBalance()` additionally restricts to `cleared`/`reconciled`
 rows (excluding `uncleared` manual cash-book entries not yet confirmed
