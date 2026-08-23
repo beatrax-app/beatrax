@@ -27,7 +27,7 @@ class BiometricKeyVault
 
     public function isAvailable(): bool
     {
-        return $this->runtimeAvailable();
+        return $this->runtimeAvailable() && $this->platformCanStore();
     }
 
     // Wraps the (currently-held) data key into a biometric blob and
@@ -35,7 +35,7 @@ class BiometricKeyVault
     // Returns false off-device or on a native failure.
     public function enroll(string $dataKey): bool
     {
-        if (! $this->runtimeAvailable()) {
+        if (! $this->isAvailable()) {
             return false;
         }
 
@@ -128,6 +128,27 @@ class BiometricKeyVault
     // -------------------------------------------------------------------------
     // Native seam (overridable in tests; facade confined here)
     // -------------------------------------------------------------------------
+
+    // Android's half of the vault is a skeleton by design: a Keystore key with
+    // setUserAuthenticationRequired(true) gates every Cipher operation behind an
+    // asynchronous BiometricPrompt, so Set answers `async_required` and writes
+    // nothing. Offering enrolment there produced "Your device declined to store
+    // the key" on a phone that authenticates other apps all day.
+    /**
+     * @link ../../../../../mobile-app/nativephp-plugins/biometric-vault/resources/android/BiometricVaultFunctions.kt
+     */
+    protected function platformCanStore(): bool
+    {
+        return $this->platformFamily() !== 'Linux';
+    }
+
+    // Android reports Linux here and iOS reports Darwin, which is the same
+    // distinction NativeDeviceName leans on. A native probe would say no more
+    // until the prompt wiring lands and this becomes a real capability call.
+    protected function platformFamily(): string
+    {
+        return PHP_OS_FAMILY;
+    }
 
     protected function runtimeAvailable(): bool
     {
