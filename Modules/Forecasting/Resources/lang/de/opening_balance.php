@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Meine Zahl verwenden',
 
     'save' => 'Anfangssaldo speichern',
+    'remove' => 'Anfangssaldo entfernen',
     'saved' => 'Gespeichert.',
+    'removed' => 'Entfernt.',
 
     'toast' => [
         'updated' => 'Anfangssaldo aktualisiert.',
+        'removed' => 'Anfangssaldo entfernt.',
     ],
 
     'errors' => [

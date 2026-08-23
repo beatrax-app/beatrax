@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Bruk mitt tall',
 
     'save' => 'Lagre inngående saldo',
+    'remove' => 'Fjern inngående saldo',
     'saved' => 'Lagret.',
+    'removed' => 'Fjernet.',
 
     'toast' => [
         'updated' => 'Inngående saldo er oppdatert.',
+        'removed' => 'Inngående saldo er fjernet.',
     ],
 
     'errors' => [

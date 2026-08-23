@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Použiť moje číslo',
 
     'save' => 'Uložiť počiatočný zostatok',
+    'remove' => 'Odstrániť počiatočný zostatok',
     'saved' => 'Uložené.',
+    'removed' => 'Odstránené.',
 
     'toast' => [
         'updated' => 'Počiatočný zostatok aktualizovaný.',
+        'removed' => 'Počiatočný zostatok odstránený.',
     ],
 
     'errors' => [

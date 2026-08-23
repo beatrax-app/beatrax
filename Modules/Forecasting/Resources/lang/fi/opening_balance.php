@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Käytä omaa lukuani',
 
     'save' => 'Tallenna alkusaldo',
+    'remove' => 'Poista alkusaldo',
     'saved' => 'Tallennettu.',
+    'removed' => 'Poistettu.',
 
     'toast' => [
         'updated' => 'Alkusaldo päivitetty.',
+        'removed' => 'Alkusaldo poistettu.',
     ],
 
     'errors' => [

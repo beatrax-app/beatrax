@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Brug mit tal',
 
     'save' => 'Gem startsaldo',
+    'remove' => 'Fjern startsaldo',
     'saved' => 'Gemt.',
+    'removed' => 'Fjernet.',
 
     'toast' => [
         'updated' => 'Startsaldoen er opdateret.',
+        'removed' => 'Startsaldoen er fjernet.',
     ],
 
     'errors' => [

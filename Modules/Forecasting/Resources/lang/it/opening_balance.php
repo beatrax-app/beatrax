@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Usa il mio numero',
 
     'save' => 'Salva il saldo iniziale',
+    'remove' => 'Rimuovi il saldo iniziale',
     'saved' => 'Salvato.',
+    'removed' => 'Rimosso.',
 
     'toast' => [
         'updated' => 'Saldo iniziale aggiornato.',
+        'removed' => 'Saldo iniziale rimosso.',
     ],
 
     'errors' => [

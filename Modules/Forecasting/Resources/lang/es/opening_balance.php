@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Usar mi cifra',
 
     'save' => 'Guardar el saldo de apertura',
+    'remove' => 'Eliminar el saldo de apertura',
     'saved' => 'Guardado.',
+    'removed' => 'Eliminado.',
 
     'toast' => [
         'updated' => 'Saldo de apertura actualizado.',
+        'removed' => 'Saldo de apertura eliminado.',
     ],
 
     'errors' => [

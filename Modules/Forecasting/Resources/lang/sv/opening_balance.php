@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Använd min siffra',
 
     'save' => 'Spara ingående saldo',
+    'remove' => 'Ta bort ingående saldo',
     'saved' => 'Sparat.',
+    'removed' => 'Borttaget.',
 
     'toast' => [
         'updated' => 'Ingående saldo har uppdaterats.',
+        'removed' => 'Ingående saldo har tagits bort.',
     ],
 
     'errors' => [

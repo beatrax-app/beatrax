@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Utiliser mon chiffre',
 
     'save' => 'Enregistrer le solde d\'ouverture',
+    'remove' => 'Supprimer le solde d\'ouverture',
     'saved' => 'Enregistré.',
+    'removed' => 'Supprimé.',
 
     'toast' => [
         'updated' => 'Solde d\'ouverture mis à jour.',
+        'removed' => 'Solde d\'ouverture supprimé.',
     ],
 
     'errors' => [

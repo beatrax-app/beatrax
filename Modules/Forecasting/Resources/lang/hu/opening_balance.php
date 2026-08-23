@@ -18,10 +18,13 @@ return [
     'use_mine' => 'A saját számomat használom',
 
     'save' => 'Nyitó egyenleg mentése',
+    'remove' => 'Nyitó egyenleg eltávolítása',
     'saved' => 'Mentve.',
+    'removed' => 'Eltávolítva.',
 
     'toast' => [
         'updated' => 'A nyitó egyenleg frissítve.',
+        'removed' => 'A nyitó egyenleg eltávolítva.',
     ],
 
     'errors' => [

@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Kendi rakamımı kullan',
 
     'save' => 'Açılış bakiyesini kaydet',
+    'remove' => 'Açılış bakiyesini kaldır',
     'saved' => 'Kaydedildi.',
+    'removed' => 'Kaldırıldı.',
 
     'toast' => [
         'updated' => 'Açılış bakiyesi güncellendi.',
+        'removed' => 'Açılış bakiyesi kaldırıldı.',
     ],
 
     'errors' => [

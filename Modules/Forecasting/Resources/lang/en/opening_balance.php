@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Use my number',
 
     'save' => 'Save opening balance',
+    'remove' => 'Remove opening balance',
     'saved' => 'Saved.',
+    'removed' => 'Removed.',
 
     'toast' => [
         'updated' => 'Opening balance updated.',
+        'removed' => 'Opening balance removed.',
     ],
 
     'errors' => [

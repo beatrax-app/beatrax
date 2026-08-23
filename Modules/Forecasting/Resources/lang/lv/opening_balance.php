@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Izmantot manu skaitli',
 
     'save' => 'Saglabāt sākuma atlikumu',
+    'remove' => 'Noņemt sākuma atlikumu',
     'saved' => 'Saglabāts.',
+    'removed' => 'Noņemts.',
 
     'toast' => [
         'updated' => 'Sākuma atlikums atjaunināts.',
+        'removed' => 'Sākuma atlikums noņemts.',
     ],
 
     'errors' => [

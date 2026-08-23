@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Użyj mojej wartości',
 
     'save' => 'Zapisz saldo otwarcia',
+    'remove' => 'Usuń saldo otwarcia',
     'saved' => 'Zapisano.',
+    'removed' => 'Usunięto.',
 
     'toast' => [
         'updated' => 'Saldo otwarcia zaktualizowane.',
+        'removed' => 'Saldo otwarcia usunięte.',
     ],
 
     'errors' => [

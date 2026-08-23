@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Folosește cifra mea',
 
     'save' => 'Salvează soldul inițial',
+    'remove' => 'Elimină soldul inițial',
     'saved' => 'Salvat.',
+    'removed' => 'Eliminat.',
 
     'toast' => [
         'updated' => 'Sold inițial actualizat.',
+        'removed' => 'Sold inițial eliminat.',
     ],
 
     'errors' => [

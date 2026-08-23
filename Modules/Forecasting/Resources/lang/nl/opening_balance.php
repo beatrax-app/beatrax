@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Gebruik mijn getal',
 
     'save' => 'Beginsaldo opslaan',
+    'remove' => 'Beginsaldo verwijderen',
     'saved' => 'Opgeslagen.',
+    'removed' => 'Verwijderd.',
 
     'toast' => [
         'updated' => 'Beginsaldo bijgewerkt.',
+        'removed' => 'Beginsaldo verwijderd.',
     ],
 
     'errors' => [

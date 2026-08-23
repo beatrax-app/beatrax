@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Kasuta minu arvu',
 
     'save' => 'Salvesta algjääk',
+    'remove' => 'Eemalda algjääk',
     'saved' => 'Salvestatud.',
+    'removed' => 'Eemaldatud.',
 
     'toast' => [
         'updated' => 'Algjääk on uuendatud.',
+        'removed' => 'Algjääk on eemaldatud.',
     ],
 
     'errors' => [

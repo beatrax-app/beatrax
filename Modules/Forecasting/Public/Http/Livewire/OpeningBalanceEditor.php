@@ -92,14 +92,22 @@ final class OpeningBalanceEditor extends Component
         $this->beatraxsNumberMinor = null;
         $this->saved = false;
 
-        $minor = $this->parseInputToMinor($this->openingInput);
-        if ($minor === false) {
-            $this->errorMessage = Lang::get('forecasting::opening_balance.errors.invalid_number');
+        // An empty box is the reader taking the override back, not a typo. The
+        // figure outranks the import-detected baseline everywhere a balance is
+        // read, so its absence has to be expressible; a typed 0 is a value and
+        // stays one.
+        $minor = null;
+        if (trim($this->openingInput) !== '') {
+            $parsed = $this->parseInputToMinor($this->openingInput);
+            if ($parsed === false) {
+                $this->errorMessage = Lang::get('forecasting::opening_balance.errors.invalid_number');
 
-            return;
+                return;
+            }
+            $minor = $parsed;
         }
 
-        $asOf = trim($this->asOfInput) === '' ? null : $this->asOfInput;
+        $asOf = ($minor === null || trim($this->asOfInput) === '') ? null : $this->asOfInput;
 
         try {
             ($action)($this->accountId, $currentUser->user(), $minor, $asOf, allowDivergence: false);
@@ -118,7 +126,19 @@ final class OpeningBalanceEditor extends Component
         $this->currentOpeningMinor = $minor;
         $this->currentAsOfDate = $asOf;
         $this->saved = true;
-        $this->toast(Lang::get('forecasting::opening_balance.toast.updated'));
+        $this->toast(Lang::get($minor === null
+            ? 'forecasting::opening_balance.toast.removed'
+            : 'forecasting::opening_balance.toast.updated'));
+    }
+
+    // Saving an empty box does the same thing; this is the affordance that
+    // says so, and the Blade draws it only while there is an override to take
+    // back.
+    public function remove(CurrentUser $currentUser, SetAccountOpeningBalance $action): void
+    {
+        $this->openingInput = '';
+        $this->asOfInput = '';
+        $this->save($currentUser, $action);
     }
 
     public function useMyNumber(CurrentUser $currentUser, SetAccountOpeningBalance $action): void
@@ -169,6 +189,7 @@ final class OpeningBalanceEditor extends Component
             'accountName' => $this->accountName,
             'accountKind' => $this->accountKind,
             'currency' => $this->currency,
+            'currentOpeningMinor' => $this->currentOpeningMinor,
             'openingInput' => $this->openingInput,
             'asOfInput' => $this->asOfInput,
             'errorMessage' => $this->errorMessage,

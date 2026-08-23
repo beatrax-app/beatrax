@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Koristi moj iznos',
 
     'save' => 'Sačuvaj početno stanje',
+    'remove' => 'Ukloni početno stanje',
     'saved' => 'Sačuvano.',
+    'removed' => 'Uklonjeno.',
 
     'toast' => [
         'updated' => 'Početno stanje je ažurirano.',
+        'removed' => 'Početno stanje je uklonjeno.',
     ],
 
     'errors' => [

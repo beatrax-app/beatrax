@@ -18,10 +18,13 @@ return [
     'use_mine' => 'Naudoti mano skaičių',
 
     'save' => 'Išsaugoti pradinį likutį',
+    'remove' => 'Pašalinti pradinį likutį',
     'saved' => 'Išsaugota.',
+    'removed' => 'Pašalinta.',
 
     'toast' => [
         'updated' => 'Pradinis likutis atnaujintas.',
+        'removed' => 'Pradinis likutis pašalintas.',
     ],
 
     'errors' => [
