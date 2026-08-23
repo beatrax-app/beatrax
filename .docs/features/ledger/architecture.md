@@ -546,19 +546,26 @@ toast and no write, before any read of the "next" value.
 ## `AccountBalanceQuery` — caveats shared by all three methods
 
 `currentBalance()`, `clearedBalance()`, and `clearedBalanceAsOf()` all
-sum raw `amount_minor` (never `settled_amount_minor`) scoped by
-`(account_id, user_id)`, and share two caveats:
+open on the account's starting balance and add raw `amount_minor`
+(never `settled_amount_minor`) scoped by `(account_id, user_id)` on top
+of it — see
+[the baseline section below](#accountstartingbalancequery--the-baseline-every-balance-starts-from)
+for what the baseline is and how its date bounds the sum. All three
+share two caveats:
 
 - **Information disclosure guard**: the explicit `where('user_id', ...)`
   ensures a foreign `account_id` returns the caller's own (empty)
-  balance, never another user's transactions.
+  balance, never another user's transactions — and, since the baseline
+  read is scoped the same way, none of the owner's starting balance
+  either.
 - **Single-currency assumption**: the sum has no currency filter — for
   an account holding more than one transaction currency (e.g. an ICS
-  account with USD Google Play settlements) the result mixes units.
-  This deliberately mirrors the existing `BalanceAnchorResolver`
-  fallback so the pot reconciliation header and the net-worth figure
-  stay consistent; an FX-aware per-currency balance is a future
-  improvement that must change both call paths together.
+  account with USD Google Play settlements) the result mixes units. The
+  baseline is added in the account's `default_currency` without
+  conversion, on the same assumption. This deliberately mirrors the
+  `BalanceAnchorResolver` fallback so the pot reconciliation header and
+  the net-worth figure stay consistent; an FX-aware per-currency balance
+  is a future improvement that must change both call paths together.
 
 `clearedBalance()` additionally restricts to `cleared`/`reconciled`
 rows (excluding `uncleared` manual cash-book entries not yet confirmed
@@ -567,6 +574,68 @@ against a statement). `clearedBalanceAsOf()` further bounds by
 window `ReconciliationWriter::completeReconcile()` locks — the
 unbounded `clearedBalance()` would count rows posted after the
 statement date that the write correctly leaves untouched.
+
+The baseline belongs in the cleared figures too, not only in
+`currentBalance()`: `/reconcile` compares against the balance a bank
+printed on a statement, and that number counts the whole life of the
+account, not only the part Beatrax has imported. A cleared balance that
+started at zero could only ever match by coincidence.
+
+## `AccountStartingBalanceQuery` — the baseline every balance starts from
+
+`accounts.starting_balance_minor` / `starting_balance_date` is the
+Ledger-owned, auto-detected position the imported history begins from
+([A9](https://github.com/beatrax-app/spec/blob/main/10-functional/features/a-ingestion/a9-starting-balances.md)).
+It is written by the demo seeder, by the statement-summary backfill, and
+by the wizard's starting-balance card. It is **not**
+`accounts.opening_balance_minor` / `opening_balance_as_of_date`, which is
+Forecasting's manual override on the same row and is read by
+`BalanceAnchorResolver::fromUserInputOpeningBalance()`; both pairs exist
+on purpose and neither substitutes for the other. A third
+`opening_balance_minor` lives on `statement_summaries` and is the source
+the backfill reads, not a balance anyone displays.
+
+`Public/Services/AccountStartingBalanceQuery` is the single reader. The
+rule it encodes is:
+
+```
+balance = starting_balance_minor + SUM(transactions bounded below by starting_balance_date)
+```
+
+- **A NULL date means the baseline precedes all history**, so no lower
+  bound applies and every row counts on top of it. This is the common
+  shape: the demo seeder writes an amount with no date at all.
+- **A non-NULL date bounds the sum at `posted_at >= starting_balance_date`.**
+  The baseline is the position *before* that day's rows, so a row posted
+  exactly on the date lands on top of it. Using `>` would lose that row;
+  dropping the bound entirely would count everything before the baseline
+  date twice, since the baseline already holds it.
+- **A date with no amount is not a baseline.** The reader returns the
+  absent shape rather than honouring a bound that would drop earlier rows
+  and add nothing back.
+
+`forAccount()` returns `minorUnits` / `currency` / `date` — never a bare
+int, because the amount is denominated in the account's
+`default_currency` and is meaningless without it.
+
+`bucketedByDefaultCurrency()` exists for the one caller that cannot reach
+a per-account date in PHP: `Calendar`'s `DailyBalanceAggregator` groups
+across many accounts in a single query and buckets by *transaction*
+currency, while each baseline belongs in the bucket of its own account's
+`default_currency`. That query joins `accounts` and applies
+`AT_OR_AFTER_BASELINE_SQL`, the one spelling of the lower bound for a
+grouped read; the join is a LEFT JOIN so a transaction whose account row
+is missing keeps counting exactly as it did before, rather than silently
+vanishing from the line.
+
+Consumers, all of which were separately re-implementing "the money on
+this account" and all of which start from the baseline now:
+`AccountBalanceQuery` (and through it `Reports`' `NetWorthSeriesQuery`,
+`Pots`' `PotBalanceQuery`, and `/reconcile`), `Calendar`'s
+`DailyBalanceAggregator`, and `Forecasting`'s
+`BalanceAnchorResolver::fromTransactionsSum()`. The ICS-card zero anchor
+is deliberately excluded: a card with no anchor takes zero because
+summing would double-count the billing events the projection re-emits.
 
 ## `FieldProvenanceWriter` — race-safe manual-vs-rule provenance
 

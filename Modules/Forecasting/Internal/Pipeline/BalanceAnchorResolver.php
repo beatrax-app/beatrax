@@ -13,6 +13,7 @@ use Modules\Forecasting\Public\Dto\BalanceAnchorDto;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
@@ -24,6 +25,7 @@ final readonly class BalanceAnchorResolver
         private DatabaseManager $db,
         private Clock $clock,
         private BaseCurrency $baseCurrency,
+        private AccountStartingBalanceQuery $startingBalances,
     ) {}
 
     public function forAccount(int $accountId, User $user): BalanceAnchorDto
@@ -48,7 +50,7 @@ final readonly class BalanceAnchorResolver
         // is about to re-emit. Every other kind sums.
         return $kind === AccountKind::IcsCard->value
             ? $this->icsCardZeroAnchor($accountId, $defaultCurrency)
-            : $this->fromTransactionsSum($accountId, $user->id, $defaultCurrency);
+            : $this->fromTransactionsSum($accountId, $user, $defaultCurrency);
     }
 
     // null means no statement exists at all — an API-connected account, or one
@@ -166,15 +168,23 @@ final readonly class BalanceAnchorResolver
     // Bounded at today on posted_at, which is the column the calendar's own
     // past-day line sums: unbounded, a future-dated row was counted as money
     // already held, and the line stepped by the whole of next week on today.
-    private function fromTransactionsSum(int $accountId, int $userId, string $defaultCurrency): BalanceAnchorDto
+    private function fromTransactionsSum(int $accountId, User $user, string $defaultCurrency): BalanceAnchorDto
     {
         $asOf = $this->clock->now()->startOfDay();
+        $baseline = $this->startingBalances->forAccount($accountId, $user);
 
-        $sum = (int) $this->db->connection()->table('transactions')
-            ->where('user_id', $userId)
+        $rows = $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
             ->where('account_id', $accountId)
-            ->where('posted_at', '<=', $asOf->toDateString())
-            ->sum('amount_minor');
+            ->where('posted_at', '<=', $asOf->toDateString());
+
+        // The baseline already holds everything up to its own date, so
+        // counting a row posted before it would count that history twice.
+        if ($baseline['date'] !== null) {
+            $rows->where('posted_at', '>=', $baseline['date']->toDateString());
+        }
+
+        $sum = $baseline['minorUnits'] + (int) $rows->sum('amount_minor');
 
         if ($defaultCurrency === '') {
             $defaultCurrency = $this->baseCurrency->code();

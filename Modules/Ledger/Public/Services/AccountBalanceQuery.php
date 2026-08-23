@@ -14,33 +14,22 @@ use Modules\Ledger\Public\Enums\ClearedStatus;
  */
 final class AccountBalanceQuery
 {
+    /** @var list<string> */
+    private const array CLEARED_STATUSES = [ClearedStatus::Cleared->value, ClearedStatus::Reconciled->value];
+
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly AccountStartingBalanceQuery $startingBalances,
     ) {}
 
-    // A positive result means a credit balance; 0 when there are no
-    // transactions for this account/user pair. See the linked
-    // architecture page for the shared single-currency caveat.
     public function currentBalance(int $accountId, User $user): int
     {
-        return (int) $this->db->connection()
-            ->table('transactions')
-            ->where('account_id', $accountId)
-            ->where('user_id', $user->id)
-            ->sum('amount_minor');
+        return $this->sumFromBaseline($accountId, $user, null, null);
     }
 
-    // Excludes uncleared rows (manual cash-book entries not yet
-    // confirmed against a bank statement). See the linked architecture
-    // page for the shared caveats.
     public function clearedBalance(int $accountId, User $user): int
     {
-        return (int) $this->db->connection()
-            ->table('transactions')
-            ->where('account_id', $accountId)
-            ->where('user_id', $user->id)
-            ->whereIn('status', [ClearedStatus::Cleared->value, ClearedStatus::Reconciled->value])
-            ->sum('amount_minor');
+        return $this->sumFromBaseline($accountId, $user, self::CLEARED_STATUSES, null);
     }
 
     // /reconcile checks "matched" over the same posted_at <= $asOf window
@@ -48,12 +37,35 @@ final class AccountBalanceQuery
     // rows the write correctly leaves untouched.
     public function clearedBalanceAsOf(int $accountId, User $user, CarbonImmutable $asOf): int
     {
-        return (int) $this->db->connection()
+        return $this->sumFromBaseline($accountId, $user, self::CLEARED_STATUSES, $asOf);
+    }
+
+    /**
+     * @param  list<string>|null  $statuses
+     */
+    private function sumFromBaseline(int $accountId, User $user, ?array $statuses, ?CarbonImmutable $asOf): int
+    {
+        $baseline = $this->startingBalances->forAccount($accountId, $user);
+
+        $query = $this->db->connection()
             ->table('transactions')
             ->where('account_id', $accountId)
-            ->where('user_id', $user->id)
-            ->whereIn('status', [ClearedStatus::Cleared->value, ClearedStatus::Reconciled->value])
-            ->where('posted_at', '<=', $asOf->toDateString())
-            ->sum('amount_minor');
+            ->where('user_id', $user->id);
+
+        if ($statuses !== null) {
+            $query->whereIn('status', $statuses);
+        }
+
+        if ($asOf !== null) {
+            $query->where('posted_at', '<=', $asOf->toDateString());
+        }
+
+        // The baseline is the position BEFORE its own day's rows, so a row
+        // posted exactly on that date lands on top of it rather than inside it.
+        if ($baseline['date'] !== null) {
+            $query->where('posted_at', '>=', $baseline['date']->toDateString());
+        }
+
+        return $baseline['minorUnits'] + (int) $query->sum('amount_minor');
     }
 }

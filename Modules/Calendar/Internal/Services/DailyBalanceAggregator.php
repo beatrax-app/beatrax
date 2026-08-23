@@ -11,6 +11,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -25,6 +26,7 @@ final readonly class DailyBalanceAggregator
         private Clock $clock,
         private ForecastQuery $forecastQuery,
         private ExchangeRateService $fxService,
+        private AccountStartingBalanceQuery $startingBalances,
     ) {}
 
     /**
@@ -192,17 +194,23 @@ final readonly class DailyBalanceAggregator
     private function cumulativeBalanceBefore(array $effectiveBalance, User $user, CarbonImmutable $gridStart): array
     {
         $rows = $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereIn('account_id', $effectiveBalance)
-            ->where('posted_at', '<', $gridStart->toDateString())
-            ->groupBy('currency')
-            ->selectRaw('currency, SUM(amount_minor) as sum_minor')
+            ->leftJoin('accounts', 'accounts.id', '=', 'transactions.account_id')
+            ->where('transactions.user_id', $user->id)
+            ->whereIn('transactions.account_id', $effectiveBalance)
+            ->where('transactions.posted_at', '<', $gridStart->toDateString())
+            ->whereRaw(AccountStartingBalanceQuery::AT_OR_AFTER_BASELINE_SQL)
+            ->groupBy('transactions.currency')
+            ->selectRaw('transactions.currency as currency, SUM(transactions.amount_minor) as sum_minor')
             ->get();
 
-        $cumByCurrency = [];
+        // The baseline is denominated in the ACCOUNT's default currency, not
+        // in whatever currency its transactions happen to carry, so it opens
+        // that bucket and the row sums accumulate on top of it.
+        $cumByCurrency = $this->startingBalances->bucketedByDefaultCurrency($effectiveBalance, $user);
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $cumByCurrency[self::toString($row->currency)] = self::toInt($row->sum_minor);
+            $currency = self::toString($row->currency);
+            $cumByCurrency[$currency] = ($cumByCurrency[$currency] ?? 0) + self::toInt($row->sum_minor);
         }
 
         return $cumByCurrency;
@@ -219,11 +227,13 @@ final readonly class DailyBalanceAggregator
         CarbonImmutable $pastEnd,
     ): array {
         $rows = $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereIn('account_id', $effectiveBalance)
-            ->whereBetween('posted_at', [$gridStart->toDateString(), $pastEnd->toDateString()])
-            ->groupBy('posted_at', 'currency')
-            ->selectRaw('posted_at, currency, SUM(amount_minor) as sum_minor')
+            ->leftJoin('accounts', 'accounts.id', '=', 'transactions.account_id')
+            ->where('transactions.user_id', $user->id)
+            ->whereIn('transactions.account_id', $effectiveBalance)
+            ->whereBetween('transactions.posted_at', [$gridStart->toDateString(), $pastEnd->toDateString()])
+            ->whereRaw(AccountStartingBalanceQuery::AT_OR_AFTER_BASELINE_SQL)
+            ->groupBy('transactions.posted_at', 'transactions.currency')
+            ->selectRaw('transactions.posted_at as posted_at, transactions.currency as currency, SUM(transactions.amount_minor) as sum_minor')
             ->get();
 
         $deltaByDateCurrency = [];

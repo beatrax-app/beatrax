@@ -225,9 +225,15 @@ starting point available:
 Fallback: an ICS card account with no statement and no user-input opening
 balance defaults to zero (summing transactions would double-count the
 historical billing events the projection is about to re-emit forward). Every
-other account with no anchor sums every existing transaction from scratch
-(`asOf=1970-01-01`); the UI surfaces this case with an "Opening balance not
-set" banner. The returned `BalanceAnchorDto.source` label
+other account with no anchor opens on its Ledger-owned starting balance
+([the baseline every balance starts from](../ledger/architecture.md#accountstartingbalancequery--the-baseline-every-balance-starts-from))
+and sums its transactions on top, bounded below by `starting_balance_date`
+where one is set and above by today on `posted_at` — the same column the
+calendar's past-day line sums, so the anchor and the line agree on which rows
+have landed. `asOfDate` is that day, not a 1970 sentinel. The UI surfaces
+this case with an "Opening balance not set" banner, which refers to the
+manual `accounts.opening_balance_minor` override, not to the baseline. The
+returned `BalanceAnchorDto.source` label
 (`asn_statement_summary` / `ics_card_statement` / `user_input_opening_balance`
 / `sum_of_transactions` / `ics_card_zero_anchor`) is the audit ribbon's input.
 A missing or cross-user account raises `ModelNotFoundException`, converted to
