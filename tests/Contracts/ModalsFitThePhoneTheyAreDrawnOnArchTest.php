@@ -11,28 +11,46 @@ beforeEach(function (): void {
     $this->css = (string) file_get_contents(base_path('resources/css/app.css'));
 });
 
-it('caps every Flux dialog at the screen it is drawn on', function (): void {
-    $start = strpos($this->css, '[data-flux-modal] > dialog:where([class~="[:where(&)]:max-w-xl"])');
-    expect($start)->not->toBeFalse('No rule sets the Flux dialog max-width.');
+// Brace-matched rather than read as a fixed window after the selector: a
+// declaration this test asserts on sits at whatever offset the rule happens to
+// put it, and a window short enough to miss it reports the cap as absent while
+// a window long enough to spill into the next rule reports a neighbour's.
+function declarationBlockFor(string $css, string $selector): string
+{
+    $selectorAt = strpos($css, $selector);
+    expect($selectorAt)->not->toBeFalse('No rule found for selector: '.$selector);
 
-    expect(substr($this->css, (int) $start, 200))->toContain('max-width: min(36rem, calc(100vw - 1rem));');
+    $open = strpos($css, '{', (int) $selectorAt);
+    expect($open)->not->toBeFalse('Selector has no declaration block: '.$selector);
+
+    $depth = 0;
+    $length = strlen($css);
+    for ($cursor = (int) $open; $cursor < $length; $cursor++) {
+        $depth += (int) ($css[$cursor] === '{') - (int) ($css[$cursor] === '}');
+        if ($depth === 0) {
+            return substr($css, (int) $open, $cursor - (int) $open + 1);
+        }
+    }
+
+    return '';
+}
+
+it('caps every Flux dialog at the screen it is drawn on', function (): void {
+    expect(declarationBlockFor($this->css, '[data-flux-modal] > dialog:where([class~="[:where(&)]:max-w-xl"])'))
+        ->toContain('max-width: min(36rem, calc(100vw - 1rem));');
 });
 
 // min-width always beats max-width, so an uncapped floor puts the overflow back.
 it('caps the dialog floor as well as its ceiling', function (): void {
-    $start = strpos($this->css, '[data-flux-modal] > dialog:where([class~="[:where(&)]:min-w-xs"])');
-    expect($start)->not->toBeFalse('No rule sets the Flux dialog min-width.');
-
-    expect(substr($this->css, (int) $start, 200))->toContain('min-width: min(20rem, calc(100vw - 1rem));');
+    expect(declarationBlockFor($this->css, '[data-flux-modal] > dialog:where([class~="[:where(&)]:min-w-xs"])'))
+        ->toContain('min-width: min(20rem, calc(100vw - 1rem));');
 });
 
 // The cap alone still left three elements outside the dialog: a 46-character
 // URL has no break opportunity of its own.
 it('lets an unbreakable string inside a dialog wrap', function (): void {
-    $start = strpos($this->css, '[data-flux-modal] > dialog p');
-    expect($start)->not->toBeFalse('Nothing lets dialog prose wrap.');
-
-    expect(substr($this->css, (int) $start, 120))->toContain('overflow-wrap: anywhere;');
+    expect(declarationBlockFor($this->css, '[data-flux-modal] > dialog p'))
+        ->toContain('overflow-wrap: anywhere;');
 });
 
 it('reaches every modal in the tree, not just the one that overflowed', function (): void {
