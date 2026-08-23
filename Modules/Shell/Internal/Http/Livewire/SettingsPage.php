@@ -298,7 +298,7 @@ final class SettingsPage extends Component
             // The help text needs the per-user directory the user must create,
             // not the shared root inbox-drop folder.
             'userId' => $currentUser->user()->id,
-            'forecastingAccounts' => $this->mapAccounts($accounts, $baseCurrency->code()),
+            'accounts' => $this->mapAccounts($accounts, $baseCurrency->code()),
             'currencyOptions' => $this->mapCurrencyOptions($currencyRows),
             'countryOptions' => $countries->options(),
         ]);

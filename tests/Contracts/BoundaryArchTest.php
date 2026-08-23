@@ -2367,6 +2367,7 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Auth (auth.delete-account-section)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Auth (auth.recovery-codes-section)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Forecasting (forecasting.opening-balance-editor)',
+        'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Ledger (ledger.account-currency-editor)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Notifications (notifications.settings-section)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Tax (tax.settings-section)',
     ];

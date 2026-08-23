@@ -28,6 +28,7 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
+use Modules\Ledger\Public\Http\Livewire\AccountCurrencyEditor;
 use Modules\Ledger\Public\Services\CategorySpendTrendQuery;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -77,6 +78,7 @@ final class LedgerServiceProvider extends ServiceProvider
 
         $livewire->component('ledger.transactions-list', TransactionsList::class);
         $livewire->component('ledger.transaction-detail', TransactionDetail::class);
+        $livewire->component('ledger.account-currency-editor', AccountCurrencyEditor::class);
 
         // A migration cannot convert a sealed ledger, because the schema moves
         // at a moment no app-lock key is held. Every unlock is a moment one is,

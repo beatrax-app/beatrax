@@ -608,6 +608,57 @@ printed on a statement, and that number counts the whole life of the
 account, not only the part Beatrax has imported. A cleared balance that
 started at zero could only ever match by coincidence.
 
+## Changing an account's currency
+
+`accounts.default_currency` is the account's own denomination (`B1-R17`).
+Every creation site writes it from `BaseCurrency->code()` — app config,
+one value for the install — and `/settings` now carries a per-account
+picker beside the opening-balance editor so the reader can correct it:
+`Ledger\Public\Http\Livewire\AccountCurrencyEditor`, over
+`Ledger\Internal\Actions\SetAccountCurrency`. The offered set is the
+`currencies` reference table, the same one the base-currency picker
+reads — not `Ledger\Public\Enums\Currency`, which names only the codes
+the code itself writes as literals.
+
+**The change relabels; it never converts.** `settled_amount_minor` and
+`settled_currency` are what the account was actually debited, and no
+write touches them. What moves is which line the account reports:
+
+- The baseline is relabelled where it stands. `AccountStartingBalanceQuery`
+  denominates `opening_balance_minor` / `starting_balance_minor` in
+  `default_currency`, so the same integer opens a different line after
+  the change — 12345 read as EUR before is 12345 read as USD after.
+- Transaction rows keep the `settled_currency` they were booked in, so a
+  row the account no longer names stays present as its own line.
+- Every consumer in the table above that answers
+  `->in($account->default_currency)` — pots, `/reconcile`, the forecast
+  anchor — therefore reads a different line. An account whose rows are
+  all USD starts reporting its real position once it is relabelled to
+  USD; one relabelled to a currency it holds no rows in reports **zero**
+  for it, which is what `AccountBalance::in()` answers for a line that
+  does not exist. It is never a converted guess.
+
+Because that is a meaning change and not a correction, the Action raises
+`AccountCurrencyRelabelWarning` rather than writing, on the same
+warn-do-not-block shape as `Forecasting`'s
+`OpeningBalanceDivergenceWarning`: the banner states what will move,
+lists the lines the account currently holds, and offers "change anyway"
+or "keep the current code". It stays silent for an account with nothing
+to misread — no transactions and no non-zero baseline — which is the
+only case where the two labels describe the same position.
+
+**No migration was needed.** `default_currency` is `char(3) NOT NULL`
+with a database default of `EUR` since `create_accounts_table`, so every
+existing row already carries a value and the column's shape does not
+change. The picker writes the column that was always there.
+
+One thing the change does *not* do: reproject the forecast.
+`ForecastQuery` reads a stored `forecast_runs` row whose anchor came
+from `BalanceAnchorResolver`, so a relabelled account's projection is
+stale until the next run — exactly as it is after an import adds rows,
+which has no reprojection trigger either. The four other balance
+surfaces resolve `default_currency` live and are correct immediately.
+
 ## `AccountStartingBalanceQuery` — the baseline every balance starts from
 
 `accounts.starting_balance_minor` / `starting_balance_date` is the
