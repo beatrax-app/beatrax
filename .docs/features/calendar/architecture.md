@@ -96,18 +96,22 @@ so yesterday and today differ by exactly the rows posted today. While the
 anchor was a statement closing balance months old the line stepped on today
 instead — €3,020 on 22 August dropping to €2,085 on the 23rd.
 
-Both the starting balance and the row sums are bucketed by the ACCOUNT's
-`default_currency`, never by the currency a transaction happens to carry. The
-baseline comes from Ledger's `AccountStartingBalanceQuery`
+The starting balance and the row sums open **different** buckets, and the
+difference is deliberate. The baseline comes from Ledger's
+`AccountStartingBalanceQuery`
 ([the baseline every balance starts from](../ledger/architecture.md#accountstartingbalancequery--the-baseline-every-balance-starts-from))
-and is denominated that way already; the rows join it there by summing
-`settled_amount_minor`, the figure the ACCOUNT was debited, on exactly the
-footing `AccountBalanceQuery` uses
+and opens the line of the ACCOUNT's `default_currency`, because that is what
+the account is denominated in. Each row instead opens the line of its own
+`settled_currency` and adds `settled_amount_minor`, the figure the ACCOUNT was
+debited, on exactly the footing `AccountBalanceQuery` uses
 ([caveats shared by all four methods](../ledger/architecture.md#accountbalancequery--caveats-shared-by-all-four-methods)).
-Summing the native `amount_minor` instead re-derived each foreign row from
-today's rate rather than the bank's rate on the day, so a euro account holding
-USD rows drew yesterday €1.46 away from the same account's ledger balance and
-the line stepped at today on a curve that is continuous by construction.
+Grouping the rows on the account's currency instead dropped a Revolut
+account's dollar rows into its euro line, which is the sum an account balance
+must never take. Summing the native `amount_minor` re-derived each foreign row
+from today's rate rather than the bank's rate on the day, so a euro account
+holding USD rows drew yesterday €1.46 away from the same account's ledger
+balance and the line stepped at today on a curve that is continuous by
+construction.
 
 Both transaction reads join `accounts` and apply the reader's
 `AT_OR_AFTER_BASELINE_SQL` lower bound: a row posted before an account's
