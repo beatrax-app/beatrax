@@ -1,7 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
-@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     /drift/watch — Subscription Drift Watch overview. Approved subscriptions
     ranked by how much their price has crept up since the first observed charge,
@@ -75,9 +74,12 @@
                 </span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
                 <span class="whitespace-nowrap">
-                    <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totalMonthlyMinor, BaseCurrency::value()) }}</span>
+                    <span style="font-variant-numeric: tabular-nums;">{{ $fmt($monthlyTotal->minor, $monthlyTotal->currency) }}</span>
                     <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.per_month_total') }}</span>
                 </span>
+                @if ($monthlyTotal->isPartial())
+                    <span class="text-slate-400 dark:text-slate-500" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $monthlyTotal->unconvertedList()]) }}</span>
+                @endif
             </div>
         @endif
     </header>

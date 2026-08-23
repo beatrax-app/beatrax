@@ -15,7 +15,8 @@ final class SubscriptionDriftWatchPage extends Component
 {
     public function render(CurrentUser $currentUser, SubscriptionDriftWatchQuery $query, ViewFactory $views): View
     {
-        $rows = $query->forUser($currentUser->user());
+        $user = $currentUser->user();
+        $rows = $query->forUser($user);
 
         $driftedUp = array_filter($rows, static fn ($row): bool => $row->deltaMinor > 0);
 
@@ -23,7 +24,7 @@ final class SubscriptionDriftWatchPage extends Component
             'rows' => $rows,
             'trackedCount' => count($rows),
             'driftedUpCount' => count($driftedUp),
-            'totalMonthlyMinor' => array_sum(array_map(static fn ($row): int => $row->monthlyEquivalentMinor, $rows)),
+            'monthlyTotal' => $query->monthlyTotalFor($user, $rows),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

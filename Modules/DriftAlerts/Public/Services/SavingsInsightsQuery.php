@@ -14,6 +14,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\DriftAlerts\Public\Dto\SavingsInsight;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -33,6 +34,7 @@ final class SavingsInsightsQuery
         private readonly Clock $clock,
         private readonly CacheRepository $cache,
         private readonly BaseCurrency $baseCurrency,
+        private readonly CrossCurrencyTotal $fx,
     ) {}
 
     /**
@@ -91,9 +93,42 @@ final class SavingsInsightsQuery
             }
         }
 
-        usort($insights, static fn (SavingsInsight $a, SavingsInsight $b): int => $b->monthlyMinor <=> $a->monthlyMinor);
+        return $this->costliestFirst($insights, $user);
+    }
 
-        return $insights;
+    // "Ways to save", ordered by what each costs the reader — a race between
+    // currencies, so it is run in the reader's own. On raw minor units a
+    // USD150.00 subscription outranked a EUR100.00 one while being cheaper. An
+    // insight the rate table cannot reach sorts after every one it can.
+    /**
+     * @param  list<SavingsInsight>  $insights
+     * @return list<SavingsInsight>
+     */
+    private function costliestFirst(array $insights, User $user): array
+    {
+        $baseCurrency = $this->baseCurrency->forUser($user);
+        $rates = $this->fx->ratesTo(array_map(
+            static fn (SavingsInsight $insight): string => $insight->currency,
+            $insights,
+        ), $baseCurrency);
+
+        $inBase = [];
+        foreach ($insights as $index => $insight) {
+            $money = Money::tryOfMinor($insight->monthlyMinor, $insight->currency);
+            $inBase[$index] = $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates)?->toMinor();
+        }
+
+        $order = array_keys($insights);
+        usort($order, static function (int $a, int $b) use ($inBase, $insights): int {
+            $rankable = ($inBase[$b] !== null) <=> ($inBase[$a] !== null);
+            if ($rankable !== 0) {
+                return $rankable;
+            }
+
+            return ($inBase[$b] ?? $insights[$b]->monthlyMinor) <=> ($inBase[$a] ?? $insights[$a]->monthlyMinor);
+        });
+
+        return array_map(static fn (int $index): SavingsInsight => $insights[$index], $order);
     }
 
     public function dismiss(User $user, string $key): void
