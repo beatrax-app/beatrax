@@ -56,6 +56,10 @@ return [
         'missed' => 'Gaidīts — nav atrasts',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Iegrāmatots maksājums',
+    ],
+
     'panel' => [
         'aria' => 'Dienas detaļu panelis',
         'close' => 'Aizvērt dienas paneli',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ aptuvens datums',
         'series' => '↗ sērija',
         'counterparty' => '↗ darījuma partneris',
+        'transaction' => '↗ darījums',
         'end_of_day' => 'Dienas beigas',
     ],
 ];

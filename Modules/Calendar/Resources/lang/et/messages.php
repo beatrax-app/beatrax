@@ -56,6 +56,10 @@ return [
         'missed' => 'Oodatud — ei leitud',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Kirjendatud makse',
+    ],
+
     'panel' => [
         'aria' => 'Päeva üksikasjade paneel',
         'close' => 'Sulge päevapaneel',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ kuupäev on ligikaudne',
         'series' => '↗ seeria',
         'counterparty' => '↗ vastaspool',
+        'transaction' => '↗ tehing',
         'end_of_day' => 'Päeva lõpp',
     ],
 ];

@@ -9,11 +9,17 @@ use Modules\Calendar\Internal\Dto\CalendarDayDto;
 use Modules\Calendar\Internal\Dto\CalendarEntryDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Services\BookedFutureRowQuery;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 final readonly class CalendarQuery
 {
+    // How far ahead /calendar will render. The page clamps its month
+    // navigation to it and the empty state asks over the same reach, so a
+    // reader is never told there is nothing on a horizon they cannot open.
+    public const int HORIZON_MONTHS = 12;
+
     public function __construct(
         private Clock $clock,
         private RecurringSeriesQuery $seriesQuery,
@@ -21,6 +27,8 @@ final readonly class CalendarQuery
         private SeriesEntryPlacer $entryPlacer,
         private DailyBalanceAggregator $balanceAggregator,
         private OccurrenceMatcher $occurrenceMatcher,
+        private BookedEntryPlacer $bookedEntryPlacer,
+        private BookedFutureRowQuery $bookedRows,
     ) {}
 
     /**
@@ -53,13 +61,19 @@ final readonly class CalendarQuery
         $monthStart = CarbonImmutable::parse(sprintf('%04d-%02d-01', $year, $month));
         $monthEnd = $monthStart->endOfMonth();
 
-        $entryMap = $this->entryPlacer->buildEntryMap(
-            $allSeries,
-            $accountIdForSeries,
-            $effectiveVisible,
+        $entryMap = $this->bookedEntryPlacer->mergeInto(
+            $this->entryPlacer->buildEntryMap(
+                $allSeries,
+                $accountIdForSeries,
+                $effectiveVisible,
+                $monthStart,
+                $monthEnd,
+                $user,
+            ),
+            $user,
             $monthStart,
             $monthEnd,
-            $user,
+            $effectiveVisible,
         );
 
         ['map' => $balanceMap, 'todayAnchorMinor' => $todayAnchorMinor]
@@ -108,11 +122,19 @@ final readonly class CalendarQuery
         return $days;
     }
 
-    // Whether the reader has anything the calendar could ever draw, which is
-    // not the same question as whether the month on screen is quiet.
-    public function hasApprovedSeries(User $user): bool
+    // Whether the reader has anything the calendar could ever draw, which is not
+    // the same question as whether the month on screen is quiet. A booked row
+    // dated ahead counts: the grid draws it, so telling its owner to go approve
+    // a series was the calendar disowning what it was already showing.
+    public function hasProjectableEntries(User $user): bool
     {
-        return $this->seriesQuery->hasApprovedForUser($user);
+        if ($this->seriesQuery->hasApprovedForUser($user)) {
+            return true;
+        }
+
+        $today = $this->clock->now()->startOfDay();
+
+        return $this->bookedRows->hasAnyAfter($user, $today, $today->addMonths(self::HORIZON_MONTHS)->endOfMonth());
     }
 
     /**
@@ -162,8 +184,10 @@ final readonly class CalendarQuery
 
         $entries = [];
         foreach ($rawEntries as $entry) {
-            $observedDates = $occurrenceMap[$entry->seriesId] ?? [];
-            $windowDays = $this->occurrenceMatcher->matchWindowDays($cadenceBySeries[$entry->seriesId] ?? null);
+            $observedDates = $entry->seriesId === null ? [] : ($occurrenceMap[$entry->seriesId] ?? []);
+            $windowDays = $this->occurrenceMatcher->matchWindowDays(
+                $entry->seriesId === null ? null : ($cadenceBySeries[$entry->seriesId] ?? null),
+            );
             $isPaid = $this->occurrenceMatcher->hasMatchingOccurrence($date, $observedDates, $windowDays);
 
             $entries[] = new CalendarEntryDto(
@@ -179,6 +203,7 @@ final readonly class CalendarQuery
                 isPaid: $isPaid,
                 isMissed: ! $isPaid,
                 isApproximate: $entry->isApproximate,
+                transactionId: $entry->transactionId,
             );
         }
 

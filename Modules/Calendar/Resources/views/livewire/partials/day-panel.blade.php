@@ -84,12 +84,21 @@
                              built by hand: it encodes the slug, which arrived
                              here as stored data. --}}
                         <div class="mt-1 flex flex-wrap gap-2 text-xs" style="color: var(--color-text-muted);">
-                            <a
-                                href="{{ route('recurring.series.show', ['seriesId' => $entry->seriesId]) }}"
-                                class="tap-link font-medium underline-offset-2 hover:underline"
-                                style="color: var(--color-text-muted);"
-                                wire:navigate
-                            >{{ Lang::get('calendar::messages.panel.series') }}</a>
+                            @if ($entry->seriesId !== null)
+                                <a
+                                    href="{{ route('recurring.series.show', ['seriesId' => $entry->seriesId]) }}"
+                                    class="tap-link font-medium underline-offset-2 hover:underline"
+                                    style="color: var(--color-text-muted);"
+                                    wire:navigate
+                                >{{ Lang::get('calendar::messages.panel.series') }}</a>
+                            @elseif ($entry->transactionId !== null)
+                                <a
+                                    href="{{ route('transactions.show', ['transactionId' => $entry->transactionId]) }}"
+                                    class="tap-link font-medium underline-offset-2 hover:underline"
+                                    style="color: var(--color-text-muted);"
+                                    wire:navigate
+                                >{{ Lang::get('calendar::messages.panel.transaction') }}</a>
+                            @endif
                             @if ($entry->counterpartySlug !== null)
                                 <a
                                     href="{{ route('counterparties.profile', ['slug' => $entry->counterpartySlug]) }}"

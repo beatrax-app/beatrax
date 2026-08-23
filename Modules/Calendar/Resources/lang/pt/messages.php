@@ -56,6 +56,10 @@ return [
         'missed' => 'Esperado — não encontrado',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Pagamento registado',
+    ],
+
     'panel' => [
         'aria' => 'Painel de detalhe do dia',
         'close' => 'Fechar o painel do dia',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ data aproximada',
         'series' => '↗ série',
         'counterparty' => '↗ contraparte',
+        'transaction' => '↗ transação',
         'end_of_day' => 'Fim do dia',
     ],
 ];

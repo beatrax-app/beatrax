@@ -56,6 +56,10 @@ return [
         'missed' => 'Oczekiwane — nie znaleziono',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Zaksięgowana płatność',
+    ],
+
     'panel' => [
         'aria' => 'Panel szczegółów dnia',
         'close' => 'Zamknij panel dnia',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ data przybliżona',
         'series' => '↗ seria',
         'counterparty' => '↗ kontrahent',
+        'transaction' => '↗ transakcja',
         'end_of_day' => 'Koniec dnia',
     ],
 ];

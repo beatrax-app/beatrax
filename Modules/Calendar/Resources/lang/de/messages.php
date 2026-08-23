@@ -56,6 +56,10 @@ return [
         'missed' => 'Erwartet — nicht gefunden',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Gebuchte Zahlung',
+    ],
+
     'panel' => [
         'aria' => 'Detailbereich Tag',
         'close' => 'Tagesbereich schließen',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ Datum ungefähr',
         'series' => '↗ Reihe',
         'counterparty' => '↗ Zahlungspartner',
+        'transaction' => '↗ Transaktion',
         'end_of_day' => 'Tagesende',
     ],
 ];

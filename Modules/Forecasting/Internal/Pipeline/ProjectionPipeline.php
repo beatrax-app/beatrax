@@ -34,6 +34,7 @@ final readonly class ProjectionPipeline
         private ShortfallDetector $shortfall,
         private ScenarioApplier $scenarioApplier,
         private BaseCurrency $baseCurrency,
+        private BookedRowProjector $bookedRows,
     ) {}
 
     public function project(User $user, ?int $scenarioId, int $horizonDays): void
@@ -114,6 +115,13 @@ final readonly class ProjectionPipeline
             ->orderBy('id')
             ->get();
 
+        $currencyByAccountId = [];
+        foreach ($accounts as $account) {
+            /** @var stdClass $account */
+            $currency = self::toString($account->default_currency ?? null);
+            $currencyByAccountId[self::toInt($account->id)] = $currency !== '' ? $currency : $this->baseCurrency->code();
+        }
+
         // Every series first, then route: the router rewrites which account a
         // contribution lands on, so bucketing before it would misfile them.
         $allContributions = [];
@@ -133,6 +141,16 @@ final readonly class ProjectionPipeline
                 $allContributions[] = $contrib;
             }
         }
+
+        // Before the router, so a booked row supersedes the estimate of the
+        // same series wherever that estimate was about to be routed to.
+        $allContributions = $this->bookedRows->mergeInto(
+            seriesContributions: $allContributions,
+            user: $user,
+            asOf: $asOf,
+            horizonDays: $horizonDays,
+            currencyByAccountId: $currencyByAccountId,
+        );
 
         $routed = $this->router->route(
             contributions: $allContributions,
@@ -165,10 +183,7 @@ final readonly class ProjectionPipeline
             /** @var stdClass $account */
             $accountId = self::toInt($account->id);
             $anchor = $this->anchor->forAccount($accountId, $user);
-            $defaultCurrency = self::toString($account->default_currency ?? null);
-            if ($defaultCurrency === '') {
-                $defaultCurrency = $this->baseCurrency->code();
-            }
+            $defaultCurrency = $currencyByAccountId[$accountId];
 
             $contributions = $byAccount[$accountId] ?? [];
 

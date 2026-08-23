@@ -56,6 +56,10 @@ return [
         'missed' => 'Tikėtasi — nerasta',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Užregistruotas mokėjimas',
+    ],
+
     'panel' => [
         'aria' => 'Dienos informacijos skydelis',
         'close' => 'Uždaryti dienos skydelį',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ data apytikslė',
         'series' => '↗ serija',
         'counterparty' => '↗ kita šalis',
+        'transaction' => '↗ operacija',
         'end_of_day' => 'Dienos pabaiga',
     ],
 ];

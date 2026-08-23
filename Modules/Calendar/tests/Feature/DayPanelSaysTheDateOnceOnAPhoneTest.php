@@ -35,11 +35,15 @@ it('still prints the date for the desktop right rail', function (): void {
 });
 
 // Measured in the sheet: 50x16 and 92x16, and a tap 9px outside reached them
-// at 0 of 6 positions.
-it('gives the two drill-through links a reachable target', function (): void {
+// at 0 of 6 positions. Counted against the anchors actually in the partial
+// rather than against a number, so a link added later cannot ship without one.
+it('gives every drill-through link a reachable target', function (): void {
     $panel = (string) file_get_contents(
         base_path('Modules/Calendar/Resources/views/livewire/partials/day-panel.blade.php')
     );
 
-    expect(substr_count($panel, 'class="tap-link font-medium underline-offset-2 hover:underline"'))->toBe(2);
+    $anchors = substr_count($panel, '<a'.PHP_EOL);
+
+    expect($anchors)->toBeGreaterThan(0)
+        ->and(substr_count($panel, 'class="tap-link font-medium underline-offset-2 hover:underline"'))->toBe($anchors);
 });

@@ -56,6 +56,10 @@ return [
         'missed' => 'Beklendi — bulunamadı',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Kaydedilmiş ödeme',
+    ],
+
     'panel' => [
         'aria' => 'Gün ayrıntı paneli',
         'close' => 'Gün panelini kapat',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ tarih yaklaşık',
         'series' => '↗ seri',
         'counterparty' => '↗ karşı taraf',
+        'transaction' => '↗ işlem',
         'end_of_day' => 'Gün sonu',
     ],
 ];

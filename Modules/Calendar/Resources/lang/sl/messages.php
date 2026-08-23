@@ -56,6 +56,10 @@ return [
         'missed' => 'Pričakovano — ni najdeno',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Knjiženo plačilo',
+    ],
+
     'panel' => [
         'aria' => 'Plošča s podrobnostmi dneva',
         'close' => 'Zapri ploščo dneva',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ datum približen',
         'series' => '↗ serija',
         'counterparty' => '↗ nasprotna stranka',
+        'transaction' => '↗ transakcija',
         'end_of_day' => 'Konec dneva',
     ],
 ];

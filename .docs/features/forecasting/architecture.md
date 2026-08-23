@@ -176,6 +176,7 @@ ProjectForecastJob::handle()
   → ProjectionPipeline::run
        → BalanceAnchorResolver
        → RangeProjector (with CadenceJitter)
+       → BookedRowProjector
        → ChainAwareForecastRouter
        → ScenarioApplier (only when scenarioId != null)
        → DailyFold (P10/P50/P90)
@@ -209,6 +210,78 @@ dashboard
 sidebar badge
   → composer reads ForecastHighlightsQuery::activeShortfallCountForUser
 ```
+
+## Booked future-dated rows
+
+A projection used to be built from **recurring series alone**. A ledger row
+whose `posted_at` is still ahead — a rent the bank has already booked for the
+first of next month — is not a series, so nothing emitted it: `/transactions`
+listed it, every balance query correctly left it out of today's figure, and no
+forward-looking surface knew it existed. Three device rounds filed the same
+€1,450.00 as missing from the curve and from the calendar.
+
+`BookedRowProjector` reads those rows through `BookedFutureRowQuery` and turns
+each into a `ForecastContribution` with **`low = point = high`**. This widens
+what a contribution represents: it is no longer purely probabilistic. That is
+deliberate — the amount is not an estimate of a charge, it is the charge, and
+an envelope around it would invent uncertainty the row does not carry.
+
+Three things bound which rows reach the curve:
+
+- **Strictly after `asOf`.** A row dated today or behind is money the account
+  is already holding, and the anchor has counted it. Today's figure must not
+  move, and the five surfaces that agree on it are pinned by
+  `TodayAgreesAcrossSurfacesTest`.
+- **At or after the account's baseline** (`AT_OR_AFTER_BASELINE_SQL`), the same
+  bound every balance sum uses — a row before it is already inside the opening
+  figure.
+- **In the account's own projection currency.** A projection runs on one line,
+  and `BalanceAnchorResolver` opens it on the line the account is denominated
+  in, deliberately leaving the account's other currency lines out. A row
+  settled in one of those has no anchor here to move, so it is not folded in.
+  `transactions.fx_rate_used` is the native→settled rate and says nothing about
+  settled→account-default, so it cannot rescue the case.
+
+Booked contributions carry `seriesId = 0`, the sentinel
+`ChainAwareForecastRouter` already reads as "no series behind this". That is
+what stops a chain link re-routing them: the row sits on the account the ledger
+says it does, and moving it onto a funder would take a real card charge off the
+card.
+
+### Which wins where a booked row and a projected occurrence are the same payment
+
+A monthly rent is exactly the shape that can be both. Emitting both drew
+−€2,900.00 for one €1,450.00 rent.
+
+The **booked row wins**: one is what the account will be charged, the other is
+what a cadence suggests it might be. `BookedRowProjector` drops any series
+contribution falling within `MatchWindow::DAYS` of a booked row belonging to
+that series — a window, not an equality, because a bank that moves a direct
+debit off a weekend still charges the rent once.
+
+Membership is answered by `RecurringSeriesQuery::seriesIdsForTransactionIds()`,
+which resolves in two steps, and the second is the one that matters:
+
+1. **`recurring_series_occurrences.transaction_id`** — the authoritative link,
+   written by the detection sweep. It is *not sufficient on its own*. The same
+   sweep that writes the link also advances `next_expected_at` past the row it
+   just read (`CadenceInferrer` sets it to the last occurrence plus the refined
+   median), so for a row the sweep has already seen the projector stops short
+   of it anyway and there is nothing left to suppress.
+2. **The cluster identity the detector groups on** —
+   `transactions.counterparty_normalized` = `recurring_series.cluster_counterparty_key`,
+   same currency, same direction. Both columns are keyed blind indexes under
+   `DOMAIN_COUNTERPARTY_NORMALIZED`, so they are directly comparable. This is
+   the arm that carries the fix: the double count exists precisely in the
+   window between a future-dated row landing in the ledger and the next sweep
+   reading it, which is when no occurrence link exists yet and
+   `next_expected_at` still points at the very day the row is dated.
+
+`UNIQUE(user_id, direction, cluster_counterparty_key, latest_currency)` makes
+the joined triple plus a direction at most one series, so the second arm needs
+no tie-break. Both arms are scoped to `approved` / `cadence_changed` — the two
+states `allApprovedForUser()` walks — because a series in neither is not on the
+curve to be superseded.
 
 ## Balance anchor resolution
 

@@ -56,6 +56,10 @@ return [
         'missed' => 'Očekáváno — nenalezeno',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Zaúčtovaná platba',
+    ],
+
     'panel' => [
         'aria' => 'Panel s detailem dne',
         'close' => 'Zavřít panel dne',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ přibližné datum',
         'series' => '↗ série',
         'counterparty' => '↗ protistrana',
+        'transaction' => '↗ transakce',
         'end_of_day' => 'Konec dne',
     ],
 ];

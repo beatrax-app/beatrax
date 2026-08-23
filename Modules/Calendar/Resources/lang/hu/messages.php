@@ -56,6 +56,10 @@ return [
         'missed' => 'Várt — nem található',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Könyvelt fizetés',
+    ],
+
     'panel' => [
         'aria' => 'Napi részletek panel',
         'close' => 'Napi panel bezárása',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ hozzávetőleges dátum',
         'series' => '↗ sorozat',
         'counterparty' => '↗ partner',
+        'transaction' => '↗ tranzakció',
         'end_of_day' => 'Nap vége',
     ],
 ];

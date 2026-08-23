@@ -56,6 +56,10 @@ return [
         'missed' => 'Așteptat — negăsit',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Plată înregistrată',
+    ],
+
     'panel' => [
         'aria' => 'Panou cu detaliile zilei',
         'close' => 'Închide panoul zilei',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ dată aproximativă',
         'series' => '↗ serie',
         'counterparty' => '↗ contraparte',
+        'transaction' => '↗ tranzacție',
         'end_of_day' => 'Sfârșitul zilei',
     ],
 ];

@@ -56,6 +56,10 @@ return [
         'missed' => 'Forventet — ikke funnet',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Bokført betaling',
+    ],
+
     'panel' => [
         'aria' => 'Panel med dagsdetaljer',
         'close' => 'Lukk dagspanelet',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ omtrentlig dato',
         'series' => '↗ serie',
         'counterparty' => '↗ motpart',
+        'transaction' => '↗ transaksjon',
         'end_of_day' => 'Slutten av dagen',
     ],
 ];

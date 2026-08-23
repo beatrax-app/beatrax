@@ -56,6 +56,10 @@ return [
         'missed' => 'Odotettu — ei löytynyt',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Kirjattu maksu',
+    ],
+
     'panel' => [
         'aria' => 'Päivän tietopaneeli',
         'close' => 'Sulje päivänäkymä',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ päivä on arvio',
         'series' => '↗ sarja',
         'counterparty' => '↗ vastapuoli',
+        'transaction' => '↗ tapahtuma',
         'end_of_day' => 'Päivän loppu',
     ],
 ];

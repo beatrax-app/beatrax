@@ -56,6 +56,10 @@ return [
         'missed' => 'Verwacht — niet gevonden',
     ],
 
+    'entry' => [
+        'booked_unnamed' => 'Geboekte betaling',
+    ],
+
     'panel' => [
         'aria' => 'Detailpaneel dag',
         'close' => 'Dagpaneel sluiten',
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ datum bij benadering',
         'series' => '↗ reeks',
         'counterparty' => '↗ tegenpartij',
+        'transaction' => '↗ transactie',
         'end_of_day' => 'Einde van de dag',
     ],
 ];

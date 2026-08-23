@@ -1,9 +1,10 @@
 # `Calendar` — architecture
 
 The `Calendar` module renders `/calendar`, a month-grid cash-flow surface:
-each day shows the recurring-series entries expected on it plus a
-start-of-day/end-of-day projected balance line, so the user can see upcoming
-fixed payments and the funding position they land against. `CalendarQuery` is
+each day shows the payments expected on it — recurring-series occurrences and
+the rows the ledger already holds dated ahead — plus a start-of-day/end-of-day
+projected balance line, so the user can see upcoming fixed payments and the
+funding position they land against. `CalendarQuery` is
 the single backend brain — the Livewire page is a thin renderer over its
 output.
 
@@ -11,9 +12,11 @@ output.
 
 - **Public/Dto** — `CalendarDayDto` (one grid day: date, today/past flags,
   risk flag, SoD/EoD balances, computing sentinel, entries) and
-  `CalendarEntryDto` (one recurring-series occurrence: amount, direction,
-  account, counterparty, paid/missed/approximate flags). Read-only value
-  objects; the module never writes.
+  `CalendarEntryDto` (one expected payment: amount, direction, account,
+  counterparty, paid/missed/approximate flags). An entry carries either a
+  `seriesId` or a `transactionId` — a cadence predicted it, or the ledger has
+  already booked it — and the panel drills through to whichever it has.
+  Read-only value objects; the module never writes.
 - **Internal/Services/CalendarQuery** — the sole composition service.
   Registered as a stateless singleton (all state flows through `forMonth()`
   arguments).
@@ -37,7 +40,9 @@ anchor in months that have it.
 Irregular-cadence series with a null `nextExpectedAt` are excluded entirely
 (there is no well-defined placement date). A series' occurrences are also
 floored at its **inception** — the earliest observed `recurring_series_occurrences`
-row, or `created_at` as a fallback, minus a small slack (`MatchWindow::DAYS`)
+row, or `created_at` as a fallback, minus a small slack
+(`Modules\Recurring\Public\Support\MatchWindow::DAYS`, shared with the
+projection's supersession window)
 so a payment expected slightly before its first observed occurrence is not
 dropped along with genuine pre-inception phantoms. Without this floor, every
 history month before a series existed would render a phantom "expected — not
@@ -63,15 +68,39 @@ merchant, and reaches nothing at all for a user with at-rest encryption
 enabled: the key is a 64-hex blind index by then, and no slug can equal
 one.
 
+## Booked rows dated ahead
+
+`SeriesEntryPlacer` answers what a cadence expects. `BookedEntryPlacer` answers
+what the ledger has already booked: a row whose `posted_at` is still to come is
+a known, dated payment, and leaving it off the grid left a day panel reading
+"No payments on this day." above a balance line that stepped down €1,450.00.
+Both placers feed one entry map, and the same supersession rule the
+[projection](../forecasting/architecture.md#booked-future-dated-rows) applies
+runs here: where a series occurrence and a booked row are the same payment, the
+booked row is the one that happens and the estimate steps aside.
+
+Booked entries are placed **only ahead of today**. A past day already draws its
+balance from the transactions themselves and gives its entries a paid-or-missed
+verdict, so a booked row behind today is a payment that pass has covered — and
+the supersession is likewise skipped on those days, because the tolerance
+window reaches a week back and would otherwise silently remove an entry the
+reader is owed a verdict on.
+
 ## The empty state
 
-`/calendar` shows its "no upcoming payments" card when the reader has **no
-approved series at all** — not when the month on screen happens to be quiet.
-The two are different questions, and keying the card on the visible grid made
-the calendar tell a reader with a full ledger and an approved rent to "connect
-an account or approve a recurring series" on every month the projection did
-not reach, including every month in the past. `CalendarQuery::hasApprovedSeries()`
-answers it as an existence check over the same two states the projection walks.
+`/calendar` shows its "no upcoming payments" card when the reader has **nothing
+the calendar could ever draw** — not when the month on screen happens to be
+quiet. The two are different questions, and keying the card on the visible grid
+made the calendar tell a reader with a full ledger and an approved rent to
+"connect an account or approve a recurring series" on every month the
+projection did not reach, including every month in the past.
+`CalendarQuery::hasProjectableEntries()` answers it as an existence check over
+the two series states the projection walks **plus** any booked row dated ahead
+within `CalendarQuery::HORIZON_MONTHS` — the same reach the page clamps its
+month navigation to, so a reader is never told there is nothing on a horizon
+they cannot open. Asking about approved series alone told a reader whose ledger
+held a dated rent, and whose grid was about to draw it, that they had no
+upcoming payments.
 
 ## Balance aggregation
 
