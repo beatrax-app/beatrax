@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Para birimi gösterimi',
         'label' => 'İşlem listesindeki varsayılan görünüm',
-        'eur_only' => 'Yalnızca EUR',
+        'eur_only' => 'Yalnızca :code',
         'original' => 'Orijinal para birimi',
         'help' => 'İşlem listesinden sayfa bazında yine de değiştirebilirsin.',
     ],

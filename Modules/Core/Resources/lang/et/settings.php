@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Valuuta kuvamine',
         'label' => 'Vaikevaade tehingute loendis',
-        'eur_only' => 'Ainult EUR',
+        'eur_only' => 'Ainult :code',
         'original' => 'Algne valuuta',
         'help' => 'Tehingute loendis saad seda igal lehel endiselt vahetada.',
     ],

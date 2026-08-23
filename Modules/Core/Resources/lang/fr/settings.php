@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Affichage des devises',
         'label' => 'Vue par défaut dans la liste des transactions',
-        'eur_only' => 'EUR uniquement',
+        'eur_only' => ':code uniquement',
         'original' => 'Devise d\'origine',
         'help' => 'Tu peux toujours changer page par page depuis la liste des transactions.',
     ],

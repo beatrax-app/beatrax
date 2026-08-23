@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Скорошни транзакции (последните 90 дни).',
 
     'currency_aria' => 'Изглед по валута',
-    'currency_eur' => 'Само EUR',
+    'currency_eur' => 'Само :code',
     'currency_original' => 'Оригинална валута',
 
     'show_recent' => 'Покажи само скорошните',

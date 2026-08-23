@@ -146,7 +146,7 @@
                 wire:model="defaultCurrencyView"
                 class="max-w-xs"
             >
-                <option value="eur_only">{{ Lang::get('core::settings.currency_display.eur_only') }}</option>
+                <option value="eur_only">{{ Lang::get('core::settings.currency_display.eur_only', ['code' => $baseCurrency]) }}</option>
                 <option value="original">{{ Lang::get('core::settings.currency_display.original') }}</option>
             </x-core::form-field>
         </section>

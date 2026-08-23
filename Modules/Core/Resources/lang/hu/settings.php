@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Pénznem megjelenítése',
         'label' => 'Alapértelmezett nézet a tranzakciólistán',
-        'eur_only' => 'Csak EUR',
+        'eur_only' => 'Csak :code',
         'original' => 'Eredeti pénznem',
         'help' => 'A tranzakciólistán oldalanként továbbra is válthatsz.',
     ],

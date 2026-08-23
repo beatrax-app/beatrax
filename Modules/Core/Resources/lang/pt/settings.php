@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Apresentação da moeda',
         'label' => 'Vista predefinida na lista de transações',
-        'eur_only' => 'Apenas EUR',
+        'eur_only' => 'Apenas :code',
         'original' => 'Moeda original',
         'help' => 'Podes na mesma alternar página a página a partir da lista de transações.',
     ],

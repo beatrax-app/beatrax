@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Valūtas attēlojums',
         'label' => 'Noklusējuma skats darījumu sarakstā',
-        'eur_only' => 'Tikai EUR',
+        'eur_only' => 'Tikai :code',
         'original' => 'Sākotnējā valūta',
         'help' => 'Katrā lapā to joprojām varat pārslēgt darījumu sarakstā.',
     ],

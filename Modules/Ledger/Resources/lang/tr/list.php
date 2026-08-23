@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Son işlemler (son 90 gün).',
 
     'currency_aria' => 'Para birimi görünümü',
-    'currency_eur' => 'Yalnızca EUR',
+    'currency_eur' => 'Yalnızca :code',
     'currency_original' => 'Orijinal para birimi',
 
     'show_recent' => 'Yalnızca son işlemleri göster',

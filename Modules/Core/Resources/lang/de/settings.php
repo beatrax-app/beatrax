@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Währungsanzeige',
         'label' => 'Standardansicht in der Transaktionsliste',
-        'eur_only' => 'Nur EUR',
+        'eur_only' => 'Nur :code',
         'original' => 'Originalwährung',
         'help' => 'Du kannst weiterhin pro Seite aus der Transaktionsliste heraus umschalten.',
     ],

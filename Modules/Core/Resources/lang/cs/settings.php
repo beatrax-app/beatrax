@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Zobrazení měny',
         'label' => 'Výchozí zobrazení v seznamu transakcí',
-        'eur_only' => 'Jen EUR',
+        'eur_only' => 'Jen :code',
         'original' => 'Původní měna',
         'help' => 'Přímo v seznamu transakcí to můžeš kdykoli přepnout pro danou stránku.',
     ],

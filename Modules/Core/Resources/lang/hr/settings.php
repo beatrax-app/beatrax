@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Prikaz valute',
         'label' => 'Zadani prikaz na popisu transakcija',
-        'eur_only' => 'Samo EUR',
+        'eur_only' => 'Samo :code',
         'original' => 'Izvorna valuta',
         'help' => 'Prikaz i dalje možeš promijeniti za svaku stranicu s popisa transakcija.',
     ],

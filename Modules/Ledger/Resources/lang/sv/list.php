@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Senaste transaktionerna (senaste 90 dagarna).',
 
     'currency_aria' => 'Valutavy',
-    'currency_eur' => 'Endast EUR',
+    'currency_eur' => 'Endast :code',
     'currency_original' => 'Ursprunglig valuta',
 
     'show_recent' => 'Visa endast de senaste',

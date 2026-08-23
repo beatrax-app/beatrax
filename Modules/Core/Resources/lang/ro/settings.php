@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Afișarea monedei',
         'label' => 'Vizualizarea implicită din lista de tranzacții',
-        'eur_only' => 'Doar EUR',
+        'eur_only' => 'Doar :code',
         'original' => 'Moneda originală',
         'help' => 'Poți schimba în continuare pentru fiecare pagină din lista de tranzacții.',
     ],

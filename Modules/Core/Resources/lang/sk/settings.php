@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Zobrazenie meny',
         'label' => 'Predvolené zobrazenie v zozname transakcií',
-        'eur_only' => 'Len EUR',
+        'eur_only' => 'Len :code',
         'original' => 'Pôvodná mena',
         'help' => 'V zozname transakcií to môžeš kedykoľvek prepnúť pre jednotlivé stránky.',
     ],

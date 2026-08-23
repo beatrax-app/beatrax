@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Naujausios operacijos (paskutinės 90 dienų).',
 
     'currency_aria' => 'Valiutos rodinys',
-    'currency_eur' => 'Tik EUR',
+    'currency_eur' => 'Tik :code',
     'currency_original' => 'Originali valiuta',
 
     'show_recent' => 'Rodyti tik naujausias',

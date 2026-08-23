@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Currency display',
         'label' => 'Default view on the transactions list',
-        'eur_only' => 'EUR only',
+        'eur_only' => ':code only',
         'original' => 'Original currency',
         'help' => 'You can still switch per page from the transactions list.',
     ],

@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Legutóbbi tranzakciók (utolsó 90 nap).',
 
     'currency_aria' => 'Devizanézet',
-    'currency_eur' => 'Csak EUR',
+    'currency_eur' => 'Csak :code',
     'currency_original' => 'Eredeti deviza',
 
     'show_recent' => 'Csak a legutóbbiak',

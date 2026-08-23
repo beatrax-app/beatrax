@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Wyświetlanie waluty',
         'label' => 'Domyślny widok na liście transakcji',
-        'eur_only' => 'Tylko EUR',
+        'eur_only' => 'Tylko :code',
         'original' => 'Waluta oryginalna',
         'help' => 'Widok nadal można przełączać dla każdej strony z poziomu listy transakcji.',
     ],

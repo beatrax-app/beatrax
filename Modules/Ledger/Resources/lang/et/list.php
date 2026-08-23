@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Hiljutised tehingud (viimased 90 päeva).',
 
     'currency_aria' => 'Valuutavaade',
-    'currency_eur' => 'Ainult EUR',
+    'currency_eur' => 'Ainult :code',
     'currency_original' => 'Algne valuuta',
 
     'show_recent' => 'Näita ainult hiljutisi',

@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Valiutos rodymas',
         'label' => 'Numatytasis rodinys operacijų sąraše',
-        'eur_only' => 'Tik EUR',
+        'eur_only' => 'Tik :code',
         'original' => 'Pradinė valiuta',
         'help' => 'Kiekviename puslapyje vis tiek gali persijungti iš operacijų sąrašo.',
     ],

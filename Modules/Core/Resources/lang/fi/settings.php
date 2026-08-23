@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Valuutan näyttö',
         'label' => 'Oletusnäkymä tapahtumalistalla',
-        'eur_only' => 'Vain EUR',
+        'eur_only' => 'Vain :code',
         'original' => 'Alkuperäinen valuutta',
         'help' => 'Voit silti vaihtaa näkymää sivukohtaisesti tapahtumalistalla.',
     ],

@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Valutavisning',
         'label' => 'Standardvisning på transaktionslisten',
-        'eur_only' => 'Kun EUR',
+        'eur_only' => 'Kun :code',
         'original' => 'Oprindelig valuta',
         'help' => 'Du kan stadig skifte pr. side fra transaktionslisten.',
     ],

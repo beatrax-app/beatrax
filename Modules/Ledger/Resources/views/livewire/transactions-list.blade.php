@@ -71,7 +71,7 @@
         @if (! $isSearchMode)
             <div class="flex flex-wrap items-center gap-2">
                 <flux:radio.group wire:model.live="currency" variant="segmented" aria-label="{{ Lang::get('ledger::list.currency_aria') }}">
-                    <flux:radio value="eur" label="{{ Lang::get('ledger::list.currency_eur') }}" />
+                    <flux:radio value="eur" label="{{ Lang::get('ledger::list.currency_eur', ['code' => $baseCurrency]) }}" />
                     <flux:radio value="original" label="{{ Lang::get('ledger::list.currency_original') }}" />
                 </flux:radio.group>
                 <x-core::secondary-button

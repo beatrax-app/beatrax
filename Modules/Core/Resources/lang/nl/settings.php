@@ -81,7 +81,7 @@ return [
     'currency_display' => [
         'heading' => 'Valutaweergave',
         'label' => 'Standaardweergave in de transactielijst',
-        'eur_only' => 'Alleen EUR',
+        'eur_only' => 'Alleen :code',
         'original' => 'Oorspronkelijke valuta',
         'help' => 'Je kunt dit nog steeds per pagina wijzigen in de transactielijst.',
     ],

@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Πρόσφατες συναλλαγές (τελευταίες 90 ημέρες).',
 
     'currency_aria' => 'Προβολή νομίσματος',
-    'currency_eur' => 'Μόνο EUR',
+    'currency_eur' => 'Μόνο :code',
     'currency_original' => 'Αρχικό νόμισμα',
 
     'show_recent' => 'Εμφάνιση μόνο πρόσφατων',
