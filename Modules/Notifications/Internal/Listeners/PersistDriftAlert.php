@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Notifications\Internal\Support\CopyLine;
 use Modules\Notifications\Internal\Support\CopyParam;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
@@ -30,7 +31,7 @@ final class PersistDriftAlert
     public function handle(DriftAlertOpened $event): void
     {
         try {
-            $direction = $event->direction === 'up' ? 'up' : 'down';
+            $direction = self::movementWord($event->direction, $event->deltaMinor);
 
             $copy = NotificationCopySpec::of(
                 CopyLine::of('notifications::copy.title.drift'),
@@ -62,4 +63,18 @@ final class PersistDriftAlert
             ]);
         }
     }
+
+    // The event carries the SERIES direction — the drift_alerts.direction
+    // vocabulary, 'expense' or 'income' — not which way the amount moved.
+    // Expenses are stored negative, so a dearer bill is a MORE negative
+    // delta; income moves with the sign of its delta.
+    private static function movementWord(string $seriesDirection, int $deltaMinor): string
+    {
+        $movedUp = $seriesDirection === Direction::Expense->value
+            ? $deltaMinor < 0
+            : $deltaMinor > 0;
+
+        return $movedUp ? 'up' : 'down';
+    }
+
 }
