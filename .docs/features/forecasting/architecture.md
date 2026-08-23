@@ -92,8 +92,8 @@ What the module explicitly does NOT do:
 `Internal/` houses the projection pipeline:
 
 - **Internal/Pipeline/BalanceAnchorResolver** — picks the anchor
-  balance for the account (statement-derived; user-overridden
-  opening balance when present).
+  balance for the account (Ledger's balance as of today; the card
+  statement or the user-entered opening balance for an ICS card).
 - **Internal/Pipeline/RangeProjector** — produces
   `ForecastContribution` instances per recurring series across the
   horizon, with `CadenceJitter` modelling cadence drift.
@@ -212,30 +212,43 @@ sidebar badge
 
 ## Balance anchor resolution
 
-`BalanceAnchorResolver` routes by `accounts.kind` to the most authoritative
-starting point available:
+The projection opens where the account stands **today**, and today has exactly
+one figure in this application: Ledger's
+[`AccountBalanceQuery::currentBalanceAsOf`](../ledger/architecture.md#accountbalancequery--caveats-shared-by-all-three-methods),
+the same call behind the dashboard's net worth, the pots reconciliation header
+and `/reconcile`. `BalanceAnchorResolver` delegates to it rather than
+re-deriving a balance of its own, so the four surfaces cannot drift apart.
+That reader opens on the account's Ledger-owned baseline
+([the baseline every balance starts from](../ledger/architecture.md#accountstartingbalancequery--the-baseline-every-balance-starts-from)),
+which already prefers a reader-typed `opening_balance_minor` over an
+import-detected `starting_balance_minor`, and sums `settled_amount_minor`
+bounded below by the baseline's date and above by today on `posted_at` — the
+same column the calendar's past-day line sums, so the anchor and the line
+agree on which rows have landed and the line no longer steps on today.
 
-- `asn` → most recent `statement_summaries.closing_balance_minor`.
-- `ics_card` → most recent `card_statements` "open balance" (the absolute
-  amount still owed, negated to a signed running-balance position since the
-  user owes that amount to the card vendor).
-- `paypal` or any other kind → `accounts.opening_balance_minor` when the
-  user entered one; otherwise the fallback below.
+`accounts.kind` changes that for one kind only. An **ICS card** takes, in
+order, its most recent `card_statements` "open balance" (the absolute amount
+still owed, negated to a signed running-balance position since the user owes
+it to the card vendor), then `accounts.opening_balance_minor` when the reader
+entered one, then zero. A card must not take the ledger balance: summing its
+rows would double-count the historical billing events the projection is about
+to re-emit forward. The UI surfaces the zero case with an "Opening balance not
+set" banner, which refers to the manual `accounts.opening_balance_minor`
+override, not to the baseline.
 
-Fallback: an ICS card account with no statement and no user-input opening
-balance defaults to zero (summing transactions would double-count the
-historical billing events the projection is about to re-emit forward). Every
-other account with no anchor opens on its Ledger-owned starting balance
-([the baseline every balance starts from](../ledger/architecture.md#accountstartingbalancequery--the-baseline-every-balance-starts-from))
-and sums its transactions on top, bounded below by `starting_balance_date`
-where one is set and above by today on `posted_at` — the same column the
-calendar's past-day line sums, so the anchor and the line agree on which rows
-have landed. `asOfDate` is that day, not a 1970 sentinel. The UI surfaces
-this case with an "Opening balance not set" banner, which refers to the
-manual `accounts.opening_balance_minor` override, not to the baseline. The
-returned `BalanceAnchorDto.source` label
-(`asn_statement_summary` / `ics_card_statement` / `user_input_opening_balance`
-/ `sum_of_transactions` / `ics_card_zero_anchor`) is the audit ribbon's input.
+A statement summary is no longer an anchor for any kind. It was, and a closing
+balance that had not moved since 11 April opened the round-6 desktop's forecast
+at €2,011.11 against €2,941.09 actually on the account — four months of
+imported rows simply absent, because nothing read the `asOfDate` that said how
+old the figure was. The summaries are still Ingestion's record of what a
+statement said; they are not a position.
+
+The returned `BalanceAnchorDto.source` label (`sum_of_transactions` /
+`ics_card_statement` / `user_input_opening_balance` / `ics_card_zero_anchor`)
+is a diagnostic ribbon carried into `result_json` as `anchor_source`; no
+reader branches on it. `asOfDate` is today on the ledger path and the
+statement's or the reader's own date on the two card paths — written, and
+currently read by nothing.
 A missing or cross-user account raises `ModelNotFoundException`, converted to
 a 404 by the HTTP kernel.
 
@@ -529,6 +542,17 @@ popover-style `AccountBufferEditor`) mounted per account row in the
 4. The user clicks "Use my number" to commit with `allowDivergence=true`,
    or "Use Beatrax's number" to replace the input with the computed
    sum-of-transactions and manually re-save.
+
+An override is removable, and visibly so. The editor draws a "Remove
+opening balance" button whenever one is stored; `OpeningBalanceEditor::remove`
+blanks both boxes and runs the same save path, which reads an empty amount
+box as the absence of an override rather than as an invalid number. Absence
+and zero stay separate: a typed `0` parses to a value and outranks the
+detected baseline exactly as any other figure does, while removal restores
+`accounts.starting_balance_minor` as the answer `AccountStartingBalanceQuery`
+gives. This matters because the override governs net worth, pots, reconcile,
+the calendar and the forecast alike — a mistyped figure that could not be
+taken back was permanent.
 
 `SetAccountForecastBuffer` and `SetAccountOpeningBalance` both: raise a
 cross-user 404 via an `(id, user_id)` guard; validate server-side (buffer

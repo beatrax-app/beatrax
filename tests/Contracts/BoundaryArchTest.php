@@ -2066,6 +2066,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/EmailScan/tests/Feature/InvalidGrantToastTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\Dashboard',
         'Modules/FX/tests/Feature/BaseCurrencySettingTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/FX/tests/Feature/FxOnlineToggleTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Forecasting/tests/Feature/TodayAgreesAcrossSurfacesTest.php -> Modules\\Calendar\\Internal\\Services\\DailyBalanceAggregator',
         'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
         'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'Modules/Import/tests/Feature/LockedImportSaysSoWithoutNamingAClassTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',

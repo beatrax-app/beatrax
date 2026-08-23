@@ -564,9 +564,11 @@ share two caveats:
   charge carries its dollar figure in `amount_minor` and the euro one
   here — so an account holding several transaction currencies still
   totals in its own. The baseline is added in the account's
-  `default_currency` on the same footing. `BalanceAnchorResolver`'s
-  fallback sums the same column, so the pot reconciliation header, the
-  net-worth figure and the forecast anchor stay consistent.
+  `default_currency` on the same footing. Forecasting's
+  `BalanceAnchorResolver` calls `currentBalanceAsOf()` itself for every
+  non-card account, so the pot reconciliation header, the net-worth
+  figure and the forecast's opening balance are one number, not three
+  that happen to agree.
 
 `clearedBalance()` additionally restricts to `cleared`/`reconciled`
 rows (excluding `uncleared` manual cash-book entries not yet confirmed
@@ -632,10 +634,10 @@ vanishing from the line.
 Consumers, all of which were separately re-implementing "the money on
 this account" and all of which start from the baseline now:
 `AccountBalanceQuery` (and through it `Reports`' `NetWorthSeriesQuery`,
-`Pots`' `PotBalanceQuery`, and `/reconcile`), `Calendar`'s
-`DailyBalanceAggregator`, and `Forecasting`'s
-`BalanceAnchorResolver::fromTransactionsSum()`. The ICS-card zero anchor
-is deliberately excluded: a card with no anchor takes zero because
+`Pots`' `PotBalanceQuery`, `/reconcile`, and — via
+`currentBalanceAsOf()` — `Forecasting`'s `BalanceAnchorResolver`), and
+`Calendar`'s `DailyBalanceAggregator`. The ICS-card anchors are
+deliberately excluded: a card takes its statement or zero, because
 summing would double-count the billing events the projection re-emits.
 
 ## `FieldProvenanceWriter` — race-safe manual-vs-rule provenance

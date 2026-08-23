@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
+use DateTimeInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
@@ -13,10 +14,13 @@ use Modules\Forecasting\Public\Dto\BalanceAnchorDto;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Currency;
-use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
+use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
+/**
+ * @link ../../../../.docs/features/forecasting/architecture.md#balance-anchor-resolution
+ */
 final readonly class BalanceAnchorResolver
 {
     use CoercesScalars;
@@ -25,7 +29,7 @@ final readonly class BalanceAnchorResolver
         private DatabaseManager $db,
         private Clock $clock,
         private BaseCurrency $baseCurrency,
-        private AccountStartingBalanceQuery $startingBalances,
+        private AccountBalanceQuery $balances,
     ) {}
 
     public function forAccount(int $accountId, User $user): BalanceAnchorDto
@@ -36,30 +40,35 @@ final readonly class BalanceAnchorResolver
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        $kind = self::toString($account->getAttribute('kind'));
         $defaultCurrency = self::toString($account->getAttribute('default_currency'));
 
-        $anchor = $this->fromStatementAnchor($kind, $accountId, $user->id);
-        if ($anchor !== null) {
-            return $anchor;
+        // A card takes its statement, then the reader-typed balance, then zero,
+        // rather than the ledger balance: summing would double-count the
+        // billing events the projection is about to re-emit.
+        if (self::toString($account->getAttribute('kind')) === AccountKind::IcsCard->value) {
+            return $this->fromCardStatements($accountId, $user->id)
+                ?? $this->fromUserInputOpeningBalance($account)
+                ?? $this->icsCardZeroAnchor($accountId, $defaultCurrency);
         }
 
-        // A card takes its reader-typed balance, or zero, rather than a
-        // transaction sum: summing would double-count the billing events the
-        // projection is about to re-emit. Every other kind sums, and that sum
-        // already opens on the reader's figure as a dated baseline.
-        return $kind === AccountKind::IcsCard->value
-            ? $this->fromUserInputOpeningBalance($account) ?? $this->icsCardZeroAnchor($accountId, $defaultCurrency)
-            : $this->fromTransactionsSum($accountId, $user, $defaultCurrency);
+        return $this->fromLedgerBalance($accountId, $user, $defaultCurrency);
     }
 
-    // null means no statement exists at all — an API-connected account, or one
-    // with nothing imported yet — and the caller falls through.
-    private function fromStatementAnchor(string $kind, int $accountId, int $userId): ?BalanceAnchorDto
+    // Where the account stands today, the one figure the dashboard, pots and
+    // /reconcile also read. Anchored on a statement that closed on 11 April
+    // instead, the forecast opened EUR929.98 under the money on the account
+    // and the calendar's line stepped down on today to meet it.
+    private function fromLedgerBalance(int $accountId, User $user, string $defaultCurrency): BalanceAnchorDto
     {
-        return $kind === AccountKind::IcsCard->value
-            ? $this->fromCardStatements($accountId, $userId)
-            : $this->fromStatementSummaries($accountId, $userId);
+        $asOf = $this->clock->now()->startOfDay();
+
+        return new BalanceAnchorDto(
+            accountId: $accountId,
+            openingBalanceMinor: $this->balances->currentBalanceAsOf($accountId, $user, $asOf),
+            currency: $defaultCurrency !== '' ? $defaultCurrency : $this->baseCurrency->code(),
+            asOfDate: $asOf,
+            source: 'sum_of_transactions',
+        );
     }
 
     private function icsCardZeroAnchor(int $accountId, string $defaultCurrency): BalanceAnchorDto
@@ -73,39 +82,8 @@ final readonly class BalanceAnchorResolver
         );
     }
 
-    private function fromStatementSummaries(int $accountId, int $userId): ?BalanceAnchorDto
-    {
-        $row = $this->db->connection()->table('statement_summaries')
-            ->where('user_id', $userId)
-            ->where('account_id', $accountId)
-            ->whereNotNull('closing_balance_minor')
-            ->orderByDesc('period_end')
-            ->orderByDesc('id')
-            ->first();
-
-        if ($row === null) {
-            return null;
-        }
-
-        /** @var stdClass $row */
-        $currency = self::toString($row->closing_balance_currency ?? null);
-        if ($currency === '') {
-            $currency = $this->baseCurrency->code();
-        }
-        $rawAsOf = self::toString($row->closing_balance_date ?? $row->period_end ?? null);
-        $asOf = $rawAsOf !== ''
-            ? CarbonImmutable::parse($rawAsOf)
-            : $this->clock->now();
-
-        return new BalanceAnchorDto(
-            accountId: $accountId,
-            openingBalanceMinor: self::toInt($row->closing_balance_minor),
-            currency: $currency,
-            asOfDate: $asOf,
-            source: 'asn_statement_summary',
-        );
-    }
-
+    // null means the card has no statement imported yet, and the caller falls
+    // through to the reader's own figure.
     private function fromCardStatements(int $accountId, int $userId): ?BalanceAnchorDto
     {
         $row = $this->db->connection()->table('card_statements')
@@ -165,46 +143,12 @@ final readonly class BalanceAnchorResolver
         );
     }
 
-    // Bounded at today on posted_at, which is the column the calendar's own
-    // past-day line sums: unbounded, a future-dated row was counted as money
-    // already held, and the line stepped by the whole of next week on today.
-    private function fromTransactionsSum(int $accountId, User $user, string $defaultCurrency): BalanceAnchorDto
-    {
-        $asOf = $this->clock->now()->startOfDay();
-        $baseline = $this->startingBalances->forAccount($accountId, $user);
-
-        $rows = $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('account_id', $accountId)
-            ->where('posted_at', '<=', $asOf->toDateString());
-
-        // The baseline already holds everything up to its own date, so
-        // counting a row posted before it would count that history twice.
-        if ($baseline['date'] !== null) {
-            $rows->where('posted_at', '>=', $baseline['date']->toDateString());
-        }
-
-        $sum = $baseline['minorUnits'] + (int) $rows->sum('settled_amount_minor');
-
-        if ($defaultCurrency === '') {
-            $defaultCurrency = $this->baseCurrency->code();
-        }
-
-        return new BalanceAnchorDto(
-            accountId: $accountId,
-            openingBalanceMinor: $sum,
-            currency: $defaultCurrency,
-            asOfDate: $asOf,
-            source: 'sum_of_transactions',
-        );
-    }
-
     private static function carbonOrStringToString(mixed $value): string
     {
         if ($value instanceof CarbonImmutable) {
             return $value->toDateString();
         }
-        if ($value instanceof \DateTimeInterface) {
+        if ($value instanceof DateTimeInterface) {
             return $value->format('Y-m-d');
         }
 

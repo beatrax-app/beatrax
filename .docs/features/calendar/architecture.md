@@ -67,9 +67,14 @@ both legs of a self-transfer.
 before today is each account's starting balance plus the real cumulative sum
 of `transactions.amount_minor` across the balance accounts (bucketed per
 currency, FX-converted the same way), carried forward day-by-day from a base
-sum computed once for everything before the visible grid. This mirrors the
-forecast's own anchor semantics and means past-day balances stay known even
-while a projection is still computing.
+sum computed once for everything before the visible grid. Past-day balances
+therefore stay known even while a projection is still computing. Today is the
+join: it comes from the projection, whose opening figure is Ledger's balance
+as of today over the same rows
+([balance anchor resolution](../forecasting/architecture.md#balance-anchor-resolution)),
+so yesterday and today differ by exactly the rows posted today. While the
+anchor was a statement closing balance months old the line stepped on today
+instead — €3,020 on 22 August dropping to €2,085 on the 23rd.
 
 The starting balance comes from Ledger's `AccountStartingBalanceQuery`
 ([the baseline every balance starts from](../ledger/architecture.md#accountstartingbalancequery--the-baseline-every-balance-starts-from)),
