@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Request;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\Theme;
 use Modules\Core\Public\Support\AppChromeResolver;
 
 // A `system` theme is decided by prefers-color-scheme, which the server cannot
@@ -47,4 +49,29 @@ it('ignores a junk value rather than trusting it', function (): void {
     $chrome = chromeWithCookie('sepia')->resolve();
 
     expect($chrome->needsPrePaintScript)->toBeTrue();
+});
+
+// The three cases above hand the resolver a Request built in memory, so the
+// cookie never passes the middleware the browser's does. `document.cookie`
+// writes plaintext, and the `web` group decrypts every cookie it is not told
+// to leave alone — so the reported scheme arrived as null on every real
+// request and the shell rendered light on a dark device.
+it('reads the scheme the browser actually sends, through the middleware stack', function (): void {
+    $user = User::query()->create([
+        'username' => 'scheme-'.bin2hex(random_bytes(4)),
+        'password' => 'fixture',
+        'theme' => Theme::System->value,
+    ]);
+
+    $html = (string) test()->actingAs($user)
+        ->withUnencryptedCookie(AppChromeResolver::SCHEME_COOKIE, 'dark')
+        ->followingRedirects()
+        ->get('/')
+        ->getContent();
+
+    preg_match('/<html\b[^>]*\bclass="([^"]*)"/i', $html, $matches);
+
+    expect($matches)->toHaveCount(2)
+        ->and($matches[1])->toContain('dark')
+        ->and($matches[1])->not->toContain('light');
 });
