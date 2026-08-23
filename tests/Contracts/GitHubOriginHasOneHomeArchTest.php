@@ -136,7 +136,7 @@ it('finds the file it scans from either Composer root', function (): void {
         ->toContain('config/community.php');
 });
 
-it('never points a beatrax link at an org that does not host it', function (): void {
+it('never points a Beatrax link at an org that does not host it', function (): void {
     $repoRoot = dirname((string) realpath(base_path('Modules')));
 
     $offenders = [];
