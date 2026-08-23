@@ -270,11 +270,28 @@ td.date,
  * the layered :where() default; flyout drawers use `w-*` (not these two
  * classes) and are untouched.
  */
+/*
+ * 36rem is 576px and a phone is 375. Nothing capped a dialog at the screen it
+ * is drawn on, so its content set its width: the Gmail OAuth wizard measured
+ * 407px on an iPhone 12 mini with 46 elements past the right edge, the scope
+ * URL and "Publish App" cut off mid-word. min-width is capped too, because
+ * min always beats max and would put the cap back where it was.
+ */
 [data-flux-modal] > dialog:where([class~="[:where(&)]:max-w-xl"]) {
-    max-width: 36rem;
+    max-width: min(36rem, calc(100vw - 1rem));
 }
 [data-flux-modal] > dialog:where([class~="[:where(&)]:min-w-xs"]) {
-    min-width: 20rem;
+    min-width: min(20rem, calc(100vw - 1rem));
+}
+
+/*
+ * The cap alone left three elements outside it: one 46-character scope URL
+ * has no break opportunity, so it overflows whatever box holds it. anywhere
+ * rather than break-word, because only anywhere lowers the min-content width
+ * the dialog is sized from.
+ */
+[data-flux-modal] > dialog p {
+    overflow-wrap: anywhere;
 }
 
 /*
