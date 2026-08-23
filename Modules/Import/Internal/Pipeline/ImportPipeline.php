@@ -292,7 +292,12 @@ final class ImportPipeline
             error: null,
             diff: $diff,
             paymentType: $normalized->paymentType,
-            aliasFriendlyName: $rowDescription === null
+            // Resolved from the description, and the three blades that render
+            // the counterparty column read it before anything else — so on a
+            // row whose file also names the counterparty it hid that name and
+            // previewed something the commit does not write. It stands in for
+            // a missing counterparty; it does not overrule one.
+            aliasFriendlyName: $rowDescription === null || self::hasText($source->counterpartyName)
                 ? null
                 : $this->merchantNameResolver->resolve($rowDescription, $user->id),
         );
@@ -359,5 +364,10 @@ final class ImportPipeline
         $trimmed = trim($value);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    private static function hasText(?string $value): bool
+    {
+        return self::trimToNull($value) !== null;
     }
 }
