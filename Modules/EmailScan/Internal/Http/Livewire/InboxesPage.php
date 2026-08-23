@@ -17,10 +17,10 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
-use Modules\EmailScan\Internal\Listeners\RaiseReconsentAlertOnTokenFailure;
 use Modules\EmailScan\Public\Actions\DisconnectInbox;
 use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
 use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
@@ -150,7 +150,7 @@ final class InboxesPage extends Component
     {
         $base = $db->connection()->table('system_alerts')
             ->where('user_id', $userId)
-            ->where('kind', RaiseReconsentAlertOnTokenFailure::ALERT_KIND)
+            ->where('kind', OAuthAlertKind::ReconsentRequired->value)
             ->whereNull('acknowledged_at');
 
         try {
