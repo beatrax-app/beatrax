@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'položka|položky|položiek',
         'aria' => ':date: :entries — :count',
-        'aria_balance_negative' => ', predpokladaný zostatok mínus :amount €',
-        'aria_balance_positive' => ', predpokladaný zostatok :amount €',
+        'aria_balance_negative' => ', predpokladaný zostatok mínus :amount',
+        'aria_balance_positive' => ', predpokladaný zostatok :amount',
         'overflow' => '+:count ďalších',
         'paid' => 'Zaplatené',
         'missed' => 'Očakávané — nenájdené',

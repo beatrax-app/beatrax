@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'intrare|intrări|de intrări',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', sold estimat minus :amount €',
-        'aria_balance_positive' => ', sold estimat :amount €',
+        'aria_balance_negative' => ', sold estimat minus :amount',
+        'aria_balance_positive' => ', sold estimat :amount',
         'overflow' => '+:count în plus',
         'paid' => 'Plătit',
         'missed' => 'Așteptat — negăsit',

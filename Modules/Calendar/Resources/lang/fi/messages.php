@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'merkintä|merkintää',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', ennustettu saldo miinus :amount €',
-        'aria_balance_positive' => ', ennustettu saldo :amount €',
+        'aria_balance_negative' => ', ennustettu saldo miinus :amount',
+        'aria_balance_positive' => ', ennustettu saldo :amount',
         'overflow' => '+:count muuta',
         'paid' => 'Maksettu',
         'missed' => 'Odotettu — ei löytynyt',

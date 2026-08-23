@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'stavka|stavke|stavki',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', predviđeno stanje minus €:amount',
-        'aria_balance_positive' => ', predviđeno stanje €:amount',
+        'aria_balance_negative' => ', predviđeno stanje minus :amount',
+        'aria_balance_positive' => ', predviđeno stanje :amount',
         'overflow' => '+:count više',
         'paid' => 'Plaćeno',
         'missed' => 'Očekivano — nije pronađeno',

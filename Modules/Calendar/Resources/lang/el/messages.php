@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'εγγραφή|εγγραφές',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', προβλεπόμενο υπόλοιπο μείον :amount €',
-        'aria_balance_positive' => ', προβλεπόμενο υπόλοιπο :amount €',
+        'aria_balance_negative' => ', προβλεπόμενο υπόλοιπο μείον :amount',
+        'aria_balance_positive' => ', προβλεπόμενο υπόλοιπο :amount',
         'overflow' => '+:count ακόμη',
         'paid' => 'Πληρώθηκε',
         'missed' => 'Αναμενόταν — δεν βρέθηκε',

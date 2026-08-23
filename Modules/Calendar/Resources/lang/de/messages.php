@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'Zahlung|Zahlungen',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', voraussichtlicher Saldo minus €:amount',
-        'aria_balance_positive' => ', voraussichtlicher Saldo €:amount',
+        'aria_balance_negative' => ', voraussichtlicher Saldo minus :amount',
+        'aria_balance_positive' => ', voraussichtlicher Saldo :amount',
         'overflow' => '+:count weitere',
         'paid' => 'Bezahlt',
         'missed' => 'Erwartet — nicht gefunden',

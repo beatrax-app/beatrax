@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'betaling|betalingen',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', verwacht saldo min €:amount',
-        'aria_balance_positive' => ', verwacht saldo €:amount',
+        'aria_balance_negative' => ', verwacht saldo min :amount',
+        'aria_balance_positive' => ', verwacht saldo :amount',
         'overflow' => '+:count meer',
         'paid' => 'Betaald',
         'missed' => 'Verwacht — niet gevonden',

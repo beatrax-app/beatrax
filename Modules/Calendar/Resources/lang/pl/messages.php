@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'pozycja|pozycje|pozycji',
         'aria' => ':date: :entries — :count',
-        'aria_balance_negative' => ', prognozowane saldo minus €:amount',
-        'aria_balance_positive' => ', prognozowane saldo €:amount',
+        'aria_balance_negative' => ', prognozowane saldo minus :amount',
+        'aria_balance_positive' => ', prognozowane saldo :amount',
         'overflow' => '+:count więcej',
         'paid' => 'Opłacone',
         'missed' => 'Oczekiwane — nie znaleziono',

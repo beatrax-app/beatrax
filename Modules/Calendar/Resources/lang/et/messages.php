@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'kirje|kirjet',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', prognoositav jääk miinus :amount €',
-        'aria_balance_positive' => ', prognoositav jääk :amount €',
+        'aria_balance_negative' => ', prognoositav jääk miinus :amount',
+        'aria_balance_positive' => ', prognoositav jääk :amount',
         'overflow' => '+:count veel',
         'paid' => 'Makstud',
         'missed' => 'Oodatud — ei leitud',

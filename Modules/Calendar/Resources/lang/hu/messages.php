@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'tétel|tétel',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', előrejelzett egyenleg mínusz :amount €',
-        'aria_balance_positive' => ', előrejelzett egyenleg :amount €',
+        'aria_balance_negative' => ', előrejelzett egyenleg mínusz :amount',
+        'aria_balance_positive' => ', előrejelzett egyenleg :amount',
         'overflow' => '+:count további',
         'paid' => 'Kifizetve',
         'missed' => 'Várt — nem található',

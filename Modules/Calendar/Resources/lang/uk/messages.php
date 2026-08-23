@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'запис|записи|записів',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', прогнозований баланс мінус €:amount',
-        'aria_balance_positive' => ', прогнозований баланс €:amount',
+        'aria_balance_negative' => ', прогнозований баланс мінус :amount',
+        'aria_balance_positive' => ', прогнозований баланс :amount',
         'overflow' => 'ще +:count',
         'paid' => 'Оплачено',
         'missed' => 'Очікувано — не знайдено',

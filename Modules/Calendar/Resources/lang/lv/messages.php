@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'ierakstu|ieraksts|ieraksti',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', prognozētais atlikums mīnus :amount €',
-        'aria_balance_positive' => ', prognozētais atlikums :amount €',
+        'aria_balance_negative' => ', prognozētais atlikums mīnus :amount',
+        'aria_balance_positive' => ', prognozētais atlikums :amount',
         'overflow' => 'vēl +:count',
         'paid' => 'Samaksāts',
         'missed' => 'Gaidīts — nav atrasts',

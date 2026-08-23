@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'entrada|entradas',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', saldo projetado menos €:amount',
-        'aria_balance_positive' => ', saldo projetado €:amount',
+        'aria_balance_negative' => ', saldo projetado menos :amount',
+        'aria_balance_positive' => ', saldo projetado :amount',
         'overflow' => '+:count mais',
         'paid' => 'Pago',
         'missed' => 'Esperado — não encontrado',

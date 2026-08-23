@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'kayıt',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', öngörülen bakiye eksi €:amount',
-        'aria_balance_positive' => ', öngörülen bakiye €:amount',
+        'aria_balance_negative' => ', öngörülen bakiye eksi :amount',
+        'aria_balance_positive' => ', öngörülen bakiye :amount',
         'overflow' => '+:count daha',
         'paid' => 'Ödendi',
         'missed' => 'Beklendi — bulunamadı',

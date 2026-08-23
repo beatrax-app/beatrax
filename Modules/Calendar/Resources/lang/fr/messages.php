@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'paiement|paiements',
         'aria' => ':date : :count :entries',
-        'aria_balance_negative' => ', solde prévu moins :amount €',
-        'aria_balance_positive' => ', solde prévu :amount €',
+        'aria_balance_negative' => ', solde prévu moins :amount',
+        'aria_balance_positive' => ', solde prévu :amount',
         'overflow' => '+:count de plus',
         'paid' => 'Payé',
         'missed' => 'Attendu — introuvable',

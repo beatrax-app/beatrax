@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'post|poster',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', forventet saldo minus €:amount',
-        'aria_balance_positive' => ', forventet saldo €:amount',
+        'aria_balance_negative' => ', forventet saldo minus :amount',
+        'aria_balance_positive' => ', forventet saldo :amount',
         'overflow' => '+:count til',
         'paid' => 'Betalt',
         'missed' => 'Forventet — ikke funnet',

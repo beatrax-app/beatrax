@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'įrašas|įrašai|įrašų',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', prognozuojamas likutis minus :amount €',
-        'aria_balance_positive' => ', prognozuojamas likutis :amount €',
+        'aria_balance_negative' => ', prognozuojamas likutis minus :amount',
+        'aria_balance_positive' => ', prognozuojamas likutis :amount',
         'overflow' => 'dar :count',
         'paid' => 'Apmokėta',
         'missed' => 'Tikėtasi — nerasta',

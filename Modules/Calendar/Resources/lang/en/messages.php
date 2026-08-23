@@ -49,8 +49,8 @@ return [
     'cell' => [
         'entry' => 'entry|entries',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', projected balance minus €:amount',
-        'aria_balance_positive' => ', projected balance €:amount',
+        'aria_balance_negative' => ', projected balance minus :amount',
+        'aria_balance_positive' => ', projected balance :amount',
         'overflow' => '+:count more',
         'paid' => 'Paid',
         'missed' => 'Expected — not found',
