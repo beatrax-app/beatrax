@@ -33,11 +33,20 @@ final class RecoveryCodesDisplay extends Component
 
     public bool $confirmed = false;
 
-    public function mount(Session $session): void
+    public function mount(Session $session, CurrentUser $currentUser, UrlGenerator $urls): mixed
     {
         // Arriving outside the ceremony has no codes to show, and an empty page
-        // would be worse than a 404.
+        // would be worse than a 404 — but a reader who has already finished it
+        // is not lost, they are behind. Signup leaves this page in history one
+        // entry behind the wizard, whose nine steps share a URL, so the system
+        // back button on the first step of setup landed here and met the 404.
+        if ($session->get(self::SESSION_KEY) === null && $currentUser->isAuthenticated()) {
+            return $this->redirect($this->onwardFrom($session, $urls), navigate: false);
+        }
+
         $this->codesFromSession($session);
+
+        return null;
     }
 
     public function continueAfterSave(Session $session, UrlGenerator $urls): void
@@ -46,16 +55,9 @@ final class RecoveryCodesDisplay extends Component
             return;
         }
 
-        $returnTo = $session->pull(self::SESSION_RETURN_KEY);
         $session->forget(self::SESSION_KEY);
 
-        // The default is the setup wizard, not the dashboard: this screen sits
-        // between signup and setup, and onboarding has not run yet.
-        $target = $returnTo === self::RETURN_TO_SETTINGS
-            ? Destination::Settings->urlFrom($urls)
-            : $urls->route('setup');
-
-        $this->redirect($target, navigate: false);
+        $this->redirect($this->onwardFrom($session, $urls), navigate: false);
     }
 
     public function render(
@@ -90,6 +92,15 @@ final class RecoveryCodesDisplay extends Component
         $view->extends('layouts.app', ['title' => Lang::get('auth::recovery_codes.page_title')]);
 
         return $view;
+    }
+
+    // The default is the setup wizard, not the dashboard: this screen sits
+    // between signup and setup, and onboarding has not run yet.
+    private function onwardFrom(Session $session, UrlGenerator $urls): string
+    {
+        return $session->pull(self::SESSION_RETURN_KEY) === self::RETURN_TO_SETTINGS
+            ? Destination::Settings->urlFrom($urls)
+            : $urls->route('setup');
     }
 
     /**
