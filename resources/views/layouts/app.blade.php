@@ -124,14 +124,19 @@
                     CSS-hidden at >=1024px — desktop layout is unchanged.
                     Inserts before <main> so it stacks above the main content column on mobile.
                 --}}
-                <x-core::mobile-top-bar class="top-bar-global" />
+                {{-- The palette covers the top bar and carries its own close
+                     control, so it may go inert too. The DRAWER must never
+                     inert it: the scrim is aria-hidden, so the hamburger is a
+                     screen reader's only way back out. --}}
+                <x-core::mobile-top-bar class="top-bar-global" x-bind:inert="$store.overlay.has('palette') || null" />
                 {{--
-                    inert while the drawer is open. The drawer is role=dialog
-                    aria-modal=true, but nothing made the page behind it
-                    unreachable: read off an iPhone 12 mini with VoiceOver's own
-                    tree, the open drawer still exposed "August 2026",
-                    "This period totals" and the €3,202.14 behind it, and left
-                    15 controls focusable outside the dialog.
+                    inert while any overlay covers the page. Both the drawer
+                    and the command palette are role=dialog aria-modal=true, and
+                    nothing made the page behind them unreachable: read off an
+                    iPhone 12 mini with VoiceOver's own tree, the open drawer
+                    still exposed "August 2026", "This period totals" and the
+                    €3,202.14 behind it. Controls left focusable outside the
+                    dialog — drawer 15, palette 97 (the whole ledger).
 
                     One attribute on one element, which is what x-shell::drawer
                     asks for — x-trap.inert walked the document marking siblings
@@ -146,7 +151,7 @@
                     aria-hidden, so the hamburger is a screen reader's only way
                     back out of the drawer.
                 --}}
-                <main class="flex-1 min-w-0 overflow-auto" x-bind:inert="$store.mobileNav.drawerOpen || null">
+                <main class="flex-1 min-w-0 overflow-auto" x-bind:inert="$store.overlay.blocking || null">
                     @livewire('core.system-alerts-banner')
                     @livewire('categorization.rule-form-modal')
                     @livewire('categorization.correction-divergence-toast')

@@ -632,11 +632,27 @@ document.addEventListener('alpine:init', () => {
         window.Alpine.data('copyToClipboard', copyToClipboard);
 
         // Mobile navigation drawer state
+        // Which overlays are covering the page, by name. The layout marks
+        // <main> inert while any of them is up: aria-modal is a promise to a
+        // screen reader that everything behind is unreachable, and nothing was
+        // keeping it. Read from the real iOS tree with the drawer open, the
+        // dashboard behind the scrim was still being announced.
+        //
+        // Names rather than a counter, so a double open() cannot leave the app
+        // inert forever.
+        window.Alpine.store('overlay', {
+            names: [],
+            add(name) { if (!this.names.includes(name)) { this.names.push(name); } },
+            remove(name) { this.names = this.names.filter((n) => n !== name); },
+            has(name) { return this.names.includes(name); },
+            get blocking() { return this.names.length > 0; },
+        });
+
         window.Alpine.store('mobileNav', {
             drawerOpen: false,
-            open() { this.drawerOpen = true; },
-            close() { this.drawerOpen = false; },
-            toggle() { this.drawerOpen = !this.drawerOpen; },
+            open() { this.drawerOpen = true; window.Alpine.store('overlay').add('drawer'); },
+            close() { this.drawerOpen = false; window.Alpine.store('overlay').remove('drawer'); },
+            toggle() { this.drawerOpen ? this.close() : this.open(); },
         });
 
         // Alpine stores survive a wire:navigate page swap, so a drawer opened
