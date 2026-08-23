@@ -319,6 +319,35 @@ it('user A cannot see user B transactions in search results', function (): void 
         );
 });
 
+// The search body joins counterparty, description and note with a form feed,
+// and SQLite's snippet() window spans that join, so the byte reached the page:
+// WebKit has no glyph for it and drew a missing-character box between the two.
+// The window is wrong as well — the index tokenizer is trigram, so a "token"
+// is three characters and twelve of them cut Rentevergoeding down to "Rente…",
+// the very word the reader had typed.
+it('shows the matched narrative in the snippet, without the field separator byte', function (): void {
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'ASN Bank',
+        'counterparty_normalized' => 'asn bank',
+        'description' => 'Rentevergoeding tweede kwartaal',
+    ]);
+
+    /** @var SearchQuery $searchQuery */
+    $searchQuery = app(SearchQuery::class);
+    $user = User::findOrFail($this->userAId);
+
+    /** @var SearchResultPage $page */
+    $page = $searchQuery->search($user, 'Rentevergoeding', SearchFilters::empty());
+
+    expect($page->rows)->not->toBeEmpty();
+    $snippet = $page->rows[0]->snippet;
+
+    expect($snippet)->not->toBeNull()
+        ->and($snippet)->not->toContain(chr(12))
+        ->and($snippet)->toContain('<mark>Rentevergoeding</mark>')
+        ->and($snippet)->toBe('ASN Bank · <mark>Rentevergoeding</mark> tweede kwartaal');
+});
+
 // FTS highlight() and snippet() do not HTML-escape the surrounding text, so
 // SearchQuery has to escape before injecting <mark>; otherwise a counterparty
 // containing HTML is stored XSS the moment the markup is rendered unescaped.

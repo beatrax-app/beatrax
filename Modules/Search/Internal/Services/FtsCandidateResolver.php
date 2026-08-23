@@ -23,6 +23,13 @@ final class FtsCandidateResolver
 {
     use CoercesScalars;
 
+    // The index tokenizer is trigram, so an FTS5 "token" is a three-character
+    // window, not a word: the twelve this asked for was about a dozen
+    // characters and cut the matched word itself in half — a search for
+    // Rentevergoeding came back as "Rente…". 64 is FTS5's own ceiling and the
+    // whole of an ordinary counterparty-plus-narrative body.
+    private const int SNIPPET_TRIGRAMS = 64;
+
     // Bounds the candidate window the <3-char LIKE fallback decrypts,
     // most-recent-first, so a short query never decrypts an entire
     // multi-year history on every keystroke.
@@ -96,13 +103,14 @@ final class FtsCandidateResolver
             ->selectRaw(
                 'transaction_search_fts.rowid,
                  highlight(transaction_search_fts, 0, ?, ?) AS highlighted_body,
-                 snippet(transaction_search_fts, 0, ?, ?, ?, 12) AS snippet_body',
+                 snippet(transaction_search_fts, 0, ?, ?, ?, ?) AS snippet_body',
                 [
                     HighlightSentinels::START,
                     HighlightSentinels::END,
                     HighlightSentinels::START,
                     HighlightSentinels::END,
                     '…',
+                    self::SNIPPET_TRIGRAMS,
                 ],
             )
             ->whereRaw('transaction_search_fts MATCH ?', [$ftsMatch])
