@@ -337,9 +337,11 @@
     </div>
 
     {{-- §6.5 Phone bottom sheet (open-sheet event dispatched from selectDay()) --}}
-    <x-core::bottom-sheet name="day-detail" :title="$selectedDayDto ? $selectedDayDto->date->translatedFormat('j M') : ''">
+    {{-- The sheet's title IS the panel's heading here — j M Y, not j M, so the
+         year is not lost when the panel stops repeating it. --}}
+    <x-core::bottom-sheet name="day-detail" :title="$selectedDayDto ? $selectedDayDto->date->translatedFormat('j M Y') : ''">
         @if ($selectedDayDto !== null)
-            @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto])
+            @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto, 'showDate' => false])
         @endif
     </x-core::bottom-sheet>
 </div>
