@@ -214,7 +214,7 @@ sidebar badge
 
 The projection opens where the account stands **today**, and today has exactly
 one figure in this application: Ledger's
-[`AccountBalanceQuery::currentBalanceAsOf`](../ledger/architecture.md#accountbalancequery--caveats-shared-by-all-three-methods),
+[`AccountBalanceQuery::currentBalanceAsOf`](../ledger/architecture.md#accountbalancequery--caveats-shared-by-all-four-methods),
 the same call behind the dashboard's net worth, the pots reconciliation header
 and `/reconcile`. `BalanceAnchorResolver` delegates to it rather than
 re-deriving a balance of its own, so the four surfaces cannot drift apart.

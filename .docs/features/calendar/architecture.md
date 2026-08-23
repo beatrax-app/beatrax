@@ -65,25 +65,34 @@ both legs of a self-transfer.
 
 **Past days** never depend on a forecast run: the balance line for any day
 before today is each account's starting balance plus the real cumulative sum
-of `transactions.amount_minor` across the balance accounts (bucketed per
-currency, FX-converted the same way), carried forward day-by-day from a base
-sum computed once for everything before the visible grid. Past-day balances
-therefore stay known even while a projection is still computing. Today is the
-join: it comes from the projection, whose opening figure is Ledger's balance
-as of today over the same rows
+of `transactions.settled_amount_minor` across the balance accounts (bucketed
+per account currency, FX-converted the same way), carried forward day-by-day
+from a base sum computed once for everything before the visible grid. Past-day
+balances therefore stay known even while a projection is still computing.
+Today is the join: it comes from the projection, whose opening figure is
+Ledger's balance as of today over the same rows
 ([balance anchor resolution](../forecasting/architecture.md#balance-anchor-resolution)),
 so yesterday and today differ by exactly the rows posted today. While the
 anchor was a statement closing balance months old the line stepped on today
 instead — €3,020 on 22 August dropping to €2,085 on the 23rd.
 
-The starting balance comes from Ledger's `AccountStartingBalanceQuery`
-([the baseline every balance starts from](../ledger/architecture.md#accountstartingbalancequery--the-baseline-every-balance-starts-from)),
-and it lands in the bucket of the ACCOUNT's `default_currency`, not the
-currency its transactions happen to carry. Both transaction reads join
-`accounts` and apply the reader's `AT_OR_AFTER_BASELINE_SQL` lower bound: a
-row posted before an account's `starting_balance_date` is history the
-baseline already holds, and counting it here would draw the line twice as
-high as the money on the account.
+Both the starting balance and the row sums are bucketed by the ACCOUNT's
+`default_currency`, never by the currency a transaction happens to carry. The
+baseline comes from Ledger's `AccountStartingBalanceQuery`
+([the baseline every balance starts from](../ledger/architecture.md#accountstartingbalancequery--the-baseline-every-balance-starts-from))
+and is denominated that way already; the rows join it there by summing
+`settled_amount_minor`, the figure the ACCOUNT was debited, on exactly the
+footing `AccountBalanceQuery` uses
+([caveats shared by all four methods](../ledger/architecture.md#accountbalancequery--caveats-shared-by-all-four-methods)).
+Summing the native `amount_minor` instead re-derived each foreign row from
+today's rate rather than the bank's rate on the day, so a euro account holding
+USD rows drew yesterday €1.46 away from the same account's ledger balance and
+the line stepped at today on a curve that is continuous by construction.
+
+Both transaction reads join `accounts` and apply the reader's
+`AT_OR_AFTER_BASELINE_SQL` lower bound: a row posted before an account's
+`starting_balance_date` is history the baseline already holds, and counting it
+here would draw the line twice as high as the money on the account.
 
 **Start-of-day chaining**: a day's start-of-day balance is the prior grid
 day's end-of-day balance, chained forward — but only when that prior value was

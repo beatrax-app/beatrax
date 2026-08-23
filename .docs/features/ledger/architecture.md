@@ -543,14 +543,14 @@ value is computed server-side and validated against
 the target string. A `reconciled` current status short-circuits with a
 toast and no write, before any read of the "next" value.
 
-## `AccountBalanceQuery` — caveats shared by all three methods
+## `AccountBalanceQuery` — caveats shared by all four methods
 
-`currentBalance()`, `clearedBalance()`, and `clearedBalanceAsOf()` all
-open on the account's starting balance and add `settled_amount_minor`
-(never the native `amount_minor`) scoped by `(account_id, user_id)` on top
-of it — see
+`currentBalance()`, `currentBalanceAsOf()`, `clearedBalance()`, and
+`clearedBalanceAsOf()` all open on the account's starting balance and add
+`settled_amount_minor` (never the native `amount_minor`) scoped by
+`(account_id, user_id)` on top of it — see
 [the baseline section below](#accountstartingbalancequery--the-baseline-every-balance-starts-from)
-for what the baseline is and how its date bounds the sum. All three
+for what the baseline is and how its date bounds the sum. All four
 share two caveats:
 
 - **Information disclosure guard**: the explicit `where('user_id', ...)`
@@ -568,7 +568,12 @@ share two caveats:
   `BalanceAnchorResolver` calls `currentBalanceAsOf()` itself for every
   non-card account, so the pot reconciliation header, the net-worth
   figure and the forecast's opening balance are one number, not three
-  that happen to agree.
+  that happen to agree. The calendar's past-day line adds the same
+  column bucketed by the same `default_currency`
+  ([balance aggregation](../calendar/architecture.md#balance-aggregation));
+  while it re-derived each foreign row from `amount_minor` at today's
+  rate its yesterday sat €1.46 above this figure and its line stepped at
+  today.
 
 `clearedBalance()` additionally restricts to `cleared`/`reconciled`
 rows (excluding `uncleared` manual cash-book entries not yet confirmed

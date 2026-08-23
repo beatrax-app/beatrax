@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\Forecasting\Public\Services\NetWorthQuery;
+use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Enums\Currency;
@@ -39,8 +40,15 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow(null);
 });
 
-function taasTransaction(DatabaseManager $db, int $userId, int $accountId, string $postedAt, int $amountMinor): void
-{
+function taasTransaction(
+    DatabaseManager $db,
+    int $userId,
+    int $accountId,
+    string $postedAt,
+    int $settledMinor,
+    ?int $nativeMinor = null,
+    string $nativeCurrency = Currency::Eur->value,
+): void {
     static $row = 0;
     $row++;
     $hex = bin2hex(random_bytes(6));
@@ -65,15 +73,15 @@ function taasTransaction(DatabaseManager $db, int $userId, int $accountId, strin
         'posted_at' => $postedAt,
         'booked_at' => $postedAt.' 12:00:00',
         'value_date' => $postedAt,
-        'amount_minor' => $amountMinor,
-        'currency' => Currency::Eur->value,
-        'settled_amount_minor' => $amountMinor,
+        'amount_minor' => $nativeMinor ?? $settledMinor,
+        'currency' => $nativeCurrency,
+        'settled_amount_minor' => $settledMinor,
         'settled_currency' => Currency::Eur->value,
         'counterparty_normalized' => 'taas',
         'counterparty_name' => 'TAAS',
         'normalization_version' => 1,
         'description' => 'taas fixture',
-        'type' => $amountMinor >= 0 ? TransactionType::Income->value : TransactionType::Expense->value,
+        'type' => $settledMinor >= 0 ? TransactionType::Income->value : TransactionType::Expense->value,
         'source_format' => 'asn-csv',
         'source_row_index' => $row,
         'status' => ClearedStatus::Cleared->value,
@@ -171,4 +179,69 @@ it('draws today on the calendar at the projection opening, continuous from yeste
     expect($built['todayAnchorMinor'])->toBe($forecast->todayBalanceMinor)
         ->and($built['map'][$today->toDateString()][0])->toBe(192_109)
         ->and($built['map'][$today->subDay()->toDateString()][0])->toBe(194_109);
+});
+
+function taasSeedEuroAccountWithForeignRows(DatabaseManager $db, int $userId): int
+{
+    $hex = bin2hex(random_bytes(4));
+    $accountId = $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId,
+        'name' => 'TAAS Euro Account',
+        'slug' => 'taas-fx-'.$hex,
+        'kind' => AccountKind::Bank->value,
+        'iban' => 'NL01TAAS'.strtoupper($hex),
+        'default_currency' => Currency::Eur->value,
+        'starting_balance_minor' => 100_000,
+        'starting_balance_date' => '2026-01-01',
+        'created_at' => '2026-01-01 00:00:00',
+        'updated_at' => '2026-01-01 00:00:00',
+    ]);
+
+    // The bank charged EUR100 for a USD120 purchase — an implied 1.2 — while
+    // the rate table below says 1.5. Re-deriving the euro figure from the
+    // dollar one therefore lands EUR20 away from what the account was debited.
+    taasTransaction($db, $userId, $accountId, '2026-08-20', -10_000, -12_000, Currency::Usd->value);
+    taasTransaction($db, $userId, $accountId, '2026-08-23', -2_000);
+
+    $db->connection()->table('exchange_rates')->insert([
+        'base_currency' => Currency::Eur->value,
+        'quote_currency' => Currency::Usd->value,
+        'rate_date' => '2026-08-23',
+        'rate' => '1.5',
+        'source' => BundledRates::SOURCE,
+        'created_at' => '2026-08-23 00:00:00',
+        'updated_at' => '2026-08-23 00:00:00',
+    ]);
+
+    return $accountId;
+}
+
+// The same continuity, for the account that actually splits the two
+// derivations apart. Summing the native amount at today's rate drew yesterday
+// at EUR920.00 against a ledger of EUR900.00, so the line stepped EUR20 at
+// today on a curve with nothing behind the step.
+it('draws a past day carrying foreign rows at the balance the account was debited', function (): void {
+    $accountId = taasSeedEuroAccountWithForeignRows($this->db, $this->user->id);
+
+    app(ProjectionPipeline::class)->project($this->user, null, TAAS_HORIZON_DAYS);
+
+    $today = CarbonImmutable::now()->startOfDay();
+    $yesterday = $today->subDay();
+    $built = app(DailyBalanceAggregator::class)->buildBalanceMap(
+        [$accountId],
+        $this->user,
+        $today->startOfMonth(),
+        $today->endOfMonth()->startOfDay(),
+    );
+
+    $balances = app(AccountBalanceQuery::class);
+    $ledgerYesterday = $balances->currentBalanceAsOf($accountId, $this->user, $yesterday);
+    $ledgerToday = $balances->currentBalanceAsOf($accountId, $this->user, $today);
+
+    expect($ledgerYesterday)->toBe(90_000)
+        ->and($ledgerToday)->toBe(88_000)
+        ->and($built['map'][$yesterday->toDateString()][0])->toBe($ledgerYesterday)
+        ->and($built['map'][$today->toDateString()][0])->toBe($ledgerToday)
+        ->and($built['todayAnchorMinor'])->toBe($ledgerToday)
+        ->and($built['map'][$today->toDateString()][0] - $built['map'][$yesterday->toDateString()][0])->toBe(-2_000);
 });

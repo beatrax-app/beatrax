@@ -15,6 +15,9 @@ use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
+/**
+ * @link ../../../../.docs/features/calendar/architecture.md#balance-aggregation
+ */
 final readonly class DailyBalanceAggregator
 {
     use CoercesScalars;
@@ -199,13 +202,13 @@ final readonly class DailyBalanceAggregator
             ->whereIn('transactions.account_id', $effectiveBalance)
             ->where('transactions.posted_at', '<', $gridStart->toDateString())
             ->whereRaw(AccountStartingBalanceQuery::AT_OR_AFTER_BASELINE_SQL)
-            ->groupBy('transactions.currency')
-            ->selectRaw('transactions.currency as currency, SUM(transactions.amount_minor) as sum_minor')
+            ->groupBy('accounts.default_currency')
+            ->selectRaw('accounts.default_currency as currency, SUM(transactions.settled_amount_minor) as sum_minor')
             ->get();
 
-        // The baseline is denominated in the ACCOUNT's default currency, not
-        // in whatever currency its transactions happen to carry, so it opens
-        // that bucket and the row sums accumulate on top of it.
+        // The baseline opens the bucket of the ACCOUNT's default currency, so
+        // the rows have to arrive in that same bucket or the two are added
+        // across currencies.
         $cumByCurrency = $this->startingBalances->bucketedByDefaultCurrency($effectiveBalance, $user);
         foreach ($rows as $row) {
             /** @var stdClass $row */
@@ -232,8 +235,8 @@ final readonly class DailyBalanceAggregator
             ->whereIn('transactions.account_id', $effectiveBalance)
             ->whereBetween('transactions.posted_at', [$gridStart->toDateString(), $pastEnd->toDateString()])
             ->whereRaw(AccountStartingBalanceQuery::AT_OR_AFTER_BASELINE_SQL)
-            ->groupBy('transactions.posted_at', 'transactions.currency')
-            ->selectRaw('transactions.posted_at as posted_at, transactions.currency as currency, SUM(transactions.amount_minor) as sum_minor')
+            ->groupBy('transactions.posted_at', 'accounts.default_currency')
+            ->selectRaw('transactions.posted_at as posted_at, accounts.default_currency as currency, SUM(transactions.settled_amount_minor) as sum_minor')
             ->get();
 
         $deltaByDateCurrency = [];

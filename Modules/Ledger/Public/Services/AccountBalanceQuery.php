@@ -10,7 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 
 /**
- * @link ../../../../.docs/features/ledger/architecture.md#accountbalancequery--caveats-shared-by-all-three-methods
+ * @link ../../../../.docs/features/ledger/architecture.md#accountbalancequery--caveats-shared-by-all-four-methods
  */
 final class AccountBalanceQuery
 {
