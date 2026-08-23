@@ -122,7 +122,7 @@
                 wire:model="newCategoryName"
                 type="text"
                 placeholder="{{ Lang::get('tax::settings.new_category_placeholder') }}"
-                class="flex-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                class="min-w-0 grow basis-full sm:basis-auto rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 data-testid="new-category-input"
             />
             <button

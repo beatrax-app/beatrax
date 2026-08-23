@@ -207,7 +207,7 @@
                         type="text"
                         placeholder="{{ Lang::get('counterparties::triage.display_name_placeholder') }}"
                         x-model="manualName"
-                        style="flex: 1 1 240px; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px;"
+                        style="flex: 1 1 240px; min-width: 0; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px;"
                     />
                     <label for="triage-manual-type" class="sr-only">{{ Lang::get('counterparties::triage.type_label') }}</label>
                     <select

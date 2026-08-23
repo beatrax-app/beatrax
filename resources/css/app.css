@@ -2898,10 +2898,14 @@ td.date,
         font-variant-numeric: tabular-nums;
     }
 
+    /* A fieldset carries min-width: min-content from the browser, so at the
+       phone's largest font size it refused to shrink below the name box inside
+       it and took the whole queue 30px sideways. */
     .triage-section {
         display: flex;
         flex-direction: column;
         gap: var(--space-4);
+        min-width: 0;
     }
 
     /* The report builder's control rail. It was a hardcoded `flex: 0 0 280px`,
