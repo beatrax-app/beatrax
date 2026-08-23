@@ -163,11 +163,17 @@ final readonly class BalanceAnchorResolver
         );
     }
 
+    // Bounded at today on posted_at, which is the column the calendar's own
+    // past-day line sums: unbounded, a future-dated row was counted as money
+    // already held, and the line stepped by the whole of next week on today.
     private function fromTransactionsSum(int $accountId, int $userId, string $defaultCurrency): BalanceAnchorDto
     {
+        $asOf = $this->clock->now()->startOfDay();
+
         $sum = (int) $this->db->connection()->table('transactions')
             ->where('user_id', $userId)
             ->where('account_id', $accountId)
+            ->where('posted_at', '<=', $asOf->toDateString())
             ->sum('amount_minor');
 
         if ($defaultCurrency === '') {
@@ -178,7 +184,7 @@ final readonly class BalanceAnchorResolver
             accountId: $accountId,
             openingBalanceMinor: $sum,
             currency: $defaultCurrency,
-            asOfDate: CarbonImmutable::parse('1970-01-01'),
+            asOfDate: $asOf,
             source: 'sum_of_transactions',
         );
     }

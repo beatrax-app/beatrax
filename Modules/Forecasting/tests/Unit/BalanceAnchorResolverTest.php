@@ -144,7 +144,25 @@ it('falls through to the transactions sum for an asn account with no statement_s
 
     expect($anchor->openingBalanceMinor)->toBe(4000);
     expect($anchor->source)->toBe('sum_of_transactions');
-    expect($anchor->asOfDate->toDateString())->toBe('1970-01-01');
+    expect($anchor->asOfDate->toDateString())->toBe(CarbonImmutable::now()->toDateString());
+});
+
+// The sum answers "what is on this account today", so a row dated after today
+// is not on it yet. Unbounded, the balance line rose by the whole of the coming
+// week on today and then ran flat through the days that carried the money.
+it('leaves a future-dated transaction out of the sum, and says which day it is for', function (): void {
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-05-15 09:00:00'));
+
+    $accountId = barInsertAccount($this->db, $this->user->id, 'bank');
+    barInsertTransaction($this->db, $this->user->id, $accountId, 5000, '2026-05-10');
+    barInsertTransaction($this->db, $this->user->id, $accountId, 2500, '2026-05-15');
+    barInsertTransaction($this->db, $this->user->id, $accountId, 360800, '2026-05-25');
+
+    $anchor = $this->resolver->forAccount($accountId, $this->user);
+
+    expect($anchor->openingBalanceMinor)->toBe(7500)
+        ->and($anchor->source)->toBe('sum_of_transactions')
+        ->and($anchor->asOfDate->toDateString())->toBe('2026-05-15');
 });
 
 it('routes ics_card to the most recent card_statements row (negated open_balance)', function (): void {
