@@ -58,7 +58,12 @@
 <div>
     @if ($netWorth->hasAccounts())
         <x-core::card tag="section" aria-label="{{ Lang::get('core::net_worth.aria') }}">
-            <div class="flex items-start justify-between gap-4">
+            {{-- flex-wrap: the figure is text-3xl and has no break opportunity
+                 inside it, and its column is min-w-0 beside a shrink-0 button,
+                 so it overflowed VISIBLY and painted under the button. Measured
+                 on an iPhone 12 mini: €1,727.38 needed 170px in a 137px column
+                 and the last digit sat under "Breakdown". --}}
+            <div class="flex flex-wrap items-start justify-between gap-4">
                 <div class="min-w-0">
                     <p class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ Lang::get('core::net_worth.heading') }}</p>
 
