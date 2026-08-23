@@ -14,6 +14,7 @@
     forward — waiting for parity — and no other interactive control.
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Mobile\Internal\Http\PairingEntryUrl')
 @use('Modules\Mobile\Internal\Sync\SyncPhase')
 <div
     class="safe-screen min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
@@ -68,7 +69,7 @@
              that otherwise holds the app hostage. --}}
         @if ($blocked === \Modules\Mobile\Internal\Sync\SyncBlockedReason::Revoked)
             <a
-                href="{{ route('mobile.pair', ['mode' => 'import']) }}"
+                href="{{ PairingEntryUrl::importing() }}"
                 class="inline-block text-sm font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400"
                 data-testid="setup-repair-link"
             >{{ Lang::get('mobile::setup.step.connect') }}</a>

@@ -25,6 +25,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\AcceptsPairingCode;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\ChoosesCodeEntryArm;
+use Modules\Mobile\Internal\Http\PairingEntryUrl;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Enums\PairingSide;
@@ -128,7 +129,7 @@ final class MobilePairingScan extends Component
         // Echo the param into the durable marker the moment it is observed, then
         // read the marker back: it is the only one of the two a back button or
         // a relaunch cannot lose.
-        if ($request->query('mode') === 'import') {
+        if ($request->query(PairingEntryUrl::MODE_PARAM) === PairingEntryUrl::MODE_IMPORT) {
             $importIntent->markImporting($userId);
         }
 
@@ -281,8 +282,8 @@ final class MobilePairingScan extends Component
         $session->put(
             MobileLockGateway::SESSION_INTENDED_URL,
             $this->importing
-                ? $urls->route('mobile.pair').'?mode=import'
-                : $urls->route('mobile.pair'),
+                ? PairingEntryUrl::importingFrom($urls)
+                : PairingEntryUrl::bareFrom($urls),
         );
 
         $this->redirect($urls->route('mobile.lock'), navigate: false);

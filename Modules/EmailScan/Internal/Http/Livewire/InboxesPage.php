@@ -240,8 +240,10 @@ final class InboxesPage extends Component
             throw new NotFoundHttpException(self::INBOX_NOT_FOUND);
         }
 
-        $target = $urls->route('oauth.connect', ['provider' => $health->provider])
-            .'?inbox_id='.$inboxId;
+        $target = $urls->route('oauth.connect', [
+            'provider' => $health->provider,
+            'inbox_id' => $inboxId,
+        ]);
 
         // A returned RedirectResponse is not picked up by the wire:click
         // protocol; $this->redirect() is.

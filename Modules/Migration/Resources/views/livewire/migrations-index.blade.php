@@ -46,7 +46,7 @@
 
                     @if ($run->status === \Modules\Migration\Internal\Enums\MigrationRunStatus::Confirmed->value)
                         <x-core::secondary-button
-                            href="{{ route('migrations.new') }}?reconcile_of={{ $run->id }}"
+                            href="{{ route('migrations.new', ['reconcile_of' => $run->id]) }}"
                             size="sm"
                         >
                             {{ Lang::get('migration::index.check_updates') }}

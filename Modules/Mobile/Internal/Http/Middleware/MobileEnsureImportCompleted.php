@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Mobile\Internal\Http\PairingEntryUrl;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Mobile\Internal\Sync\SyncPhase;
 use Symfony\Component\HttpFoundation\Response;
@@ -86,7 +87,7 @@ final readonly class MobileEnsureImportCompleted
         // still pulling goes to the blocking setup gate, because a
         // half-populated balance is worse than a progress bar.
         $url = match (true) {
-            ! $this->hasEpoch($userId) => $this->urls->route('mobile.pair', ['mode' => 'import']),
+            ! $this->hasEpoch($userId) => PairingEntryUrl::importingFrom($this->urls),
             ! $this->hasCompletedInitialSync($userId) => $this->urls->route('mobile.setup'),
             default => null,
         };

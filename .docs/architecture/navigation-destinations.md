@@ -101,6 +101,35 @@ exists as a method instead of callers reading `->value`.
   `dashboard` and `settings` are not registered route names in that root at all.
   Resolving them there would throw where a literal works.
 
+## Query parameters ride the `route()` call
+
+Anything not consumed as a path segment is written after a `?` by `route()`
+itself, so a query parameter is passed to the call rather than concatenated
+onto its result:
+
+```php
+$urls->route('mobile.pair', ['mode' => 'import']);   // one query, one `?`
+$urls->route('mobile.pair').'?mode=import';          // agrees only by accident
+```
+
+Blade glues the same two halves without a concatenation operator, and the rule
+is the same there:
+
+```blade
+{{ route('oauth.connect', ['provider' => $p, 'inbox_id' => $id]) }}
+{{ route('oauth.connect', ['provider' => $p]) }}?inbox_id={{ $id }}
+```
+
+The two spellings agree exactly as long as the route carries no query of its
+own. The day one does — a new default, a parameter that stops being a path
+segment — the concatenation writes `?a=1?mode=import`, and `mode` stops being
+readable as a parameter at all rather than failing loudly. That is a property
+of the route definition, which the call site cannot see, so
+`QueryParametersRideTheRouteCallArchTest` rejects the concatenated form
+outright. `Modules/Mobile/Internal/Http/PairingEntryUrl` is the same rule one
+step further on: `?mode=import` had six senders and one reader, and naming it
+once is what keeps a sender from drifting out of earshot silently.
+
 ## Related
 
 - [Module boundaries](module-boundaries.md) — the `Public`/`Internal` split and
