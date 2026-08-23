@@ -201,7 +201,7 @@
             @endif
 
             @if ($parsedRowCount > 0)
-            <x-core::data-table style="font-feature-settings: 'tnum';">
+            <x-core::data-table class="preview-rows-table" style="font-feature-settings: 'tnum';">
                 <x-slot:head>
                     <x-core::th align="left">{{ Lang::get('import::preview.col_date') }}</x-core::th>
                     <x-core::th align="left">{{ Lang::get('import::preview.col_funding_source') }}</x-core::th>

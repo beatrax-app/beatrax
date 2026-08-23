@@ -5415,6 +5415,85 @@ mark {
 }
 
 /*
+ * Import-preview rows at phone width.
+ *
+ * Five columns — date, funding source, counterparty, amount, status — measure
+ * 533px against 305px of room, so AMOUNT (382-484) and STATUS (484-568) both
+ * sat entirely past the right edge of a 375px screen and 18 of the 45 cells
+ * started off it. The screen asks the reader to review the parsed rows before
+ * anything is written to their ledger, and the amount and whether it is new or
+ * a duplicate are what there is to review.
+ *
+ * Restacked below 768px: counterparty and amount on the first line, the date
+ * and the funding IBAN beneath as secondary, then the status badge on its own
+ * full width, which is what an error row needs for its reason and detail. Same
+ * cells, same DOM order, same reading order for assistive tech.
+ */
+@media (max-width: 767px) {
+    .preview-rows-table,
+    .preview-rows-table tbody {
+        display: block;
+    }
+
+    /* The cells name themselves here — a merchant, a date, an amount, a
+       badge — so the column labels stop earning their line. */
+    .preview-rows-table thead {
+        display: none;
+    }
+
+    .preview-rows-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: var(--space-3);
+        row-gap: var(--space-1);
+        padding: var(--space-3) var(--space-4);
+        /* The counterparty is a padded rename button and the amount is bare
+           text; stretched, the two sat 30px apart on a line that reads as one. */
+        align-items: baseline;
+    }
+
+    .preview-rows-table td {
+        padding: 0;
+    }
+
+    /* Counterparty leads, amount holds the right of the same line. */
+    .preview-rows-table td:nth-child(3) {
+        grid-column: 1;
+        grid-row: 1;
+        overflow-wrap: anywhere;
+    }
+
+    .preview-rows-table td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 1;
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    .preview-rows-table td:nth-child(1) {
+        grid-column: 1;
+        grid-row: 2;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    .preview-rows-table td:nth-child(2) {
+        grid-column: 2;
+        grid-row: 2;
+        text-align: right;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    /* Full width: an error row spells its reason and detail out under the
+       badge, and that prose has nowhere to go in an auto-width column. */
+    .preview-rows-table td:nth-child(5) {
+        grid-column: 1 / -1;
+        grid-row: 3;
+    }
+}
+
+/*
  * Stop iOS zooming the page when a control takes focus.
  *
  * WKWebView zooms in whenever a focused input/select/textarea computes below
