@@ -42,9 +42,13 @@
     x-data="passwordStrength({{ (int) $minLength }}, @js($passwordProperty), @js($confirmationProperty))"
     {{ $attributes->merge(['class' => 'space-y-1.5']) }}
 >
+    {{-- met/unmet travel on the row object rather than being written into
+         each clone's own x-text: Alpine compiles a clone's expression once, so
+         a re-render in another language left the suffix in the old one while
+         the label beside it changed. --}}
     <template x-for="req in [
-        { label: @js($lengthLabel), ok: lengthOk },
-        { label: @js($matchLabel), ok: matchOk },
+        { label: @js($lengthLabel), ok: lengthOk, met: @js($met), unmet: @js($unmet) },
+        { label: @js($matchLabel), ok: matchOk, met: @js($met), unmet: @js($unmet) },
     ]" :key="req.label">
         <li class="flex items-center gap-2 text-xs transition-colors"
             :class="req.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'">
@@ -60,7 +64,7 @@
                 </svg>
             </span>
             <span x-text="req.label"></span>
-            <span class="sr-only" x-text="req.ok ? @js($met) : @js($unmet)"></span>
+            <span class="sr-only" x-text="req.ok ? req.met : req.unmet"></span>
         </li>
     </template>
 </ul>
