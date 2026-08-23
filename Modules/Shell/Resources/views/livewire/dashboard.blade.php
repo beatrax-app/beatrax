@@ -49,8 +49,11 @@
          stepper are one control line, and aligning their boxes left the
          30px title and the 40px buttons reading off two different lines.
          The stepper never shrinks, so its glyphs keep their tap targets
-         when a long month name takes the width it needs. --}}
-    <header class="flex items-baseline justify-between gap-6 dashboard-phone-order-1">
+         when a long month name takes the width it needs — which is why the
+         row has to STACK below sm rather than squeeze. Measured on an iPhone
+         12 mini: "Αύγουστος 2026" put the stepper's right edge at 397px on a
+         375pt screen, taking the next-period glyph off the display. --}}
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6 dashboard-phone-order-1">
         <div class="space-y-1">
             <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $summary->period->label }}</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.subtitle') }}</p>
