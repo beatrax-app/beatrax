@@ -597,9 +597,11 @@ Ledger-owned, auto-detected position the imported history begins from
 It is written by the demo seeder, by the statement-summary backfill, and
 by the wizard's starting-balance card. It is **not**
 `accounts.opening_balance_minor` / `opening_balance_as_of_date`, which is
-Forecasting's manual override on the same row and is read by
-`BalanceAnchorResolver::fromUserInputOpeningBalance()`; both pairs exist
-on purpose and neither substitutes for the other. A third
+Forecasting's manual override on the same row, written by
+`SetAccountOpeningBalance` from the Settings editor. Both pairs exist on
+purpose and both are read by `AccountStartingBalanceQuery`, which prefers
+the override: it is the only figure the reader entered deliberately, so a
+number they typed outranks one an import inferred. A third
 `opening_balance_minor` lives on `statement_summaries` and is the source
 the backfill reads, not a balance anyone displays.
 
