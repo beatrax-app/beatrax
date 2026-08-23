@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Http\Middleware\ForgetStaleLivewireHeaderBetweenRequests;
@@ -33,6 +34,9 @@ it('reads a deep link query parameter even when the request carries a Livewire h
     // from the Referer on a component update, and it tells the two apart by
     // this header. A persistent runtime that leaves one behind therefore makes
     // every deep link land on the default view.
+    /** @link ../../../../.docs/features/mobile/architecture.md */
+    app(Kernel::class)->prependMiddleware(ForgetStaleLivewireHeaderBetweenRequests::class);
+
     $html = (string) $this->withHeaders(['X-Livewire' => 'true'])
         ->get('/drift?type=anomaly')
         ->assertOk()
@@ -66,4 +70,14 @@ it('leaves the header alone on the endpoint that means it', function (): void {
 
         return new Response;
     });
+});
+
+// The middleware only reaches a request where it is registered, and the runtime
+// that needs it is the persistent mobile worker rather than this root.
+it('is prepended by the mobile runtime that keeps a worker alive between requests', function (): void {
+    $bootstrap = dirname(__DIR__, 4).'/mobile-app/bootstrap/app.php';
+
+    expect(file_exists($bootstrap))->toBeTrue()
+        ->and((string) file_get_contents($bootstrap))
+        ->toContain('ForgetStaleLivewireHeaderBetweenRequests::class');
 });
