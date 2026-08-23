@@ -3764,8 +3764,17 @@ td.date,
            no break opportunity, so the clamp cannot save it and the text runs
            under the amount. Same guard the counterparty cards and the tax
            rows already carry. */
+
+        /* Wrapping alone only trades an overflow for a column: 300 characters
+           of unbroken name took eleven lines and 350px of a 812px screen,
+           burying the amount and the delete it belongs to. The desktop list
+           truncates the same field; this is that, with a second line. */
         .card-list-item .primary {
             overflow-wrap: anywhere;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
         }
 
         .card-list-item .amount {
