@@ -188,8 +188,8 @@ it('routes ics_card to the most recent card_statements row (negated open_balance
     expect($anchor->source)->toBe('ics_card_statement');
 });
 
-it('routes paypal to accounts.opening_balance_minor when the user set one', function (): void {
-    $accountId = barInsertAccount($this->db, $this->user->id, 'paypal', [
+it('routes a card to accounts.opening_balance_minor when the user set one', function (): void {
+    $accountId = barInsertAccount($this->db, $this->user->id, 'ics_card', [
         'opening_balance_minor' => 25000,
         'opening_balance_as_of_date' => '2026-05-01',
     ]);
@@ -199,6 +199,29 @@ it('routes paypal to accounts.opening_balance_minor when the user set one', func
     expect($anchor->openingBalanceMinor)->toBe(25000);
     expect($anchor->source)->toBe('user_input_opening_balance');
     expect($anchor->asOfDate->toDateString())->toBe('2026-05-01');
+});
+
+// The figure the reader types in Settings is a baseline with a date, not the
+// position today: every row posted since has to be carried onto it. Frozen on
+// the baseline, the forecast opened at EUR1,000 and ran flat for thirty days
+// while the dashboard's own net worth, one card above it, read EUR3,706.72.
+it('carries the reader-typed opening balance forward through the rows posted since its date', function (): void {
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-23 09:00:00'));
+
+    $accountId = barInsertAccount($this->db, $this->user->id, 'paypal', [
+        'opening_balance_minor' => 100000,
+        'opening_balance_as_of_date' => '2026-07-01',
+    ]);
+    barInsertTransaction($this->db, $this->user->id, $accountId, -99900, '2026-06-30');
+    barInsertTransaction($this->db, $this->user->id, $accountId, 320000, '2026-07-01');
+    barInsertTransaction($this->db, $this->user->id, $accountId, -145000, '2026-08-01');
+    barInsertTransaction($this->db, $this->user->id, $accountId, -4120, '2026-08-23');
+    barInsertTransaction($this->db, $this->user->id, $accountId, 320000, '2026-08-25');
+
+    $anchor = $this->resolver->forAccount($accountId, $this->user);
+
+    expect($anchor->openingBalanceMinor)->toBe(270880)
+        ->and($anchor->asOfDate->toDateString())->toBe('2026-08-23');
 });
 
 it('falls through to the transactions sum for a paypal account with no opening balance', function (): void {
@@ -222,7 +245,7 @@ it('defaults to the base currency when the statement summary carries no closing 
 });
 
 it('defaults to the base currency on the user-input path when the account has no default currency', function (): void {
-    $accountId = barInsertAccount($this->db, $this->user->id, 'paypal', [
+    $accountId = barInsertAccount($this->db, $this->user->id, 'ics_card', [
         'default_currency' => '',
         'opening_balance_minor' => 25000,
         'opening_balance_as_of_date' => '2026-05-01',

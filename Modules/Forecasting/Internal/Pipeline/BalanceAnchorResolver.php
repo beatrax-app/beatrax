@@ -39,17 +39,18 @@ final readonly class BalanceAnchorResolver
         $kind = self::toString($account->getAttribute('kind'));
         $defaultCurrency = self::toString($account->getAttribute('default_currency'));
 
-        $anchor = $this->fromStatementAnchor($kind, $accountId, $user->id)
-            ?? $this->fromUserInputOpeningBalance($account);
+        $anchor = $this->fromStatementAnchor($kind, $accountId, $user->id);
         if ($anchor !== null) {
             return $anchor;
         }
 
-        // A card with no anchor at all takes zero rather than a transaction
-        // sum: summing would double-count the billing events the projection
-        // is about to re-emit. Every other kind sums.
+        // A card takes its reader-typed balance, or zero, rather than a
+        // transaction sum: summing would double-count the billing events the
+        // projection is about to re-emit. Every other kind sums, and the sum
+        // already starts from the reader's figure — it is the baseline, dated,
+        // not the position today.
         return $kind === AccountKind::IcsCard->value
-            ? $this->icsCardZeroAnchor($accountId, $defaultCurrency)
+            ? $this->fromUserInputOpeningBalance($account) ?? $this->icsCardZeroAnchor($accountId, $defaultCurrency)
             : $this->fromTransactionsSum($accountId, $user, $defaultCurrency);
     }
 
