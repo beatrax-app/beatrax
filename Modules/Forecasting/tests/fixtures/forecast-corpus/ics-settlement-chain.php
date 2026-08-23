@@ -42,9 +42,9 @@ return [
             'latest_fx_rate_used' => null,
             'next_expected_date' => '2026-05-20',
             'occurrences' => [
+                ['date' => '2026-02-20', 'observed_amount_minor' => -1999, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-03-20', 'observed_amount_minor' => -1999, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-04-20', 'observed_amount_minor' => -1999, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
-                ['date' => '2026-05-20', 'observed_amount_minor' => -1999, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
             ],
         ],
     ],
