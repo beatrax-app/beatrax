@@ -22,7 +22,7 @@
 <p align="center">
   <a href="https://beatrax.app">Website</a> ·
   <a href="https://github.com/beatrax-app/spec">Specification</a> ·
-  <a href="https://discord.gg/FYuV9CbTHR">Discord</a>
+  <a href="https://discord.nightworks.io">Discord</a>
 </p>
 
 ## What is Beatrax?
@@ -226,5 +226,5 @@ Report vulnerabilities via [Security Policy](SECURITY.md).
 <p align="center">
   <a href="https://nightworks.io">NightWorks.io</a>
   &nbsp;&middot;&nbsp;
-  <a href="https://discord.gg/FYuV9CbTHR">Discord</a>
+  <a href="https://discord.nightworks.io">Discord</a>
 </p>
