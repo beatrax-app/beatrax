@@ -46,9 +46,8 @@ final readonly class BalanceAnchorResolver
 
         // A card takes its reader-typed balance, or zero, rather than a
         // transaction sum: summing would double-count the billing events the
-        // projection is about to re-emit. Every other kind sums, and the sum
-        // already starts from the reader's figure — it is the baseline, dated,
-        // not the position today.
+        // projection is about to re-emit. Every other kind sums, and that sum
+        // already opens on the reader's figure as a dated baseline.
         return $kind === AccountKind::IcsCard->value
             ? $this->fromUserInputOpeningBalance($account) ?? $this->icsCardZeroAnchor($accountId, $defaultCurrency)
             : $this->fromTransactionsSum($accountId, $user, $defaultCurrency);

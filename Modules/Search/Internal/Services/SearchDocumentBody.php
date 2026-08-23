@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
-// The shape of one row in transaction_search_docs: counterparty, description
-// and tax note joined by a byte no transaction text carries, so FTS5 cannot
-// match across two fields as if they were one phrase. The writer, the
-// reindexer and the reader all have to agree on it, and the reader has to put
-// something legible in its place — a snippet() window spans the join, and the
-// raw byte drew a missing-character box on the phone.
+// One row of transaction_search_docs: counterparty, description and tax note
+// joined by a byte no transaction text carries, so FTS5 cannot match across
+// two fields as one phrase. Writer, reindexer and reader must agree on it, and
+// the reader must replace it — the raw byte drew a tofu box on the phone.
 final class SearchDocumentBody
 {
     public const FIELD_SEPARATOR = "\x0C";

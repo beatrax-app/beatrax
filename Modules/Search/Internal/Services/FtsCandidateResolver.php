@@ -24,10 +24,9 @@ final class FtsCandidateResolver
     use CoercesScalars;
 
     // The index tokenizer is trigram, so an FTS5 "token" is a three-character
-    // window, not a word: the twelve this asked for was about a dozen
-    // characters and cut the matched word itself in half — a search for
-    // Rentevergoeding came back as "Rente…". 64 is FTS5's own ceiling and the
-    // whole of an ordinary counterparty-plus-narrative body.
+    // window rather than a word: the twelve asked for here was a dozen
+    // characters and halved the matched word, turning a search for
+    // Rentevergoeding into "Rente…". 64 is FTS5's own ceiling.
     private const int SNIPPET_TRIGRAMS = 64;
 
     // Bounds the candidate window the <3-char LIKE fallback decrypts,
