@@ -7,6 +7,7 @@ use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\GooglePlayReceiptMatcher;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function googlePlayMatcher(): GooglePlayReceiptMatcher
@@ -67,7 +68,7 @@ it('parses a current-generation Google Play receipt with the strict GPA order-id
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed)->not->toBeNull();
     $dto = $outcome->parsed;
     expect($dto)->toBeInstanceOf(ParsedReceiptDto::class);
@@ -87,7 +88,7 @@ it('preserves both native USD and settled EUR legs for a foreign-currency receip
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     $dto = $outcome->parsed;
     expect($dto?->amountMinor)->toBe(-1299);
     expect($dto?->currency)->toBe('USD');
@@ -113,7 +114,7 @@ it('returns skipped(googleplay-refund-v2) for refund-subject receipts (v2 deferr
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('skipped');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Skipped);
     expect($outcome->skipReason)->toBe('googleplay-refund-v2');
 });
 
@@ -132,7 +133,7 @@ it('returns unmatched when the body lacks a GPA order id', function (): void {
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('unmatched');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
 });
 
 it('routes a Google Play sender via MatcherRegistry to GooglePlayReceiptMatcher', function (): void {
@@ -152,6 +153,6 @@ it('routes a Google Play sender via MatcherRegistry to GooglePlayReceiptMatcher'
 
     $outcome = $registry->dispatch($input, $raw);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed?->referenceId)->toBe('GPA.1234-5678-9012-34567');
 });

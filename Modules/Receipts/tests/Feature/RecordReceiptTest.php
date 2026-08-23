@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use Modules\Receipts\Public\Actions\RecordReceipt;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 
 beforeEach(function (): void {
     $seeded = $this->seedFixtureUserAndAccount();
@@ -17,7 +18,7 @@ it('invokes the matcher and transitions status to parsed for a PayPal .eml', fun
 
     $outcome = $record($bytes, $this->fixtureUser, 'paypal-receipt.eml');
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed?->merchantName)->toBe('Netflix BV');
 
     $row = DB::table('file_imports')->where('user_id', $this->fixtureUser->id)->first();

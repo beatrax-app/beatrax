@@ -14,6 +14,7 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Receipts\Public\Actions\RecordReceipt;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\MboxIterator;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 
@@ -73,7 +74,7 @@ final class ParseStage
             }
 
             $outcome = ($this->recordReceipt)($bytes, $user, $sourceFilename);
-            if ($outcome->kind === 'parsed' && $outcome->parsed !== null) {
+            if ($outcome->kind === MatchOutcomeKind::Parsed && $outcome->parsed !== null) {
                 yield $this->receiptAdapter->toSourceDto($outcome->parsed, sourceRowIndex: 0);
             }
 
@@ -83,7 +84,7 @@ final class ParseStage
         $rowIndex = 0;
         foreach ($this->mbox->iterate($localPath) as $entry) {
             $outcome = ($this->recordReceipt)($entry['eml'], $user, $sourceFilename);
-            if ($outcome->kind === 'parsed' && $outcome->parsed !== null) {
+            if ($outcome->kind === MatchOutcomeKind::Parsed && $outcome->parsed !== null) {
                 yield $this->receiptAdapter->toSourceDto($outcome->parsed, sourceRowIndex: $rowIndex);
             }
             $rowIndex++;

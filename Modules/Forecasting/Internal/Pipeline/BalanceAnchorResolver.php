@@ -41,12 +41,13 @@ final readonly class BalanceAnchorResolver
 
         $defaultCurrency = self::toString($account->getAttribute('default_currency'));
 
-        // A card takes its statement, then the reader-typed balance, then zero,
-        // rather than the ledger balance: summing would double-count the
-        // billing events the projection is about to re-emit.
+        // A card takes its statement, then a baseline the reader confirmed,
+        // then zero, rather than the ledger balance: with nothing to anchor on,
+        // summing would double-count the billing events the projection is
+        // about to re-emit.
         if (self::toString($account->getAttribute('kind')) === AccountKind::IcsCard->value) {
             return $this->fromCardStatements($accountId, $user, $defaultCurrency)
-                ?? ($this->hasReaderTypedBalance($account)
+                ?? ($this->hasReaderConfirmedBaseline($account)
                     ? $this->fromLedgerBalance($accountId, $user, $defaultCurrency)
                     : $this->icsCardZeroAnchor($accountId, $defaultCurrency));
         }
@@ -133,8 +134,11 @@ final readonly class BalanceAnchorResolver
             ->sum('settled_amount_minor');
     }
 
-    private function hasReaderTypedBalance(Account $account): bool
+    // Both columns AccountStartingBalanceQuery reads: the Settings override the
+    // reader types, and the baseline the wizard asks every new user to confirm.
+    private function hasReaderConfirmedBaseline(Account $account): bool
     {
-        return is_numeric($account->getAttribute('opening_balance_minor'));
+        return is_numeric($account->getAttribute('opening_balance_minor'))
+            || is_numeric($account->getAttribute('starting_balance_minor'));
     }
 }

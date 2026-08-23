@@ -12,6 +12,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Pots\Internal\Enums\PotLinkType;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
@@ -27,7 +28,7 @@ final class PotsPage extends Component
 
     public string $accountId = '';
 
-    public string $linkType = 'none';
+    public string $linkType = PotLinkType::None->value;
 
     public string $goalId = '';
 
@@ -106,9 +107,9 @@ final class PotsPage extends Component
             return;
         }
 
-        // linkType is 'goal' | 'none' only, so PotWriter always gets a null
-        // categoryId: category-linked pots are no longer creatable.
-        $goalId = ($this->linkType === 'goal' && $this->goalId !== '') ? (int) $this->goalId : null;
+        // PotWriter always gets a null categoryId: category-linked pots are
+        // no longer creatable.
+        $goalId = ($this->linkType === PotLinkType::Goal->value && $this->goalId !== '') ? (int) $this->goalId : null;
         $rawAmount = trim($this->amount) !== '' ? $this->amount : null;
 
         try {
@@ -149,12 +150,12 @@ final class PotsPage extends Component
                 $this->name = $pot->name;
                 $this->accountId = (string) $pot->accountId;
                 if ($pot->goalId !== null) {
-                    $this->linkType = 'goal';
+                    $this->linkType = PotLinkType::Goal->value;
                     $this->goalId = (string) $pot->goalId;
                 } else {
-                    // A lingering category_id falls back to 'none' rather than
-                    // surfacing a picker that no longer exists.
-                    $this->linkType = 'none';
+                    // A lingering category_id falls back to the unlinked case
+                    // rather than surfacing a picker that no longer exists.
+                    $this->linkType = PotLinkType::None->value;
                     $this->goalId = '';
                 }
                 $this->clearErrors();
@@ -181,7 +182,7 @@ final class PotsPage extends Component
         }
 
         $goalId = null;
-        if ($this->linkType === 'goal' && $this->goalId !== '') {
+        if ($this->linkType === PotLinkType::Goal->value && $this->goalId !== '') {
             $goalId = (int) $this->goalId;
         }
 
@@ -518,7 +519,7 @@ final class PotsPage extends Component
         $this->name = '';
         $this->amount = '';
         $this->accountId = '';
-        $this->linkType = 'none';
+        $this->linkType = PotLinkType::None->value;
         $this->goalId = '';
         $this->editPotId = 0;
         $this->clearErrors();

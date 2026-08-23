@@ -8,6 +8,7 @@ use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function icsMatcher(): IcsReceiptMatcher
@@ -68,7 +69,7 @@ it('parses a current-generation ICS receipt into a ParsedReceiptDto with a Funde
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed)->not->toBeNull();
     $dto = $outcome->parsed;
     expect($dto)->toBeInstanceOf(ParsedReceiptDto::class);
@@ -96,7 +97,7 @@ it('falls back to prior-generation anchors (kaart **** 1234, Merchant:, Autorisa
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed)->not->toBeNull();
     $dto = $outcome->parsed;
     expect($dto?->merchantName)->toBe('GELDMAAT ROELANTDREEF 239');
@@ -115,7 +116,7 @@ it('returns skipped(pdf_attachment_v2_only) for a PDF-attachment statement email
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('skipped');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Skipped);
     expect($outcome->skipReason)->toBe('pdf_attachment_v2_only');
 });
 
@@ -148,6 +149,6 @@ it('routes an ICS sender via MatcherRegistry to IcsReceiptMatcher', function ():
 
     $outcome = $registry->dispatch($input, $raw);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed?->merchantName)->toBe('SYNTHETIC ICS TINY');
 });

@@ -144,3 +144,12 @@ it('keeps the URL clean when the toggle is on the default value', function (): v
     expect($urlEffects)->toHaveKey('currency');
     expect($urlEffects['currency']['except'] ?? null)->toBe('');
 })->group('phase-3');
+
+// The segmented control submits into the same property the row branch reads,
+// so both tokens are spelled out here rather than read back off the enum.
+it('offers both currency-view tokens on the segmented toggle', function (): void {
+    $html = Livewire::test(TransactionsList::class)->html();
+
+    expect($html)->toContain('value="eur"')
+        ->and($html)->toContain('value="original"');
+})->group('phase-3');

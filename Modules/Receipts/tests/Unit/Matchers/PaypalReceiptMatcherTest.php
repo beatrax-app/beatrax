@@ -9,6 +9,7 @@ use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 
@@ -65,7 +66,7 @@ it('parses a current-generation Dutch PayPal receipt into a ParsedReceiptDto', f
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed)->not->toBeNull();
     $dto = $outcome->parsed;
     expect($dto)->toBeInstanceOf(ParsedReceiptDto::class);
@@ -88,7 +89,7 @@ it('falls back to English merchant/amount anchors on a prior-generation PayPal r
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed?->merchantName)->toBe('Netflix BV');
     expect($outcome->parsed?->amountMinor)->toBe(-1299);
     expect($outcome->parsed?->currency)->toBe('EUR');
@@ -100,7 +101,7 @@ it('returns skipped(paypal-login-notification) for a sign-in notice', function (
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('skipped');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Skipped);
     expect($outcome->skipReason)->toBe('paypal-login-notification');
 });
 
@@ -110,7 +111,7 @@ it('extracts both native and settled legs for foreign-currency receipts', functi
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     $dto = $outcome->parsed;
     expect($dto?->amountMinor)->toBe(-1299);
     expect($dto?->currency)->toBe('USD');
@@ -136,7 +137,7 @@ it('returns unmatched(invalid_date_header) without throwing when the Date header
 
     $outcome = $matcher->match($raw);
 
-    expect($outcome->kind)->toBe('unmatched');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
     expect($outcome->unmatchedReason)->toBe('invalid_date_header');
 });
 
@@ -157,7 +158,7 @@ it('routes a PayPal sender via MatcherRegistry to PaypalReceiptMatcher', functio
 
     $outcome = $registry->dispatch($input, $raw);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed?->merchantName)->toBe('Netflix BV');
 });
 
@@ -177,7 +178,7 @@ it('returns unmatched when no matcher claims the sender', function (): void {
 
     $outcome = $registry->dispatch($input, '');
 
-    expect($outcome->kind)->toBe('unmatched');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
     expect($outcome->parsed)->toBeNull();
 });
 

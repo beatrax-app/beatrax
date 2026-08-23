@@ -60,6 +60,23 @@ it('offers the same fields in the phone sheet as in the desktop modal', function
     expect(substr_count($html, 'wire:model.live="linkType"'))->toBe(4);
 });
 
+// Both radio pairs submit the token the component branches on, and both
+// branches reveal or hide the goal picker. The literals are spelled out here on
+// purpose: they are the wire values a stored pot round-trips through, so this
+// is the one place they must not be read back off the enum under test.
+it('submits goal and none from every link-type radio and reveals the picker only for goal', function (): void {
+    $html = Livewire::test(PotsPage::class)->html();
+
+    expect(substr_count($html, 'wire:model.live="linkType" value="goal"'))->toBe(2)
+        ->and(substr_count($html, 'wire:model.live="linkType" value="none"'))->toBe(2);
+
+    expect(Livewire::test(PotsPage::class)->set('linkType', 'none')->html())
+        ->not->toContain('wire:model="goalId"');
+
+    expect(Livewire::test(PotsPage::class)->set('linkType', 'goal')->html())
+        ->toContain('wire:model="goalId"');
+});
+
 it('createPot writes a pots row for the acting user', function (): void {
     Livewire::test(PotsPage::class)
         ->set('name', 'Holiday fund')

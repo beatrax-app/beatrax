@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Reports\Internal\Enums\ReportViz')
 {{--
     Dashboard "pinned reports" mini-card row. Up to 3 chart-only
     mini cards, ADDITIVE among the dashboard's other fixed cards — same
@@ -32,7 +33,7 @@
                 @php
                     $options = json_decode($card['optionsJson'], true);
                     $legend = [];
-                    if (is_array($options) && ($options['chart']['type'] ?? '') === 'donut') {
+                    if (is_array($options) && ($options['chart']['type'] ?? '') === ReportViz::Donut->value) {
                         foreach ($options['labels'] ?? [] as $i => $label) {
                             $legend[] = ['label' => $label, 'colour' => $options['colors'][$i] ?? '#94A3B8'];
                         }

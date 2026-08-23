@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Enums\AccountKind')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 {{--
     Per-account opening-balance editor — inline on /settings.
@@ -32,7 +33,7 @@
     // before the input by form convention, which assemble() decides per locale.
     $symbol = Money::SYMBOLS[$currency] ?? $currency;
     $helpText = match (true) {
-        str_contains($accountKind, 'paypal') => Lang::get('forecasting::opening_balance.help_paypal'),
+        str_contains($accountKind, AccountKind::Paypal->value) => Lang::get('forecasting::opening_balance.help_paypal'),
         default => Lang::get('forecasting::opening_balance.help_default'),
     };
 @endphp

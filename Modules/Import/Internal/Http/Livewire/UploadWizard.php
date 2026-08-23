@@ -53,7 +53,7 @@ final class UploadWizard extends Component
         'ics' => [SourceFormat::IcsPdf->value],
         'paypal' => [SourceFormat::PaypalCsv->value],
         'email-file' => [SourceFormat::Eml->value, SourceFormat::Mbox->value],
-        'other-bank' => [CsvPresetRegistry::N26, CsvPresetRegistry::REVOLUT, CsvPresetRegistry::ING_NL],
+        CsvPresetRegistry::ISSUER => [CsvPresetRegistry::N26, CsvPresetRegistry::REVOLUT, CsvPresetRegistry::ING_NL],
     ];
 
     public ?TemporaryUploadedFile $file = null;
@@ -135,7 +135,7 @@ final class UploadWizard extends Component
                 ['value' => SourceFormat::Eml->value, 'label' => Lang::get('import::upload.formats.email_message')],
                 ['value' => SourceFormat::Mbox->value, 'label' => Lang::get('import::upload.formats.mailbox_archive')],
             ],
-            'other-bank' => [
+            CsvPresetRegistry::ISSUER => [
                 ['value' => CsvPresetRegistry::N26, 'label' => 'N26 (CSV)'],
                 ['value' => CsvPresetRegistry::REVOLUT, 'label' => 'Revolut (CSV)'],
                 ['value' => CsvPresetRegistry::ING_NL, 'label' => Lang::get('import::upload.formats.ing_nl')],

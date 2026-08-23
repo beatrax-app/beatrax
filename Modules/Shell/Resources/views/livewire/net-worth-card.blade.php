@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\FX\Public\Support\BundledRates')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -19,7 +20,7 @@
     $sourceLabel = static fn (?string $source): string => match ($source) {
         'ecb' => 'ECB',
         'frankfurter' => 'Frankfurter',
-        'bundled' => Lang::get('core::net_worth.source_bundled'),
+        BundledRates::SOURCE => Lang::get('core::net_worth.source_bundled'),
         'transaction' => Lang::get('core::net_worth.source_transaction'),
         null, '' => Lang::get('core::net_worth.source_fallback'),
         default => ucfirst($source),
@@ -28,7 +29,7 @@
     // Stale-note copy depends on the rate's provenance (UI-SPEC §7.2): a bundled
     // snapshot tells the user to enable online refresh; a merely-old online rate
     // (staleness is age-based, independent of source) just notes its age.
-    $staleNote = static fn (?string $source): string => $source === 'bundled'
+    $staleNote = static fn (?string $source): string => $source === BundledRates::SOURCE
         ? Lang::get('core::net_worth.stale_bundled')
         : Lang::get('core::net_worth.stale_old');
 

@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Pots\Internal\Enums\PotLinkType')
 {{--
     /pots page — savings pots grouped by account with per-account reconciliation
     headers (real · allocated · unallocated), negative-unallocated amber
@@ -506,19 +507,19 @@
             <fieldset>
                 <legend class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.link_to') }}</legend>
                 <div class="flex gap-2">
-                    <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-2 text-sm {{ $linkType === 'goal' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400' }}">
-                        <input type="radio" name="linkTypeSheet" wire:model.live="linkType" value="goal" class="sr-only" />
+                    <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-2 text-sm {{ $linkType === PotLinkType::Goal->value ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400' }}">
+                        <input type="radio" name="linkTypeSheet" wire:model.live="linkType" value="{{ PotLinkType::Goal->value }}" class="sr-only" />
                         {{ Lang::get('pots::messages.form.link_goal') }}
                     </label>
-                    <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-2 text-sm {{ $linkType === 'none' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400' }}">
-                        <input type="radio" name="linkTypeSheet" wire:model.live="linkType" value="none" class="sr-only" />
+                    <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-2 text-sm {{ $linkType === PotLinkType::None->value ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400' }}">
+                        <input type="radio" name="linkTypeSheet" wire:model.live="linkType" value="{{ PotLinkType::None->value }}" class="sr-only" />
                         {{ Lang::get('pots::messages.form.link_none') }}
                     </label>
                 </div>
                 {{-- Unlabelled for the same reason as the modal's picker: the
                      legend names the group, and x-core::form-field would demand
                      a label of its own — a new string in 26 locales. --}}
-                @if ($linkType === 'goal')
+                @if ($linkType === PotLinkType::Goal->value)
                     <select
                         wire:model="goalId"
                         class="mt-2 block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
@@ -767,12 +768,12 @@
                 <fieldset>
                     <legend class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.link_to') }}</legend>
                     <div class="flex gap-2">
-                        <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === 'goal' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
-                            <input type="radio" name="linkType" wire:model.live="linkType" value="goal" class="sr-only" />
+                        <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === PotLinkType::Goal->value ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
+                            <input type="radio" name="linkType" wire:model.live="linkType" value="{{ PotLinkType::Goal->value }}" class="sr-only" />
                             {{ Lang::get('pots::messages.form.link_goal') }}
                         </label>
-                        <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === 'none' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
-                            <input type="radio" name="linkType" wire:model.live="linkType" value="none" class="sr-only" />
+                        <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === PotLinkType::None->value ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
+                            <input type="radio" name="linkType" wire:model.live="linkType" value="{{ PotLinkType::None->value }}" class="sr-only" />
                             {{ Lang::get('pots::messages.form.link_none') }}
                         </label>
                     </div>
@@ -781,7 +782,7 @@
                          sits in — and x-core::form-field requires one. Giving it a label
                          means a new user-facing string in all 26 locales, which
                          is a copy decision, not a refactor. --}}
-                    @if ($linkType === 'goal')
+                    @if ($linkType === PotLinkType::Goal->value)
                         <select
                             wire:model="goalId"
                             class="mt-2 block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"

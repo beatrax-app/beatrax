@@ -12,6 +12,7 @@ use Modules\Core\Public\Enums\InboxMessageStatus;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
 use Throwable;
@@ -107,11 +108,11 @@ final class RecordReceipt
             'updated_at' => $this->clock->now()->toDateTimeString(),
         ];
 
-        if ($outcome->kind === 'parsed' && $outcome->parsed !== null) {
+        if ($outcome->kind === MatchOutcomeKind::Parsed && $outcome->parsed !== null) {
             $update['status'] = InboxMessageStatus::Parsed->value;
             $rawKey = $outcome->parsed->rawPayload['matcher_key'] ?? null;
             $update['matcher_key'] = is_string($rawKey) && $rawKey !== '' ? $rawKey : null;
-        } elseif ($outcome->kind === 'skipped') {
+        } elseif ($outcome->kind === MatchOutcomeKind::Skipped) {
             $update['status'] = InboxMessageStatus::Skipped->value;
         } else {
             $update['status'] = InboxMessageStatus::Unmatched->value;

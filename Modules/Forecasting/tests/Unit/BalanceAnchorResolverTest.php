@@ -329,3 +329,23 @@ it('leaves a card charge dated after today out of what the card owes', function 
 
     expect($anchor->openingBalanceMinor)->toBe(-51000);
 });
+
+// The wizard asks every new user to confirm what each account holds and writes
+// the answer to accounts.starting_balance_minor. A card only ever consulted
+// accounts.opening_balance_minor, so the confirmed figure was not a balance to
+// it: the card opened at zero and the all-accounts curve stood its whole
+// balance above the net worth on the dashboard one page away.
+it('opens a card on the baseline the wizard asked the reader to confirm', function (): void {
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-23 09:00:00'));
+
+    $accountId = barInsertAccount($this->db, $this->user->id, AccountKind::IcsCard->value, [
+        'starting_balance_minor' => -15000,
+        'starting_balance_date' => null,
+    ]);
+    barInsertTransaction($this->db, $this->user->id, $accountId, -55400, '2026-08-01');
+
+    $anchor = $this->resolver->forAccount($accountId, $this->user);
+
+    expect($anchor->openingBalanceMinor)->toBe(-70400)
+        ->and($anchor->source)->toBe('sum_of_transactions');
+});

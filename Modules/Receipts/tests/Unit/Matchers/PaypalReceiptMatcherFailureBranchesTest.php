@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function paypalFailMatcher(): PaypalReceiptMatcher
@@ -29,21 +30,21 @@ it('returns unmatched when the body has no transaction id', function (): void {
     $body = "Aan: Netflix BV\r\nBedrag: EUR 12,99\r\n";
     $outcome = paypalFailMatcher()->match(paypalPlainEml($body));
 
-    expect($outcome->kind)->toBe('unmatched');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
 });
 
 it('returns unmatched when no amount anchor matches (USD, EUR and labelled all miss)', function (): void {
     $body = "Aan: Netflix BV\r\nTransaction ID: PAYPALNOAMOUNT001\r\n";
     $outcome = paypalFailMatcher()->match(paypalPlainEml($body));
 
-    expect($outcome->kind)->toBe('unmatched');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
 });
 
 it('returns unmatched when a charge is present but no merchant line is found', function (): void {
     $body = "Transaction ID: PAYPALNOMERCH0001\r\nAmount: EUR 5,00\r\n";
     $outcome = paypalFailMatcher()->match(paypalPlainEml($body));
 
-    expect($outcome->kind)->toBe('unmatched');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
 });
 
 it('parses the native leg from a bare labelled amount (no USD/EUR anchor)', function (): void {
@@ -52,7 +53,7 @@ it('parses the native leg from a bare labelled amount (no USD/EUR anchor)', func
     $body = "Merchant: Labelled Store\r\nTotal: 25,00\r\nTransaction ID: PAYPALLABEL000001\r\n";
     $outcome = paypalFailMatcher()->match(paypalPlainEml($body));
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed?->merchantName)->toBe('Labelled Store');
     expect($outcome->parsed?->amountMinor)->toBe(-2500);
     expect($outcome->parsed?->currency)->toBe('EUR');

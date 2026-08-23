@@ -331,12 +331,16 @@ agree on which rows have landed and the line no longer steps on today.
 `accounts.kind` changes that for one kind only. An **ICS card** takes, in
 order, its most recent `card_statements` "open balance" (the absolute amount
 still owed, negated to a signed running-balance position since the user owes
-it to the card vendor), then `accounts.opening_balance_minor` when the reader
-entered one, then zero. A card must not take the ledger balance: summing its
-rows would double-count the historical billing events the projection is about
-to re-emit forward. The UI surfaces the zero case with an "Opening balance not
-set" banner, which refers to the manual `accounts.opening_balance_minor`
-override, not to the baseline.
+it to the card vendor), then the ledger balance when the account carries a
+baseline the reader confirmed — either column
+`AccountStartingBalanceQuery` reads, the Settings override
+`accounts.opening_balance_minor` or the `accounts.starting_balance_minor`
+the wizard asks every new user to confirm — then zero. A card with **no**
+baseline to open on must not take the ledger balance: summing its rows would
+double-count the historical billing events the projection is about to re-emit
+forward. Reading only the Settings override left a card whose balance the
+wizard had confirmed anchored at zero, and the all-accounts curve then stood
+that card's whole balance above the net worth on the dashboard one page away.
 
 A statement summary is no longer an anchor for any kind. It was, and a closing
 balance that had not moved since 11 April opened the round-6 desktop's forecast
