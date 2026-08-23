@@ -7,6 +7,7 @@ use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricRecoverResult;
+use Psr\Log\NullLogger;
 
 // The native BiometricVault facade is unreachable in the repo toolchain, so this
 // subclass supplies an in-memory enclave. The blob crypto is real, so the
@@ -63,7 +64,7 @@ function fakeVault(int $userId = 7): FakeBiometricKeyVault
     $cu = Mockery::mock(CurrentUser::class);
     $cu->shouldReceive('id')->andReturn($userId);
 
-    return new FakeBiometricKeyVault(new BiometricKeyBlobCodec(new AppLockKeyWrap), $cu);
+    return new FakeBiometricKeyVault(new BiometricKeyBlobCodec(new AppLockKeyWrap), $cu, new NullLogger);
 }
 
 it('round-trips the data key through enroll() then recover()', function (): void {

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Identity;
 
 use Beatrax\BiometricVault\Facades\BiometricVault;
-use Illuminate\Support\Facades\Log;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
+use Psr\Log\LoggerInterface;
 
 /**
  * @link ../../../../.docs/design/cold-start-biometric-unlock.md
@@ -22,6 +22,7 @@ class BiometricKeyVault
     public function __construct(
         private readonly BiometricKeyBlobCodec $codec,
         private readonly CurrentUser $currentUser,
+        private readonly LoggerInterface $log,
     ) {}
 
     public function isAvailable(): bool
@@ -180,7 +181,7 @@ class BiometricKeyVault
 
     protected function logRefusal(?string $reason): void
     {
-        Log::warning('BiometricKeyVault: the enclave refused to store the cold-start key.', [
+        $this->log->warning('BiometricKeyVault: the enclave refused to store the cold-start key.', [
             'reason' => $reason ?? 'the native side gave none',
         ]);
     }

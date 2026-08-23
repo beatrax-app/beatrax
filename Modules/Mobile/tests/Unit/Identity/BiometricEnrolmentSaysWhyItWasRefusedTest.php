@@ -8,6 +8,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 // Found on an iPhone 12 mini: "Use Face ID → Enroll" failed every time, the
 // screen said only "Your device declined to store the key", and NOTHING was
@@ -89,7 +91,7 @@ function refusingKeyVault(?string $nativeError, bool $stored, array &$logged): B
         }
     };
 
-    return new class(app(BiometricKeyBlobCodec::class), $currentUser, $nativeError, $stored, $logged) extends BiometricKeyVault
+    return new class(app(BiometricKeyBlobCodec::class), $currentUser, new NullLogger, $nativeError, $stored, $logged) extends BiometricKeyVault
     {
         /**
          * @param  list<?string>  $logged
@@ -97,11 +99,12 @@ function refusingKeyVault(?string $nativeError, bool $stored, array &$logged): B
         public function __construct(
             BiometricKeyBlobCodec $codec,
             CurrentUser $currentUser,
+            LoggerInterface $log,
             private readonly ?string $nativeError,
             private readonly bool $stored,
             private array &$logged,
         ) {
-            parent::__construct($codec, $currentUser);
+            parent::__construct($codec, $currentUser, $log);
         }
 
         protected function runtimeAvailable(): bool
