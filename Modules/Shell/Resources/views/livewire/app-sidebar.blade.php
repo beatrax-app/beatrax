@@ -49,7 +49,7 @@
         x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
         style="cursor: pointer;"
     >
-        <span class="ic" aria-hidden="true">⌕</span>
+        <x-core::search-mark class="ic" />
         <input
             type="text"
             placeholder="{{ Lang::get('core::sidebar.search_placeholder') }}"

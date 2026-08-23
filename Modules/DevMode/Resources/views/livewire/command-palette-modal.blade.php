@@ -67,11 +67,11 @@
                          of the input, and two glyphs of different advance
                          width would shift the query text sideways every time
                          a search starts. --}}
-                    <span
-                        class="ic w-4 text-center text-slate-400 dark:text-slate-500"
-                        aria-hidden="true"
+                    <x-core::search-mark
+                        size="md"
+                        class="ic text-slate-400 dark:text-slate-500"
                         x-show="!serverLoading"
-                    >⌕</span>
+                    />
                     <x-core::spinner
                         class="text-slate-400 dark:text-slate-500"
                         x-show="serverLoading"
