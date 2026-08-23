@@ -142,7 +142,7 @@ final class AsnCsvAdapter implements SourceAdapter
     {
         $parts = [];
         foreach ([AsnCsvColumnMap::PAYMENT_REF, AsnCsvColumnMap::DESCRIPTION] as $col) {
-            $value = trim($row[$col]);
+            $value = self::unwrapDelimiters(trim($row[$col]));
             if ($value !== '') {
                 $parts[] = $value;
             }
@@ -159,5 +159,16 @@ final class AsnCsvAdapter implements SourceAdapter
         $collapsed = preg_replace('/\s+/u', ' ', $combined);
 
         return is_string($collapsed) ? trim($collapsed) : trim($combined);
+    }
+
+    // ASN wraps this field in apostrophes as a delimiter, not as punctuation.
+    // They were carried into the ledger, so /transactions/{id} printed
+    // 'Rentevergoeding tweede kwartaal' with the quotes, and search indexed
+    // them. Only a MATCHING pair goes; rawPayload keeps the untouched row.
+    private static function unwrapDelimiters(string $value): string
+    {
+        return strlen($value) >= 2 && str_starts_with($value, "'") && str_ends_with($value, "'")
+            ? trim(substr($value, 1, -1))
+            : $value;
     }
 }
