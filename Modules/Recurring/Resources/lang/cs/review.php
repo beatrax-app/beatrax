@@ -36,10 +36,12 @@ return [
     'reject' => 'Odmítnout',
     'reject_aria' => 'Odmítnout opakovanou řadu :id',
     'snooze' => 'Odložit',
+    'snooze_aria' => 'Odložit opakovanou řadu :id',
     'snooze_1w' => '1 týden',
     'snooze_1m' => '1 měsíc',
     'snooze_3m' => '3 měsíce',
     'edit_name' => 'Upravit název',
+    'edit_name_aria' => 'Přejmenovat opakovanou řadu :id',
     'new_name_label' => 'Nový název této řady',
     'save' => 'Uložit',
 

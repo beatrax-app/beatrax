@@ -36,10 +36,12 @@ return [
     'reject' => 'Afwijzen',
     'reject_aria' => 'Terugkerende reeks :id afwijzen',
     'snooze' => 'Uitstellen',
+    'snooze_aria' => 'Terugkerende reeks :id uitstellen',
     'snooze_1w' => '1 week',
     'snooze_1m' => '1 maand',
     'snooze_3m' => '3 maanden',
     'edit_name' => 'Naam bewerken',
+    'edit_name_aria' => 'Terugkerende reeks :id hernoemen',
     'new_name_label' => 'Nieuwe naam voor deze reeks',
     'save' => 'Opslaan',
 

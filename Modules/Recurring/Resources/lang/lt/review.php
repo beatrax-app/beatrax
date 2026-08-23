@@ -36,10 +36,12 @@ return [
     'reject' => 'Atmesti',
     'reject_aria' => 'Atmesti pasikartojančią seriją :id',
     'snooze' => 'Atidėti',
+    'snooze_aria' => 'Atidėti pasikartojančią seriją :id',
     'snooze_1w' => '1 savaitė',
     'snooze_1m' => '1 mėnuo',
     'snooze_3m' => '3 mėnesiai',
     'edit_name' => 'Redaguoti pavadinimą',
+    'edit_name_aria' => 'Pervadinti pasikartojančią seriją :id',
     'new_name_label' => 'Naujas šios serijos pavadinimas',
     'save' => 'Išsaugoti',
 

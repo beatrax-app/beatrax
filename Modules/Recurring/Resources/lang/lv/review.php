@@ -36,10 +36,12 @@ return [
     'reject' => 'Noraidīt',
     'reject_aria' => 'Noraidīt regulāro sēriju :id',
     'snooze' => 'Atlikt',
+    'snooze_aria' => 'Atlikt regulāro sēriju :id',
     'snooze_1w' => '1 nedēļa',
     'snooze_1m' => '1 mēnesis',
     'snooze_3m' => '3 mēneši',
     'edit_name' => 'Rediģēt nosaukumu',
+    'edit_name_aria' => 'Pārdēvēt regulāro sēriju :id',
     'new_name_label' => 'Jauns nosaukums šai sērijai',
     'save' => 'Saglabāt',
 

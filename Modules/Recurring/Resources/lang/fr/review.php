@@ -36,10 +36,12 @@ return [
     'reject' => 'Rejeter',
     'reject_aria' => 'Rejeter la série récurrente :id',
     'snooze' => 'Reporter',
+    'snooze_aria' => 'Reporter la série récurrente :id',
     'snooze_1w' => '1 semaine',
     'snooze_1m' => '1 mois',
     'snooze_3m' => '3 mois',
     'edit_name' => 'Modifier le nom',
+    'edit_name_aria' => 'Renommer la série récurrente :id',
     'new_name_label' => 'Nouveau nom pour cette série',
     'save' => 'Enregistrer',
 

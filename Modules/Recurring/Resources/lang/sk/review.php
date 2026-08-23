@@ -36,10 +36,12 @@ return [
     'reject' => 'Zamietnuť',
     'reject_aria' => 'Zamietnuť opakovanú sériu :id',
     'snooze' => 'Odložiť',
+    'snooze_aria' => 'Odložiť opakovanú sériu :id',
     'snooze_1w' => '1 týždeň',
     'snooze_1m' => '1 mesiac',
     'snooze_3m' => '3 mesiace',
     'edit_name' => 'Upraviť názov',
+    'edit_name_aria' => 'Premenovať opakovanú sériu :id',
     'new_name_label' => 'Nový názov pre túto sériu',
     'save' => 'Uložiť',
 

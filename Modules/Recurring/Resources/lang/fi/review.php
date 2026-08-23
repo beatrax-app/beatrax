@@ -36,10 +36,12 @@ return [
     'reject' => 'Hylkää',
     'reject_aria' => 'Hylkää toistuva sarja :id',
     'snooze' => 'Torkuta',
+    'snooze_aria' => 'Torkuta toistuvaa sarjaa :id',
     'snooze_1w' => '1 viikko',
     'snooze_1m' => '1 kuukausi',
     'snooze_3m' => '3 kuukautta',
     'edit_name' => 'Muokkaa nimeä',
+    'edit_name_aria' => 'Nimeä toistuva sarja :id uudelleen',
     'new_name_label' => 'Uusi nimi tälle sarjalle',
     'save' => 'Tallenna',
 

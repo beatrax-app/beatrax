@@ -36,10 +36,12 @@ return [
     'reject' => 'Odbij',
     'reject_aria' => 'Odbij ponavljajuću seriju :id',
     'snooze' => 'Odloži',
+    'snooze_aria' => 'Odloži ponavljajuću seriju :id',
     'snooze_1w' => '1 nedelja',
     'snooze_1m' => '1 mesec',
     'snooze_3m' => '3 meseca',
     'edit_name' => 'Izmeni naziv',
+    'edit_name_aria' => 'Preimenuj ponavljajuću seriju :id',
     'new_name_label' => 'Novi naziv za ovu seriju',
     'save' => 'Sačuvaj',
 

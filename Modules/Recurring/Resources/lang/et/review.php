@@ -36,10 +36,12 @@ return [
     'reject' => 'Lükka tagasi',
     'reject_aria' => 'Lükka korduvmaksete seeria :id tagasi',
     'snooze' => 'Lükka edasi',
+    'snooze_aria' => 'Lükka korduvmaksete seeria :id edasi',
     'snooze_1w' => '1 nädal',
     'snooze_1m' => '1 kuu',
     'snooze_3m' => '3 kuud',
     'edit_name' => 'Muuda nime',
+    'edit_name_aria' => 'Muuda korduvmaksete seeria :id nime',
     'new_name_label' => 'Selle seeria uus nimi',
     'save' => 'Salvesta',
 

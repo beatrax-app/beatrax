@@ -36,10 +36,12 @@ return [
     'reject' => 'Ablehnen',
     'reject_aria' => 'Wiederkehrende Reihe :id ablehnen',
     'snooze' => 'Zurückstellen',
+    'snooze_aria' => 'Wiederkehrende Reihe :id zurückstellen',
     'snooze_1w' => '1 Woche',
     'snooze_1m' => '1 Monat',
     'snooze_3m' => '3 Monate',
     'edit_name' => 'Namen bearbeiten',
+    'edit_name_aria' => 'Wiederkehrende Reihe :id umbenennen',
     'new_name_label' => 'Neuer Name für diese Reihe',
     'save' => 'Speichern',
 

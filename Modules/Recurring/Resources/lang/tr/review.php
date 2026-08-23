@@ -36,10 +36,12 @@ return [
     'reject' => 'Reddet',
     'reject_aria' => ':id numaralı düzenli seriyi reddet',
     'snooze' => 'Ertele',
+    'snooze_aria' => ':id numaralı düzenli seriyi ertele',
     'snooze_1w' => '1 hafta',
     'snooze_1m' => '1 ay',
     'snooze_3m' => '3 ay',
     'edit_name' => 'Adı düzenle',
+    'edit_name_aria' => ':id numaralı düzenli serinin adını düzenle',
     'new_name_label' => 'Bu seri için yeni ad',
     'save' => 'Kaydet',
 

@@ -137,6 +137,7 @@
                                     <button
                                         type="button"
                                         x-on:click="open = ! open"
+                                        aria-label="{{ Lang::get('recurring::review.snooze_aria', ['id' => $row->seriesId]) }}"
                                         class="{{ $rowActionClass }}"
                                     >{{ Lang::get('recurring::review.snooze') }}</button>
                                     {{-- text-xs sizes the window buttons below, which set no size of
@@ -162,6 +163,7 @@
                                     <button
                                         type="button"
                                         x-on:click="editing = ! editing"
+                                        aria-label="{{ Lang::get('recurring::review.edit_name_aria', ['id' => $row->seriesId]) }}"
                                         class="{{ $rowActionClass }}"
                                     >{{ Lang::get('recurring::review.edit_name') }}</button>
                                     <div

@@ -36,10 +36,12 @@ return [
     'reject' => 'Odrzuć',
     'reject_aria' => 'Odrzuć serię cykliczną :id',
     'snooze' => 'Odłóż',
+    'snooze_aria' => 'Odłóż serię cykliczną :id',
     'snooze_1w' => '1 tydzień',
     'snooze_1m' => '1 miesiąc',
     'snooze_3m' => '3 miesiące',
     'edit_name' => 'Edytuj nazwę',
+    'edit_name_aria' => 'Zmień nazwę serii cyklicznej :id',
     'new_name_label' => 'Nowa nazwa dla tej serii',
     'save' => 'Zapisz',
 
