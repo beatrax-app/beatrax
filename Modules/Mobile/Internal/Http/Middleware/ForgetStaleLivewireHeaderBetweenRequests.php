@@ -38,6 +38,9 @@ final class ForgetStaleLivewireHeaderBetweenRequests
     // endpoint's own URI is what Livewire itself matches on.
     private function isUpdateEndpoint(Request $request): bool
     {
-        return '/'.ltrim($request->path(), '/') === '/'.ltrim($this->livewire->getUpdateUri(), '/');
+        $updateUri = $this->livewire->getUpdateUri();
+
+        return is_string($updateUri)
+            && '/'.ltrim($request->path(), '/') === '/'.ltrim($updateUri, '/');
     }
 }
