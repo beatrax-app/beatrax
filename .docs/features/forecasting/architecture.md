@@ -388,12 +388,55 @@ Algorithm:
    date) tuple. Any OTHER contribution sharing that tuple (an unrelated
    recurring series whose occurrence happens to land on the settlement
    date) survives, so the daily fold sums it alongside the settlement.
-4. When `$viewByFunder=true`, per-series contributions collapse onto a
+4. Drop the synthesised settlement itself where a booked row on the funder
+   already is it — see below.
+5. When `$viewByFunder=true`, per-series contributions collapse onto a
    single per-day-per-account aggregate (one line per funder account
    instead of N series-tagged lines) — the collapse assumes contributions
    sharing a tuple are already in the funder's default currency, since FX
    conversion never happens in this router (it stays at the daily-fold
    boundary per RESEARCH Pitfall 6).
+
+### Which wins where a booked row and the synthesised settlement are the same payment
+
+Step 2 infers the settlement from an open statement. If the reader's bank
+statement already carries that settlement as a future-dated direct debit, the
+ledger holds the very charge being inferred, `BookedRowProjector` emits it, and
+the fold drew −€2,900.00 for one €1,450.00 settlement.
+
+The dedup in step 3 cannot see it. It is scoped to the chain-routed series ids,
+and a booked contribution carries `seriesId = 0` — so the `seriesId != 0` arm is
+false for it and it always survived.
+
+The **booked row wins**, the same precedence `BookedRowProjector` applies to a
+series estimate: one is a real, already-committed transaction, the other is an
+inference about the same event. The synthesised contribution is what gets
+dropped, and the booked row reaches the fold untouched.
+
+Sameness is decided on three things, because there is no relation between a
+`transactions` row and a `card_statements` row to read instead:
+
+- **The funder account.** Both sit on the account that pays the card.
+- **`MatchWindow::DAYS` around the due date**, not the due date itself — the
+  same window the series case uses, for the same reason: a bank that moves a
+  direct debit off a weekend still settles the card once.
+- **The amount, within `SettlementTolerance::minorFor()`** — €5 or 2% of the
+  statement, whichever is larger, which is already this repo's answer to "is
+  this payment that statement's settlement" where `IcsSettlementResolver` links
+  a settled transfer. A charge that posted after the period closed leaves the
+  debit a little above the balance the statement was written for; it is still
+  the one payment.
+
+The amount arm is what makes the rule safe rather than merely narrow. A bank
+account has a booked row in a fifteen-day window almost always, and matching on
+(account, date) alone would delete the settlement whenever any of them existed.
+
+**Outside the tolerance both survive.** Two figures that far apart are not
+evidence of one payment, and the asymmetry decides it: showing a settlement
+twice makes the curve too pessimistic and raises a shortfall that is not there,
+while dropping a real one hides a shortfall the reader never sees coming. A
+part payment is therefore kept alongside the settlement rather than netted off
+it — netting would invent a figure neither the ledger nor the statement states.
 
 ## Daily fold
 

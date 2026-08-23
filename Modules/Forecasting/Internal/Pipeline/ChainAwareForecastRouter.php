@@ -7,11 +7,18 @@ namespace Modules\Forecasting\Internal\Pipeline;
 use Carbon\CarbonImmutable;
 use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
+use Modules\Chains\Public\Support\SettlementTolerance;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Recurring\Public\Support\MatchWindow;
 
+/**
+ * @link ../../../../.docs/features/forecasting/architecture.md#chain-aware-routing
+ */
 final readonly class ChainAwareForecastRouter
 {
+    private const int NO_SERIES = 0;
+
     public function __construct(
         private ChainLinkQuery $chainQuery,
         private CardStatementQuery $cardStatementQuery,
@@ -92,7 +99,7 @@ final readonly class ChainAwareForecastRouter
             highMinor: $settlementMinor,
             currency: $nextSettlement->amount->currency(),
             fxRateUsed: null,
-            seriesId: 0,
+            seriesId: self::NO_SERIES,
             accountId: $nextSettlement->accountId,
         );
 
@@ -112,14 +119,43 @@ final readonly class ChainAwareForecastRouter
         $dedup = [];
         foreach ($routed as $c) {
             $cKey = $c->accountId.'|'.$c->date->toDateString();
-            if ($cKey === $dueKey && $c->seriesId !== 0 && array_key_exists($c->seriesId, $chainRoutedSeriesIds)) {
+            if ($cKey === $dueKey && $c->seriesId !== self::NO_SERIES && array_key_exists($c->seriesId, $chainRoutedSeriesIds)) {
                 continue;
             }
             $dedup[] = $c;
         }
+
+        if ($this->bookedAlready($dedup, $synth)) {
+            return $dedup;
+        }
+
         $dedup[] = $synth;
 
         return $dedup;
+    }
+
+    // The ledger already holds the debit this settlement infers, so the
+    // inference is dropped and the booked row carries the day on its own.
+    /**
+     * @param  list<ForecastContribution>  $contributions
+     */
+    private function bookedAlready(array $contributions, ForecastContribution $synth): bool
+    {
+        $tolerance = SettlementTolerance::minorFor($synth->pointMinor);
+
+        foreach ($contributions as $c) {
+            if ($c->seriesId !== self::NO_SERIES || $c->accountId !== $synth->accountId || $c->currency !== $synth->currency) {
+                continue;
+            }
+            if (abs($c->date->diffInDays($synth->date)) > MatchWindow::DAYS) {
+                continue;
+            }
+            if (abs($c->pointMinor - $synth->pointMinor) <= $tolerance) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Assumes contributions sharing an (accountId, date) tuple are already in
@@ -159,7 +195,7 @@ final readonly class ChainAwareForecastRouter
                 highMinor: $b['high'],
                 currency: $b['currency'],
                 fxRateUsed: null,
-                seriesId: 0,
+                seriesId: self::NO_SERIES,
                 accountId: $b['accountId'],
             );
         }
@@ -172,7 +208,7 @@ final readonly class ChainAwareForecastRouter
      */
     private function resolveFunderForSeries(int $seriesId, User $user, array &$cache): ?int
     {
-        if ($seriesId === 0) {
+        if ($seriesId === self::NO_SERIES) {
             return null;
         }
 

@@ -14,6 +14,7 @@ use Modules\Chains\Public\Enums\CardStatementCreditReason;
 use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
+use Modules\Chains\Public\Support\SettlementTolerance;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -35,10 +36,6 @@ use stdClass;
 final class IcsSettlementResolver
 {
     use CoercesScalars;
-
-    public const AMOUNT_TOLERANCE_MINOR = 500;
-
-    public const AMOUNT_TOLERANCE_PERCENT = 2;
 
     public const PERIOD_WINDOW_DAYS = 10;
 
@@ -238,14 +235,12 @@ final class IcsSettlementResolver
         // $settled is a magnitude; positive delta = overpaid, negative = under.
         $delta = -$expenseSum - $priorCredits - $settled;
 
-        $absStatementTotal = abs($statementTotal);
-        $percentTolerance = (int) floor($absStatementTotal * (self::AMOUNT_TOLERANCE_PERCENT / 100));
-        $tolerance = max(self::AMOUNT_TOLERANCE_MINOR, $percentTolerance);
+        $tolerance = SettlementTolerance::minorFor($statementTotal);
 
         $signatureHash = self::signatureHash($ibans, $accountId, $periodEnd, $user);
 
         if (abs($delta) <= $tolerance) {
-            $toleranceUsed = abs($delta) <= self::AMOUNT_TOLERANCE_MINOR
+            $toleranceUsed = abs($delta) <= SettlementTolerance::FLOOR_MINOR
                 ? 'amount_5eur'
                 : 'percent_2';
 

@@ -145,7 +145,8 @@ resolves to an `ics_card`-kind Account A:
    negative on the ASN side). Positive delta = user overpaid; negative
    = underpaid.
 5. If `|delta|` is within tolerance (max of ±€5 absolute or ±2% of the
-   statement total) — write one confirmed `chain_links` row per
+   statement total, from `SettlementTolerance` — the forecast's booked-row
+   dedup reads the same figures) — write one confirmed `chain_links` row per
    expense and call `CardStatementStateMachine::applySettlement()`. If
    the resulting state is `overpaid`, emit a `card_statement_credits`
    row with `reason = 'overpayment'`.
