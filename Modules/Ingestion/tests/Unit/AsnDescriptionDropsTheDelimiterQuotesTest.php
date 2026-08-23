@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
+use Modules\Ingestion\Public\Asn\AsnDescriptionDelimiters;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 
 // Read off an iPhone 12 mini after importing a real ASN export: the transaction
@@ -58,11 +59,38 @@ it('leaves the raw payload exactly as the bank wrote it', function (): void {
 
 // An apostrophe that is part of the text, or an unmatched one, is punctuation.
 it('leaves an apostrophe that is not a matching wrapper alone', function (): void {
-    $unwrap = new ReflectionMethod(AsnCsvAdapter::class, 'unwrapDelimiters');
+    expect(AsnDescriptionDelimiters::unwrap("Bakkerij 't Stoepje"))->toBe("Bakkerij 't Stoepje")
+        ->and(AsnDescriptionDelimiters::unwrap("'unclosed"))->toBe("'unclosed")
+        ->and(AsnDescriptionDelimiters::unwrap("unopened'"))->toBe("unopened'")
+        ->and(AsnDescriptionDelimiters::unwrap("'"))->toBe("'")
+        ->and(AsnDescriptionDelimiters::unwrap("'wrapped'"))->toBe('wrapped');
+});
 
-    expect($unwrap->invoke(null, "Bakkerij 't Stoepje"))->toBe("Bakkerij 't Stoepje")
-        ->and($unwrap->invoke(null, "'unclosed"))->toBe("'unclosed")
-        ->and($unwrap->invoke(null, "unopened'"))->toBe("unopened'")
-        ->and($unwrap->invoke(null, "'"))->toBe("'")
-        ->and($unwrap->invoke(null, "'wrapped'"))->toBe('wrapped');
+// The backfill over already-imported rows reads a STORED description, which
+// the adapter may have joined from two wrapped fields. Both readings of the
+// rule live in one class so they cannot drift apart.
+it('unwraps a stored description without splitting a narrative that carries the separator', function (): void {
+    expect(AsnDescriptionDelimiters::unwrapStored("'Rentevergoeding tweede kwartaal'"))
+        ->toBe('Rentevergoeding tweede kwartaal')
+        ->and(AsnDescriptionDelimiters::unwrapStored("'Europese incasso: NL-1234 / FEBRUARI 2026'"))
+        ->toBe('Europese incasso: NL-1234 / FEBRUARI 2026')
+        ->and(AsnDescriptionDelimiters::unwrapStored("'FACTUUR 88' / 'Maandtermijn'"))
+        ->toBe('FACTUUR 88 / Maandtermijn')
+        ->and(AsnDescriptionDelimiters::unwrapStored("Bakker's Delft"))
+        ->toBe("Bakker's Delft")
+        ->and(AsnDescriptionDelimiters::unwrapStored("'unclosed"))
+        ->toBe("'unclosed")
+        ->and(AsnDescriptionDelimiters::unwrapStored("unopened'"))
+        ->toBe("unopened'")
+        ->and(AsnDescriptionDelimiters::unwrapStored("''nested''"))
+        ->toBe("''nested''")
+        ->and(AsnDescriptionDelimiters::unwrapStored("''"))
+        ->toBeNull();
+});
+
+it('is a fixpoint: unwrapping a stored description twice changes nothing the second time', function (): void {
+    $once = AsnDescriptionDelimiters::unwrapStored("'Rentevergoeding tweede kwartaal'");
+
+    expect($once)->toBe('Rentevergoeding tweede kwartaal')
+        ->and(AsnDescriptionDelimiters::unwrapStored((string) $once))->toBe($once);
 });
