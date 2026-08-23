@@ -386,13 +386,15 @@ final class PreviewWizard extends Component
             return false;
         }
 
-        $icsAccountCount = $db->connection()
+        // Whether THIS literal is claimed, not whether any card account exists:
+        // a card account on some other IBAN suppressed the prompt, and the
+        // generic namer then had to validate ICS-CARD as a real IBAN, which it
+        // can never be. Drift in the literal still raises the prompt.
+        return ! $db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
-            ->where('kind', AccountKind::IcsCard->value)
-            ->count();
-
-        return $icsAccountCount === 0;
+            ->where('iban', self::ICS_OWN_IBAN)
+            ->exists();
     }
 
     private function needsPaypalAccountName(CurrentUser $currentUser, DatabaseManager $db): bool
