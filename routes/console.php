@@ -436,7 +436,7 @@ Schedule::call(function (Dispatcher $bus, NotificationPreferenceQuery $prefs): v
 // rather than duplicating an off-check here too.
 Schedule::call(function (Dispatcher $bus, NotificationPreferenceQuery $prefs): void {
     User::query()->lazyById(100)->each(function (User $user) use ($bus, $prefs): void {
-        $cadence = $prefs->forCurrentDevice($user)->digestCadence;
+        $cadence = $prefs->forCurrentDevice($user)->digestCadence->value;
         $bus->dispatch(new EmitPositionDigestJob($user->id, $cadence));
     });
 })->name('notifications.digest')->dailyAt($notificationsDailyTime)->withoutOverlapping(30);
