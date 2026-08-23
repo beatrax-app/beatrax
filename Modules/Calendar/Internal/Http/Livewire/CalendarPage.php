@@ -211,7 +211,7 @@ final class CalendarPage extends Component
 
         $view = $views->make('calendar::livewire.calendar-page', [
             'days' => $days,
-            'hasEntries' => self::daysHaveEntries($days),
+            'hasProjectableSeries' => $calendarQuery->hasApprovedSeries($user),
             'selectedDayDto' => $this->findSelectedDay($days),
             'displayYear' => $year,
             'displayMonth' => $month,
@@ -242,20 +242,6 @@ final class CalendarPage extends Component
         }
 
         return $roster;
-    }
-
-    /**
-     * @param  list<CalendarDayDto>  $days
-     */
-    private static function daysHaveEntries(array $days): bool
-    {
-        foreach ($days as $day) {
-            if ($day->entries !== []) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**

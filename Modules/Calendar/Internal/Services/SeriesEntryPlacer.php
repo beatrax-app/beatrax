@@ -11,6 +11,7 @@ use Modules\Calendar\Internal\Dto\CalendarEntryDto;
 use Modules\Calendar\Internal\Support\MatchWindow;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
@@ -34,6 +35,7 @@ final readonly class SeriesEntryPlacer
 
     public function __construct(
         private DatabaseManager $db,
+        private Clock $clock,
         private RecurringSeriesQuery $seriesQuery,
         private CounterpartyProfileQuery $counterpartyQuery,
         private AccountResolver $accountResolver,
@@ -265,6 +267,12 @@ final readonly class SeriesEntryPlacer
         $anchor = $next->startOfDay();
         $k = $this->firstOccurrenceIndex($anchor, $cadence, $monthStart);
 
+        // Backward steps are history fill-in. The anchor is the app's own
+        // answer to when the next charge falls, and the forecast walks
+        // forward from it, so a step behind the anchor that lands on a day
+        // still to come is an entry no balance line will ever account for.
+        $today = $this->clock->now()->startOfDay();
+
         // Dates increase strictly in k, so the first one past monthEnd ends the
         // walk; there is nothing behind it that could still land in the month.
         $results = [];
@@ -281,6 +289,9 @@ final readonly class SeriesEntryPlacer
                 continue;
             }
             if ($seriesStart !== null && $occurrence->lt($seriesStart)) {
+                continue;
+            }
+            if ($occurrence->lt($anchor) && $occurrence->gte($today)) {
                 continue;
             }
             $results[] = $occurrence;

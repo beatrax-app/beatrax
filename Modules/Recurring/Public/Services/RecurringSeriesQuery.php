@@ -44,6 +44,17 @@ final readonly class RecurringSeriesQuery
         return $this->projector->scoped($user, [RecurringSeriesState::Pending->value], $cursorId, $limit, 'id');
     }
 
+    // The same two states allApprovedForUser walks, asked as a bare existence
+    // question: a surface that only needs to know whether the reader has
+    // anything to project must not pay to hydrate every series to find out.
+    public function hasApprovedForUser(User $user): bool
+    {
+        return $this->db->connection()->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->whereIn('state', [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value])
+            ->exists();
+    }
+
     public function pendingCountForUser(User $user): int
     {
         return $this->db->connection()->table('recurring_series')

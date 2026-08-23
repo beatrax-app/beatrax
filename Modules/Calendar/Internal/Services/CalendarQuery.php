@@ -108,6 +108,13 @@ final readonly class CalendarQuery
         return $days;
     }
 
+    // Whether the reader has anything the calendar could ever draw, which is
+    // not the same question as whether the month on screen is quiet.
+    public function hasApprovedSeries(User $user): bool
+    {
+        return $this->seriesQuery->hasApprovedForUser($user);
+    }
+
     /**
      * @return list<int>
      */

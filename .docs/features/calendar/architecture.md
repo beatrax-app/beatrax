@@ -43,6 +43,16 @@ dropped along with genuine pre-inception phantoms. Without this floor, every
 history month before a series existed would render a phantom "expected — not
 found" entry.
 
+The backward walk is also **ceilinged at today**: a negative-index occurrence
+that lands on a day still to come is dropped. Backward steps exist to fill in
+history, and the anchor is the app's own answer to when the next charge falls,
+so the forecast's forward walk
+([range projection](../forecasting/architecture.md)) never emits a
+contribution before it. Without the ceiling the two disagree on the same cell:
+a rent series anchored on 28 September drew an expected −€1,450.00 on 28
+August — five days ahead of today — under a day panel reading start of day
+€9,208.08 and end of day €9,208.08.
+
 Metadata resolution (counterparty, account name) is fully batched — the
 service issues a bounded number of queries per render regardless of how many
 series are approved, resolving counterparty identity primarily through
@@ -52,6 +62,16 @@ linked occurrence yet. That fallback only ever reaches a single-token
 merchant, and reaches nothing at all for a user with at-rest encryption
 enabled: the key is a 64-hex blind index by then, and no slug can equal
 one.
+
+## The empty state
+
+`/calendar` shows its "no upcoming payments" card when the reader has **no
+approved series at all** — not when the month on screen happens to be quiet.
+The two are different questions, and keying the card on the visible grid made
+the calendar tell a reader with a full ledger and an approved rent to "connect
+an account or approve a recurring series" on every month the projection did
+not reach, including every month in the past. `CalendarQuery::hasApprovedSeries()`
+answers it as an existence check over the same two states the projection walks.
 
 ## Balance aggregation
 

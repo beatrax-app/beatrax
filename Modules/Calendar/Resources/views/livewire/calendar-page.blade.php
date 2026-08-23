@@ -130,7 +130,7 @@
     </div>
 
     {{-- §7.1 Empty state --}}
-    @if (!$hasEntries)
+    @if (!$hasProjectableSeries)
         <x-core::empty-state
             class="mb-6"
             :heading="Lang::get('calendar::messages.empty.heading')"
