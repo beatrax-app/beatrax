@@ -567,7 +567,7 @@ it('does not bleed the owner hint candidates into the partner chain hints queue'
         'state' => 'candidate',
         'confidence' => 0.7,
         'resolver' => 'auto',
-        'evidence' => '{"card_last_four":"4242"}',
+        'evidence' => '{"card_last4":"4242"}',
         'created_at' => '2026-05-19 00:00:00',
         'updated_at' => '2026-05-19 00:00:00',
     ]);

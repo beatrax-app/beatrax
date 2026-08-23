@@ -144,7 +144,7 @@ final class DemoChainsSeeder
             fromTransactionId: $expense->id,
             kind: ChainLinkKind::FundedByCardHint->value,
             evidence: [
-                'card_last_four' => '1234',
+                'card_last4' => '1234',
                 'source_receipt' => 'demo-coolblue-receipt.eml',
                 'resolver_step' => 'demo-seed',
             ],
@@ -171,7 +171,7 @@ final class DemoChainsSeeder
             fromTransactionId: $refund->id,
             kind: ChainLinkKind::RefundOfHint->value,
             evidence: [
-                'original_order_ref' => 'ORD-DEMO-99',
+                'original_reference_id' => 'ORD-DEMO-99',
                 'source_receipt' => 'demo-bol-refund-receipt.eml',
                 'resolver_step' => 'demo-seed',
             ],
