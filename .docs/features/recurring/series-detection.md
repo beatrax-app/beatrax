@@ -175,9 +175,10 @@ added to that posting: a bill seen on 15 January and 15 February has a
 a little further off every period. Stepping the band is also what
 delivers "one month out, not three" for the subscription that skipped —
 the step is taken from the last posting the series actually has, so a
-skipped period is behind it, not inside it. A band with no calendar step
-of its own falls back to the day median, and an `irregular` cluster is
-projected nowhere at all.
+skipped period is behind it, not inside it. An `irregular` cluster is
+projected nowhere at all — it is the one band with no calendar step, and
+it is excluded before the step is taken rather than falling through to a
+day-median guess.
 
 The day of the month is read off the series' **first** posting, not off
 the stepped date. February clamps a bill charged on the 31st to the

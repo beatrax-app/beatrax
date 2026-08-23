@@ -350,11 +350,11 @@ old the figure was. The summaries are still Ingestion's record of what a
 statement said; they are not a position.
 
 The returned `BalanceAnchorDto.source` label (`sum_of_transactions` /
-`ics_card_statement` / `user_input_opening_balance` / `ics_card_zero_anchor`)
-is a diagnostic ribbon carried into `result_json` as `anchor_source`; no
-reader branches on it. `asOfDate` is today on the ledger path and the
-statement's or the reader's own date on the two card paths — written, and
-currently read by nothing.
+`ics_card_statement` / `ics_card_zero_anchor`) is a diagnostic ribbon carried
+into `result_json` as `anchor_source`; no reader branches on it. There is no
+`asOfDate` on the DTO. There was, and nothing read it, which is how a statement
+four months stale came to be drawn as today's position — every path resolves to
+today now, so there is no date left to carry.
 A missing or cross-user account raises `ModelNotFoundException`, converted to
 a 404 by the HTTP kernel.
 
@@ -594,7 +594,7 @@ every restore, then carries.
       "account_name": "ASN Betaalrekening",
       "default_currency": "EUR",
       "today_balance_minor": 150000,
-      "anchor_source": "user_input_opening_balance",
+      "anchor_source": "sum_of_transactions",
       "points": [{"date": "...", "low_minor": 0, "point_minor": 0, "high_minor": 0, "currency": "EUR"}]
     }
   }

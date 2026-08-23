@@ -112,8 +112,7 @@ final class CadenceInferrer
         $nextExpectedAt = null;
         if ($cadence->isRegular()) {
             $last = $sortedTimestamps[count($sortedTimestamps) - 1];
-            $nextExpectedAt = self::stepOnePeriod($last, $sortedTimestamps[0], $cadence)
-                ?? $last->addDays((int) round($refinedMedian));
+            $nextExpectedAt = self::stepOnePeriod($last, $sortedTimestamps[0], $cadence);
         }
 
         return [
