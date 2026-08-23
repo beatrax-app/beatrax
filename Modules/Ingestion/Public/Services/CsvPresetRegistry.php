@@ -9,7 +9,16 @@ use Modules\Ledger\Public\Enums\Currency;
 
 final class CsvPresetRegistry
 {
-    public const ISSUER = 'other-bank';
+    public const string ISSUER = 'other-bank';
+
+    // A preset id is the adapter key the registry binds and the value every
+    // picker submits, so it is named here rather than spelled out at each of
+    // those call sites.
+    public const string N26 = 'n26-csv';
+
+    public const string REVOLUT = 'revolut-csv';
+
+    public const string ING_NL = 'ing-nl-csv';
 
     /** @var array<string, CsvPreset>|null */
     private ?array $presets = null;
@@ -39,7 +48,7 @@ final class CsvPresetRegistry
     {
         $presets = [
             new CsvPreset(
-                format: 'n26-csv',
+                format: self::N26,
                 label: 'N26',
                 issuer: self::ISSUER,
                 headerSignature: ['Booking Date', 'Partner Name', 'Amount (EUR)'],
@@ -59,7 +68,7 @@ final class CsvPresetRegistry
             // A pending Revolut row ships an empty Completed Date; the adapter's
             // no-booking-date branch skips it before acceptedStates is consulted.
             new CsvPreset(
-                format: 'revolut-csv',
+                format: self::REVOLUT,
                 label: 'Revolut',
                 issuer: self::ISSUER,
                 headerSignature: ['Type', 'Started Date', 'Completed Date', 'Amount', 'Currency', 'State'],
@@ -77,7 +86,7 @@ final class CsvPresetRegistry
             ),
 
             new CsvPreset(
-                format: 'ing-nl-csv',
+                format: self::ING_NL,
                 label: 'ING (Netherlands)',
                 issuer: self::ISSUER,
                 headerSignature: ['Datum', 'Naam/Omschrijving', 'Af Bij', 'Bedrag (EUR)'],

@@ -19,6 +19,7 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Import\Public\Services\UploadFilename;
 use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -35,13 +36,13 @@ final class UploadWizard extends Component
         SourceFormat::AsnCsv->value,
         SourceFormat::Camt053->value,
         SourceFormat::Mt940->value,
-        'ics-pdf',
-        'paypal-csv',
-        'eml',
-        'mbox',
-        'n26-csv',
-        'revolut-csv',
-        'ing-nl-csv',
+        SourceFormat::IcsPdf->value,
+        SourceFormat::PaypalCsv->value,
+        SourceFormat::Eml->value,
+        SourceFormat::Mbox->value,
+        CsvPresetRegistry::N26,
+        CsvPresetRegistry::REVOLUT,
+        CsvPresetRegistry::ING_NL,
     ];
 
     /**
@@ -49,10 +50,10 @@ final class UploadWizard extends Component
      */
     private const ISSUER_FORMAT_MAP = [
         'asn' => [SourceFormat::AsnCsv->value, SourceFormat::Camt053->value, SourceFormat::Mt940->value],
-        'ics' => ['ics-pdf'],
-        'paypal' => ['paypal-csv'],
-        'email-file' => ['eml', 'mbox'],
-        'other-bank' => ['n26-csv', 'revolut-csv', 'ing-nl-csv'],
+        'ics' => [SourceFormat::IcsPdf->value],
+        'paypal' => [SourceFormat::PaypalCsv->value],
+        'email-file' => [SourceFormat::Eml->value, SourceFormat::Mbox->value],
+        'other-bank' => [CsvPresetRegistry::N26, CsvPresetRegistry::REVOLUT, CsvPresetRegistry::ING_NL],
     ];
 
     public ?TemporaryUploadedFile $file = null;
@@ -73,15 +74,15 @@ final class UploadWizard extends Component
         // reject every email upload whatever its contents; `extensions:` is
         // the only rule that works here.
         $sizeRule = match ($this->sourceFormat) {
-            'mbox' => 'max:1048576',
-            'eml' => 'max:20480',
+            SourceFormat::Mbox->value => 'max:1048576',
+            SourceFormat::Eml->value => 'max:20480',
             default => 'max:'.UploadLimits::MAX_KB,
         };
 
         return [
             'file' => ['required', 'file', $sizeRule, 'extensions:csv,txt,xml,sta,mt940,940,pdf,eml,mbox'],
             'issuer' => ['required', 'in:asn,ics,paypal,email-file,other-bank'],
-            'sourceFormat' => ['required', 'in:asn-csv,camt053,mt940,ics-pdf,paypal-csv,eml,mbox,n26-csv,revolut-csv,ing-nl-csv', $this->issuerFormatRule()],
+            'sourceFormat' => ['required', 'in:'.implode(',', self::SUPPORTED_FORMATS), $this->issuerFormatRule()],
         ];
     }
 
@@ -125,19 +126,19 @@ final class UploadWizard extends Component
                 ['value' => SourceFormat::Mt940->value, 'label' => 'MT940'],
             ],
             'ics' => [
-                ['value' => 'ics-pdf', 'label' => 'PDF'],
+                ['value' => SourceFormat::IcsPdf->value, 'label' => 'PDF'],
             ],
             'paypal' => [
-                ['value' => 'paypal-csv', 'label' => Lang::get('import::upload.formats.activity_download')],
+                ['value' => SourceFormat::PaypalCsv->value, 'label' => Lang::get('import::upload.formats.activity_download')],
             ],
             'email-file' => [
-                ['value' => 'eml', 'label' => Lang::get('import::upload.formats.email_message')],
-                ['value' => 'mbox', 'label' => Lang::get('import::upload.formats.mailbox_archive')],
+                ['value' => SourceFormat::Eml->value, 'label' => Lang::get('import::upload.formats.email_message')],
+                ['value' => SourceFormat::Mbox->value, 'label' => Lang::get('import::upload.formats.mailbox_archive')],
             ],
             'other-bank' => [
-                ['value' => 'n26-csv', 'label' => 'N26 (CSV)'],
-                ['value' => 'revolut-csv', 'label' => 'Revolut (CSV)'],
-                ['value' => 'ing-nl-csv', 'label' => Lang::get('import::upload.formats.ing_nl')],
+                ['value' => CsvPresetRegistry::N26, 'label' => 'N26 (CSV)'],
+                ['value' => CsvPresetRegistry::REVOLUT, 'label' => 'Revolut (CSV)'],
+                ['value' => CsvPresetRegistry::ING_NL, 'label' => Lang::get('import::upload.formats.ing_nl')],
             ],
             default => [],
         };
@@ -171,11 +172,10 @@ final class UploadWizard extends Component
         $tmp = $this->file->getRealPath();
         $originalFilename = UploadFilename::sanitise($this->file->getClientOriginalName(), UploadFilename::extensionFor($this->sourceFormat));
 
-        // Only the two CSV dialects are ambiguous; every other format is
-        // self-describing and needs no hint.
+        // Only the built-in ASN CSV is ambiguous; a preset names its dialect in
+        // its own format id, and every other format is self-describing.
         $formatHint = match ($this->sourceFormat) {
             SourceFormat::AsnCsv->value => BankCsvFormatHint::Asn,
-            SourceFormat::IngCsv->value => BankCsvFormatHint::Ing,
             default => null,
         };
 

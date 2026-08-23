@@ -35,8 +35,8 @@ final class IngestionServiceProvider extends ServiceProvider
                     SourceFormat::AsnCsv->value => $app->make(AsnCsvAdapter::class),
                     SourceFormat::Camt053->value => $app->make(Camt053Adapter::class),
                     SourceFormat::Mt940->value => $app->make(Mt940Adapter::class),
-                    'ics-pdf' => $app->make(IcsPdfAdapter::class),
-                    'paypal-csv' => $app->make(PaypalCsvAdapter::class),
+                    SourceFormat::IcsPdf->value => $app->make(IcsPdfAdapter::class),
+                    SourceFormat::PaypalCsv->value => $app->make(PaypalCsvAdapter::class),
                 ];
 
                 $presets = $app->make(CsvPresetRegistry::class);

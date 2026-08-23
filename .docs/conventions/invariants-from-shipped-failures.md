@@ -1494,6 +1494,39 @@ the test does. The fix strips it from every request that is not Livewire's own
 update endpoint, alongside the three other middlewares that exist to undo what
 this runtime carries between requests.
 
+## A picker offering a format nothing can parse
+
+`tests/Contracts/OfferedFormatsResolveToAParserArchTest.php`
+
+`SourceAdapterRegistry` is keyed by format id. A picker offers a list of format
+ids. Nothing held the two together, so a format could sit on a chip with no
+adapter bound to it, and the only report was an import that produced nothing.
+
+ING existed twice under two ids. The upload wizard offered `ing-nl-csv`, a CSV
+preset that binds a real `GenericCsvAdapter`. First-run onboarding offered
+`ing-csv`, a `SourceFormat` case nothing ever bound. Worse, the ING chip only
+ever set the *hint*; the format stayed on the CSV row's landing default,
+`asn-csv`. So the file that reached the pipeline was an ING statement declared
+as ASN. Measured on the ING fixture, both spellings previewed **zero rows and
+zero errors** — the wizard reported the step complete and imported nothing.
+Every new user who banked with ING and used the wizard as designed hit that.
+
+Nothing caught it because each half was individually well-formed: the enum case
+was valid, the chip rendered, the validator's `in:` rule admitted the value, and
+the pipeline's own hint guard was satisfied. The two lists simply never met.
+
+The rule reads each picker's format list out of its source — a Livewire
+component's `SUPPORTED_FORMATS` and its `$selectedFormat`/`$sourceFormat`
+default — resolves constants through the file's own imports, and checks every
+value against the live `SourceAdapterRegistry` plus `ParseStage`'s receipt arm.
+It covers binding drift as well as picker drift: the provider's adapter map now
+keys off `SourceFormat` cases rather than bare strings, so renaming a case moves
+both sides together, and a map that stops tracking the enum fails here.
+
+A second assertion runs over `SourceFormat::cases()` directly. That is the one
+that would have caught `IngCsv` on the day it was added, before any picker
+offered it.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

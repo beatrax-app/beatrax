@@ -54,8 +54,8 @@ all, and `unwrapStored()` returns `null` to say so.
 pass over rows imported before the adapter fix, run once from a migration. It
 is scoped to `source_format = 'asn-csv'`: that is the only key
 `SourceAdapterRegistry` binds to `AsnCsvAdapter`, so no other format can have
-produced these delimiters. `ing-csv` is a format hint with no adapter
-registered, and the CSV presets route through `GenericCsvAdapter`.
+produced these delimiters. The CSV presets, ING's among them, route through
+`GenericCsvAdapter` under their own format ids.
 
 Three things make it safe to run on a live install:
 

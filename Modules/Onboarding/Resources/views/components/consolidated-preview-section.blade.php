@@ -26,6 +26,7 @@
       :section — the ConsolidatedPreviewSection DTO instance.
 --}}
 @use('Modules\Ingestion\Public\Enums\SourceFormat')
+@use('Modules\Ingestion\Public\Services\CsvPresetRegistry')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Core\Public\Support\Lang')
@@ -34,9 +35,9 @@
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewSection $section */
 
     $eyebrowLabel = match ($section->sourceFormat) {
-        SourceFormat::Camt053->value, SourceFormat::Mt940->value, SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => Lang::get('onboarding::first_import.section.from_bank'),
-        'ics-pdf' => Lang::get('onboarding::first_import.section.from_ics'),
-        'paypal-csv' => Lang::get('onboarding::first_import.section.from_paypal'),
+        SourceFormat::Camt053->value, SourceFormat::Mt940->value, SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL => Lang::get('onboarding::first_import.section.from_bank'),
+        SourceFormat::IcsPdf->value => Lang::get('onboarding::first_import.section.from_ics'),
+        SourceFormat::PaypalCsv->value => Lang::get('onboarding::first_import.section.from_paypal'),
         default => Lang::get('onboarding::first_import.section.from_prefix').strtoupper(str_replace('-', ' ', $section->sourceFormat)),
     };
 

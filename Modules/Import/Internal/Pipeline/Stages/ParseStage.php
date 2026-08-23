@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Import\Internal\Exceptions\ReceiptParseException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Pipeline\MboxIterator;
@@ -21,7 +22,11 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
  */
 final class ParseStage
 {
-    private const RECEIPT_FORMATS = ['eml', 'mbox'];
+    // Parsed here rather than through the adapter registry: a receipt file
+    // carries no account, so it is read by the receipt recorder and only then
+    // shaped into source rows.
+    /** @var list<string> */
+    private const array RECEIPT_FORMATS = [SourceFormat::Eml->value, SourceFormat::Mbox->value];
 
     public function __construct(
         private readonly SourceAdapterRegistry $registry,
@@ -60,7 +65,7 @@ final class ParseStage
     {
         $sourceFilename = basename($localPath);
 
-        if ($sourceFormat === 'eml') {
+        if ($sourceFormat === SourceFormat::Eml->value) {
             try {
                 $bytes = $this->files->get($localPath);
             } catch (FileNotFoundException $e) {

@@ -20,6 +20,7 @@
     is 620px; this one needs the room for the preview table.
 --}}
 @use('Modules\Ingestion\Public\Enums\SourceFormat')
+@use('Modules\Ingestion\Public\Services\CsvPresetRegistry')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @php
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewBatch $preview */
@@ -117,9 +118,9 @@
                                     SourceFormat::Camt053->value => 'CAMT.053',
                                     SourceFormat::Mt940->value => 'MT940',
                                     SourceFormat::AsnCsv->value => 'ASN CSV',
-                                    SourceFormat::IngCsv->value => 'ING CSV',
-                                    'ics-pdf' => 'ICS PDF',
-                                    'paypal-csv' => 'PayPal CSV',
+                                    CsvPresetRegistry::ING_NL => 'ING CSV',
+                                    SourceFormat::IcsPdf->value => 'ICS PDF',
+                                    SourceFormat::PaypalCsv->value => 'PayPal CSV',
                                     default => $candidate->sourceFormat,
                                 };
                                 $alternativeCandidates[] = [

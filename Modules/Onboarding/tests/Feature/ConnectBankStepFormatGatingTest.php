@@ -5,7 +5,9 @@ declare(strict_types=1);
 use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectBankStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
@@ -47,16 +49,44 @@ it('drop zone is interactive when MT940 is selected', function (): void {
 
 it('drop zone is disabled when CSV is selected without a bank chip', function (): void {
     Livewire::test(ConnectBankStep::class)
-        ->set('selectedFormat', 'asn-csv')
-        ->set('selectedBankFormatHint', null)
+        ->call('setFormat', 'asn-csv')
         ->assertSeeHtml('aria-disabled="true"');
 });
 
 it('drop zone becomes interactive when CSV is paired with the ASN bank chip', function (): void {
     Livewire::test(ConnectBankStep::class)
-        ->set('selectedFormat', 'asn-csv')
-        ->set('selectedBankFormatHint', 'asn-csv')
+        ->call('setFormat', 'asn-csv')
+        ->call('setCsvBank', 'asn-csv')
         ->assertDontSeeHtml('aria-disabled="true"');
+});
+
+it('makes the ING bank chip select the preset format the import runs as', function (): void {
+    Livewire::test(ConnectBankStep::class)
+        ->call('setFormat', 'asn-csv')
+        ->call('setCsvBank', CsvPresetRegistry::ING_NL)
+        ->assertSet('selectedFormat', CsvPresetRegistry::ING_NL)
+        ->assertSet('csvBankPicked', true)
+        ->assertDontSeeHtml('aria-disabled="true"');
+});
+
+it('re-gates the drop zone when the format chip moves back off the picked bank', function (): void {
+    Livewire::test(ConnectBankStep::class)
+        ->call('setFormat', 'asn-csv')
+        ->call('setCsvBank', CsvPresetRegistry::ING_NL)
+        ->call('setFormat', 'asn-csv')
+        ->assertSet('csvBankPicked', false)
+        ->assertSeeHtml('aria-disabled="true"');
+});
+
+it('refuses a submit made from the CSV landing default before a bank is named', function (): void {
+    $upload = UploadedFile::fake()->createWithContent('statement.csv', "Datum\n20260501\n");
+
+    Livewire::test(ConnectBankStep::class)
+        ->call('setFormat', 'asn-csv')
+        ->set('file', $upload)
+        ->call('submit')
+        ->assertHasErrors('csvBankPicked')
+        ->assertNotDispatched('wizard.step.completed');
 });
 
 it('stashes bank_import_run_id into wizard_progress.data after a successful submit', function (): void {
@@ -92,4 +122,40 @@ it('stashes bank_import_run_id into wizard_progress.data after a successful subm
     expect($row->data)->toBeArray();
     expect($row->data['bank_import_run_id'] ?? null)->toBeInt();
     expect($row->data['bank_import_run_id'])->toBeGreaterThan(0);
+});
+
+it('imports an ING CSV picked in onboarding through to a previewed run', function (): void {
+    Account::query()->updateOrCreate(
+        ['iban' => 'NL91ABNA0417164300'],
+        [
+            'user_id' => $this->user->id,
+            'name' => 'ING',
+            'slug' => 'ing-fixture',
+            'kind' => 'bank',
+            'default_currency' => 'EUR',
+        ],
+    );
+
+    $fixturePath = __DIR__.'/../../../Ingestion/tests/fixtures/csv/ing-nl-sample.csv';
+    $contents = file_get_contents($fixturePath);
+    $upload = UploadedFile::fake()->createWithContent('ing.csv', $contents !== false ? $contents : '');
+
+    Livewire::test(ConnectBankStep::class)
+        ->call('setFormat', 'asn-csv')
+        ->call('setCsvBank', CsvPresetRegistry::ING_NL)
+        ->set('file', $upload)
+        ->call('submit')
+        ->assertSet('uploadError', null)
+        ->assertDispatched('wizard.step.completed');
+
+    $row = WizardProgress::query()
+        ->where('user_id', $this->user->id)
+        ->where('step_key', 'connect-bank')
+        ->first();
+
+    /** @var ImportRun $run */
+    $run = ImportRun::query()->findOrFail($row->data['bank_import_run_id']);
+    expect($run->source_format)->toBe(CsvPresetRegistry::ING_NL);
+    expect($run->status)->toBe('previewed');
+    expect($run->error_count)->toBe(0);
 });

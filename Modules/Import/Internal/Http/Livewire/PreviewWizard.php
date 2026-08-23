@@ -272,7 +272,6 @@ final class PreviewWizard extends Component
     {
         return match ($sourceFormat) {
             SourceFormat::AsnCsv->value => BankCsvFormatHint::Asn,
-            SourceFormat::IngCsv->value => BankCsvFormatHint::Ing,
             default => null,
         };
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Import\Public\Services\UploadFilename;
 use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 
 it('folds every path-traversal character out of the stem', function (): void {
     expect(UploadFilename::sanitise('../../etc/passwd.csv', '.csv'))->toBe('passwd.csv');
@@ -33,7 +34,6 @@ it('keeps hyphens and underscores, which are already filesystem-safe', function 
 it('maps every upload format the wizard accepts to its stored extension', function (): void {
     expect([
         SourceFormat::AsnCsv->value => UploadFilename::extensionFor(SourceFormat::AsnCsv->value),
-        SourceFormat::IngCsv->value => UploadFilename::extensionFor(SourceFormat::IngCsv->value),
         SourceFormat::Camt053->value => UploadFilename::extensionFor(SourceFormat::Camt053->value),
         SourceFormat::Mt940->value => UploadFilename::extensionFor(SourceFormat::Mt940->value),
         'ics-pdf' => UploadFilename::extensionFor('ics-pdf'),
@@ -45,7 +45,6 @@ it('maps every upload format the wizard accepts to its stored extension', functi
         'ing-nl-csv' => UploadFilename::extensionFor('ing-nl-csv'),
     ])->toBe([
         'asn-csv' => '.csv',
-        'ing-csv' => '.csv',
         'camt053' => '.xml',
         'mt940' => '.sta',
         'ics-pdf' => '.pdf',
@@ -60,11 +59,14 @@ it('maps every upload format the wizard accepts to its stored extension', functi
 
 it('gives the bank step the same three extensions its own match gave it', function (): void {
     // Named rather than taken from cases(): the enum also carries the formats
-    // the other upload steps accept, and only these four reach the bank step.
-    $bankStepFormats = array_map(
-        static fn (SourceFormat $format): string => $format->value,
-        [SourceFormat::AsnCsv, SourceFormat::IngCsv, SourceFormat::Camt053, SourceFormat::Mt940],
-    );
+    // the other upload steps accept, only these four reach the bank step, and
+    // the ING one is a CSV preset rather than an enum case.
+    $bankStepFormats = [
+        SourceFormat::AsnCsv->value,
+        CsvPresetRegistry::ING_NL,
+        SourceFormat::Camt053->value,
+        SourceFormat::Mt940->value,
+    ];
 
     $viaSeam = [];
     $viaOldMatch = [];

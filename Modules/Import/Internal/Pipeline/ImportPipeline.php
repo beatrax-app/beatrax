@@ -68,7 +68,7 @@ final class ImportPipeline
     {
         // The backstop at the contract boundary: CSV cannot self-disambiguate,
         // so a caller that skipped the wizard's validation is still refused.
-        if ($formatHint === null && in_array($sourceFormat, [SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value], strict: true)) {
+        if ($formatHint === null && $sourceFormat === SourceFormat::AsnCsv->value) {
             throw new InvalidArgumentException('CSV imports require a format hint.');
         }
 
