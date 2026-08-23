@@ -14,6 +14,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Enums\PreviewRowStatus;
+use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
@@ -998,8 +999,21 @@ it('never renders a stored sensitive value in the rename-counterparty popover', 
 // the row, so the one exception the blind index raises by design is printed to
 // the reader, once per row, as if it were copy.
 it('never prints the crypto layer\'s vocabulary on the import preview', function (): void {
+    // Its own run, in the one state a preview is offered for. The shared
+    // fixture's run is `confirmed`, and a confirmed run now answers with
+    // "already imported" instead of a preview, which renders no rows at all —
+    // so reusing it left this guard asserting against an empty screen.
     $importRunId = (int) $this->app->make(DatabaseManager::class)->connection()
-        ->table('import_runs')->where('user_id', $this->rcgUser->id)->value('id');
+        ->table('import_runs')->insertGetId([
+            'user_id' => $this->rcgUser->id,
+            'source_format' => 'asn-csv',
+            'raw_file_path' => '/tmp/rcg-preview.csv',
+            'sha256' => str_repeat('d', 64),
+            'uploaded_at' => CarbonImmutable::parse('2026-08-14 09:00:00'),
+            'status' => ImportRunStatus::Previewed->value,
+            'created_at' => CarbonImmutable::parse('2026-08-14 09:00:00'),
+            'updated_at' => CarbonImmutable::parse('2026-08-14 09:00:00'),
+        ]);
 
     // The real message, from the real exception, rather than a string shaped to
     // look like one: what reaches the row is whatever this class says.

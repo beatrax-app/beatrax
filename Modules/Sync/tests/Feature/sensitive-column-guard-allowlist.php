@@ -19,4 +19,5 @@ return [
     'Modules/Import/Public/Services/EloquentAccountResolver.php' => 'where(\'iban\', ...) targets accounts.iban (Eloquent Account lookup by IBAN) — Section E safe.',
     'Modules/Onboarding/Internal/Http/Livewire/Steps/ConnectCardStep.php' => 'where(\'iban\', ...) targets accounts.iban (ICS own-account existence check during onboarding) — Section E safe.',
     'Modules/Onboarding/Internal/Http/Livewire/Steps/ConnectBankStep.php' => 'where(\'iban\', ...) targets accounts.iban (ASN own-account existence check during onboarding) — Section E safe.',
+    'Modules/Import/Internal/Http/Livewire/PreviewWizard.php' => 'where(\'iban\', ...) targets accounts.iban (ICS own-account existence check, the same one ConnectCardStep makes, deciding whether the preview must ask for a card-account name) — Section E safe.',
 ];
