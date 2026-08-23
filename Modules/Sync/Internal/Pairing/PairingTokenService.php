@@ -27,6 +27,11 @@ final class PairingTokenService
 
     private const int ACCEPT_GRACE_MINUTES = 5;
 
+    // The absolute age past which a ceremony is dead however many times a human
+    // moment renewed it. Two people comparing six words do not need an hour;
+    // anything still unconfirmed after one is a row nobody is attending.
+    private const int CEREMONY_MAX_AGE_MINUTES = 60;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -477,6 +482,12 @@ final class PairingTokenService
      */
     public function extendCeremonyAcrossLock(int $userId, string $selfDeviceId): bool
     {
+        // Renewed from two human moments and bounded by neither, a ceremony
+        // nobody completed was revived forever — one row from a phone wiped two
+        // rounds ago kept hasLiveHandshake() true, and that is what suppressed
+        // the daemon credentialling a new code needs (see @link).
+        $this->retireCeremoniesPastTheirCeiling($userId, $this->clock->now());
+
         // No expiry filter: reviving a row whose TTL lapsed while the app sat
         // locked is the whole point. `pending` is excluded because it binds no
         // responder, so there is nothing to compare and a longer window buys
@@ -505,6 +516,30 @@ final class PairingTokenService
         $this->db->connection()->table('pairing_tokens')
             ->where('id', $tokenId)
             ->where('user_id', $userId)
+            ->update(['state' => PairingState::Expired->value]);
+    }
+
+    // Ends every unfinished ceremony this user has, whatever its id. The modal's
+    // cancel could only reach a row it had resumed, and a `pending` one it never
+    // resumes — inFlight() excludes that state — so the one row blocking the next
+    // attempt was the one row no UI could clear.
+    public function expireUnfinished(int $userId): void
+    {
+        $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->whereIn('state', [PairingState::Pending->value, PairingState::AwaitingConfirm->value])
+            ->update(['state' => PairingState::Expired->value]);
+    }
+
+    // Read off created_at, never expires_at: expires_at is the column the
+    // revival moves, so a ceiling measured against it would move with every
+    // renewal and never arrive.
+    private function retireCeremoniesPastTheirCeiling(int $userId, CarbonImmutable $now): void
+    {
+        $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->whereIn('state', [PairingState::Pending->value, PairingState::AwaitingConfirm->value])
+            ->where('created_at', '<', ZuluTimestamp::stamp($now->subMinutes(self::CEREMONY_MAX_AGE_MINUTES)))
             ->update(['state' => PairingState::Expired->value]);
     }
 

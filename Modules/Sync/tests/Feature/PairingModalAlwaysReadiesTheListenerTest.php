@@ -17,9 +17,15 @@ use Modules\Sync\Public\Events\SyncTransportCredentialsAvailable;
 
 uses(RefreshDatabase::class);
 
-// The event replaces the running sync:serve process, which is the only way it
-// can be handed a keypair. Opening the modal fired it unconditionally, so the
-// reopen the ceremony asks for killed the daemon serving the handshake.
+// This file asserted the opposite, and that inversion IS the round-6 bug: the
+// dispatch was skipped whenever a handshake looked live, but showMyCode() mints
+// a `pending` row, so showing a code made the next open unable to credential the
+// daemon at all.
+
+// The protection it gave is real and is kept — it moved to the only seam that
+// knows which identity the running daemon holds, and so can tell a restart that
+// changes something from one that destroys a ceremony for nothing:
+// Modules/Desktop/tests/Feature/SyncListenerIsCredentialledOnUnlockTest.php.
 
 function listenerModalUser(string $username): User
 {
@@ -62,23 +68,25 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('does not restart the listener when a code it showed is still live and the peer may be dialling it', function (): void {
+// The case that broke four rounds: a code was showing, so a handshake WAS live,
+// and the daemon holding no keypair is exactly why nothing answered it.
+it('readies the listener while a code it showed is still live', function (): void {
     listenerModalRow((int) $this->user->id, PairingState::Pending->value, CarbonImmutable::now()->addMinutes(9));
 
     Livewire::test(PairingFlowModal::class)->call('openModal');
 
-    Event::assertNotDispatched(SyncTransportCredentialsAvailable::class);
+    Event::assertDispatched(SyncTransportCredentialsAvailable::class);
 });
 
-it('does not restart the listener when reopening on a handshake waiting to be confirmed', function (): void {
+it('readies the listener when reopening on a handshake waiting to be confirmed', function (): void {
     listenerModalRow((int) $this->user->id, PairingState::AwaitingConfirm->value, CarbonImmutable::now()->addMinutes(9));
 
     Livewire::test(PairingFlowModal::class)->call('openModal');
 
-    Event::assertNotDispatched(SyncTransportCredentialsAvailable::class);
+    Event::assertDispatched(SyncTransportCredentialsAvailable::class);
 });
 
-it('still readies the listener when there is no ceremony a restart could destroy', function (): void {
+it('readies the listener when there is no ceremony at all', function (): void {
     Livewire::test(PairingFlowModal::class)->call('openModal');
 
     Event::assertDispatched(SyncTransportCredentialsAvailable::class);

@@ -13,6 +13,7 @@ use Livewire\LivewireManager;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
+use Modules\Auth\Public\Events\AppLockUnlocked;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Events\UpdateInstallRequested;
 use Modules\Core\Public\Services\HostPipeWatch;
@@ -159,6 +160,11 @@ final class DesktopServiceProvider extends ServiceProvider
             SyncTransportCredentialsAvailable::class,
             [StartSyncListenerOnEnable::class, 'handleCredentialsAvailable'],
         );
+
+        // The daemon is spawned at boot, while the app is locked, so it cannot
+        // have credentials then. This is the moment it can — every unlock, not
+        // only the one a pairing modal happens to follow.
+        $events->listen(AppLockUnlocked::class, [StartSyncListenerOnEnable::class, 'handleUnlocked']);
 
         $config = $this->app->make(ConfigRepository::class);
         if ($config->get('nativephp-internal.running') !== true) {
