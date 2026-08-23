@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Vaihe :number / :total',
 
+    'back' => 'Takaisin',
+    'back_aria' => 'Takaisin — palaa edelliseen määritysvaiheeseen',
+
     'resume_later' => 'Jatka myöhemmin',
     'resume_later_aria' => 'Jatka myöhemmin — tallentaa edistymisesi ja sulkee ohjatun käyttöönoton',
     'resume_banner' => 'Tervetuloa takaisin — jatketaan siitä, mihin jäit.',

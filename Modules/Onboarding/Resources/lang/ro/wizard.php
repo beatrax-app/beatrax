@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Pasul :number din :total',
 
+    'back' => 'Înapoi',
+    'back_aria' => 'Înapoi — revine la pasul anterior de configurare',
+
     'resume_later' => 'Reia mai târziu',
     'resume_later_aria' => 'Reia mai târziu — îți salvează progresul și închide asistentul de configurare',
     'resume_banner' => 'Bine ai revenit — hai să reluăm de unde ai rămas.',

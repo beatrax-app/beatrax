@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Schritt :number von :total',
 
+    'back' => 'Zurück',
+    'back_aria' => 'Zurück — kehrt zum vorherigen Einrichtungsschritt zurück',
+
     'resume_later' => 'Später fortsetzen',
     'resume_later_aria' => 'Später fortsetzen — speichert deinen Fortschritt und schließt den Einrichtungsassistenten',
     'resume_banner' => 'Willkommen zurück — wir machen da weiter, wo du aufgehört hast.',

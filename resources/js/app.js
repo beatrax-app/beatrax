@@ -624,6 +624,55 @@ document.addEventListener('step-changed', () => {
     window.scrollTo({ top: 0 });
 });
 
+/**
+ * Let the platform's back gesture step the wizard back instead of leaving it.
+ *
+ * The nine steps share one URL, so advancing writes nothing to history and the
+ * newest entry is still whatever came before the wizard. On the phone that is
+ * the recovery-codes screen, which is deliberately a 404 once the ceremony is
+ * over — so the Android back button, pressed on step six of first-run setup,
+ * showed "This page does not exist".
+ *
+ * One entry is pushed while a previous step exists, and consumed by the gesture
+ * that pops it. The step itself is read from the DOM at pop time rather than
+ * carried in the state object, because a re-render between push and pop is the
+ * normal case here.
+ */
+(function wizardOwnsTheBackGesture() {
+    const ATTRIBUTE = 'data-wizard-previous-step';
+    const MARKER = 'beatrax-wizard-step';
+
+    const wizard = () => document.querySelector('[' + ATTRIBUTE + ']');
+
+    const arm = () => {
+        if (! wizard() || window.history.state?.[MARKER]) {
+            return;
+        }
+
+        window.history.pushState({ [MARKER]: true }, '', window.location.href);
+    };
+
+    window.addEventListener('popstate', () => {
+        const element = wizard();
+
+        if (! element || ! window.Livewire) {
+            return;
+        }
+
+        const component = window.Livewire.find(element.getAttribute('wire:id'));
+
+        if (! component) {
+            return;
+        }
+
+        component.call('goToStep', element.getAttribute(ATTRIBUTE));
+    });
+
+    document.addEventListener('step-changed', arm);
+    document.addEventListener('DOMContentLoaded', arm);
+    arm();
+})();
+
 document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);

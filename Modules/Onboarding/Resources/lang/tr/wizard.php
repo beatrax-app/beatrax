@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Adım :number / :total',
 
+    'back' => 'Geri',
+    'back_aria' => 'Geri — önceki kurulum adımına döner',
+
     'resume_later' => 'Sonra devam et',
     'resume_later_aria' => 'Sonra devam et — ilerlemeni kaydeder ve kurulum sihirbazını kapatır',
     'resume_banner' => 'Tekrar hoş geldin — kaldığın yerden devam edelim.',
