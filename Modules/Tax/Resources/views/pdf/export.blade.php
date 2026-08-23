@@ -20,7 +20,7 @@
            isRemoteEnabled=false; all styles are inline here. */
 
         body {
-            font-family: Helvetica, Arial, sans-serif;
+            font-family: 'DejaVu Sans', sans-serif;
             font-size: 10pt;
             color: #1e293b;
             margin: 0;
