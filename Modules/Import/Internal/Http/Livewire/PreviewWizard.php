@@ -382,7 +382,7 @@ final class PreviewWizard extends Component
             return false;
         }
 
-        if ($importRun->source_format !== 'ics-pdf') {
+        if ($importRun->source_format !== SourceFormat::IcsPdf->value) {
             return false;
         }
 
@@ -411,7 +411,7 @@ final class PreviewWizard extends Component
             return false;
         }
 
-        if ($importRun->source_format !== 'paypal-csv') {
+        if ($importRun->source_format !== SourceFormat::PaypalCsv->value) {
             return false;
         }
 
