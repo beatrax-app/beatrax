@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Doel bereikt',
+        'closed_short' => 'Afgesloten vóór het doel',
         'add_contributions' => 'Voeg bijdragen toe om een prognose te zien',
         'not_enough_history' => 'Nog te weinig historie voor een prognosedatum',
         'no_recent_contributions' => 'Geen recente inleg om een prognose op te baseren',

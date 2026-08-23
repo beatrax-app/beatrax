@@ -702,3 +702,75 @@ it('points every phone-sheet field at its own error line', function (): void {
             ->and($error['#text'] ?? null)->toBe($message, $fieldId.'-error is not the error paragraph');
     }
 });
+
+// "Mark as complete" is a lifecycle action with no target check, and the
+// projection line read status where it means to read progress: a goal closed
+// at EUR300.00 of EUR600.00 printed "Target reached" one line under the two
+// figures that say it was not.
+it('does not tell a goal closed short of its target that the target was reached', function (): void {
+    $goal = Goal::create([
+        'user_id' => $this->user->id,
+        'name' => 'Winter tyres',
+        'target_minor' => 60000,
+        'target_currency' => 'EUR',
+        'start_date' => CarbonImmutable::now()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addMonths(3)->toDateString(),
+        'status' => 'completed',
+    ]);
+    Pot::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'name' => 'Winter tyres',
+        'goal_id' => $goal->id,
+        'currency' => 'EUR',
+        'status' => 'active',
+    ]);
+    \Illuminate\Support\Facades\DB::table('pot_movements')->insert([
+        'user_id' => $this->user->id,
+        'pot_id' => (int) Pot::query()->where('goal_id', $goal->id)->value('id'),
+        'amount_minor' => 30000,
+        'currency' => 'EUR',
+        'kind' => 'fund',
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    $branches = goalsListBranches((string) Livewire::test(GoalsPage::class)->html());
+
+    expect($branches['desktop'])->not->toContain(Lang::get('goals::messages.projection.target_reached'))
+        ->and($branches['phone'])->not->toContain(Lang::get('goals::messages.projection.target_reached'))
+        ->and($branches['desktop'])->toContain(Lang::get('goals::messages.projection.closed_short'));
+});
+
+it('still tells a goal completed on its target that the target was reached', function (): void {
+    $goal = Goal::create([
+        'user_id' => $this->user->id,
+        'name' => 'Winter tyres',
+        'target_minor' => 60000,
+        'target_currency' => 'EUR',
+        'start_date' => CarbonImmutable::now()->subMonths(2)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addMonths(3)->toDateString(),
+        'status' => 'completed',
+    ]);
+    $pot = Pot::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'name' => 'Winter tyres',
+        'goal_id' => $goal->id,
+        'currency' => 'EUR',
+        'status' => 'active',
+    ]);
+    \Illuminate\Support\Facades\DB::table('pot_movements')->insert([
+        'user_id' => $this->user->id,
+        'pot_id' => $pot->id,
+        'amount_minor' => 60000,
+        'currency' => 'EUR',
+        'kind' => 'fund',
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    $branches = goalsListBranches((string) Livewire::test(GoalsPage::class)->html());
+
+    expect($branches['desktop'])->toContain(Lang::get('goals::messages.projection.target_reached'));
+});

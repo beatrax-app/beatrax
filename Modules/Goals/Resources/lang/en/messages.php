@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Target reached',
+        'closed_short' => 'Closed before the target',
         'add_contributions' => 'Add contributions to see a projection',
         'not_enough_history' => 'Not enough history to project a date yet',
         'no_recent_contributions' => 'No recent contributions to project from',

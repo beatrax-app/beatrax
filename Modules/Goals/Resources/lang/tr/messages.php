@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Hedefe ulaşıldı',
+        'closed_short' => 'Hedefe ulaşılmadan kapatıldı',
         'add_contributions' => 'Tahmin görmek için katkı ekle',
         'not_enough_history' => 'Tarih tahmini için henüz yeterli geçmiş yok',
         'no_recent_contributions' => 'Tahmin yapılacak yakın tarihli katkı yok',

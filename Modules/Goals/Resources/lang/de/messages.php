@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Ziel erreicht',
+        'closed_short' => 'Vor dem Ziel abgeschlossen',
         'add_contributions' => 'Füge Einzahlungen hinzu, um eine Prognose zu sehen',
         'not_enough_history' => 'Noch zu wenig Verlauf für ein Prognosedatum',
         'no_recent_contributions' => 'Keine aktuellen Einzahlungen, aus denen sich etwas prognostizieren lässt',

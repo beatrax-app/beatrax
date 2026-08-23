@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Cél elérve',
+        'closed_short' => 'Lezárva a cél elérése előtt',
         'add_contributions' => 'Adj hozzá befizetéseket az előrejelzéshez',
         'not_enough_history' => 'Még nincs elég előzmény a dátum előrejelzéséhez',
         'no_recent_contributions' => 'Nincs friss befizetés, amiből előre lehetne jelezni',

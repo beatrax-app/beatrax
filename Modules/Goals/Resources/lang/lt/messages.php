@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Tikslas pasiektas',
+        'closed_short' => 'Uždaryta nepasiekus tikslo',
         'add_contributions' => 'Pridėk įnašų, kad matytum prognozę',
         'not_enough_history' => 'Kol kas per mažai istorijos datai prognozuoti',
         'no_recent_contributions' => 'Nėra naujausių įnašų, pagal kuriuos būtų galima prognozuoti',

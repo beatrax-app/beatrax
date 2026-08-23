@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Cieľ dosiahnutý',
+        'closed_short' => 'Uzavreté pred dosiahnutím cieľa',
         'add_contributions' => 'Pridaj príspevky a zobrazí sa prognóza',
         'not_enough_history' => 'Zatiaľ nie je dosť histórie na odhad dátumu',
         'no_recent_contributions' => 'Žiadne nedávne vklady, z ktorých by sa dalo odhadovať',
