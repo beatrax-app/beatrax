@@ -9,6 +9,11 @@ return [
     'confirm' => 'Apstiprināt importu',
     'subtitle' => 'Pārskatiet nolasītās rindas. Nekas netiek saglabāts virsgrāmatā, kamēr neapstiprināt.',
 
+    'already_imported' => 'Šis fails jau ir importēts.',
+
+    'already_imported_link' => 'Skatīt importa rezultātu',
+
+
     'expired_html' => 'Priekšskatījuma termiņš ir beidzies. <a href="/imports/new" class="underline">Augšupielādējiet failu vēlreiz</a>, lai mēģinātu no jauna.',
 
     'save_name' => 'Saglabāt nosaukumu',

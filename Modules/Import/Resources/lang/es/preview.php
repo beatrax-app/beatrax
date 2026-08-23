@@ -9,6 +9,11 @@ return [
     'confirm' => 'Confirmar la importación',
     'subtitle' => 'Revisa las filas analizadas. No se guarda nada en tu libro mayor hasta que confirmes.',
 
+    'already_imported' => 'Este archivo ya se ha importado.',
+
+    'already_imported_link' => 'Ver el resultado de la importación',
+
+
     'expired_html' => 'La vista previa ha caducado. <a href="/imports/new" class="underline">Vuelve a subir el archivo</a> para intentarlo de nuevo.',
 
     'save_name' => 'Guardar el nombre',

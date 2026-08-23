@@ -9,6 +9,11 @@ return [
     'confirm' => 'Bekræft importen',
     'subtitle' => 'Gennemgå de indlæste rækker. Intet gemmes blandt dine transaktioner, før du bekræfter.',
 
+    'already_imported' => 'Denne fil er allerede importeret.',
+
+    'already_imported_link' => 'Se importresultatet',
+
+
     'expired_html' => 'Forhåndsvisningen er udløbet. <a href="/imports/new" class="underline">Upload filen igen</a> for at prøve igen.',
 
     'save_name' => 'Gem navnet',

@@ -31,6 +31,7 @@ use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
 use Modules\Ledger\Public\Services\BaseCurrency;
 
@@ -345,11 +346,24 @@ final class PreviewWizard extends Component
         return $views->make('import::livewire.preview-wizard', [
             'preview' => $preview,
             'previewExpired' => $this->previewExpired,
+            'alreadyImported' => $this->alreadyImported(),
             'needsIcsAccountName' => $needsIcsAccountName,
             'needsPaypalAccountName' => $needsPaypalAccountName,
             'importableRowCount' => self::importableRowCount($preview),
             'failedRowCount' => self::failedRowCount($preview),
         ]);
+    }
+
+    // A confirmed run has no preview left, which is indistinguishable from an
+    // expired one until the status is read. RunImport short-circuits a SHA it
+    // has already landed, so re-uploading a file lands here rather than on a
+    // duplicate — and "expired, re-upload" would send the reader round again.
+    private function alreadyImported(): bool
+    {
+        return ImportRun::query()
+            ->whereKey($this->importRunId)
+            ->where('status', ImportRunStatus::Confirmed->value)
+            ->exists();
     }
 
     // Anchored on source_format rather than the unknown-IBAN list, so drift in

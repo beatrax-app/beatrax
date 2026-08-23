@@ -9,6 +9,11 @@ return [
     'confirm' => 'Patvirtinti importą',
     'subtitle' => 'Peržiūrėk nuskaitytas eilutes. Kol nepatvirtinsi, į didžiąją knygą nieko neįrašoma.',
 
+    'already_imported' => 'Šis failas jau importuotas.',
+
+    'already_imported_link' => 'Peržiūrėti importo rezultatą',
+
+
     'expired_html' => 'Peržiūros galiojimas baigėsi. <a href="/imports/new" class="underline">Įkelk failą iš naujo</a> ir bandyk dar kartą.',
 
     'save_name' => 'Išsaugoti pavadinimą',

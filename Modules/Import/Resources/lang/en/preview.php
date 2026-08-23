@@ -9,6 +9,11 @@ return [
     'confirm' => 'Confirm import',
     'subtitle' => 'Review the parsed rows. Nothing is saved to your ledger until you confirm.',
 
+    'already_imported' => 'This file has already been imported.',
+
+    'already_imported_link' => 'View the import result',
+
+
     'expired_html' => 'The preview has expired. <a href="/imports/new" class="underline">Re-upload the file</a> to try again.',
 
     'save_name' => 'Save name',

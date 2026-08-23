@@ -9,6 +9,11 @@ return [
     'confirm' => 'Vahvista tuonti',
     'subtitle' => 'Tarkista jäsennetyt rivit. Mitään ei tallenneta tilikirjaasi ennen kuin vahvistat.',
 
+    'already_imported' => 'Tämä tiedosto on jo tuotu.',
+
+    'already_imported_link' => 'Näytä tuonnin tulos',
+
+
     'expired_html' => 'Esikatselu on vanhentunut. <a href="/imports/new" class="underline">Lähetä tiedosto uudelleen</a> ja yritä uudestaan.',
 
     'save_name' => 'Tallenna nimi',

@@ -9,6 +9,11 @@ return [
     'confirm' => 'Kinnita import',
     'subtitle' => 'Vaata töödeldud read üle. Enne kinnitamist ei salvestata pearaamatusse midagi.',
 
+    'already_imported' => 'See fail on juba imporditud.',
+
+    'already_imported_link' => 'Vaata impordi tulemust',
+
+
     'expired_html' => 'Eelvaade on aegunud. <a href="/imports/new" class="underline">Laadi fail uuesti üles</a> ja proovi uuesti.',
 
     'save_name' => 'Salvesta nimi',

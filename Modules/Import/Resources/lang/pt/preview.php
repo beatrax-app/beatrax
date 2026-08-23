@@ -9,6 +9,11 @@ return [
     'confirm' => 'Confirmar a importação',
     'subtitle' => 'Revê as linhas processadas. Nada é guardado no teu livro-razão até confirmares.',
 
+    'already_imported' => 'Este ficheiro já foi importado.',
+
+    'already_imported_link' => 'Ver o resultado da importação',
+
+
     'expired_html' => 'A pré-visualização expirou. <a href="/imports/new" class="underline">Volta a carregar o ficheiro</a> para tentares de novo.',
 
     'save_name' => 'Guardar o nome',

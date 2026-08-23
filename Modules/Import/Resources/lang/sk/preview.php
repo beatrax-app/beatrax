@@ -9,6 +9,11 @@ return [
     'confirm' => 'Potvrdiť import',
     'subtitle' => 'Skontroluj načítané riadky. Do knihy sa nič neuloží, kým to nepotvrdíš.',
 
+    'already_imported' => 'Tento súbor už bol importovaný.',
+
+    'already_imported_link' => 'Zobraziť výsledok importu',
+
+
     'expired_html' => 'Náhľad expiroval. <a href="/imports/new" class="underline">Nahraj súbor znova</a> a skús to ešte raz.',
 
     'save_name' => 'Uložiť názov',

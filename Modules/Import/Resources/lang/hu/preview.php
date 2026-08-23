@@ -9,6 +9,11 @@ return [
     'confirm' => 'Import megerősítése',
     'subtitle' => 'Nézd át a beolvasott sorokat. A megerősítésig semmi nem kerül a főkönyvedbe.',
 
+    'already_imported' => 'Ezt a fájlt már importálta.',
+
+    'already_imported_link' => 'Importálás eredményének megtekintése',
+
+
     'expired_html' => 'Az előnézet lejárt. <a href="/imports/new" class="underline">Töltsd fel újra a fájlt</a>, és próbáld meg ismét.',
 
     'save_name' => 'Név mentése',

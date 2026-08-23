@@ -9,6 +9,11 @@ return [
     'confirm' => 'Potwierdź import',
     'subtitle' => 'Przejrzyj wczytane wiersze. Nic nie trafi do księgi, dopóki nie potwierdzisz.',
 
+    'already_imported' => 'Ten plik został już zaimportowany.',
+
+    'already_imported_link' => 'Zobacz wynik importu',
+
+
     'expired_html' => 'Podgląd wygasł. <a href="/imports/new" class="underline">Wgraj plik ponownie</a>, aby spróbować jeszcze raz.',
 
     'save_name' => 'Zapisz nazwę',

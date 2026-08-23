@@ -9,6 +9,11 @@ return [
     'confirm' => 'Confirmer l\'import',
     'subtitle' => 'Vérifie les lignes analysées. Rien n\'est enregistré dans ton registre tant que tu n\'as pas confirmé.',
 
+    'already_imported' => 'Ce fichier a déjà été importé.',
+
+    'already_imported_link' => 'Voir le résultat de l\'import',
+
+
     'expired_html' => 'L\'aperçu a expiré. <a href="/imports/new" class="underline">Téléverse à nouveau le fichier</a> pour réessayer.',
 
     'save_name' => 'Enregistrer le nom',

@@ -9,6 +9,11 @@ return [
     'confirm' => "Conferma l'importazione",
     'subtitle' => 'Rivedi le righe analizzate. Non viene salvato nulla nel tuo registro finché non confermi.',
 
+    'already_imported' => 'Questo file è già stato importato.',
+
+    'already_imported_link' => 'Vedi il risultato dell\'importazione',
+
+
     'expired_html' => 'Anteprima scaduta. <a href="/imports/new" class="underline">Ricarica il file</a> per riprovare.',
 
     'save_name' => 'Salva il nome',

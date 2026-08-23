@@ -9,6 +9,11 @@ return [
     'confirm' => 'Import bevestigen',
     'subtitle' => 'Bekijk de ingelezen regels. Er wordt niets in je grootboek opgeslagen totdat je bevestigt.',
 
+    'already_imported' => 'Dit bestand is al geïmporteerd.',
+
+    'already_imported_link' => 'Bekijk het importresultaat',
+
+
     'expired_html' => 'De voorvertoning is verlopen. <a href="/imports/new" class="underline">Upload het bestand opnieuw</a> om het nog eens te proberen.',
 
     'save_name' => 'Naam opslaan',

@@ -54,7 +54,16 @@
         @endunless
     </header>
 
-    @if ($preview === null || $previewExpired)
+    @if ($alreadyImported)
+        <x-core::alert tone="info">
+            <p>{{ Lang::get('import::preview.already_imported') }}</p>
+            <p class="mt-2">
+                <a href="{{ route('imports.results', ['id' => $importRunId]) }}" class="underline">
+                    {{ Lang::get('import::preview.already_imported_link') }}
+                </a>
+            </p>
+        </x-core::alert>
+    @elseif ($preview === null || $previewExpired)
         <x-core::alert tone="warning">
             <p>{!! Lang::get('import::preview.expired_html') !!}</p>
         </x-core::alert>

@@ -9,6 +9,11 @@ return [
     'confirm' => 'Potvrdi uvoz',
     'subtitle' => 'Pregledaj obrađene redove. Ništa se ne čuva u tvojoj glavnoj knjizi dok ne potvrdiš.',
 
+    'already_imported' => 'Ova datoteka je već uvezena.',
+
+    'already_imported_link' => 'Pogledaj rezultat uvoza',
+
+
     'expired_html' => 'Pregled je istekao. <a href="/imports/new" class="underline">Ponovo otpremi datoteku</a> za novi pokušaj.',
 
     'save_name' => 'Sačuvaj naziv',
