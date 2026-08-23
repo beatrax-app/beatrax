@@ -10,9 +10,9 @@ use Illuminate\Support\Carbon;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
+use Modules\Tax\Internal\Enums\TaxCategoryStatus;
 use Modules\Tax\Internal\Exceptions\CategoryPersistenceException;
 use Modules\Tax\Internal\Exceptions\DuplicateTaxCategoryNameException;
-use Modules\Tax\Internal\Enums\TaxCategoryStatus;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class TaxCategoryWriter
