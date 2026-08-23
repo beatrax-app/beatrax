@@ -5,7 +5,12 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
+    // A row carries the currency it settled in; the reader's base is only the
+    // fallback for a row that lost one.
+    $fmt = static fn (int $minor, mixed $currency = null): string => Money::ofMinor(
+        $minor,
+        is_string($currency) && $currency !== '' ? $currency : BaseCurrency::value(),
+    )->format();
 
     // Tax state map: array<int, array{taxTagged: bool, taxCategoryShortName: ?string}>
     $taxState ??= [];
@@ -119,7 +124,7 @@
                             <span
                                 class="amount{{ $isPositive ? ' positive' : '' }}"
                                 style="{{ $isPositive ? 'color: var(--color-emerald)' : '' }}"
-                            >{{ $fmt((int) $entry->settled_amount_minor) }}</span>
+                            >{{ $fmt((int) $entry->settled_amount_minor, $entry->settled_currency) }}</span>
                             {{-- Delete action always-visible at phone width --}}
                             <x-core::emoji-action
                                 tone="danger"
@@ -161,7 +166,7 @@
                         {{-- Tax badge: hover-reveal on desktop. --}}
                         <x-tax::tax-badge :transaction="$dEntryTaxRow" :showAlways="false" />
                         <span class="shrink-0 font-medium {{ (int) $entry->settled_amount_minor < 0 ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-400' }}" style="font-variant-numeric: tabular-nums;">
-                            {{ $fmt((int) $entry->settled_amount_minor) }}
+                            {{ $fmt((int) $entry->settled_amount_minor, $entry->settled_currency) }}
                         </span>
                         @if ($deletingEntryId === $dEntryId)
                             <x-core::confirm-strip

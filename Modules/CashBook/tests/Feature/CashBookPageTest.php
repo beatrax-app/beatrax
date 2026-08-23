@@ -256,3 +256,60 @@ it('orders the category options by collated name, then by id', function (): void
 
     expect((int) $mine[0]->id)->toBeLessThan((int) $mine[1]->id);
 });
+
+// The /settings account-currency picker reaches the Cash account like any
+// other. Relabelled to dollars, the book kept writing euro rows, so the
+// account could never come to hold the currency it names and /reconcile and
+// pots — which read the account's own line — answered zero forever.
+it('records into the currency the cash account is denominated in', function (): void {
+    $cashAccountId = DB::table('accounts')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => 'Cash',
+        'slug' => 'cash-relabelled',
+        'kind' => 'cash',
+        'iban' => 'CASH'.str_pad((string) $this->user->id, 12, '0', STR_PAD_LEFT),
+        'default_currency' => 'USD',
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('direction', 'expense')
+        ->set('amount', '12,50')
+        ->set('date', '2026-06-05')
+        ->set('counterparty', 'Bakery')
+        ->call('add')
+        ->assertSet('error', '');
+
+    $tx = DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->first();
+
+    expect((int) $tx->account_id)->toBe($cashAccountId);
+    expect($tx->settled_currency)->toBe('USD');
+    expect($tx->currency)->toBe('USD');
+    expect(
+        app(Modules\Ledger\Public\Services\AccountBalanceQuery::class)
+            ->currentBalance($cashAccountId, $this->user)
+            ->in('USD')
+    )->toBe(-1250);
+});
+
+it('prints a cash entry under the sign of the currency it was recorded in', function (): void {
+    DB::table('accounts')->insert([
+        'user_id' => $this->user->id,
+        'name' => 'Cash',
+        'slug' => 'cash-relabelled',
+        'kind' => 'cash',
+        'iban' => 'CASH'.str_pad((string) $this->user->id, 12, '0', STR_PAD_LEFT),
+        'default_currency' => 'USD',
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '12,50')
+        ->set('date', '2026-06-05')
+        ->set('counterparty', 'Bakery')
+        ->call('add');
+
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->assertSee(Modules\Ledger\Public\ValueObjects\Money::ofMinor(-1250, 'USD')->format());
+});

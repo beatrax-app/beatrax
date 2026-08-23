@@ -2,8 +2,8 @@
     All-accounts aggregate `line` chart partial.
 
     Renders ONE line series summing every account's per-day point
-    estimate (converted to EUR via the per-account default-currency
-    stored fx-rate on each contribution). The chart variant is
+    estimate, each converted from the account's own currency into the
+    reader's base currency before it is added. The chart variant is
     `line` (NOT `rangeArea`) — the aggregate of all accounts is
     informational; the per-account chart still shows the honest
     range band on its own tab.
@@ -11,8 +11,8 @@
     Variables in scope:
       - $chartElementId : string                   (DOM id the JS hook attaches to)
       - $aggregatePoints : list<array{date: string, point_minor: int}>
-      - $aggregateBufferFloor : int                (sum of per-account effective buffers, in minor)
-      - $aggregateCurrency : string                ('EUR' for the rollup)
+      - $aggregateBufferFloor : int                (per-account effective buffers in base currency, in minor)
+      - $aggregateCurrency : string                (the reader's base currency)
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 

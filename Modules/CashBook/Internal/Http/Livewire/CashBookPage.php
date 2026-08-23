@@ -155,7 +155,7 @@ final class CashBookPage extends Component
             ->orderByDesc('t.posted_at')
             ->orderByDesc('t.id')
             ->limit(100)
-            ->get(['t.id', 't.posted_at', 't.counterparty_name', 't.settled_amount_minor', 't.type', ...CategoryDisplayName::columns('c')]);
+            ->get(['t.id', 't.posted_at', 't.counterparty_name', 't.settled_amount_minor', 't.settled_currency', 't.type', ...CategoryDisplayName::columns('c')]);
 
         // The raw query builder applies no cast to ciphertext columns.
         // decryptValue is a pass-through for non-encryption users.

@@ -9,7 +9,9 @@ use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
+use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\RateTable;
 use stdClass;
 
 trait BuildsForecastCharts
@@ -30,35 +32,135 @@ trait BuildsForecastCharts
         ForecastQuery $forecastQuery,
         DatabaseManager $db,
         User $user,
+        ExchangeRateService $fx,
+        string $baseCurrency,
     ): array {
-        /** @var array<string, int> $byDate */
-        $byDate = [];
+        /** @var array<string, array<string, int>> $byDateCurrency */
+        $byDateCurrency = [];
         foreach ($accountList as $account) {
             $dto = $forecastQuery->forUser($account['id'], $horizon, null, $user);
             foreach ($dto->points as $p) {
-                $byDate[$p->date] = ($byDate[$p->date] ?? 0) + $p->pointMinor;
+                $currency = self::denominationOf($p->currency, $dto->defaultCurrency, $account['default_currency'], $baseCurrency);
+                $byDateCurrency[$p->date][$currency] = ($byDateCurrency[$p->date][$currency] ?? 0) + $p->pointMinor;
             }
         }
 
-        ksort($byDate, SORT_STRING);
+        ksort($byDateCurrency, SORT_STRING);
+        $rates = $this->ratesToBase($this->currenciesIn($byDateCurrency), $fx, $baseCurrency);
+
         $aggregatePoints = [];
-        foreach ($byDate as $date => $sumPoint) {
-            $aggregatePoints[] = ['date' => $date, 'point_minor' => $sumPoint];
+        foreach ($byDateCurrency as $date => $byCurrency) {
+            $aggregatePoints[] = ['date' => $date, 'point_minor' => self::totalInBase($byCurrency, $rates, $baseCurrency)];
         }
 
         $bufferRows = $db->connection()->table('accounts')
             ->where('user_id', $user->id)
             ->whereNotNull('forecast_min_buffer_minor')
-            ->get(['forecast_min_buffer_minor']);
-        $bufferFloor = 0;
+            ->get(['forecast_min_buffer_minor', 'default_currency']);
+        /** @var array<string, int> $bufferByCurrency */
+        $bufferByCurrency = [];
         foreach ($bufferRows as $row) {
             /** @var stdClass $row */
-            if (is_numeric($row->forecast_min_buffer_minor ?? null)) {
-                $bufferFloor += (int) $row->forecast_min_buffer_minor;
+            if (! is_numeric($row->forecast_min_buffer_minor ?? null)) {
+                continue;
+            }
+            $rowCurrency = $row->default_currency ?? null;
+            $currency = self::denominationOf(is_string($rowCurrency) ? $rowCurrency : '', '', '', $baseCurrency);
+            $bufferByCurrency[$currency] = ($bufferByCurrency[$currency] ?? 0) + (int) $row->forecast_min_buffer_minor;
+        }
+
+        $bufferRates = $this->ratesToBase(array_keys($bufferByCurrency), $fx, $baseCurrency);
+
+        return [$aggregatePoints, self::totalInBase($bufferByCurrency, $bufferRates, $baseCurrency)];
+    }
+
+    // A projection is denominated in the account's own code, and the aggregate
+    // is one line in the reader's. Adding the two at face value read
+    // EUR2,000.00 for EUR1,000.00 next to USD1,000.00 and stamped the euro
+    // sign on it.
+    /**
+     * @param  array<string, int>  $minorByCurrency
+     * @param  array<string, string>  $rates  currency code => rate to $baseCurrency
+     */
+    private static function totalInBase(array $minorByCurrency, array $rates, string $baseCurrency): int
+    {
+        $totalMinor = 0;
+        foreach ($minorByCurrency as $currency => $minor) {
+            if ($currency === $baseCurrency) {
+                $totalMinor += $minor;
+
+                continue;
+            }
+
+            // A currency the rate table cannot reach is left out, never added
+            // at one to one, which is the same rule the net-worth roll-up
+            // applies to a line it has no rate for.
+            $money = Money::tryOfMinor($minor, $currency);
+            $rate = $rates[$currency] ?? null;
+            if ($money === null || $rate === null) {
+                continue;
+            }
+
+            $converted = RateTable::direct()->withRate($currency, $baseCurrency, $rate)->convert($money, $baseCurrency);
+            $totalMinor += $converted?->toMinor() ?? 0;
+        }
+
+        return $totalMinor;
+    }
+
+    // One lookup per currency rather than one per day: the service reads the
+    // whole rate table on every call, and a 365-day horizon asks for the same
+    // pair 366 times. The rate a zero amount converts at is the rate any
+    // amount converts at.
+    /**
+     * @param  list<string>  $currencies
+     * @return array<string, string>
+     */
+    private function ratesToBase(array $currencies, ExchangeRateService $fx, string $baseCurrency): array
+    {
+        $rates = [];
+        foreach ($currencies as $currency) {
+            if ($currency === $baseCurrency) {
+                continue;
+            }
+            $probe = Money::tryOfMinor(0, $currency);
+            $rate = $probe === null ? null : $fx->convertToBase($probe, $baseCurrency)->rate;
+            if ($rate !== null) {
+                $rates[$currency] = $rate;
             }
         }
 
-        return [$aggregatePoints, $bufferFloor];
+        return $rates;
+    }
+
+    /**
+     * @param  array<string, array<string, int>>  $byDateCurrency
+     * @return list<string>
+     */
+    private function currenciesIn(array $byDateCurrency): array
+    {
+        $seen = [];
+        foreach ($byDateCurrency as $byCurrency) {
+            foreach (array_keys($byCurrency) as $currency) {
+                $seen[$currency] = true;
+            }
+        }
+
+        return array_keys($seen);
+    }
+
+    // A run written before the point carried its own code, or an account row
+    // that lost its, still has to land in some bucket; the reader's own
+    // currency is the last one left that is not a guess.
+    private static function denominationOf(string $pointCurrency, string $dtoCurrency, string $accountCurrency, string $baseCurrency): string
+    {
+        foreach ([$pointCurrency, $dtoCurrency, $accountCurrency] as $candidate) {
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        return $baseCurrency;
     }
 
     // Computed rather than left to ApexCharts auto-scale: independent scaling

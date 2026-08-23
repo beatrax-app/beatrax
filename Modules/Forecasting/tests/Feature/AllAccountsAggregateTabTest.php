@@ -19,7 +19,7 @@ function aatUser(): User
     ]);
 }
 
-function aatAccount(DatabaseManager $db, int $userId, string $name, ?int $buffer = null): int
+function aatAccount(DatabaseManager $db, int $userId, string $name, ?int $buffer = null, string $currency = 'EUR'): int
 {
     return $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId,
@@ -27,7 +27,7 @@ function aatAccount(DatabaseManager $db, int $userId, string $name, ?int $buffer
         'slug' => 'aat-'.bin2hex(random_bytes(4)),
         'kind' => 'bank',
         'iban' => 'AAT'.strtoupper(bin2hex(random_bytes(4))),
-        'default_currency' => 'EUR',
+        'default_currency' => $currency,
         'opening_balance_minor' => 100000,
         'opening_balance_as_of_date' => '2026-05-01',
         'forecast_min_buffer_minor' => $buffer,
@@ -38,11 +38,13 @@ function aatAccount(DatabaseManager $db, int $userId, string $name, ?int $buffer
 // the latest row for the tuple, so per-account inserts would shadow each other.
 /**
  * @param  array<int, int>  $pointMinorByAccount  accountId => point estimate (minor)
+ * @param  array<int, string>  $currencyByAccount  accountId => the code that account is denominated in
  */
-function aatForecastRun(DatabaseManager $db, int $userId, array $pointMinorByAccount, int $horizon): void
+function aatForecastRun(DatabaseManager $db, int $userId, array $pointMinorByAccount, int $horizon, array $currencyByAccount = []): void
 {
     $accountsBlock = [];
     foreach ($pointMinorByAccount as $accountId => $pointMinor) {
+        $currency = $currencyByAccount[$accountId] ?? 'EUR';
         $points = [];
         for ($d = 0; $d <= $horizon; $d++) {
             $points[] = [
@@ -50,13 +52,13 @@ function aatForecastRun(DatabaseManager $db, int $userId, array $pointMinorByAcc
                 'low_minor' => $pointMinor - 1000,
                 'point_minor' => $pointMinor,
                 'high_minor' => $pointMinor + 1000,
-                'currency' => 'EUR',
+                'currency' => $currency,
             ];
         }
         $accountsBlock[(string) $accountId] = [
             'account_id' => $accountId,
             'account_name' => 'aat',
-            'default_currency' => 'EUR',
+            'default_currency' => $currency,
             'today_balance_minor' => $pointMinor,
             'anchor_source' => 'user_input_opening_balance',
             'points' => $points,
@@ -157,4 +159,38 @@ it('renders the per-account rangeArea chart when the URL pin selects an account'
     expect($content)->toContain('forecast-chart-baseline-'.$a);
     expect($content)->toMatch('/data-options="[^"]*rangeArea/');
     expect($content)->not->toContain('data-testid="all-accounts-aggregate-chart"');
+});
+
+// Measured with the /settings account-currency picker set to USD on one of two
+// accounts: the aggregate line read EUR2,000.00 for EUR1,000.00 plus
+// USD1,000.00 -- dollar cents added to euro cents and labelled with the euro
+// sign. The bundled snapshot prices USD1,000.00 at EUR880.36.
+it('converts a dollar account before adding it to the euro aggregate', function (): void {
+    $euro = aatAccount($this->db, $this->user->id, 'Alpha');
+    $dollar = aatAccount($this->db, $this->user->id, 'Beta', currency: 'USD');
+    aatForecastRun($this->db, $this->user->id, [$euro => 100000, $dollar => 100000], 30, [$dollar => 'USD']);
+
+    $response = $this->actingAs($this->user)->get('/forecast');
+
+    $matches = [];
+    expect(preg_match('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', (string) $response->getContent(), $matches))->toBe(1);
+    $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
+
+    expect($decoded)->toBeArray();
+    expect($decoded['series'][0]['data'][0]['y'])->toBe(1880.36);
+});
+
+it('converts a dollar account buffer before adding it to the euro buffer floor', function (): void {
+    $euro = aatAccount($this->db, $this->user->id, 'Alpha', buffer: 50000);
+    $dollar = aatAccount($this->db, $this->user->id, 'Beta', buffer: 50000, currency: 'USD');
+    aatForecastRun($this->db, $this->user->id, [$euro => 100000, $dollar => 100000], 30, [$dollar => 'USD']);
+
+    $response = $this->actingAs($this->user)->get('/forecast');
+
+    $matches = [];
+    expect(preg_match('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', (string) $response->getContent(), $matches))->toBe(1);
+    $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
+
+    expect($decoded)->toBeArray();
+    expect($decoded['annotations']['yaxis'][0]['y2'])->toBe(940.18);
 });

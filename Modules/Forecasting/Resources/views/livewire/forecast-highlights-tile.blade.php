@@ -35,7 +35,7 @@
         }
         return Money::ofMinor($minor, $currency ?? BaseCurrency::value())->format();
     };
-    $lowestFormatted = $fmtMinor($dto->lowestProjectedBalanceMinor);
+    $lowestFormatted = $fmtMinor($dto->lowestProjectedBalanceMinor, $dto->lowestProjectedBalanceCurrency);
     $nextSettlementFormatted = $dto->nextIcsSettlement !== null
         ? Money::ofMinor((int) $dto->nextIcsSettlement->amount->toMinor(), $dto->nextIcsSettlement->amount->currency())->format()
         : '';

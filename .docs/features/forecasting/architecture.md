@@ -621,13 +621,20 @@ payload subclass is hydrated correctly.
 
 `computeAllAccountsAggregate` (in `ForecastPage`) sums every account's
 per-day point estimate into a single date-indexed series for the
-All-accounts aggregate chart. The rollup intentionally simplifies:
-per-account `default_currency` is treated as already-converted (a
-PayPal-USD point carries the per-occurrence settled-EUR amount from
-upstream FX conversion); multi-currency edge cases are captured at the
-per-account chart's confidence-row legend rather than smudged into the
-aggregate. The buffer floor is the sum of every account's
-`forecast_min_buffer_minor` (NULL treated as 0).
+All-accounts aggregate chart. A projection is denominated in the
+account's own `default_currency`, which the `/settings` account-currency
+picker lets the reader set independently of their base currency, so each
+day's points are bucketed by currency and every non-base bucket is
+converted through `ExchangeRateService` before the day's buckets are
+added. The rate for a pair is looked up ONCE per render rather than once
+per day: the service reads the whole `exchange_rates` table on every
+call, and a 365-day horizon would otherwise ask for the same pair 366
+times. A currency the rate table cannot reach is left out of the total
+rather than added at 1:1 — the same rule `NetWorthQuery` applies to a
+line it has no rate for. The buffer floor is the sum of every account's
+`forecast_min_buffer_minor` (NULL treated as 0), bucketed and converted
+the same way, because a buffer is denominated in its account's currency
+too.
 
 ## Net worth roll-up
 

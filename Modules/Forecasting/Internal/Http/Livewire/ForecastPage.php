@@ -23,6 +23,7 @@ use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
+use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -212,6 +213,7 @@ final class ForecastPage extends Component
         ViewFactory $views,
         ForecastDtoMapper $mapper,
         BaseCurrency $baseCurrency,
+        ExchangeRateService $fx,
     ): View {
         $user = $currentUser->user();
 
@@ -232,7 +234,7 @@ final class ForecastPage extends Component
 
         $viewData = array_merge(
             $this->selectedAccountView($selectedAccountId, $forecastQuery, $db, $user, $mapper, $baseCurrency->code()),
-            $this->aggregateView($accountList, $isAllAccountsView, $isEmpty, $forecastQuery, $db, $user, $baseCurrency->code()),
+            $this->aggregateView($accountList, $isAllAccountsView, $isEmpty, $forecastQuery, $db, $user, $baseCurrency->code(), $fx),
             [
                 'accounts' => $accountList,
                 'selectedAccountId' => $selectedAccountId,
@@ -436,6 +438,7 @@ final class ForecastPage extends Component
         DatabaseManager $db,
         User $user,
         string $baseCurrency,
+        ExchangeRateService $fx,
     ): array {
         if (! $isAllAccountsView || $isEmpty) {
             return [
@@ -452,6 +455,8 @@ final class ForecastPage extends Component
             forecastQuery: $forecastQuery,
             db: $db,
             user: $user,
+            fx: $fx,
+            baseCurrency: $baseCurrency,
         );
 
         return [

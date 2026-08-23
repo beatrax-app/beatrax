@@ -46,7 +46,7 @@ function fhtIcsAccount(User $user, string $slug): Account
     ]);
 }
 
-function fhtAsnAccount(User $user, string $slug): Account
+function fhtAsnAccount(User $user, string $slug, string $currency = 'EUR'): Account
 {
     return Account::query()->create([
         'user_id' => $user->id,
@@ -54,7 +54,38 @@ function fhtAsnAccount(User $user, string $slug): Account
         'slug' => $slug,
         'kind' => 'bank',
         'iban' => 'NL57FHT'.strtoupper($slug),
-        'default_currency' => 'EUR',
+        'default_currency' => $currency,
+    ]);
+}
+
+/**
+ * @param  array<int, array{currency: string, lowest: int}>  $byAccount
+ */
+function fhtRunDipping(DatabaseManager $db, User $user, array $byAccount): void
+{
+    $accounts = [];
+    foreach ($byAccount as $accountId => $spec) {
+        $accounts[(string) $accountId] = [
+            'account_id' => $accountId,
+            'account_name' => 'fht '.$accountId,
+            'default_currency' => $spec['currency'],
+            'today_balance_minor' => 0,
+            'anchor_source' => 'user_input_opening_balance',
+            'points' => [
+                ['date' => '2026-05-19', 'low_minor' => 0, 'point_minor' => 0, 'high_minor' => 0, 'currency' => $spec['currency']],
+                ['date' => '2026-05-20', 'low_minor' => $spec['lowest'], 'point_minor' => $spec['lowest'], 'high_minor' => $spec['lowest'], 'currency' => $spec['currency']],
+            ],
+        ];
+    }
+
+    $db->connection()->table('forecast_runs')->insert([
+        'user_id' => $user->id,
+        'scenario_id' => null,
+        'horizon_days' => 30,
+        'status' => 'complete',
+        'result_json' => json_encode(['as_of' => '2026-05-19', 'horizon_days' => 30, 'accounts' => $accounts]),
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
     ]);
 }
 
@@ -382,4 +413,38 @@ it('keeps the display line to the figure and moves the words beneath it', functi
 
     $response->assertSeeText('Lowest in 30 days');
     $response->assertSeeText('fht bank');
+});
+
+// Measured with the /settings account-currency picker set to USD on a second
+// account: -USD1,100.00 is the smaller integer but the larger balance, so the
+// tile named the dollar account and printed its figure under the euro sign.
+// The bundled snapshot prices USD1,100.00 at EUR968.40.
+it('ranks the lowest projected balance on one currency, not on the raw minor units', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $dollar = fhtAsnAccount($this->user, 'revolut', currency: 'USD');
+
+    fhtRunDipping($db, $this->user, [
+        $this->asn->id => ['currency' => 'EUR', 'lowest' => -100000],
+        $dollar->id => ['currency' => 'USD', 'lowest' => -110000],
+    ]);
+
+    $dto = app(Modules\Forecasting\Public\Services\ForecastHighlightsQuery::class)->forUser($this->user);
+
+    expect($dto->lowestProjectedAccountId)->toBe($this->asn->id);
+    expect($dto->lowestProjectedBalanceMinor)->toBe(-100000);
+    expect($dto->lowestProjectedBalanceCurrency)->toBe('EUR');
+});
+
+it('prints the lowest projected balance under the account own currency sign', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $dollar = fhtAsnAccount($this->user, 'revolut', currency: 'USD');
+
+    fhtRunDipping($db, $this->user, [$dollar->id => ['currency' => 'USD', 'lowest' => -110000]]);
+
+    $this->actingAs($this->user)
+        ->get('/')
+        ->assertOk()
+        ->assertSee(Modules\Ledger\Public\ValueObjects\Money::ofMinor(-110000, 'USD')->format());
 });
