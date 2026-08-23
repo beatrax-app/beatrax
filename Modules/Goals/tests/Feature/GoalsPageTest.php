@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
@@ -725,7 +726,7 @@ it('does not tell a goal closed short of its target that the target was reached'
         'currency' => 'EUR',
         'status' => 'active',
     ]);
-    \Illuminate\Support\Facades\DB::table('pot_movements')->insert([
+    DB::table('pot_movements')->insert([
         'user_id' => $this->user->id,
         'pot_id' => (int) Pot::query()->where('goal_id', $goal->id)->value('id'),
         'amount_minor' => 30000,
@@ -760,7 +761,7 @@ it('still tells a goal completed on its target that the target was reached', fun
         'currency' => 'EUR',
         'status' => 'active',
     ]);
-    \Illuminate\Support\Facades\DB::table('pot_movements')->insert([
+    DB::table('pot_movements')->insert([
         'user_id' => $this->user->id,
         'pot_id' => $pot->id,
         'amount_minor' => 60000,
