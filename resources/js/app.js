@@ -150,8 +150,12 @@ window.beatraxLocaliseChart = function (options) {
         maximumFractionDigits: 0,
     });
 
+    // A chart that declares no y axis at all still draws money on it — the
+    // recurring series chart left the axis out and ApexCharts printed
+    // `-1449.5` where every other number on the page reads `-EUR1,450.00`.
     const withFormatter = (axis) => {
-        if (!axis || Array.isArray(axis)) return axis;
+        if (Array.isArray(axis)) return axis;
+        axis = axis || {};
         const labels = axis.labels || {};
         if (labels.formatter) return axis;
 

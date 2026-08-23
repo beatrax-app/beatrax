@@ -130,6 +130,11 @@ final class RecurringSeriesDetailPage extends Component
             'xaxis' => [
                 'type' => 'datetime',
             ],
+            // The axis is money, and the shared chart helper formats it as
+            // money only once the chart has declared one.
+            'yaxis' => [
+                'forceNiceScale' => true,
+            ],
             'stroke' => [
                 'curve' => 'straight',
                 'width' => $hasShadow ? [3, 2] : [3],
