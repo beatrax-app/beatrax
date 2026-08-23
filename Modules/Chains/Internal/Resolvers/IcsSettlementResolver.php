@@ -575,11 +575,10 @@ final class IcsSettlementResolver
         return number_format($value, 3, '.', '');
     }
 
-    // card_statements period bounds are DATETIME and transactions.posted_at is
-    // a DATE, so comparing them raw drops a transaction posted on the period's
-    // FIRST day: '2026-04-17' >= '2026-04-17 00:00:00' is false as a string.
-    // Comparison only -- signatureHash() keeps the stored spelling, which is
-    // what the chain_links of every install already carry.
+    // Comparison only: signatureHash() keeps the stored spelling, which every
+    // install's chain_links already carry. The bounds are DATETIME and
+    // posted_at is a DATE, so raw they drop the period's FIRST day --
+    // '2026-04-17' >= '2026-04-17 00:00:00' is false as a string.
     private static function periodDay(string $value): string
     {
         return substr($value, 0, 10);
