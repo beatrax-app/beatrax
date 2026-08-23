@@ -11,6 +11,8 @@ use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\Pairing\PairingState;
+use Modules\Sync\Public\Enums\PairingWizardStep;
 use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
@@ -53,7 +55,7 @@ function staleCeremonyRow(int $userId, string $localDeviceId, array $overrides =
         'responder_ed25519_pub_hex' => str_repeat('c', 64),
         'responder_x25519_pub_hex' => str_repeat('d', 64),
         'responder_name' => 'Gone',
-        'state' => 'awaiting_confirm',
+        'state' => PairingState::AwaitingConfirm->value,
         'expires_at' => CarbonImmutable::now()->addMinutes(10)->toIso8601ZuluString(),
         'created_at' => CarbonImmutable::now()->toIso8601ZuluString(),
         ...$overrides,
@@ -105,7 +107,7 @@ it('still revives a ceremony that only lapsed behind the lock', function (): voi
 // attempt. Cancel was the reader's only way out and could not reach it.
 it('lets the reader cancel a pending row the modal never resumed', function (): void {
     staleCeremonyRow((int) $this->user->id, $this->localDeviceId, [
-        'state' => 'pending',
+        'state' => PairingState::Pending->value,
         'responder_device_id' => null,
     ]);
 
@@ -113,7 +115,7 @@ it('lets the reader cancel a pending row the modal never resumed', function (): 
 
     Livewire::test(PairingFlowModal::class)
         ->call('openModal')
-        ->assertSet('step', 'choose_direction')
+        ->assertSet('step', PairingWizardStep::ChooseDirection->value)
         ->assertSet('pairingTokenId', '')
         ->call('cancelPairing');
 
