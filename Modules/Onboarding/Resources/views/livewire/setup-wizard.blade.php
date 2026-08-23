@@ -154,7 +154,7 @@
             {{ Lang::get('onboarding::wizard.privacy') }}
         </span>
         <a
-            class="wiz-help-link"
+            class="wiz-help-link tap-link"
             href="{{ config('community.github_issues_url') }}"
             wire:click.prevent="openHelp"
             target="_blank"
