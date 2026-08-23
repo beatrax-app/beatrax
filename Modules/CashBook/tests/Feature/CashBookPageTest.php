@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Lang;
 use Livewire\Livewire;
 use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Services\AccountBalanceQuery;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -286,7 +288,7 @@ it('records into the currency the cash account is denominated in', function (): 
     expect($tx->settled_currency)->toBe('USD');
     expect($tx->currency)->toBe('USD');
     expect(
-        app(Modules\Ledger\Public\Services\AccountBalanceQuery::class)
+        app(AccountBalanceQuery::class)
             ->currentBalance($cashAccountId, $this->user)
             ->in('USD')
     )->toBe(-1250);
@@ -311,5 +313,5 @@ it('prints a cash entry under the sign of the currency it was recorded in', func
 
     Livewire::actingAs($this->user)
         ->test(CashBookPage::class)
-        ->assertSee(Modules\Ledger\Public\ValueObjects\Money::ofMinor(-1250, 'USD')->format());
+        ->assertSee(Money::ofMinor(-1250, 'USD')->format());
 });

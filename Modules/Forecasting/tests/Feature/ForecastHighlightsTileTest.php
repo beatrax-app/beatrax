@@ -7,9 +7,11 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Chains\Models\CardStatement;
 use Modules\Core\Models\User;
+use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 uses(RefreshDatabase::class);
 
@@ -429,7 +431,7 @@ it('ranks the lowest projected balance on one currency, not on the raw minor uni
         $dollar->id => ['currency' => 'USD', 'lowest' => -110000],
     ]);
 
-    $dto = app(Modules\Forecasting\Public\Services\ForecastHighlightsQuery::class)->forUser($this->user);
+    $dto = app(ForecastHighlightsQuery::class)->forUser($this->user);
 
     expect($dto->lowestProjectedAccountId)->toBe($this->asn->id);
     expect($dto->lowestProjectedBalanceMinor)->toBe(-100000);
@@ -446,5 +448,5 @@ it('prints the lowest projected balance under the account own currency sign', fu
     $this->actingAs($this->user)
         ->get('/')
         ->assertOk()
-        ->assertSee(Modules\Ledger\Public\ValueObjects\Money::ofMinor(-110000, 'USD')->format());
+        ->assertSee(Money::ofMinor(-110000, 'USD')->format());
 });
