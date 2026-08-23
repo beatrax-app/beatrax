@@ -346,7 +346,7 @@ final class PreviewWizard extends Component
         return $views->make('import::livewire.preview-wizard', [
             'preview' => $preview,
             'previewExpired' => $this->previewExpired,
-            'alreadyImported' => $this->alreadyImported(),
+            'alreadyImported' => $this->alreadyImported($db),
             'needsIcsAccountName' => $needsIcsAccountName,
             'needsPaypalAccountName' => $needsPaypalAccountName,
             'importableRowCount' => self::importableRowCount($preview),
@@ -354,14 +354,15 @@ final class PreviewWizard extends Component
         ]);
     }
 
-    // A confirmed run has no preview left, which is indistinguishable from an
-    // expired one until the status is read. RunImport short-circuits a SHA it
-    // has already landed, so re-uploading a file lands here rather than on a
-    // duplicate — and "expired, re-upload" would send the reader round again.
-    private function alreadyImported(): bool
+    // A confirmed run has no preview left, indistinguishable from an expired one
+    // until the status is read: RunImport short-circuits a SHA it has already
+    // landed, so "expired, re-upload" sends that reader round again. Raw builder
+    // rather than ImportRun::query()->exists(), which trips staticMethod.dynamicCall.
+    private function alreadyImported(DatabaseManager $db): bool
     {
-        return ImportRun::query()
-            ->whereKey($this->importRunId)
+        return $db->connection()
+            ->table('import_runs')
+            ->where('id', $this->importRunId)
             ->where('status', ImportRunStatus::Confirmed->value)
             ->exists();
     }
