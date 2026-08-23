@@ -3,7 +3,15 @@
 declare(strict_types=1);
 
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
+
+// Asserted through the same key the builder reads, so a retitled menu entry
+// cannot leave this test passing against a label the app no longer draws.
+function devMenuLabel(string $key): string
+{
+    return Lang::get('desktop::native.menu.'.$key);
+}
 
 function devMenuUser(bool $isDeveloper, string $username = 'menu-fixture'): User
 {
@@ -31,9 +39,9 @@ it('appends a Developer submenu with the Open Dev Console + Run-a-command entrie
         JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE,
     );
 
-    expect($rendered)->toContain(AppMenuBuilder::DEVELOPER_SUBMENU);
-    expect($rendered)->toContain(AppMenuBuilder::DEV_OPEN_CONSOLE);
-    expect($rendered)->toContain(AppMenuBuilder::DEV_RUN_COMMAND);
+    expect($rendered)->toContain(devMenuLabel('developer_submenu'));
+    expect($rendered)->toContain(devMenuLabel('dev_open_console'));
+    expect($rendered)->toContain(devMenuLabel('dev_run_command'));
 
     // ⌘K stays a label hint with no OS accelerator: if the menu claimed it,
     // Cmd+K would navigate to /dev instead of opening the palette.
@@ -57,9 +65,9 @@ it('omits the Developer submenu entirely for is_developer=false (defense-in-dept
         JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE,
     );
 
-    expect($rendered)->not->toContain(AppMenuBuilder::DEVELOPER_SUBMENU);
-    expect($rendered)->not->toContain(AppMenuBuilder::DEV_OPEN_CONSOLE);
-    expect($rendered)->not->toContain(AppMenuBuilder::DEV_RUN_COMMAND);
+    expect($rendered)->not->toContain(devMenuLabel('developer_submenu'));
+    expect($rendered)->not->toContain(devMenuLabel('dev_open_console'));
+    expect($rendered)->not->toContain(devMenuLabel('dev_run_command'));
 });
 
 it('omits the Developer submenu for an unauthenticated request', function (): void {
@@ -75,5 +83,5 @@ it('omits the Developer submenu for an unauthenticated request', function (): vo
         JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE,
     );
 
-    expect($rendered)->not->toContain(AppMenuBuilder::DEVELOPER_SUBMENU);
+    expect($rendered)->not->toContain(devMenuLabel('developer_submenu'));
 });

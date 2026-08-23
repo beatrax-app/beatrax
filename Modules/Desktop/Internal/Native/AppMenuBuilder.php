@@ -12,12 +12,6 @@ use Native\Desktop\Facades\Menu;
 
 final class AppMenuBuilder
 {
-    public const DEVELOPER_SUBMENU = 'Developer';
-
-    public const DEV_OPEN_CONSOLE = 'Open Dev Console';
-
-    public const DEV_RUN_COMMAND = '⌘K Run a command';
-
     public const GITHUB_REPO_URL = 'https://github.com/beatrax-app/beatrax';
 
     public const REPORT_ISSUE_URL = 'https://github.com/beatrax-app/beatrax/issues/new';
