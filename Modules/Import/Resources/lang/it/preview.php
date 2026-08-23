@@ -13,7 +13,6 @@ return [
 
     'already_imported_link' => 'Vedi il risultato dell\'importazione',
 
-
     'expired_html' => 'Anteprima scaduta. <a href="/imports/new" class="underline">Ricarica il file</a> per riprovare.',
 
     'save_name' => 'Salva il nome',

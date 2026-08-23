@@ -13,7 +13,6 @@ return [
 
     'already_imported_link' => 'Näytä tuonnin tulos',
 
-
     'expired_html' => 'Esikatselu on vanhentunut. <a href="/imports/new" class="underline">Lähetä tiedosto uudelleen</a> ja yritä uudestaan.',
 
     'save_name' => 'Tallenna nimi',

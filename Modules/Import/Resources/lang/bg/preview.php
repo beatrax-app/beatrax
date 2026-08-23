@@ -13,7 +13,6 @@ return [
 
     'already_imported_link' => 'Вижте резултата от импортирането',
 
-
     'expired_html' => 'Прегледът е изтекъл. <a href="/imports/new" class="underline">Качи файла отново</a>, за да опиташ пак.',
 
     'save_name' => 'Запази името',

@@ -13,7 +13,6 @@ return [
 
     'already_imported_link' => 'Importálás eredményének megtekintése',
 
-
     'expired_html' => 'Az előnézet lejárt. <a href="/imports/new" class="underline">Töltsd fel újra a fájlt</a>, és próbáld meg ismét.',
 
     'save_name' => 'Név mentése',

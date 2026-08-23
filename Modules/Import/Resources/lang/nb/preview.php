@@ -13,7 +13,6 @@ return [
 
     'already_imported_link' => 'Se importresultatet',
 
-
     'expired_html' => 'Forhåndsvisningen er utløpt. <a href="/imports/new" class="underline">Last opp filen på nytt</a> for å prøve igjen.',
 
     'save_name' => 'Lagre navnet',

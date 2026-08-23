@@ -13,7 +13,6 @@ return [
 
     'already_imported_link' => 'Переглянути результат імпорту',
 
-
     'expired_html' => 'Попередній перегляд застарів. <a href="/imports/new" class="underline">Завантаж файл знову</a>, щоб спробувати ще раз.',
 
     'save_name' => 'Зберегти назву',

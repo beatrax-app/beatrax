@@ -13,7 +13,6 @@ return [
 
     'already_imported_link' => 'Pogledaj rezultat uvoza',
 
-
     'expired_html' => 'Pregled je istekao. <a href="/imports/new" class="underline">Ponovo otpremi datoteku</a> za novi pokušaj.',
 
     'save_name' => 'Sačuvaj naziv',

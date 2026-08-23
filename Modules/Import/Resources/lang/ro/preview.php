@@ -13,7 +13,6 @@ return [
 
     'already_imported_link' => 'Vezi rezultatul importului',
 
-
     'expired_html' => 'Previzualizarea a expirat. <a href="/imports/new" class="underline">Încarcă fișierul din nou</a> pentru a reîncerca.',
 
     'save_name' => 'Salvează numele',

@@ -13,7 +13,6 @@ return [
 
     'already_imported_link' => 'Voir le résultat de l\'import',
 
-
     'expired_html' => 'L\'aperçu a expiré. <a href="/imports/new" class="underline">Téléverse à nouveau le fichier</a> pour réessayer.',
 
     'save_name' => 'Enregistrer le nom',
