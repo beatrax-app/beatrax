@@ -32,10 +32,16 @@ final class SystemAlert extends Model
         'acknowledged_at',
     ];
 
+    // created_at only, because there is no updated_at column. Left to the
+    // schema's CURRENT_TIMESTAMP default it was SQLite's clock, which is
+    // always UTC: on a phone in CEST an alert raised at 01:38 was stored and
+    // shown as 23:38 the previous day, while every other row read local.
     /**
      * @var bool
      */
-    public $timestamps = false;
+    public $timestamps = true;
+
+    public const UPDATED_AT = null;
 
     /** @return array<string, string> */
     protected function casts(): array

@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Behold PIN-kode',
 
     'error_pin_too_short' => 'PIN-koden må ha minst 6 sifre.',
+    'error_pin_digits' => 'PIN-koden må ha 6 til 10 sifre — bare tall.',
     'error_pin_mismatch' => 'PIN-kodene er ikke like. Prøv igjen.',
     'error_pin_required' => 'Tast inn PIN-koden din.',
     'error_pin_incorrect' => 'Feil PIN-kode.',

@@ -202,7 +202,7 @@ final class OpLogRebuilder
             ->table('op_log_entries')
             ->where('user_id', $userId)
             ->where('table_name', $table)
-            ->where('op_type', 'create_row')
+            ->where('op_type', OpType::CreateRow->value)
             ->distinct()
             ->pluck('pk');
 

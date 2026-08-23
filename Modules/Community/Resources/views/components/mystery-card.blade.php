@@ -25,7 +25,7 @@
     </div>
     <div class="text-sm text-slate-700 dark:text-slate-300">
         @if ($paymentType !== null)
-            <span class="ptype-chip ptype-chip-{{ $paymentType->chipClass() }} inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+            <span class="ptype-chip inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-900 dark:text-slate-200">
                 {{ $paymentType->chipLabel() }}
             </span>
         @endif

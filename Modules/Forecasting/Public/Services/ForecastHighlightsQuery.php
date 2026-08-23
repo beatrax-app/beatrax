@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Public\Dto\ForecastHighlightsDto;
 use stdClass;
 
@@ -147,7 +148,7 @@ final readonly class ForecastHighlightsQuery
             ->where('user_id', $user->id)
             ->whereNull('scenario_id')
             ->where('horizon_days', self::HORIZON_DAYS)
-            ->where('status', 'complete')
+            ->where('status', JobRunStatus::Complete->value)
             ->orderByDesc('id')
             ->first(['result_json']);
 

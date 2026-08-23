@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Enums\Direction')
 {{--
     Day panel partial — §6.4 (desktop right-rail) and §6.5 (phone bottom sheet).
 
@@ -45,9 +46,9 @@
     <div class="overflow-y-auto flex-1">
         @foreach ($dayDto->entries as $entry)
             @php
-                $amountSign = $entry->direction === 'income' ? '+' : '−';
+                $amountSign = $entry->direction === Direction::Income->value ? '+' : '−';
                 $amountStr  = $amountSign . Money::ofMinor(abs($entry->amountMinor), $entry->currency)->format();
-                $amountColor = $entry->direction === 'income' ? 'var(--color-emerald)' : 'var(--color-text)';
+                $amountColor = $entry->direction === Direction::Income->value ? 'var(--color-emerald)' : 'var(--color-text)';
             @endphp
             <div class="cal-panel-entry">
                 <div class="flex items-start justify-between gap-2">

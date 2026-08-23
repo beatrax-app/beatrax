@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Zadrži PIN',
 
     'error_pin_too_short' => 'PIN mora da ima bar 6 cifre.',
+    'error_pin_digits' => 'PIN mora da ima 6 do 10 cifara — samo brojevi.',
     'error_pin_mismatch' => 'PIN-ovi se ne poklapaju. Probaj ponovo.',
     'error_pin_required' => 'Unesi svoj PIN.',
     'error_pin_incorrect' => 'Neispravan PIN.',

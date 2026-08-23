@@ -66,7 +66,7 @@
         default => '',
     };
 @endphp
-<section class="wiz-step wiz-step-connect-bank" aria-labelledby="wiz-connect-bank-h1">
+<section class="wiz-step" aria-labelledby="wiz-connect-bank-h1">
     <x-onboarding::wiz-eyebrow step="connect-bank" glyph="🏦">{{ Lang::get('onboarding::connect_bank.eyebrow') }} {{ $eyebrowSuffix }}</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-bank-h1" class="wiz-h1">
         {{ Lang::get('onboarding::connect_bank.h1') }}

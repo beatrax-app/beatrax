@@ -20,7 +20,7 @@
     friendly toast surfaces inline below the drop zone alongside any
     other parse-time failure.
 --}}
-<section class="wiz-step wiz-step-connect-paypal" aria-labelledby="wiz-connect-paypal-h1">
+<section class="wiz-step" aria-labelledby="wiz-connect-paypal-h1">
     <x-onboarding::wiz-eyebrow step="connect-paypal" glyph="💸">{{ Lang::get('onboarding::connect_paypal.eyebrow') }}</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-paypal-h1" class="wiz-h1">
         {{ Lang::get('onboarding::connect_paypal.h1') }}

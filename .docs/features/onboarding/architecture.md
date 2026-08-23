@@ -187,6 +187,31 @@ connector, OAuth provider name, uploaded filename, stashed ImportRun
 ids) so the wizard resumes mid-flow after a relaunch without
 re-prompting.
 
+## Leaving the wizard
+
+The wizard has two exits and they mean different things.
+
+`SetupWizard::leaveForNow()` is the "Resume later" affordance in
+`.wiz-top`. It writes nothing: it redirects to `/` and leaves
+`wizard_progress` exactly as it stands, so `ResumeStepResolver` still
+finds the first pending step on the next visit and `isResuming` raises
+the resume banner. It used to mark every not-done row `skipped`, which
+is why a device walk found it abandoning 229 parsed transactions that
+were staged and waiting for the commit step, under a control whose
+aria-label says it "saves your progress".
+
+The per-step "Skip this step" control is the other exit, and that one
+does mark its own row `skipped` — through `SetupWizard::skip()`, gated
+on `WizardStepRegistry::isSkippable()`.
+
+Once every row is `done` or `skipped` there is nothing to resume.
+`mount()` then renders the terminal step — `WizardStepRegistry::lastStep()`
+with `allComplete` set — rather than redirecting. A redirect from
+`mount()` is not available here: Livewire's `redirect()` calls
+`skipRender()`, and on the NativePHP mobile runtime the abort that is
+supposed to turn that into a 302 does not fire, so the route answered
+200 and the layout painted around an empty slot.
+
 ## Data flow
 
 The first-install ceremony:

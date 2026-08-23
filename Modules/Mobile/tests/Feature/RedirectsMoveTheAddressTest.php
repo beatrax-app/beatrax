@@ -63,8 +63,12 @@ it('carries the query string and fragment across', function (): void {
         ->toContain('/budgets?month=2026-08&view=table#totals');
 });
 
-it('leaves a Livewire round-trip its redirect', function (): void {
-    $response = $this->get('/login', ['Accept' => 'text/html', 'X-Livewire' => 'true']);
+// A GET carrying X-Livewire is not a round-trip: Livewire's client sends that
+// header only on the JSON POST to its update endpoint, and wire:navigate names
+// itself separately. On a persistent worker a GET wearing it is a leftover,
+// which is why the runtime strips it before this middleware ever looks.
+it('leaves a Livewire navigation its redirect', function (): void {
+    $response = $this->get('/login', ['Accept' => 'text/html', 'X-Livewire-Navigate' => '1']);
 
     $response->assertRedirect();
 });

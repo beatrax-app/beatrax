@@ -23,6 +23,8 @@ final class PinnedReportsRow extends Component
 
     private const DONUT_HEIGHT = 240;
 
+    private const AXIS_LABEL_COLOUR = '#64748B';
+
     /** @var list<string> */
     private const DONUT_PALETTE = ['#0F172A', '#334155', '#64748B', '#94A3B8', '#0EA5E9', '#059669', '#B45309', '#BE123C', '#7C3AED', '#0891B2'];
 
@@ -113,9 +115,19 @@ final class PinnedReportsRow extends Component
             'plotOptions' => $chartType === ReportViz::Bar->value ? ['bar' => ['borderRadius' => 2, 'columnWidth' => '55%']] : [],
             'colors' => ['#0F172A'],
             'dataLabels' => ['enabled' => false],
+            // The bucket labels are this card's legend: without them the bars
+            // name nothing, and hover is unavailable on a phone. Ticks and
+            // border stay off — the labels carry the meaning, the furniture
+            // does not.
             'xaxis' => [
                 'categories' => $categories,
-                'labels' => ['show' => false],
+                'labels' => [
+                    'show' => true,
+                    'rotate' => 0,
+                    'hideOverlappingLabels' => true,
+                    'trim' => true,
+                    'style' => ['fontSize' => '11px', 'colors' => self::AXIS_LABEL_COLOUR],
+                ],
                 'axisTicks' => ['show' => false],
                 'axisBorder' => ['show' => false],
             ],
@@ -189,7 +201,7 @@ final class PinnedReportsRow extends Component
                 'position' => 'bottom',
                 'fontSize' => '11px',
                 'itemMargin' => ['horizontal' => 6, 'vertical' => 2],
-                'labels' => ['colors' => '#64748B'],
+                'labels' => ['colors' => self::AXIS_LABEL_COLOUR],
             ],
             'tooltip' => ['enabled' => true],
         ];

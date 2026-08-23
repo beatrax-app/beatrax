@@ -17,7 +17,7 @@
 <div class="srch-toolbar">
     {{-- ─── Search input ─────────────────────────────────────────────── --}}
     <div class="srch-input-wrap" wire:loading.class="srch-input-wrap--loading" wire:target="searchQuery">
-        <span class="srch-icon" aria-hidden="true">⌕</span>
+        <x-core::search-mark class="srch-icon" />
         <input
             type="search"
             wire:model.live.debounce.250ms="searchQuery"

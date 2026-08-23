@@ -11,7 +11,7 @@
     Core's UserCountry seam, Skip bubbles `wizard.step.skipped`.
     Blade default {{ }} escaping throughout.
 --}}
-<section class="wiz-step wiz-step-tax-country" aria-labelledby="wiz-tax-country-h1">
+<section class="wiz-step" aria-labelledby="wiz-tax-country-h1">
     <p class="wiz-eyebrow">{{ Lang::get('onboarding::tax_country.eyebrow') }}</p>
     <h1 id="wiz-tax-country-h1" class="wiz-h1">{{ Lang::get('onboarding::tax_country.h1') }}</h1>
     <p class="wiz-lede">

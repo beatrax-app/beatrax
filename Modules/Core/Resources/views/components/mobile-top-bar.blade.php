@@ -58,19 +58,6 @@
         aria-label="{{ Lang::get('core::components.topbar.search_transactions') }}"
         x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
     >
-        {{-- An SVG, not the ⌕ glyph: at the same 22px the character renders
-             13px wide against the hamburger's 19px, so the control looked
-             smaller than its neighbour. Font metrics for that codepoint vary
-             by platform, which a drawn icon does not. --}}
-        <svg
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-        >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/>
-        </svg>
+        <x-core::search-mark />
     </button>
 </header>

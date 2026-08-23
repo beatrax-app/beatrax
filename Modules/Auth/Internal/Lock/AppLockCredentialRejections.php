@@ -13,19 +13,25 @@ use Modules\Core\Public\Support\Lang;
 // spread over six call sites is one a later edit can only half-change.
 final readonly class AppLockCredentialRejections
 {
-    private const int MINIMUM_PIN_LENGTH = 6;
-
     public function __construct(private Hasher $hasher) {}
 
+    // Presence only, and deliberately not the shape: this is the PIN already
+    // stored being offered as proof, and an install that predates the shape
+    // rule holds one the rule would now refuse. Refusing it here would take
+    // away the Change PIN route out of exactly that state.
     public function pinRequired(string $pin): ?string
     {
         return $pin === '' ? Lang::get('auth::app_lock.error_pin_required') : null;
     }
 
+    // Shape before agreement: two boxes that agree on something the keypad
+    // cannot type are still a lockout, so the rule about what a PIN is runs
+    // first and reads from AppLockPinShape rather than restating it.
     public function newPin(string $newPin, string $confirmPin): ?string
     {
         return match (true) {
-            strlen($newPin) < self::MINIMUM_PIN_LENGTH => Lang::get('auth::app_lock.error_pin_too_short'),
+            AppLockPinShape::isTooShort($newPin) => Lang::get('auth::app_lock.error_pin_too_short'),
+            ! AppLockPinShape::isWellFormed($newPin) => Lang::get('auth::app_lock.error_pin_digits'),
             $newPin !== $confirmPin => Lang::get('auth::app_lock.error_pin_mismatch'),
             default => null,
         };

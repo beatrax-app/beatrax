@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Залишити PIN',
 
     'error_pin_too_short' => 'PIN має містити щонайменше 6 цифри.',
+    'error_pin_digits' => 'PIN має містити від 6 до 10 цифр — лише цифри.',
     'error_pin_mismatch' => 'PIN-коди не збігаються. Спробуй ще раз.',
     'error_pin_required' => 'Введи свій PIN.',
     'error_pin_incorrect' => 'Неправильний PIN.',

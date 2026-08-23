@@ -36,8 +36,9 @@ final class AppLockSettingsSection extends Component
     use DispatchesToast;
     use HoldsFlashMessage;
 
-    private const PIN_RULES = 'nullable|regex:/^[0-9]{6,10}$/';
-
+    // No #[Validate] on the PIN and password boxes below. The attribute only
+    // runs where an action calls validate(), none of these do, and a rule that
+    // never runs reads as a gate that is there. AppLockPinShape is the rule.
     public bool $lockEnabled = false;
 
     public bool $biometricEnrolled = false;
@@ -48,7 +49,6 @@ final class AppLockSettingsSection extends Component
 
     public bool $confirmingDeenroll = false;
 
-    #[Validate(self::PIN_RULES)]
     public string $deenrollPin = '';
 
     // Exempt from the PIN confirmation every other mutation here requires:
@@ -56,16 +56,12 @@ final class AppLockSettingsSection extends Component
     #[Validate('required|integer|in:1,5,15,30')]
     public int $idleTimeoutMinutes = 5;
 
-    #[Validate(self::PIN_RULES)]
     public string $newPin = '';
 
-    #[Validate(self::PIN_RULES)]
     public string $confirmPin = '';
 
-    #[Validate(self::PIN_RULES)]
     public string $currentPin = '';
 
-    #[Validate('nullable|string')]
     public string $accountPassword = '';
 
     public bool $confirmingDisable = false;

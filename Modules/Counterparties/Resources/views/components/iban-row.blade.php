@@ -35,7 +35,6 @@
         x-show="revealed"
         x-cloak
         aria-live="polite"
-        style="font-family: var(--font-mono); font-variant-numeric: tabular-nums;"
     >{{ $iban }}</span>
     <button
         type="button"

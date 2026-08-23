@@ -12,7 +12,6 @@
     {{-- Console pane — 7-day quarantine count (theme-locked dark) --}}
     <div
         class="console-pane mb-6 rounded-lg overflow-hidden border"
-        style="background: #0b1220; color: #f1f5f9; border-color: #1e293b;"
         data-testid="sync-health-console-pane"
     >
         <div

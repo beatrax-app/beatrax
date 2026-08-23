@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Internal\Exceptions\ForecastResultEncodingException;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Forecasting\Models\ForecastRun;
@@ -67,7 +68,7 @@ final readonly class ProjectionPipeline
         $run->user_id = $user->id;
         $run->scenario_id = $scenarioId;
         $run->horizon_days = $horizonDays;
-        $run->status = 'pending';
+        $run->status = JobRunStatus::Pending->value;
         $run->save();
 
         return $run;

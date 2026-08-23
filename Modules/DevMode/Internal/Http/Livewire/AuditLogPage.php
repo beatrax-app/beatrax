@@ -14,6 +14,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\CommandTier;
 
 #[Layout('dev::layouts.dev-shell')]
@@ -72,7 +73,7 @@ final class AuditLogPage extends Component
         // Raw query builder, not Eloquent: __call forwarding trips
         // larastan-strict staticMethod.dynamicCall on limit()/whereIn().
         $audit = $db->connection()->table('dev_mode_audit')
-            ->where('log_name', 'dev_mode');
+            ->where('log_name', SpatieAuditWriter::LOG_NAME);
 
         $this->applyFilters($audit, $db);
 

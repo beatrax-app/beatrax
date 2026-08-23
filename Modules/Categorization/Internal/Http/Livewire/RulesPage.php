@@ -126,8 +126,9 @@ final class RulesPage extends Component
 
     public static function conditionFragment(RuleConditionDto $condition): string
     {
-        $displayField = $condition->valueType === ConditionValueType::Text->value ? $condition->field : $condition->valueType;
-        $opLabel = RuleFormModal::operatorOptionsFor($displayField)[$condition->op] ?? $condition->op;
+        $field = $condition->valueType === ConditionValueType::Text->value ? $condition->field : $condition->valueType;
+        $displayField = RuleFormModal::fieldLabel($field);
+        $opLabel = RuleFormModal::operatorOptionsFor($field)[$condition->op] ?? $condition->op;
 
         if ($condition->valueType !== ConditionValueType::Text->value) {
             $value = self::readableValue($condition->valueType, $condition->value);

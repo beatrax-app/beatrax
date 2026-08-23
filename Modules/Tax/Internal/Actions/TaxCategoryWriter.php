@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
+use Modules\Tax\Internal\Enums\TaxCategoryStatus;
 use Modules\Tax\Internal\Exceptions\CategoryPersistenceException;
 use Modules\Tax\Internal\Exceptions\DuplicateTaxCategoryNameException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -93,7 +94,7 @@ final class TaxCategoryWriter
             'hint' => self::nullableStringField($entry, 'hint'),
             'corpus_key' => $key,
             'country_code' => $countryCode,
-            'status' => 'active',
+            'status' => TaxCategoryStatus::Active->value,
             'sort_order' => $sortOrder,
             'created_at' => $now,
             'updated_at' => $now,
@@ -176,7 +177,7 @@ final class TaxCategoryWriter
             'hint' => $hint,
             'corpus_key' => null,
             'country_code' => null,
-            'status' => 'active',
+            'status' => TaxCategoryStatus::Active->value,
             'sort_order' => $sortOrder,
             'created_at' => $now,
             'updated_at' => $now,
@@ -257,7 +258,7 @@ final class TaxCategoryWriter
             ->where('id', $categoryId)
             ->where('user_id', $userId)
             ->update([
-                'status' => 'archived',
+                'status' => TaxCategoryStatus::Archived->value,
                 'updated_at' => Carbon::now()->toDateTimeString(),
             ]);
     }
@@ -282,7 +283,7 @@ final class TaxCategoryWriter
             ->where('id', $categoryId)
             ->where('user_id', $userId)
             ->update([
-                'status' => 'active',
+                'status' => TaxCategoryStatus::Active->value,
                 'updated_at' => Carbon::now()->toDateTimeString(),
             ]);
     }
@@ -297,7 +298,7 @@ final class TaxCategoryWriter
             ->where('user_id', $userId);
 
         if (! $includeArchived) {
-            $query->where('status', 'active');
+            $query->where('status', TaxCategoryStatus::Active->value);
         }
 
         /** @var list<\stdClass> $rows */

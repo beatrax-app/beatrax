@@ -16,6 +16,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Support\Lang;
+use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RecentLogEntriesReader;
@@ -90,7 +91,7 @@ final class DevOverviewPage extends Component
     private function resolveLastCommand(DatabaseManager $db): ?string
     {
         $row = $db->connection()->table('dev_mode_audit')
-            ->where('log_name', 'dev_mode')
+            ->where('log_name', SpatieAuditWriter::LOG_NAME)
             ->orderByDesc('created_at')
             ->limit(1)
             ->first();
@@ -133,7 +134,7 @@ final class DevOverviewPage extends Component
     private function resolveRecentRuns(DatabaseManager $db, User $user): array
     {
         $rows = $db->connection()->table('dev_mode_audit')
-            ->where('log_name', 'dev_mode')
+            ->where('log_name', SpatieAuditWriter::LOG_NAME)
             ->where('causer_id', $user->id)
             ->orderByDesc('created_at')
             ->limit(self::RECENT_RUNS_LIMIT)

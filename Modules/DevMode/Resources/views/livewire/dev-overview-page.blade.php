@@ -18,11 +18,10 @@
     --}}
     <section
         class="console-pane rounded-md p-4"
-        style="background:#0b1220; color:#f1f5f9;"
         data-testid="console-pane"
         wire:poll.5s.keep-alive
     >
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 console-pane-head items-start">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
             {{-- Worker heartbeat tile --}}
             <div data-testid="console-pane-heartbeat">
                 <div class="text-[11px] uppercase tracking-wide text-slate-400">{{ Lang::get('dev::overview.worker_heartbeat') }}</div>
@@ -156,7 +155,7 @@
                             >
                                 <span class="text-sm font-mono truncate">{{ $run['command'] }}</span>
                                 <span
-                                    class="tier text-[10px] uppercase px-1.5 py-0.5 rounded {{ $run['tier'] === CommandTier::Destructive ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700' }}"
+                                    class="text-[10px] uppercase px-1.5 py-0.5 rounded {{ $run['tier'] === CommandTier::Destructive ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700' }}"
                                 >{{ $run['tier']->value }}</span>
                                 <span class="text-[11px] text-[var(--color-text-muted)] flex-shrink-0">
                                     @if ($run['createdAt'])

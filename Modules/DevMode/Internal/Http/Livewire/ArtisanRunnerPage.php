@@ -19,6 +19,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
+use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Process\CommandSpawner;
@@ -200,7 +201,7 @@ final class ArtisanRunnerPage extends Component
         // The query builder rather than Eloquent: Builder's __call forwarding
         // trips larastan-strict staticMethod.dynamicCall on limit()/whereIn().
         $audit = $db->connection()->table('dev_mode_audit')
-            ->where('log_name', 'dev_mode')
+            ->where('log_name', SpatieAuditWriter::LOG_NAME)
             ->where('causer_id', $userId)
             ->orderByDesc('created_at')
             ->limit(100)
@@ -328,7 +329,7 @@ final class ArtisanRunnerPage extends Component
         FinalizeRunAudit $finalize,
     ): void {
         $pending = $db->connection()->table('dev_mode_audit')
-            ->where('log_name', 'dev_mode')
+            ->where('log_name', SpatieAuditWriter::LOG_NAME)
             ->where('causer_id', $userId)
             ->whereNull('properties->finished_at')
             ->orderByDesc('id')

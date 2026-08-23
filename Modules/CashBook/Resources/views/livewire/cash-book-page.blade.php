@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
+@use('Modules\Ledger\Public\Enums\Direction')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
@@ -22,7 +23,7 @@
 
     <form wire:submit="add" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-800 dark:bg-slate-950">
         <div role="radiogroup" aria-label="{{ Lang::get('cashbook::cash-book.direction') }}" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
-            @foreach (['expense' => Lang::get('cashbook::cash-book.expense'), 'income' => Lang::get('cashbook::cash-book.income')] as $value => $label)
+            @foreach ([Direction::Expense->value => Lang::get('cashbook::cash-book.expense'), Direction::Income->value => Lang::get('cashbook::cash-book.income')] as $value => $label)
                 <button
                     type="button"
                     role="radio"

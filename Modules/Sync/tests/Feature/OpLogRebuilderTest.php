@@ -312,3 +312,54 @@ it('re-derives the full-text index after a rebuild instead of leaving it behind'
     expect(in_array($txnId, $searchWriter->indexed, true))
         ->toBeTrue('the rebuilt transaction was never re-indexed');
 });
+
+// createdRowPks() decides which rows a rebuild may delete before replay, by
+// matching op_log_entries.op_type against the create-row value. That value is
+// on the wire to peers, so it is pinned to the literal the protocol carries,
+// not to whatever the enum currently spells.
+it('deletes and recreates only the rows whose persisted op_type is the create-row value', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->db;
+    [$userId] = rebuildSeedBase($db, 'pks');
+
+    $pk = 8802;
+    $deviceKeys = ['device-rebuild' => $this->pkHex];
+    $replayer = new OpLogReplayer($db, $deviceKeys);
+
+    $creates = [
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'id', (string) $pk, OpType::CreateRow, 1000),
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'priority', '777', OpType::CreateRow, 1000),
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'combinator', json_encode('all', JSON_THROW_ON_ERROR), OpType::CreateRow, 1000),
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'hits_count', '0', OpType::CreateRow, 1000),
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'active', 'true', OpType::CreateRow, 1000),
+    ];
+    $replayer->replay($creates, $userId);
+
+    foreach ($creates as $index => $entry) {
+        $db->connection()->table('op_log_entries')->insert([
+            'user_id' => $userId,
+            'device_id' => $entry->deviceId,
+            'table_name' => $entry->table,
+            'pk' => (string) $entry->pk,
+            'field' => $entry->field,
+            'op_type' => $entry->opType->value,
+            'value' => $entry->value,
+            'hlc_l' => $entry->hlcL,
+            'hlc_c' => $index,
+            'signature' => $entry->signature,
+            'recorded_at' => '2026-06-15 10:00:00',
+        ]);
+    }
+
+    expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->pluck('op_type')->unique()->all())
+        ->toBe(['create_row']);
+
+    // Local drift the op log never recorded: only a delete-and-recreate puts
+    // the priority back to what the ops say.
+    $db->connection()->table('categorization_rules')->where('id', $pk)->update(['priority' => 999]);
+
+    $rebuilder = new OpLogRebuilder($db, $replayer, new MergeRulesRegistry, ['categorization_rules']);
+    $rebuilder->rebuild($userId);
+
+    expect($db->connection()->table('categorization_rules')->where('id', $pk)->value('priority'))->toBe(777);
+});

@@ -99,10 +99,10 @@
     </div>
 
     @if ($excerpt !== null && $excerpt !== '')
-        <pre class="run-card-out overflow-auto rounded bg-slate-950 px-3 py-2 text-[11px] font-mono text-slate-200 max-h-44">{{ $excerpt }}</pre>
+        <pre class="overflow-auto rounded bg-slate-950 px-3 py-2 text-[11px] font-mono text-slate-200 max-h-44">{{ $excerpt }}</pre>
     @elseif ($status === 'running')
         <pre
-            class="run-card-out overflow-auto rounded bg-slate-950 px-3 py-2 text-[11px] font-mono text-slate-200 max-h-44"
+            class="overflow-auto rounded bg-slate-950 px-3 py-2 text-[11px] font-mono text-slate-200 max-h-44"
             x-data='{
                 lines: "",
                 init() {

@@ -12,7 +12,7 @@
     Livewire component (a `#[On('oauth-client-wizard:saved')]`
     listener) once the modal saves credentials successfully.
 --}}
-<section class="wiz-step wiz-step-connect-email" aria-labelledby="wiz-connect-email-h1">
+<section class="wiz-step" aria-labelledby="wiz-connect-email-h1">
     <x-onboarding::wiz-eyebrow step="connect-email" glyph="✉️">{{ Lang::get('onboarding::connect_email.eyebrow') }}</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-email-h1" class="wiz-h1">
         {{ Lang::get('onboarding::connect_email.h1') }}

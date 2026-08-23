@@ -11,6 +11,8 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\JobRunStatus;
+use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Position\Public\Services\PositionQuery;
 
@@ -75,7 +77,7 @@ final class Dashboard extends Component
         $reauthInboxCount = $db->connection()
             ->table('inbox_scan_state')
             ->where('user_id', $user->id)
-            ->where('status', 'needs_reauth')
+            ->where('status', InboxScanStatus::NeedsReauth->value)
             ->count();
 
         $this->reauthToastDismissed = $session->has('reauth_toast_dismissed_at');
@@ -83,7 +85,7 @@ final class Dashboard extends Component
         $this->failedChainResolutionExists = $db->connection()
             ->table('chain_resolution_runs')
             ->where('user_id', $user->id)
-            ->where('status', 'failed')
+            ->where('status', JobRunStatus::Failed->value)
             ->exists();
 
         return $views->make('shell::livewire.dashboard', [

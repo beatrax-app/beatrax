@@ -28,7 +28,7 @@
                     {{ Lang::get('dev::triple_gate.intro') }}
                 </p>
 
-                <div class="gate-cmd rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100">
+                <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100">
                     <span aria-hidden="true">$ </span>
                     php artisan {{ $command }}
                     @foreach ($resolvedArgs as $key => $value)

@@ -6,11 +6,11 @@
     with `raw` + `rowIndex` so the popover (mounted at the bottom of
     the wizard blade) can open against this row.
 
-    The partial is consumed by:
-      - preview-wizard.blade.php (the in-wizard preview table)
-      - the RenameCounterpartyPopoverTest .desc-fallback / friendly-
-        name render assertions (so the test can exercise both branches
-        without standing up the full preview pipeline).
+    The partial is rendered only by the RenameCounterpartyPopoverTest
+    .desc-fallback / friendly-name assertions, which exercise both
+    branches without standing up the full preview pipeline.
+    preview-wizard.blade.php carries its own copy of this fallback
+    chain inline and does not include this file.
 
     Expects `$rows` (list<PreviewRowDto>) in scope.
 
@@ -23,13 +23,13 @@
 
 @use('Modules\Core\Public\Support\Lang')
 {{-- overflow-x-auto ensures phone-width horizontal scroll in standalone use --}}
-<div class="rename-counterparty-cells overflow-x-auto">
+<div class="overflow-x-auto">
     @foreach ($rows as $row)
-        <div class="cp-cell" data-row-index="{{ $row->rowIndex }}">
+        <div data-row-index="{{ $row->rowIndex }}">
             @if ($row->aliasFriendlyName !== null)
-                <span class="cp-name">{{ $row->aliasFriendlyName }}</span>
+                <span>{{ $row->aliasFriendlyName }}</span>
             @elseif ($row->counterpartyName !== null)
-                <span class="cp-name">{{ $row->counterpartyName }}</span>
+                <span>{{ $row->counterpartyName }}</span>
             @elseif ($row->counterpartyIban !== null)
                 <span class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ $row->counterpartyIban }}</span>
             @elseif ($row->description !== null)

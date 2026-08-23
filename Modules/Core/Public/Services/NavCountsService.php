@@ -9,13 +9,19 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
+use Modules\Ledger\Public\Enums\Direction;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 
 final class NavCountsService
 {
     private const CACHE_TTL = 300;
 
     /** @var list<string> recurring states considered "active". */
-    private const ACTIVE_STATES = ['approved', 'cadence_changed'];
+    private const ACTIVE_STATES = [
+        RecurringSeriesState::Approved->value,
+        RecurringSeriesState::CadenceChanged->value,
+    ];
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -81,9 +87,9 @@ final class NavCountsService
         $now = $this->clock->now()->toDateTimeString();
         $openOrRevived = static fn (Builder $query): Builder => $query->where(
             static function (Builder $group) use ($now): void {
-                $group->where('state', 'open')
+                $group->where('state', DriftAlertState::Open->value)
                     ->orWhere(static function (Builder $revived) use ($now): void {
-                        $revived->where('state', 'snoozed')
+                        $revived->where('state', DriftAlertState::Snoozed->value)
                             ->whereNotNull('snoozed_until')
                             ->where('snoozed_until', '<=', $now);
                     });
@@ -99,7 +105,7 @@ final class NavCountsService
             // envelope cutover. The "Budgets" badge now reflects how many
             // distinct categories the user budgets via envelope_assignments.
             'budgets' => $countDistinct('envelope_assignments', 'category_id'),
-            'subscriptions' => $count('recurring_series', static fn (Builder $query): Builder => $query->where('direction', 'expense')->whereIn('state', self::ACTIVE_STATES)),
+            'subscriptions' => $count('recurring_series', static fn (Builder $query): Builder => $query->where('direction', Direction::Expense->value)->whereIn('state', self::ACTIVE_STATES)),
             'imports' => $count('import_runs'),
             // Total tagged transactions for the sidebar badge (lifetime count,
             // no year filter). A raw row count would double-count a transaction

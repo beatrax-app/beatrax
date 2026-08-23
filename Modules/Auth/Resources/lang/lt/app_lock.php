@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Palikti PIN kodą',
 
     'error_pin_too_short' => 'PIN kodą turi sudaryti bent 6 skaitmenys.',
+    'error_pin_digits' => 'PIN kodą turi sudaryti nuo 6 iki 10 skaitmenų — tik skaitmenys.',
     'error_pin_mismatch' => 'PIN kodai nesutampa. Bandyk dar kartą.',
     'error_pin_required' => 'Įvesk savo PIN kodą.',
     'error_pin_incorrect' => 'Neteisingas PIN kodas.',

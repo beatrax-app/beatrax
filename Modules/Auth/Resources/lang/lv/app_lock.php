@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Paturēt PIN kodu',
 
     'error_pin_too_short' => 'PIN kodā jābūt vismaz 6 cipariem.',
+    'error_pin_digits' => 'PIN kodā jābūt 6 līdz 10 cipariem — tikai cipari.',
     'error_pin_mismatch' => 'PIN kodi nesakrīt. Mēģiniet vēlreiz.',
     'error_pin_required' => 'Ievadiet savu PIN kodu.',
     'error_pin_incorrect' => 'Nepareizs PIN kods.',

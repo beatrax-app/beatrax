@@ -12,6 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
@@ -76,7 +77,7 @@ final class IncomeSeriesDetector implements SeriesDetector
                 'counterparty_iban',
             ])
             ->where('user_id', $user->id)
-            ->where('type', 'income')
+            ->where('type', TransactionType::Income->value)
             ->where('amount_minor', '>=', $threshold)
             ->where('posted_at', '>=', $since)
             ->orderBy('posted_at')

@@ -9,6 +9,7 @@ use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Chains\Public\Dto\CardStatementForecastTile;
+use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
@@ -20,6 +21,7 @@ use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -29,6 +31,17 @@ use stdClass;
 final class ThisPeriodAtAGlanceQuery
 {
     use CoercesScalars;
+
+    private const ROLLUP_SQL = 'COALESCE(SUM(CASE WHEN type = ? THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
+         COALESCE(SUM(CASE WHEN type IN (?, ?) THEN settled_amount_minor ELSE 0 END), 0) AS net_minor';
+
+    private const NON_EMPTY_CURRENCY_SQL = '(COALESCE(SUM(CASE WHEN type = ? THEN settled_amount_minor ELSE 0 END), 0) <> 0)
+         OR (COALESCE(SUM(CASE WHEN type = ? THEN -settled_amount_minor ELSE 0 END), 0) <> 0)';
+
+    private const PER_CURRENCY_SQL = 'settled_currency,
+         COALESCE(SUM(CASE WHEN type = ? THEN settled_amount_minor ELSE 0 END), 0) AS inflow_minor,
+         COALESCE(SUM(CASE WHEN type = ? THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
+         COALESCE(SUM(CASE WHEN type IN (?, ?) THEN settled_amount_minor ELSE 0 END), 0) AS net_minor';
 
     // 86400 = 24h: a scanned inbox untouched longer than that shows an amber
     // dot. Inboxes past TILE_LINE_LIMIT collapse into a "+N more" line.
@@ -80,10 +93,11 @@ final class ThisPeriodAtAGlanceQuery
             ->where('settled_currency', $displayCurrency)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
-            ->selectRaw(
-                "COALESCE(SUM(CASE WHEN type = 'expense' THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
-                 COALESCE(SUM(CASE WHEN type IN ('income', 'expense') THEN settled_amount_minor ELSE 0 END), 0) AS net_minor"
-            )
+            ->selectRaw(self::ROLLUP_SQL, [
+                TransactionType::Expense->value,
+                TransactionType::Income->value,
+                TransactionType::Expense->value,
+            ])
             ->first();
 
         $outflowMinor = self::toInt($row?->outflow_minor);
@@ -122,7 +136,7 @@ final class ThisPeriodAtAGlanceQuery
             ->table('transactions')
             ->where('user_id', $user->id)
             ->where('settled_currency', $currency)
-            ->where('type', 'income')
+            ->where('type', TransactionType::Income->value)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->sum('settled_amount_minor');
@@ -145,16 +159,16 @@ final class ThisPeriodAtAGlanceQuery
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->groupBy('settled_currency')
-            ->havingRaw(
-                "(COALESCE(SUM(CASE WHEN type = 'income' THEN settled_amount_minor ELSE 0 END), 0) <> 0)
-                 OR (COALESCE(SUM(CASE WHEN type = 'expense' THEN -settled_amount_minor ELSE 0 END), 0) <> 0)"
-            )
-            ->selectRaw(
-                "settled_currency,
-                 COALESCE(SUM(CASE WHEN type = 'income' THEN settled_amount_minor ELSE 0 END), 0) AS inflow_minor,
-                 COALESCE(SUM(CASE WHEN type = 'expense' THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
-                 COALESCE(SUM(CASE WHEN type IN ('income', 'expense') THEN settled_amount_minor ELSE 0 END), 0) AS net_minor"
-            )
+            ->havingRaw(self::NON_EMPTY_CURRENCY_SQL, [
+                TransactionType::Income->value,
+                TransactionType::Expense->value,
+            ])
+            ->selectRaw(self::PER_CURRENCY_SQL, [
+                TransactionType::Income->value,
+                TransactionType::Expense->value,
+                TransactionType::Income->value,
+                TransactionType::Expense->value,
+            ])
             ->orderBy('settled_currency')
             ->get();
 
@@ -180,7 +194,10 @@ final class ThisPeriodAtAGlanceQuery
             ->join('accounts', 'accounts.id', '=', 'card_statements.account_id')
             ->where('card_statements.user_id', $user->id)
             ->where('accounts.kind', AccountKind::IcsCard->value)
-            ->whereIn('card_statements.state', ['open', 'partially_settled'])
+            ->whereIn('card_statements.state', [
+                CardStatementState::Open->value,
+                CardStatementState::PartiallySettled->value,
+            ])
             ->orderByDesc('card_statements.period_end')
             ->orderByDesc('card_statements.id')
             ->select(

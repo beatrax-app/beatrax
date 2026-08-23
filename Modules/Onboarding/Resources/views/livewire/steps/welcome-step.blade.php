@@ -11,7 +11,7 @@
     shared with the connector-step welcome surfaces and with any future
     page that needs a 44×44 tile + title + description row pattern.
 --}}
-<section class="wiz-step wiz-step-welcome" aria-labelledby="wiz-welcome-h1">
+<section class="wiz-step" aria-labelledby="wiz-welcome-h1">
     <p class="wiz-eyebrow">{{ Lang::get('onboarding::welcome.eyebrow') }}</p>
     <h1 id="wiz-welcome-h1" class="wiz-h1">
         {{ Lang::get('onboarding::welcome.h1') }}

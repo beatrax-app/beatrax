@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Dto\DiscoveredSenderDto;
+use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use stdClass;
 use Throwable;
 
@@ -49,7 +50,7 @@ final class DiscoveredSenderQuery
                     ->where('inboxes.user_id', '=', $user->id);
             })
             ->where('discovered_senders.user_id', $user->id)
-            ->where('discovered_senders.state', 'candidate')
+            ->where('discovered_senders.state', DiscoveredSenderState::Candidate->value)
             ->where('discovered_senders.occurrence_count', '>=', $minOccurrences)
             ->where('discovered_senders.last_seen_at', '>=', $threshold)
             ->orderBy('discovered_senders.occurrence_count', 'desc')

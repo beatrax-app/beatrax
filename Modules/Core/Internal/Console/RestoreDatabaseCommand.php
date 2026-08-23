@@ -9,6 +9,7 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Enums\BackupAlertKind;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
@@ -236,7 +237,7 @@ final class RestoreDatabaseCommand extends Command
     {
         SystemAlert::create([
             'user_id' => null,
-            'kind' => 'backup_corrupt',
+            'kind' => BackupAlertKind::Corrupt->value,
             'severity' => SystemAlertSeverity::Critical->value,
             'message' => sprintf(
                 'Restore from %s failed at %s. Pre-restore snapshot at %s.',

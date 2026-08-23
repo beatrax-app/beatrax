@@ -16,7 +16,7 @@ use Throwable;
 
 final class RaiseReconsentAlertOnTokenFailure
 {
-    private const ALERT_KIND = 'oauth_reconsent_required';
+    public const ALERT_KIND = 'oauth_reconsent_required';
 
     private const MESSAGE_GMAIL = 'Reconnect your Gmail';
 

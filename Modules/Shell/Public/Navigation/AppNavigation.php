@@ -46,6 +46,14 @@ final class AppNavigation
         return $destinations;
     }
 
+    // The drawer spelled every glyph out again beside its own <a>, so the one
+    // in the row list and the one on screen could disagree — and did: Forecasts
+    // and Subscriptions both wore ↗ until the drawer was read on a phone.
+    public static function icon(Destination $destination): string
+    {
+        return self::row($destination)['icon'];
+    }
+
     public static function label(Destination $destination): string
     {
         return Lang::get('core::sidebar.nav.'.self::row($destination)['key']);
@@ -114,7 +122,7 @@ final class AppNavigation
     {
         return [
             ['destination' => Destination::Recurring, 'icon' => '↻', 'key' => 'recurring', 'keywords' => ['series', 'fixed', 'standing order', 'direct debit']],
-            ['destination' => Destination::Subscriptions, 'icon' => '↗', 'key' => 'subscriptions', 'keywords' => ['subscription', 'plans', 'memberships', 'price history']],
+            ['destination' => Destination::Subscriptions, 'icon' => '▷', 'key' => 'subscriptions', 'keywords' => ['subscription', 'plans', 'memberships', 'price history']],
             ['destination' => Destination::Chains, 'icon' => '⇉', 'key' => 'chains', 'keywords' => ['routing', 'funding', 'credit card', 'settlement']],
             ['destination' => Destination::UnusualCharges, 'icon' => '◬', 'key' => 'unusual_charges', 'keywords' => ['anomaly', 'spike', 'unexpected', 'outlier']],
             ['destination' => Destination::DriftAlerts, 'icon' => '⚠', 'key' => 'drift_alerts', 'keywords' => ['drift', 'price rise', 'increase', 'alerts']],

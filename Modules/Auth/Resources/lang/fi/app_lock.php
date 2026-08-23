@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Säilytä PIN-koodi',
 
     'error_pin_too_short' => 'PIN-koodissa on oltava vähintään 6 numeroa.',
+    'error_pin_digits' => 'PIN-koodissa on oltava 6–10 numeroa — vain numeroita.',
     'error_pin_mismatch' => 'PIN-koodit eivät täsmää. Yritä uudelleen.',
     'error_pin_required' => 'Anna PIN-koodisi.',
     'error_pin_incorrect' => 'Väärä PIN-koodi.',

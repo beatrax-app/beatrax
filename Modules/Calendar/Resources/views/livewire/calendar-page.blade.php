@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Enums\Direction')
 {{--
     /calendar page — the full month-grid surface.
 
@@ -273,12 +274,12 @@
                                 @foreach ($visibleEntries as $entry)
                                     @php
                                         $entryClass = 'cal-entry';
-                                        if ($entry->direction === 'income') $entryClass .= ' cal-entry--inflow';
+                                        if ($entry->direction === Direction::Income->value) $entryClass .= ' cal-entry--inflow';
                                         if ($entry->isApproximate)          $entryClass .= ' cal-entry--approx';
                                         if ($entry->isPaid)                 $entryClass .= ' cal-entry--paid';
                                         if ($entry->isMissed)               $entryClass .= ' cal-entry--missed';
 
-                                        $amountSign   = $entry->direction === 'income' ? '+' : '−';
+                                        $amountSign   = $entry->direction === Direction::Income->value ? '+' : '−';
                                         $amountStr    = $amountSign . Money::ofMinor(abs($entry->amountMinor), $entry->currency)->formatWholeUnits();
                                     @endphp
                                     <div class="{{ $entryClass }}">

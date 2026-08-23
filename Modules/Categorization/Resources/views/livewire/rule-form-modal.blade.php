@@ -61,10 +61,12 @@
                                     aria-label="{{ Lang::get('categorization::rule_form.condition_field_aria', ['number' => $i + 1]) }}"
                                     class="inline-flex rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                 >
-                                    <option value="description">{{ Lang::get('categorization::rule_form.field_description') }}</option>
-                                    <option value="counterparty">{{ Lang::get('categorization::rule_form.field_counterparty') }}</option>
-                                    <option value="amount">{{ Lang::get('categorization::rule_form.field_amount') }}</option>
-                                    <option value="date">{{ Lang::get('categorization::rule_form.field_date') }}</option>
+                                    {{-- Same map the /rules list reads, so a
+                                         field cannot be named one thing on the
+                                         form and another in the sentence. --}}
+                                    @foreach (\Modules\Categorization\Internal\Http\Livewire\RuleFormModal::fieldOptions() as $fieldValue => $fieldLabel)
+                                        <option value="{{ $fieldValue }}">{{ $fieldLabel }}</option>
+                                    @endforeach
                                 </select>
 
                                 <select
