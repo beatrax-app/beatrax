@@ -230,3 +230,37 @@ it('drops the empty buckets before the first real one but keeps the empty ones b
     expect($options['xaxis']['categories'])->toHaveCount(3);
     expect($options['xaxis']['categories'][0])->toBe('Mar 2026');
 });
+
+// The mini card is ~267px wide, and ApexCharts trims every tick that will not
+// fit: five months of history rendered as "Apr 2…", "May 2…", which reads as a
+// day rather than a year. Whether the ticks then FIT is a browser measurement
+// this test cannot make — it pins the option that stops the truncation, so the
+// axis cannot silently go back to eliding.
+it('tells ApexCharts not to truncate the axis ticks it draws', function (): void {
+    $user = prrUser();
+    test()->actingAs($user);
+    $db = app(DatabaseManager::class);
+    $account = prrAccount($user);
+
+    prrExpense($db, $user, $account, '2026-04-10', -1_000);
+    prrExpense($db, $user, $account, '2026-08-10', -2_000);
+
+    $definition = new ReportDefinition(
+        metric: 'spend',
+        dimension: 'time_bucket',
+        periodPreset: 'custom',
+        granularity: ReportGranularity::Monthly,
+        currencyMode: 'base',
+        viz: 'bar',
+        customFrom: '2026-04-01',
+        customTo: '2026-08-31',
+    );
+
+    $saved = app(SaveReport::class)->save($user, $definition, 'Monthly net position');
+    app(TogglePin::class)->toggle($user, $saved->id);
+
+    $html = Livewire::test(PinnedReportsRow::class)->html();
+
+    expect($html)->toContain('trim: false')
+        ->toContain('hideOverlappingLabels: true');
+});
