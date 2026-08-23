@@ -261,9 +261,8 @@ final readonly class SeriesEntryPlacer
         CarbonImmutable $monthEnd,
         ?CarbonImmutable $seriesStart,
     ): array {
-        // Every occurrence is anchor + k steps, never a chain of no-overflow
-        // steps: chaining permanently loses an end-of-month anchor after the
-        // first short month, and is not invertible for negative k.
+        // k runs negative below, for the history fill-in; SeriesCadence::occurrenceAt
+        // is what makes both directions read off the same anchor.
         $anchor = $next->startOfDay();
         $k = $this->firstOccurrenceIndex($anchor, $cadence, $monthStart);
 
@@ -280,7 +279,7 @@ final readonly class SeriesEntryPlacer
 
         while ($iterations < self::MAX_PLACEMENT_ITERATIONS) {
             $iterations++;
-            $occurrence = $this->occurrenceAt($anchor, $cadence, $k);
+            $occurrence = $cadence->occurrenceAt($anchor, $k);
             $k++;
             if ($occurrence === null || $occurrence->gt($monthEnd)) {
                 break;
@@ -353,17 +352,6 @@ final readonly class SeriesEntryPlacer
         }
 
         return $map;
-    }
-
-    private function occurrenceAt(CarbonImmutable $anchor, SeriesCadence $cadence, int $k): ?CarbonImmutable
-    {
-        return match ($cadence) {
-            SeriesCadence::Weekly => $anchor->addDays(self::DAYS_PER_WEEK * $k),
-            SeriesCadence::Monthly => $anchor->addMonthsNoOverflow($k),
-            SeriesCadence::Quarterly => $anchor->addMonthsNoOverflow(self::MONTHS_PER_QUARTER * $k),
-            SeriesCadence::Yearly => $anchor->addYearsNoOverflow($k),
-            SeriesCadence::Irregular => null,
-        };
     }
 
     /**

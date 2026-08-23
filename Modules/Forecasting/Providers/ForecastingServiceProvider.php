@@ -20,6 +20,7 @@ use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
+use Modules\Forecasting\Internal\Pipeline\CadenceWalk;
 use Modules\Forecasting\Internal\Pipeline\ChainAwareForecastRouter;
 use Modules\Forecasting\Internal\Pipeline\DailyFold;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
@@ -67,6 +68,7 @@ final class ForecastingServiceProvider extends ServiceProvider
         // so it is dispatched rather than container-resolved.
         $this->app->singleton(BalanceAnchorResolver::class);
         $this->app->singleton(NetWorthQuery::class);
+        $this->app->singleton(CadenceWalk::class);
         $this->app->singleton(RangeProjector::class);
         $this->app->singleton(DailyFold::class);
         $this->app->singleton(ProjectionPipeline::class);

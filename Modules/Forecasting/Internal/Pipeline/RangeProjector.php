@@ -24,6 +24,7 @@ final readonly class RangeProjector
     public function __construct(
         private Percentile $percentile,
         private CadenceJitter $jitter,
+        private CadenceWalk $walk,
         private RecurringSeriesQuery $seriesQuery,
     ) {}
 
@@ -100,26 +101,18 @@ final readonly class RangeProjector
         }
 
         $contributions = [];
-        $cursor = $next;
 
-        while ($cursor->lessThanOrEqualTo($horizonEnd)) {
-            if ($cursor->greaterThanOrEqualTo($asOf)) {
-                $contributions[] = new ForecastContribution(
-                    date: $cursor,
-                    pointMinor: $point,
-                    lowMinor: $lowMinor,
-                    highMinor: $highMinor,
-                    currency: $currency,
-                    fxRateUsed: $series->latestFxRateUsed,
-                    seriesId: $series->seriesId,
-                    accountId: $accountId,
-                );
-            }
-
-            $cursor = $this->advance($cursor, $cadence);
-            if ($cursor === null) {
-                break;
-            }
+        foreach ($this->walk->datesInHorizon($next, $cadence, $asOf, $horizonEnd) as $date) {
+            $contributions[] = new ForecastContribution(
+                date: $date,
+                pointMinor: $point,
+                lowMinor: $lowMinor,
+                highMinor: $highMinor,
+                currency: $currency,
+                fxRateUsed: $series->latestFxRateUsed,
+                seriesId: $series->seriesId,
+                accountId: $accountId,
+            );
         }
 
         return $contributions;
@@ -166,39 +159,20 @@ final readonly class RangeProjector
 
         $horizonEnd = $asOf->addDays($horizonDays);
         $contributions = [];
-        $cursor = $next;
 
-        while ($cursor->lessThanOrEqualTo($horizonEnd)) {
-            if ($cursor->greaterThanOrEqualTo($asOf)) {
-                $contributions[] = new ForecastContribution(
-                    date: $cursor,
-                    pointMinor: $pointMinor,
-                    lowMinor: $lowMinor,
-                    highMinor: $highMinor,
-                    currency: $currency,
-                    fxRateUsed: $series->latestFxRateUsed,
-                    seriesId: $series->seriesId,
-                    accountId: $accountId,
-                );
-            }
-
-            $cursor = $this->advance($cursor, $cadence);
-            if ($cursor === null) {
-                break;
-            }
+        foreach ($this->walk->datesInHorizon($next, $cadence, $asOf, $horizonEnd) as $date) {
+            $contributions[] = new ForecastContribution(
+                date: $date,
+                pointMinor: $pointMinor,
+                lowMinor: $lowMinor,
+                highMinor: $highMinor,
+                currency: $currency,
+                fxRateUsed: $series->latestFxRateUsed,
+                seriesId: $series->seriesId,
+                accountId: $accountId,
+            );
         }
 
         return $contributions;
-    }
-
-    private function advance(CarbonImmutable $cursor, SeriesCadence $cadence): ?CarbonImmutable
-    {
-        return match ($cadence) {
-            SeriesCadence::Weekly => $cursor->addDays(7),
-            SeriesCadence::Monthly => $cursor->addMonthNoOverflow(),
-            SeriesCadence::Quarterly => $cursor->addMonthsNoOverflow(3),
-            SeriesCadence::Yearly => $cursor->addYearNoOverflow(),
-            SeriesCadence::Irregular => null,
-        };
     }
 }
