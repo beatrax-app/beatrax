@@ -142,6 +142,8 @@ What the module explicitly does NOT do:
   6. `ShortfallDetector::detect` — find windows below buffer;
      write rows + dispatch `ForecastShortfallDetected`.
   7. Persist `forecast_runs.result_json` for the read-side query.
+  8. Prune the runs this one supersedes — every row with a lower id
+     sharing its `(user_id, scenario_id, horizon_days)`.
 - `ForecastRunStateMachine::transition($run, $next)` — the
   `pending → running → complete | failed` lifecycle; the sole
   writer of `forecast_runs.state`.
@@ -403,6 +405,16 @@ horizon) run, mediated by `ForecastRunStateMachine` (`pending → running →
 complete`, or `→ failed` on any thrown exception, re-thrown so the queue
 worker logs the stack trace). The result is serialized to
 `forecast_runs.result_json`:
+
+`forecast_runs` is a cache with exactly one live row per
+`(user_id, scenario_id, horizon_days)`. Both readers — `ForecastQuery` and
+`ForecastHighlightsQuery` — take the newest row for that key and nothing holds
+a foreign key into the table, so a completed run deletes the rows it
+supersedes. Without that the table is append-only: a round-6 desktop reached
+1,305 rows and 54.6 MB of `result_json` in thirteen hours of ordinary use,
+taking the database from 9 MB to 62 MB — a weight every encrypted backup, and
+every restore, then carries.
+
 
 ```json
 {

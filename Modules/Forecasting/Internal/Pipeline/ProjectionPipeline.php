@@ -56,10 +56,31 @@ final readonly class ProjectionPipeline
                 ->update(['result_json' => $encoded]);
 
             $this->stateMachine->complete($run);
+            $this->pruneSupersededRuns($run, $scenarioId, $horizonDays);
         } catch (Throwable $e) {
             $this->stateMachine->fail($run);
             throw $e;
         }
+    }
+
+    // Every reader takes the newest run for a (user, scenario, horizon) and no
+    // foreign key points at an older one, so everything below this id is already
+    // unreachable. Unpruned the table only grows — 1,305 rows holding 54.6 MB of
+    // result_json in thirteen hours, which every backup then carries.
+    private function pruneSupersededRuns(ForecastRun $run, ?int $scenarioId, int $horizonDays): void
+    {
+        $query = $this->db->connection()->table('forecast_runs')
+            ->where('user_id', self::toInt($run->user_id))
+            ->where('horizon_days', $horizonDays)
+            ->where('id', '<', self::toInt($run->id));
+
+        if ($scenarioId === null) {
+            $query->whereNull('scenario_id');
+        } else {
+            $query->where('scenario_id', $scenarioId);
+        }
+
+        $query->delete();
     }
 
     private function createPendingRun(User $user, ?int $scenarioId, int $horizonDays): ForecastRun
