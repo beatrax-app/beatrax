@@ -27,6 +27,10 @@
     $bufferValue = $aggregateBufferFloor / Money::MINOR_UNITS_PER_MAJOR;
 
     $options = [
+        // The axis formatter in app.js has no other way to know what these
+        // points are denominated in; without it the page-level reporting
+        // currency wins and the numbers keep the wrong symbol.
+        'beatraxCurrency' => $aggregateCurrency,
         'chart' => [
             'type' => 'line',
             'height' => 320,

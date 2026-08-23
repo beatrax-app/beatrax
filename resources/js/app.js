@@ -137,10 +137,13 @@ window.beatraxLocaliseChart = function (options) {
     });
 
     // Axis numbers are money on every chart this app draws. The currency is
-    // what is being drawn; `tag` — the same locale Money::format() reads —
-    // decides the separators and which side the symbol falls on, so the axis
-    // and the tile beside it cannot end up in two notations.
-    const currency = document.documentElement.dataset.baseCurrency || 'EUR';
+    // what is being drawn, which only the chart knows: a per-account forecast
+    // panel draws that account's own currency, not the reader's, and stamping
+    // the page-level one on it printed euro points under a dollar sign.
+    const currency = options.beatraxCurrency
+        || document.documentElement.dataset.baseCurrency
+        || 'EUR';
+    delete options.beatraxCurrency;
     const money = new Intl.NumberFormat(tag, {
         style: 'currency',
         currency,

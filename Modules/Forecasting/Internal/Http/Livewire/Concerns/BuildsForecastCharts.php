@@ -186,6 +186,10 @@ trait BuildsForecastCharts
         }
 
         return [
+            // The axis formatter in app.js has no other way to know what these
+            // points are denominated in; without it the page-level reporting
+            // currency wins and the numbers keep the wrong symbol.
+            'beatraxCurrency' => $forecast->defaultCurrency,
             'chart' => [
                 'type' => 'rangeArea',
                 'height' => 320,
