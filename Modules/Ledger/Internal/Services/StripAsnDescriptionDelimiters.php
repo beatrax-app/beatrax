@@ -15,6 +15,7 @@ use Modules\Core\Public\Support\RowChunk;
 use Modules\Ingestion\Public\Asn\AsnDescriptionDelimiters;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Internal\Enums\BackfillPass;
+use Modules\Ledger\Internal\Support\SweptRowSummary;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
@@ -41,6 +42,7 @@ final class StripAsnDescriptionDelimiters
         private readonly EncryptionMigrationService $encryption,
         private readonly SearchIndexWriterContract $searchIndex,
         private readonly BackfillCompletionMarkers $markers,
+        private readonly AsnCsvRowSummary $summary,
         private readonly LoggerInterface $log,
     ) {}
 
@@ -64,19 +66,19 @@ final class StripAsnDescriptionDelimiters
         return $rewritten;
     }
 
-    // The one entry point that is safe to call on every unlock. A user already
-    // marked done costs a single indexed read, and a user with no ASN row at
-    // all pays for one existence query once, ever.
+    // The one entry point that is safe to call on every unlock. A settled user
+    // costs the marker read plus one aggregate, and neither reads a
+    // description, so nothing here has to open the ledger to find no work.
     public function sweepPendingFor(int $userId, Session $session): int
     {
-        if ($this->markers->isComplete($userId, BackfillPass::AsnDescriptionDelimiters)) {
+        $current = $this->summary->for($userId);
+
+        if ($this->isSettled($userId, $current)) {
             return 0;
         }
 
-        $connection = $this->db->connection();
-
-        if (! $this->hasAsnCsvRows($connection, $userId)) {
-            $this->markComplete($userId);
+        if ($current->isEmpty()) {
+            $this->markComplete($userId, $current);
 
             return 0;
         }
@@ -87,27 +89,27 @@ final class StripAsnDescriptionDelimiters
             return 0;
         }
 
-        $rewritten = $this->sweepUser($connection, $userId, $session);
+        $rewritten = $this->sweepUser($this->db->connection(), $userId, $session);
 
-        $this->markComplete($userId);
+        // Marked against the set read BEFORE the sweep, never a fresh reading.
+        // A row that arrived while the pass was running is then still unseen,
+        // and the next unlock picks it up instead of it being recorded as
+        // answered by a pass that never looked at it.
+        $this->markComplete($userId, $current);
 
         return $rewritten;
     }
 
-    private function markComplete(int $userId): void
+    private function isSettled(int $userId, SweptRowSummary $current): bool
     {
-        $this->markers->markComplete($userId, BackfillPass::AsnDescriptionDelimiters);
+        $completed = $this->markers->completedSummary($userId, BackfillPass::AsnDescriptionDelimiters);
+
+        return $completed !== null && $completed->equals($current);
     }
 
-    // Asked once per user per device and then never again, because the marker
-    // this leads to is written whether or not a row was found. Scoped to the
-    // owner first, so the reach of the worst case is one person's ledger.
-    private function hasAsnCsvRows(ConnectionInterface $connection, int $userId): bool
+    private function markComplete(int $userId, SweptRowSummary $swept): void
     {
-        return $connection->table(self::TABLE)
-            ->where('user_id', $userId)
-            ->where('source_format', SourceFormat::AsnCsv->value)
-            ->exists();
+        $this->markers->markComplete($userId, BackfillPass::AsnDescriptionDelimiters, $swept);
     }
 
     // Only `asn-csv` reaches AsnCsvAdapter: it is the sole key the adapter

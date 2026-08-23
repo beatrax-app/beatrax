@@ -110,25 +110,54 @@ done. Two rules hold it in place:
 
 This now runs on every unlock, so the cost of having no work has to be near
 zero — and it cannot be answered by decrypting descriptions to look for quotes.
-Two reads answer it instead, in this order:
+Two reads answer it instead, and neither opens the ledger:
 
 1. `ledger_backfill_state` — one indexed row per completed pass per user, keyed
-   by `Modules\Ledger\Internal\Enums\BackfillPass`. A user recorded done costs
-   exactly this read and nothing else: the sweep is not even resolved from the
-   container, so the codec, the encryption-state reader and the search index
-   writer are never built.
-2. `EXISTS` over that user's `asn-csv` rows. A user who never imported an ASN
-   file is marked done from this alone, so they pay for it once, ever.
+   by `Modules\Ledger\Internal\Enums\BackfillPass`. It stores the **row set the
+   pass answered for**: `swept_rows` and `swept_id_sum`.
+2. One aggregate over that user's `asn-csv` rows, `COUNT(*)` and `SUM(id)`
+   together. A user whose ledger still summarises to the recorded pair is done,
+   and the sweep is not even resolved from the container — the codec, the
+   encryption-state reader and the search index writer are never built. A user
+   who never imported an ASN file summarises to zero and is recorded from this
+   alone, so they pay for it once, ever.
 
 The marker is written whenever a pass **ran to the end**, including over a
 ledger it found nothing to change in — that pass has answered the question. It
 is deliberately not written when the pass was skipped for want of a key, which
-is what leaves the retry armed.
+is what leaves the retry armed. It records the set read *before* the sweep, so a
+row that arrived while the pass was running stays unanswered rather than being
+recorded as swept by a pass that never saw it.
 
 `ledger_backfill_state` is device-local and absent from `MergeRulesRegistry`, on
 purpose. The sweep rewrites rows with a raw write that produces no op-log entry,
 so a paired device still holds the delimiters in its own copy; a replicated
 "done" would tell that device to skip the pass it still needs.
+
+## Why it is not a highest-id watermark
+
+The obvious cheap check is a high-water mark: remember the largest
+`transactions.id` swept, and look for anything above it. **It does not work
+here, and the reason is worth keeping.**
+
+The sync daemon runs independently of the lock screen, so a peer that is still
+locked — and has therefore never swept its own copy — can replicate pre-fix rows
+into a device that already finished. Those rows do not get a local
+autoincrement id. `Modules\Sync\Internal\Merge\OpLogEntryApplier` inserts them
+under the **originating device's** id, deliberately:
+
+> The op's own pk, not a fresh autoincrement. Without it every device invented
+> its own id for the same logical row: children referenced parents that did not
+> exist, and a replayed create duplicated instead of colliding with itself.
+
+Ids are minted per device, with no offset between them, so an arriving row
+routinely lands *below* everything this device has already swept. A watermark
+steps straight over it and the row keeps its delimiters for good.
+
+`COUNT(*)` with `SUM(id)` is order-free, which is what makes it immune: an
+arrival moves both totals whichever id it takes. Count alone would miss a merge
+that deleted one row and created another; the pair only agrees when the id set
+sums to the same total with the same cardinality.
 
 ## Related
 

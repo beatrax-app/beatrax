@@ -9,6 +9,7 @@ use Modules\Auth\Public\Events\AppLockUnlocked;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Internal\Enums\BackfillPass;
+use Modules\Ledger\Internal\Services\AsnCsvRowSummary;
 use Modules\Ledger\Internal\Services\BackfillCompletionMarkers;
 use Modules\Ledger\Internal\Services\StripAsnDescriptionDelimiters;
 use Psr\Log\LoggerInterface;
@@ -26,11 +27,12 @@ final readonly class SweepAsnDelimitersOnUnlock
     // The sweep is resolved on demand, never injected: it pulls the codec, the
     // encryption state reader and the search index writer into the container,
     // and an unlock on an install with nothing left to convert should not build
-    // any of them.
+    // any of them. The two readers above answer that question without them.
     public function __construct(
         private Container $container,
         private CurrentUser $currentUser,
         private BackfillCompletionMarkers $markers,
+        private AsnCsvRowSummary $summary,
         private LoggerInterface $log,
     ) {}
 
@@ -45,8 +47,9 @@ final readonly class SweepAsnDelimitersOnUnlock
 
         try {
             $userId = $this->currentUser->id();
+            $completed = $this->markers->completedSummary($userId, BackfillPass::AsnDescriptionDelimiters);
 
-            if ($this->markers->isComplete($userId, BackfillPass::AsnDescriptionDelimiters)) {
+            if ($completed !== null && $completed->equals($this->summary->for($userId))) {
                 return;
             }
 
