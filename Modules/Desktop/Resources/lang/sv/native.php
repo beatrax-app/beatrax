@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 return [
     'menu' => [
+        'file' => 'Arkiv',
         'file_import' => 'Importera fil…',
         'file_scan_email' => 'Skanna e-post nu',
+        'help' => 'Hjälp',
         'help_github_repo' => 'GitHub-repo',
         'help_report_issue' => 'Rapportera ett problem',
         'help_about' => 'Om Beatrax',

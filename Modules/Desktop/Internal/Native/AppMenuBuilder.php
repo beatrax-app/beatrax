@@ -31,16 +31,22 @@ final class AppMenuBuilder
      */
     public function build(): array
     {
+        // Every menu that owns its entries is a SubmenuItem, never Menu::file(),
+        // Menu::help() or Menu::label(): the shell strips a role's submenu and
+        // types a label `normal`, and both render as no menu at all.
+        // See .docs/features/desktop/architecture.md — "Submenus never hang off a role".
         $items = [
             Menu::app(),
-            Menu::file()->submenu(
+            new SubmenuItem(
+                Lang::get('desktop::native.menu.file'),
                 Menu::route(Destination::Imports->routeName(), Lang::get('desktop::native.menu.file_import')),
                 Menu::route(Destination::Email->routeName(), Lang::get('desktop::native.menu.file_scan_email')),
             ),
             Menu::edit(),
             Menu::view(),
             Menu::window(),
-            Menu::help()->submenu(
+            new SubmenuItem(
+                Lang::get('desktop::native.menu.help'),
                 Menu::link(self::GITHUB_REPO_URL, Lang::get('desktop::native.menu.help_github_repo'))->openInBrowser(),
                 Menu::link(self::REPORT_ISSUE_URL, Lang::get('desktop::native.menu.help_report_issue'))->openInBrowser(),
                 Menu::route(Destination::Settings->routeName(), Lang::get('desktop::native.menu.help_about')),
@@ -50,7 +56,8 @@ final class AppMenuBuilder
         if ($this->isDeveloper()) {
             // No accelerator on "Run a command": one would let the OS menu swallow ⌘K
             // before the body-level keybind handler dispatches palette:open.
-            $items[] = Menu::label(Lang::get('desktop::native.menu.developer_submenu'))->submenu(
+            $items[] = new SubmenuItem(
+                Lang::get('desktop::native.menu.developer_submenu'),
                 Menu::route('dev.overview', Lang::get('desktop::native.menu.dev_open_console'))->accelerator('Cmd+.'),
                 Menu::route('dev.overview', Lang::get('desktop::native.menu.dev_run_command')),
             );

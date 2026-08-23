@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 return [
     'menu' => [
+        'file' => 'Súbor',
         'file_import' => 'Importovať súbor…',
         'file_scan_email' => 'Prehľadať e-mail teraz',
+        'help' => 'Pomocník',
         'help_github_repo' => 'GitHub repozitár',
         'help_report_issue' => 'Nahlásiť problém',
         'help_about' => 'O aplikácii Beatrax',
