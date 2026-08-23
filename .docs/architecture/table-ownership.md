@@ -30,7 +30,7 @@ Three spellings create a table in this repo and all three are recognised:
 
 Ownership only means something while exactly one module creates a table, so the
 invariant asserts that too: a table created by two modules fails the test rather
-than letting the derivation silently pick one. Today **94 tables, none
+than letting the derivation silently pick one. Today **95 tables, none
 contested.** The framework's own tables (`cache`, `cache_locks`, `jobs`,
 `job_batches`, `failed_jobs`) have no owning module and are attributed to
 `@root`; a module writing them is a crossing like any other.

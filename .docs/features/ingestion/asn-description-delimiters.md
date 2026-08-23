@@ -51,11 +51,11 @@ all, and `unwrapStored()` returns `null` to say so.
 ## The backfill
 
 `Modules\Ledger\Internal\Services\StripAsnDescriptionDelimiters` is the forward
-pass over rows imported before the adapter fix, run once from a migration. It
-is scoped to `source_format = 'asn-csv'`: that is the only key
-`SourceAdapterRegistry` binds to `AsnCsvAdapter`, so no other format can have
-produced these delimiters. The CSV presets, ING's among them, route through
-`GenericCsvAdapter` under their own format ids.
+pass over rows imported before the adapter fix. It is scoped to
+`source_format = 'asn-csv'`: that is the only key `SourceAdapterRegistry` binds
+to `AsnCsvAdapter`, so no other format can have produced these delimiters. The
+CSV presets, ING's among them, route through `GenericCsvAdapter` under their own
+format ids.
 
 Three things make it safe to run on a live install:
 
@@ -71,6 +71,64 @@ Three things make it safe to run on a live install:
   has.
 - **Re-runs.** A row already unwrapped produces no change, so the pass is
   idempotent and safe on an install with nothing to do.
+
+## Why a migration alone could not deliver it
+
+The pass shipped run-once from a migration, and on the first sealed install it
+reached that skip for **every** affected row. A migration runs when the schema
+moves — at boot, before a lock screen has been cleared — which is never a
+moment the app-lock key is held. It skipped all of them, wrote
+
+```
+StripAsnDescriptionDelimiters: skipped a sealed ledger this process cannot open.
+```
+
+to the log, and was recorded in `migrations` as Ran. There was no second chance:
+the rows kept their delimiters permanently on the one kind of install the
+feature was written for.
+
+The migration is still there and still runs the pass, because an install with no
+encryption is converted at deploy time and never has to wait. What it no longer
+is, is the only delivery.
+
+## Where the sealed install gets swept
+
+`Modules\Ledger\Internal\Listeners\SweepAsnDelimitersOnUnlock` listens for
+`Modules\Auth\Public\Events\AppLockUnlocked`. An unlock is by definition the
+moment the key becomes reachable, so the pass is retried there until a user is
+done. Two rules hold it in place:
+
+- **It never throws.** The unlock has already happened, and a backfill that
+  could not finish must not become an exception on the lock screen the reader
+  just cleared. A failure is logged through `SafeExceptionContext`, the marker
+  below stays unwritten, and the next unlock retries.
+- **It never weakens the skip.** A sealed ledger this process cannot open is
+  still left exactly as it is. The unlock changes when the pass runs, not what
+  it is allowed to rewrite.
+
+## Knowing there is nothing to do, cheaply
+
+This now runs on every unlock, so the cost of having no work has to be near
+zero — and it cannot be answered by decrypting descriptions to look for quotes.
+Two reads answer it instead, in this order:
+
+1. `ledger_backfill_state` — one indexed row per completed pass per user, keyed
+   by `Modules\Ledger\Internal\Enums\BackfillPass`. A user recorded done costs
+   exactly this read and nothing else: the sweep is not even resolved from the
+   container, so the codec, the encryption-state reader and the search index
+   writer are never built.
+2. `EXISTS` over that user's `asn-csv` rows. A user who never imported an ASN
+   file is marked done from this alone, so they pay for it once, ever.
+
+The marker is written whenever a pass **ran to the end**, including over a
+ledger it found nothing to change in — that pass has answered the question. It
+is deliberately not written when the pass was skipped for want of a key, which
+is what leaves the retry armed.
+
+`ledger_backfill_state` is device-local and absent from `MergeRulesRegistry`, on
+purpose. The sweep rewrites rows with a raw write that produces no op-log entry,
+so a paired device still holds the delimiters in its own copy; a replicated
+"done" would tell that device to skip the pass it still needs.
 
 ## Related
 

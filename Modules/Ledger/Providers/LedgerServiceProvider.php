@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Providers;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Auth\Public\Events\AppLockUnlocked;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Ledger\Internal\Console\RederiveFingerprintsCommand;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
+use Modules\Ledger\Internal\Listeners\SweepAsnDelimitersOnUnlock;
 use Modules\Ledger\Internal\Services\CounterpartyKeyProvenance;
 use Modules\Ledger\Internal\Services\FingerprintRederiveService;
 use Modules\Ledger\Internal\Sync\NullTransactionSyncCapture;
@@ -67,13 +70,18 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(FingerprintRederiveService::class);
     }
 
-    public function boot(LivewireManager $livewire): void
+    public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
         $this->loadModuleResources('ledger');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
 
         $livewire->component('ledger.transactions-list', TransactionsList::class);
         $livewire->component('ledger.transaction-detail', TransactionDetail::class);
+
+        // A migration cannot convert a sealed ledger, because the schema moves
+        // at a moment no app-lock key is held. Every unlock is a moment one is,
+        // so the pass is retried there until a user is recorded done.
+        $events->listen(AppLockUnlocked::class, [SweepAsnDelimitersOnUnlock::class, 'handle']);
 
         if ($this->app->runningInConsole()) {
             $this->commands([

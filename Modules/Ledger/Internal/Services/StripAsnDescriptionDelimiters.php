@@ -14,6 +14,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Ingestion\Public\Asn\AsnDescriptionDelimiters;
 use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ledger\Internal\Enums\BackfillPass;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
@@ -39,14 +40,16 @@ final class StripAsnDescriptionDelimiters
         private readonly SessionFactory $session,
         private readonly EncryptionMigrationService $encryption,
         private readonly SearchIndexWriterContract $searchIndex,
+        private readonly BackfillCompletionMarkers $markers,
         private readonly LoggerInterface $log,
     ) {}
 
+    // Every owner at once, for the caller that has no particular user in hand.
+    // On an install whose ledger is sealed this converts nobody and marks
+    // nobody; sweepPendingFor() is where those users are reached.
     public function run(): int
     {
-        $connection = $this->db->connection();
-
-        $userIds = $this->ownersOfAsnCsvRows($connection);
+        $userIds = $this->ownersOfAsnCsvRows($this->db->connection());
         if ($userIds === []) {
             return 0;
         }
@@ -55,16 +58,56 @@ final class StripAsnDescriptionDelimiters
         $rewritten = 0;
 
         foreach ($userIds as $userId) {
-            if ($this->encryption->isEnabled($userId) && ! $this->codec->canSeal($userId, $session)) {
-                $this->reportSkipped($userId);
-
-                continue;
-            }
-
-            $rewritten += $this->sweepUser($connection, $userId, $session);
+            $rewritten += $this->sweepPendingFor($userId, $session);
         }
 
         return $rewritten;
+    }
+
+    // The one entry point that is safe to call on every unlock. A user already
+    // marked done costs a single indexed read, and a user with no ASN row at
+    // all pays for one existence query once, ever.
+    public function sweepPendingFor(int $userId, Session $session): int
+    {
+        if ($this->markers->isComplete($userId, BackfillPass::AsnDescriptionDelimiters)) {
+            return 0;
+        }
+
+        $connection = $this->db->connection();
+
+        if (! $this->hasAsnCsvRows($connection, $userId)) {
+            $this->markComplete($userId);
+
+            return 0;
+        }
+
+        if ($this->encryption->isEnabled($userId) && ! $this->codec->canSeal($userId, $session)) {
+            $this->reportSkipped($userId);
+
+            return 0;
+        }
+
+        $rewritten = $this->sweepUser($connection, $userId, $session);
+
+        $this->markComplete($userId);
+
+        return $rewritten;
+    }
+
+    private function markComplete(int $userId): void
+    {
+        $this->markers->markComplete($userId, BackfillPass::AsnDescriptionDelimiters);
+    }
+
+    // Asked once per user per device and then never again, because the marker
+    // this leads to is written whether or not a row was found. Scoped to the
+    // owner first, so the reach of the worst case is one person's ledger.
+    private function hasAsnCsvRows(ConnectionInterface $connection, int $userId): bool
+    {
+        return $connection->table(self::TABLE)
+            ->where('user_id', $userId)
+            ->where('source_format', SourceFormat::AsnCsv->value)
+            ->exists();
     }
 
     // Only `asn-csv` reaches AsnCsvAdapter: it is the sole key the adapter
