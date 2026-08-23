@@ -28,8 +28,6 @@ return [
 
     'next' => 'Volgende',
     'cadence_changed_note' => 'frequentie gewijzigd',
-
-    'select_aria' => 'Terugkerende reeks :id selecteren',
     'un_reject' => 'Afwijzing ongedaan maken',
     'approve' => 'Goedkeuren',
     'approve_aria' => 'Terugkerende reeks :id goedkeuren',

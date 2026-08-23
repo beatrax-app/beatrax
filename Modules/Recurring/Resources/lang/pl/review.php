@@ -28,8 +28,6 @@ return [
 
     'next' => 'Następna',
     'cadence_changed_note' => 'zmieniona częstotliwość',
-
-    'select_aria' => 'Wybierz serię cykliczną :id',
     'un_reject' => 'Cofnij odrzucenie',
     'approve' => 'Zatwierdź',
     'approve_aria' => 'Zatwierdź serię cykliczną :id',

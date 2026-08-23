@@ -28,8 +28,6 @@ return [
 
     'next' => 'Seuraava',
     'cadence_changed_note' => 'maksuväli muuttui',
-
-    'select_aria' => 'Valitse toistuva sarja :id',
     'un_reject' => 'Peru hylkäys',
     'approve' => 'Hyväksy',
     'approve_aria' => 'Hyväksy toistuva sarja :id',

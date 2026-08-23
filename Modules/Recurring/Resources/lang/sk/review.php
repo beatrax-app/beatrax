@@ -28,8 +28,6 @@ return [
 
     'next' => 'Ďalšia',
     'cadence_changed_note' => 'zmenená frekvencia',
-
-    'select_aria' => 'Vybrať opakovanú sériu :id',
     'un_reject' => 'Zrušiť zamietnutie',
     'approve' => 'Schváliť',
     'approve_aria' => 'Schváliť opakovanú sériu :id',

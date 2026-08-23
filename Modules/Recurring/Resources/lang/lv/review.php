@@ -28,8 +28,6 @@ return [
 
     'next' => 'Nākamais',
     'cadence_changed_note' => 'biežums mainījies',
-
-    'select_aria' => 'Atlasīt regulāro sēriju :id',
     'un_reject' => 'Atsaukt noraidījumu',
     'approve' => 'Apstiprināt',
     'approve_aria' => 'Apstiprināt regulāro sēriju :id',

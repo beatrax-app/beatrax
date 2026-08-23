@@ -28,8 +28,6 @@ return [
 
     'next' => 'Siguiente',
     'cadence_changed_note' => 'frecuencia cambiada',
-
-    'select_aria' => 'Seleccionar la serie recurrente :id',
     'un_reject' => 'Anular el rechazo',
     'approve' => 'Aprobar',
     'approve_aria' => 'Aprobar la serie recurrente :id',

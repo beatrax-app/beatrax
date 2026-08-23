@@ -8,7 +8,11 @@ declare(strict_types=1);
 // same card each carry the series id; these two were left off that convention,
 // so a screen reader could not tell which card's Snooze it had landed on.
 
-$actions = ['select_aria', 'approve_aria', 'reject_aria', 'snooze_aria', 'edit_name_aria'];
+// select_aria is gone: the checkbox is a labelled row now and takes the
+// merchant as its accessible name, which disambiguates the card better than
+// its row id and matches the words on screen. The four buttons have no visible
+// name of their own, so they keep the id.
+$actions = ['approve_aria', 'reject_aria', 'snooze_aria', 'edit_name_aria'];
 
 it('gives every action on a review card an aria-label naming its series', function () use ($actions): void {
     $blade = (string) file_get_contents(

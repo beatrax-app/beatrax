@@ -28,8 +28,6 @@ return [
 
     'next' => 'Neste',
     'cadence_changed_note' => 'intervallet endret',
-
-    'select_aria' => 'Velg gjentakende serie :id',
     'un_reject' => 'Angre avvisning',
     'approve' => 'Godkjenn',
     'approve_aria' => 'Godkjenn gjentakende serie :id',

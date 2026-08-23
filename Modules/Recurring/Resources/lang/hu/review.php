@@ -28,8 +28,6 @@ return [
 
     'next' => 'Következő',
     'cadence_changed_note' => 'a gyakoriság módosult',
-
-    'select_aria' => 'A(z) :id ismétlődő sorozat kijelölése',
     'un_reject' => 'Elutasítás visszavonása',
     'approve' => 'Jóváhagyás',
     'approve_aria' => 'A(z) :id ismétlődő sorozat jóváhagyása',

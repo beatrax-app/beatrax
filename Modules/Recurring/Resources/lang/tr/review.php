@@ -28,8 +28,6 @@ return [
 
     'next' => 'Sonraki',
     'cadence_changed_note' => 'sıklık değişti',
-
-    'select_aria' => ':id numaralı düzenli seriyi seç',
     'un_reject' => 'Reddi geri al',
     'approve' => 'Onayla',
     'approve_aria' => ':id numaralı düzenli seriyi onayla',

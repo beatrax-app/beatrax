@@ -28,8 +28,6 @@ return [
 
     'next' => 'Următoarea',
     'cadence_changed_note' => 'frecvență schimbată',
-
-    'select_aria' => 'Selectează seria recurentă :id',
     'un_reject' => 'Anulează respingerea',
     'approve' => 'Aprobă',
     'approve_aria' => 'Aprobă seria recurentă :id',

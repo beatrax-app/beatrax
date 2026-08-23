@@ -28,8 +28,6 @@ return [
 
     'next' => 'Næste',
     'cadence_changed_note' => 'interval ændret',
-
-    'select_aria' => 'Vælg tilbagevendende serie :id',
     'un_reject' => 'Fortryd afvisning',
     'approve' => 'Godkend',
     'approve_aria' => 'Godkend tilbagevendende serie :id',

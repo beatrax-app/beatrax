@@ -28,8 +28,6 @@ return [
 
     'next' => 'Kitas',
     'cadence_changed_note' => 'pasikeitė dažnumas',
-
-    'select_aria' => 'Pasirinkti pasikartojančią seriją :id',
     'un_reject' => 'Grąžinti iš atmestų',
     'approve' => 'Patvirtinti',
     'approve_aria' => 'Patvirtinti pasikartojančią seriją :id',

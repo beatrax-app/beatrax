@@ -28,8 +28,6 @@ return [
 
     'next' => 'Nächste',
     'cadence_changed_note' => 'Rhythmus geändert',
-
-    'select_aria' => 'Wiederkehrende Reihe :id auswählen',
     'un_reject' => 'Ablehnung aufheben',
     'approve' => 'Bestätigen',
     'approve_aria' => 'Wiederkehrende Reihe :id bestätigen',

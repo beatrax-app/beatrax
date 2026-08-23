@@ -28,8 +28,6 @@ return [
 
     'next' => 'Järgmine',
     'cadence_changed_note' => 'sagedus muutus',
-
-    'select_aria' => 'Vali korduvmaksete seeria :id',
     'un_reject' => 'Võta tagasilükkamine tagasi',
     'approve' => 'Kinnita',
     'approve_aria' => 'Kinnita korduvmaksete seeria :id',

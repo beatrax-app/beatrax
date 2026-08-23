@@ -92,16 +92,20 @@
                 <li class="relative rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700">
                     <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
                         <div class="min-w-0 flex-1 basis-full sm:basis-auto">
-                            <p class="text-sm text-slate-900 dark:text-slate-100">
-                                <input
-                                    type="checkbox"
+                            {{-- The four buttons below carry the series id in their
+                                 aria-label because none of them has a visible name of
+                                 its own. This one does, so it takes it: the merchant
+                                 disambiguates the card better than its row id, and it
+                                 is the same words the eye reads. --}}
+                            <p class="flex flex-wrap items-center gap-x-2 text-sm text-slate-900 dark:text-slate-100">
+                                <x-core::checkbox-field
+                                    :label="$row->displayName()"
+                                    :field-id="'recurring-select-'.$row->seriesId"
                                     wire:model.live="selectedIds"
                                     value="{{ $row->seriesId }}"
-                                    aria-label="{{ Lang::get('recurring::review.select_aria', ['id' => $row->seriesId]) }}"
-                                    class="mr-2 align-middle"
+                                    class="font-medium"
                                 />
-                                <span class="font-medium">{{ $row->displayName() }}</span>
-                                <span class="ml-2 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
+                                <span class="text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                 {{ $row->cadence->label() }}

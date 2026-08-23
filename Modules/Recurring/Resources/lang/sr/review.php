@@ -28,8 +28,6 @@ return [
 
     'next' => 'Sledeće',
     'cadence_changed_note' => 'učestalost promenjena',
-
-    'select_aria' => 'Izaberi ponavljajuću seriju :id',
     'un_reject' => 'Opozovi odbijanje',
     'approve' => 'Odobri',
     'approve_aria' => 'Odobri ponavljajuću seriju :id',

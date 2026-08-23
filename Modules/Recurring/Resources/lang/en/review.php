@@ -28,8 +28,6 @@ return [
 
     'next' => 'Next',
     'cadence_changed_note' => 'cadence changed',
-
-    'select_aria' => 'Select recurring series :id',
     'un_reject' => 'Un-reject',
     'approve' => 'Approve',
     'approve_aria' => 'Approve recurring series :id',
