@@ -134,7 +134,11 @@ final class SettingsPage extends Component
         // component update does not re-render — so they kept the old language
         // until the reader happened to navigate. Re-requesting the page is what
         // makes the switch mean the whole screen.
-        $this->redirect($urls->current());
+
+        // Named route, not current(): this runs inside the POST to Livewire's
+        // update endpoint, so "the current URL" is that endpoint, and the
+        // browser followed that redirect with a GET and got 405.
+        $this->redirect($urls->route('settings'));
     }
 
     // Empty is the placeholder, and nothing else in the app can put the

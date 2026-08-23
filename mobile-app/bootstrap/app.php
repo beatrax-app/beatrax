@@ -16,6 +16,7 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SqliteDatabase;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Http\Middleware\ForgetGuardsBetweenRequests;
+use Modules\Mobile\Internal\Http\Middleware\ForgetStaleLivewireHeaderBetweenRequests;
 use Modules\Mobile\Internal\Http\Middleware\ForgetStaleSessionBetweenRequests;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureImportCompleted;
@@ -48,6 +49,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // the session the previous request left in memory to decide, and this is
         // what empties it, so the other order leaves the stale User in place.
         $middleware->prepend(ForgetStaleSessionBetweenRequests::class);
+
+        // Same class of leak as the three above, on a header rather than on a
+        // binding. Prepended so it runs before anything Livewire boots.
+        $middleware->prepend(ForgetStaleLivewireHeaderBetweenRequests::class);
 
         // prepend() reverses, so the last call here runs first. This one belongs
         // after the container binding RestoreFrameworkRedirector repairs and

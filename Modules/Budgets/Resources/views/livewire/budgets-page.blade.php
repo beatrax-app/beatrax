@@ -90,8 +90,12 @@
             :body="Lang::get('budgets::messages.no_categories.body')"
         />
     @else
-        {{-- Desktop grid (>=768px) --}}
-        <table class="hidden w-full text-left text-sm md:table">
+        {{-- Desktop grid (>=768px). The scroll container is the point: the
+             table's min-content width exceeds the content column in the
+             desktop shell's default window, and without it the whole document
+             scrolls sideways instead. --}}
+        <div class="hidden overflow-x-auto md:block">
+        <table class="w-full text-left text-sm md:table">
             <thead class="border-b border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-700">
                 <tr>
                     <x-core::th align="left">{{ Lang::get('budgets::messages.table.category') }}</x-core::th>
@@ -219,6 +223,7 @@
                 @endforeach
             </tbody>
         </table>
+        </div>
 
         {{-- Phone stacked list (<768px) --}}
         <div class="rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden md:hidden">

@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 
 // The candidate half reuses DiscoveredSenderQuery's MIN_OCCURRENCES /
@@ -50,7 +51,7 @@ final class InboxesBadgeCount
                     ) AS total',
                 [
                     $user->id,
-                    'candidate',
+                    DiscoveredSenderState::Candidate->value,
                     DiscoveredSenderQuery::MIN_OCCURRENCES,
                     $threshold,
                     $user->id,

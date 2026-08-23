@@ -11,6 +11,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Enums\CommandTier;
+use Modules\DevMode\Internal\Enums\PaletteSource;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
@@ -106,12 +107,15 @@ final class CommandPaletteModal extends Component
                 continue;
             }
 
+            $source = str_starts_with($entry->id, 'dev.') ? PaletteSource::DevView : PaletteSource::View;
+
             $registry[] = [
                 'id' => $entry->id,
                 'label' => $entry->label,
                 'icon' => $entry->icon,
                 'hint' => $entry->hint,
-                'source' => str_starts_with($entry->id, 'dev.') ? 'dev-view' : 'view',
+                'source' => $source->value,
+                'sourceLabel' => $source->label(),
                 'url' => $entry->url,
                 'handler' => null,
                 'name' => null,
@@ -132,7 +136,8 @@ final class CommandPaletteModal extends Component
                     'label' => 'Run '.$spec->name,
                     'icon' => '›_',
                     'hint' => $spec->label,
-                    'source' => 'dev',
+                    'source' => PaletteSource::Dev->value,
+                    'sourceLabel' => PaletteSource::Dev->label(),
                     'url' => null,
                     'handler' => $hasArgs ? 'command-args:prompt' : 'spawn-command',
                     'name' => $spec->name,
@@ -149,7 +154,8 @@ final class CommandPaletteModal extends Component
                 'label' => $action->label,
                 'icon' => $action->icon,
                 'hint' => $action->hint,
-                'source' => 'action',
+                'source' => PaletteSource::Action->value,
+                'sourceLabel' => PaletteSource::Action->label(),
                 'url' => $action->url,
                 'handler' => $action->handlerEvent,
                 'name' => null,
@@ -202,7 +208,9 @@ final class CommandPaletteModal extends Component
             'label' => is_string($entry['label'] ?? null) ? $entry['label'] : $id,
             'icon' => is_string($entry['icon'] ?? null) ? $entry['icon'] : '',
             'hint' => is_string($entry['hint'] ?? null) ? $entry['hint'] : '',
-            'source' => is_string($entry['source'] ?? null) ? $entry['source'] : 'view',
+            // A recent pick is replayed from client storage, so an unknown
+            // source is a stale or edited entry rather than a new kind.
+            'source' => (PaletteSource::tryFrom(is_string($entry['source'] ?? null) ? $entry['source'] : '') ?? PaletteSource::View)->value,
             'url' => is_string($entry['url'] ?? null) ? $entry['url'] : null,
             'handler' => is_string($entry['handler'] ?? null) ? $entry['handler'] : null,
             'name' => is_string($entry['name'] ?? null) ? $entry['name'] : null,

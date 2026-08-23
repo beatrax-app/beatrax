@@ -49,12 +49,13 @@ final class SetupWizard extends Component
         ResumeStepResolver $resolver,
         WizardProgressQuery $query,
         WizardProgressInitializer $initializer,
+        WizardStepRegistry $registry,
         CurrentUser $currentUser,
         DatabaseManager $db,
         Request $request,
         Clock $clock,
         LoggerInterface $logger,
-    ): mixed {
+    ): void {
         $user = $currentUser->user();
 
         // Safety net for a manual URL hit that raced the UserInstalled
@@ -90,16 +91,20 @@ final class SetupWizard extends Component
         $resumeKey = $resolver->resolve($user->id);
 
         if ($resumeKey === '') {
-            // Livewire ignores a RedirectResponse returned from mount() and
-            // renders the stale "welcome" view instead.
-            return $this->redirect('/');
+            // Nothing pending, nothing in progress: the state advance()
+            // reaches after the last step. Rendering it, rather than
+            // redirecting, is load-bearing on the mobile runtime.
+            // @link ../../../../../.docs/conventions/invariants-from-shipped-failures.md#a-livewire-redirect-from-mount
+            $this->currentStepKey = $registry->lastStep();
+            $this->allComplete = true;
+            $this->isResuming = false;
+
+            return;
         }
 
         $this->isResuming = $resumeKey !== 'welcome' && ! $request->boolean('force');
         $this->currentStepKey = $resumeKey;
         $this->allComplete = false;
-
-        return null;
     }
 
     public function goToStep(string $stepKey, WizardStepRegistry $registry, CurrentUser $currentUser, WizardProgressQuery $query): void
@@ -153,21 +158,15 @@ final class SetupWizard extends Component
         $this->advance($db, $currentUser, $registry, $query, $clock, WizardStepStatus::Skipped->value);
     }
 
-    public function skipRest(
-        DatabaseManager $db,
-        CurrentUser $currentUser,
-        Clock $clock,
-    ): mixed {
-        $db->connection()
-            ->table('wizard_progress')
-            ->where('user_id', $currentUser->id())
-            ->where('status', '!=', WizardStepStatus::Done->value)
-            ->update([
-                'status' => WizardStepStatus::Skipped->value,
-                'completed_at' => $clock->now()->toDateTimeString(),
-                'updated_at' => $clock->now()->toDateTimeString(),
-            ]);
-
+    // "Resume later", whose aria-label promises it saves your progress. It
+    // writes nothing: the row it used to mark skipped is the one the reader
+    // is coming back to, and on a phone that abandoned 229 parsed
+    // transactions waiting to be committed.
+    /**
+     * @link ../../../../../.docs/features/onboarding/architecture.md#leaving-the-wizard
+     */
+    public function leaveForNow(): mixed
+    {
         // Livewire drops a RedirectResponse returned from an action, so
         // navigation has to go through $this->redirect() or it silently no-ops.
         return $this->redirect('/');

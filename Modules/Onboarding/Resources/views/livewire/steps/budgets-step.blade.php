@@ -8,7 +8,7 @@
     Skip bubbles `wizard.step.skipped`. Blade default `{{ }}` escaping
     throughout.
 --}}
-<section class="wiz-step wiz-step-budgets" aria-labelledby="wiz-budgets-h1">
+<section class="wiz-step" aria-labelledby="wiz-budgets-h1">
     <p class="wiz-eyebrow">{{ Lang::get('onboarding::budgets.eyebrow') }}</p>
     {{-- {!! !!}: app-static heading; the straight apostrophe must render
          literally (not &#039;) so the wizard copy stays verbatim. --}}

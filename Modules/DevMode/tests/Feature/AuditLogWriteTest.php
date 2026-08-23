@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
@@ -13,6 +14,7 @@ use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\AuditEvent;
 use Modules\DevMode\Internal\Enums\CommandTier;
+use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
@@ -34,6 +36,34 @@ it('declares the AuditEvent enum taxonomy (locks audit-action strings as enum ca
     expect(AuditEvent::CommandExecuted->value)->toBe('command_executed');
     expect(AuditEvent::QueueAction->value)->toBe('queue_action');
     expect(AuditEvent::SqlSelect->value)->toBe('sql.select');
+});
+
+// Every dev-mode reader narrows dev_mode_audit by log_name, on a plain string
+// column with no constraint: a spelling the writer and the readers no longer
+// share empties the audit pages while the rows sit in the table.
+it('locks the audit log name to the value the rows already on disk carry', function (): void {
+    expect(SpatieAuditWriter::LOG_NAME)->toBe('dev_mode');
+});
+
+it('surfaces a run the writer recorded on the audit log page', function (): void {
+    $user = auditDeveloper('audit-log-name');
+
+    /** @var SpatieAuditWriter $writer */
+    $writer = app(AuditWriter::class);
+
+    $writer->recordCommandRun(new CommandRunAudit(
+        command: 'db:backup',
+        args: [],
+        tier: CommandTier::Safe,
+        callerUserId: $user->id,
+        startedAt: CarbonImmutable::parse('2026-05-24T10:00:00Z'),
+        finishedAt: CarbonImmutable::parse('2026-05-24T10:00:05Z'),
+        exitCode: 0,
+        stdoutExcerpt: 'output ok',
+        errorExcerpt: '',
+    ));
+
+    Livewire::actingAs($user)->test(AuditLogPage::class)->assertSee('db:backup');
 });
 
 it('redacts Authorization: Bearer headers in RedactionExcerptCap', function (): void {

@@ -27,6 +27,7 @@ use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
+use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Exceptions\UnresolvedStagedAccountException;
 use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
@@ -425,7 +426,7 @@ final class PromoteStagingToDomain
                 $this->db->connection()->table('migration_staging_unmapped_items')->insert([
                     'user_id' => $user->id,
                     'migration_run_id' => $runId,
-                    'item_type' => 'extra',
+                    'item_type' => UnmappedItemType::Extra->value,
                     'source_external_id' => self::toString($row->source_external_id),
                     'display_label' => 'Transaction: '.($description ?? '(no description)'),
                     'reason' => 'This transaction collided with another already-recorded transaction (identical fingerprint) and was not imported.',
@@ -734,7 +735,7 @@ final class PromoteStagingToDomain
                 $this->db->connection()->table('migration_staging_unmapped_items')->insert([
                     'user_id' => $user->id,
                     'migration_run_id' => $runId,
-                    'item_type' => 'extra',
+                    'item_type' => UnmappedItemType::Extra->value,
                     'source_external_id' => $categoryExternalId,
                     'display_label' => 'Goal: '.$name,
                     'reason' => 'This goal has no target date; Beatrax requires one to create a savings goal.',

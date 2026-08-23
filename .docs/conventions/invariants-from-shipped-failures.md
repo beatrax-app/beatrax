@@ -1357,6 +1357,143 @@ it resolves `OpLogWriter` inside each handler and treats a
 `BindingResolutionException` as "no writer yet, skip" — and it is asserted clean
 by the guard for that reason.
 
+## A class in a Blade template that matches no rule
+
+`tests/Contracts/BladeClassesResolveToARuleArchTest.php`
+
+A class name written in a template that no stylesheet defines renders
+**unstyled**. Nothing reports it: the element is in the DOM, the route answers
+200, and every assertion over the markup passes, because the markup is exactly
+what the template said. Only a reader looking at the screen can tell.
+
+Found on a real Android phone during round 5. The onboarding starting-balance
+card's amount field had no box around it — all eleven of its `balance-card-*`
+classes were used in the blade and defined nowhere. Sweeping the tree for the
+same shape turned up 56 classes across six modules, Onboarding and DevMode
+holding most of them.
+
+The check reads the **compiled** stylesheet under `public/build/assets/`, which
+carries every Tailwind utility actually generated for this tree alongside every
+custom rule, so a class absent from it is inert rather than merely absent from
+source. A class defined in the template's own `<style>` block counts as styled —
+the tax PDF is rendered by dompdf against its own sheet and legitimately does
+this. It fails loudly when `public/build` is missing rather than skipping,
+because an invariant that quietly does nothing is worse than none.
+
+It is deliberately narrow: only fully static `class="..."` attributes are read,
+since a Blade expression cannot be evaluated by a scan, and only lowercase
+hyphenated tokens are considered, which leaves single-word classes and Tailwind's
+own variant syntax out of scope. That narrowness has a cost worth knowing —
+`per-file-chip` is composed through `$attributes->class([$stateClass])`, so no
+scan of `class="..."` reaches it, and the connector chip was found unstyled by
+reading the component rather than by the guard. A class a test selects on but
+nothing paints is allowlisted in the test with its reason.
+
+The compiled sheet is read as-is, so the build must be current: a utility added
+to a template since the last `npm run build` has not been generated yet and
+reads here as though it matched nothing. The failure message says so, because
+that is where somebody meets it.
+
+## A validation rule declared but never run
+
+`tests/Contracts/DeclaredValidationIsEnforcedArchTest.php`
+
+Livewire enforces a `#[Validate]` rule only when the component actually calls
+`validate()`. The attribute alone does nothing. A component that declares a rule
+and never runs it reads as validated in review — the rule is right there above
+the property — and accepts anything at runtime.
+
+The app lock declared its PIN as `^[0-9]{6,10}$` on four properties and never
+validated any of them; the only validation call in the component was a
+`validateOnly()` for an unrelated timeout field. The real gate checked two
+things, that the PIN met a minimum length and that both boxes matched. So a PIN
+could contain letters and could exceed the declared maximum, while the unlock
+surface is a numeric keypad — a PIN that can be set and then never typed again.
+Found on an iPhone in round 5 by an agent that locked itself out and recovered
+through sign-out and a password reset.
+
+The rule that broke was declared in one place and enforced in another, which is
+how the two came to disagree; the fix shape is a single definition of what a PIN
+is, rather than a second copy kept in step by hand.
+
+Any `validate()` call at all exempts a component, including one passed explicit
+rules, so only a component that never validates anything is reported. That
+narrowness is deliberate — the guard exists to catch a rule nobody runs, not to
+adjudicate which rules a call covers.
+
+## A Livewire redirect from `mount()`
+
+`$this->redirect()` calls `skipRender()`. On a Livewire *update* that is
+harmless — the client is handed a redirect effect and navigates. On the
+**initial full-page render** of a component registered directly as a route
+action, the reader gets whatever the layout draws around a slot the component
+never filled.
+
+Both Composer roots answer that with a real 302: a probe against
+`/setup-wizard` with nothing left to resume returned `302 -> /` from the repo
+root and from `mobile-app/`. The NativePHP runtime on Android does not. There
+the same route answered **200 with the default layout painted around an empty
+slot** — no exception, no log line, `BRIDGE_TOTAL [/setup-wizard] 73ms` in
+logcat, and a blank body under the app header with no way back into the
+wizard. Redirects as such do reach the reader on that runtime: `/login` for a
+signed-in reader answers 200 carrying the dashboard's body, because the bridge
+follows the middleware redirect server-side. It is the Livewire-mount one that
+does not.
+
+Found on a Samsung SM-S928B in round 5, after "Resume later" left nothing for
+`ResumeStepResolver` to resolve and `SetupWizard::mount()` took its
+`$resumeKey === ''` branch.
+
+The fix shape is to render a coherent terminal state instead — the wizard now
+mounts `WizardStepRegistry::lastStep()` with `allComplete` set. A `mount()`
+that cannot proceed has to answer with a page, because on one of the two
+runtimes the redirect it would rather send never becomes one.
+
+`MobilePairingScan::mount()` carries the same shape on the pairing entry and
+has not been exercised in that state on a device.
+
+## A stale `X-Livewire` header on a page load
+
+`Modules/Mobile/tests/Feature/StaleLivewireHeaderDoesNotEatTheQueryStringTest.php`
+
+Livewire asks one question — `request()->hasHeader('X-Livewire')` — and
+branches two behaviours on the answer:
+
+- `BaseUrl::getFromUrlQueryString()` reads a `#[Url]` property from the URL's
+  query string when it is false, and from the **Referer** header when it is
+  true.
+- `SupportRedirects::dehydrate()` turns a `$this->redirect()` into a real
+  `abort(redirect(...))` when it is false, and into a client-side effect when
+  it is true.
+
+The Android runtime keeps one PHP worker alive across every request, and once
+that worker has served a single component update, an ordinary page load
+arrives with the header still on it. Both behaviours then invert.
+
+Measured on a Samsung SM-S928B, same device and same data, cold worker versus
+warm:
+
+| request | cold worker | after one component update |
+|---|---|---|
+| `GET /drift?type=anomaly` | Unusual charges tab | Subscription drift (the default) |
+| `GET /tax?year=2025` | — | `<title>Tax 2026</title>`, `year` 2026 in the snapshot |
+| `GET /setup-wizard` with nothing to resume | 131,604 bytes, `Dashboard · Beatrax` | 105,316 bytes, no page component, **blank body** |
+
+So every deep link carrying a query parameter lands on the default view within
+seconds of launch — the sidebar's own "Unusual charges" entry points at
+`?type=anomaly` and answered "No open drift alerts" while the dashboard
+counted seven. And a redirect from `mount()` paints nothing at all.
+
+The query string itself reaches PHP intact — logcat shows
+`persistent_dispatch: GET /drift?type=anomaly&tab=dismissed` — and a plain
+`$request->boolean('force')` still reads it on a warm worker. Only the two
+branches above are affected, and both through that one header.
+
+Reproduced at a desk by sending the header on an ordinary GET, which is what
+the test does. The fix strips it from every request that is not Livewire's own
+update endpoint, alongside the three other middlewares that exist to undo what
+this runtime carries between requests.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

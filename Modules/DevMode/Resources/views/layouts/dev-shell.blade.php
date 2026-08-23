@@ -23,7 +23,10 @@
 >
     <head>
         <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {{-- viewport-fit=cover is what makes iOS populate env(safe-area-inset-*).
+             This layout was the only one without it, so --safe-top read 0 here
+             and the Dev Console heading printed over the clock. --}}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
 
         {{-- See UploadSignalArchTest: every layout hosting posting UI has to

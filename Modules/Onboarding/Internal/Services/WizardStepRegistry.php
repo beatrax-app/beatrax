@@ -38,6 +38,13 @@ final class WizardStepRegistry
         return self::STEPS;
     }
 
+    // The terminal step, for the callers that need to land on it without
+    // naming it: advance() reaches it by walking, mount() has to jump.
+    public function lastStep(): string
+    {
+        return self::STEPS[count(self::STEPS) - 1];
+    }
+
     public function isSkippable(string $stepKey): bool
     {
         return in_array($stepKey, self::SKIPPABLE, true);

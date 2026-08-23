@@ -55,7 +55,7 @@
     <div class="desktop-only">
         <div style="display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;">
         <div class="side-search" role="search" style="flex: 1 1 280px; min-width: 240px;">
-            <span class="ic" aria-hidden="true">⌕</span>
+            <x-core::search-mark class="ic" />
             <input
                 type="text"
                 placeholder="{{ Lang::get('counterparties::index.search_placeholder') }}"

@@ -63,7 +63,7 @@
 
     $commitDisabled = $isCommitting || ! $hasAnyReadySection;
 @endphp
-<section class="wiz-step wiz-step-first-import" aria-labelledby="wiz-first-import-h1">
+<section class="wiz-step" aria-labelledby="wiz-first-import-h1">
     <x-onboarding::wiz-card :wide="true">
         <x-onboarding::wiz-eyebrow step="first-import" glyph="📥">{{ Lang::get('onboarding::first_import.eyebrow') }}</x-onboarding::wiz-eyebrow>
         <h1 id="wiz-first-import-h1" class="wiz-h1">

@@ -537,8 +537,10 @@ it('never offers two options that read the same in any locale', function (): voi
     preg_match('/<select\s+wire:model\.live="conditions\.\{\{ \$i \}\}\.field".*?<\/select>/s', $blade, $select);
     expect($select)->not->toBeEmpty();
 
-    preg_match_all("/Lang::get\('categorization::rule_form\.(field_[a-z_]+)'\)/", $select[0], $keys);
-    expect($keys[1])->not->toBeEmpty();
+    // The select renders RuleFormModal::fieldOptions(), which the /rules
+    // sentence also reads, so the labels are asked of that map rather than
+    // scraped back out of the markup.
+    expect($select[0])->toContain('RuleFormModal::fieldOptions()');
 
     // `merchant` and `counterparty` both resolved to the counterparty name and
     // both rendered "Counterparty" in en, "Tiers" in fr, "Contraparte" in es —
@@ -546,14 +548,13 @@ it('never offers two options that read the same in any locale', function (): voi
     // decides which column the rule matches.
     $duplicates = [];
     foreach (glob(base_path('Modules/Categorization/Resources/lang/*/rule_form.php')) as $file) {
-        /** @var array<string, string> $messages */
-        $messages = require $file;
+        $locale = basename(dirname($file));
+        app()->setLocale($locale);
 
         $labels = [];
-        foreach ($keys[1] as $key) {
-            $label = $messages[$key] ?? $key;
+        foreach (RuleFormModal::fieldOptions() as $label) {
             if (isset($labels[$label])) {
-                $duplicates[] = basename(dirname($file)).': '.$label;
+                $duplicates[] = $locale.': '.$label;
             }
             $labels[$label] = true;
         }

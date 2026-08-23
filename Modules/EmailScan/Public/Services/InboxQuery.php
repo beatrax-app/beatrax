@@ -10,6 +10,7 @@ use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\EmailScan\Public\Dto\InboxHealthDto;
+use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use stdClass;
 
@@ -96,7 +97,7 @@ final class InboxQuery
             $this->db->connection()
                 ->table('discovered_senders')
                 ->where('user_id', $user->id)
-                ->where('state', 'candidate')
+                ->where('state', DiscoveredSenderState::Candidate->value)
                 ->count(),
         );
 

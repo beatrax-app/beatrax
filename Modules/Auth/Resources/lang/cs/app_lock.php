@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Ponechat PIN',
 
     'error_pin_too_short' => 'PIN musí mít aspoň 6 číslice.',
+    'error_pin_digits' => 'PIN musí mít 6 až 10 číslic — pouze číslice.',
     'error_pin_mismatch' => 'PINy se neshodují. Zkus to znovu.',
     'error_pin_required' => 'Zadej svůj PIN.',
     'error_pin_incorrect' => 'Nesprávný PIN.',

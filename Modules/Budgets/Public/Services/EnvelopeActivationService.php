@@ -7,6 +7,7 @@ namespace Modules\Budgets\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Pots\Public\Enums\PotStatus;
 use Modules\Pots\Public\Services\PotWriter;
 
 final class EnvelopeActivationService
@@ -63,7 +64,7 @@ final class EnvelopeActivationService
             $potIds = $this->db->connection()
                 ->table('pots')
                 ->where('user_id', $userId)
-                ->where('status', 'active')
+                ->where('status', PotStatus::Active->value)
                 ->whereNotNull('category_id')
                 ->pluck('id');
 

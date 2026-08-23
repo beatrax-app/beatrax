@@ -16,6 +16,7 @@ use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Pots\Public\Dto\PotMovementRow;
 use Modules\Pots\Public\Dto\PotRow;
 use Modules\Pots\Public\Dto\ReconciliationRow;
+use Modules\Pots\Public\Enums\PotStatus;
 use stdClass;
 
 final class PotBalanceQuery
@@ -80,7 +81,7 @@ final class PotBalanceQuery
      */
     public function forUser(User $user): array
     {
-        return $this->loadPotRows($user, 'active');
+        return $this->loadPotRows($user, PotStatus::Active);
     }
 
     /**
@@ -88,7 +89,7 @@ final class PotBalanceQuery
      */
     public function archivedForUser(User $user): array
     {
-        return $this->loadPotRows($user, 'archived');
+        return $this->loadPotRows($user, PotStatus::Archived);
     }
 
     /**
@@ -116,7 +117,7 @@ final class PotBalanceQuery
         $goalsQuery = $this->db->connection()
             ->table('goals')
             ->where('user_id', $user->id)
-            ->where('status', 'active')
+            ->where('status', PotStatus::Active->value)
             ->orderBy('name');
 
         if ($editPotId !== 0) {
@@ -147,7 +148,7 @@ final class PotBalanceQuery
         return $this->db->connection()
             ->table('pots')
             ->where('user_id', $user->id)
-            ->where('status', 'active')
+            ->where('status', PotStatus::Active->value)
             ->whereNotNull('goal_id')
             ->pluck('goal_id')
             ->all();
@@ -161,7 +162,7 @@ final class PotBalanceQuery
         $rows = $this->db->connection()
             ->table('pots')
             ->where('user_id', $user->id)
-            ->where('status', 'active')
+            ->where('status', PotStatus::Active->value)
             ->whereNotNull('goal_id')
             ->get(['id', 'goal_id', 'currency']);
 
@@ -193,7 +194,7 @@ final class PotBalanceQuery
         $row = $this->db->connection()
             ->table('pots')
             ->where('user_id', $user->id)
-            ->where('status', 'active')
+            ->where('status', PotStatus::Active->value)
             ->where('goal_id', $goalId)
             ->first(['id']);
 
@@ -213,7 +214,7 @@ final class PotBalanceQuery
         $row = $this->db->connection()
             ->table('pots')
             ->where('user_id', $user->id)
-            ->where('status', 'active')
+            ->where('status', PotStatus::Active->value)
             ->where('goal_id', $goalId)
             ->first(['currency']);
 
@@ -232,7 +233,7 @@ final class PotBalanceQuery
             ->table('pots')
             ->where('account_id', $accountId)
             ->where('user_id', $user->id)
-            ->where('status', 'active')
+            ->where('status', PotStatus::Active->value)
             ->pluck('id')
             ->toArray();
 
@@ -250,7 +251,7 @@ final class PotBalanceQuery
     /**
      * @return list<PotRow>
      */
-    private function loadPotRows(User $user, string $status): array
+    private function loadPotRows(User $user, PotStatus $status): array
     {
         $connection = $this->db->connection();
 
@@ -259,7 +260,7 @@ final class PotBalanceQuery
             ->leftJoin('goals', 'pots.goal_id', '=', 'goals.id')
             ->leftJoin('categories', 'pots.category_id', '=', 'categories.id')
             ->where('pots.user_id', $user->id)
-            ->where('pots.status', $status)
+            ->where('pots.status', $status->value)
             ->orderBy('accounts.name')
             ->orderBy('pots.name')
             ->get([

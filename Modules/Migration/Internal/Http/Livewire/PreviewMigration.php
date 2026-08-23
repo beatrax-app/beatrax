@@ -14,6 +14,7 @@ use Modules\Migration\Internal\Actions\ConfirmMigration;
 use Modules\Migration\Internal\Actions\DiscardMigrationRun;
 use Modules\Migration\Internal\Dto\PreviewSummary;
 use Modules\Migration\Internal\Enums\ConflictResolution;
+use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
 use Modules\Migration\Models\MigrationRun;
 
@@ -41,7 +42,7 @@ final class PreviewMigration extends Component
             ->where('id', $conflictId)
             ->where('migration_run_id', $this->runId)
             ->where('user_id', $user->id)
-            ->where('item_type', 'conflict')
+            ->where('item_type', UnmappedItemType::Conflict->value)
             ->update(['resolution' => $resolution->value]);
     }
 

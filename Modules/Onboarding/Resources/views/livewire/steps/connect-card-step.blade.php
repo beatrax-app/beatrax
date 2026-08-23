@@ -13,7 +13,7 @@
     `wizard_progress.data['card_import_run_ids']` for the consolidated
     preview screen to read back.
 --}}
-<section class="wiz-step wiz-step-connect-card" aria-labelledby="wiz-connect-card-h1">
+<section class="wiz-step" aria-labelledby="wiz-connect-card-h1">
     <x-onboarding::wiz-eyebrow step="connect-card" glyph="💳">{{ Lang::get('onboarding::connect_card.eyebrow') }}</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-card-h1" class="wiz-h1">
         {{ Lang::get('onboarding::connect_card.h1') }}

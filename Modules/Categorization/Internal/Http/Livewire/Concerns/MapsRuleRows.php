@@ -10,10 +10,30 @@ use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Categorization\Public\Enums\ConditionOperator;
 use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Categorization\Public\Enums\NoteMode;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 trait MapsRuleRows
 {
+    // The four fields a condition may read, each under the name the reader
+    // knows it by. The /rules list printed the raw column instead, so a Dutch
+    // rule read `counterparty bevat "Netflix"` — half a sentence in English.
+    /** @return array<string, string> */
+    public static function fieldOptions(): array
+    {
+        return [
+            'description' => Lang::get('categorization::rule_form.field_description'),
+            'counterparty' => Lang::get('categorization::rule_form.field_counterparty'),
+            'amount' => Lang::get('categorization::rule_form.field_amount'),
+            'date' => Lang::get('categorization::rule_form.field_date'),
+        ];
+    }
+
+    public static function fieldLabel(string $field): string
+    {
+        return self::fieldOptions()[$field] ?? $field;
+    }
+
     /** @return array<string, string> */
     public static function operatorOptionsFor(string $field): array
     {

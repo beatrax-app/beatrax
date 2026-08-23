@@ -711,6 +711,33 @@ td.date,
         color: var(--color-text);
     }
 
+    /* A 220px rail beside a 375pt screen leaves 87pt of page: the queue
+       inspector's own heading was clipped, its three count tiles were 26pt
+       wide and two of its tabs sat off the display. Below the tablet
+       breakpoint the rail becomes a wrapped strip above the page instead. */
+    @media (max-width: 767px) {
+        .flex:has(> .dev-side) {
+            flex-direction: column;
+        }
+
+        .dev-side {
+            width: 100%;
+            height: auto;
+            z-index: 20;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--space-1);
+            border-right: 0;
+            border-bottom: 1px solid var(--color-border);
+            padding-top: calc(var(--space-3) + var(--safe-top));
+        }
+
+        .dev-side-head {
+            flex-basis: 100%;
+        }
+    }
+
     .dev-side-head {
         display: flex;
         align-items: center;
@@ -1918,6 +1945,87 @@ td.date,
         font-style: italic;
     }
 
+    /* The three fixed tracks above sum to 328px, which is the ENTIRE table
+       width inside the card on a 411px phone: the counterparty — the only
+       column that says who was paid — measured 0px, its header printed on
+       top of AMOUNT, and the 328px floor pushed the card 32px wider than the
+       document. One line for the payee, one for date, type and amount: the
+       same shape .card-list-item already takes at this width.
+
+       Immediately after the rules it overrides, and restating each
+       :nth-child, because those base rules are one specificity step above a
+       bare `td` and a media query buys nothing. Same trap as .mini-steps. */
+    @media (max-width: 640px) {
+        .preview-section-table,
+        .preview-section-table thead,
+        .preview-section-table tbody,
+        .preview-section-table tr,
+        .preview-section-table th,
+        .preview-section-table td {
+            display: block;
+        }
+
+        /* Not display:none: the column names are the only thing that says
+           which number is the amount once the row is a free-form line. */
+        .preview-section-table thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+
+        .preview-section-table tbody tr {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            column-gap: var(--space-2);
+            row-gap: var(--space-1);
+            padding: var(--space-2) 0;
+            border-bottom: 1px solid var(--color-border-faint);
+        }
+
+        .preview-section-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .preview-section-table tbody td:nth-child(1),
+        .preview-section-table tbody td:nth-child(2),
+        .preview-section-table tbody td:nth-child(3),
+        .preview-section-table tbody td:nth-child(4) {
+            width: auto;
+            padding: 0;
+            border-bottom: 0;
+        }
+
+        .preview-section-table tbody td:nth-child(3) {
+            flex: 1 1 100%;
+            order: 1;
+        }
+
+        .preview-section-table tbody td:nth-child(1) {
+            order: 2;
+        }
+
+        .preview-section-table tbody td:nth-child(2) {
+            order: 3;
+        }
+
+        .preview-section-table tbody td:nth-child(4) {
+            order: 4;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        /* The nowrap that made the ellipsis work in a fixed cell is what
+           would keep the IBAN on one 328px line here. */
+        .preview-section-table .preview-row-counterparty {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+    }
+
     /* Payment-type chip used in the Type column. Variants map to the
        existing chip-* palette in the dashboard tables. */
     .ptype-chip {
@@ -2284,6 +2392,17 @@ td.date,
         gap: var(--space-2);
     }
 
+    /* The card's headline, beside the type chip. Carries the same min-width
+       release as .cp-card, for the same reason: it is the flex item the
+       unbroken counterparty token actually lands in. */
+    .cp-head-name {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        font-size: var(--text-md);
+        font-weight: 600;
+        color: var(--color-text);
+    }
+
     .cp-stats {
         display: flex;
         align-items: baseline;
@@ -2615,6 +2734,18 @@ td.date,
         font-size: var(--text-sm);
     }
 
+    /* Same size as the placeholder it replaces, so the row does not resize
+       when the reader clicks Show. An IBAN is one unbroken token in a flex
+       row, hence the wrap release. */
+    .iban-revealed {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-sm);
+        color: var(--color-text);
+    }
+
     /* ─── Tax-year cards (government profile) ────────────────────── */
 
     .tax-year-row {
@@ -2896,6 +3027,20 @@ td.date,
     .help-locations .copy-path-btn:hover {
         background: var(--color-surface-2);
         color: var(--color-text);
+    }
+
+    /* On a phone the three-across row left the path 108px of a 275px card, so
+       the container path broke every twelve characters into fourteen lines.
+       Given the whole row it wraps at five, and the label and the copy button
+       keep the line above. */
+    @media (max-width: 640px) {
+        .help-locations .path-row {
+            flex-wrap: wrap;
+        }
+
+        .help-locations .path-mono {
+            flex-basis: 100%;
+        }
     }
 }
 
@@ -3370,6 +3515,33 @@ td.date,
         content: none;
     }
 
+    /* The wizard shell is the third case: it wears neither .safe-screen nor
+     * .top-bar, and .wiz-top/.wiz-footer only PAD the seams. On a phone every
+     * step is taller than the viewport, so on real hardware the step eyebrow
+     * scrolled up into the status bar and drew through the clock, and the
+     * primary "Continue →" sat under the navigation bar glyphs. Both edges,
+     * because unlike .safe-screen this shell scrolls past both of them. */
+    .wiz-page::before,
+    .wiz-page::after {
+        content: '';
+        position: fixed;
+        left: 0;
+        right: 0;
+        background: var(--color-bg-subtle);
+        z-index: 30;
+        pointer-events: none;
+    }
+
+    .wiz-page::before {
+        top: 0;
+        height: var(--safe-top);
+    }
+
+    .wiz-page::after {
+        bottom: 0;
+        height: var(--safe-bottom);
+    }
+
     /* .top-bar — mobile top bar.
      * Only visible at <1024px (CSS hidden at desktop via the .top-bar rule above).
      * safe-area-inset-top handles the notch/Dynamic Island on phones. */
@@ -3599,8 +3771,12 @@ td.date,
         padding: var(--space-2) var(--space-4);
     }
 
+    /* min-width: 0 or `flex: 1` is a floor, not a share: the search box held
+       its intrinsic width, pushed the Filters button past the row and squeezed
+       it onto the 44px touch floor, where its own label overflowed it. */
     .filter-search {
         flex: 1;
+        min-width: 0;
         display: flex;
         align-items: center;
         gap: var(--space-2);
@@ -3626,8 +3802,14 @@ td.date,
         color: var(--color-text-faint);
     }
 
+    /* flex-shrink, because the coarse-pointer floor further down sets
+       min-width: 44px on every button, and that REPLACES the min-width: auto
+       a flex item relies on to refuse to shrink below its own label. Measured
+       on a phone: this one squeezed to 44px and printed "Filters" through its
+       right border. */
     .filter-trigger-btn {
         display: inline-flex;
+        flex-shrink: 0;
         align-items: center;
         gap: var(--space-2);
         padding: 6px var(--space-3);
@@ -4445,6 +4627,7 @@ mark {
 
 .srch-date-input {
     flex: 1;
+    min-width: 0;
     height: 32px;
     padding: 0 6px;
     border: 1px solid var(--color-border, oklch(93% 0 0));
@@ -4504,8 +4687,12 @@ mark {
     gap: var(--space-2, 8px);
 }
 
+/* min-width: 0 because flex:1 alone cannot shrink a text input below its own
+   intrinsic size: Min and Max each held 211px and the Max box ended 88pt past
+   the right edge of a 375pt phone. */
 .srch-amount-input {
     flex: 1;
+    min-width: 0;
     height: 32px;
     padding: 0 6px;
     border: 1px solid var(--color-border, oklch(93% 0 0));
@@ -5282,6 +5469,24 @@ mark {
     }
 
     /*
+     * A control revealed on hover does not exist on a phone. .tax-badge--untagged
+     * already took this exemption one class at a time; every other site kept
+     * the pattern and lost the control. Measured: 50 rows on /uncategorized
+     * each drew a 44px blank band where "Help others identify this" was, and
+     * every tax category on /settings hid its own Rename and Archive.
+     *
+     * Matched on the reveal utility itself rather than per component, so a new
+     * site cannot be added without it. [class] doubles the specificity, which
+     * is what beats Tailwind's own opacity-0 beside it — the single-attribute
+     * form ties and loses, measured on the device.
+     */
+    [class][class~='group-hover:opacity-100'],
+    [class][class~='hover:opacity-100'],
+    [class][class~='focus-within:opacity-100'] {
+        opacity: 1;
+    }
+
+    /*
      * The guideline asks for a 44px target, not a 44px picture. Inflating the
      * box turned the 36x20 switch into a circle with its thumb stranded at the
      * top, so the reach moves to a pseudo-element that no layout can see.
@@ -5411,6 +5616,17 @@ mark {
     label:has(> input[type='radio']) {
         min-height: 44px;
     }
+
+    /*
+     * A box the reader types into is tapped before it is typed into, and the
+     * floor above names only buttons. Measured on an iPhone 12 mini: 34px on
+     * every /budgets amount cell, 42px on the signup and login boxes. The
+     * checkbox and radio branches are excluded — the label above carries them.
+     */
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+    textarea {
+        min-height: 44px;
+    }
 }
 
 /*
@@ -5483,4 +5699,289 @@ mark {
     .rules-table td:nth-child(1) { grid-column: 1; }
     .rules-table td:nth-child(4) { grid-column: 2; text-align: right; white-space: nowrap; }
     .rules-table td:nth-child(5) { grid-column: 1 / -1; grid-row: 4; }
+}
+
+@layer components {
+    /* Starting-balance card internals. The card chrome above owns
+       `.balance-card`; every element below carried a class with no rule, so
+       the edit form rendered as bare browser defaults on a real phone —
+       the amount field had no box at all. */
+    .balance-card-main {
+        grid-column: 1 / -1;
+        min-width: 0;
+    }
+
+    .balance-card-h3 {
+        font-size: var(--text-base);
+        font-weight: 600;
+        color: var(--color-text);
+        margin: 0 0 var(--space-2);
+    }
+
+    /* The confirmed state collapses the heading to a summary line, so it
+       stops reading as a heading and starts reading as a row. */
+    .balance-card-h3--collapsed {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--space-2);
+        font-weight: 500;
+        margin-bottom: 0;
+    }
+
+    .balance-card-lede {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+        margin: 0 0 var(--space-3);
+    }
+
+    .balance-card-editor {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        margin-bottom: var(--space-3);
+    }
+
+    /* Label on its own line, then control + suffix sharing the next one.
+       The 100% basis on the label is what forces that break. */
+    .balance-card-input {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-1) var(--space-2);
+        min-width: 0;
+    }
+
+    .balance-card-input-label {
+        flex: 1 0 100%;
+        font-size: var(--text-xs);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-text-muted);
+    }
+
+    .balance-card-amount-input {
+        flex: 1 1 8rem;
+        min-width: 0;
+        padding: 0.35rem var(--space-2);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: transparent;
+        color: var(--color-text);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .balance-card-amount-input:focus-visible {
+        outline: 2px solid var(--color-border-strong);
+        outline-offset: 1px;
+    }
+
+    .balance-card-currency-suffix {
+        flex: 0 0 auto;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        white-space: nowrap;
+    }
+
+    /* Lands on the date-input component's own relative-positioned root, which
+       anchors its popover; the trigger button inside is styled by the
+       component. Full basis keeps it off the amount row. */
+    .balance-card-date-input {
+        flex: 1 0 100%;
+        min-width: 0;
+    }
+
+    .balance-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-2);
+        margin-top: var(--space-3);
+    }
+
+    /* A <fieldset> carries a UA border, padding and margin that read as a
+       stray box inside the card. */
+    .conflict-options {
+        border: 0;
+        padding: 0;
+        margin: 0 0 var(--space-3);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+    }
+
+    .conflict-option {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .conflict-option:hover {
+        background: var(--color-surface-2);
+    }
+
+    .conflict-option:has(input:checked) {
+        border-color: var(--color-border-strong);
+        background: var(--color-surface-2);
+    }
+
+    .conflict-source {
+        flex: 1 1 auto;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    .conflict-helper {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        margin: 0 0 var(--space-3);
+    }
+
+    /* Per-file chip queue on the card connector step. The chip itself, its
+       three states and all three children were unstyled, so a queued PDF
+       rendered as a run-on line of plain text. */
+    .per-file-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin-bottom: var(--space-4);
+    }
+
+    .per-file-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        max-width: 100%;
+        padding: 4px 10px;
+        border-radius: var(--radius-full);
+        border: 1px solid var(--color-border);
+        background: var(--color-surface-2);
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    .per-file-chip.ready {
+        background: var(--color-emerald-bg);
+        border-color: transparent;
+        color: var(--color-emerald);
+    }
+
+    .per-file-chip.failed {
+        background: var(--color-rose-bg);
+        border-color: transparent;
+        color: var(--color-rose);
+    }
+
+    .per-file-chip-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 500;
+    }
+
+    .per-file-chip-size {
+        flex: 0 0 auto;
+        font-variant-numeric: tabular-nums;
+        opacity: 0.75;
+    }
+
+    .per-file-chip .remove {
+        flex: 0 0 auto;
+        background: transparent;
+        border: 0;
+        padding: 0 2px;
+        color: inherit;
+        line-height: 1;
+        opacity: 0.6;
+        cursor: pointer;
+    }
+
+    .per-file-chip .remove:hover,
+    .per-file-chip .remove:focus-visible {
+        opacity: 1;
+    }
+
+    /* The button only carries the chip; its own UA chrome would draw a second
+       box around one already-rounded pill. */
+    .format-chip-button {
+        display: inline-flex;
+        background: none;
+        border: 0;
+        padding: 0;
+        border-radius: var(--radius-full);
+        cursor: pointer;
+    }
+
+    .format-chip-button:focus-visible {
+        outline: 2px solid var(--color-border-strong);
+        outline-offset: 2px;
+    }
+
+    .format-bank-list {
+        margin: 0 0 var(--space-4);
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    /* Subordinate to the CSV chip that reveals it: the rule is what says
+       "this choice belongs to the one above". */
+    .csv-bank-picker-row {
+        margin-top: 0;
+        padding-left: var(--space-3);
+        border-left: 2px solid var(--color-border);
+    }
+
+    .wiz-email-auth {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin: var(--space-4) 0;
+    }
+
+    /* The first-import step wraps its own wide card, so its resume banner
+       sits on the page wash instead of inside the card and has to match the
+       card's width itself. Same skin as `.wiz-resume-banner`. */
+    .wiz-resume-banner-floating {
+        max-width: 1120px;
+        width: 100%;
+        margin: 0 auto var(--space-4);
+        background: var(--color-surface-2);
+        border-radius: var(--radius-md);
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+    }
+}
+
+@layer components {
+    /* Theme-locked dark inset shared by the /dev overview and the sync-health
+       page. Both hard-coded the same three values inline; the pane never
+       participates in theme switching, which is why it has a name at all. */
+    .console-pane {
+        background: #0b1220;
+        color: #f1f5f9;
+        border-color: #1e293b;
+    }
+}
+
+/* Palette source chips. Unlayered, like `.palette-source--txn` above: the chip
+   carries Tailwind's muted slate utilities, and a `@layer components` rule
+   would lose to them. `view` and `dev-view` are the muted default. */
+.palette-source--dev {
+    background: var(--color-amber-bg, #fef3c7);
+    color: var(--color-amber, #b45309);
+}
+
+.palette-source--action {
+    background: var(--color-blue-bg, #dbeafe);
+    color: var(--color-blue, #2563eb);
 }

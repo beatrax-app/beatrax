@@ -63,7 +63,7 @@
                 name="username"
                 :label="Lang::get('auth::signup.username')"
                 :hint="Lang::get('auth::signup.username_hint')"
-                wire:model="username"
+                wire:model.blur="username"
                 autocomplete="username"
                 autofocus
             />
@@ -76,7 +76,7 @@
                 type="password"
                 :label="Lang::get('auth::signup.password')"
                 :hint="Lang::get('auth::signup.password_hint')"
-                wire:model="password"
+                wire:model.blur="password"
                 autocomplete="new-password"
                 aria-describedby="password-requirements"
             />
@@ -86,7 +86,7 @@
                 name="passwordConfirmation"
                 type="password"
                 :label="Lang::get('auth::signup.confirm_password')"
-                wire:model="passwordConfirmation"
+                wire:model.blur="passwordConfirmation"
                 autocomplete="new-password"
             />
 

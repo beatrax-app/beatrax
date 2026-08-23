@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'PIN kodunu koru',
 
     'error_pin_too_short' => 'PIN en az 6 haneli olmalı.',
+    'error_pin_digits' => 'PIN 6 ila 10 haneli olmalı — yalnızca rakam.',
     'error_pin_mismatch' => 'PIN kodları eşleşmiyor. Yeniden dene.',
     'error_pin_required' => 'PIN kodunu gir.',
     'error_pin_incorrect' => 'Hatalı PIN.',

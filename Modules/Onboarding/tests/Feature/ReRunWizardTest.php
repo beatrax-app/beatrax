@@ -28,10 +28,15 @@ beforeEach(function (): void {
         ->update(['status' => 'done']);
 });
 
-it('redirects to / when every wizard step is already done and no force flag is set', function (): void {
+it('renders the terminal step when every wizard step is already done and no force flag is set', function (): void {
+    // It used to redirect. $this->redirect() from mount() skips the render, and
+    // on the phone runtime that left the layout painted around an empty slot.
+    // @link ../../../../.docs/conventions/invariants-from-shipped-failures.md#a-livewire-redirect-from-mount
     $response = $this->get(route('setup'));
 
-    $response->assertRedirect('/');
+    $response->assertOk();
+
+    expect((string) $response->getContent())->toContain('onboarding.steps.done-step');
 });
 
 it('resets every wizard_progress row and re-enters from welcome when ?force=1 is passed', function (): void {

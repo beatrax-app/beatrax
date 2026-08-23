@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\CounterpartyKey;
+use Modules\Recurring\Internal\Detectors\OccurrenceWriter;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
@@ -21,6 +22,7 @@ final class DemoRecurringSeeder
     // clusterKey values are hand-picked so they cannot collide with real detector
     // output. recurring_series needs its currency present in the currencies table,
     // which the demo command seeds via CurrenciesSeeder before reaching this step.
+    // latestAmountMinor is a magnitude; upsertSeries() applies the direction sign.
     /** @var list<array{detectedName: string, displayName: string, latestAmountMinor: int, cadence: string, dayOfMonth: int, clusterKey: string, state: string}> */
     private const SERIES = [
         [
@@ -113,6 +115,7 @@ final class DemoRecurringSeeder
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly CounterpartyKey $counterpartyKey,
+        private readonly OccurrenceWriter $occurrences,
     ) {}
 
     /**
@@ -124,6 +127,7 @@ final class DemoRecurringSeeder
         if ($primary !== null) {
             foreach (self::SERIES as $row) {
                 $this->upsertSeries($primary, $row);
+                $this->upsertOccurrences($primary, $row);
             }
             $this->upsertTransitionsForUser($primary);
         }
@@ -190,6 +194,8 @@ final class DemoRecurringSeeder
             ? $today->addDays(30)->setTime(0, 0)
             : null;
 
+        $signedMinor = self::signedMinor($row['latestAmountMinor'], Direction::Expense);
+
         RecurringSeries::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
@@ -202,9 +208,9 @@ final class DemoRecurringSeeder
                 'display_name_override' => $row['displayName'],
                 'state' => $row['state'],
                 'cadence' => $row['cadence'],
-                'latest_amount_minor' => $row['latestAmountMinor'],
+                'latest_amount_minor' => $signedMinor,
                 'latest_fx_rate_used' => null,
-                'monthly_equivalent_minor' => $row['latestAmountMinor'],
+                'monthly_equivalent_minor' => $signedMinor,
                 'variance_tolerance_percent' => 25,
                 'latest_funding_chain_link_id' => null,
                 'snoozed_until' => $snoozedUntil,
@@ -216,5 +222,66 @@ final class DemoRecurringSeeder
                 'cluster_counterparty_key' => $this->counterpartyKey->forName($row['detectedName'], (int) $user->id),
             ],
         );
+    }
+
+    private static function signedMinor(int $magnitude, Direction $direction): int
+    {
+        return $direction === Direction::Income ? abs($magnitude) : -abs($magnitude);
+    }
+
+    // The detector only ever writes a series it has watched charge, so an
+    // occurrence-less series is a shape the field never produces — and one the
+    // calendar reads as "born today", dropping this month's paid instalment.
+    /**
+     * @link ../../../../../.docs/features/calendar/architecture.md#entry-placement
+     *
+     * @param  array{detectedName: string, displayName: string, latestAmountMinor: int, cadence: string, dayOfMonth: int, clusterKey: string, state: string}  $row
+     */
+    private function upsertOccurrences(User $user, array $row): void
+    {
+        $connection = $this->db->connection();
+
+        $series = $connection->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->where('cluster_key', $row['clusterKey'])
+            ->first(['id']);
+
+        if ($series === null) {
+            return;
+        }
+
+        $seriesId = (int) $series->id;
+        $signedMinor = self::signedMinor($row['latestAmountMinor'], Direction::Expense);
+
+        $charges = $connection->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('amount_minor', $signedMinor)
+            ->where('currency', Currency::Eur->value)
+            ->orderBy('booked_at')
+            ->get(['id', 'booked_at', 'amount_minor', 'currency']);
+
+        $observed = [];
+        foreach ($charges as $charge) {
+            $bookedAt = CarbonImmutable::parse(self::stringValue($charge->booked_at));
+            if ($bookedAt->day !== $row['dayOfMonth']) {
+                continue;
+            }
+
+            $observed[] = (object) [
+                'id' => $charge->id,
+                'posted_at' => $bookedAt->toDateString(),
+                'amount_minor' => $signedMinor,
+            ];
+        }
+
+        // Through the one writer the table has, whose insertOrIgnore against
+        // rec_occ_uniq is what makes a re-seed idempotent — the same guarantee
+        // a re-detection relies on, rather than a second copy of it here.
+        $this->occurrences->write($user->id, $seriesId, $observed, Currency::Eur->value);
+    }
+
+    private static function stringValue(mixed $value): string
+    {
+        return is_scalar($value) ? (string) $value : '';
     }
 }

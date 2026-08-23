@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Doctor\ProbeOutputParser;
 
 #[Layout('dev::layouts.dev-shell')]
@@ -21,7 +22,7 @@ final class DoctorPanelPage extends Component
         ProbeOutputParser $parser,
     ): View {
         $latest = $db->connection()->table('dev_mode_audit')
-            ->where('log_name', 'dev_mode')
+            ->where('log_name', SpatieAuditWriter::LOG_NAME)
             ->where('properties->command', 'beatrax:doctor')
             ->orderByDesc('created_at')
             ->limit(1)

@@ -14,6 +14,7 @@
     Blade change.
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Internal\Enums\BackupAlertKind')
 @use('Modules\Core\Public\Enums\UpdateAlertKind')
 @switch ($alert->kind)
     @case (UpdateAlertKind::Available->value)
@@ -64,7 +65,7 @@
             {{ $alert->message }}
         @endif
         @break
-    @case ('backup_corrupt')
+    @case (BackupAlertKind::Corrupt->value)
         @php
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];
             $timestamp = isset($metadata['timestamp']) && is_string($metadata['timestamp'])
@@ -81,7 +82,7 @@
             {{ Lang::get('core::alerts.messages.backup_corrupt_no_path', ['timestamp' => $timestamp]) }}
         @endif
         @break
-    @case ('backup_overdue')
+    @case (BackupAlertKind::Overdue->value)
         @php
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];
             $hoursOld = isset($metadata['hours_old']) && is_numeric($metadata['hours_old'])

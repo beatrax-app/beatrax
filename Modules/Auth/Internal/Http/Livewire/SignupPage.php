@@ -45,6 +45,19 @@ final class SignupPage extends Component
 
     public string $locale = '';
 
+    // A rejection describes the boxes as they were when submit ran, and the
+    // checklist under them keeps reading them as they are now. Left standing,
+    // "Passwords do not match." sat in red directly above a ticked "Both
+    // passwords match". Both boxes clear the pair's message: either one fixes it.
+    public function updated(string $property): void
+    {
+        $this->resetErrorBag($property);
+
+        if (in_array($property, ['password', 'passwordConfirmation'], true)) {
+            $this->resetErrorBag('passwordConfirmation');
+        }
+    }
+
     // A rejected submit leaves both password boxes as the reader typed them.
     // Emptying them turned a username error into a retyped 12-character
     // passphrase on a phone keyboard, and left the live checklist ticking

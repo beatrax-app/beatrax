@@ -59,6 +59,7 @@ return [
     'keep_pin' => 'Mantener PIN',
 
     'error_pin_too_short' => 'El PIN debe tener al menos 6 dígitos.',
+    'error_pin_digits' => 'El PIN debe tener de 6 a 10 dígitos — solo números.',
     'error_pin_mismatch' => 'Los PIN no coinciden. Inténtalo de nuevo.',
     'error_pin_required' => 'Introduce tu PIN.',
     'error_pin_incorrect' => 'PIN incorrecto.',
