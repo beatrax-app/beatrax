@@ -31,10 +31,15 @@
                 <ul class="mt-4 space-y-1.5">
                     @foreach ($trend->movers as $mover)
                         @php $dir = $mover->direction(); @endphp
-                        <li class="flex items-center justify-between gap-3 text-sm">
-                            <span class="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-300">{{ $mover->name }}</span>
-                            <span class="shrink-0 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($mover->currentMinor) }}</span>
-                            <span class="w-20 shrink-0 text-right font-medium {{ $deltaClass($dir) }}" style="font-variant-numeric: tabular-nums;">{{ $signed($mover->deltaMinor) }}</span>
+                        {{-- The pair wraps as one: a category with its two
+                             amounts under it still reads, the same two amounts
+                             beside a name squeezed to nothing do not. --}}
+                        <li class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm">
+                            <span class="min-w-0 flex-1 basis-32 truncate text-slate-700 dark:text-slate-300">{{ $mover->name }}</span>
+                            <span class="ml-auto flex shrink-0 items-baseline gap-x-3">
+                                <span class="text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($mover->currentMinor) }}</span>
+                                <span class="w-20 text-right font-medium {{ $deltaClass($dir) }}" style="font-variant-numeric: tabular-nums;">{{ $signed($mover->deltaMinor) }}</span>
+                            </span>
                         </li>
                     @endforeach
                 </ul>
