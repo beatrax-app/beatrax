@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Este teléfono no puede guardar un archivo que la aplicación le entrega, así que la copia cifrada se hace en la aplicación de escritorio. Vincula este dispositivo para mantener ambos sincronizados.",
         'unavailable' => 'Las copias de seguridad cifradas están disponibles en la versión de escritorio (SQLite). Con una base de datos en un servidor, usa las herramientas de copia de seguridad de la propia base de datos.',
         'intro' => 'Descarga una copia de toda tu base de datos cifrada con una frase de contraseña — puedes guardarla sin riesgo en un disco externo o en la nube, porque es ilegible sin la frase de contraseña (XChaCha20-Poly1305 + Argon2id, resistente a la computación cuántica).',
         'passphrase' => 'Frase de contraseña',

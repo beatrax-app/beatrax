@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Dieses Telefon kann eine Datei, die die App übergibt, nicht speichern — das verschlüsselte Backup entsteht daher in der Desktop-App. Koppele dieses Gerät, um beide synchron zu halten.",
         'unavailable' => 'Verschlüsselte Backups gibt es in der Desktop-Version (SQLite). Nutze bei einer Server-Datenbank die eigenen Backup-Werkzeuge deiner Datenbank.',
         'intro' => 'Lade eine mit einer Passphrase verschlüsselte Kopie deiner gesamten Datenbank herunter — du kannst sie bedenkenlos auf einer externen Festplatte oder in der Cloud aufbewahren, denn ohne die Passphrase ist sie unlesbar (quantensicheres XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Passphrase',

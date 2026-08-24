@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Ta telefon ne more shraniti datoteke, ki mu jo aplikacija izroči, zato šifrirano varnostno kopijo naredite v namizni aplikaciji. Seznanite to napravo, da ostaneta usklajeni.",
         'unavailable' => 'Šifrirane varnostne kopije so na voljo v namizni različici (SQLite). Pri strežniški bazi podatkov uporabi orodja za varnostno kopiranje same baze.',
         'intro' => 'Prenesi z geslom šifrirano kopijo celotne baze podatkov — varno jo je hraniti na zunanjem disku ali v oblaku, ker je brez gesla neberljiva (kvantno odporen XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Geslo',

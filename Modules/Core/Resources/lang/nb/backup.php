@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Denne telefonen kan ikke lagre en fil appen gir den, så den krypterte sikkerhetskopien lages i skrivebordsappen. Par denne enheten for å holde dem synkronisert.",
         'unavailable' => 'Krypterte sikkerhetskopier er tilgjengelige i skrivebordsversjonen (SQLite). På en serverdatabase bruker du databasens egne verktøy for sikkerhetskopiering.',
         'intro' => 'Last ned en kopi av hele databasen din kryptert med en passordfrase — trygg å oppbevare på en ekstern disk eller i skylagring, fordi den ikke kan leses uten passordfrasen (kvantesikker XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Passordfrase',

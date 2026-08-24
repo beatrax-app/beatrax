@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Tento telefon neumí uložit soubor, který mu aplikace předá, proto se šifrovaná záloha vytváří v desktopové aplikaci. Spárujte toto zařízení, aby zůstala synchronizovaná.",
         'unavailable' => 'Šifrované zálohy jsou dostupné v desktopové verzi (SQLite). U databáze na serveru použij zálohovací nástroje samotné databáze.',
         'intro' => 'Stáhni si kopii celé své databáze zašifrovanou přístupovou frází — bezpečně ji uložíš na externí disk nebo do cloudu, protože bez fráze je nečitelná (kvantově odolné XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Přístupová fráze',

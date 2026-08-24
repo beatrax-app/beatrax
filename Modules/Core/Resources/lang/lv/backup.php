@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Šis tālrunis nevar saglabāt failu, ko lietotne tam nodod, tāpēc šifrētā dublējuma kopija tiek veidota datora lietotnē. Savieno šo ierīci, lai abas paliktu sinhronizētas.",
         'unavailable' => 'Šifrēti dublējumi ir pieejami darbvirsmas (SQLite) versijā. Servera datubāzē izmantojiet pašas datubāzes dublēšanas rīkus.',
         'intro' => 'Lejupielādējiet ar paroles frāzi šifrētu visas datubāzes kopiju — to var droši glabāt ārējā diskā vai mākonī, jo bez paroles frāzes tā nav nolasāma (kvantu drošs XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Paroles frāze',

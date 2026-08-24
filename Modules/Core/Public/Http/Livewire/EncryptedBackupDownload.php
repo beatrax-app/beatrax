@@ -91,6 +91,10 @@ final class EncryptedBackupDownload extends Component
     {
         return $views->make('core::livewire.encrypted-backup-download', [
             'sqliteOnly' => $this->isSqliteBuild($config),
+            // A BinaryFileResponse is only a backup where the shell saves what
+            // its WebView downloads. Where it does not, the response goes
+            // nowhere and deleteFileAfterSend() removes the file behind it.
+            'savesDownloads' => UserDataPathService::platform()?->savesWebViewDownloads() !== false,
         ]);
     }
 

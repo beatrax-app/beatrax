@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Ovaj telefon ne može spremiti datoteku koju mu aplikacija preda, pa se šifrirana sigurnosna kopija radi u aplikaciji za računalo. Upari ovaj uređaj kako bi ostali usklađeni.",
         'unavailable' => 'Šifrirane sigurnosne kopije dostupne su u desktop verziji (SQLite). Na poslužiteljskoj bazi podataka koristi vlastite alate te baze za sigurnosno kopiranje.',
         'intro' => 'Preuzmi kopiju cijele baze podataka šifriranu pristupnom frazom — sigurno ju je držati na vanjskom disku ili u oblaku jer je bez pristupne fraze nečitljiva (kvantno otporni XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Pristupna fraza',

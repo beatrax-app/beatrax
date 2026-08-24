@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Acest telefon nu poate salva un fișier pe care aplicația i-l predă, așa că backupul criptat se face în aplicația de desktop. Asociază acest dispozitiv pentru a le păstra sincronizate.",
         'unavailable' => 'Copiile de rezervă criptate sunt disponibile în versiunea desktop (SQLite). Pe o bază de date pe server, folosește instrumentele proprii de copiere de rezervă ale bazei de date.',
         'intro' => 'Descarcă o copie a întregii tale baze de date, criptată cu o frază de acces — o poți păstra în siguranță pe un disc extern sau în cloud, pentru că fără fraza de acces este ilizibilă (XChaCha20-Poly1305 + Argon2id, rezistente cuantic).',
         'passphrase' => 'Frază de acces',

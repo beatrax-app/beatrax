@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Ce téléphone ne peut pas enregistrer un fichier que l’application lui remet ; la sauvegarde chiffrée se fait donc dans l’application de bureau. Associe cet appareil pour garder les deux synchronisés.",
         'unavailable' => 'Les sauvegardes chiffrées sont disponibles sur la version bureau (SQLite). Sur une base de données serveur, utilise les outils de sauvegarde de la base elle-même.',
         'intro' => 'Télécharge une copie chiffrée par phrase secrète de toute ta base de données — tu peux la garder sans risque sur un disque externe ou dans le cloud, car elle est illisible sans la phrase secrète (XChaCha20-Poly1305 résistant au quantique + Argon2id).',
         'passphrase' => 'Phrase secrète',

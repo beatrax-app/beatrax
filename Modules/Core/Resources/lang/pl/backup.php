@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Ten telefon nie potrafi zapisać pliku przekazanego przez aplikację, więc zaszyfrowaną kopię tworzysz w aplikacji na komputer. Sparuj to urządzenie, aby oba były zsynchronizowane.",
         'unavailable' => 'Zaszyfrowane kopie zapasowe są dostępne w wersji desktopowej (SQLite). Przy bazie danych na serwerze użyj własnych narzędzi kopii zapasowych tej bazy.',
         'intro' => 'Pobierz kopię całej swojej bazy danych zaszyfrowaną hasłem — bezpieczną do trzymania na dysku zewnętrznym lub w chmurze, bo bez hasła jest nieczytelna (odporne na komputery kwantowe XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Hasło',

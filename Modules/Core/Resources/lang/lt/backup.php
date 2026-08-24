@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => "Šis telefonas negali įrašyti failo, kurį programėlė jam perduoda, todėl užšifruota atsarginė kopija daroma kompiuterio programėlėje. Susiek šį įrenginį, kad abu liktų sinchronizuoti.",
         'unavailable' => 'Šifruotos atsarginės kopijos veikia darbalaukio (SQLite) versijoje. Serverio duomenų bazėje naudok pačios duomenų bazės atsarginių kopijų įrankius.',
         'intro' => 'Atsisiųsk slaptafraze užšifruotą visos savo duomenų bazės kopiją — ją saugu laikyti išoriniame diske ar debesijos saugykloje, nes be slaptafrazės jos perskaityti neįmanoma (kvantams atsparus XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Slaptafrazė',
