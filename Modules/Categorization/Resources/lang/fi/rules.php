@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Osumat',
     'col_created' => 'Luotu',
     'col_row_actions' => 'Toiminnot',
+    'inactive_badge' => 'Pois',
+    'inactive_title' => 'Tämä sääntö ei ole käytössä. Sääntö kytkeytyy pois, kun sen osoittama luokka tai vastapuoli poistetaan.',
 
     'more_conditions' => '+:count muuta',
 

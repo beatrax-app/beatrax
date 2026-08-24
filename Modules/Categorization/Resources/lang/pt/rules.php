@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Ocorrências',
     'col_created' => 'Criada',
     'col_row_actions' => 'Ações',
+    'inactive_badge' => 'Inativa',
+    'inactive_title' => 'Esta regra não é aplicada. Uma regra é desativada quando a categoria ou a contraparte a que aponta é eliminada.',
 
     'more_conditions' => '+:count mais',
 

@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Eşleşme',
     'col_created' => 'Oluşturuldu',
     'col_row_actions' => 'Eylemler',
+    'inactive_badge' => 'Kapalı',
+    'inactive_title' => 'Bu kural çalışmıyor. İşaret ettiği kategori veya karşı taraf silindiğinde kural kapanır.',
 
     'more_conditions' => '+:count daha',
 

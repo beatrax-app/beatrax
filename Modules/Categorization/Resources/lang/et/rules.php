@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Vasteid',
     'col_created' => 'Loodud',
     'col_row_actions' => 'Toimingud',
+    'inactive_badge' => 'Väljas',
+    'inactive_title' => 'See reegel ei tööta. Reegel lülitub välja, kui kustutatakse kategooria või vastaspool, millele see viitab.',
 
     'more_conditions' => '+:count veel',
 

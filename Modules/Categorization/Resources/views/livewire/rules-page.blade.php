@@ -110,6 +110,13 @@
                     <td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;"><span class="md:hidden">{{ Lang::get('categorization::rules.col_priority') }} </span>{{ $rule->priority }}</td>
                     <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
                         <div class="flex flex-wrap items-center gap-1">
+                            {{-- RuleEngine matches active rules only, and deleting a
+                                 category switches every rule that pointed at it off.
+                                 Without this the list printed a rule that had not run
+                                 since exactly like the live ones above it. --}}
+                            @if (! $rule->active)
+                                <span class="chip text-amber-700 dark:text-amber-300" title="{{ Lang::get('categorization::rules.inactive_title') }}">{{ Lang::get('categorization::rules.inactive_badge') }}</span>
+                            @endif
                             @if (count($rule->conditions) >= 2)
                                 <span class="chip">{{ $rule->combinator === RuleCombinator::Any->value ? 'ANY' : 'ALL' }}</span>
                             @endif
