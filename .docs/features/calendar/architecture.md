@@ -115,7 +115,13 @@ upcoming payments.
 Each balance-included account's forecast is fetched exactly once (not
 re-fetched per grid day) and summed per `(date, currency)` bucket, then each
 currency bucket is FX-converted to the user's base reporting currency before
-summing across accounts — minor units are never added across currencies.
+summing across accounts — minor units are never added across currencies. The
+conversion goes through `CrossCurrencyTotal`, so a currency the rate table
+cannot reach is left out of the day's figure rather than added at one to one,
+and every currency the month touches — forecast points, today's anchor and the
+past-day overlay alike — is priced once for the whole render. The service
+behind a conversion reads the entire `exchange_rates` table on every call, and
+a 365-day horizon asked it for the same pair once per day.
 Internal-transfer entries appear on the grid but net to zero in the combined
 balance automatically, because each account's own forecast already includes
 both legs of a self-transfer.

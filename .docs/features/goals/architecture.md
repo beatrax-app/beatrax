@@ -42,7 +42,12 @@ which belong to a single goal:
   `target_currency`. A goal nothing is attributed to reports 0 contributed.
 
 Both sources are batch-loaded once per render — never a per-goal follow-up
-query.
+query, and both convert through `CrossCurrencyTotal`: the level and the rate
+share one rate lookup per (source currency, `target_currency`) pair for the
+whole list rather than one per attribution, and a currency the rate table
+cannot reach is left out of the figure rather than added at one to one. A goal
+funded only in a currency with no rate therefore reads 0 contributed and is
+never marked reached on minor units that are not its own.
 
 There is deliberately no third source. Goals used to sum every credit on a
 linked `goals.account_id`, which belonged to no goal in particular: two goals
