@@ -6,6 +6,7 @@ namespace Modules\Community\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Dto\SuggestMappingDto;
+use Modules\Core\Public\Contracts\Clock;
 
 // A suggestion leaves as a pull request, so the shared list cannot have it
 // until somebody merges it. The reader's own row is what remembers they made
@@ -15,14 +16,14 @@ final class ContributionLog
 {
     private const TABLE = 'community_merchant_mappings';
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private readonly DatabaseManager $db, private readonly Clock $clock) {}
 
     // Upsert on the (user_id, pattern) unique index the table already carries:
     // suggesting a better name for a description already suggested is one
     // contribution corrected, not two made.
     public function record(int $userId, string $contributor, SuggestMappingDto $dto): void
     {
-        $now = now()->toDateTimeString();
+        $now = $this->clock->now()->toDateTimeString();
 
         $this->db->connection()->table(self::TABLE)->updateOrInsert(
             ['user_id' => $userId, 'pattern' => $dto->pattern],
