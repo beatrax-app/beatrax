@@ -90,12 +90,16 @@ another module.
   `settled_currency` values actually present for the
   user+period+metric+filters, then re-runs the caller-supplied
   dimension query once per discovered currency. `'base'` mode converts
-  each currency's rows via `ExchangeRateService::convertToBase()` and
-  merges same-group rows across currencies into one base-currency
-  total; a row whose currency has no available rate is excluded from
-  the total and counted (`hasExcludedAccounts`/`accountsWithoutRate`) —
-  never a silent 1:1 fallback, mirroring `NetWorthSeriesQuery`'s own
-  never-1:1 guard. `'original'` mode never converts: a group present in
+  each currency's rows via `CrossCurrencyTotal` and merges same-group
+  rows across currencies into one base-currency total; a row whose
+  currency has no available rate is excluded from the total and counted
+  (`hasExcludedAccounts`/`accountsWithoutRate`) — never a silent 1:1
+  fallback, mirroring `NetWorthSeriesQuery`'s own never-1:1 guard. The
+  rate for every discovered currency, fees included, is fetched once
+  per report: each dimension query returns rows already scoped to the
+  one currency it was asked for, so converting per row read the whole
+  `exchange_rates` table once per row for a rate that could not have
+  changed between them. `'original'` mode never converts: a group present in
   more than one currency yields one row *per* currency (never merged —
   summing raw minor units across different currencies would corrupt
   the total); the DTO-level `currency`/`totalMinor` are picked as the

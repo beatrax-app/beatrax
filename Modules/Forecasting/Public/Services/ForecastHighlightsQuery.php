@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Collection;
 use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Public\Dto\ForecastHighlightsDto;
-use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
@@ -23,7 +24,7 @@ final readonly class ForecastHighlightsQuery
         private DatabaseManager $db,
         private Clock $clock,
         private CardStatementQuery $cardStatementQuery,
-        private ExchangeRateService $fx,
+        private CrossCurrencyTotal $fx,
         private BaseCurrency $baseCurrency,
     ) {}
 
@@ -84,23 +85,17 @@ final readonly class ForecastHighlightsQuery
             ->get(['id', 'name', 'default_currency']);
 
         $baseCurrency = $this->baseCurrency->forUser($user);
+        $candidates = $this->candidatesByAccount($accountsBlock, $accounts, $baseCurrency);
+        $rates = $this->fx->ratesTo(
+            array_values(array_map(static fn (array $candidate): string => $candidate['currency'], $candidates)),
+            $baseCurrency,
+        );
+
         $lowest = null;
         $lowestInBase = null;
 
-        foreach ($accounts as $accountRow) {
-            /** @var stdClass $accountRow */
-            $accountId = is_numeric($accountRow->id) ? (int) $accountRow->id : 0;
-            $accountName = is_string($accountRow->name) ? $accountRow->name : '';
-            $accountCurrency = is_string($accountRow->default_currency) && $accountRow->default_currency !== ''
-                ? $accountRow->default_currency
-                : $baseCurrency;
-
-            $candidate = $this->lowestForAccount($accountsBlock, $accountId, $accountName, $accountCurrency);
-            if ($candidate === null) {
-                continue;
-            }
-
-            $inBase = $this->inBase($candidate['balanceMinor'], $candidate['currency'], $baseCurrency);
+        foreach ($candidates as $candidate) {
+            $inBase = $this->inBase($candidate['balanceMinor'], $candidate['currency'], $baseCurrency, $rates);
             if ($inBase === null) {
                 continue;
             }
@@ -114,23 +109,40 @@ final readonly class ForecastHighlightsQuery
         return $lowest;
     }
 
-    // Null for a currency the rate table cannot reach, which drops the account
-    // out of the race rather than letting its raw minor units win it — the
-    // same rule the net-worth roll-up applies to a line it has no rate for.
-    private function inBase(int $minor, string $currency, string $baseCurrency): ?int
+    /**
+     * @param  array<int|string, mixed>  $accountsBlock
+     * @param  Collection<int, stdClass>  $accounts
+     * @return list<array{balanceMinor: int, currency: string, date: string, accountId: int, accountName: string}>
+     */
+    private function candidatesByAccount(array $accountsBlock, Collection $accounts, string $baseCurrency): array
     {
-        if ($currency === $baseCurrency) {
-            return $minor;
+        $candidates = [];
+        foreach ($accounts as $accountRow) {
+            $accountId = is_numeric($accountRow->id) ? (int) $accountRow->id : 0;
+            $accountName = is_string($accountRow->name) ? $accountRow->name : '';
+            $accountCurrency = is_string($accountRow->default_currency) && $accountRow->default_currency !== ''
+                ? $accountRow->default_currency
+                : $baseCurrency;
+
+            $candidate = $this->lowestForAccount($accountsBlock, $accountId, $accountName, $accountCurrency);
+            if ($candidate !== null) {
+                $candidates[] = $candidate;
+            }
         }
 
+        return $candidates;
+    }
+
+    // Null for a currency the rate table cannot reach, which drops the account
+    // out of the race rather than letting its raw minor units win it.
+    /**
+     * @param  array<string, string>  $rates
+     */
+    private function inBase(int $minor, string $currency, string $baseCurrency, array $rates): ?int
+    {
         $money = Money::tryOfMinor($minor, $currency);
-        if ($money === null) {
-            return null;
-        }
 
-        $converted = $this->fx->convertToBase($money, $baseCurrency)->converted;
-
-        return $converted->currency() === $baseCurrency ? $converted->toMinor() : null;
+        return $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates)?->toMinor();
     }
 
     /**

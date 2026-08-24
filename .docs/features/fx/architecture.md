@@ -124,7 +124,32 @@ at is the rate any amount converts at. Callers holding many buckets call
 `ratesTo()` once and then `withRates()` per bucket group; callers with a
 single group call `of()`, which does both.
 
-## Wiring
+`convert()` is the same rule for one amount rather than a bucket map:
+a `Money` in, the amount in the target currency or `null` out. It is
+what a surface that *ranks* across currencies uses — the costliest
+subscription, the biggest drift, the lowest projected balance — where
+the figure is a comparison key rather than a total. `null` drops the
+candidate out of the race, which is the ranking equivalent of leaving a
+bucket out of a sum: a JPY minor unit is not a euro cent, and on raw
+minor units the cheaper subscription won.
+
+### What deliberately does not go through it
+
+`NetWorthQuery` converts per balance line and stays on
+`ExchangeRateService` on purpose. It needs the whole `ConversionResult`
+per line — the rate, its source, its as-of date and its staleness are
+rendered beside the line and rolled into the DTO's `ratesSource`,
+`ratesAsOf` and `hasStaleRates` — and `ConvertedTotal` carries none of
+them. It also has to keep a rate-less line **visible** in the breakdown,
+listed at its native amount with a null base equivalent, which is the
+opposite of leaving a bucket out; and its `balancesWithoutRate` counts
+*lines*, where `ConvertedTotal::unconverted` counts distinct currency
+codes. Routing it through the seam would quietly change all three. Its
+cost is one rate read per non-base line, bounded by the account count.
+
+`CurrencyModeApplier`'s `'original'` mode converts nothing at all — it
+is the mode that exists to leave every figure in the currency it was
+settled in — so only its `'base'` branch meets the seam.
 
 `FXServiceProvider::register()` tags and registers the three rate
 providers as singletons, binds `RateProviderRegistry` sorted by

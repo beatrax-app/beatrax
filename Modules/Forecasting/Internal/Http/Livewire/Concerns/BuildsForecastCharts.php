@@ -9,9 +9,8 @@ use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
-use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\ValueObjects\Money;
-use Modules\Ledger\Public\ValueObjects\RateTable;
 use stdClass;
 
 trait BuildsForecastCharts
@@ -32,7 +31,7 @@ trait BuildsForecastCharts
         ForecastQuery $forecastQuery,
         DatabaseManager $db,
         User $user,
-        ExchangeRateService $fx,
+        CrossCurrencyTotal $fx,
         string $baseCurrency,
     ): array {
         /** @var array<string, array<string, int>> $byDateCurrency */
@@ -46,11 +45,14 @@ trait BuildsForecastCharts
         }
 
         ksort($byDateCurrency, SORT_STRING);
-        $rates = $this->ratesToBase($this->currenciesIn($byDateCurrency), $fx, $baseCurrency);
+        // A projection is denominated in the account's own code, and the
+        // aggregate is one line in the reader's. Adding the two at face value
+        // read EUR2,000.00 for EUR1,000.00 next to USD1,000.00.
+        $rates = $fx->ratesTo($this->currenciesIn($byDateCurrency), $baseCurrency);
 
         $aggregatePoints = [];
         foreach ($byDateCurrency as $date => $byCurrency) {
-            $aggregatePoints[] = ['date' => $date, 'point_minor' => self::totalInBase($byCurrency, $rates, $baseCurrency)];
+            $aggregatePoints[] = ['date' => $date, 'point_minor' => $fx->withRates($byCurrency, $baseCurrency, $rates)->minor];
         }
 
         $bufferRows = $db->connection()->table('accounts')
@@ -69,68 +71,9 @@ trait BuildsForecastCharts
             $bufferByCurrency[$currency] = ($bufferByCurrency[$currency] ?? 0) + (int) $row->forecast_min_buffer_minor;
         }
 
-        $bufferRates = $this->ratesToBase(array_keys($bufferByCurrency), $fx, $baseCurrency);
+        $bufferRates = $fx->ratesTo(array_keys($bufferByCurrency), $baseCurrency);
 
-        return [$aggregatePoints, self::totalInBase($bufferByCurrency, $bufferRates, $baseCurrency)];
-    }
-
-    // A projection is denominated in the account's own code, and the aggregate
-    // is one line in the reader's. Adding the two at face value read
-    // EUR2,000.00 for EUR1,000.00 next to USD1,000.00 and stamped the euro
-    // sign on it.
-    /**
-     * @param  array<string, int>  $minorByCurrency
-     * @param  array<string, string>  $rates  currency code => rate to $baseCurrency
-     */
-    private static function totalInBase(array $minorByCurrency, array $rates, string $baseCurrency): int
-    {
-        $totalMinor = 0;
-        foreach ($minorByCurrency as $currency => $minor) {
-            if ($currency === $baseCurrency) {
-                $totalMinor += $minor;
-
-                continue;
-            }
-
-            // A currency the rate table cannot reach is left out, never added
-            // at one to one, which is the same rule the net-worth roll-up
-            // applies to a line it has no rate for.
-            $money = Money::tryOfMinor($minor, $currency);
-            $rate = $rates[$currency] ?? null;
-            if ($money === null || $rate === null) {
-                continue;
-            }
-
-            $converted = RateTable::direct()->withRate($currency, $baseCurrency, $rate)->convert($money, $baseCurrency);
-            $totalMinor += $converted?->toMinor() ?? 0;
-        }
-
-        return $totalMinor;
-    }
-
-    // One lookup per currency rather than one per day: the service reads the
-    // whole rate table on every call, and a 365-day horizon asks for the same
-    // pair 366 times. The rate a zero amount converts at is the rate any
-    // amount converts at.
-    /**
-     * @param  list<string>  $currencies
-     * @return array<string, string>
-     */
-    private function ratesToBase(array $currencies, ExchangeRateService $fx, string $baseCurrency): array
-    {
-        $rates = [];
-        foreach ($currencies as $currency) {
-            if ($currency === $baseCurrency) {
-                continue;
-            }
-            $probe = Money::tryOfMinor(0, $currency);
-            $rate = $probe === null ? null : $fx->convertToBase($probe, $baseCurrency)->rate;
-            if ($rate !== null) {
-                $rates[$currency] = $rate;
-            }
-        }
-
-        return $rates;
+        return [$aggregatePoints, $fx->withRates($bufferByCurrency, $baseCurrency, $bufferRates)->minor];
     }
 
     /**

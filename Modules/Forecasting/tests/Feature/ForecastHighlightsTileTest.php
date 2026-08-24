@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Chains\Models\CardStatement;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
@@ -443,6 +445,32 @@ it('ranks the lowest projected balance on one currency, not on the raw minor uni
     expect($dto->lowestProjectedAccountId)->toBe($this->asn->id);
     expect($dto->lowestProjectedBalanceMinor)->toBe(-100000);
     expect($dto->lowestProjectedBalanceCurrency)->toBe('EUR');
+});
+
+// The race runs in the reader's currency, and a conversion reads the whole
+// exchange_rates table: pricing each account as its turn came round asked for
+// the same pair once per account holding it.
+it('prices each currency in the race once, not once per account', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $byAccount = [$this->asn->id => ['currency' => 'EUR', 'lowest' => -1000]];
+    for ($i = 0; $i < 8; $i++) {
+        $dollar = fhtAsnAccount($this->user, 'revolut-'.$i, currency: 'USD');
+        $byAccount[$dollar->id] = ['currency' => 'USD', 'lowest' => -2000 - $i];
+    }
+    fhtRunDipping($db, $this->user, $byAccount);
+
+    $reads = 0;
+    DB::listen(function (QueryExecuted $query) use (&$reads): void {
+        if (str_contains($query->sql, 'exchange_rates')) {
+            $reads++;
+        }
+    });
+
+    app(ForecastHighlightsQuery::class)->forUser($this->user);
+
+    expect($reads)->toBe(1);
 });
 
 it('prints the lowest projected balance under the account own currency sign', function (): void {

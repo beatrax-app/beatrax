@@ -23,7 +23,7 @@ use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
-use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -213,7 +213,7 @@ final class ForecastPage extends Component
         ViewFactory $views,
         ForecastDtoMapper $mapper,
         BaseCurrency $baseCurrency,
-        ExchangeRateService $fx,
+        CrossCurrencyTotal $fx,
     ): View {
         $user = $currentUser->user();
 
@@ -438,7 +438,7 @@ final class ForecastPage extends Component
         DatabaseManager $db,
         User $user,
         string $baseCurrency,
-        ExchangeRateService $fx,
+        CrossCurrencyTotal $fx,
     ): array {
         if (! $isAllAccountsView || $isEmpty) {
             return [
