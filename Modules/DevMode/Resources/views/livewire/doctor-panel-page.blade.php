@@ -22,7 +22,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name=&quot;csrf-token&quot;]').getAttribute('content')
                     },
-                    body: JSON.stringify({ command: 'Beatrax:doctor', args: {} })
+                    body: JSON.stringify({ command: '{{ $commandName }}', args: {} })
                 }).then(r => r.json()).then(d => {
                     if (d.run_id) {
                         const es = new EventSource('/dev/artisan/stream/' + d.run_id);
@@ -45,7 +45,7 @@
             <p class="text-sm text-[var(--color-text-muted)]">
                 {{ Lang::get('dev::doctor.empty_prefix') }}
                 <span class="font-semibold">{{ Lang::get('dev::doctor.empty_rerun') }}</span>
-                {{ Lang::get('dev::doctor.empty_suffix') }} <code class="font-mono">Beatrax:doctor</code>.
+                {{ Lang::get('dev::doctor.empty_suffix') }} <code class="font-mono">{{ $commandName }}</code>.
             </p>
         </div>
     @else
