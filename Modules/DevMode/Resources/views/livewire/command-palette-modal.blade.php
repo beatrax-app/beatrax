@@ -189,13 +189,21 @@
                                                             x-text="hit.amount"
                                                         ></span>
                                                     </span>
-                                                    {{-- Line 2: matched snippet --}}
-                                                    <template x-if="hit.snippet">
+                                                    {{-- Line 2: date, then the matched snippet. A bill charged
+                                                         every month repeats its counterparty, its amount and its
+                                                         reference, so without the day two rows read alike. --}}
+                                                    <span class="flex items-baseline gap-2 min-w-0">
                                                         <span
-                                                            class="block text-xs text-slate-500 dark:text-slate-400 truncate"
-                                                            x-html="hit.snippet"
+                                                            class="text-xs text-slate-500 dark:text-slate-400 shrink-0 tabular-nums"
+                                                            x-text="hit.date"
                                                         ></span>
-                                                    </template>
+                                                        <template x-if="hit.snippet">
+                                                            <span
+                                                                class="block min-w-0 flex-1 text-xs text-slate-500 dark:text-slate-400 truncate"
+                                                                x-html="hit.snippet"
+                                                            ></span>
+                                                        </template>
+                                                    </span>
                                                 </span>
                                                 <span class="palette-source--txn text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 shrink-0">{{ Lang::get('dev::palette.source_txn') }}</span>
                                             </button>

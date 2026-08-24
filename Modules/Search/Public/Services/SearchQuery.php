@@ -154,7 +154,7 @@ final class SearchQuery
     }
 
     /**
-     * @return list<array{id: int, counterpartyName: ?string, amount: string, snippet: ?string, url: string}>
+     * @return list<array{id: int, counterpartyName: ?string, date: string, amount: string, snippet: ?string, url: string}>
      */
     public function palette(User $user, string $q): array
     {
@@ -165,6 +165,10 @@ final class SearchQuery
             $hits[] = [
                 'id' => $row->id,
                 'counterpartyName' => $row->counterpartyName,
+                // A bill charged every month repeats its counterparty, its
+                // amount and its reference, so the day is the only thing on
+                // the row that tells two of them apart.
+                'date' => $row->bookedAt,
                 'amount' => $this->rowMapper->formatMinorAmount($row->amountMinor, $row->amountCurrency),
                 'snippet' => $row->snippet,
                 'url' => '/transactions/'.$row->id,
