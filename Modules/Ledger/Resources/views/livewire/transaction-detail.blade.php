@@ -27,7 +27,11 @@
         :title="Lang::get('ledger::detail.heading')"
     />
 
-    <main class="min-h-screen bg-white dark:bg-slate-950">
+    {{-- A div, not a <main>: layouts.app already opened one, and a main
+         inside a main is a nesting the HTML spec does not allow. The gutter
+         stays this page's own -- page-shell's px-8 at phone width breaks
+         the "Transaction" heading across two lines mid-word. --}}
+    <div class="min-h-screen bg-white dark:bg-slate-950">
         <div class="mx-auto max-w-3xl px-4 py-12 space-y-6 sm:px-8" data-testid="transaction-detail">
             <header class="space-y-1">
                 <div class="flex items-center gap-3">
@@ -683,5 +687,5 @@
                 @livewire('chains.chain-drawer')
             @endif
         </div>
-    </main>
+    </div>
 </div>

@@ -153,7 +153,8 @@
                         </template>
                     </aside>
 
-                    <main class="flex-1 p-2 overflow-y-auto">
+                    {{-- A pane of the dialog, not the page: layouts.app owns the main landmark. --}}
+                    <div class="flex-1 p-2 overflow-y-auto">
                         {{-- Server-backed sections — only rendered when Search module is wired and query >= 2 chars --}}
                         @if($searchAvailable)
                         <template x-if="query.length >= 2">
@@ -329,7 +330,7 @@
                         <template x-if="results.length === 0 && serverTransactionHits.length === 0 && serverEntityHits.length === 0">
                             <div class="p-4 text-center text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('dev::palette.no_results') }}</div>
                         </template>
-                    </main>
+                    </div>
                 </div>
 
                 <div class="hidden-touch max-lg:hidden flex items-center gap-3 px-4 py-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
