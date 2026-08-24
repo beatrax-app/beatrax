@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Fjernet enhed',
     'dismiss_peer' => 'Skjul denne enhed',
     'dismiss_stale' => 'Ryd enheder, der ikke længere er parret',
-    'no_devices' => 'Ingen enheder synkroniseret endnu',
+    'not_synced_yet' => 'Ikke synkroniseret endnu',
     'error' => 'Synkroniseringsfejl på en eller flere enheder',
     'syncing' => 'Synkroniserer…',
     'offline' => 'Enheder offline',

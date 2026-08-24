@@ -20,10 +20,11 @@
 
     {{-- ===== Overall status line ===== --}}
     @if ($overallStatus === 'unknown')
-        {{-- No sync sessions yet — calm empty state --}}
+        {{-- No sync_sessions rows yet. Not the same as having no device: the
+             list below this line may well name two paired ones. --}}
         <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400" data-testid="sync-status-overall">
             <span class="inline-block h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" aria-hidden="true"></span>
-            {{ Lang::get('sync::status.no_devices') }}
+            {{ Lang::get('sync::status.not_synced_yet') }}
         </div>
 
     @elseif ($overallStatus === 'error')

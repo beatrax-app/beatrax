@@ -146,7 +146,7 @@ it('mounts cleanly with no progress cursor and no sessions (fresh device)', func
 
     Livewire::test(SyncScreen::class)
         ->assertStatus(200)
-        ->assertSee('No devices synced yet')
+        ->assertSee('Not synced yet')
         ->assertSet('initialSyncInProgress', false)
         ->assertSet('progressApplied', 0)
         ->assertSet('progressExpected', null);

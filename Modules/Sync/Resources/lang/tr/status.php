@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Kaldırılmış cihaz',
     'dismiss_peer' => 'Bu cihazı yoksay',
     'dismiss_stale' => 'Artık eşleştirilmemiş cihazları temizle',
-    'no_devices' => 'Henüz senkronize edilmiş cihaz yok',
+    'not_synced_yet' => 'Henüz eşitlenmedi',
     'error' => 'Bir veya daha fazla cihazda senkronizasyon hatası',
     'syncing' => 'Senkronize ediliyor…',
     'offline' => 'Cihazlar çevrimdışı',
