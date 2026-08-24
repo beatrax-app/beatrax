@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Označit platby, které o více než :percent% převyšují tvé obvyklé útraty u daného obchodníka nebo kategorie.',
 
     'min_amount_label' => 'Minimální částka platby',
-    'min_amount_help' => 'Ignorovat anomálie u plateb pod touto částkou. Ukládá se v centech (€) — 1000 znamená 10,00 €.',
+    'min_amount_help' => 'Ignorovat anomálie u plateb pod touto částkou. Ukládá se v centech (:symbol) — 1000 znamená :example.',
 
     'save' => 'Uložit nastavení anomálií',
     'saved' => 'Uloženo.',

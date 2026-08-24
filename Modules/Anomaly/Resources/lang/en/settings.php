@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Flag charges more than :percent% above your typical spend for that merchant or category.',
 
     'min_amount_label' => 'Minimum charge amount',
-    'min_amount_help' => 'Ignore anomalies on charges under this amount. Stored in cents (€) — 1000 means €10.00.',
+    'min_amount_help' => 'Ignore anomalies on charges under this amount. Stored in cents (:symbol) — 1000 means :example.',
 
     'save' => 'Save anomaly settings',
     'saved' => 'Saved.',

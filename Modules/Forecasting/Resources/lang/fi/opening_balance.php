@@ -13,7 +13,7 @@ return [
     'as_of_label' => 'Alkusaldon päivämäärä',
     'as_of_help' => 'Päivä, jolta yllä oleva luku pitää paikkansa.',
 
-    'divergence' => 'Tämä poikkeaa yli 500 € siitä saldosta, jonka Beatrax laskee tuoduista tapahtumistasi. Oletko varma?',
+    'divergence' => 'Tämä poikkeaa yli :threshold siitä saldosta, jonka Beatrax laskee tuoduista tapahtumistasi. Oletko varma?',
     'use_beatrax' => 'Käytä Beatraxin lukua',
     'use_mine' => 'Käytä omaa lukuani',
 

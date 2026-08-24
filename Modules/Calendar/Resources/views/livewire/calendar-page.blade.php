@@ -27,7 +27,7 @@
     @php
         // Count only days OF the display month — the Mon–Sun grid
         // carries lead-in/lead-out cells from adjacent months, and a June
-        // view must not headline "dips below €0 on Jul 1".
+        // view must not headline a July dip.
         $riskDays = array_filter($days, fn ($d) => $d->isRisk && $d->date->month === $displayMonth);
         $riskDayList = array_values($riskDays);
         $riskCount = count($riskDayList);
@@ -41,7 +41,7 @@
                 </span>
             @else
                 <span style="color: var(--color-rose);">
-                    {{ Lang::choice('calendar::messages.summary.risk', $riskCount, ['count' => $riskCount, 'date' => $riskDayList[0]->date->translatedFormat('j M')]) }}
+                    {{ Lang::choice('calendar::messages.summary.risk', $riskCount, ['count' => $riskCount, 'date' => $riskDayList[0]->date->translatedFormat('j M'), 'zero' => Money::ofMinor(0, $baseCurrency)->formatWholeUnits()]) }}
                 </span>
             @endif
         </div>

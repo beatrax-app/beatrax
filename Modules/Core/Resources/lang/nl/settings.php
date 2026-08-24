@@ -116,7 +116,7 @@ return [
         'window_label' => 'Detectievenster (maanden)',
         'window_help' => 'Hoeveel maanden geschiedenis worden gescand bij het clusteren van transacties tot terugkerende patronen.',
         'income_label' => 'Minimuminkomen (centen)',
-        'income_help' => 'Inkomsten onder deze drempel worden niet automatisch geclusterd. Opgeslagen in centen — 200000 betekent € 2.000,00. Zet op 0 om de drempel uit te schakelen.',
+        'income_help' => 'Inkomsten onder deze drempel worden niet automatisch geclusterd. Opgeslagen in centen — 200000 betekent :example. Zet op 0 om de drempel uit te schakelen.',
     ],
 
     'drift' => [
@@ -193,7 +193,7 @@ return [
         'currency_required' => 'Kies een valuta.',
         'window_months' => 'Kies tussen 2 en 60 maanden.',
         'threshold' => 'Kies een drempel van 1%, 2%, 5%, 10%, 25% of 50%.',
-        'amount' => 'Voer een bedrag in vanaf € 0.',
+        'amount' => 'Voer een bedrag in vanaf :zero.',
         'period_day' => 'Kies een dag van 1 tot 28.',
         'currency_view' => 'Kies een van de beschikbare opties.',
     ],

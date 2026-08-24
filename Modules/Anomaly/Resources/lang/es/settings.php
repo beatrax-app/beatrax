@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Marca los cargos que superen en más de un :percent% tu gasto habitual en ese comercio o categoría.',
 
     'min_amount_label' => 'Importe mínimo del cargo',
-    'min_amount_help' => 'Ignora las anomalías en cargos por debajo de este importe. Se guarda en céntimos (€) — 1000 significa 10,00 €.',
+    'min_amount_help' => 'Ignora las anomalías en cargos por debajo de este importe. Se guarda en céntimos (:symbol) — 1000 significa :example.',
 
     'save' => 'Guardar ajustes de anomalías',
     'saved' => 'Guardado.',

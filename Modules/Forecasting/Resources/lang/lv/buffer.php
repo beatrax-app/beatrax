@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Minimālā rezerve kontam :name',
     'save' => 'Saglabāt rezervi',
     'cancel' => 'Atcelt',
-    'clear' => 'Notīrīt rezervi (izmantot 0 € slieksni)',
+    'clear' => 'Notīrīt rezervi (izmantot :zero slieksni)',
 
     'toast' => [
         'updated' => 'Rezerve atjaunināta.',

@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Aktualizowanie prognozy…',
-        'risk' => 'Saldo spada poniżej €0 w dniu :date.|Saldo spada poniżej €0 w :count dniach — pierwszy: :date.|Saldo spada poniżej €0 w :count dniach — pierwszy: :date.',
+        'risk' => 'Saldo spada poniżej :zero w dniu :date.|Saldo spada poniżej :zero w :count dniach — pierwszy: :date.|Saldo spada poniżej :zero w :count dniach — pierwszy: :date.',
     ],
 
     'toolbar' => [

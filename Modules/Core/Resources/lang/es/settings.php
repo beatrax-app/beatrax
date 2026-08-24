@@ -117,7 +117,7 @@ return [
         'window_label' => 'Ventana de detección (meses)',
         'window_help' => 'Cuántos meses de historial se analizan al agrupar transacciones en patrones recurrentes.',
         'income_label' => 'Ingreso mínimo (céntimos)',
-        'income_help' => 'Los ingresos por debajo de este umbral no se agrupan automáticamente. Se guarda en céntimos — 200000 significa 2.000,00 €. Ponlo a 0 para desactivar el umbral.',
+        'income_help' => 'Los ingresos por debajo de este umbral no se agrupan automáticamente. Se guarda en céntimos — 200000 significa :example. Ponlo a 0 para desactivar el umbral.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Elige una moneda.',
         'window_months' => 'Elige entre 2 y 60 meses.',
         'threshold' => 'Elige un umbral entre 1%, 2%, 5%, 10%, 25% o 50%.',
-        'amount' => 'Introduce un importe a partir de 0 €.',
+        'amount' => 'Introduce un importe a partir de :zero.',
         'period_day' => 'Elige un día del 1 al 28.',
         'currency_view' => 'Elige una de las opciones disponibles.',
     ],

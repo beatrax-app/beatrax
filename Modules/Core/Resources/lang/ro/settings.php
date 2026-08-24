@@ -117,7 +117,7 @@ return [
         'window_label' => 'Fereastră de detectare (luni)',
         'window_help' => 'Câte luni de istoric să fie scanate la gruparea tranzacțiilor în tipare recurente.',
         'income_label' => 'Venit minim (cenți)',
-        'income_help' => 'Veniturile sub acest prag nu sunt grupate automat. Stocat în cenți — 200000 înseamnă €2,000.00. Setează 0 ca să dezactivezi pragul.',
+        'income_help' => 'Veniturile sub acest prag nu sunt grupate automat. Stocat în cenți — 200000 înseamnă :example. Setează 0 ca să dezactivezi pragul.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Alege o monedă.',
         'window_months' => 'Alege între 2 și 60 de luni.',
         'threshold' => 'Alege un prag dintre 1%, 2%, 5%, 10%, 25% sau 50%.',
-        'amount' => 'Introdu o sumă de la €0 în sus.',
+        'amount' => 'Introdu o sumă de la :zero în sus.',
         'period_day' => 'Alege o zi de la 1 la 28.',
         'currency_view' => 'Alege una dintre opțiunile disponibile.',
     ],

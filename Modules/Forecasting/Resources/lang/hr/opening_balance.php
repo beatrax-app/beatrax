@@ -13,7 +13,7 @@ return [
     'as_of_label' => 'Početno stanje na dan',
     'as_of_help' => 'Datum na koji gornji iznos vrijedi.',
 
-    'divergence' => 'Ovo odstupa više od €500 od stanja koje Beatrax izračuna iz tvojih uvezenih transakcija. Jesi li siguran?',
+    'divergence' => 'Ovo odstupa više od :threshold od stanja koje Beatrax izračuna iz tvojih uvezenih transakcija. Jesi li siguran?',
     'use_beatrax' => 'Koristi Beatraxov iznos',
     'use_mine' => 'Koristi moj iznos',
 

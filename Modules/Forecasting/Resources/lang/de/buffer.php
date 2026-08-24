@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Mindestpuffer für :name',
     'save' => 'Puffer speichern',
     'cancel' => 'Abbrechen',
-    'clear' => 'Puffer löschen (€0 als Untergrenze verwenden)',
+    'clear' => 'Puffer löschen (:zero als Untergrenze verwenden)',
 
     'toast' => [
         'updated' => 'Puffer aktualisiert.',

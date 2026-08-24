@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognosen oppdateres…',
-        'risk' => 'Saldoen faller under €0 den :date.|Saldoen faller under €0 på :count dager — første: :date.',
+        'risk' => 'Saldoen faller under :zero den :date.|Saldoen faller under :zero på :count dager — første: :date.',
     ],
 
     'toolbar' => [

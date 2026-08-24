@@ -26,6 +26,7 @@ use Modules\Core\Public\Support\ProjectLinks;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 final class SettingsPage extends Component
 {
@@ -380,7 +381,7 @@ final class SettingsPage extends Component
         // is reflected in the validation copy.
         $periodDay = Lang::get('core::settings.errors.period_day');
         $windowMonths = Lang::get('core::settings.errors.window_months');
-        $amount = Lang::get('core::settings.errors.amount');
+        $amount = Lang::get('core::settings.errors.amount', ['zero' => Money::ofMinor(0, $this->baseCurrency)->formatWholeUnits()]);
         $threshold = Lang::get('core::settings.errors.threshold');
         $currencyRequired = Lang::get('core::settings.errors.currency_required');
         $currencyView = Lang::get('core::settings.errors.currency_view');

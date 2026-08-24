@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognose wird aktualisiert…',
-        'risk' => 'Saldo fällt am :date unter €0.|Saldo fällt an :count Tagen unter €0 — erster: :date.',
+        'risk' => 'Saldo fällt am :date unter :zero.|Saldo fällt an :count Tagen unter :zero — erster: :date.',
     ],
 
     'toolbar' => [

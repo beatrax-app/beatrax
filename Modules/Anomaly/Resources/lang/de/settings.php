@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Markiere Abbuchungen, die mehr als :percent% über deinen üblichen Ausgaben für diesen Händler oder diese Kategorie liegen.',
 
     'min_amount_label' => 'Mindestbetrag der Abbuchung',
-    'min_amount_help' => 'Ignoriere Auffälligkeiten bei Abbuchungen unter diesem Betrag. Gespeichert in Cent (€) — 1000 bedeutet €10.00.',
+    'min_amount_help' => 'Ignoriere Auffälligkeiten bei Abbuchungen unter diesem Betrag. Gespeichert in Cent (:symbol) — 1000 bedeutet :example.',
 
     'save' => 'Anomalie-Einstellungen speichern',
     'saved' => 'Gespeichert.',

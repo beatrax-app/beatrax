@@ -47,7 +47,7 @@
             <x-core::form-field
                 name="amount"
                 field-id="cb-amount"
-                :label="Lang::get('cashbook::cash-book.amount')"
+                :label="Lang::get('cashbook::cash-book.amount', ['symbol' => Money::symbolFor($entryCurrency)])"
                 inputmode="decimal"
                 wire:model="amount"
                 :placeholder="Lang::get('core::components.amount_placeholder')"

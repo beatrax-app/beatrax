@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Signale les débits supérieurs de plus de :percent% à tes dépenses habituelles pour ce commerçant ou cette catégorie.',
 
     'min_amount_label' => 'Montant minimum du débit',
-    'min_amount_help' => 'Ignore les anomalies sur les débits inférieurs à ce montant. Stocké en centimes (€) — 1000 signifie 10,00 €.',
+    'min_amount_help' => 'Ignore les anomalies sur les débits inférieurs à ce montant. Stocké en centimes (:symbol) — 1000 signifie :example.',
 
     'save' => 'Enregistrer les paramètres d\'anomalie',
     'saved' => 'Enregistré.',

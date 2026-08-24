@@ -13,7 +13,7 @@ return [
     'as_of_label' => 'Počiatočný zostatok k dátumu',
     'as_of_help' => 'Dátum, ku ktorému uvedená suma platí.',
 
-    'divergence' => 'Toto je o viac než 500 € vedľa zostatku, ktorý Beatrax vypočíta z tvojich importovaných transakcií. Naozaj?',
+    'divergence' => 'Toto je o viac než :threshold vedľa zostatku, ktorý Beatrax vypočíta z tvojich importovaných transakcií. Naozaj?',
     'use_beatrax' => 'Použiť číslo z Beatraxu',
     'use_mine' => 'Použiť moje číslo',
 

@@ -10,7 +10,7 @@ return [
     'account' => 'Sąskaita',
     'choose_account' => 'Pasirink sąskaitą…',
     'statement_date' => 'Išrašo data',
-    'statement_balance' => 'Išrašo likutis (€)',
+    'statement_balance' => 'Išrašo likutis (:symbol)',
     'balance_help' => 'Užpildoma iš naujausio importuoto išrašo, kai jis yra — neigiama reikšmė reiškia skolą, bet kuriuo atveju galima redaguoti.',
 
     'cleared_balance' => 'Įvykdytų operacijų likutis',

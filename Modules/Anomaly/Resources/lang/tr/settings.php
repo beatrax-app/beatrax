@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'O işyeri veya kategori için tipik harcamanın %:percent üzerine çıkan harcamaları işaretler.',
 
     'min_amount_label' => 'Asgari harcama tutarı',
-    'min_amount_help' => 'Bu tutarın altındaki harcamalarda anormallikleri yok sayar. Sent (€) cinsinden saklanır — 1000, €10.00 anlamına gelir.',
+    'min_amount_help' => 'Bu tutarın altındaki harcamalarda anormallikleri yok sayar. Sent (:symbol) cinsinden saklanır — 1000, :example anlamına gelir.',
 
     'save' => 'Anormallik ayarlarını kaydet',
     'saved' => 'Kaydedildi.',

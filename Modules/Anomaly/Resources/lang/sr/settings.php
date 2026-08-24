@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Označi zaduženja veća od :percent% iznad tvoje uobičajene potrošnje kod tog trgovca ili u toj kategoriji.',
 
     'min_amount_label' => 'Najmanji iznos zaduženja',
-    'min_amount_help' => 'Zanemari anomalije na zaduženjima manjim od ovog iznosa. Čuva se u centima (€) — 1000 znači 10,00 €.',
+    'min_amount_help' => 'Zanemari anomalije na zaduženjima manjim od ovog iznosa. Čuva se u centima (:symbol) — 1000 znači :example.',
 
     'save' => 'Sačuvaj podešavanja anomalija',
     'saved' => 'Sačuvano.',

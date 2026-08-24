@@ -10,7 +10,7 @@ return [
     'account' => 'Konts',
     'choose_account' => 'Izvēlieties kontu…',
     'statement_date' => 'Konta izraksta datums',
-    'statement_balance' => 'Konta izraksta atlikums (€)',
+    'statement_balance' => 'Konta izraksta atlikums (:symbol)',
     'balance_help' => 'Aizpildīts no jūsu jaunākā importētā konta izraksta, ja tāds ir pieejams — negatīvs parādam, rediģējams abos gadījumos.',
 
     'cleared_balance' => 'Apstiprinātais atlikums',

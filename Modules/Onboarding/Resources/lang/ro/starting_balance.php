@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Contul nu este setat. Reîncarcă asistentul.',
         'invalid_amount' => 'Introdu o sumă validă.',
-        'amount_range' => 'Introdu o sumă între -€10M și €10M.',
+        'amount_range' => 'Introdu o sumă între :min și :max.',
         'pick_date' => 'Alege o dată.',
         'pick_valid_date' => 'Alege o dată validă.',
         'future_date' => 'Data soldului inițial nu poate fi în viitor.',

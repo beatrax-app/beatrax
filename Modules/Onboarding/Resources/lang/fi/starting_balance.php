@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Tiliä ei ole asetettu. Lataa ohjattu toiminto uudelleen.',
         'invalid_amount' => 'Anna kelvollinen summa.',
-        'amount_range' => 'Anna summa väliltä -10 M€ ja 10 M€.',
+        'amount_range' => 'Anna summa väliltä :min ja :max.',
         'pick_date' => 'Valitse päivämäärä.',
         'pick_valid_date' => 'Valitse kelvollinen päivämäärä.',
         'future_date' => 'Alkusaldon päivämäärä ei voi olla tulevaisuudessa.',

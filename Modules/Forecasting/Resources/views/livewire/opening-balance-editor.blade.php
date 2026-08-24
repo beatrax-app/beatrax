@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Forecasting\Public\Actions\SetAccountOpeningBalance')
 @use('Modules\Ledger\Public\Enums\AccountKind')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 {{--
@@ -27,11 +28,11 @@
 --}}
 
 @php
-    // Money::SYMBOLS, not a pair of ternaries: this editor knew two of the four
+    // Money::symbolFor, not a pair of ternaries: this editor knew two of the four
     // codes format() writes, so a GBP account showed "GBP 12.34" here and
     // "£12.34" on the row beside it. Placement stays local — the glyph sits
     // before the input by form convention, which assemble() decides per locale.
-    $symbol = Money::SYMBOLS[$currency] ?? $currency;
+    $symbol = Money::symbolFor($currency);
     $helpText = match (true) {
         str_contains($accountKind, AccountKind::Paypal->value) => Lang::get('forecasting::opening_balance.help_paypal'),
         default => Lang::get('forecasting::opening_balance.help_default'),
@@ -78,7 +79,7 @@
              the one the hand-rolled copy was missing. --}}
         <x-core::alert tone="warning" aria-atomic="true" aria-live="polite" data-testid="opening-balance-divergence-banner">
             <p>
-                {{ Lang::get('forecasting::opening_balance.divergence') }}
+                {{ Lang::get('forecasting::opening_balance.divergence', ['threshold' => Money::ofMinor(SetAccountOpeningBalance::DIVERGENCE_WARNING_THRESHOLD_MINOR, $currency)->formatWholeUnits()]) }}
             </p>
             <div class="mt-2 flex flex-wrap gap-3">
                 <button

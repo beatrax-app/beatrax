@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Mise à jour de la prévision…',
-        'risk' => 'Le solde passe sous 0 € le :date.|Le solde passe sous 0 € sur :count jours — premier : :date.',
+        'risk' => 'Le solde passe sous :zero le :date.|Le solde passe sous :zero sur :count jours — premier : :date.',
     ],
 
     'toolbar' => [

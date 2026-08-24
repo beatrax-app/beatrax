@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Réserve minimale pour :name',
     'save' => 'Enregistrer la réserve',
     'cancel' => 'Annuler',
-    'clear' => 'Effacer la réserve (utiliser le seuil de 0 €)',
+    'clear' => 'Effacer la réserve (utiliser le seuil de :zero)',
 
     'toast' => [
         'updated' => 'Réserve mise à jour.',

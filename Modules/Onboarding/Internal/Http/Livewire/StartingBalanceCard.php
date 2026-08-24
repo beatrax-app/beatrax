@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 final class StartingBalanceCard extends Component
 {
@@ -150,7 +151,7 @@ final class StartingBalanceCard extends Component
 
         return match (true) {
             $minor === null => Lang::get('onboarding::starting_balance.errors.invalid_amount'),
-            $minor < self::MIN_BALANCE_MINOR || $minor > self::MAX_BALANCE_MINOR => Lang::get('onboarding::starting_balance.errors.amount_range'),
+            $minor < self::MIN_BALANCE_MINOR || $minor > self::MAX_BALANCE_MINOR => Lang::get('onboarding::starting_balance.errors.amount_range', ['min' => Money::ofMinor(self::MIN_BALANCE_MINOR, $this->currency)->formatWholeUnits(), 'max' => Money::ofMinor(self::MAX_BALANCE_MINOR, $this->currency)->formatWholeUnits()]),
             $date === null || $date === '' => Lang::get('onboarding::starting_balance.errors.pick_date'),
             $timestamp === false => Lang::get('onboarding::starting_balance.errors.pick_valid_date'),
             $timestamp > time() => Lang::get('onboarding::starting_balance.errors.future_date'),

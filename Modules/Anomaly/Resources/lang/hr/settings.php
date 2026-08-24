@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Označi terećenja veća od :percent% iznad tvoje uobičajene potrošnje kod tog trgovca ili u toj kategoriji.',
 
     'min_amount_label' => 'Najmanji iznos terećenja',
-    'min_amount_help' => 'Zanemari anomalije na terećenjima manjima od ovog iznosa. Pohranjuje se u centima (€) — 1000 znači 10,00 €.',
+    'min_amount_help' => 'Zanemari anomalije na terećenjima manjima od ovog iznosa. Pohranjuje se u centima (:symbol) — 1000 znači :example.',
 
     'save' => 'Spremi postavke anomalija',
     'saved' => 'Spremljeno.',

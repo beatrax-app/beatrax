@@ -13,7 +13,7 @@ return [
     'as_of_label' => 'Pradinis likutis datai',
     'as_of_help' => 'Data, kuriai pirmiau nurodytas skaičius yra teisingas.',
 
-    'divergence' => 'Tai daugiau nei 500 € skiriasi nuo likučio, kurį Beatrax apskaičiuoja iš tavo importuotų operacijų. Ar tikrai?',
+    'divergence' => 'Tai daugiau nei :threshold skiriasi nuo likučio, kurį Beatrax apskaičiuoja iš tavo importuotų operacijų. Ar tikrai?',
     'use_beatrax' => 'Naudoti Beatrax skaičių',
     'use_mine' => 'Naudoti mano skaičių',
 

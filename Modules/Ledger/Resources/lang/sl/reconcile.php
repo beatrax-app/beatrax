@@ -10,7 +10,7 @@ return [
     'account' => 'Račun',
     'choose_account' => 'Izberi račun…',
     'statement_date' => 'Datum izpiska',
-    'statement_balance' => 'Stanje z izpiska (€)',
+    'statement_balance' => 'Stanje z izpiska (:symbol)',
     'balance_help' => 'Vnaprej izpolnjeno iz tvojega zadnjega uvoženega izpiska, kadar je na voljo — negativno za dolgovani znesek, v obeh primerih uredljivo.',
 
     'cleared_balance' => 'Knjiženo stanje',

@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Compte non défini. Recharge l\'assistant.',
         'invalid_amount' => 'Saisis un montant valide.',
-        'amount_range' => 'Saisis un montant compris entre -10 M€ et 10 M€.',
+        'amount_range' => 'Saisis un montant compris entre :min et :max.',
         'pick_date' => 'Choisis une date.',
         'pick_valid_date' => 'Choisis une date valide.',
         'future_date' => 'La date du solde de départ ne peut pas être dans le futur.',

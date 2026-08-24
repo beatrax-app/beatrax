@@ -13,7 +13,7 @@ return [
     'as_of_label' => 'Saldo inicial à data de',
     'as_of_help' => 'A data em que o valor acima é válido.',
 
-    'divergence' => 'Isto difere em mais de €500 do saldo que o Beatrax calcula a partir das transações importadas. Tens a certeza?',
+    'divergence' => 'Isto difere em mais de :threshold do saldo que o Beatrax calcula a partir das transações importadas. Tens a certeza?',
     'use_beatrax' => 'Usar o número do Beatrax',
     'use_mine' => 'Usar o meu número',
 

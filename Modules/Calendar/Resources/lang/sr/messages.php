@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Ažuriranje prognoze…',
-        'risk' => 'Stanje pada ispod €0 tokom :count dana — prvi: :date.|Stanje pada ispod €0 tokom :count dana — prvi: :date.|Stanje pada ispod €0 tokom :count dana — prvi: :date.',
+        'risk' => 'Stanje pada ispod :zero tokom :count dana — prvi: :date.|Stanje pada ispod :zero tokom :count dana — prvi: :date.|Stanje pada ispod :zero tokom :count dana — prvi: :date.',
     ],
 
     'toolbar' => [

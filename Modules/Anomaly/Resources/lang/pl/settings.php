@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Oznaczaj obciążenia przekraczające o więcej niż :percent% typowe wydatki u danego sprzedawcy lub w danej kategorii.',
 
     'min_amount_label' => 'Minimalna kwota obciążenia',
-    'min_amount_help' => 'Pomijaj anomalie przy obciążeniach poniżej tej kwoty. Zapisywane w centach (€) — 1000 oznacza 10,00 €.',
+    'min_amount_help' => 'Pomijaj anomalie przy obciążeniach poniżej tej kwoty. Zapisywane w centach (:symbol) — 1000 oznacza :example.',
 
     'save' => 'Zapisz ustawienia anomalii',
     'saved' => 'Zapisano.',

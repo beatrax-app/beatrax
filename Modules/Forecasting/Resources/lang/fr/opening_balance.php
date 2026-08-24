@@ -13,7 +13,7 @@ return [
     'as_of_label' => 'Solde d\'ouverture à la date du',
     'as_of_help' => 'La date à laquelle le montant ci-dessus est exact.',
 
-    'divergence' => 'C\'est plus de 500 € d\'écart avec le solde que Beatrax calcule à partir de tes transactions importées. Tu confirmes ?',
+    'divergence' => 'C\'est plus de :threshold d\'écart avec le solde que Beatrax calcule à partir de tes transactions importées. Tu confirmes ?',
     'use_beatrax' => 'Utiliser le chiffre de Beatrax',
     'use_mine' => 'Utiliser mon chiffre',
 

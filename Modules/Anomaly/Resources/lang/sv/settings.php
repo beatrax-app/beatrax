@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Flagga debiteringar som ligger mer än :percent% över din typiska utgift hos den handlaren eller i den kategorin.',
 
     'min_amount_label' => 'Minsta debiteringsbelopp',
-    'min_amount_help' => 'Ignorera anomalier för debiteringar under det här beloppet. Lagras i cent (€) — 1000 betyder €10.00.',
+    'min_amount_help' => 'Ignorera anomalier för debiteringar under det här beloppet. Lagras i cent (:symbol) — 1000 betyder :example.',
 
     'save' => 'Spara anomaliinställningar',
     'saved' => 'Sparat.',

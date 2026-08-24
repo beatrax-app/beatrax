@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => "Segnala gli addebiti che superano di oltre il :percent% la tua spesa tipica per quell'esercente o categoria.",
 
     'min_amount_label' => 'Importo minimo di addebito',
-    'min_amount_help' => 'Ignora le anomalie sugli addebiti inferiori a questo importo. Memorizzato in centesimi (€) — 1000 corrisponde a €10,00.',
+    'min_amount_help' => 'Ignora le anomalie sugli addebiti inferiori a questo importo. Memorizzato in centesimi (:symbol) — 1000 corrisponde a :example.',
 
     'save' => 'Salva impostazioni anomalie',
     'saved' => 'Salvato.',

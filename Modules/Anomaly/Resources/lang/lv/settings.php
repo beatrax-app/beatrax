@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Atzīmēt maksājumus, kas par vairāk nekā :percent% pārsniedz jūsu ierastos tēriņus pie šī tirgotāja vai šajā kategorijā.',
 
     'min_amount_label' => 'Minimālā maksājuma summa',
-    'min_amount_help' => 'Ignorēt novirzes maksājumiem, kas mazāki par šo summu. Glabā centos (€) — 1000 nozīmē 10,00 €.',
+    'min_amount_help' => 'Ignorēt novirzes maksājumiem, kas mazāki par šo summu. Glabā centos (:symbol) — 1000 nozīmē :example.',
 
     'save' => 'Saglabāt noviržu iestatījumus',
     'saved' => 'Saglabāts.',

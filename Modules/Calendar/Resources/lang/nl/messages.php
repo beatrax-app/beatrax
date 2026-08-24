@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognose wordt bijgewerkt…',
-        'risk' => 'Saldo daalt onder € 0 op :date.|Saldo daalt onder € 0 op :count dagen — eerste: :date.',
+        'risk' => 'Saldo daalt onder :zero op :date.|Saldo daalt onder :zero op :count dagen — eerste: :date.',
     ],
 
     'toolbar' => [

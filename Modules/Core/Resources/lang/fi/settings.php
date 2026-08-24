@@ -117,7 +117,7 @@ return [
         'window_label' => 'Tunnistusikkuna (kuukautta)',
         'window_help' => 'Kuinka monen kuukauden historia käydään läpi, kun tapahtumia ryhmitellään toistuviksi kaavoiksi.',
         'income_label' => 'Tulojen vähimmäismäärä (senttiä)',
-        'income_help' => 'Tätä rajaa pienempiä tuloja ei ryhmitellä automaattisesti. Tallennetaan sentteinä — 200000 tarkoittaa 2 000,00 €. Poista raja käytöstä asettamalla arvoksi 0.',
+        'income_help' => 'Tätä rajaa pienempiä tuloja ei ryhmitellä automaattisesti. Tallennetaan sentteinä — 200000 tarkoittaa :example. Poista raja käytöstä asettamalla arvoksi 0.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Valitse valuutta.',
         'window_months' => 'Valitse 2–60 kuukautta.',
         'threshold' => 'Valitse raja vaihtoehdoista 1%, 2%, 5%, 10%, 25% tai 50%.',
-        'amount' => 'Anna summa, joka on vähintään 0 €.',
+        'amount' => 'Anna summa, joka on vähintään :zero.',
         'period_day' => 'Valitse päivä väliltä 1–28.',
         'currency_view' => 'Valitse jokin käytettävissä olevista vaihtoehdoista.',
     ],

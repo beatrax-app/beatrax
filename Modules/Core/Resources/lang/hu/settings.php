@@ -117,7 +117,7 @@ return [
         'window_label' => 'Felismerési ablak (hónap)',
         'window_help' => 'Hány hónapnyi előzményt vizsgáljon a rendszer, amikor a tranzakciókat ismétlődő mintákba csoportosítja.',
         'income_label' => 'Bevételi minimum (cent)',
-        'income_help' => 'Az e küszöbérték alatti bevételek nem kerülnek automatikus csoportba. Centben tárolva — a 200000 azt jelenti: €2,000.00. A küszöb kikapcsolásához állítsd 0-ra.',
+        'income_help' => 'Az e küszöbérték alatti bevételek nem kerülnek automatikus csoportba. Centben tárolva — a 200000 azt jelenti: :example. A küszöb kikapcsolásához állítsd 0-ra.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Válassz pénznemet.',
         'window_months' => 'Válassz 2 és 60 hónap között.',
         'threshold' => 'Válassz küszöbértéket: 1%, 2%, 5%, 10%, 25% vagy 50%.',
-        'amount' => 'Adj meg egy összeget €0-tól felfelé.',
+        'amount' => 'Adj meg egy összeget :zero-tól felfelé.',
         'period_day' => 'Válassz egy napot 1 és 28 között.',
         'currency_view' => 'Válassz az elérhető lehetőségek közül.',
     ],

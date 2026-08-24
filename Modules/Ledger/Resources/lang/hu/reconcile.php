@@ -10,7 +10,7 @@ return [
     'account' => 'Számla',
     'choose_account' => 'Válassz számlát…',
     'statement_date' => 'Kivonat dátuma',
-    'statement_balance' => 'Kivonategyenleg (€)',
+    'statement_balance' => 'Kivonategyenleg (:symbol)',
     'balance_help' => 'Ha van rá adat, a legutóbb importált számlakivonatból előre kitöltve — tartozás esetén negatív, mindkét esetben szerkeszthető.',
 
     'cleared_balance' => 'Elszámolt egyenleg',

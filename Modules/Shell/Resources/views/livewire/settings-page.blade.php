@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Core\Public\Support\LegalLinks')
 @use('Modules\Core\Public\Enums\Theme')
 @php
@@ -256,7 +257,7 @@
                 min="0"
                 max="100000000"
                 :label="Lang::get('core::settings.recurring.income_label')"
-                :hint="Lang::get('core::settings.recurring.income_help')"
+                :hint="Lang::get('core::settings.recurring.income_help', ['example' => Money::ofMinor(200000, $baseCurrency)->format()])"
                 wire:model="recurringIncomeMinAmountMinor"
                 class="max-w-xs"
             />

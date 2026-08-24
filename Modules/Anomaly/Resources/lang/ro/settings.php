@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Semnalează plățile care depășesc cu peste :percent% cheltuiala ta obișnuită la acel comerciant sau la acea categorie.',
 
     'min_amount_label' => 'Sumă minimă a plății',
-    'min_amount_help' => 'Ignoră anomaliile pentru plățile sub această sumă. Stocată în cenți (€) — 1000 înseamnă 10,00 €.',
+    'min_amount_help' => 'Ignoră anomaliile pentru plățile sub această sumă. Stocată în cenți (:symbol) — 1000 înseamnă :example.',
 
     'save' => 'Salvează setările pentru anomalii',
     'saved' => 'Salvat.',

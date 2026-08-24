@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Assinala cobranças mais de :percent% acima do teu gasto habitual nesse comerciante ou categoria.',
 
     'min_amount_label' => 'Montante mínimo da cobrança',
-    'min_amount_help' => 'Ignora anomalias em cobranças abaixo deste montante. Guardado em cêntimos (€) — 1000 significa €10,00.',
+    'min_amount_help' => 'Ignora anomalias em cobranças abaixo deste montante. Guardado em cêntimos (:symbol) — 1000 significa :example.',
 
     'save' => 'Guardar definições de anomalias',
     'saved' => 'Guardado.',

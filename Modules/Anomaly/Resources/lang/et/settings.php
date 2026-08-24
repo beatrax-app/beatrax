@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Märgista maksed, mis ületavad selle kaupmehe või kategooria tavapärast kulu rohkem kui :percent% võrra.',
 
     'min_amount_label' => 'Makse minimaalne summa',
-    'min_amount_help' => 'Eira kõrvalekaldeid maksetel, mis jäävad sellest summast väiksemaks. Salvestatakse sentides (€) — 1000 tähendab 10,00 €.',
+    'min_amount_help' => 'Eira kõrvalekaldeid maksetel, mis jäävad sellest summast väiksemaks. Salvestatakse sentides (:symbol) — 1000 tähendab :example.',
 
     'save' => 'Salvesta kõrvalekallete seaded',
     'saved' => 'Salvestatud.',

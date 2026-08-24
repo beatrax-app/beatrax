@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Se actualizează proiecția…',
-        'risk' => 'Soldul scade sub 0 € pe :date.|Soldul scade sub 0 € în :count zile — prima: :date.|Soldul scade sub 0 € în :count de zile — prima: :date.',
+        'risk' => 'Soldul scade sub :zero pe :date.|Soldul scade sub :zero în :count zile — prima: :date.|Soldul scade sub :zero în :count de zile — prima: :date.',
     ],
 
     'toolbar' => [

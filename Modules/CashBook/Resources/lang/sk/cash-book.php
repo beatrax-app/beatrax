@@ -11,7 +11,7 @@ return [
     'expense' => 'Výdavok',
     'income' => 'Príjem',
 
-    'amount' => 'Suma (€)',
+    'amount' => 'Suma (:symbol)',
     'date' => 'Dátum',
     'counterparty' => 'Protistrana',
     'counterparty_placeholder' => 'napr. Pekáreň',

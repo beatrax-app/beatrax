@@ -49,7 +49,7 @@
         <x-core::form-field
             name="statementBalance"
             field-id="rc-balance"
-            :label="Lang::get('ledger::reconcile.statement_balance')"
+            :label="Lang::get('ledger::reconcile.statement_balance', ['symbol' => Money::symbolFor($statementCurrency)])"
             :hint="Lang::get('ledger::reconcile.balance_help')"
             inputmode="decimal"
             wire:model.live="statementBalance"

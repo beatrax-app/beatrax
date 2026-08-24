@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Előrejelzés frissítése…',
-        'risk' => 'Az egyenleg 0 € alá csökken ekkor: :date.|Az egyenleg :count napon 0 € alá csökken — az első: :date.',
+        'risk' => 'Az egyenleg :zero alá csökken ekkor: :date.|Az egyenleg :count napon :zero alá csökken — az első: :date.',
     ],
 
     'toolbar' => [

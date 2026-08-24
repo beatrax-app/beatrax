@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Tahmin güncelleniyor…',
-        'risk' => 'Bakiye :count gün €0 altına iniyor — ilki: :date.',
+        'risk' => 'Bakiye :count gün :zero altına iniyor — ilki: :date.',
     ],
 
     'toolbar' => [

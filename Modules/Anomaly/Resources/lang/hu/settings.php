@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Jelölje meg azokat a terheléseket, amelyek több mint :percent%-kal haladják meg az adott kereskedőnél vagy kategóriában szokásos költésedet.',
 
     'min_amount_label' => 'Minimális terhelési összeg',
-    'min_amount_help' => 'Az ennél kisebb terheléseknél ne jelezzen anomáliát. Centben tárolva (€) — az 1000 azt jelenti: 10,00 €.',
+    'min_amount_help' => 'Az ennél kisebb terheléseknél ne jelezzen anomáliát. Centben tárolva (:symbol) — az 1000 azt jelenti: :example.',
 
     'save' => 'Anomáliabeállítások mentése',
     'saved' => 'Mentve.',

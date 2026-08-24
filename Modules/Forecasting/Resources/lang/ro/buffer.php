@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Rezerva minimă pentru :name',
     'save' => 'Salvează rezerva',
     'cancel' => 'Anulează',
-    'clear' => 'Șterge rezerva (folosește pragul de 0 €)',
+    'clear' => 'Șterge rezerva (folosește pragul de :zero)',
 
     'toast' => [
         'updated' => 'Rezervă actualizată.',

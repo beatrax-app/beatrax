@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Merk belastninger som ligger mer enn :percent% over det du vanligvis bruker hos den forhandleren eller i den kategorien.',
 
     'min_amount_label' => 'Minste belastningsbeløp',
-    'min_amount_help' => 'Ignorer anomalier på belastninger under dette beløpet. Lagres i cent (€) — 1000 betyr €10.00.',
+    'min_amount_help' => 'Ignorer anomalier på belastninger under dette beløpet. Lagres i cent (:symbol) — 1000 betyr :example.',
 
     'save' => 'Lagre anomaliinnstillinger',
     'saved' => 'Lagret.',

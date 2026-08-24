@@ -13,7 +13,7 @@ return [
     'as_of_label' => 'Saldo otwarcia na dzień',
     'as_of_help' => 'Data, na którą powyższa kwota jest prawdziwa.',
 
-    'divergence' => 'To ponad 500 € różnicy w stosunku do salda, które Beatrax wylicza z zaimportowanych transakcji. Na pewno?',
+    'divergence' => 'To ponad :threshold różnicy w stosunku do salda, które Beatrax wylicza z zaimportowanych transakcji. Na pewno?',
     'use_beatrax' => 'Użyj wartości z Beatrax',
     'use_mine' => 'Użyj mojej wartości',
 

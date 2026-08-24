@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Projection updating…',
-        'risk' => 'Balance dips below €0 on :date.|Balance dips below €0 on :count days — first: :date.',
+        'risk' => 'Balance dips below :zero on :date.|Balance dips below :zero on :count days — first: :date.',
     ],
 
     'toolbar' => [

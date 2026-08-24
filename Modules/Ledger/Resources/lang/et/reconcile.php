@@ -10,7 +10,7 @@ return [
     'account' => 'Konto',
     'choose_account' => 'Vali konto…',
     'statement_date' => 'Väljavõtte kuupäev',
-    'statement_balance' => 'Väljavõtte jääk (€)',
+    'statement_balance' => 'Väljavõtte jääk (:symbol)',
     'balance_help' => 'Täidetud võimaluse korral sinu viimasest imporditud väljavõttest — võlgnetava raha puhul negatiivne, mõlemal juhul muudetav.',
 
     'cleared_balance' => 'Laekunud jääk',

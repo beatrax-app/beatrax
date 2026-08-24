@@ -117,7 +117,7 @@ return [
         'window_label' => 'Okno wykrywania (miesiące)',
         'window_help' => 'Ile miesięcy historii przeszukiwać przy grupowaniu transakcji we wzorce cykliczne.',
         'income_label' => 'Minimalny przychód (centy)',
-        'income_help' => 'Przychody poniżej tego progu nie są grupowane automatycznie. Zapisywane w centach — 200000 oznacza 2000,00 €. Ustaw 0, aby wyłączyć próg.',
+        'income_help' => 'Przychody poniżej tego progu nie są grupowane automatycznie. Zapisywane w centach — 200000 oznacza :example. Ustaw 0, aby wyłączyć próg.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Wybierz walutę.',
         'window_months' => 'Wybierz wartość od 2 do 60 miesięcy.',
         'threshold' => 'Wybierz próg spośród 1%, 2%, 5%, 10%, 25% lub 50%.',
-        'amount' => 'Podaj kwotę od €0 wzwyż.',
+        'amount' => 'Podaj kwotę od :zero wzwyż.',
         'period_day' => 'Wybierz dzień od 1 do 28.',
         'currency_view' => 'Wybierz jedną z dostępnych opcji.',
     ],

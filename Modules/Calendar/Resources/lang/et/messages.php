@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognoosi uuendatakse…',
-        'risk' => 'Jääk langeb alla 0 € kuupäeval :date.|Jääk langeb alla 0 € :count päeval — esimene: :date.',
+        'risk' => 'Jääk langeb alla :zero kuupäeval :date.|Jääk langeb alla :zero :count päeval — esimene: :date.',
     ],
 
     'toolbar' => [

@@ -11,7 +11,7 @@ return [
     'expense' => 'Výdaj',
     'income' => 'Příjem',
 
-    'amount' => 'Částka (€)',
+    'amount' => 'Částka (:symbol)',
     'date' => 'Datum',
     'counterparty' => 'Protistrana',
     'counterparty_placeholder' => 'např. Pekárna',

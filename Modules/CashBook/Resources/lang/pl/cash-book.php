@@ -11,7 +11,7 @@ return [
     'expense' => 'Wydatek',
     'income' => 'Przychód',
 
-    'amount' => 'Kwota (€)',
+    'amount' => 'Kwota (:symbol)',
     'date' => 'Data',
     'counterparty' => 'Kontrahent',
     'counterparty_placeholder' => 'np. Piekarnia',

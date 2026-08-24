@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognozė atnaujinama…',
-        'risk' => 'Likutis nukrenta žemiau 0 € :count dieną — pirmoji: :date.|Likutis nukrenta žemiau 0 € :count dienas — pirmoji: :date.|Likutis nukrenta žemiau 0 € :count dienų — pirmoji: :date.',
+        'risk' => 'Likutis nukrenta žemiau :zero :count dieną — pirmoji: :date.|Likutis nukrenta žemiau :zero :count dienas — pirmoji: :date.|Likutis nukrenta žemiau :zero :count dienų — pirmoji: :date.',
     ],
 
     'toolbar' => [

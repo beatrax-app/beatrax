@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Markér posteringer, der ligger mere end :percent% over dit typiske forbrug hos den forhandler eller i den kategori.',
 
     'min_amount_label' => 'Mindste posteringsbeløb',
-    'min_amount_help' => 'Ignorér anomalier på posteringer under dette beløb. Gemmes i cent (€) — 1000 betyder €10.00.',
+    'min_amount_help' => 'Ignorér anomalier på posteringer under dette beløb. Gemmes i cent (:symbol) — 1000 betyder :example.',
 
     'save' => 'Gem anomaliindstillinger',
     'saved' => 'Gemt.',

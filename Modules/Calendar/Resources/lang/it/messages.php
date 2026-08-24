@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Aggiornamento della previsione…',
-        'risk' => 'Il saldo scende sotto €0 il :date.|Il saldo scende sotto €0 in :count giorni — il primo: :date.',
+        'risk' => 'Il saldo scende sotto :zero il :date.|Il saldo scende sotto :zero in :count giorni — il primo: :date.',
     ],
 
     'toolbar' => [

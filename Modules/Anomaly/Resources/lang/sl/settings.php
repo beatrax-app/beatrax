@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Označi bremenitve, ki so za več kot :percent% nad tvojo običajno porabo pri tem trgovcu ali v tej kategoriji.',
 
     'min_amount_label' => 'Najmanjši znesek bremenitve',
-    'min_amount_help' => 'Prezri anomalije pri bremenitvah pod tem zneskom. Shranjeno v centih (€) — 1000 pomeni 10,00 €.',
+    'min_amount_help' => 'Prezri anomalije pri bremenitvah pod tem zneskom. Shranjeno v centih (:symbol) — 1000 pomeni :example.',
 
     'save' => 'Shrani nastavitve anomalij',
     'saved' => 'Shranjeno.',

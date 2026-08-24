@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Ennustetta päivitetään…',
-        'risk' => 'Saldo painuu alle nollan :date.|Saldo painuu alle nollan :count päivänä — ensimmäinen: :date.',
+        'risk' => 'Saldo painuu alle :zero :date.|Saldo painuu alle :zero :count päivänä — ensimmäinen: :date.',
     ],
 
     'toolbar' => [

@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Pažymėti mokėjimus, kurie daugiau nei :percent% viršija įprastas tavo išlaidas tam prekybininkui ar kategorijai.',
 
     'min_amount_label' => 'Mažiausia mokėjimo suma',
-    'min_amount_help' => 'Nepaisyti anomalijų mokėjimuose, mažesniuose už šią sumą. Saugoma centais (€) — 1000 reiškia 10,00 €.',
+    'min_amount_help' => 'Nepaisyti anomalijų mokėjimuose, mažesniuose už šią sumą. Saugoma centais (:symbol) — 1000 reiškia :example.',
 
     'save' => 'Išsaugoti anomalijų nustatymus',
     'saved' => 'Išsaugota.',

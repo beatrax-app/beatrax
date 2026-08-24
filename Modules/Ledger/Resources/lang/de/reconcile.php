@@ -10,7 +10,7 @@ return [
     'account' => 'Konto',
     'choose_account' => 'Wähle ein Konto…',
     'statement_date' => 'Kontoauszugsdatum',
-    'statement_balance' => 'Saldo laut Kontoauszug (€)',
+    'statement_balance' => 'Saldo laut Kontoauszug (:symbol)',
     'balance_help' => 'Wenn möglich aus deinem zuletzt importierten Kontoauszug vorausgefüllt — negativ bei Schulden, in beiden Fällen bearbeitbar.',
 
     'cleared_balance' => 'Bestätigter Saldo',

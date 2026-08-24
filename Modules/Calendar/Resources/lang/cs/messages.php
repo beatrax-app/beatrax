@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Odhad se aktualizuje…',
-        'risk' => 'Zůstatek klesne pod 0 € dne :date.|Zůstatek klesne pod 0 € v :count dnech — poprvé :date.|Zůstatek klesne pod 0 € v :count dnech — poprvé :date.',
+        'risk' => 'Zůstatek klesne pod :zero dne :date.|Zůstatek klesne pod :zero v :count dnech — poprvé :date.|Zůstatek klesne pod :zero v :count dnech — poprvé :date.',
     ],
 
     'toolbar' => [

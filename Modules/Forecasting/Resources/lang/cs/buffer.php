@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Minimální rezerva — účet: :name',
     'save' => 'Uložit rezervu',
     'cancel' => 'Zrušit',
-    'clear' => 'Zrušit rezervu (použít hranici 0 €)',
+    'clear' => 'Zrušit rezervu (použít hranici :zero)',
 
     'toast' => [
         'updated' => 'Rezerva upravena.',

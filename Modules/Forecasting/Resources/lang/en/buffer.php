@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Minimum buffer for :name',
     'save' => 'Save buffer',
     'cancel' => 'Cancel',
-    'clear' => 'Clear buffer (use €0 floor)',
+    'clear' => 'Clear buffer (use :zero floor)',
 
     'toast' => [
         'updated' => 'Buffer updated.',

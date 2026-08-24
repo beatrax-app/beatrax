@@ -13,7 +13,7 @@ return [
     'as_of_label' => 'Sākuma atlikums uz datumu',
     'as_of_help' => 'Datums, uz kuru iepriekš minētais skaitlis ir patiess.',
 
-    'divergence' => 'Šis skaitlis vairāk nekā par 500 € atšķiras no atlikuma, ko Beatrax aprēķina no jūsu importētajiem darījumiem. Vai tiešām turpināt?',
+    'divergence' => 'Šis skaitlis vairāk nekā par :threshold atšķiras no atlikuma, ko Beatrax aprēķina no jūsu importētajiem darījumiem. Vai tiešām turpināt?',
     'use_beatrax' => 'Izmantot Beatrax skaitli',
     'use_mine' => 'Izmantot manu skaitli',
 

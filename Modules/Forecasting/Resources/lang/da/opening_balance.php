@@ -13,7 +13,7 @@ return [
     'as_of_label' => 'Startsaldo pr.',
     'as_of_help' => 'Den dato, tallet ovenfor gælder for.',
 
-    'divergence' => 'Det afviger med mere end €500 fra den saldo, Beatrax beregner ud fra dine importerede transaktioner. Er du sikker?',
+    'divergence' => 'Det afviger med mere end :threshold fra den saldo, Beatrax beregner ud fra dine importerede transaktioner. Er du sikker?',
     'use_beatrax' => 'Brug tallet fra Beatrax',
     'use_mine' => 'Brug mit tal',
 

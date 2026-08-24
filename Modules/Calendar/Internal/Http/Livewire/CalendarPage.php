@@ -19,6 +19,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Lang;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
 final class CalendarPage extends Component
@@ -167,6 +168,7 @@ final class CalendarPage extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         Clock $clock,
+        BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
         $display = $this->resolveDisplay($clock);
@@ -216,6 +218,7 @@ final class CalendarPage extends Component
             'isComputingAny' => $balanceSources !== [] && self::daysAreComputing($days),
             'accountRoster' => $accountRoster,
             'atCeiling' => $atCeiling,
+            'baseCurrency' => $baseCurrency->forUser($user),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

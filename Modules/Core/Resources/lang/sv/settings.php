@@ -117,7 +117,7 @@ return [
         'window_label' => 'Detekteringsfönster (månader)',
         'window_help' => 'Hur många månaders historik som genomsöks när transaktioner grupperas till återkommande mönster.',
         'income_label' => 'Minsta inkomst (cent)',
-        'income_help' => 'Inkomster under det här tröskelvärdet grupperas inte automatiskt. Lagras i cent — 200000 betyder 2 000,00 €. Sätt till 0 för att stänga av tröskelvärdet.',
+        'income_help' => 'Inkomster under det här tröskelvärdet grupperas inte automatiskt. Lagras i cent — 200000 betyder :example. Sätt till 0 för att stänga av tröskelvärdet.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Välj en valuta.',
         'window_months' => 'Välj mellan 2 och 60 månader.',
         'threshold' => 'Välj ett tröskelvärde på 1%, 2%, 5%, 10%, 25% eller 50%.',
-        'amount' => 'Ange ett belopp från €0 och uppåt.',
+        'amount' => 'Ange ett belopp från :zero och uppåt.',
         'period_day' => 'Välj en dag från 1 till 28.',
         'currency_view' => 'Välj ett av de tillgängliga alternativen.',
     ],

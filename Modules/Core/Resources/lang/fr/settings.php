@@ -117,7 +117,7 @@ return [
         'window_label' => 'Fenêtre de détection (mois)',
         'window_help' => 'Nombre de mois d\'historique à analyser pour regrouper les transactions en schémas récurrents.',
         'income_label' => 'Revenu minimum (centimes)',
-        'income_help' => 'Les revenus sous ce seuil ne sont pas regroupés automatiquement. Stocké en centimes — 200000 signifie 2 000,00 €. Mets 0 pour désactiver le seuil.',
+        'income_help' => 'Les revenus sous ce seuil ne sont pas regroupés automatiquement. Stocké en centimes — 200000 signifie :example. Mets 0 pour désactiver le seuil.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Choisis une devise.',
         'window_months' => 'Choisis entre 2 et 60 mois.',
         'threshold' => 'Choisis un seuil parmi 1%, 2%, 5%, 10%, 25% ou 50%.',
-        'amount' => 'Saisis un montant à partir de 0 €.',
+        'amount' => 'Saisis un montant à partir de :zero.',
         'period_day' => 'Choisis un jour de 1 à 28.',
         'currency_view' => 'Choisis l\'une des options disponibles.',
     ],

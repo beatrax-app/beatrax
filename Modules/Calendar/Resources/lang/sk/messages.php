@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognóza sa aktualizuje…',
-        'risk' => 'Zostatok klesne pod 0 € dňa :date.|Zostatok klesne pod 0 € v :count dňoch — prvý: :date.|Zostatok klesne pod 0 € v :count dňoch — prvý: :date.',
+        'risk' => 'Zostatok klesne pod :zero dňa :date.|Zostatok klesne pod :zero v :count dňoch — prvý: :date.|Zostatok klesne pod :zero v :count dňoch — prvý: :date.',
     ],
 
     'toolbar' => [

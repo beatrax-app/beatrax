@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Konts nav iestatīts. Pārlādējiet vedni.',
         'invalid_amount' => 'Ievadiet derīgu summu.',
-        'amount_range' => 'Ievadiet summu no -10 milj. € līdz 10 milj. €.',
+        'amount_range' => 'Ievadiet summu no :min līdz :max.',
         'pick_date' => 'Izvēlieties datumu.',
         'pick_valid_date' => 'Izvēlieties derīgu datumu.',
         'future_date' => 'Sākuma atlikuma datums nevar būt nākotnē.',

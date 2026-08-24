@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognoze tiek atjaunināta…',
-        'risk' => 'Atlikums noslīd zem 0 € :count dienās — pirmā: :date.|Atlikums noslīd zem 0 € :count dienā — pirmā: :date.|Atlikums noslīd zem 0 € :count dienās — pirmā: :date.',
+        'risk' => 'Atlikums noslīd zem :zero :count dienās — pirmā: :date.|Atlikums noslīd zem :zero :count dienā — pirmā: :date.|Atlikums noslīd zem :zero :count dienās — pirmā: :date.',
     ],
 
     'toolbar' => [

@@ -13,7 +13,7 @@ return [
     'as_of_label' => 'Sold inițial valabil la data',
     'as_of_help' => 'Data la care cifra de mai sus este corectă.',
 
-    'divergence' => 'Aceasta diferă cu peste 500 € față de soldul calculat de Beatrax din tranzacțiile tale importate. Ești sigur?',
+    'divergence' => 'Aceasta diferă cu peste :threshold față de soldul calculat de Beatrax din tranzacțiile tale importate. Ești sigur?',
     'use_beatrax' => 'Folosește cifra Beatrax',
     'use_mine' => 'Folosește cifra mea',
 
