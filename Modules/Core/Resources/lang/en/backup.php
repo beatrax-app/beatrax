@@ -17,7 +17,7 @@ return [
     'restore' => [
         'heading' => 'Restore from a backup',
 
-        'intro_html' => 'Replace your current database with an encrypted backup. The file is decrypted and checked before anything changes, and a pre-restore snapshot of your current data is saved first — but this still <strong class="text-slate-700 dark:text-slate-200">overwrites everything</strong>, so it is gated.',
+        'intro_html' => 'Replace your current database with an encrypted backup. The file is decrypted and checked before anything changes, and a pre-restore snapshot of your current data is saved first — but this still <strong class="text-slate-700 dark:text-slate-200">overwrites everything</strong>, so it is gated. You will be signed out, because your sign-in lives in the database too.',
         'restored' => 'Restored. Reload the app to see your restored data.',
         'snapshot_saved_prefix' => 'A snapshot of your previous data was saved to',
         'file_label' => 'Encrypted backup (.enc)',

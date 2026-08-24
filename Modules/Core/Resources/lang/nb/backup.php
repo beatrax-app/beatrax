@@ -17,7 +17,7 @@ return [
     'restore' => [
         'heading' => 'Gjenopprett fra en sikkerhetskopi',
 
-        'intro_html' => 'Erstatt den nåværende databasen din med en kryptert sikkerhetskopi. Filen dekrypteres og kontrolleres før noe endres, og et øyeblikksbilde av dagens data lagres først — men dette <strong class="text-slate-700 dark:text-slate-200">overskriver alt</strong>, så det er sperret.',
+        'intro_html' => 'Erstatt den nåværende databasen din med en kryptert sikkerhetskopi. Filen dekrypteres og kontrolleres før noe endres, og et øyeblikksbilde av dagens data lagres først — men dette <strong class="text-slate-700 dark:text-slate-200">overskriver alt</strong>, så det er sperret. Du blir logget ut, for innloggingen din ligger også i databasen.',
         'restored' => 'Gjenopprettet. Last appen på nytt for å se de gjenopprettede dataene dine.',
         'snapshot_saved_prefix' => 'Et øyeblikksbilde av de tidligere dataene dine ble lagret i',
         'file_label' => 'Kryptert sikkerhetskopi (.enc)',

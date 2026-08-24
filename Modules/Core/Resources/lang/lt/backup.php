@@ -17,7 +17,7 @@ return [
     'restore' => [
         'heading' => 'Atkurti iš atsarginės kopijos',
 
-        'intro_html' => 'Pakeisk dabartinę duomenų bazę šifruota atsargine kopija. Failas iššifruojamas ir patikrinamas prieš keičiant bet ką, o dabartinių duomenų momentinė kopija išsaugoma pirmiausia — bet tai vis tiek <strong class="text-slate-700 dark:text-slate-200">perrašo viską</strong>, todėl veiksmas yra apsaugotas.',
+        'intro_html' => 'Pakeisk dabartinę duomenų bazę šifruota atsargine kopija. Failas iššifruojamas ir patikrinamas prieš keičiant bet ką, o dabartinių duomenų momentinė kopija išsaugoma pirmiausia — bet tai vis tiek <strong class="text-slate-700 dark:text-slate-200">perrašo viską</strong>, todėl veiksmas yra apsaugotas. Būsi atjungtas, nes tavo prisijungimas taip pat yra duomenų bazėje.',
         'restored' => 'Atkurta. Įkelk programėlę iš naujo, kad matytum atkurtus duomenis.',
         'snapshot_saved_prefix' => 'Ankstesnių duomenų momentinė kopija išsaugota į',
         'file_label' => 'Šifruota atsarginė kopija (.enc)',

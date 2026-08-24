@@ -17,7 +17,7 @@ return [
     'restore' => [
         'heading' => 'Obnovitev iz varnostne kopije',
 
-        'intro_html' => 'Zamenjaj trenutno bazo podatkov s šifrirano varnostno kopijo. Datoteka se pred kakršno koli spremembo dešifrira in preveri, posnetek trenutnih podatkov pa se shrani vnaprej — a to kljub temu <strong class="text-slate-700 dark:text-slate-200">prepiše vse</strong>, zato je dodatno zaščiteno.',
+        'intro_html' => 'Zamenjaj trenutno bazo podatkov s šifrirano varnostno kopijo. Datoteka se pred kakršno koli spremembo dešifrira in preveri, posnetek trenutnih podatkov pa se shrani vnaprej — a to kljub temu <strong class="text-slate-700 dark:text-slate-200">prepiše vse</strong>, zato je dodatno zaščiteno. Odjavljen boš, saj je tudi tvoja prijava v zbirki podatkov.',
         'restored' => 'Obnovljeno. Znova naloži aplikacijo, da vidiš obnovljene podatke.',
         'snapshot_saved_prefix' => 'Posnetek tvojih prejšnjih podatkov je shranjen v',
         'file_label' => 'Šifrirana varnostna kopija (.enc)',

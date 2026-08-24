@@ -17,7 +17,7 @@ return [
     'restore' => [
         'heading' => 'Vraćanje iz sigurnosne kopije',
 
-        'intro_html' => 'Zamijeni trenutnu bazu podataka šifriranom sigurnosnom kopijom. Datoteka se dešifrira i provjerava prije bilo kakve promjene, a snimka trenutnih podataka sprema se prije toga — no ovo i dalje <strong class="text-slate-700 dark:text-slate-200">prebrisuje sve</strong>, pa je dodatno zaštićeno.',
+        'intro_html' => 'Zamijeni trenutnu bazu podataka šifriranom sigurnosnom kopijom. Datoteka se dešifrira i provjerava prije bilo kakve promjene, a snimka trenutnih podataka sprema se prije toga — no ovo i dalje <strong class="text-slate-700 dark:text-slate-200">prebrisuje sve</strong>, pa je dodatno zaštićeno. Bit ćeš odjavljen jer je i tvoja prijava u bazi podataka.',
         'restored' => 'Vraćeno. Ponovno učitaj aplikaciju da vidiš vraćene podatke.',
         'snapshot_saved_prefix' => 'Snimka tvojih prethodnih podataka spremljena je u',
         'file_label' => 'Šifrirana sigurnosna kopija (.enc)',

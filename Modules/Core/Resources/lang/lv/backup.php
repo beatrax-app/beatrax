@@ -17,7 +17,7 @@ return [
     'restore' => [
         'heading' => 'Atjaunot no dublējuma',
 
-        'intro_html' => 'Aizstājiet pašreizējo datubāzi ar šifrētu dublējumu. Fails tiek atšifrēts un pārbaudīts, pirms kaut kas mainās, un vispirms tiek saglabāts pašreizējo datu momentuzņēmums — tomēr tas joprojām <strong class="text-slate-700 dark:text-slate-200">pārraksta visu</strong>, tāpēc darbība ir ierobežota.',
+        'intro_html' => 'Aizstājiet pašreizējo datubāzi ar šifrētu dublējumu. Fails tiek atšifrēts un pārbaudīts, pirms kaut kas mainās, un vispirms tiek saglabāts pašreizējo datu momentuzņēmums — tomēr tas joprojām <strong class="text-slate-700 dark:text-slate-200">pārraksta visu</strong>, tāpēc darbība ir ierobežota. Tu tiksi izrakstīts, jo arī tava pieteikšanās ir datubāzē.',
         'restored' => 'Atjaunots. Pārlādējiet lietotni, lai redzētu atjaunotos datus.',
         'snapshot_saved_prefix' => 'Jūsu iepriekšējo datu momentuzņēmums tika saglabāts šeit:',
         'file_label' => 'Šifrēts dublējums (.enc)',

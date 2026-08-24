@@ -17,7 +17,7 @@ return [
     'restore' => [
         'heading' => 'Visszaállítás biztonsági mentésből',
 
-        'intro_html' => 'Cseréld le a jelenlegi adatbázisodat egy titkosított biztonsági mentésre. A fájl visszafejtése és ellenőrzése megtörténik, mielőtt bármi megváltozna, és előbb pillanatkép készül a jelenlegi adataidról — ez azonban akkor is <strong class="text-slate-700 dark:text-slate-200">mindent felülír</strong>, ezért védett művelet.',
+        'intro_html' => 'Cseréld le a jelenlegi adatbázisodat egy titkosított biztonsági mentésre. A fájl visszafejtése és ellenőrzése megtörténik, mielőtt bármi megváltozna, és előbb pillanatkép készül a jelenlegi adataidról — ez azonban akkor is <strong class="text-slate-700 dark:text-slate-200">mindent felülír</strong>, ezért védett művelet. Ki fogsz jelentkezni, mert a bejelentkezésed is az adatbázisban van.',
         'restored' => 'Visszaállítva. Töltsd újra az alkalmazást a visszaállított adatok megtekintéséhez.',
         'snapshot_saved_prefix' => 'A korábbi adataidról készült pillanatkép ide mentve',
         'file_label' => 'Titkosított biztonsági mentés (.enc)',

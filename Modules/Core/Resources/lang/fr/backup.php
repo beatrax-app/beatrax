@@ -17,7 +17,7 @@ return [
     'restore' => [
         'heading' => 'Restaurer depuis une sauvegarde',
 
-        'intro_html' => 'Remplace ta base de données actuelle par une sauvegarde chiffrée. Le fichier est déchiffré et vérifié avant tout changement, et un instantané de tes données actuelles est enregistré au préalable — mais cela <strong class="text-slate-700 dark:text-slate-200">écrase tout</strong>, d\'où le verrou.',
+        'intro_html' => 'Remplace ta base de données actuelle par une sauvegarde chiffrée. Le fichier est déchiffré et vérifié avant tout changement, et un instantané de tes données actuelles est enregistré au préalable — mais cela <strong class="text-slate-700 dark:text-slate-200">écrase tout</strong>, d\'où le verrou. Tu seras déconnecté, car ta session est elle aussi dans la base de données.',
         'restored' => 'Restauré. Recharge l\'application pour voir tes données restaurées.',
         'snapshot_saved_prefix' => 'Un instantané de tes données précédentes a été enregistré dans',
         'file_label' => 'Sauvegarde chiffrée (.enc)',
