@@ -127,8 +127,10 @@ it('reports a device that declines to store the key', function (): void {
 });
 
 // In the shell with no OS gate the browser event resolves to nothing, so this
-// says unsupported rather than appearing to hang.
-it('refuses in the desktop shell rather than dispatching into nothing', function (): void {
+// says what is missing rather than appearing to hang. Which is the app's half:
+// this is the branch an Android phone that unlocks a dozen other apps takes,
+// because the vault's Android side stores nothing yet.
+it('refuses in the shell rather than dispatching into nothing, and does not blame the phone', function (): void {
     $user = coldStartSettingsUser('cold-shell');
     $this->actingAs($user);
     app(AppLockProvisioner::class)->enable($user->id, '123456', 'settings-pass');
@@ -139,7 +141,20 @@ it('refuses in the desktop shell rather than dispatching into nothing', function
         ->set('lockEnabled', true)
         ->call('startEnroll')
         ->assertNotDispatched('beatrax:webauthn-create')
-        ->assertSee('Biometric unlock is not available on this device.');
+        ->assertSee('This version of Beatrax has nowhere to store an unlock key, so biometric unlock is not offered. Your device is not the limitation.')
+        ->assertDontSee('not available on this device');
+});
+
+it('offers no biometric row without blaming the device it is drawn on', function (): void {
+    $user = coldStartSettingsUser('cold-empty-state');
+    $this->actingAs($user);
+    app(AppLockProvisioner::class)->enable($user->id, '123456', 'settings-pass');
+    bindColdStartVault(available: false);
+
+    Livewire::test(AppLockSettingsSection::class)
+        ->set('lockEnabled', true)
+        ->assertSee('This version of Beatrax cannot offer biometric unlock. Your PIN is the only unlock here.')
+        ->assertDontSee('not available on this device');
 });
 
 it('still asks the browser when there is no shell and no OS gate', function (): void {
