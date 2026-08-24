@@ -25,6 +25,7 @@ return [
     'no_not' => 'Nē, tas nav :name',
 
     'recent_on_iban' => 'Nesenie darījumi ar šo IBAN',
+    'recent_on_counterparty' => 'Nesenie darījumi ar šo darījuma partneri',
     'no_transactions_yet' => 'Vēl nav reģistrēts neviens darījums.',
 
     'label_manually' => 'Vai marķējiet manuāli',

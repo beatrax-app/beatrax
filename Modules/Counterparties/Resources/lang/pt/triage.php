@@ -25,6 +25,7 @@ return [
     'no_not' => 'Não, não é :name',
 
     'recent_on_iban' => 'Transações recentes neste IBAN',
+    'recent_on_counterparty' => 'Transações recentes com esta contraparte',
     'no_transactions_yet' => 'Ainda não há transações registadas.',
 
     'label_manually' => 'Ou identifica manualmente',

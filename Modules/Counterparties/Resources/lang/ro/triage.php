@@ -25,6 +25,7 @@ return [
     'no_not' => 'Nu, nu este :name',
 
     'recent_on_iban' => 'Tranzacții recente pe acest IBAN',
+    'recent_on_counterparty' => 'Tranzacții recente cu această contraparte',
     'no_transactions_yet' => 'Nicio tranzacție înregistrată deocamdată.',
 
     'label_manually' => 'Sau etichetează manual',

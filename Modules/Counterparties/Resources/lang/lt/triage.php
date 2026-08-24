@@ -25,6 +25,7 @@ return [
     'no_not' => 'Ne, tai ne :name',
 
     'recent_on_iban' => 'Naujausios operacijos šiuo IBAN',
+    'recent_on_counterparty' => 'Naujausios operacijos su šia sandorio šalimi',
     'no_transactions_yet' => 'Operacijų dar neužfiksuota.',
 
     'label_manually' => 'Arba pažymėk ranka',

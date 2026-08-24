@@ -25,6 +25,7 @@ return [
     'no_not' => 'Не, това не е :name',
 
     'recent_on_iban' => 'Скорошни транзакции по този IBAN',
+    'recent_on_counterparty' => 'Скорошни транзакции с този контрагент',
     'no_transactions_yet' => 'Още няма записани транзакции.',
 
     'label_manually' => 'Или етикетирай ръчно',
