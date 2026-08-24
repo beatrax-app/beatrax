@@ -253,7 +253,7 @@
                                             <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 6rem;">{{ Lang::get('tax::page.col_account') }}</th>
                                             <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em;">{{ Lang::get('tax::page.col_counterparty') }}</th>
                                             <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em;">{{ Lang::get('tax::page.col_note') }}</th>
-                                            <th class="money px-3 py-2 text-right" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 7rem;">{{ Lang::get('tax::page.col_settled_eur') }}</th>
+                                            <th class="money px-3 py-2 text-right" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 7rem;">{{ Lang::get('tax::page.col_settled') }}</th>
                                             <th class="px-3 py-2 text-right" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 5rem;">{{ Lang::get('tax::page.col_original') }}</th>
                                             <th class="px-3 py-2 text-center" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 3rem;">{{ Lang::get('tax::page.col_year') }}</th>
                                         </tr>
@@ -297,7 +297,7 @@
                                                         <span style="color: var(--color-text-faint); font-style: normal;">—</span>
                                                     @endif
                                                 </td>
-                                                {{-- Settled EUR --}}
+                                                {{-- Settled amount, in the row's own settled currency --}}
                                                 <td class="money px-3 py-2 text-right" style="color: var(--color-text);">
                                                     {{ Money::ofMinor(abs($settledMinor), $settledCurrency)->format() }}
                                                 </td>

@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Karşı taraf',
     'col_description' => 'Açıklama',
     'col_note' => 'Not',
-    'col_amount' => 'Tutar (EUR)',
+    'col_amount' => 'Tutar',
 
     'subtotal' => 'Ara toplam',
 

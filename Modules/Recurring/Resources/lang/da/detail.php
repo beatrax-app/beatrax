@@ -22,7 +22,7 @@ return [
         'transaction' => 'Transaktion',
     ],
 
-    'eur_equivalent' => 'Modsvarende i EUR',
+    'settled_equivalent' => 'Afregnet i :code',
     'chart_requires_js' => 'Diagrammet kræver JavaScript.',
 
     'tolerance_toast' => 'Tolerance: :percent%',

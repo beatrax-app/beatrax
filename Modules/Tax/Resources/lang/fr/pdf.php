@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Tiers',
     'col_description' => 'Description',
     'col_note' => 'Note',
-    'col_amount' => 'Montant (EUR)',
+    'col_amount' => 'Montant',
 
     'subtotal' => 'Sous-total',
 

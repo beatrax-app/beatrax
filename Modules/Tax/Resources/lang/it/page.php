@@ -37,7 +37,7 @@ return [
     'col_account' => 'Conto',
     'col_counterparty' => 'Controparte',
     'col_note' => 'Nota',
-    'col_settled_eur' => 'Regolato in EUR',
+    'col_settled' => 'Regolato',
     'col_original' => 'Originale',
     'col_year' => 'Anno',
 

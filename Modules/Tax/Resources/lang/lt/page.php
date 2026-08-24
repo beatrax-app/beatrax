@@ -37,7 +37,7 @@ return [
     'col_account' => 'Sąskaita',
     'col_counterparty' => 'Kita šalis',
     'col_note' => 'Pastaba',
-    'col_settled_eur' => 'Atsiskaityta EUR',
+    'col_settled' => 'Atsiskaityta',
     'col_original' => 'Originalas',
     'col_year' => 'Metai',
 

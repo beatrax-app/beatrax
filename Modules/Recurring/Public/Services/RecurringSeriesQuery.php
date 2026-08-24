@@ -9,7 +9,6 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -462,8 +461,8 @@ final readonly class RecurringSeriesQuery
 
     /**
      * @return RecurringSeriesAmountTrendDto up to $maxPoints points, oldest first. Each
-     *                                       carries the native amount plus the settled-EUR shadow; eur_amount_minor
-     *                                       is null when the observation is already in EUR
+     *                                       carries the native amount plus the settled shadow; settled_amount_minor
+     *                                       is null when the account was debited in the currency quoted
      */
     public function amountTrendForSeries(int $seriesId, User $user, int $maxPoints = 24): RecurringSeriesAmountTrendDto
     {
@@ -520,17 +519,19 @@ final readonly class RecurringSeriesQuery
             $observedAt = CarbonImmutable::parse(self::toString($row->observed_at))->toDateString();
             $amountMinor = self::toInt($row->observed_amount_minor);
             $observedCurrency = self::toString($row->observed_currency);
-            $eurAmountMinor = null;
-            if ($observedCurrency !== Currency::Eur->value) {
-                $settledCurrency = self::toString($row->settled_currency ?? null);
-                if ($settledCurrency === Currency::Eur->value) {
-                    $eurAmountMinor = self::toInt($row->settled_amount_minor ?? null);
-                }
+            // Whatever the account was actually debited, whenever that is not
+            // what the charge was quoted in. Pinned to the euro, the shadow
+            // line never appeared for an account denominated in anything else.
+            $settledCurrency = self::toString($row->settled_currency ?? null);
+            $settledMinor = null;
+            if ($settledCurrency !== '' && $settledCurrency !== $observedCurrency) {
+                $settledMinor = self::toInt($row->settled_amount_minor ?? null);
             }
             $points[] = [
                 'date' => $observedAt,
                 'amount_minor' => $amountMinor,
-                'eur_amount_minor' => $eurAmountMinor,
+                'settled_amount_minor' => $settledMinor,
+                'settled_currency' => $settledMinor === null ? null : $settledCurrency,
             ];
         }
 

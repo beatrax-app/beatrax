@@ -37,7 +37,7 @@ return [
     'col_account' => 'Cont',
     'col_counterparty' => 'Contraparte',
     'col_note' => 'Notă',
-    'col_settled_eur' => 'Decontat EUR',
+    'col_settled' => 'Decontat',
     'col_original' => 'Original',
     'col_year' => 'An',
 

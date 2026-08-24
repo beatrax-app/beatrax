@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Контрагент',
     'col_description' => 'Опис',
     'col_note' => 'Нотатка',
-    'col_amount' => 'Сума (EUR)',
+    'col_amount' => 'Сума',
 
     'subtotal' => 'Проміжний підсумок',
 

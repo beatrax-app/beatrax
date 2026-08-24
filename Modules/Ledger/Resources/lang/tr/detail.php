@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Karşı taraf',
     'description' => 'Açıklama',
     'amount_native' => 'Tutar (orijinal para birimi)',
-    'amount_settled' => 'Tutar (EUR olarak kesinleşen)',
+    'amount_settled' => 'Tutar (tahsil edilen)',
     'effective_rate' => 'Geçerli kur',
     'ics_markup' => 'Varsa ICS ek ücretini içerir.',
 

@@ -22,7 +22,7 @@ return [
         'transaction' => 'Transaksjon',
     ],
 
-    'eur_equivalent' => 'Tilsvarende i EUR',
+    'settled_equivalent' => 'Oppgjort i :code',
     'chart_requires_js' => 'Diagrammet krever JavaScript.',
 
     'tolerance_toast' => 'Toleranse: :percent%',

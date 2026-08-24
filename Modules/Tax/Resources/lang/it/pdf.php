@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Controparte',
     'col_description' => 'Descrizione',
     'col_note' => 'Nota',
-    'col_amount' => 'Importo (EUR)',
+    'col_amount' => 'Importo',
 
     'subtotal' => 'Subtotale',
 

@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Контрагент',
     'description' => 'Описание',
     'amount_native' => 'Сума (оригинална валута)',
-    'amount_settled' => 'Сума (осчетоводена в EUR)',
+    'amount_settled' => 'Сума (уредена)',
     'effective_rate' => 'Ефективен курс',
     'ics_markup' => 'Включва евентуалната надбавка на ICS.',
 

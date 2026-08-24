@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Αντισυμβαλλόμενος',
     'description' => 'Περιγραφή',
     'amount_native' => 'Ποσό (αρχικό νόμισμα)',
-    'amount_settled' => 'Ποσό (διακανονισμένο σε EUR)',
+    'amount_settled' => 'Ποσό (εκκαθαρισμένο)',
     'effective_rate' => 'Πραγματική ισοτιμία',
     'ics_markup' => 'Περιλαμβάνει τυχόν προσαύξηση ICS.',
 

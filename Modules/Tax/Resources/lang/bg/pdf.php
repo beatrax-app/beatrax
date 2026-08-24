@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Контрагент',
     'col_description' => 'Описание',
     'col_note' => 'Бележка',
-    'col_amount' => 'Сума (EUR)',
+    'col_amount' => 'Сума',
 
     'subtotal' => 'Междинна сума',
 

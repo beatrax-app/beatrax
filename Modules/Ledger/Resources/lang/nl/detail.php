@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Tegenpartij',
     'description' => 'Omschrijving',
     'amount_native' => 'Bedrag (oorspronkelijk)',
-    'amount_settled' => 'Bedrag (verrekend in EUR)',
+    'amount_settled' => 'Bedrag (verrekend)',
     'effective_rate' => 'Effectieve koers',
     'ics_markup' => 'Inclusief eventuele ICS-opslag.',
 

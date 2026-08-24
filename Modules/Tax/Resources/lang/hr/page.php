@@ -37,7 +37,7 @@ return [
     'col_account' => 'Račun',
     'col_counterparty' => 'Protustranka',
     'col_note' => 'Bilješka',
-    'col_settled_eur' => 'Podmireno u EUR',
+    'col_settled' => 'Podmireno',
     'col_original' => 'Izvorno',
     'col_year' => 'Godina',
 

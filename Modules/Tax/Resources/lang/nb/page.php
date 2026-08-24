@@ -37,7 +37,7 @@ return [
     'col_account' => 'Konto',
     'col_counterparty' => 'Motpart',
     'col_note' => 'Notat',
-    'col_settled_eur' => 'Oppgjort EUR',
+    'col_settled' => 'Oppgjort',
     'col_original' => 'Opprinnelig',
     'col_year' => 'År',
 

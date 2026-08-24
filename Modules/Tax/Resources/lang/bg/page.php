@@ -37,7 +37,7 @@ return [
     'col_account' => 'Сметка',
     'col_counterparty' => 'Контрагент',
     'col_note' => 'Бележка',
-    'col_settled_eur' => 'Уредено в EUR',
+    'col_settled' => 'Уредено',
     'col_original' => 'Оригинал',
     'col_year' => 'Година',
 

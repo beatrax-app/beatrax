@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Zahlungspartner',
     'description' => 'Beschreibung',
     'amount_native' => 'Betrag (Originalwährung)',
-    'amount_settled' => 'Betrag (abgerechnet in EUR)',
+    'amount_settled' => 'Betrag (abgerechnet)',
     'effective_rate' => 'Effektiver Kurs',
     'ics_markup' => 'Enthält einen etwaigen ICS-Aufschlag.',
 

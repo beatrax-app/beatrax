@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Contraparte',
     'description' => 'Descripción',
     'amount_native' => 'Importe (moneda original)',
-    'amount_settled' => 'Importe (liquidado en EUR)',
+    'amount_settled' => 'Importe (liquidado)',
     'effective_rate' => 'Tipo de cambio efectivo',
     'ics_markup' => 'Incluye el recargo de ICS, si lo hay.',
 

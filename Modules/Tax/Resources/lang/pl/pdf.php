@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Kontrahent',
     'col_description' => 'Opis',
     'col_note' => 'Notatka',
-    'col_amount' => 'Kwota (EUR)',
+    'col_amount' => 'Kwota',
 
     'subtotal' => 'Suma częściowa',
 

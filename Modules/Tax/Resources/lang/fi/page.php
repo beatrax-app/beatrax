@@ -37,7 +37,7 @@ return [
     'col_account' => 'Tili',
     'col_counterparty' => 'Vastapuoli',
     'col_note' => 'Muistiinpano',
-    'col_settled_eur' => 'Tilitetty EUR',
+    'col_settled' => 'Tilitetty',
     'col_original' => 'Alkuperäinen',
     'col_year' => 'Vuosi',
 

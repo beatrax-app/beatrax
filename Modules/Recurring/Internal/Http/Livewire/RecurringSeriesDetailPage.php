@@ -93,17 +93,17 @@ final class RecurringSeriesDetailPage extends Component
     {
         $primaryData = [];
         $shadowData = [];
-        $hasShadow = false;
+        $shadowCurrency = '';
         foreach ($trend->points as $point) {
             $primaryData[] = [
                 'x' => $point['date'],
                 'y' => $point['amount_minor'] / Money::MINOR_UNITS_PER_MAJOR,
             ];
-            if ($point['eur_amount_minor'] !== null) {
-                $hasShadow = true;
+            if ($point['settled_amount_minor'] !== null) {
+                $shadowCurrency = $point['settled_currency'] ?? '';
                 $shadowData[] = [
                     'x' => $point['date'],
-                    'y' => $point['eur_amount_minor'] / Money::MINOR_UNITS_PER_MAJOR,
+                    'y' => $point['settled_amount_minor'] / Money::MINOR_UNITS_PER_MAJOR,
                 ];
             }
         }
@@ -112,9 +112,9 @@ final class RecurringSeriesDetailPage extends Component
             'name' => $trend->currency,
             'data' => $primaryData,
         ]];
-        if ($hasShadow) {
+        if ($shadowData !== []) {
             $series[] = [
-                'name' => Lang::get('recurring::detail.eur_equivalent'),
+                'name' => Lang::get('recurring::detail.settled_equivalent', ['code' => $shadowCurrency]),
                 'data' => $shadowData,
             ];
         }
@@ -137,9 +137,9 @@ final class RecurringSeriesDetailPage extends Component
             ],
             'stroke' => [
                 'curve' => 'straight',
-                'width' => $hasShadow ? [3, 2] : [3],
+                'width' => $shadowData !== [] ? [3, 2] : [3],
             ],
-            'colors' => $hasShadow ? ['#0f172a', '#94a3b8'] : ['#0f172a'],
+            'colors' => $shadowData !== [] ? ['#0f172a', '#94a3b8'] : ['#0f172a'],
             'markers' => [
                 'size' => 4,
             ],
@@ -148,7 +148,7 @@ final class RecurringSeriesDetailPage extends Component
                 'x' => ['format' => 'dd MMM yyyy'],
             ],
             'legend' => [
-                'show' => $hasShadow,
+                'show' => $shadowData !== [],
             ],
         ];
     }

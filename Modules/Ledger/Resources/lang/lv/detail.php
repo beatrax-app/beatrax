@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Darījuma partneris',
     'description' => 'Apraksts',
     'amount_native' => 'Summa (sākotnējā valūtā)',
-    'amount_settled' => 'Summa (norēķinu EUR)',
+    'amount_settled' => 'Summa (norēķina)',
     'effective_rate' => 'Faktiskais kurss',
     'ics_markup' => 'Ietver iespējamo ICS uzcenojumu.',
 

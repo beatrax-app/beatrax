@@ -9,7 +9,7 @@ use Spatie\LaravelData\Data;
 final class RecurringSeriesAmountTrendDto extends Data
 {
     /**
-     * @param  list<array{date: string, amount_minor: int, eur_amount_minor: int|null}>  $points
+     * @param  list<array{date: string, amount_minor: int, settled_amount_minor: int|null, settled_currency: string|null}>  $points
      * @param  int  $maxPoints  caps the rendered series; the chart truncates older occurrences
      *                          once the limit is reached. Default 24 covers two years of monthly data, the
      *                          documented zoom band
