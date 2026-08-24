@@ -42,9 +42,27 @@ class RecoveryCodesExportBridge
         return $path !== null && $this->handToShareSheet($shareTitle, $shareMessage, $path);
     }
 
+    // Share::file() is a void call and nativephp_call() swallows a name the
+    // shell never registered, so calling it proves nothing. Asking first is
+    // the only way this returns an answer rather than an assumption.
+    private function handToShareSheet(string $shareTitle, string $shareMessage, string $path): bool
+    {
+        if (! $this->canShareFiles()) {
+            return false;
+        }
+
+        return $this->share($shareTitle, $shareMessage, $path);
+    }
+
+    // Whether this shell registers the function behind Share::file() at all.
+    protected function canShareFiles(): bool
+    {
+        return function_exists('nativephp_can') && nativephp_can('Share.File');
+    }
+
     // The in-method class_exists() re-check is load-bearing: PHPStan narrowing
     // is scope-local, so it has to sit in the same method as the Share:: call.
-    private function handToShareSheet(string $shareTitle, string $shareMessage, string $path): bool
+    protected function share(string $shareTitle, string $shareMessage, string $path): bool
     {
         if (! class_exists(Share::class)) {
             return false;
