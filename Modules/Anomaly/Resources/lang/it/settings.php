@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Sensibilità degli avvisi',
-    'sensitivity_help' => "Segnala gli addebiti che superano di oltre il :percent% la tua spesa tipica per quell'esercente o categoria.",
+    'sensitivity_help' => "Con quanta facilità Beatrax considera insolito un addebito per quell'esercente o categoria, da 1 a 100. Più alto segnala di più.",
 
     'min_amount_label' => 'Importo minimo di addebito',
     'min_amount_help' => 'Ignora le anomalie sugli addebiti inferiori a questo importo. Memorizzato in centesimi (:symbol) — 1000 corrisponde a :example.',

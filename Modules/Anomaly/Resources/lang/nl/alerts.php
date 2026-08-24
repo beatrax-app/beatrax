@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'basislijn :baseline → werkelijk: :actual',
     'detected' => 'gedetecteerd :date',
-    'sensitivity' => 'gevoeligheid ±:percent%',
+    'sensitivity' => 'gevoeligheid :percent of 100',
 
     'actions_summary' => 'Acties',
 

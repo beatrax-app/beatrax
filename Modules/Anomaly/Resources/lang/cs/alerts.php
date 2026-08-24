@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'základ :baseline → skutečnost: :actual',
     'detected' => 'zjištěno :date',
-    'sensitivity' => 'citlivost ±:percent%',
+    'sensitivity' => 'citlivost :percent of 100',
 
     'actions_summary' => 'Akce',
 

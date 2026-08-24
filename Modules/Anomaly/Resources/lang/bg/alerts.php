@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'база :baseline → реално: :actual',
     'detected' => 'открито на :date',
-    'sensitivity' => 'чувствителност ±:percent%',
+    'sensitivity' => 'чувствителност :percent of 100',
 
     'actions_summary' => 'Действия',
 

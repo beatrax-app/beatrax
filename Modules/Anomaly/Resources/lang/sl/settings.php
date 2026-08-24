@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Občutljivost opozoril',
-    'sensitivity_help' => 'Označi bremenitve, ki so za več kot :percent% nad tvojo običajno porabo pri tem trgovcu ali v tej kategoriji.',
+    'sensitivity_help' => "Kako hitro Beatrax označi bremenitev kot nenavadno za tega trgovca ali kategorijo, od 1 do 100. Višje označi več.",
 
     'min_amount_label' => 'Najmanjši znesek bremenitve',
     'min_amount_help' => 'Prezri anomalije pri bremenitvah pod tem zneskom. Shranjeno v centih (:symbol) — 1000 pomeni :example.',

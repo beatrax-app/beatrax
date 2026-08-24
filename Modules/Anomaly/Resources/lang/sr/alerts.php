@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'uobičajeno :baseline → stvarno: :actual',
     'detected' => 'otkriveno :date',
-    'sensitivity' => 'osetljivost ±:percent%',
+    'sensitivity' => 'osetljivost :percent of 100',
 
     'actions_summary' => 'Radnje',
 

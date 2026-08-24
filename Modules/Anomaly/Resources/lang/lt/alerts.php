@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'bazinis :baseline → faktinis: :actual',
     'detected' => 'aptikta :date',
-    'sensitivity' => 'jautrumas ±:percent%',
+    'sensitivity' => 'jautrumas :percent of 100',
 
     'actions_summary' => 'Veiksmai',
 

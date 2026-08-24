@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'baastase :baseline → tegelik: :actual',
     'detected' => 'tuvastatud :date',
-    'sensitivity' => 'tundlikkus ±:percent%',
+    'sensitivity' => 'tundlikkus :percent of 100',
 
     'actions_summary' => 'Toimingud',
 

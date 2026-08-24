@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Varselfølsomhet',
-    'sensitivity_help' => 'Merk belastninger som ligger mer enn :percent% over det du vanligvis bruker hos den forhandleren eller i den kategorien.',
+    'sensitivity_help' => "Hvor lett Beatrax kaller en belastning uvanlig for den forhandleren eller kategorien, fra 1 til 100. Høyere flagger flere.",
 
     'min_amount_label' => 'Minste belastningsbeløp',
     'min_amount_help' => 'Ignorer anomalier på belastninger under dette beløpet. Lagres i cent (:symbol) — 1000 betyr :example.',

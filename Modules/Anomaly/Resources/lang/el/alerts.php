@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'βάση :baseline → πραγματικό: :actual',
     'detected' => 'εντοπίστηκε :date',
-    'sensitivity' => 'ευαισθησία ±:percent%',
+    'sensitivity' => 'ευαισθησία :percent of 100',
 
     'actions_summary' => 'Ενέργειες',
 

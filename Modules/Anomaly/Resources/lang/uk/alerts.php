@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'базовий рівень :baseline → фактично: :actual',
     'detected' => 'виявлено :date',
-    'sensitivity' => 'чутливість ±:percent%',
+    'sensitivity' => 'чутливість :percent of 100',
 
     'actions_summary' => 'Дії',
 

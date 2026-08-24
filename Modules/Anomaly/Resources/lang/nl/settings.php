@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Waarschuwingsgevoeligheid',
-    'sensitivity_help' => 'Markeer afschrijvingen die meer dan :percent% boven je gebruikelijke uitgaven voor die winkelier of categorie liggen.',
+    'sensitivity_help' => "Hoe snel Beatrax een afschrijving ongebruikelijk noemt voor die winkelier of categorie, van 1 tot 100. Hoger markeert meer.",
 
     'min_amount_label' => 'Minimaal afschrijvingsbedrag',
     'min_amount_help' => 'Negeer anomalieën op afschrijvingen onder dit bedrag. Opgeslagen in centen (:symbol) — 1000 betekent :example.',

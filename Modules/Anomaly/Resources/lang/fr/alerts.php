@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'référence :baseline → réel : :actual',
     'detected' => 'détecté le :date',
-    'sensitivity' => 'sensibilité ±:percent%',
+    'sensitivity' => 'sensibilité :percent of 100',
 
     'actions_summary' => 'Actions',
 
