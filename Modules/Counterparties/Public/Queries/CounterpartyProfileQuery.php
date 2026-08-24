@@ -207,6 +207,9 @@ final readonly class CounterpartyProfileQuery
         return $map;
     }
 
+    // Settled, like every total on this page: these rows are what those totals
+    // are made of, and reading the charged figure here put a dollar amount
+    // under a euro sum.
     /**
      * @return Collection<int, stdClass>
      */
@@ -220,7 +223,7 @@ final readonly class CounterpartyProfileQuery
             ->orderByDesc('posted_at')
             ->orderByDesc('id')
             ->limit($limit)
-            ->get(['id', 'posted_at', 'description', 'amount_minor', 'currency']);
+            ->get(['id', 'posted_at', 'description', 'settled_amount_minor', 'settled_currency']);
 
         $decrypted = $rows->map(function (stdClass $row) use ($userId): stdClass {
             if (is_string($row->description)) {

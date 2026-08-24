@@ -183,9 +183,9 @@
                                 // pages: this is one transaction, not an aggregate, and an abs()
                                 // made a charge and a refund of the same size read identically
                                 // on the one screen whose question direction most helps answer.
-                                $amountMinor = (int) ($tx->amount_minor ?? 0);
-                                $currency = is_string($tx->currency ?? null) && $tx->currency !== ''
-                                    ? $tx->currency
+                                $amountMinor = (int) ($tx->settled_amount_minor ?? 0);
+                                $currency = is_string($tx->settled_currency ?? null) && $tx->settled_currency !== ''
+                                    ? $tx->settled_currency
                                     : Currency::Eur->value;
                             @endphp
                             <li class="triage-tx">
