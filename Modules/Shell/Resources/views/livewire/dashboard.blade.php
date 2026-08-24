@@ -131,6 +131,11 @@
                 >
                     {{ $fmt($summary->net) }}
                 </p>
+                @if ($summary->unconvertedCurrencies !== [])
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">
+                        {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $summary->unconvertedCurrencies)]) }}
+                    </p>
+                @endif
             </x-core::card>
         </section>
     @else

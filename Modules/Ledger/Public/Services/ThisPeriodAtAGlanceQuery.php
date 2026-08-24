@@ -17,6 +17,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Dto\EmailScanHealthTile;
 use Modules\EmailScan\Public\Dto\InboxHealthLine;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Dto\Period;
@@ -31,9 +32,6 @@ use stdClass;
 final class ThisPeriodAtAGlanceQuery
 {
     use CoercesScalars;
-
-    private const ROLLUP_SQL = 'COALESCE(SUM(CASE WHEN type = ? THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
-         COALESCE(SUM(CASE WHEN type IN (?, ?) THEN settled_amount_minor ELSE 0 END), 0) AS net_minor';
 
     private const NON_EMPTY_CURRENCY_SQL = '(COALESCE(SUM(CASE WHEN type = ? THEN settled_amount_minor ELSE 0 END), 0) <> 0)
          OR (COALESCE(SUM(CASE WHEN type = ? THEN -settled_amount_minor ELSE 0 END), 0) <> 0)';
@@ -57,6 +55,7 @@ final class ThisPeriodAtAGlanceQuery
         private readonly TransactionListQuery $listQuery,
         private readonly Clock $clock,
         private readonly BaseCurrency $baseCurrency,
+        private readonly CrossCurrencyTotal $fx,
     ) {}
 
     public function for(User $user, Period $period, ?string $displayCurrency = null): DashboardSummary
@@ -85,23 +84,22 @@ final class ThisPeriodAtAGlanceQuery
 
         // Inflow/outflow rollups filter by transactions.type, never by amount
         // sign — the subtractive income rule, see the linked architecture page.
-        $inflowMinor = $this->incomeForPeriod($user, $period, $displayCurrency);
+        // Bucketed by the currency each row was settled in and converted from
+        // there: an account denominated in anything but the reporting currency
+        // used to be filtered away, which read as a period with no money in it.
+        $buckets = $this->bucketsByCurrency($user, $period);
 
-        $row = $connection
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('settled_currency', $displayCurrency)
-            ->where('posted_at', '>=', $period->start->toDateString())
-            ->where('posted_at', '<', $period->endExclusive->toDateString())
-            ->selectRaw(self::ROLLUP_SQL, [
-                TransactionType::Expense->value,
-                TransactionType::Income->value,
-                TransactionType::Expense->value,
-            ])
-            ->first();
+        $inflowByCurrency = [];
+        $outflowByCurrency = [];
+        foreach ($buckets as $bucket) {
+            $currency = self::toString($bucket->settled_currency);
+            $inflowByCurrency[$currency] = self::toInt($bucket->inflow_minor);
+            $outflowByCurrency[$currency] = self::toInt($bucket->outflow_minor);
+        }
 
-        $outflowMinor = self::toInt($row?->outflow_minor);
-        $netMinor = self::toInt($row?->net_minor);
+        $rates = $this->fx->ratesTo(array_keys($inflowByCurrency), $displayCurrency);
+        $inflow = $this->fx->withRates($inflowByCurrency, $displayCurrency, $rates);
+        $outflow = $this->fx->withRates($outflowByCurrency, $displayCurrency, $rates);
 
         $uncategorized = $connection
             ->table('transactions')
@@ -109,19 +107,20 @@ final class ThisPeriodAtAGlanceQuery
             ->whereNull('category_id')
             ->count();
 
-        // Keeps the "Recent transactions" panel consistent with the
-        // currency-scoped tiles — a EUR view never surfaces USD/JPY rows.
         $recent = $this->listQuery->recent($user, daysBack: 90, limit: 10, currency: $displayCurrency);
 
         return new DashboardSummary(
             period: $period,
-            inflow: Money::ofMinor($inflowMinor, $displayCurrency),
-            outflow: Money::ofMinor($outflowMinor, $displayCurrency),
-            net: Money::ofMinor($netMinor, $displayCurrency),
+            inflow: Money::ofMinor($inflow->minor, $displayCurrency),
+            outflow: Money::ofMinor($outflow->minor, $displayCurrency),
+            // Subtracted after conversion, never converted itself: a separately
+            // converted net can miss the two tiles above it by a cent.
+            net: Money::ofMinor($inflow->minor - $outflow->minor, $displayCurrency),
             topCategories: $this->topCategoriesQuery->for($user, $period, displayCurrency: $displayCurrency, limit: 5),
             recentTransactions: $recent->rows,
             uncategorizedCount: $uncategorized,
             isFirstRun: false,
+            unconvertedCurrencies: $inflow->unconverted,
         );
     }
 
@@ -132,28 +131,31 @@ final class ThisPeriodAtAGlanceQuery
     {
         $currency ??= $this->baseCurrency->code();
 
-        $value = $this->db->connection()
+        $rows = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->where('settled_currency', $currency)
             ->where('type', TransactionType::Income->value)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
-            ->sum('settled_amount_minor');
+            ->groupBy('settled_currency')
+            ->selectRaw('settled_currency, COALESCE(SUM(settled_amount_minor), 0) AS income_minor')
+            ->get();
 
-        return self::toInt($value);
+        $byCurrency = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $byCurrency[self::toString($row->settled_currency)] = self::toInt($row->income_minor);
+        }
+
+        return $this->fx->of($byCurrency, $currency)->minor;
     }
 
     /**
-     * @return list<PerCurrencyTile>
+     * @return list<stdClass>
      */
-    public function forByCurrency(User $user, Period $period): array
+    private function bucketsByCurrency(User $user, Period $period): array
     {
-        $connection = $this->db->connection();
-
-        // Per-currency tiles apply the same type filter as for() so
-        // original-currency mode never double-counts internal transfers.
-        $rows = $connection
+        $rows = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
             ->where('posted_at', '>=', $period->start->toDateString())
@@ -172,7 +174,20 @@ final class ThisPeriodAtAGlanceQuery
             ->orderBy('settled_currency')
             ->get();
 
-        return array_values($rows->map(static function (stdClass $row): PerCurrencyTile {
+        /** @var list<stdClass> $all */
+        $all = $rows->all();
+
+        return $all;
+    }
+
+    /**
+     * @return list<PerCurrencyTile>
+     */
+    public function forByCurrency(User $user, Period $period): array
+    {
+        // Per-currency tiles apply the same type filter as for() so
+        // original-currency mode never double-counts internal transfers.
+        return array_map(static function (stdClass $row): PerCurrencyTile {
             $currency = self::toString($row->settled_currency);
 
             return new PerCurrencyTile(
@@ -181,7 +196,7 @@ final class ThisPeriodAtAGlanceQuery
                 outflow: Money::ofMinor(self::toInt($row->outflow_minor), $currency),
                 net: Money::ofMinor(self::toInt($row->net_minor), $currency),
             );
-        })->all());
+        }, $this->bucketsByCurrency($user, $period));
     }
 
     // Null when no open/partially_settled statement exists, which the Blade

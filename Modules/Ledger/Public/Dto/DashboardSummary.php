@@ -14,6 +14,7 @@ final class DashboardSummary extends Data
     /**
      * @param  array<TopCategoryRow>  $topCategories
      * @param  array<TransactionRowDto>  $recentTransactions
+     * @param  list<string>  $unconvertedCurrencies  codes left out of the tiles for want of a rate
      */
     public function __construct(
         public readonly Period $period,
@@ -24,5 +25,6 @@ final class DashboardSummary extends Data
         public readonly array $recentTransactions,
         public readonly int $uncategorizedCount,
         public readonly bool $isFirstRun,
+        public readonly array $unconvertedCurrencies = [],
     ) {}
 }
