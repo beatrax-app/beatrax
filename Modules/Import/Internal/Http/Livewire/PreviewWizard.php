@@ -383,9 +383,6 @@ final class PreviewWizard extends Component
     // prompts fire on source_format alone, so they asked for a durable account
     // on the strength of a file the reader is about to be told could not be
     // read at all. Rows that DID read still need theirs, hence the row count.
-    /**
-     * @link ../../../../.docs/features/import/architecture.md#preview-wizard-inline-account-naming
-     */
     private function previewReadNothing(PreviewCache $cache): bool
     {
         $preview = $cache->getPreview($this->importRunId);
