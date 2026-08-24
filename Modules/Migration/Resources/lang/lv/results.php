@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Joprojām nav importēts — kategorijas',
-        'payee' => 'Joprojām nav importēts — darījuma partneri',
         'extra' => 'Netiek importēts',
         'conflict' => 'Nepieciešams jūsu lēmums',
     ],

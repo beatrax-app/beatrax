@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Še ni uvoženo — kategorije',
-        'payee' => 'Še ni uvoženo — prejemniki plačil',
         'extra' => 'Ni uvoženo',
         'conflict' => 'Potrebuje tvojo odločitev',
     ],

@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Nadal niezaimportowane — kategorie',
-        'payee' => 'Nadal niezaimportowani — kontrahenci',
         'extra' => 'Niezaimportowane',
         'conflict' => 'Wymaga Twojej decyzji',
     ],

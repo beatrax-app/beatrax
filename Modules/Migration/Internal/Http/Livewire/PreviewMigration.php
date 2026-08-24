@@ -12,7 +12,6 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Migration\Internal\Actions\ConfirmMigration;
 use Modules\Migration\Internal\Actions\DiscardMigrationRun;
-use Modules\Migration\Internal\Dto\PreviewSummary;
 use Modules\Migration\Internal\Enums\ConflictResolution;
 use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
@@ -101,16 +100,5 @@ final class PreviewMigration extends Component
             'run' => $run,
             'summary' => $summary,
         ]);
-    }
-
-    public function fullyMapped(PreviewSummary $summary, string $statKey): bool
-    {
-        // Only categories and counterparties have an unmapped-items group in this
-        // schema, so nothing else can show the "fully mapped" micro-label.
-        return match ($statKey) {
-            'category' => $summary->unmapped['category']['count'] === 0,
-            'payee' => $summary->unmapped['payee']['count'] === 0,
-            default => false,
-        };
     }
 }

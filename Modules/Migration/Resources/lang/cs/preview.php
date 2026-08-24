@@ -16,13 +16,10 @@ return [
         'budget' => 'Měsíce rozpočtu',
     ],
 
-    'fully_mapped' => '✓ plně namapováno',
     'all_clean' => 'Všechno se namapovalo čistě — před potvrzením nic nevyžaduje tvou pozornost.',
 
     'groups' => [
         'conflict' => 'Vyžaduje tvé rozhodnutí',
-        'category' => 'Nevyřešené kategorie',
-        'payee' => 'Nevyřešené protistrany',
         'extra' => 'Neimportováno',
     ],
 

@@ -88,7 +88,7 @@ return new class extends ModuleMigration
         $this->schema()->create('migration_staging_unmapped_items', function (Blueprint $table): void {
             $table->id();
             $this->scopeColumns($table);
-            // 'category' | 'payee' | 'extra' | 'conflict'
+            // 'extra' | 'conflict'
             $table->string('item_type');
             $table->string('source_external_id')->nullable();
             $table->string('display_label');

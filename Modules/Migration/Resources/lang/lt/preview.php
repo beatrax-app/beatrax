@@ -16,13 +16,10 @@ return [
         'budget' => 'Biudžeto mėnesiai',
     ],
 
-    'fully_mapped' => '✓ visiškai susieta',
     'all_clean' => 'Viskas susieta švariai — prieš patvirtinant tavo dėmesio niekas nereikalauja.',
 
     'groups' => [
         'conflict' => 'Reikia tavo sprendimo',
-        'category' => 'Neišspręstos kategorijos',
-        'payee' => 'Neišspręstos kitos šalys',
         'extra' => 'Neimportuota',
     ],
 

@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Yhä tuomatta — kategoriat',
-        'payee' => 'Yhä tuomatta — maksunsaajat',
         'extra' => 'Ei tuotu',
         'conflict' => 'Vaatii päätöksesi',
     ],

@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Hâlâ içe aktarılmadı — kategoriler',
-        'payee' => 'Hâlâ içe aktarılmadı — karşı taraflar',
         'extra' => 'İçe aktarılmadı',
         'conflict' => 'Kararını bekliyor',
     ],

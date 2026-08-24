@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Endiselt importimata — kategooriad',
-        'payee' => 'Endiselt importimata — maksesaajad',
         'extra' => 'Ei imporditud',
         'conflict' => 'Vajab sinu otsust',
     ],

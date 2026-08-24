@@ -16,13 +16,10 @@ return [
         'budget' => 'Eelarvekuud',
     ],
 
-    'fully_mapped' => '✓ täielikult seotud',
     'all_clean' => 'Kõik on puhtalt seotud — enne kinnitamist ei vaja miski sinu tähelepanu.',
 
     'groups' => [
         'conflict' => 'Vajab sinu otsust',
-        'category' => 'Lahendamata kategooriad',
-        'payee' => 'Lahendamata maksesaajad',
         'extra' => 'Ei imporditud',
     ],
 

@@ -16,13 +16,10 @@ return [
         'budget' => 'Mois budgétaires',
     ],
 
-    'fully_mapped' => '✓ entièrement associé',
     'all_clean' => 'Tout est associé proprement — rien ne demande ton attention avant de confirmer.',
 
     'groups' => [
         'conflict' => 'Demande ta décision',
-        'category' => 'Catégories non résolues',
-        'payee' => 'Tiers non résolus',
         'extra' => 'Non importé',
     ],
 

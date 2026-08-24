@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Vis dar neimportuota — kategorijos',
-        'payee' => 'Vis dar neimportuota — kitos šalys',
         'extra' => 'Neimportuota',
         'conflict' => 'Reikia tavo sprendimo',
     ],

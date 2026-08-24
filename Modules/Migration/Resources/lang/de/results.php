@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Weiterhin nicht importiert — Kategorien',
-        'payee' => 'Weiterhin nicht importiert — Zahlungspartner',
         'extra' => 'Nicht importiert',
         'conflict' => 'Braucht deine Entscheidung',
     ],
