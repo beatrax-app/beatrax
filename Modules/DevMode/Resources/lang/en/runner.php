@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Opens an arg form',
 
+    'spawning_unavailable' => 'Artisan commands run in a separate process, and this platform will not let the app start one. Run them from the desktop app instead.',
+
     'status' => [
         'running' => 'Running',
         'done' => 'Done',

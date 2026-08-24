@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Desktop\Internal;
 
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
+use Modules\Desktop\Internal\Native\AppWindow;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Modules\Desktop\Internal\Native\RelayListenerProcess;
@@ -68,7 +69,7 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
 
         $this->precompileViews();
 
-        $this->windows->open('main')
+        $this->windows->open(AppWindow::ID)
             ->width(self::WINDOW_WIDTH)
             ->height(self::WINDOW_HEIGHT)
             ->rememberState();

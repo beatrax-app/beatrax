@@ -30,6 +30,9 @@
                         es.onerror = () => { es.close(); window.location.reload(); };
                     } else {
                         running = false;
+                        if (d.message) {
+                            window.dispatchEvent(new CustomEvent('toast', { detail: { message: d.message } }));
+                        }
                     }
                 }).catch(() => { running = false; });
             "

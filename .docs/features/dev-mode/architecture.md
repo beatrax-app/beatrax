@@ -244,6 +244,61 @@ The module raises no Public events; the Internal listeners observe
 framework events (`JobProcessed`, `JobFailed`, `Login`) and the
 Eloquent observer.
 
+## The runner needs a child process, and the phone builds have none
+
+Spawn-then-tail is the whole architecture: the request returns in
+milliseconds because a detached child does the work. On iOS there is
+no child to detach. Three separate things are missing, and each on
+its own is fatal:
+
+- `PHP_BINARY` is the empty string. The mobile runtime is the `embed`
+  SAPI, which has no interpreter file behind it, so the invocation the
+  spawner assembles begins `'' '…/artisan' 'route:list'`.
+- `/bin/bash` and `/bin/sh` are not present in the app sandbox at all.
+- `proc_open()` exists and is not disabled, but the fork behind it is
+  refused: `PHP Startup: Fork failed: Operation not permitted`.
+  `pcntl_fork()` is not compiled in either.
+
+That last one is the important one, because it rules out the obvious
+workarounds. Dropping the bash wrapper and exec'ing PHP directly fails
+identically — the refusal is on starting any process, not on finding a
+shell.
+
+Running the command in-process instead, through `Artisan::call()` inside
+the web request, is not the answer either, and this was measured on the
+device rather than assumed:
+
+- Every first-party command in the SAFE list is registered inside an
+  `$this->app->runningInConsole()` guard, so from a web request they do
+  not exist. `beatrax:doctor` answers `CommandNotFoundException`, and
+  the Doctor panel is built entirely on that one command.
+- `route:list` does run, and calls `Router::flushMiddlewareGroups()` on
+  the live router as it goes. The request that invoked it then dies in
+  `Kernel::terminate()` with `Target class [web] does not exist` — a
+  500 for the reader either way, plus a router the rest of the process
+  is now missing. A console command owns its process; in a web request
+  it does not.
+- `cache:clear` does work cleanly. It is the exception, not the rule,
+  and a runner that silently supports three of eleven commands is a
+  worse answer than one that says what it cannot do.
+
+So the console reports the limit rather than working around it.
+`CommandSpawner::start()` raises `ProcessSpawningUnavailableException`
+before it creates the runs directory, the `RunRegistry` record or the
+opening audit row, so a platform that cannot spawn leaves nothing
+behind to sweep. The same exception replaces Symfony's
+`ProcessStartFailedException` at the spawn itself, which is the layer
+that catches a host where the interpreter path is fine and the fork is
+still refused. `ArtisanSpawnController` and `DestructiveSpawnController`
+answer `501` with `{error: "spawning_unavailable", message}`; the runner
+page toasts the same sentence; the Doctor panel's Re-run shows whatever
+`message` came back instead of silently un-pressing itself.
+
+The empty-interpreter guard earns its place on the desktop too. Before
+it, a spawner with `PHP_BINARY = ''` still returned `202` and a run id:
+bash accepts `'' artisan cache:clear`, the wrapper exits 0, and the
+console reports a started run that never ran anything.
+
 ## Data flow
 
 The ⌘K command-palette flow:

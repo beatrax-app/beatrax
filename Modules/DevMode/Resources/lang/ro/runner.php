@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Deschide un formular de argumente',
 
+    'spawning_unavailable' => 'Comenzile Artisan rulează într-un proces separat, iar această platformă nu lasă aplicația să pornească unul. Rulează-le din aplicația pentru computer.',
+
     'status' => [
         'running' => 'În rulare',
         'done' => 'Gata',

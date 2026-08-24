@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Enums\CommandTier;
+use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Exceptions\SpawnedRunVanishedException;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRegistry;
@@ -74,7 +75,15 @@ final readonly class ArtisanSpawnController
         /** @var array<string, mixed> $args */
         $args = is_array($argsRaw) ? $argsRaw : [];
 
-        $runId = $this->spawner->start($command, $args, $user->id(), CommandTier::Safe);
+        try {
+            $runId = $this->spawner->start($command, $args, $user->id(), CommandTier::Safe);
+        } catch (ProcessSpawningUnavailableException $e) {
+            return new JsonResponse(
+                ['error' => ProcessSpawningUnavailableException::WIRE_ERROR, 'message' => $e->readerMessage()],
+                Response::HTTP_NOT_IMPLEMENTED,
+            );
+        }
+
         $record = $this->runs->find($runId);
         if ($record === null) {
             throw SpawnedRunVanishedException::immediatelyAfterSpawn('ArtisanSpawnController', $runId);

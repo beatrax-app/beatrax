@@ -21,6 +21,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\CommandTier;
+use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\ProcessLiveness;
@@ -108,7 +109,14 @@ final class ArtisanRunnerPage extends Component
             return;
         }
 
-        $runId = $spawner->start($command, $args, $user->id(), CommandTier::Safe);
+        try {
+            $runId = $spawner->start($command, $args, $user->id(), CommandTier::Safe);
+        } catch (ProcessSpawningUnavailableException $e) {
+            $this->toast($e->readerMessage());
+
+            return;
+        }
+
         $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
     }
 
@@ -177,7 +185,14 @@ final class ArtisanRunnerPage extends Component
             return;
         }
 
-        $newRunId = $spawner->start($record->command, $record->args, $user->id(), CommandTier::Safe);
+        try {
+            $newRunId = $spawner->start($record->command, $record->args, $user->id(), CommandTier::Safe);
+        } catch (ProcessSpawningUnavailableException $e) {
+            $this->toast($e->readerMessage());
+
+            return;
+        }
+
         $this->toast(Lang::get('dev::runner.toast.reran', ['command' => $record->command, 'runId' => $newRunId]));
     }
 

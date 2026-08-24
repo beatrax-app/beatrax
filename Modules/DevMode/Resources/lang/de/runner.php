@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Öffnet ein Argumentformular',
 
+    'spawning_unavailable' => 'Artisan-Befehle laufen in einem eigenen Prozess, und diese Plattform lässt die App keinen starten. Führe sie stattdessen in der Desktop-App aus.',
+
     'status' => [
         'running' => 'Läuft',
         'done' => 'Fertig',

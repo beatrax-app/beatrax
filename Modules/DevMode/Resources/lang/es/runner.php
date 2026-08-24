@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Abre un formulario de argumentos',
 
+    'spawning_unavailable' => 'Los comandos de Artisan se ejecutan en un proceso aparte, y esta plataforma no deja que la app inicie ninguno. Ejecútalos desde la app de escritorio.',
+
     'status' => [
         'running' => 'En curso',
         'done' => 'Hecho',
