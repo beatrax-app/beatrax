@@ -294,6 +294,10 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Recurring/Public/Actions/RejectRecurringSeries.php',
         'Modules/Recurring/Public/Actions/SnoozeRecurringSeries.php',
         'Modules/Recurring/Public/Actions/UnRejectRecurringSeries.php',
+        // FixedPaymentsCard hands this to its Blade view as `$totals`, and the
+        // card is mounted from Shell's dashboard, so the consumer is real but
+        // outside this scan: a view variable never names its own type.
+        'Modules/Recurring/Public/Dto/MonthlyEquivalentTotals.php',
         'Modules/Recurring/Public/Dto/RecurringSeriesAmountTrendDto.php',
         'Modules/Recurring/Public/Events/RecurringSeriesDetected.php',
         'Modules/Recurring/Public/Services/FixedPaymentsViewQuery.php',

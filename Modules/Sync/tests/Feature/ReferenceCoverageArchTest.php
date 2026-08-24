@@ -86,7 +86,7 @@ it('keeps every unenforced reference pointing at a table that exists and is user
     }
 });
 
-// EntityChangeApplier maps a SOURCE entity type to its beatrax name at runtime
+// EntityChangeApplier maps a SOURCE entity type to its Beatrax name at runtime
 // rather than naming one, so the scan below cannot read a word out of it. Every
 // word it can return is already written as a literal by PromoteStagingToDomain,
 // which is where the scan does read them.
