@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Déverrouillez l\'application pour importer : les clés de chiffrement ne peuvent pas être utilisées tant qu\'elle est verrouillée.',
         'file_unreadable' => 'Ce fichier n\'a pas pu être lu.',
         'iban_not_in_preview' => 'Cet IBAN ne fait pas partie de l\'aperçu actuel.',
+        'pdf_reader_unavailable' => 'Les relevés PDF ont besoin du programme pdftotext, qui n\'est pas installé ici. Importe ce fichier sur un ordinateur qui l\'a, ou utilise plutôt un export CSV de ta banque.',
         'row_unreadable' => 'Cette ligne n\'a pas pu être lue.',
         'unknown_account' => 'Cette ligne appartient à un compte auquel tu n\'as pas encore donné de nom.',
     ],

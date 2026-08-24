@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Desbloqueie a aplicação para importar: as chaves de encriptação não podem ser usadas enquanto estiver bloqueada.',
         'file_unreadable' => 'Não foi possível ler este ficheiro.',
         'iban_not_in_preview' => 'Este IBAN não faz parte da pré-visualização atual.',
+        'pdf_reader_unavailable' => 'Os extratos em PDF precisam do programa pdftotext, que não está instalado aqui. Importa este ficheiro num computador que o tenha, ou usa antes uma exportação CSV do teu banco.',
         'row_unreadable' => 'Não foi possível ler esta linha.',
         'unknown_account' => 'Esta linha pertence a uma conta a que ainda não deste nome.',
     ],

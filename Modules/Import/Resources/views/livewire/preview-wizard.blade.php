@@ -167,7 +167,7 @@
                         @endif
                     </p>
                     @if ($fileFailure)
-                        <p class="mt-2">{{ Lang::get('import::preview.failed.likely_cause') }}</p>
+                        <p class="mt-2">{{ $preview->fileFailureReason->fileCause() }}</p>
                     @endif
                     @if ($fileFailureDetail !== null)
                         <p class="mt-2">

@@ -65,6 +65,7 @@ return [
         'app_locked' => 'İçe aktarmak için uygulamanın kilidini açın: kilitliyken şifreleme anahtarları kullanılamaz.',
         'file_unreadable' => 'Bu dosya okunamadı.',
         'iban_not_in_preview' => 'Bu IBAN geçerli önizlemenin bir parçası değil.',
+        'pdf_reader_unavailable' => 'PDF ekstreleri için pdftotext programı gerekir, o da burada kurulu değil. Bu dosyayı programın kurulu olduğu bir bilgisayarda içe aktar ya da bankandan CSV dışa aktarımı kullan.',
         'row_unreadable' => 'Bu satır okunamadı.',
         'unknown_account' => 'Bu satır henüz ad vermediğin bir hesaba ait.',
     ],

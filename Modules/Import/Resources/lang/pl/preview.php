@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Odblokuj aplikację, aby zaimportować: kluczy szyfrowania nie można użyć, gdy jest zablokowana.',
         'file_unreadable' => 'Nie udało się odczytać tego pliku.',
         'iban_not_in_preview' => 'Ten IBAN nie należy do bieżącego podglądu.',
+        'pdf_reader_unavailable' => 'Wyciągi PDF wymagają programu pdftotext, którego tu nie zainstalowano. Zaimportuj ten plik na komputerze, który go ma, albo użyj eksportu CSV z banku.',
         'row_unreadable' => 'Nie udało się odczytać tego wiersza.',
         'unknown_account' => 'Ten wiersz należy do konta, któremu nie nadano jeszcze nazwy.',
     ],

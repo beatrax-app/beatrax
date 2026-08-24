@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Atrakinkite programėlę, kad importuotumėte: šifravimo raktų negalima naudoti, kol ji užrakinta.',
         'file_unreadable' => 'Šio failo nepavyko perskaityti.',
         'iban_not_in_preview' => 'Šis IBAN nėra dabartinės peržiūros dalis.',
+        'pdf_reader_unavailable' => 'PDF išrašams reikia programos pdftotext, kuri čia neįdiegta. Importuok šį failą kompiuteryje, kuriame ji yra, arba naudok banko CSV eksportą.',
         'row_unreadable' => 'Šios eilutės nepavyko perskaityti.',
         'unknown_account' => 'Ši eilutė priklauso sąskaitai, kuriai dar nesuteikei pavadinimo.',
     ],

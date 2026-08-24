@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Unlock the app to import: the encryption keys cannot be used while it is locked.',
         'file_unreadable' => 'This file could not be read.',
         'iban_not_in_preview' => 'This IBAN is not part of the current preview.',
+        'pdf_reader_unavailable' => 'PDF statements need the pdftotext program, which is not installed here. Import this file on a desktop that has it, or use a CSV export from your bank instead.',
         'row_unreadable' => 'This row could not be read.',
         'unknown_account' => 'This row belongs to an account you have not named yet.',
     ],

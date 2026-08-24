@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Avaa sovelluksen lukitus tuodaksesi: salausavaimia ei voi käyttää lukittuna.',
         'file_unreadable' => 'Tätä tiedostoa ei voitu lukea.',
         'iban_not_in_preview' => 'Tämä IBAN ei kuulu nykyiseen esikatseluun.',
+        'pdf_reader_unavailable' => 'PDF-tiliotteet tarvitsevat pdftotext-ohjelman, jota ei ole täällä asennettu. Tuo tämä tiedosto tietokoneella, jossa se on, tai käytä pankkisi CSV-vientiä.',
         'row_unreadable' => 'Tätä riviä ei voitu lukea.',
         'unknown_account' => 'Tämä rivi kuuluu tilille, jolle et ole vielä antanut nimeä.',
     ],

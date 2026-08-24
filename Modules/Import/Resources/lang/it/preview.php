@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Sblocca l\'app per importare: le chiavi di crittografia non possono essere usate mentre è bloccata.',
         'file_unreadable' => 'Non è stato possibile leggere questo file.',
         'iban_not_in_preview' => "Questo IBAN non fa parte dell'anteprima attuale.",
+        'pdf_reader_unavailable' => 'Gli estratti conto in PDF richiedono il programma pdftotext, che qui non è installato. Importa questo file su un desktop che lo ha, oppure usa un export CSV della tua banca.',
         'row_unreadable' => 'Non è stato possibile leggere questa riga.',
         'unknown_account' => 'Questa riga appartiene a un conto a cui non hai ancora dato un nome.',
     ],

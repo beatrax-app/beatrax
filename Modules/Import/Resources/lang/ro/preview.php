@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Deblocați aplicația pentru a importa: cheile de criptare nu pot fi folosite cât timp este blocată.',
         'file_unreadable' => 'Acest fișier nu a putut fi citit.',
         'iban_not_in_preview' => 'Acest IBAN nu face parte din previzualizarea curentă.',
+        'pdf_reader_unavailable' => 'Extrasele PDF au nevoie de programul pdftotext, care nu este instalat aici. Importă acest fișier pe un computer care îl are sau folosește un export CSV de la bancă.',
         'row_unreadable' => 'Acest rând nu a putut fi citit.',
         'unknown_account' => 'Acest rând aparține unui cont căruia nu i-ai dat încă un nume.',
     ],

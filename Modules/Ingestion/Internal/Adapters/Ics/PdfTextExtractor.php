@@ -6,6 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Ingestion\Internal\Exceptions\PdfExtractionFailed;
+use Modules\Ingestion\Public\Exceptions\PdfReaderUnavailableException;
 use Spatie\PdfToText\Exceptions\BinaryNotFoundException;
 use Spatie\PdfToText\Exceptions\CouldNotExtractText;
 use Spatie\PdfToText\Exceptions\PdfNotFound;
@@ -27,6 +28,7 @@ class PdfTextExtractor
     ) {}
 
     /**
+     * @throws PdfReaderUnavailableException When this install has no pdftotext.
      * @throws PdfExtractionFailed When the input cannot be extracted.
      */
     public function extract(string $pdfPath): string
@@ -58,6 +60,15 @@ class PdfTextExtractor
             ));
         }
 
+        // Spatie only reports a missing binary when it does the finding, so a
+        // configured path that is not executable would otherwise arrive as a
+        // failed extraction. Same absence, same answer, either way it was set.
+        if ($this->binaryPath !== null && ! is_executable($this->binaryPath)) {
+            throw new PdfReaderUnavailableException(
+                'pdftotext is not installed or not executable.',
+            );
+        }
+
         try {
             $pdf = $this->binaryPath !== null
                 ? new Pdf($this->binaryPath)
@@ -67,7 +78,16 @@ class PdfTextExtractor
                 ->setPdf($pdfPath)
                 ->setOptions(self::PDFTOTEXT_OPTIONS)
                 ->text();
-        } catch (BinaryNotFoundException|PdfNotFound|CouldNotExtractText $e) {
+        } catch (BinaryNotFoundException $e) {
+            // Not a property of the file, so it is not reported as one: a phone
+            // ships no pdftotext and never can, and a server without poppler
+            // needs it installed. Both are answered by naming the binary.
+            throw new PdfReaderUnavailableException(
+                sprintf('pdftotext is not installed or not executable: %s', $e->getMessage()),
+                0,
+                $e,
+            );
+        } catch (PdfNotFound|CouldNotExtractText $e) {
             throw new PdfExtractionFailed(
                 sprintf('Could not extract PDF text: %s', $e->getMessage()),
                 0,

@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Lås upp appen för att importera: krypteringsnycklarna kan inte användas medan den är låst.',
         'file_unreadable' => 'Filen gick inte att läsa.',
         'iban_not_in_preview' => 'Det här IBAN-numret ingår inte i den aktuella förhandsgranskningen.',
+        'pdf_reader_unavailable' => 'PDF-kontoutdrag kräver programmet pdftotext, som inte är installerat här. Importera filen på en dator som har det, eller använd en CSV-export från din bank i stället.',
         'row_unreadable' => 'Raden gick inte att läsa.',
         'unknown_account' => 'Raden hör till ett konto som du ännu inte har namngett.',
     ],

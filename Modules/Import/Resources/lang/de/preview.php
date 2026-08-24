@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Entsperren Sie die App zum Importieren: Die Verschlüsselungsschlüssel können im gesperrten Zustand nicht verwendet werden.',
         'file_unreadable' => 'Diese Datei konnte nicht gelesen werden.',
         'iban_not_in_preview' => 'Diese IBAN gehört nicht zur aktuellen Vorschau.',
+        'pdf_reader_unavailable' => 'PDF-Kontoauszüge brauchen das Programm pdftotext, das hier nicht installiert ist. Importiere diese Datei auf einem Desktop, der es hat, oder nutze stattdessen einen CSV-Export deiner Bank.',
         'row_unreadable' => 'Diese Zeile konnte nicht gelesen werden.',
         'unknown_account' => 'Diese Zeile gehört zu einem Konto, das du noch nicht benannt hast.',
     ],

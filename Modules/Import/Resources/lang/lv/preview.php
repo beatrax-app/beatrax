@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Atbloķējiet lietotni, lai importētu: šifrēšanas atslēgas nevar izmantot, kamēr tā ir bloķēta.',
         'file_unreadable' => 'Šo failu neizdevās nolasīt.',
         'iban_not_in_preview' => 'Šis IBAN nav daļa no pašreizējā priekšskatījuma.',
+        'pdf_reader_unavailable' => 'PDF izrakstiem nepieciešama programma pdftotext, kas šeit nav uzstādīta. Importē šo failu datorā, kurā tā ir, vai izmanto bankas CSV eksportu.',
         'row_unreadable' => 'Šo rindu neizdevās nolasīt.',
         'unknown_account' => 'Šī rinda pieder kontam, kuram vēl neesi devis nosaukumu.',
     ],

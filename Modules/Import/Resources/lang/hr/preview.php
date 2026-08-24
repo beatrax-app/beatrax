@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Otključajte aplikaciju za uvoz: ključevi za šifriranje ne mogu se upotrijebiti dok je zaključana.',
         'file_unreadable' => 'Ovu datoteku nije bilo moguće pročitati.',
         'iban_not_in_preview' => 'Ovaj IBAN nije dio trenutnog pregleda.',
+        'pdf_reader_unavailable' => 'PDF izvodi trebaju program pdftotext, koji ovdje nije instaliran. Uvezi ovu datoteku na računalu koje ga ima ili radije upotrijebi CSV izvoz iz banke.',
         'row_unreadable' => 'Ovaj redak nije bilo moguće pročitati.',
         'unknown_account' => 'Ovaj redak pripada računu kojem još nisi dao naziv.',
     ],

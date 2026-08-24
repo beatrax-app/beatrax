@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Importimiseks avage rakendus: krüpteerimisvõtmeid ei saa lukustatuna kasutada.',
         'file_unreadable' => 'Seda faili ei õnnestunud lugeda.',
         'iban_not_in_preview' => 'See IBAN ei kuulu praegusesse eelvaatesse.',
+        'pdf_reader_unavailable' => 'PDF-väljavõtted vajavad programmi pdftotext, mida siin pole paigaldatud. Impordi see fail arvutis, kus see olemas on, või kasuta hoopis panga CSV-eksporti.',
         'row_unreadable' => 'Seda rida ei õnnestunud lugeda.',
         'unknown_account' => 'See rida kuulub kontole, millele sa pole veel nime andnud.',
     ],

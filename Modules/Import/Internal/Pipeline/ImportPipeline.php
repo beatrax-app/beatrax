@@ -33,6 +33,7 @@ use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
 use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Exceptions\PdfReaderUnavailableException;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -332,9 +333,15 @@ final class ImportPipeline
     // cannot be sealed — and both mean "unlock the app and try again".
     private static function reasonFor(Throwable $e, ImportFailureReason $default): ImportFailureReason
     {
-        return $e instanceof BlindIndexKeyUnavailableException || $e instanceof SensitiveColumnKeyUnavailableException
-            ? ImportFailureReason::AppLocked
-            : $default;
+        return match (true) {
+            $e instanceof BlindIndexKeyUnavailableException,
+            $e instanceof SensitiveColumnKeyUnavailableException => ImportFailureReason::AppLocked,
+            // Nothing about the file is wrong, so the header-row advice the
+            // default carries would send the reader to re-download a statement
+            // that would fail again the same way.
+            $e instanceof PdfReaderUnavailableException => ImportFailureReason::PdfReaderUnavailable,
+            default => $default,
+        };
     }
 
     // The same seam the log path uses, applied one step earlier: a message that

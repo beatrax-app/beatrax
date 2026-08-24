@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Odemkněte aplikaci pro import: šifrovací klíče nelze použít, dokud je zamčená.',
         'file_unreadable' => 'Tento soubor se nepodařilo načíst.',
         'iban_not_in_preview' => 'Tento IBAN není součástí aktuálního náhledu.',
+        'pdf_reader_unavailable' => 'Výpisy v PDF potřebují program pdftotext, který zde není nainstalovaný. Naimportuj tento soubor na počítači, kde je, nebo použij export CSV z banky.',
         'row_unreadable' => 'Tento řádek se nepodařilo načíst.',
         'unknown_account' => 'Tento řádek patří k účtu, kterému jsi ještě nedal jméno.',
     ],

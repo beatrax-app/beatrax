@@ -65,6 +65,7 @@ return [
         'app_locked' => 'Oldja fel az alkalmazást az importáláshoz: a titkosítási kulcsok zárolt állapotban nem használhatók.',
         'file_unreadable' => 'Ezt a fájlt nem sikerült beolvasni.',
         'iban_not_in_preview' => 'Ez az IBAN nem része az aktuális előnézetnek.',
+        'pdf_reader_unavailable' => 'A PDF kivonatokhoz a pdftotext program kell, ami itt nincs telepítve. Importáld ezt a fájlt olyan számítógépen, amelyen megvan, vagy használj CSV-exportot a bankodtól.',
         'row_unreadable' => 'Ezt a sort nem sikerült beolvasni.',
         'unknown_account' => 'Ez a sor olyan számlához tartozik, amelynek még nem adtál nevet.',
     ],

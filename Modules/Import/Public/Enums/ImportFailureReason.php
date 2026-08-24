@@ -20,6 +20,18 @@ enum ImportFailureReason: string
 
     case FileUnreadable = 'file_unreadable';
 
+    case PdfReaderUnavailable = 'pdf_reader_unavailable';
+
+    // The line under "This file could not be read". Only the default names the
+    // header row, which is the wrong advice for a file that failed for a reason
+    // already known -- a locked app, or a PDF reader this install does not have.
+    public function fileCause(): string
+    {
+        return $this === self::FileUnreadable
+            ? Lang::get('import::preview.failed.likely_cause')
+            : $this->label();
+    }
+
     public function label(): string
     {
         return Lang::get('import::preview.errors.'.$this->value);
