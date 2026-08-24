@@ -5789,6 +5789,49 @@ mark {
     }
 
     /*
+     * Reflow at 320px. Every run of characters with no break opportunity in it
+     * — a heading word, a path in a paragraph, a URL printed in mono, a bank's
+     * machine reference — sized its own parent and took the page sideways with
+     * it at the reader's largest text. `anywhere` rather than `break-word`:
+     * only `anywhere` counts toward min-content, which is what lets the flex
+     * and grid parents shrink instead of the page growing.
+     */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    li,
+    dd,
+    dt,
+    code,
+    .code {
+        overflow-wrap: anywhere;
+    }
+
+    /*
+     * A segmented group is one non-wrapping row of nowrap labels with its own
+     * h-10 pinning the height. Measured at the largest font size and screen
+     * zoom this phone offers — a 320px viewport, 32px text — the currency
+     * toggle on /transactions was 372.7px wide, ended 80px past the right
+     * edge, and took the whole page sideways with it. Releasing the height is
+     * half the fix: wrapping alone drew the second option underneath the
+     * button below it.
+     */
+    [data-flux-radio-group-segmented] {
+        flex-wrap: wrap;
+        height: auto;
+    }
+
+    /* The floor above lists buttons, and a radio is not one, so these measured
+       32px at default text as well. */
+    [data-flux-radio-group-segmented] > [role='radio'] {
+        min-height: 44px;
+    }
+
+    /*
      * A box the reader types into is tapped before it is typed into, and the
      * floor above names only buttons. Measured on an iPhone 12 mini: 34px on
      * every /budgets amount cell, 42px on the signup and login boxes. The
