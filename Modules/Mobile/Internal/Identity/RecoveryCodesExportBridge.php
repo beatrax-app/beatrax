@@ -55,6 +55,8 @@ class RecoveryCodesExportBridge
     }
 
     // Whether this shell registers the function behind Share::file() at all.
+    // A build without it answers false rather than throwing, which is what
+    // lets the caller tell the reader their codes were not saved.
     protected function canShareFiles(): bool
     {
         return function_exists('nativephp_can') && nativephp_can('Share.File');

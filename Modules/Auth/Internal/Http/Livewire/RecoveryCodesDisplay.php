@@ -35,11 +35,10 @@ final class RecoveryCodesDisplay extends Component
 
     public function mount(Session $session, CurrentUser $currentUser, UrlGenerator $urls): mixed
     {
-        // Arriving outside the ceremony has no codes to show, and an empty page
-        // would be worse than a 404 — but a reader who has already finished it
-        // is not lost, they are behind. Signup leaves this page in history one
-        // entry behind the wizard, whose nine steps share a URL, so the system
-        // back button on the first step of setup landed here and met the 404.
+        // Arriving outside the ceremony has no codes to show, but a reader who
+        // already finished it is not lost, only behind: signup leaves this page
+        // one history entry behind the wizard, whose nine steps share a URL, so
+        // the system back button on step one landed here and met a 404.
         if ($session->get(self::SESSION_KEY) === null && $currentUser->isAuthenticated()) {
             return $this->redirect($this->onwardFrom($session, $urls), navigate: false);
         }

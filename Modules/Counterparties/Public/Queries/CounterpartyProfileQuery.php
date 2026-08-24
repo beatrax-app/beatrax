@@ -261,11 +261,10 @@ final readonly class CounterpartyProfileQuery
         return $this->convertedBuckets($resolved, fn (stdClass $row): string => self::toString($row->category_id ?? null));
     }
 
-    // The SQL groups by currency as well as by the bucket key, so a category
-    // charged in two currencies arrives as two rows; they are folded back into
-    // one only once each has been through its own rate. Ordering happens here
-    // rather than in SQL for the same reason — ABS() over raw minor units
-    // ranked a dollar category above a larger euro one.
+    // The SQL groups by currency too, so a category charged in two arrives as
+    // two rows, folded back into one only after each has been through its own
+    // rate. Ordering happens here for the same reason: ABS() over raw minor
+    // units ranked a dollar category above a larger euro one.
     /**
      * @param  Collection<int, stdClass>  $rows
      * @param  callable(stdClass): string  $keyOf
