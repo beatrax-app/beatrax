@@ -468,9 +468,10 @@ it('returns filters-only results without materializing all ids', function (): vo
         ->and($page->rows[0]->counterpartyName)->toBe('Jan Vendor');
 });
 
-// The summary totals are labelled "€", so a row settled in another currency
-// must not be summed into them.
-it('summary totals exclude non-eur-settled rows', function (): void {
+// The summary totals are labelled in the reader's reporting currency, so a row
+// settled in another one is converted into it rather than left out: leaving it
+// out reported a figure the listed rows plainly contradict.
+it('summary totals convert a row settled in another currency', function (): void {
     $this->searchTestTransaction($this->userAId, [
         'counterparty_name' => 'Summary Vendor',
         'counterparty_normalized' => 'summary vendor',
@@ -491,9 +492,10 @@ it('summary totals exclude non-eur-settled rows', function (): void {
     /** @var SearchResultPage $page */
     $page = $searchQuery->search($user, 'Summary Vendor', SearchFilters::empty());
 
-    // Both rows are counted; only the EUR one contributes to the total.
+    // Both rows are counted, and the dollar one at the bundled EUR/USD rate of
+    // 1.1359: USD 74.43 is EUR 65.53, over the euro row's EUR 10.00.
     expect($page->totalCount)->toBe(2)
-        ->and($page->totalOutMinor)->toBe(-1000);
+        ->and($page->totalOutMinor)->toBe(-7553);
 });
 
 it('applies the amount token as a min filter', function (): void {

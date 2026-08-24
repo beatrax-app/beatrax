@@ -10,6 +10,7 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\AmountDirection;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\TransactionCursor;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
@@ -45,6 +46,7 @@ final class SearchQuery
         private readonly FtsCandidateResolver $ftsResolver,
         private readonly SearchRowMapper $rowMapper,
         private readonly BaseCurrency $baseCurrency,
+        private readonly CrossCurrencyTotal $fx,
     ) {}
 
     public function search(
@@ -98,20 +100,34 @@ final class SearchQuery
         $this->applyFilters($query, $user, $filters);
 
         // The reader's own reporting currency, not the app-wide fallback: the
-        // strip labels these totals with it, so a row settled in anything else
-        // would be summed into a figure shown under the wrong symbol.
+        // strip labels these totals with it. Bucketed by the currency each row
+        // settled in and converted from there — counting only the rows already
+        // in it reported nothing at all over a ledger denominated elsewhere.
         $base = $this->baseCurrency->forUser($user);
 
         $summary = (clone $query)->selectRaw(
             'COUNT(*) as total_count,
-             SUM(CASE WHEN settled_currency = ? AND settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
-             SUM(CASE WHEN settled_currency = ? AND settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in',
-            [$base, $base],
-        )->first();
+             settled_currency as bucket_currency,
+             SUM(CASE WHEN settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
+             SUM(CASE WHEN settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in',
+        )->groupBy('settled_currency')->get();
 
-        $totalCount = is_numeric($summary?->total_count) ? (int) $summary->total_count : 0;
-        $totalOut = is_numeric($summary?->total_out) ? (int) $summary->total_out : 0;
-        $totalIn = is_numeric($summary?->total_in) ? (int) $summary->total_in : 0;
+        $totalCount = 0;
+        $outByCurrency = [];
+        $inByCurrency = [];
+        foreach ($summary as $bucket) {
+            $bucketCurrency = is_string($bucket->bucket_currency ?? null) ? $bucket->bucket_currency : '';
+            $totalCount += is_numeric($bucket->total_count ?? null) ? (int) $bucket->total_count : 0;
+            if ($bucketCurrency === '') {
+                continue;
+            }
+            $outByCurrency[$bucketCurrency] = is_numeric($bucket->total_out ?? null) ? (int) $bucket->total_out : 0;
+            $inByCurrency[$bucketCurrency] = is_numeric($bucket->total_in ?? null) ? (int) $bucket->total_in : 0;
+        }
+
+        $rates = $this->fx->ratesTo(array_keys($outByCurrency), $base);
+        $totalOut = $this->fx->withRates($outByCurrency, $base, $rates)->minor;
+        $totalIn = $this->fx->withRates($inByCurrency, $base, $rates)->minor;
 
         $query->limit($limit + 1);
         TransactionCursor::apply($query, $cursorPostedAt, $cursorId);
