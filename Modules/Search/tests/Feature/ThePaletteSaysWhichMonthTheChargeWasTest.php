@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Fmt;
+use Livewire\Livewire;
+use Modules\Search\Public\Http\Livewire\PaletteSearchEndpoint;
 use Modules\Search\Public\Services\SearchQuery;
 
 // Typing "vattenfall" into the palette on the Samsung answered five rows:
@@ -69,4 +71,25 @@ it('writes that date the way the rest of the app writes dates', function (): voi
     $hits = $search->palette($this->user, 'Vattenfall');
 
     expect($hits[0]['date'] ?? null)->toBe(Fmt::shortDate('2026-04-01'));
+});
+
+// The modal does not read SearchQuery. PaletteSearchEndpoint re-shapes every
+// hit into its own array first, and a key the query adds but the endpoint does
+// not copy reaches nothing — which is exactly what shipped the first time.
+it('carries the date all the way to the component the modal renders', function (): void {
+    $this->searchTestTransaction($this->user->id, [
+        'posted_at' => '2026-04-01',
+        'booked_at' => '2026-04-01 00:00:00',
+        'value_date' => '2026-04-01',
+        'counterparty_name' => 'Vattenfall Energie',
+        'counterparty_normalized' => 'vattenfall energie',
+        'description' => 'KENMERK 582759',
+    ]);
+
+    $hits = Livewire::test(PaletteSearchEndpoint::class)
+        ->call('search', 'Vattenfall')
+        ->get('transactionHits');
+
+    expect($hits)->not->toBeEmpty()
+        ->and($hits[0]['date'] ?? null)->toBe(Fmt::shortDate('2026-04-01'));
 });

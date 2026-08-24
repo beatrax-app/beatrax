@@ -480,9 +480,8 @@ final class TransactionDetail extends Component
 
         // Read past the Category model, not through it: the shipped tree is
         // seeded with user_id = NULL and the model carries BelongsToUser, so
-        // its relation answers null for every default category on every
-        // install. Every other category read in the app already comes through
-        // this seam.
+        // its relation answers null for every default category. The seam is
+        // where every other category read in the app already goes.
         $categoryRow = $transaction->category_id === null
             ? null
             : $db->connection()->table('categories')
