@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktyvus trūkumo laikotarpis|:count aktyvūs trūkumo laikotarpiai|:count aktyvių trūkumo laikotarpių',
     'lowest_in_30_label' => 'Mažiausias per 30 dienų',
     'next_ics' => 'Kitas ICS atsiskaitymas: :amount :date',
+    'ics_overdue' => 'ICS atsiskaitymas pradelstas: :amount, terminas buvo :date',
 ];

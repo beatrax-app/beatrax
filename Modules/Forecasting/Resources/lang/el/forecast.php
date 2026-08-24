@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count ενεργό παράθυρο ελλείμματος|:count ενεργά παράθυρα ελλείμματος',
     'lowest_in_30_label' => 'Χαμηλότερο σε 30 ημέρες',
     'next_ics' => 'Επόμενος διακανονισμός ICS: :amount στις :date',
+    'ics_overdue' => 'Ληξιπρόθεσμος διακανονισμός ICS: :amount, με λήξη στις :date',
 ];

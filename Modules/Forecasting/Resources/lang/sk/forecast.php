@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktívne okno nedostatku|:count aktívne okná nedostatku|:count aktívnych okien nedostatku',
     'lowest_in_30_label' => 'Najnižšie za 30 dní',
     'next_ics' => 'Ďalšie zúčtovanie ICS: :amount dňa :date',
+    'ics_overdue' => 'Zúčtovanie ICS po splatnosti: :amount, splatné :date',
 ];

@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count etkin açık dönemi',
     'lowest_in_30_label' => '30 gündeki en düşük',
     'next_ics' => 'Sonraki ICS tahsilatı: :date tarihinde :amount',
+    'ics_overdue' => 'ICS tahsilatı gecikti: :amount, son tarih :date',
 ];

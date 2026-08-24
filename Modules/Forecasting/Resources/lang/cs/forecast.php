@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktivní okno se schodkem|:count aktivní okna se schodkem|:count aktivních oken se schodkem',
     'lowest_in_30_label' => 'Nejnižší za 30 dní',
     'next_ics' => 'Příští vypořádání ICS: :amount dne :date',
+    'ics_overdue' => 'Vypořádání ICS po splatnosti: :amount, splatné :date',
 ];

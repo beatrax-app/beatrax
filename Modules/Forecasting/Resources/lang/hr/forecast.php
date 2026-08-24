@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktivno razdoblje manjka|:count aktivna razdoblja manjka|:count aktivnih razdoblja manjka',
     'lowest_in_30_label' => 'Najniže u 30 dana',
     'next_ics' => 'Sljedeće ICS namirenje: :amount na dan :date',
+    'ics_overdue' => 'ICS namirenje je dospjelo: :amount, rok je bio :date',
 ];

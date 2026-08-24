@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count ventana de déficit activa|:count ventanas de déficit activas',
     'lowest_in_30_label' => 'Mínimo en 30 días',
     'next_ics' => 'Próxima liquidación ICS: :amount el :date',
+    'ics_overdue' => 'Liquidación ICS vencida: :amount, vencía el :date',
 ];

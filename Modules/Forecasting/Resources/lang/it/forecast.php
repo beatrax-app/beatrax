@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count finestra di scoperto attiva|:count finestre di scoperto attive',
     'lowest_in_30_label' => 'Minimo in 30 giorni',
     'next_ics' => 'Prossimo regolamento ICS: :amount il :date',
+    'ics_overdue' => 'Regolamento ICS scaduto: :amount, scaduto il :date',
 ];

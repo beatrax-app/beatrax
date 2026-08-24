@@ -71,4 +71,5 @@ return [
     'shortfall_window' => '{0} nincs aktív hiányidőszak|[1,1] :count aktív hiányidőszak|[2,*] :count aktív hiányidőszak',
     'lowest_in_30_label' => 'Legalacsonyabb 30 napon belül',
     'next_ics' => 'Következő ICS-elszámolás: :amount ekkor: :date',
+    'ics_overdue' => 'Az ICS-elszámolás lejárt: :amount, esedékes volt: :date',
 ];

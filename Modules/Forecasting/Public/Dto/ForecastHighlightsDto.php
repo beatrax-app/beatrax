@@ -22,5 +22,6 @@ final class ForecastHighlightsDto extends Data
         public readonly ?string $lowestProjectedAccountName,
         public readonly int $activeShortfallCount,
         public readonly ?NextSettlementDto $nextIcsSettlement,
+        public readonly bool $icsSettlementOverdue = false,
     ) {}
 }

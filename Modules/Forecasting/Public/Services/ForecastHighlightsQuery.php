@@ -55,6 +55,11 @@ final readonly class ForecastHighlightsQuery
             lowestProjectedAccountName: $lowest['accountName'] ?? null,
             activeShortfallCount: $shortfallCount,
             nextIcsSettlement: $nextIcsSettlement,
+            // An imported statement stays open until it is settled, so a due
+            // date that has passed is the ordinary case rather than the odd
+            // one, and calling it "next" reads as a date still to come.
+            icsSettlementOverdue: $nextIcsSettlement !== null
+                && $nextIcsSettlement->dueDate->lessThan($this->clock->now()->startOfDay()),
         );
     }
 

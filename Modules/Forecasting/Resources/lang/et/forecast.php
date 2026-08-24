@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktiivne puudujäägi aken|:count aktiivset puudujäägi akent',
     'lowest_in_30_label' => 'Madalaim 30 päeva jooksul',
     'next_ics' => 'Järgmine ICS arveldus: :amount kuupäeval :date',
+    'ics_overdue' => 'ICS arveldus on tähtaja ületanud: :amount, tähtaeg oli :date',
 ];

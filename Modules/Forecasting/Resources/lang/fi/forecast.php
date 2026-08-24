@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktiivinen vajejakso|:count aktiivista vajejaksoa',
     'lowest_in_30_label' => 'Alin 30 päivän aikana',
     'next_ics' => 'Seuraava ICS-tilitys: :amount päivänä :date',
+    'ics_overdue' => 'ICS-tilitys myöhässä: :amount, eräpäivä oli :date',
 ];

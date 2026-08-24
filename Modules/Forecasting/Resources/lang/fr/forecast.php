@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count fenêtre de déficit active|:count fenêtres de déficit actives',
     'lowest_in_30_label' => 'Point le plus bas sur 30 jours',
     'next_ics' => 'Prochain règlement ICS : :amount le :date',
+    'ics_overdue' => 'Règlement ICS en retard : :amount, échu le :date',
 ];

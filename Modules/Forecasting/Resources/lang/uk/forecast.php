@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count активне вікно дефіциту|:count активні вікна дефіциту|:count активних вікон дефіциту',
     'lowest_in_30_label' => 'Найнижчий за 30 днів',
     'next_ics' => 'Наступне врегулювання ICS: :amount — :date',
+    'ics_overdue' => 'Врегулювання ICS прострочене: :amount, термін був :date',
 ];

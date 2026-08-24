@@ -71,4 +71,5 @@ return [
     'shortfall_window' => 'o fereastră de deficit activă|:count ferestre de deficit active|:count de ferestre de deficit active',
     'lowest_in_30_label' => 'Minimul în 30 de zile',
     'next_ics' => 'Următoarea decontare ICS: :amount pe :date',
+    'ics_overdue' => 'Decontare ICS restantă: :amount, scadentă pe :date',
 ];

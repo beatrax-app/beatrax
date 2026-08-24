@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktives Unterdeckungsfenster|:count aktive Unterdeckungsfenster',
     'lowest_in_30_label' => 'Tiefstand in 30 Tagen',
     'next_ics' => 'Nächste ICS-Abrechnung: :amount am :date',
+    'ics_overdue' => 'ICS-Abrechnung überfällig: :amount, fällig am :date',
 ];

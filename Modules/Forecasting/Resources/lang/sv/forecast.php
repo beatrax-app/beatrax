@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktiv underskottsperiod|:count aktiva underskottsperioder',
     'lowest_in_30_label' => 'Lägst på 30 dagar',
     'next_ics' => 'Nästa ICS-avräkning: :amount den :date',
+    'ics_overdue' => 'ICS-avräkningen har förfallit: :amount, förföll :date',
 ];

@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktywne okno niedoboru|:count aktywne okna niedoboru|:count aktywnych okien niedoboru',
     'lowest_in_30_label' => 'Najniższe saldo w ciągu 30 dni',
     'next_ics' => 'Następne rozliczenie ICS: :amount dnia :date',
+    'ics_overdue' => 'Rozliczenie ICS po terminie: :amount, termin minął :date',
 ];

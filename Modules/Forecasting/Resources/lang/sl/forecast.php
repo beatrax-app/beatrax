@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktivno obdobje primanjkljaja|:count aktivni obdobji primanjkljaja|:count aktivna obdobja primanjkljaja|:count aktivnih obdobij primanjkljaja',
     'lowest_in_30_label' => 'Najnižje v 30 dneh',
     'next_ics' => 'Naslednja poravnava ICS: :amount na dan :date',
+    'ics_overdue' => 'Poravnava ICS je zapadla: :amount, rok je bil :date',
 ];

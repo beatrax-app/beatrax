@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count active shortfall window|:count active shortfall windows',
     'lowest_in_30_label' => 'Lowest in 30 days',
     'next_ics' => 'Next ICS settlement: :amount on :date',
+    'ics_overdue' => 'ICS settlement overdue: :amount, due :date',
 ];

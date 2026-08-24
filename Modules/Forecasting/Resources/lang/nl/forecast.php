@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count actief tekortvenster|:count actieve tekortvensters',
     'lowest_in_30_label' => 'Laagste in 30 dagen',
     'next_ics' => 'Volgende ICS-afwikkeling: :amount op :date',
+    'ics_overdue' => 'ICS-afwikkeling is verlopen: :amount, verviel op :date',
 ];

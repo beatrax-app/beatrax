@@ -74,8 +74,14 @@
             @endif
 
             @if ($dto->nextIcsSettlement !== null)
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                    {{ Lang::get('forecasting::forecast.next_ics', ['amount' => $nextSettlementFormatted, 'date' => $dto->nextIcsSettlement->dueDate->translatedFormat('d M')]) }}
+                {{-- A date already past carries its year: "19 May" alone reads
+                     as this year's, and an unsettled statement can be older. --}}
+                <p class="mt-1 text-xs {{ $dto->icsSettlementOverdue ? 'text-amber-700 dark:text-amber-500' : 'text-slate-500 dark:text-slate-400' }}" style="font-variant-numeric: tabular-nums;">
+                    @if ($dto->icsSettlementOverdue)
+                        {{ Lang::get('forecasting::forecast.ics_overdue', ['amount' => $nextSettlementFormatted, 'date' => $dto->nextIcsSettlement->dueDate->translatedFormat('d M Y')]) }}
+                    @else
+                        {{ Lang::get('forecasting::forecast.next_ics', ['amount' => $nextSettlementFormatted, 'date' => $dto->nextIcsSettlement->dueDate->translatedFormat('d M')]) }}
+                    @endif
                 </p>
             @endif
         </a>

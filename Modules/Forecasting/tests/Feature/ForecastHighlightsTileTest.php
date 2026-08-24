@@ -122,6 +122,11 @@ beforeEach(function (): void {
 });
 
 it('renders the next ICS settlement amount when one is upcoming', function (): void {
+    // Before the statement's own due date, which is what "upcoming" means:
+    // read at today's date this fixture is months overdue, and the tile now
+    // says so.
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-05-01 09:00:00'));
+
     CardStatement::query()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->ics->id,
@@ -138,6 +143,8 @@ it('renders the next ICS settlement amount when one is upcoming', function (): v
         ->assertOk()
         ->assertSeeText('Forecast highlights')
         ->assertSeeText('Next ICS settlement');
+
+    CarbonImmutable::setTestNow();
 });
 
 it('hides the Forecast highlights tile when no settlement is upcoming AND no projection exists', function (): void {

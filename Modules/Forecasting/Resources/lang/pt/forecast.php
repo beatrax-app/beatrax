@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count janela de défice ativa|:count janelas de défice ativas',
     'lowest_in_30_label' => 'Mínimo em 30 dias',
     'next_ics' => 'Próxima liquidação ICS: :amount a :date',
+    'ics_overdue' => 'Liquidação ICS em atraso: :amount, vencia a :date',
 ];

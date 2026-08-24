@@ -71,4 +71,5 @@ return [
     'shortfall_window' => ':count aktīvu iztrūkuma periodu|:count aktīvs iztrūkuma periods|:count aktīvi iztrūkuma periodi',
     'lowest_in_30_label' => 'Zemākais 30 dienās',
     'next_ics' => 'Nākamais ICS norēķins: :amount — :date',
+    'ics_overdue' => 'ICS norēķins nokavēts: :amount, termiņš bija :date',
 ];
