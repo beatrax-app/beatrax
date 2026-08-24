@@ -5812,6 +5812,20 @@ mark {
     }
 
     /*
+     * A strip of tabs, a strip of radio pills, and the calendar's own toolbar:
+     * a row of controls whose labels do not shrink, in a container with no
+     * wrap. At the reader's largest text the Open / History / Dismissed strip
+     * needed 306px of a 288px column and clipped "Dismissed" inside its own
+     * box. Keyed on the role the strips already share rather than a class each
+     * new one would have to remember.
+     */
+    [role='tablist'],
+    [role='radiogroup'],
+    .cal-toolbar {
+        flex-wrap: wrap;
+    }
+
+    /*
      * A segmented group is one non-wrapping row of nowrap labels with its own
      * h-10 pinning the height. Measured at the largest font size and screen
      * zoom this phone offers — a 320px viewport, 32px text — the currency
