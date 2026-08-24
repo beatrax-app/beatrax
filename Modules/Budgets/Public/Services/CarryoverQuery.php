@@ -22,6 +22,7 @@ use Modules\Ledger\Public\Services\SpendByCategoryQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Psr\Log\LoggerInterface;
+use stdClass;
 
 final class CarryoverQuery
 {
@@ -313,11 +314,10 @@ final class CarryoverQuery
     /**
      * @param  array<array-key, mixed>  $spentByKey
      */
-    // Reuses the shared spend query: a fresh GROUP BY here would double-count a
-    // split transaction, which is already legs union unsplit parents. Each
-    // category's buckets are converted into the currency the fold runs in, and
-    // only a bucket the rate table cannot reach stays out of it — surfaced
-    // beside the row rather than counted at one to one.
+    // Reuses the shared spend query: a fresh GROUP BY would double-count a split
+    // transaction, already legs union unsplit parents. Buckets are converted
+    // into the currency the fold runs in, and one the rate table cannot reach
+    // stays out of it, surfaced beside the row rather than counted at par.
     /**
      * @return array<int, array{spent: int, unconverted: int}>
      */
@@ -407,7 +407,7 @@ final class CarryoverQuery
     // currency can have changed since. Converted per bucket on the way into the
     // fold, which then runs on figures actually denominated in what it prints.
     /**
-     * @param  iterable<object>  $rows
+     * @param  iterable<stdClass>  $rows
      * @return array<string, array<int, int>>
      */
     private function convertedByPeriod(iterable $rows, string $minorColumn): array
@@ -417,12 +417,13 @@ final class CarryoverQuery
         $buckets = [];
         $currencies = [];
         foreach ($rows as $row) {
-            $periodKey = self::periodKeyFromRaw($row->period_start);
-            $categoryId = self::toInt($row->category_id);
-            $rowCurrency = self::toString($row->currency);
+            $fields = (array) $row;
+            $periodKey = self::periodKeyFromRaw($fields['period_start'] ?? null);
+            $categoryId = self::toInt($fields['category_id'] ?? null);
+            $rowCurrency = self::toString($fields['currency'] ?? null);
             $currencies[] = $rowCurrency;
             $buckets[$periodKey][$categoryId][$rowCurrency] =
-                ($buckets[$periodKey][$categoryId][$rowCurrency] ?? 0) + self::toInt($row->{$minorColumn});
+                ($buckets[$periodKey][$categoryId][$rowCurrency] ?? 0) + self::toInt($fields[$minorColumn] ?? null);
         }
 
         $rates = $this->fx->ratesTo($currencies, $currency);
