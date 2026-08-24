@@ -82,11 +82,10 @@ final class ThisPeriodAtAGlanceQuery
             );
         }
 
-        // Inflow/outflow rollups filter by transactions.type, never by amount
-        // sign — the subtractive income rule, see the linked architecture page.
-        // Bucketed by the currency each row was settled in and converted from
-        // there: an account denominated in anything but the reporting currency
-        // used to be filtered away, which read as a period with no money in it.
+        // Rollups filter by transactions.type, never by amount sign — the
+        // subtractive income rule, see the linked architecture page. Bucketed by
+        // the currency each row settled in: an account denominated in anything
+        // else was filtered away, reading as a period with no money in it.
         $buckets = $this->bucketsByCurrency($user, $period);
 
         $inflowByCurrency = [];
