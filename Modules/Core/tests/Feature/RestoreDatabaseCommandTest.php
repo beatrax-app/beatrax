@@ -8,6 +8,7 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Artisan;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
 beforeEach(function (): void {
@@ -15,13 +16,7 @@ beforeEach(function (): void {
     // connection is rebound here; RefreshDatabase keeps its own :memory: one.
     $this->livePath = RealSqliteFixture::create('restore-test-live');
 
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.connections.sqlite.database', $this->livePath);
-
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $db->purge('sqlite');
+    LiveSqliteConnection::pointAt($this->app, $this->livePath);
 
     $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-restore-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
@@ -49,6 +44,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    LiveSqliteConnection::restore($this->app);
     /** @var string $livePath */
     $livePath = $this->livePath;
     RealSqliteFixture::cleanup($livePath);

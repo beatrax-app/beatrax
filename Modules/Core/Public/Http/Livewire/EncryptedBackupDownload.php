@@ -90,7 +90,7 @@ final class EncryptedBackupDownload extends Component
     public function render(ViewFactory $views, Repository $config): View
     {
         return $views->make('core::livewire.encrypted-backup-download', [
-            'sqliteOnly' => $this->isSqliteBuild($config),
+            'sqliteOnly' => SqliteDatabase::isSqliteBuild($config),
             // A BinaryFileResponse is only a backup where the shell saves what
             // its WebView downloads. Where it does not, the response goes
             // nowhere and deleteFileAfterSend() removes the file behind it.
@@ -106,19 +106,8 @@ final class EncryptedBackupDownload extends Component
         return match (true) {
             strlen($this->passphrase) < self::MIN_PASSPHRASE_LENGTH => Lang::choice('core::backup.errors.passphrase_min', self::MIN_PASSPHRASE_LENGTH, ['min' => self::MIN_PASSPHRASE_LENGTH]),
             $this->passphrase !== $this->confirmPassphrase => Lang::get('core::backup.errors.passphrase_mismatch'),
-            ! $this->isSqliteBuild($config) => Lang::get('core::backup.errors.download_sqlite_only'),
+            ! SqliteDatabase::isSqliteBuild($config) => Lang::get('core::backup.errors.download_sqlite_only'),
             default => '',
         };
-    }
-
-    // Checks the driver (not the connection name) so the in-memory test
-    // connection and a real sqlite file both qualify, while a server's
-    // Postgres/MySQL default does not.
-    private function isSqliteBuild(Repository $config): bool
-    {
-        $default = $config->get('database.default');
-
-        return is_string($default)
-            && $config->get('database.connections.'.$default.'.driver') === SqliteDatabase::DRIVER;
     }
 }

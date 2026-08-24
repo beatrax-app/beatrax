@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Exceptions\UnsafeBackupPathException;
+use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
 beforeEach(function (): void {
@@ -16,13 +17,7 @@ beforeEach(function (): void {
     // The command uses the named `sqlite` connection, so only that one moves
     // to the on-disk file; `sqlite_testing` (`:memory:`) stays the framework
     // default so RefreshDatabase and SystemAlert::create() keep working.
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.connections.sqlite.database', $this->sourcePath);
-
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $db->purge('sqlite');
+    LiveSqliteConnection::pointAt($this->app, $this->sourcePath);
 
     // UserDataPathService roots every path at NATIVEPHP_STORAGE_PATH when it
     // is set, so a per-test temp root leaves the real backups untouched.
@@ -32,6 +27,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    LiveSqliteConnection::restore($this->app);
     putenv('NATIVEPHP_STORAGE_PATH');
 
     /** @var string $sourcePath */

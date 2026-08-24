@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
 // VACUUM INTO can return without throwing and still leave nothing on disk, and
@@ -23,13 +24,7 @@ beforeEach(function (): void {
 
     $this->sourcePath = RealSqliteFixture::create('backup-guards-source');
 
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.connections.sqlite.database', $this->sourcePath);
-
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $db->purge('sqlite');
+    LiveSqliteConnection::pointAt($this->app, $this->sourcePath);
 
     $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage';
     $this->backupsDir = $this->storageRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
@@ -37,6 +32,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    LiveSqliteConnection::restore($this->app);
     CarbonImmutable::setTestNow(null);
     putenv('NATIVEPHP_STORAGE_PATH');
 

@@ -19,14 +19,19 @@ use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Exceptions\UnsafeBackupPathException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SqliteDatabase;
 use PDO;
 use PDOException;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 final class BackupDatabaseCommand extends Command
 {
-    private const BACKUP_CORRUPT_MESSAGE = 'Backup corrupt — see system_alerts.';
+    // Not "see system_alerts": when the LIVE database is the corrupt one, the
+    // alert row cannot be written into it, and sending the operator to an empty
+    // table is worse than saying what happened here.
+    private const BACKUP_CORRUPT_MESSAGE = 'Backup failed — the database did not pass its integrity check.';
 
     /** @var string */
     protected $signature = 'db:backup {--force : Bypass the smart-skip data_version check and run unconditionally}';
@@ -41,6 +46,7 @@ final class BackupDatabaseCommand extends Command
         private readonly Clock $clock,
         private readonly BackupRetentionPolicy $retention,
         private readonly UserDataPathService $paths,
+        private readonly LoggerInterface $logger,
     ) {
         parent::__construct();
     }
@@ -107,7 +113,7 @@ final class BackupDatabaseCommand extends Command
             // SQLite refuses VACUUM INTO inside a transaction, and refuses an
             // existing destination. The basename is second-resolution, so two
             // runs inside the same second is the one ambiguous case — accepted.
-            $this->db->connection('sqlite')->statement(sprintf("VACUUM INTO '%s'", $escaped));
+            $this->db->connection(SqliteDatabase::connectionName($this->config))->statement(sprintf("VACUUM INTO '%s'", $escaped));
         } catch (PDOException $e) {
             // VACUUM INTO refused the source; keep any partial output as
             // .suspect so the operator can inspect it.
@@ -183,7 +189,17 @@ final class BackupDatabaseCommand extends Command
      */
     private function failCorrupt(string $destination, ?string $suspectPath, array $metadata, string $consoleMessage): never
     {
-        $this->recordCorruptAlert($destination, $suspectPath, $metadata);
+        try {
+            // The alert lands in the database this command just found
+            // unreadable, so on the corrupt-source branch the write itself
+            // throws. The console line and the exit code are the report that
+            // survives that; losing them too would turn a caught corruption
+            // into an unhandled crash.
+            $this->recordCorruptAlert($destination, $suspectPath, $metadata);
+        } catch (Throwable $e) {
+            $this->logger->error('db:backup could not record its corruption alert.', SafeExceptionContext::describe($e));
+        }
+
         $this->error($consoleMessage);
 
         throw new BackupCorruptException;
@@ -194,14 +210,13 @@ final class BackupDatabaseCommand extends Command
      */
     private function livePath(): string
     {
-        $driver = $this->config->get(SqliteDatabase::DRIVER_CONFIG_KEY);
-        if ($driver !== SqliteDatabase::DRIVER) {
+        if (! SqliteDatabase::isSqliteBuild($this->config)) {
             throw new BackupNotSupportedException('db:backup is only supported on the sqlite driver.');
         }
 
-        $path = $this->config->get(SqliteDatabase::LIVE_PATH_CONFIG_KEY);
-        if (! is_string($path) || $path === '') {
-            throw new BackupNotSupportedException(SqliteDatabase::LIVE_PATH_CONFIG_KEY.' is not configured.');
+        $path = SqliteDatabase::livePath($this->config);
+        if ($path === null) {
+            throw new BackupNotSupportedException(SqliteDatabase::livePathKey($this->config).' is not configured.');
         }
 
         return $path;

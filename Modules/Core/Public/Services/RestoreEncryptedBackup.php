@@ -35,9 +35,9 @@ final class RestoreEncryptedBackup
      */
     public function __invoke(string $encryptedPath, string $passphrase): string
     {
-        $default = $this->config->get('database.default');
-        $livePath = $this->config->get(SqliteDatabase::LIVE_PATH_CONFIG_KEY);
-        if ($default !== 'sqlite' || ! is_string($livePath) || $livePath === '') {
+        $connection = SqliteDatabase::connectionName($this->config);
+        $livePath = SqliteDatabase::livePath($this->config);
+        if ($livePath === null) {
             throw new BackupNotSupportedException('Restore is only available on the SQLite build.');
         }
 
@@ -54,16 +54,16 @@ final class RestoreEncryptedBackup
 
             // 3. Pre-restore snapshot of the CURRENT database, so the prior
             //    state is always recoverable if the swap goes wrong.
-            $snapshotPath = $this->snapshotCurrent();
+            $snapshotPath = $this->snapshotCurrent($connection);
 
             // 4. Swap: drop the live connection, copy the verified file over the
             //    live path, and clear the stale WAL/SHM sidecars.
-            $this->db->purge('sqlite');
+            $this->db->purge($connection);
             if ($this->files->copy($decryptedPath, $livePath) === false) {
                 throw new BackupIoException('Restore copy failed; the pre-restore snapshot is at '.$snapshotPath.'.');
             }
             $this->files->delete([$livePath.'-wal', $livePath.'-shm']);
-            $this->db->purge('sqlite');
+            $this->db->purge($connection);
 
             return $snapshotPath;
         } finally {
@@ -71,7 +71,7 @@ final class RestoreEncryptedBackup
         }
     }
 
-    private function snapshotCurrent(): string
+    private function snapshotCurrent(string $connection): string
     {
         // The backups directory may not exist yet (a user who has never run a
         // backup), so create it before VACUUM INTO writes the snapshot there.
@@ -84,7 +84,7 @@ final class RestoreEncryptedBackup
 
         // VACUUM INTO must not run inside a transaction — SQLite refuses it,
         // so this statement runs standalone, outside any DB transaction.
-        $this->db->connection('sqlite')->statement("VACUUM INTO '{$escaped}'");
+        $this->db->connection($connection)->statement("VACUUM INTO '{$escaped}'");
         @chmod($snapshotPath, 0600);
 
         return $snapshotPath;

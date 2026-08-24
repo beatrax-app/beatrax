@@ -74,16 +74,8 @@ final class EncryptedBackupRestore extends Component
     public function render(ViewFactory $views, Repository $config): View
     {
         return $views->make('core::livewire.encrypted-backup-restore', [
-            'sqliteOnly' => $this->isSqliteBuild($config),
+            'sqliteOnly' => SqliteDatabase::isSqliteBuild($config),
             'confirmPhrase' => self::CONFIRM_PHRASE,
         ]);
-    }
-
-    private function isSqliteBuild(Repository $config): bool
-    {
-        $default = $config->get('database.default');
-
-        return is_string($default)
-            && $config->get('database.connections.'.$default.'.driver') === SqliteDatabase::DRIVER;
     }
 }
