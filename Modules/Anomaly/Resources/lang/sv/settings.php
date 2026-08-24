@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Varningskänslighet',
-    'sensitivity_help' => "Hur lätt Beatrax kallar en debitering ovanlig för den handlaren eller kategorin, från 1 till 100. Högre flaggar fler.",
+    'sensitivity_help' => 'Hur lätt Beatrax kallar en debitering ovanlig för den handlaren eller kategorin, från 1 till 100. Högre flaggar fler.',
 
     'min_amount_label' => 'Minsta debiteringsbelopp',
     'min_amount_help' => 'Ignorera anomalier för debiteringar under det här beloppet. Lagras i cent (:symbol) — 1000 betyder :example.',

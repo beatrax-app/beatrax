@@ -72,7 +72,7 @@ final class GoalProgressQuery
             array_values(array_map(static fn (stdClass $row): int => self::toInt($row->id), $goalRows->all())),
         );
 
-        $ratesByTarget = $this->ratesByTargetCurrency($goalRows->all(), $linkedPots, $attributed);
+        $ratesByTarget = $this->ratesByTargetCurrency(array_values($goalRows->all()), $linkedPots, $attributed);
 
         $rows = [];
         foreach ($goalRows as $row) {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => "Ez a telefon nem tud elmenteni egy fájlt, amit az alkalmazás átad neki, ezért a titkosított biztonsági mentés az asztali alkalmazásban készül. Párosítsd ezt az eszközt, hogy szinkronban maradjanak.",
+        'no_download_route' => 'Ez a telefon nem tud elmenteni egy fájlt, amit az alkalmazás átad neki, ezért a titkosított biztonsági mentés az asztali alkalmazásban készül. Párosítsd ezt az eszközt, hogy szinkronban maradjanak.',
         'unavailable' => 'A titkosított biztonsági mentések az asztali (SQLite) változatban érhetők el. Kiszolgálón futó adatbázis esetén használd az adatbázis saját mentési eszközeit.',
         'intro' => 'Tölts le a teljes adatbázisodról egy jelmondattal titkosított másolatot — nyugodtan tarthatod külső meghajtón vagy felhőtárhelyen, mert jelmondat nélkül olvashatatlan (kvantumbiztos XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Jelmondat',

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Czułość alertów',
-    'sensitivity_help' => "Jak łatwo Beatrax uznaje obciążenie za nietypowe dla tego sprzedawcy lub kategorii, od 1 do 100. Wyższa wartość oznacza więcej alertów.",
+    'sensitivity_help' => 'Jak łatwo Beatrax uznaje obciążenie za nietypowe dla tego sprzedawcy lub kategorii, od 1 do 100. Wyższa wartość oznacza więcej alertów.',
 
     'min_amount_label' => 'Minimalna kwota obciążenia',
     'min_amount_help' => 'Pomijaj anomalie przy obciążeniach poniżej tej kwoty. Zapisywane w centach (:symbol) — 1000 oznacza :example.',

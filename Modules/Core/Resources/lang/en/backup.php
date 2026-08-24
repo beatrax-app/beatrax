@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => "This phone cannot save a file the app hands it, so the encrypted backup is made on the desktop app instead. Pair this device to keep the two in sync.",
+        'no_download_route' => 'This phone cannot save a file the app hands it, so the encrypted backup is made on the desktop app instead. Pair this device to keep the two in sync.',
         'unavailable' => "Encrypted backups are available on the desktop (SQLite) build. On a server database, use your database's own backup tooling.",
         'intro' => 'Download a passphrase-encrypted copy of your whole database — safe to keep on an external drive or in cloud storage, because it is unreadable without the passphrase (quantum-safe XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Passphrase',

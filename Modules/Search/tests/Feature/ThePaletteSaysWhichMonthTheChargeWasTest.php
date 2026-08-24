@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Fmt;
-use Livewire\Livewire;
 use Modules\Search\Public\Http\Livewire\PaletteSearchEndpoint;
 use Modules\Search\Public\Services\SearchQuery;
 

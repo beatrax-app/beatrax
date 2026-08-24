@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => "Denne telefon kan ikke gemme en fil, appen rækker den, så den krypterede sikkerhedskopi laves i skrivebordsappen. Par denne enhed for at holde de to synkroniseret.",
+        'no_download_route' => 'Denne telefon kan ikke gemme en fil, appen rækker den, så den krypterede sikkerhedskopi laves i skrivebordsappen. Par denne enhed for at holde de to synkroniseret.',
         'unavailable' => 'Krypterede sikkerhedskopier er tilgængelige i skrivebordsversionen (SQLite). På en serverdatabase bruger du databasens egne værktøjer til sikkerhedskopiering.',
         'intro' => 'Hent en kopi af hele din database krypteret med en adgangssætning — sikker at opbevare på et eksternt drev eller i skylageret, fordi den ikke kan læses uden adgangssætningen (kvantesikker XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Adgangssætning',

@@ -87,7 +87,7 @@ final readonly class ForecastHighlightsQuery
         $baseCurrency = $this->baseCurrency->forUser($user);
         $candidates = $this->candidatesByAccount($accountsBlock, $accounts, $baseCurrency);
         $rates = $this->fx->ratesTo(
-            array_values(array_map(static fn (array $candidate): string => $candidate['currency'], $candidates)),
+            array_map(static fn (array $candidate): string => $candidate['currency'], $candidates),
             $baseCurrency,
         );
 

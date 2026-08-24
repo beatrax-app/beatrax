@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => "See telefon ei saa salvestada faili, mille rakendus talle annab, seega tehakse krüptitud varukoopia lauaarvuti rakenduses. Seo see seade, et need püsiksid sünkroonis.",
+        'no_download_route' => 'See telefon ei saa salvestada faili, mille rakendus talle annab, seega tehakse krüptitud varukoopia lauaarvuti rakenduses. Seo see seade, et need püsiksid sünkroonis.',
         'unavailable' => 'Krüpteeritud varukoopiad on saadaval töölauaversioonis (SQLite). Serveri andmebaasi puhul kasuta andmebaasi enda varunduse tööriistu.',
         'intro' => 'Laadi alla paroolifraasiga krüpteeritud koopia kogu oma andmebaasist — seda on turvaline hoida välisel kettal või pilves, sest ilma paroolifraasita on see loetamatu (kvantkindel XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Paroolifraas',

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Sensibilitatea alertelor',
-    'sensitivity_help' => "Cât de ușor consideră Beatrax o tranzacție neobișnuită pentru acel comerciant sau categorie, de la 1 la 100. Mai mare semnalează mai multe.",
+    'sensitivity_help' => 'Cât de ușor consideră Beatrax o tranzacție neobișnuită pentru acel comerciant sau categorie, de la 1 la 100. Mai mare semnalează mai multe.',
 
     'min_amount_label' => 'Sumă minimă a plății',
     'min_amount_help' => 'Ignoră anomaliile pentru plățile sub această sumă. Stocată în cenți (:symbol) — 1000 înseamnă :example.',

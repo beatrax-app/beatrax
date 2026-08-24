@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => "Tämä puhelin ei voi tallentaa sovelluksen antamaa tiedostoa, joten salattu varmuuskopio tehdään työpöytäsovelluksessa. Paritä tämä laite pitääksesi ne synkassa.",
+        'no_download_route' => 'Tämä puhelin ei voi tallentaa sovelluksen antamaa tiedostoa, joten salattu varmuuskopio tehdään työpöytäsovelluksessa. Paritä tämä laite pitääksesi ne synkassa.',
         'unavailable' => 'Salatut varmuuskopiot ovat käytettävissä työpöytäversiossa (SQLite). Palvelintietokannassa käytä tietokannan omia varmuuskopiointityökaluja.',
         'intro' => 'Lataa salalauseella salattu kopio koko tietokannastasi — sitä voi turvallisesti säilyttää ulkoisella levyllä tai pilvitallennuksessa, koska se on lukukelvoton ilman salalausetta (kvanttiturvallinen XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Salalause',

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => "Questo telefono non può salvare un file che l’app gli consegna, quindi il backup cifrato si crea nell’app desktop. Abbina questo dispositivo per tenerli sincronizzati.",
+        'no_download_route' => 'Questo telefono non può salvare un file che l’app gli consegna, quindi il backup cifrato si crea nell’app desktop. Abbina questo dispositivo per tenerli sincronizzati.',
         'unavailable' => 'I backup crittografati sono disponibili nella build desktop (SQLite). Su un database server, usa gli strumenti di backup del database stesso.',
         'intro' => 'Scarica una copia crittografata con passphrase di tutto il tuo database — puoi conservarla senza rischi su un disco esterno o nel cloud, perché è illeggibile senza la passphrase (XChaCha20-Poly1305 + Argon2id, sicuri contro il calcolo quantistico).',
         'passphrase' => 'Passphrase',

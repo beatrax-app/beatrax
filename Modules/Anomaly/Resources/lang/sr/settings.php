@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Osetljivost upozorenja',
-    'sensitivity_help' => "Koliko lako Beatrax proglašava zaduženje neuobičajenim za tog trgovca ili kategoriju, od 1 do 100. Više označava više.",
+    'sensitivity_help' => 'Koliko lako Beatrax proglašava zaduženje neuobičajenim za tog trgovca ili kategoriju, od 1 do 100. Više označava više.',
 
     'min_amount_label' => 'Najmanji iznos zaduženja',
     'min_amount_help' => 'Zanemari anomalije na zaduženjima manjim od ovog iznosa. Čuva se u centima (:symbol) — 1000 znači :example.',

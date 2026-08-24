@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => "Bu telefon uygulamanın verdiği bir dosyayı kaydedemez, bu yüzden şifreli yedek masaüstü uygulamasında alınır. İkisini eşitlemek için bu cihazı eşleştirin.",
+        'no_download_route' => 'Bu telefon uygulamanın verdiği bir dosyayı kaydedemez, bu yüzden şifreli yedek masaüstü uygulamasında alınır. İkisini eşitlemek için bu cihazı eşleştirin.',
         'unavailable' => 'Şifreli yedekler masaüstü (SQLite) sürümünde kullanılabilir. Sunucu veritabanında, veritabanının kendi yedekleme araçlarını kullan.',
         'intro' => 'Veritabanının tamamının parolayla şifrelenmiş bir kopyasını indir — parola olmadan okunamadığı için harici bir diskte veya bulut depolamada güvenle saklayabilirsin (kuantuma dayanıklı XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Parola',

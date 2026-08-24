@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Desktop\Internal;
 
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
-use Modules\Desktop\Internal\Native\AppWindow;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
+use Modules\Desktop\Internal\Native\AppWindow;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Modules\Desktop\Internal\Native\RelayListenerProcess;
 use Modules\Desktop\Internal\Native\SyncListenerProcess;

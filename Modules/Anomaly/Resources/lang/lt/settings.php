@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Įspėjimų jautrumas',
-    'sensitivity_help' => "Kaip lengvai Beatrax laiko mokėjimą neįprastu šiam prekybininkui ar kategorijai, nuo 1 iki 100. Didesnė reikšmė pažymi daugiau.",
+    'sensitivity_help' => 'Kaip lengvai Beatrax laiko mokėjimą neįprastu šiam prekybininkui ar kategorijai, nuo 1 iki 100. Didesnė reikšmė pažymi daugiau.',
 
     'min_amount_label' => 'Mažiausia mokėjimo suma',
     'min_amount_help' => 'Nepaisyti anomalijų mokėjimuose, mažesniuose už šią sumą. Saugoma centais (:symbol) — 1000 reiškia :example.',

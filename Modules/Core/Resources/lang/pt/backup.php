@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => "Este telemóvel não consegue guardar um ficheiro que a aplicação lhe entrega, por isso a cópia cifrada é feita na aplicação de computador. Emparelha este dispositivo para os manter sincronizados.",
+        'no_download_route' => 'Este telemóvel não consegue guardar um ficheiro que a aplicação lhe entrega, por isso a cópia cifrada é feita na aplicação de computador. Emparelha este dispositivo para os manter sincronizados.',
         'unavailable' => 'As cópias de segurança encriptadas estão disponíveis na versão para computador (SQLite). Numa base de dados em servidor, usa as ferramentas de cópia de segurança da própria base de dados.',
         'intro' => 'Transfere uma cópia de toda a tua base de dados encriptada com uma frase-passe — segura para guardar num disco externo ou no armazenamento na nuvem, porque é ilegível sem a frase-passe (XChaCha20-Poly1305 + Argon2id, resistentes a computação quântica).',
         'passphrase' => 'Frase-passe',
