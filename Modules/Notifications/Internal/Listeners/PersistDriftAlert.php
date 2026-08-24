@@ -76,5 +76,4 @@ final class PersistDriftAlert
 
         return $movedUp ? 'up' : 'down';
     }
-
 }

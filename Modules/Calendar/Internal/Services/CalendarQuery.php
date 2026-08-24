@@ -9,6 +9,7 @@ use Modules\Calendar\Internal\Dto\CalendarDayDto;
 use Modules\Calendar\Internal\Dto\CalendarEntryDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\BookedFutureRowQuery;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -29,6 +30,7 @@ final readonly class CalendarQuery
         private OccurrenceMatcher $occurrenceMatcher,
         private BookedEntryPlacer $bookedEntryPlacer,
         private BookedFutureRowQuery $bookedRows,
+        private BaseCurrency $baseCurrencies,
     ) {}
 
     /**
@@ -90,7 +92,7 @@ final readonly class CalendarQuery
         // Stays null until a known EoD is seen: the day after a data-less day
         // must report "SoD unknown" rather than a fabricated 0.
         $prevEod = null;
-        $baseCurrency = $user->base_currency;
+        $baseCurrency = $this->baseCurrencies->forUser($user);
 
         $days = [];
         foreach ($gridDays as $date) {

@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -30,6 +31,7 @@ final readonly class DailyBalanceAggregator
         private ForecastQuery $forecastQuery,
         private ExchangeRateService $fxService,
         private AccountStartingBalanceQuery $startingBalances,
+        private BaseCurrency $baseCurrencies,
     ) {}
 
     /**
@@ -46,7 +48,7 @@ final readonly class DailyBalanceAggregator
             return ['map' => $this->emptyComputingMap($monthStart, $monthEnd), 'todayAnchorMinor' => null];
         }
 
-        $baseCurrency = $user->base_currency;
+        $baseCurrency = $this->baseCurrencies->forUser($user);
         ['byDateCurrency' => $byDateCurrency, 'isComputingAny' => $isComputingAny, 'todayAnchorMinor' => $todayAnchorMinor]
             = $this->collectForecastBuckets($effectiveBalance, $user, $baseCurrency);
 

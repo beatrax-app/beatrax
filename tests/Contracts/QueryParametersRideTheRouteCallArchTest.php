@@ -73,7 +73,7 @@ it('appends a query parameter through route() rather than gluing it on afterward
 
     expect($offenders)->toBe(
         [],
-        "Pass the parameter to route() instead. Concatenation writes `?a=1?b=2` the day the route "
+        'Pass the parameter to route() instead. Concatenation writes `?a=1?b=2` the day the route '
         ."carries a query of its own, and `b` stops being readable at all. Offenders:\n  "
         .implode("\n  ", $offenders),
     );
