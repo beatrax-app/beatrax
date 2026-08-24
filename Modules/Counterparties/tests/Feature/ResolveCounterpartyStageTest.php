@@ -147,7 +147,11 @@ it('Test 1 — end-to-end ImportPipeline materialises a counterparty row of ever
     $byType = $rows->groupBy('type');
     expect($byType->keys()->sort()->values()->all())->toBe(['bank', 'government', 'merchant']);
 
-    expect($byType['merchant']->first()->display_name)->toBe('Netflix');
+    // Row 1's Naam column is the name the preview column shows, so it is the
+    // name the committed entity carries; the corpus hit on its description is
+    // kept under merchant_name.
+    expect($byType['merchant']->first()->display_name)->toBe('Netflix Intl');
+    expect($byType['merchant']->first()->merchant_name)->toBe('Netflix');
     expect($byType['government']->first()->display_name)->toContain('Belastingdienst');
     expect($byType['bank']->first()->display_name)->toContain('PayPal');
 
@@ -172,7 +176,7 @@ it('Test 2 — counterparty_id is populated on every resolved transaction row (e
 
     $netflixId = (int) DB::table('counterparties')
         ->where('user_id', $this->user->id)
-        ->where('display_name', 'Netflix')
+        ->where('display_name', 'Netflix Intl')
         ->value('id');
     expect($netflixId)->toBeGreaterThan(0);
 

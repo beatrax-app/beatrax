@@ -180,6 +180,40 @@ it('Test 3 — step 3 merchant: a Netflix-shaped description resolves to type=me
     expect($dto->slug)->toBe('netflix');
 });
 
+// Test 3 leaves counterpartyName null, so it never asked what happens when the
+// file names the counterparty as well. Every N26 export does: Partner Name is
+// the merchant, Payment Reference is the description the corpus reads.
+it('Test 3b — a merchant row whose file names the counterparty displays that name, and the corpus name is kept as merchant_name', function (): void {
+    DB::table('merchant_aliases')->insert([
+        'user_id' => $this->user->id,
+        'pattern' => 'NETFLIX.COM AMSTERDAM',
+        'generalized_pattern' => 'netflix',
+        'friendly_name' => 'Netflix',
+        'merged_from' => null,
+        'created_at' => now()->toDateTimeString(),
+        'updated_at' => now()->toDateTimeString(),
+    ]);
+
+    $tx = makeCpResolverTx(
+        accountId: $this->bank->id,
+        userId: $this->user->id,
+        overrides: [
+            'description' => 'NETFLIX.COM AMSTERDAM',
+            'counterpartyName' => 'Netflix Intl',
+        ],
+    );
+
+    /** @var CounterpartyResolverService $resolver */
+    $resolver = $this->app->make(CounterpartyResolverService::class);
+    $dto = $resolver->resolve($tx, $this->user);
+
+    expect($dto)->not->toBeNull();
+    expect($dto->type)->toBe('merchant');
+    expect($dto->displayName)->toBe('Netflix Intl');
+    expect($dto->merchantName)->toBe('Netflix');
+    expect($dto->slug)->toBe('netflix-intl');
+});
+
 it('Test 4 — step 4 personal: Dutch IBAN + personal name on transfer_in resolves to type=personal and slug omits the IBAN', function (): void {
     $tx = makeCpResolverTx(
         accountId: $this->bank->id,
