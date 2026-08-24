@@ -190,11 +190,10 @@ final class BackupDatabaseCommand extends Command
     private function failCorrupt(string $destination, ?string $suspectPath, array $metadata, string $consoleMessage): never
     {
         try {
-            // The alert lands in the database this command just found
-            // unreadable, so on the corrupt-source branch the write itself
-            // throws. The console line and the exit code are the report that
-            // survives that; losing them too would turn a caught corruption
-            // into an unhandled crash.
+            // The alert lands in the database this command just found unreadable,
+            // so on the corrupt-source branch the write itself throws. The
+            // console line and exit code are the report that survives that;
+            // losing them too turns a caught corruption into a crash.
             $this->recordCorruptAlert($destination, $suspectPath, $metadata);
         } catch (Throwable $e) {
             $this->logger->error('db:backup could not record its corruption alert.', SafeExceptionContext::describe($e));

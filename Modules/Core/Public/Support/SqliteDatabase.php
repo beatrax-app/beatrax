@@ -6,12 +6,10 @@ namespace Modules\Core\Public\Support;
 
 use Illuminate\Contracts\Config\Repository;
 
-// The identity of the live SQLite database. It is NOT the connection called
-// `sqlite`: the desktop shell registers its own connection named `nativephp`
-// and makes that the default, leaving the literal `sqlite` entry pointing at a
-// file nothing ever opens. Backup and restore resolve the file they overwrite
-// through here, so asking for a spelling instead of the default loses a ledger
-// — or, as it did, refuses the only platform the feature ships for.
+// The identity of the live SQLite database, which is NOT the connection called
+// `sqlite`: the desktop shell registers its own named `nativephp` and makes it
+// the default, leaving the literal `sqlite` entry on a file nothing opens.
+// Backup and restore resolve through here, so a spelling loses a ledger.
 /**
  * @link ../../../../.docs/runbooks/operator-recovery.md
  */
