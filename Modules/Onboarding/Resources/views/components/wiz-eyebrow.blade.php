@@ -25,6 +25,9 @@
 @endphp
 
 <p {{ $attributes->class(['wiz-eyebrow']) }}>
-    @if ($glyph !== '')<span aria-hidden="true">{{ $glyph }}</span> @endif
+    {{-- The gap is a margin, not the space in the markup: an emoji's ink is
+         wider than the advance width the fallback font reports, so a single
+         collapsed space let the first letter sit on top of the glyph. --}}
+    @if ($glyph !== '')<span class="me-1.5" aria-hidden="true">{{ $glyph }}</span>@endif
     @if ($stepNumber !== null){{ Lang::get('onboarding::components.eyebrow_step', ['number' => $stepNumber]) }}@endif{{ $slot }}
 </p>
