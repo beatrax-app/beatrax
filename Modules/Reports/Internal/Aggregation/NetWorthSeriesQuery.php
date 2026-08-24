@@ -13,6 +13,7 @@ use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
 use Modules\Reports\Internal\Enums\ReportGranularity;
@@ -31,6 +32,7 @@ final class NetWorthSeriesQuery
         private readonly ExchangeRateService $fx,
         private readonly DatabaseManager $db,
         private readonly TimeBucketGenerator $timeBucketGenerator,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -39,7 +41,7 @@ final class NetWorthSeriesQuery
     public function forUser(User $user, Period $period, ?ReportGranularity $granularity = null): array
     {
         $buckets = $this->timeBucketGenerator->generate($period, $granularity ?? ReportGranularity::default());
-        $baseCurrency = $user->base_currency;
+        $baseCurrency = $this->baseCurrency->forUser($user);
 
         /** @var Collection<int, stdClass> $accounts */
         $accounts = $this->db->connection()->table('accounts')

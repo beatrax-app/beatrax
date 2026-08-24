@@ -12,13 +12,12 @@
     // Chart chrome the ApexCharts helpers in app.js read off <html>: the
     // money axis needs the base currency, and ApexCharts names its own
     // <svg> in English ("donut chart with 14 data series") unless told.
-    // The reader's OWN reporting currency, not the app-wide fallback: a user
-    // who picks GBP in Settings had every chart axis drawn in euros beside
-    // pounds everywhere else. Guests have no preference, so they get the
-    // fallback.
+    // A guest has no reporting currency to draw an axis in, and asking for
+    // one is refused, so the login shell takes what the install ships with.
+    $baseCurrency = $container->make(BaseCurrency::class);
     $chartCurrency = $currentUser->isAuthenticated()
-        ? ($currentUser->user()->base_currency ?? BaseCurrency::value())
-        : BaseCurrency::value();
+        ? $baseCurrency->code()
+        : $baseCurrency->installDefault();
 
     $chartLabels = json_encode([
         'donut' => Lang::get('core::components.chart.donut'),

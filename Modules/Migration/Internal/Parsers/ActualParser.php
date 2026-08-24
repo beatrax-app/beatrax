@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Enums\ClearedStatus;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
 use Modules\Migration\Internal\Dto\MigrationAccountDto;
@@ -32,6 +33,7 @@ final class ActualParser implements ParsesMigrationSource
 {
     public function __construct(
         private readonly ActualGoalDefInterpreter $goalDefInterpreter,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function format(): string
@@ -147,7 +149,7 @@ final class ActualParser implements ParsesMigrationSource
     {
         $currency = $reader->currency();
         if ($currency === null) {
-            $currency = $user->base_currency;
+            $currency = $this->baseCurrency->forUser($user);
             $unmapped->push(new UnmappedItemDto(
                 itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: null,

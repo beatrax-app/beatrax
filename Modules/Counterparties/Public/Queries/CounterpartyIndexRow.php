@@ -8,7 +8,6 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
-use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 // There is deliberately no `iban` field: the index must not be able to
@@ -26,7 +25,10 @@ final readonly class CounterpartyIndexRow
     public string $avgPerMonthFormatted;
 
     /**
-     * @param  array<int, int>  $sparkline  12 monthly totals (signed minor units, oldest → newest)
+     * @param  array<int, int>  $sparkline  12 monthly totals (signed minor units, oldest → newest),
+     *                                      each converted into $currency before its own month's currencies were added
+     * @param  string  $currency  the reader's reporting currency — every figure here is in it
+     * @param  list<string>  $unconverted  codes left out of the figures for want of a rate
      */
     public function __construct(
         public int $id,
@@ -37,8 +39,9 @@ final readonly class CounterpartyIndexRow
         public int $avgPerMonthMinor,
         public ?string $recentLine,
         public array $sparkline,
+        public string $currency = '',
+        public array $unconverted = [],
     ) {
-        $currency = BaseCurrency::value();
         $this->total12mFormatted = Money::ofMinor(abs($total12mMinor), $currency)->format();
         $this->avgPerMonthFormatted = Money::ofMinor(abs($avgPerMonthMinor), $currency)->format();
 
@@ -48,5 +51,15 @@ final readonly class CounterpartyIndexRow
             CounterpartyType::Unknown->value => Destination::Triage->urlFrom($urls, ['queue_first' => $id]),
             default => $urls->route('counterparties.profile', ['slug' => $slug]),
         };
+    }
+
+    public function isPartial(): bool
+    {
+        return $this->unconverted !== [];
+    }
+
+    public function unconvertedList(): string
+    {
+        return implode(', ', $this->unconverted);
     }
 }

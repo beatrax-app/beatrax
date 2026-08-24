@@ -19,7 +19,7 @@ use Modules\Ledger\Public\Enums\Currency;
  * @property string $password
  * @property int $period_start_day
  * @property string $default_currency_view
- * @property string $base_currency
+ * @property ?string $base_currency
  * @property bool $fx_online_enabled
  * @property bool|null $auto_import_drop_folder
  * @property string $receipt_conflict_resolution

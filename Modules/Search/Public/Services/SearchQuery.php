@@ -100,7 +100,7 @@ final class SearchQuery
         // The reader's own reporting currency, not the app-wide fallback: the
         // strip labels these totals with it, so a row settled in anything else
         // would be summed into a figure shown under the wrong symbol.
-        $base = $user->base_currency ?? $this->baseCurrency->code();
+        $base = $this->baseCurrency->forUser($user);
 
         $summary = (clone $query)->selectRaw(
             'COUNT(*) as total_count,

@@ -12,12 +12,16 @@ use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Events\GoalMutated;
 
 final class GoalWriter
 {
-    public function __construct(private readonly Dispatcher $events) {}
+    public function __construct(
+        private readonly Dispatcher $events,
+        private readonly BaseCurrency $baseCurrency,
+    ) {}
 
     /**
      * @throws InvalidGoalAmountException when `$rawAmount` is invalid or non-positive.
@@ -41,7 +45,7 @@ final class GoalWriter
             'name' => $name,
             'start_date' => CarbonImmutable::today()->toDateString(),
             'target_minor' => $minor,
-            'target_currency' => $user->base_currency,
+            'target_currency' => $this->baseCurrency->forUser($user),
             'target_date' => $targetDate,
             'status' => GoalStatus::Active->value,
         ];

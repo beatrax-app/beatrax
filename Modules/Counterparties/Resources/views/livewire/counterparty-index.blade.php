@@ -167,6 +167,9 @@
                             <span class="value">{{ $row->total12mFormatted }}</span>
                             <span class="label">{{ Lang::get('counterparties::index.stat_12mo') }}</span>
                         </div>
+                        @if ($row->isPartial())
+                            <div style="font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</div>
+                        @endif
                         @if ($row->recentLine !== null)
                             <div class="cp-recent"><span>{{ $row->recentLine }}</span></div>
                         @endif
@@ -191,6 +194,9 @@
                             <span class="value" style="font-size: var(--text-sm);">{{ $row->avgPerMonthFormatted }}</span>
                             <span class="label">{{ Lang::get('counterparties::index.stat_avg_mo') }}</span>
                         </div>
+                        @if ($row->isPartial())
+                            <div style="font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</div>
+                        @endif
                         <div role="img" class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
                             @php
                                 $sparkMax = max(1, max(array_map('abs', $row->sparkline)));
@@ -231,6 +237,9 @@
                 </div>
                 <div style="flex: 0 0 auto; text-align: right;">
                     <span class="amount" style="{{ $row->total12mMinor > 0 ? 'color: var(--color-emerald)' : '' }}">{{ $row->total12mFormatted }}</span>
+                    @if ($row->isPartial())
+                        <span class="secondary" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</span>
+                    @endif
                 </div>
             </a>
         @endforeach
@@ -262,6 +271,9 @@
                             </td>
                             <td style="padding: var(--space-2) var(--space-3); text-align: right; font-variant-numeric: tabular-nums;">
                                 {{ $row->avgPerMonthFormatted }}
+                                @if ($row->isPartial())
+                                    <span style="display: block; font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</span>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

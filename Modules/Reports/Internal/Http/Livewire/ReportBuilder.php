@@ -226,7 +226,7 @@ final class ReportBuilder extends Component
             && ($definition->customFrom === null || $definition->customFrom === '' || $definition->customTo === null || $definition->customTo === '');
 
         if ($customIncomplete) {
-            $result = new ReportResultDto(rows: [], totalMinor: 0, currency: $user->base_currency);
+            $result = new ReportResultDto(rows: [], totalMinor: 0, currency: $baseCurrency->forUser($user));
             $displayRows = [];
             $drilldownUrls = [];
         } else {

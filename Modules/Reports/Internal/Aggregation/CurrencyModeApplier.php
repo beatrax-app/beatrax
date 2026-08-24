@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
@@ -20,6 +21,7 @@ final class CurrencyModeApplier
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly ExchangeRateService $fx,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -87,7 +89,7 @@ final class CurrencyModeApplier
      */
     private function applyBase(User $user, array $currencies, callable $queryForCurrency, array $otherTotalsByCurrency = []): ReportResultDto
     {
-        $baseCurrency = $user->base_currency;
+        $baseCurrency = $this->baseCurrency->forUser($user);
 
         /** @var array<string, array{key: int|string|null, label: string, amount: int}> $merged */
         $merged = [];
@@ -182,7 +184,7 @@ final class CurrencyModeApplier
             $totalsByCurrency[$currency] = ($totalsByCurrency[$currency] ?? 0) + $currencyTotal;
         }
 
-        $primaryCurrency = $currencies[0] ?? $user->base_currency;
+        $primaryCurrency = $currencies[0] ?? $this->baseCurrency->forUser($user);
         $total = 0;
         $bestAbsTotal = -1;
         foreach ($totalsByCurrency as $currency => $currencyTotal) {

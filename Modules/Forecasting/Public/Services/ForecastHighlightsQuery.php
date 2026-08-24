@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Public\Dto\ForecastHighlightsDto;
 use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -23,6 +24,7 @@ final readonly class ForecastHighlightsQuery
         private Clock $clock,
         private CardStatementQuery $cardStatementQuery,
         private ExchangeRateService $fx,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function activeShortfallCountForUser(User $user): int
@@ -76,7 +78,7 @@ final readonly class ForecastHighlightsQuery
             ->orderBy('id')
             ->get(['id', 'name', 'default_currency']);
 
-        $baseCurrency = $user->base_currency;
+        $baseCurrency = $this->baseCurrency->forUser($user);
         $lowest = null;
         $lowestInBase = null;
 

@@ -175,15 +175,6 @@ final class TransactionsList extends Component
             : $this->renderList($currentUser, $listQuery, $views, $rows, $filterOptions, $baseCurrency);
     }
 
-    // The reader's own setting, not config('currency.base'): the /settings
-    // picker writes users.base_currency, and nothing wires the config value to
-    // an env — so reading it would be inert and would print € over a total
-    // counted in pounds.
-    private static function readerCurrency(User $user, BaseCurrency $baseCurrency): string
-    {
-        return $user->base_currency ?? $baseCurrency->code();
-    }
-
     // Livewire hands a #[Url] array to the view as well as to the query, so
     // cleaning it on the way to the query alone left the chip partial
     // subscripting [0] on a shape the address bar chose. Coerced on the
@@ -206,7 +197,7 @@ final class TransactionsList extends Component
         BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
-        $readerCurrency = self::readerCurrency($user, $baseCurrency);
+        $readerCurrency = $baseCurrency->forUser($user);
 
         if ($this->preSearchFullHistory === null) {
             $this->preSearchFullHistory = $this->fullHistory;
@@ -262,7 +253,7 @@ final class TransactionsList extends Component
         BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
-        $readerCurrency = self::readerCurrency($user, $baseCurrency);
+        $readerCurrency = $baseCurrency->forUser($user);
         // BaseOnly resolves to the READER's base currency, never to the euro
         // its token spells.
         $queryCurrency = $this->currency === CurrencyView::BaseOnly->value ? $readerCurrency : null;

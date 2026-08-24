@@ -94,7 +94,7 @@ final class SettingsPage extends Component
         $this->locale = $user->locale ?? LocaleNegotiator::SYSTEM;
         $this->country = $countries->current($user->id);
         $this->isDeveloper = $user->is_developer === true;
-        $this->baseCurrency = $user->base_currency ?? $baseCurrency->code();
+        $this->baseCurrency = $baseCurrency->forUser($user);
         $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
 
         $this->loadFxLastUpdated($db);

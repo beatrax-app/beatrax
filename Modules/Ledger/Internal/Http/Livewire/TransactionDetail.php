@@ -86,7 +86,7 @@ final class TransactionDetail extends Component
             ? $codec->decryptValue('transactions', 'note', $row->note, $userId, $session)['value']
             : '';
 
-        $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session, self::readerCurrency($currentUser, $baseCurrency));
+        $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session, $baseCurrency->forUser($currentUser->user()));
     }
 
     public function reclassify(
@@ -427,7 +427,7 @@ final class TransactionDetail extends Component
     public function updated(string $name, mixed $value, CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): void
     {
         if (str_starts_with($name, 'legs.') && str_ends_with($name, '.amount')) {
-            $this->recomputeRemaining($currentUser, $db, self::readerCurrency($currentUser, $baseCurrency));
+            $this->recomputeRemaining($currentUser, $db, $baseCurrency->forUser($currentUser->user()));
         }
     }
 

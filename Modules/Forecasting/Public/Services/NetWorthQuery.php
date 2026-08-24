@@ -15,6 +15,7 @@ use Modules\FX\Public\Dto\ConversionResult;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\AccountBalance;
 use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -36,6 +37,7 @@ final class NetWorthQuery
         private readonly Clock $clock,
         private readonly DatabaseManager $db,
         private readonly ExchangeRateService $fx,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function forUser(User $user): NetWorth
@@ -53,7 +55,7 @@ final class NetWorthQuery
         /** @var array{stale: bool, source: ?string, asOf: ?CarbonImmutable} $fxMeta */
         $fxMeta = ['stale' => false, 'source' => null, 'asOf' => null];
 
-        $baseCurrency = $user->base_currency;
+        $baseCurrency = $this->baseCurrency->forUser($user);
         $today = $this->clock->now()->startOfDay();
 
         foreach ($accounts as $account) {

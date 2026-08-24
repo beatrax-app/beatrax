@@ -29,6 +29,7 @@ use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 use Modules\Ledger\Public\Http\Livewire\AccountCurrencyEditor;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\CategorySpendTrendQuery;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -64,6 +65,10 @@ final class LedgerServiceProvider extends ServiceProvider
         // Transient, not singleton: it resolves the per-request CurrentUser, and
         // a singleton would freeze the first request's user in a long-lived worker.
         $this->app->bind(PeriodQuery::class);
+        // Scoped for the same reason, from the other side: one render reaches it
+        // for every money figure on the page, and the queue worker drops scoped
+        // instances between jobs so the next job's reader is resolved afresh.
+        $this->app->scoped(BaseCurrency::class);
         $this->app->bind(CategorySpendTrendQuery::class);
         $this->app->singleton(ThisPeriodAtAGlanceQuery::class);
         $this->app->singleton(TopCategoriesByPeriodQuery::class);
