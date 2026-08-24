@@ -80,7 +80,7 @@ final class TopCategoriesByPeriodQuery
     {
         $buckets = [];
         foreach ($this->spendByCategory->forUserAndPeriodByCurrency($userId, $period) as $key => $spendMinor) {
-            [$categoryId, $currency] = explode('|', (string) $key, 2) + [1 => ''];
+            [$categoryId, $currency] = explode('|', $key, 2) + [1 => ''];
             $buckets[(int) $categoryId][$currency] = $spendMinor;
         }
 

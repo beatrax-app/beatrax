@@ -12,7 +12,6 @@ use Modules\Ledger\Public\Enums\Currency;
 // that applies it refused every series not already denominated in that
 // currency. Pick pounds over a euro ledger and "Ways to save" quietly emptied.
 
-
 function rfChain(DatabaseManager $db, int $userId, string $merchant, int $monthlyMinor, string $currency): int
 {
     $cpId = $db->connection()->table('counterparties')->insertGetId([
