@@ -120,7 +120,7 @@
                                     {{ Lang::get('ledger::detail.split.category') }}
                                 </h2>
                                 <p class="text-sm text-slate-900 dark:text-slate-100" data-testid="split-current-category">
-                                    {{ $transaction->category?->display_name ?? '—' }}
+                                    {{ $currentCategoryName ?? '—' }}
                                 </p>
                             </div>
                             <x-core::secondary-button

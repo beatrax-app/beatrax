@@ -36,6 +36,7 @@ use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -448,7 +449,7 @@ final class TransactionDetail extends Component
         // counterparty is null for pre-resolver history; the Blade falls
         // back to the plain-text name.
         $transaction = Transaction::query()
-            ->with(['counterparty', 'category'])
+            ->with(['counterparty'])
             ->where('id', $this->transactionId)
             ->where('user_id', $userId)
             ->firstOrFail();
@@ -477,6 +478,21 @@ final class TransactionDetail extends Component
             )['value'];
         }
 
+        // Read past the Category model, not through it: the shipped tree is
+        // seeded with user_id = NULL and the model carries BelongsToUser, so
+        // its relation answers null for every default category on every
+        // install. Every other category read in the app already comes through
+        // this seam.
+        $categoryRow = $transaction->category_id === null
+            ? null
+            : $db->connection()->table('categories')
+                ->where('id', $transaction->category_id)
+                ->first(CategoryDisplayName::bareColumns());
+
+        $currentCategoryName = $categoryRow === null
+            ? null
+            : CategoryDisplayName::fromRow($categoryRow);
+
         $isSplittable = (TransactionType::tryFrom($transaction->type)?->isSplittable() === true);
         $splitCategories = $isSplittable ? $categoryOptions->for($currentUser->user()) : [];
 
@@ -503,6 +519,7 @@ final class TransactionDetail extends Component
             'txTaxRow' => $txTaxRow,
             'clearedStatus' => $clearedStatus,
             'counterparties' => $counterpartyNames->forUser($userId),
+            'currentCategoryName' => $currentCategoryName,
             'isSplittable' => $isSplittable,
             'splitCategories' => $splitCategories,
             'goalOptions' => $goalContributions->attributableGoals($currentUser->user()),
