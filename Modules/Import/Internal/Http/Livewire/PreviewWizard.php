@@ -185,10 +185,18 @@ final class PreviewWizard extends Component
     public function saveIcsAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
+        PreviewCache $cache,
         AccountSlugResolver $slugs,
         BaseCurrency $baseCurrency,
     ): void {
         $this->resetErrorBag('icsAccountName');
+
+        // The same guard the prompt is drawn behind, on the write side: the
+        // form is gone by the next render, and a submit already in flight
+        // would otherwise still land the account.
+        if ($this->previewReadNothing($cache)) {
+            return;
+        }
 
         try {
             $trimmed = AccountNamer::validateName($this->icsAccountName);
@@ -231,9 +239,14 @@ final class PreviewWizard extends Component
     public function savePaypalAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
+        PreviewCache $cache,
         EnsurePaypalAccountAction $ensurePaypal,
     ): void {
         $this->resetErrorBag('paypalAccountName');
+
+        if ($this->previewReadNothing($cache)) {
+            return;
+        }
 
         try {
             $trimmed = AccountNamer::validateName($this->paypalAccountName);
@@ -307,8 +320,8 @@ final class PreviewWizard extends Component
     // everything. A missing preview is a different case and stays expired.
     private function confirmationIsBlocked(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
     {
-        if ($this->needsIcsAccountName($currentUser, $db)
-            || $this->needsPaypalAccountName($currentUser, $db)) {
+        if ($this->needsIcsAccountName($currentUser, $cache, $db)
+            || $this->needsPaypalAccountName($currentUser, $cache, $db)) {
             return true;
         }
 
@@ -339,8 +352,8 @@ final class PreviewWizard extends Component
         $this->assertOwnedRun($currentUser);
 
         $preview = $cache->getPreview($this->importRunId);
-        $needsIcsAccountName = $this->needsIcsAccountName($currentUser, $db);
-        $needsPaypalAccountName = $this->needsPaypalAccountName($currentUser, $db);
+        $needsIcsAccountName = $this->needsIcsAccountName($currentUser, $cache, $db);
+        $needsPaypalAccountName = $this->needsPaypalAccountName($currentUser, $cache, $db);
 
         return $views->make('import::livewire.preview-wizard', [
             'preview' => $preview,
@@ -366,9 +379,25 @@ final class PreviewWizard extends Component
             ->exists();
     }
 
+    // A run that read nothing has no account to name: the two synthetic-IBAN
+    // prompts fire on source_format alone, so they asked for a durable account
+    // on the strength of a file the reader is about to be told could not be
+    // read at all. Rows that DID read still need theirs, hence the row count.
+    /**
+     * @link ../../../../.docs/features/import/architecture.md#preview-wizard-inline-account-naming
+     */
+    private function previewReadNothing(PreviewCache $cache): bool
+    {
+        $preview = $cache->getPreview($this->importRunId);
+
+        return $preview !== null
+            && $preview->fileFailureReason !== null
+            && self::importableRowCount($preview) === 0;
+    }
+
     // Anchored on source_format rather than the unknown-IBAN list, so drift in
     // the synthetic IBAN literal still raises the prompt.
-    private function needsIcsAccountName(CurrentUser $currentUser, DatabaseManager $db): bool
+    private function needsIcsAccountName(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
     {
         $user = $currentUser->user();
 
@@ -386,6 +415,10 @@ final class PreviewWizard extends Component
             return false;
         }
 
+        if ($this->previewReadNothing($cache)) {
+            return false;
+        }
+
         // Whether THIS literal is claimed, not whether any card account exists:
         // a card account on some other IBAN suppressed the prompt, and the
         // generic namer then had to validate ICS-CARD as a real IBAN, which it
@@ -397,7 +430,7 @@ final class PreviewWizard extends Component
             ->exists();
     }
 
-    private function needsPaypalAccountName(CurrentUser $currentUser, DatabaseManager $db): bool
+    private function needsPaypalAccountName(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
     {
         $user = $currentUser->user();
 
@@ -412,6 +445,10 @@ final class PreviewWizard extends Component
         }
 
         if ($importRun->source_format !== SourceFormat::PaypalCsv->value) {
+            return false;
+        }
+
+        if ($this->previewReadNothing($cache)) {
             return false;
         }
 
