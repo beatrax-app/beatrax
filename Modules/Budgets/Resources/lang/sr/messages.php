@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budžeti',
-        'subtitle' => 'Rasporedi svaki evro — :period.',
+        'subtitle' => 'Rasporedi sve do poslednjeg — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Prenosi minus',
-        'non_eur_aria' => 'Potrošnja van EUR u ovoj kategoriji ovde nije prikazana — pogledaj kontrolnu tablu',
-        'non_eur_title' => 'Potrošnja van EUR ovde nije prikazana — pogledaj kontrolnu tablu',
+        'unconverted_aria' => 'Potrošnja u valuti bez dostupnog kursa se ovde ne računa — pogledaj kontrolnu tablu',
+        'unconverted_title' => 'Potrošnja bez dostupnog kursa se ovde ne računa — pogledaj kontrolnu tablu',
         'over_budget' => ':count preko budžeta',
     ],
 

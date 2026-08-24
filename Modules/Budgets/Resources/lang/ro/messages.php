@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Bugete',
-        'subtitle' => 'Alocă fiecare euro — :period.',
+        'subtitle' => 'Alocă tot — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Reportează negativul',
-        'non_eur_aria' => 'Cheltuielile în altă monedă decât EUR din această categorie nu apar aici — vezi tabloul de bord',
-        'non_eur_title' => 'Cheltuielile non-EUR nu apar aici — vezi tabloul de bord',
+        'unconverted_aria' => 'Cheltuielile într-o monedă fără curs disponibil nu sunt numărate aici — vezi panoul',
+        'unconverted_title' => 'Cheltuielile fără curs disponibil nu sunt numărate aici — vezi panoul',
         'over_budget' => ':count peste buget',
     ],
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Bütçeler',
-        'subtitle' => 'Her euroyu dağıt — :period.',
+        'subtitle' => 'Hepsini dağıt — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Eksiyi devreder',
-        'non_eur_aria' => 'Bu kategorideki EUR dışı harcamalar burada gösterilmez — panele bak',
-        'non_eur_title' => 'EUR dışı harcamalar burada gösterilmez — panele bak',
+        'unconverted_aria' => 'Kuru bulunmayan bir para birimindeki harcama burada sayılmaz — panoya bak',
+        'unconverted_title' => 'Kuru bulunmayan harcama burada sayılmaz — panoya bak',
         'over_budget' => ':count bütçe aşımı',
     ],
 

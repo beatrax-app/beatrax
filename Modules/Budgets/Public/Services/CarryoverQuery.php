@@ -14,6 +14,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
@@ -45,6 +46,7 @@ final class CarryoverQuery
         private readonly Clock $clock,
         private readonly LoggerInterface $log,
         private readonly BaseCurrency $baseCurrency,
+        private readonly CrossCurrencyTotal $fx,
     ) {}
 
     // Nothing is budgeted, carried or moved before the first assignment — but
@@ -57,14 +59,14 @@ final class CarryoverQuery
     private function unstartedRows(User $user, Period $target): array
     {
         $settings = $this->envelopeSettings($user);
-        $spentByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $target);
         $currency = $this->baseCurrency->code();
+        $spendByCategory = $this->spendForPeriod($user, $target, $currency);
 
         $rows = [];
         $overspentCount = 0;
 
         foreach ($this->budgetProgress->expenseCategoryNaming($user) as $categoryId => $naming) {
-            $spent = $spentByKey["{$categoryId}|".$currency] ?? 0;
+            $spent = $spendByCategory[$categoryId]['spent'] ?? 0;
             $available = -$spent;
 
             if ($available < 0) {
@@ -81,7 +83,7 @@ final class CarryoverQuery
                 availableMinor: $available,
                 overspendMode: $settings['modes'][$categoryId] ?? self::DEFAULT_OVERSPEND_MODE,
                 currency: $currency,
-                nonEurSpentMinor: $this->sumNonEurSpent($spentByKey, $categoryId),
+                unconvertedSpentMinor: $spendByCategory[$categoryId]['unconverted'] ?? 0,
                 notifyThresholdPercent: $settings['thresholds'][$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
                 categorySlug: $naming['slug'],
                 categoryNameIsDefault: $naming['isDefault'],
@@ -234,10 +236,8 @@ final class CarryoverQuery
         int $poolCarry,
         array $carriedIn,
     ): FoldStep {
-        // Reuses the shared query: a fresh GROUP BY here would double-count a
-        // split transaction, which is already legs ∪ unsplit parents.
-        $spentByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
         $currency = $this->baseCurrency->code();
+        $spendByCategory = $this->spendForPeriod($user, $period, $currency);
         $income = $this->glance->incomeForPeriod($user, $period, $currency);
 
         $totalAssignedMoney = Money::ofMinor(0, $currency);
@@ -257,9 +257,9 @@ final class CarryoverQuery
         foreach ($context->expenseCategories as $categoryId => $naming) {
             $assigned = $assignedByCategory[$categoryId] ?? 0;
             $moved = $movedByCategory[$categoryId] ?? 0;
-            $spent = $spentByKey["{$categoryId}|".$currency] ?? 0;
+            $spent = $spendByCategory[$categoryId]['spent'] ?? 0;
             $carriedInForCategory = $carriedIn[$categoryId] ?? 0;
-            $nonEurSpent = $this->sumNonEurSpent($spentByKey, $categoryId);
+            $unconvertedSpent = $spendByCategory[$categoryId]['unconverted'] ?? 0;
 
             $availableMoney = Money::ofMinor($assigned, $currency)
                 ->plus(Money::ofMinor($carriedInForCategory, $currency))
@@ -294,7 +294,7 @@ final class CarryoverQuery
                 availableMinor: $available,
                 overspendMode: $mode,
                 currency: $currency,
-                nonEurSpentMinor: $nonEurSpent,
+                unconvertedSpentMinor: $unconvertedSpent,
                 notifyThresholdPercent: $notifyThreshold,
                 categorySlug: $naming['slug'],
                 categoryNameIsDefault: $naming['isDefault'],
@@ -313,21 +313,43 @@ final class CarryoverQuery
     /**
      * @param  array<array-key, mixed>  $spentByKey
      */
-    private function sumNonEurSpent(array $spentByKey, int $categoryId): int
+    // Reuses the shared spend query: a fresh GROUP BY here would double-count a
+    // split transaction, which is already legs union unsplit parents. Each
+    // category's buckets are converted into the currency the fold runs in, and
+    // only a bucket the rate table cannot reach stays out of it — surfaced
+    // beside the row rather than counted at one to one.
+    /**
+     * @return array<int, array{spent: int, unconverted: int}>
+     */
+    private function spendForPeriod(User $user, Period $period, string $currency): array
     {
-        // Surfaced beside the fold, never folded into it: the fold runs in the
-        // base currency alone, so a converted figure would drift against the ledger.
-        $nonEurSpent = 0;
-        $prefix = "{$categoryId}|";
-        $suffix = '|'.$this->baseCurrency->code();
-        foreach ($spentByKey as $key => $minor) {
-            $keyStr = self::toString($key);
-            if (str_starts_with($keyStr, $prefix) && ! str_ends_with($keyStr, $suffix)) {
-                $nonEurSpent += self::toInt($minor);
-            }
+        $buckets = [];
+        foreach ($this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period) as $key => $minor) {
+            [$categoryId, $bucketCurrency] = explode('|', self::toString($key), 2) + [1 => ''];
+            $buckets[(int) $categoryId][$bucketCurrency] = self::toInt($minor);
         }
 
-        return $nonEurSpent;
+        $currencies = [];
+        foreach ($buckets as $byCurrency) {
+            foreach (array_keys($byCurrency) as $bucketCurrency) {
+                $currencies[] = $bucketCurrency;
+            }
+        }
+        $rates = $this->fx->ratesTo($currencies, $currency);
+
+        $spend = [];
+        foreach ($buckets as $categoryId => $byCurrency) {
+            $converted = $this->fx->withRates($byCurrency, $currency, $rates);
+
+            $unreached = 0;
+            foreach ($converted->unconverted as $code) {
+                $unreached += $byCurrency[$code] ?? 0;
+            }
+
+            $spend[$categoryId] = ['spent' => $converted->minor, 'unconverted' => $unreached];
+        }
+
+        return $spend;
     }
 
     /**
@@ -358,16 +380,9 @@ final class CarryoverQuery
             ->where('user_id', $user->id)
             ->where('period_start', '>=', $genesis->start->toDateString())
             ->where('period_start', '<', $target->start->addDay()->toDateString())
-            ->get(['category_id', 'period_start', 'assigned_minor']);
+            ->get(['category_id', 'period_start', 'assigned_minor', 'currency']);
 
-        $byPeriod = [];
-        foreach ($rows as $row) {
-            $periodKey = self::periodKeyFromRaw($row->period_start);
-            $categoryId = self::toInt($row->category_id);
-            $byPeriod[$periodKey][$categoryId] = self::toInt($row->assigned_minor);
-        }
-
-        return $byPeriod;
+        return $this->convertedByPeriod($rows, 'assigned_minor');
     }
 
     /**
@@ -382,14 +397,41 @@ final class CarryoverQuery
             ->where('user_id', $user->id)
             ->where('period_start', '>=', $genesis->start->toDateString())
             ->where('period_start', '<', $target->start->addDay()->toDateString())
-            ->groupBy('period_start', 'category_id')
-            ->get(['period_start', 'category_id', $connection->raw('SUM(amount_minor) AS net_minor')]);
+            ->groupBy('period_start', 'category_id', 'currency')
+            ->get(['period_start', 'category_id', 'currency', $connection->raw('SUM(amount_minor) AS net_minor')]);
 
-        $byPeriod = [];
+        return $this->convertedByPeriod($rows, 'net_minor');
+    }
+
+    // A row records the currency it was written in, and the reader's reporting
+    // currency can have changed since. Converted per bucket on the way into the
+    // fold, which then runs on figures actually denominated in what it prints.
+    /**
+     * @param  iterable<object>  $rows
+     * @return array<string, array<int, int>>
+     */
+    private function convertedByPeriod(iterable $rows, string $minorColumn): array
+    {
+        $currency = $this->baseCurrency->code();
+
+        $buckets = [];
+        $currencies = [];
         foreach ($rows as $row) {
             $periodKey = self::periodKeyFromRaw($row->period_start);
             $categoryId = self::toInt($row->category_id);
-            $byPeriod[$periodKey][$categoryId] = self::toInt($row->net_minor);
+            $rowCurrency = self::toString($row->currency);
+            $currencies[] = $rowCurrency;
+            $buckets[$periodKey][$categoryId][$rowCurrency] =
+                ($buckets[$periodKey][$categoryId][$rowCurrency] ?? 0) + self::toInt($row->{$minorColumn});
+        }
+
+        $rates = $this->fx->ratesTo($currencies, $currency);
+
+        $byPeriod = [];
+        foreach ($buckets as $periodKey => $byCategory) {
+            foreach ($byCategory as $categoryId => $byCurrency) {
+                $byPeriod[$periodKey][$categoryId] = $this->fx->withRates($byCurrency, $currency, $rates)->minor;
+            }
         }
 
         return $byPeriod;

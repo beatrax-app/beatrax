@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budžeti',
-        'subtitle' => 'Sadaliet katru eiro — :period.',
+        'subtitle' => 'Sadaliet visu — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Pārnes mīnusu',
-        'non_eur_aria' => 'Tēriņi citā valūtā šajā kategorijā šeit netiek rādīti — skatiet pārskatu',
-        'non_eur_title' => 'Tēriņi citā valūtā šeit netiek rādīti — skatiet pārskatu',
+        'unconverted_aria' => 'Izdevumi valūtā bez pieejama kursa šeit netiek ieskaitīti — skati paneli',
+        'unconverted_title' => 'Izdevumi bez pieejama kursa šeit netiek ieskaitīti — skati paneli',
         'over_budget' => 'Pārsniedz budžetu: :count',
     ],
 

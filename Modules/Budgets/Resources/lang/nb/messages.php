@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budsjetter',
-        'subtitle' => 'Fordel hver eneste euro — :period.',
+        'subtitle' => 'Fordel alt — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Overfører minus',
-        'non_eur_aria' => 'Forbruk i annen valuta enn EUR i denne kategorien vises ikke her — se oversikten',
-        'non_eur_title' => 'Forbruk i annen valuta enn EUR vises ikke her — se oversikten',
+        'unconverted_aria' => 'Forbruk i en valuta uten tilgjengelig kurs telles ikke med her — se oversikten',
+        'unconverted_title' => 'Forbruk uten tilgjengelig kurs telles ikke med her — se oversikten',
         'over_budget' => ':count over budsjett',
     ],
 

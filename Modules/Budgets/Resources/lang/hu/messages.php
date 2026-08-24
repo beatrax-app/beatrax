@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Költségvetések',
-        'subtitle' => 'Oszd be minden eurót — :period.',
+        'subtitle' => 'Oszd be az utolsóig — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Negatívot visz tovább',
-        'non_eur_aria' => 'A kategória nem euróban lévő költése itt nem jelenik meg — lásd az irányítópultot',
-        'non_eur_title' => 'A nem euróban lévő költés itt nem jelenik meg — lásd az irányítópultot',
+        'unconverted_aria' => 'Az árfolyam nélküli pénznemben történt költés itt nem számít bele — lásd az áttekintést',
+        'unconverted_title' => 'Az árfolyam nélküli költés itt nem számít bele — lásd az áttekintést',
         'over_budget' => ':count túllépve',
     ],
 

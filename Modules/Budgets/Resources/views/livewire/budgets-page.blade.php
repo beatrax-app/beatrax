@@ -120,12 +120,12 @@
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
                                 <x-core::status-pill tone="warning" class="ml-2">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
-                            @if ($row->nonEurSpentMinor != 0)
+                            @if ($row->unconvertedSpentMinor != 0)
                                 <span
                                     class="ml-2 inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 align-middle dark:bg-amber-500"
                                     role="img"
-                                    aria-label="{{ Lang::get('budgets::messages.badge.non_eur_aria') }}"
-                                    title="{{ Lang::get('budgets::messages.badge.non_eur_title') }}"
+                                    aria-label="{{ Lang::get('budgets::messages.badge.unconverted_aria') }}"
+                                    title="{{ Lang::get('budgets::messages.badge.unconverted_title') }}"
                                 ></span>
                             @endif
                         </td>
@@ -245,12 +245,12 @@
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
                                 <x-core::status-pill tone="warning" class="ml-1">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
-                            @if ($row->nonEurSpentMinor != 0)
+                            @if ($row->unconvertedSpentMinor != 0)
                                 <span
                                     class="ml-1 inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 align-middle dark:bg-amber-500"
                                     role="img"
-                                    aria-label="{{ Lang::get('budgets::messages.badge.non_eur_aria') }}"
-                                    title="{{ Lang::get('budgets::messages.badge.non_eur_title') }}"
+                                    aria-label="{{ Lang::get('budgets::messages.badge.unconverted_aria') }}"
+                                    title="{{ Lang::get('budgets::messages.badge.unconverted_title') }}"
                                 ></span>
                             @endif
                         </p>

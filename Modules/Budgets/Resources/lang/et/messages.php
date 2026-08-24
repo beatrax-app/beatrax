@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Eelarved',
-        'subtitle' => 'Jaga iga euro — :period.',
+        'subtitle' => 'Jaga kõik ära — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Kannab miinust edasi',
-        'non_eur_aria' => 'Muus valuutas kui EUR tehtud kulutusi selles kategoorias siin ei näidata — vaata ülevaadet',
-        'non_eur_title' => 'Muus valuutas kui EUR tehtud kulutusi siin ei näidata — vaata ülevaadet',
+        'unconverted_aria' => 'Kulu valuutas, millele kurssi pole, siin ei arvestata — vaata töölauda',
+        'unconverted_title' => 'Kurssita kulu siin ei arvestata — vaata töölauda',
         'over_budget' => ':count üle eelarve',
     ],
 
