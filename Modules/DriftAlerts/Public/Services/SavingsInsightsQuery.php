@@ -18,6 +18,7 @@ use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 final class SavingsInsightsQuery
@@ -58,8 +59,15 @@ final class SavingsInsightsQuery
         $openAlerts = $this->openAlertSeriesIds($user);
         $dismissed = $this->dismissedKeys($user);
 
+        $approved = $this->recurring->allApprovedForUser($user);
+        $baseCurrency = $this->baseCurrency->forUser($user);
+        $rates = $this->fx->ratesTo(array_map(
+            static fn (RecurringSeriesDto $series): string => $series->monthlyEquivalent->currency(),
+            $approved,
+        ), $baseCurrency);
+
         $insights = [];
-        foreach ($this->recurring->allApprovedForUser($user) as $series) {
+        foreach ($approved as $series) {
             if ($series->direction !== Direction::Expense->value) {
                 continue;
             }
@@ -83,6 +91,7 @@ final class SavingsInsightsQuery
                 $series->displayName(),
                 $monthlyMinor,
                 $series->monthlyEquivalent->currency(),
+                $this->inBase($monthlyMinor, $series->monthlyEquivalent->currency(), $baseCurrency, $rates),
                 $identity['slug'],
                 $resource,
                 isset($openAlerts[$series->seriesId]),
@@ -93,7 +102,20 @@ final class SavingsInsightsQuery
             }
         }
 
-        return $this->costliestFirst($insights, $user);
+        return $this->costliestFirst($insights, $baseCurrency, $rates);
+    }
+
+    // Null for a currency the rate table cannot reach, which withholds the
+    // review prompt rather than comparing foreign minor units with a floor
+    // denominated in the reader's own.
+    /**
+     * @param  array<string, string>  $rates
+     */
+    private function inBase(int $minor, string $currency, string $baseCurrency, array $rates): ?int
+    {
+        $money = Money::tryOfMinor($minor, $currency);
+
+        return $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates)?->toMinor();
     }
 
     // "Ways to save", ordered by what each costs the reader — a race between
@@ -102,20 +124,14 @@ final class SavingsInsightsQuery
     // insight the rate table cannot reach sorts after every one it can.
     /**
      * @param  list<SavingsInsight>  $insights
+     * @param  array<string, string>  $rates
      * @return list<SavingsInsight>
      */
-    private function costliestFirst(array $insights, User $user): array
+    private function costliestFirst(array $insights, string $baseCurrency, array $rates): array
     {
-        $baseCurrency = $this->baseCurrency->forUser($user);
-        $rates = $this->fx->ratesTo(array_map(
-            static fn (SavingsInsight $insight): string => $insight->currency,
-            $insights,
-        ), $baseCurrency);
-
         $inBase = [];
         foreach ($insights as $index => $insight) {
-            $money = Money::tryOfMinor($insight->monthlyMinor, $insight->currency);
-            $inBase[$index] = $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates)?->toMinor();
+            $inBase[$index] = $this->inBase($insight->monthlyMinor, $insight->currency, $baseCurrency, $rates);
         }
 
         $order = array_keys($insights);
@@ -154,15 +170,16 @@ final class SavingsInsightsQuery
         string $name,
         int $monthlyMinor,
         string $currency,
+        ?int $monthlyInBaseMinor,
         string $slug,
         SupportResource $resource,
         bool $hasOpenAlert,
     ): ?SavingsInsight {
         $monthly = Money::ofMinor($monthlyMinor, $currency)->format();
 
-        // The review floor is a base-currency threshold; the arm applies it only
-        // to base-currency series so a foreign minor amount is never compared
-        // with it.
+        // The review floor is a threshold in the reader's reporting currency,
+        // so the series is converted into it before the comparison rather than
+        // refused for not already being denominated in it.
         return match (true) {
             $resource->cheaperUrl !== null => new SavingsInsight(
                 key: 'cheaper:'.$seriesId,
@@ -188,7 +205,7 @@ final class SavingsInsightsQuery
                 actionUrl: $resource->cancelUrl,
                 counterpartySlug: $slug,
             ),
-            $currency === $this->baseCurrency->code() && $monthlyMinor >= self::REVIEW_FLOOR && $resource->cancelUrl !== null => new SavingsInsight(
+            $monthlyInBaseMinor !== null && $monthlyInBaseMinor >= self::REVIEW_FLOOR && $resource->cancelUrl !== null => new SavingsInsight(
                 key: 'review:'.$seriesId,
                 type: 'review',
                 seriesId: $seriesId,
