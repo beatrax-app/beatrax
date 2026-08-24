@@ -152,3 +152,24 @@ it('answers in the currency the statement is printed in, not in every currency t
     expect(DB::table('transactions')->where('id', $dollars->id)->value('status'))->toBe('reconciled');
     expect(DB::table('transactions')->where('id', $euros->id)->value('status'))->toBe('reconciled');
 });
+
+// The account select's "choose an account" option carries the empty string, and
+// Livewire writes the CLIENT-side model value into the query string the moment
+// it changes — before the server has cast it. `except: null` does not match '',
+// so clearing the select put ?accountId= in the address bar. Only modifiers
+// written BEFORE `.live` reach the value parser; everything after it configures
+// the network trip, which is why `.live.number` reads as a fix and is not one.
+it('parses the account select client-side, so clearing it cannot write an empty accountId into the URL', function (): void {
+    $html = (string) Livewire::actingAs($this->user)
+        ->test(ReconcilePage::class)
+        ->html();
+
+    expect($html)->toContain('<option value="">');
+
+    preg_match('/wire:model((?:\.[a-z0-9]+)*)="accountId"/', $html, $binding);
+    $modifiers = array_values(array_filter(explode('.', $binding[1] ?? '')));
+
+    expect(array_search('number', $modifiers, true))
+        ->toBeInt()
+        ->toBeLessThan(array_search('live', $modifiers, true));
+});

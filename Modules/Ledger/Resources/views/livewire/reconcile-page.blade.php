@@ -33,7 +33,7 @@
                 field-id="rc-account"
                 type="select"
                 :label="Lang::get('ledger::reconcile.account')"
-                wire:model.live="accountId"
+                wire:model.number.live="accountId"
             >
                 <option value="">{{ Lang::get('ledger::reconcile.choose_account') }}</option>
                 @foreach ($accounts as $account)
