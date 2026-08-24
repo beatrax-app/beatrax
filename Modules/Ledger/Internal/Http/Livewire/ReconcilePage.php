@@ -32,7 +32,7 @@ final class ReconcilePage extends Component
     use CoercesScalars;
     use DispatchesToast;
 
-    #[Url(except: '')]
+    #[Url(except: null)]
     public ?int $accountId = null;
 
     public string $statementBalance = '';

@@ -47,7 +47,7 @@ final class InboxesPage extends Component
 
     public ?string $oauthFailedMessage = null;
 
-    #[Url(as: 'reconnect', except: '')]
+    #[Url(as: 'reconnect', except: null)]
     public ?int $reconnectInboxId = null;
 
     public function mount(
