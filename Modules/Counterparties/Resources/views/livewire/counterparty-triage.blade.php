@@ -150,9 +150,14 @@
             @endif
 
             <div class="triage-section">
-                <h3 style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0;">
+                {{-- h2, not h3: the only h2 on this page lives in the
+                     all-caught-up card, which is the other arm of the same
+                     @if, so with work left in the queue this followed the
+                     page h1 directly. Its size is set here, so the level
+                     carries no appearance. --}}
+                <h2 style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0;">
                     {{ Lang::get('counterparties::triage.recent_on_iban') }}
-                </h3>
+                </h2>
                 @if (count($recentTransactions) === 0)
                     <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
                         {{ Lang::get('counterparties::triage.no_transactions_yet') }}
