@@ -17,6 +17,9 @@
       - aria-label="Backspace" on the backspace button.
       - aria-label="OK — confirm PIN" on the submit button.
       - dot display wrapped in aria-live="polite" region announcing "{N} digits entered".
+        The eleven possible announcements are chosen server-side, because a
+        locale with more than two plural forms cannot be served by a suffix
+        glued onto a number in the browser.
       - backoff label in aria-live="assertive" slot.
 
     Sizing contract (UI-SPEC):
@@ -25,12 +28,18 @@
       - 56 px × 56 px on desktop (sm:h-14 sm:w-14).
 --}}
 
+@php
+    $digitAnnouncements = array_map(
+        static fn (int $count): string => Lang::choice('auth::lock_screen.digits_entered', $count, ['count' => $count]),
+        range(0, 10),
+    );
+@endphp
 {{-- Dot display — aria-live so screen readers announce digit count changes --}}
 <div
     class="flex justify-center gap-2 py-3"
     role="status"
     aria-live="polite"
-    x-bind:aria-label="pin.length + ' {{ Lang::get('auth::lock_screen.digits_suffix') }}'"
+    x-bind:aria-label="@js($digitAnnouncements)[pin.length]"
 >
     <template x-for="i in 10" :key="i">
         <span

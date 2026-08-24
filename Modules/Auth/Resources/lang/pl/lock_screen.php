@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Wyloguj się',
     'forgot_pin' => 'Nie pamiętasz PIN-u? Wyloguj się — możesz zalogować się ponownie hasłem do konta i ustawić nowy PIN. Żadne dane nie zostaną utracone.',
 
-    'digits_suffix' => 'wpisanych cyfr',
+    'digits_entered' => '{1} wpisana :count cyfra|[2,4] wpisane :count cyfry|[5,*] wpisanych :count cyfr',
     'pad_label' => 'Klawiatura PIN',
     'digit_aria' => 'Cyfra :digit',
     'backspace_aria' => 'Usuń znak',

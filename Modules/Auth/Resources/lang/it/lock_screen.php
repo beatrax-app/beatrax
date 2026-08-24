@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Esci',
     'forgot_pin' => 'Hai dimenticato il PIN? Esci: puoi rientrare con la password del tuo account e impostare un nuovo PIN. Non si perde nessun dato.',
 
-    'digits_suffix' => 'cifre inserite',
+    'digits_entered' => ':count cifra inserita|:count cifre inserite',
     'pad_label' => 'Tastierino del PIN',
     'digit_aria' => 'Cifra :digit',
     'backspace_aria' => 'Tasto indietro',

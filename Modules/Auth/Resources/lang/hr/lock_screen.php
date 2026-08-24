@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Odjavi se',
     'forgot_pin' => 'Zaboravio si PIN? Odjavi se — možeš se ponovno prijaviti lozinkom svojeg računa i postaviti novi PIN. Podaci se ne gube.',
 
-    'digits_suffix' => 'unesenih znamenki',
+    'digits_entered' => '{1} unesena :count znamenka|[2,4] unesene :count znamenke|[5,*] uneseno :count znamenki',
     'pad_label' => 'PIN tipkovnica',
     'digit_aria' => 'Znamenka :digit',
     'backspace_aria' => 'Backspace',

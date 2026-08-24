@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Abmelden',
     'forgot_pin' => 'PIN vergessen? Melde dich ab — mit deinem Kontopasswort meldest du dich wieder an und legst eine neue PIN fest. Es gehen keine Daten verloren.',
 
-    'digits_suffix' => 'Ziffern eingegeben',
+    'digits_entered' => ':count Ziffer eingegeben|:count Ziffern eingegeben',
     'pad_label' => 'PIN-Tastenfeld',
     'digit_aria' => 'Ziffer :digit',
     'backspace_aria' => 'Rücktaste',
