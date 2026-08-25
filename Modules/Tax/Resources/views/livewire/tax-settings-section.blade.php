@@ -114,7 +114,9 @@
 
         {{-- Add category form. The row wraps rather than squeezing: at 375pt
              the button had nothing holding its width, shrank onto the 44px
-             touch floor and printed its label off the edge of the card. --}}
+             touch floor and printed its label off the edge of the card.
+             max-w-full is the other half at the accessibility text sizes,
+             where the label alone is wider than the row it now owns. --}}
         <div class="mt-3 flex flex-wrap gap-2" data-testid="add-category-form">
             <label for="new-category-name" class="sr-only">{{ Lang::get('tax::settings.new_category_label') }}</label>
             <input
@@ -128,7 +130,7 @@
             <button
                 type="button"
                 wire:click="addCategory"
-                class="pill-btn-ghost shrink-0 whitespace-nowrap text-sm"
+                class="pill-btn-ghost max-w-full shrink-0 whitespace-nowrap text-sm"
                 data-testid="add-category-btn"
             >{{ Lang::get('tax::settings.add_category') }}</button>
         </div>

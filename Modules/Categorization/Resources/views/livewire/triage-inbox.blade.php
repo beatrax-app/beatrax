@@ -11,14 +11,18 @@
         {{-- flex-wrap + shrink-0: at phone width the heading and the action
              were both compressed rather than reflowed, breaking the button
              label over two lines beside the H1. The action wraps to its own
-             row intact instead. Same shape as the /drift header. --}}
+             row intact instead. Same shape as the /drift header.
+
+             max-w-full caps that row of its own: at the largest accessibility
+             text size "Save categories" measures 407px, which is wider than
+             the screen it has to itself. --}}
         <div class="flex flex-wrap items-baseline justify-between gap-4">
             <h1 class="min-w-0 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('categorization::triage.heading') }}</h1>
             <button
                 type="button"
                 wire:click="save"
                 @disabled(count($pending) === 0)
-                class="inline-flex shrink-0 items-center whitespace-nowrap rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                class="inline-flex max-w-full shrink-0 items-center whitespace-nowrap rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >{{ Lang::get('categorization::triage.save_categories') }}</button>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
