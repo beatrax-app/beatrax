@@ -151,3 +151,44 @@ it('splices the injection AFTER the bootstrap statement, not before', function (
 
     expect($bootstrapPos)->toBeLessThan($injectionPos);
 });
+
+it('binds every identifier the injected block calls a method on', function (): void {
+    // An identifier nothing binds throws ReferenceError at click time, and the
+    // helper's own catch swallows it — the tray goes quiet instead of failing
+    // loudly. Method calls are the shape that reaches for a module, so those
+    // are the receivers checked.
+    $upstream = <<<'JS'
+        import NativePHP from '#plugin';
+        import { app } from 'electron';
+        import path from 'path';
+        NativePHP.bootstrap(app, defaultIcon, phpBinary, certificate, appPath);
+        JS;
+
+    [$patched] = injectPersistentTray($upstream);
+
+    $receivers = preg_match_all('/(?<![\w$.])([a-z][\w$]*)\.[\w$]+\s*\(/', $patched, $called);
+    $declarations = preg_match_all(
+        '/(?:import\s+([\w$]+)\s+from|import\s*\{([^}]+)\}\s*from|(?:const|let|var|function)\s+([\w$]+))/',
+        $patched,
+        $declared,
+        PREG_SET_ORDER,
+    );
+
+    // preg_match_all returns false on a backtrack/JIT limit, and an unchecked
+    // false degrades into an empty match set — a silent pass over the very
+    // thing this asserts.
+    expect($receivers)->not->toBeFalse();
+    expect($declarations)->not->toBeFalse();
+
+    $bound = [];
+    foreach ($declared as $match) {
+        $names = ($match[1] ?? '').','.($match[2] ?? '').','.($match[3] ?? '');
+        foreach (explode(',', $names) as $name) {
+            if (trim($name) !== '') {
+                $bound[] = trim($name);
+            }
+        }
+    }
+
+    expect(array_values(array_unique(array_diff($called[1], $bound))))->toBe([]);
+});

@@ -11,7 +11,7 @@ declare(strict_types=1);
  * project-local `nativephp/electron/src/main/index.js` to:
  *
  *   1. Import `Menu`, `Tray`, `nativeImage` from electron alongside the
- *      existing `app` import.
+ *      existing `app` import, and `axios` for the show-or-recreate POST.
  *   2. Bind a module-scoped `tray` variable so the GC keeps it alive for
  *      the whole app lifetime.
  *   3. On `app.whenReady()`, poll until NativePHP has finished bootstrap
@@ -149,9 +149,10 @@ function injectPersistentTray(string $source): array
 
     // 1. Broaden the electron named imports. NativePHP's published main
     //    process imports only `app`; we also need Menu, Tray, and
-    //    nativeImage.
+    //    nativeImage. The tray's show-or-recreate helper POSTs with axios,
+    //    which the entrypoint does not import either.
     $oldImport = "import { app } from 'electron';";
-    $newImport = "import { app, Menu, Tray, nativeImage } from 'electron';";
+    $newImport = "import { app, Menu, Tray, nativeImage } from 'electron';\nimport axios from 'axios';";
 
     if (! str_contains($source, $oldImport)) {
         return [null, 'could not locate the `import { app } from \'electron\';` line to broaden'];
