@@ -40,7 +40,11 @@
         @else
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ $scenarioName }}</h2>
-                <div class="flex items-center gap-2 text-xs">
+                {{-- `shrink-0`, or the pair is squeezed onto the 44px touch
+                     floor and "Rename" breaks after "Renam": the floor is a
+                     min-width, so a label wider than it has nowhere to go once
+                     the row compresses. --}}
+                <div class="flex shrink-0 items-center gap-2 text-xs">
                     <button
                         type="button"
                         wire:click="startRename"
@@ -100,9 +104,9 @@
                                 @endif
                             </div>
                         @else
-                            <div class="flex items-center justify-between gap-2">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
                                 <p class="text-sm text-slate-900 dark:text-slate-100">{{ $m['summary'] }}</p>
-                                <div class="flex items-center gap-2 text-xs">
+                                <div class="flex shrink-0 items-center gap-2 text-xs">
                                     <button
                                         type="button"
                                         wire:click="editMutation({{ $m['id'] }})"

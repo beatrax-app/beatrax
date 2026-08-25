@@ -142,7 +142,13 @@ it('keeps a restacked row wide enough to read its own subject', function (): voi
 
     // Every table that restacks reads the track from the token; a bare
     // `minmax(0, 1fr)` beside an `auto` is the shape that had no floor.
-    expect(substr_count($css, 'grid-template-columns: var(--restacked-row-subject) max-content;'))->toBe(4)
+    //
+    // The action track is minmax(0, max-content), not max-content: a bare
+    // max-content cannot shrink, so on /rules the Dutch pair "Bewerken
+    // Verwijderen" sized the row and pushed the destructive action 29px past
+    // the screen -- reachable only by a horizontal drag nothing advertises.
+    expect(substr_count($css, 'grid-template-columns: var(--restacked-row-subject) minmax(0, max-content);'))->toBe(4)
+        ->and($css)->not->toContain('grid-template-columns: var(--restacked-row-subject) max-content;')
         ->and($css)->not->toContain('grid-template-columns: minmax(0, 1fr) auto;')
         ->and($css)->not->toContain('grid-template-columns: var(--restacked-row-subject) auto;');
 });

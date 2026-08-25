@@ -241,12 +241,10 @@ final readonly class ForecastQuery
     ): ForecastDto {
         $anchorMinor = $this->balances->currentBalanceAsOf($accountId, $user, $asOf)->in($defaultCurrency);
 
-        // A booked row dated ahead of today is not a projection, it is a
-        // certainty already in the ledger, and a line that ignores it states
-        // the wrong balance for every day after it. Evaluated only on the days
-        // one falls, because between them the balance does not move -- and
-        // through the same summation the dashboard and reconcile use, so the
-        // baseline and the currency handling cannot drift from theirs.
+        // A booked row dated ahead of today is a certainty already in the
+        // ledger, and a line ignoring it states the wrong balance for every day
+        // after. Only the days one falls are queried, through the summation the
+        // dashboard and reconcile use so the baseline cannot drift from theirs.
         $balanceOn = [];
         foreach ($this->bookedDatesAhead($accountId, $user, $asOf, $horizonDays) as $date) {
             $balanceOn[$date] = $this->balances
