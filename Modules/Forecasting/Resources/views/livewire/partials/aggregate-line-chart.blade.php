@@ -114,6 +114,11 @@
      viewport widths including phone. The responsive[] breakpoints above
      handle tick/label tuning at <768px. --}}
 <div
+    {{-- Keyed on the chart id: a horizon or account flip renames the
+         target, and without this Livewire morphs the wrapper in place,
+         x-init never re-runs, and the Alpine instance goes on holding a
+         node that is no longer the one being drawn into. --}}
+    wire:key="chart-{{ $chartElementId }}"
     style="width:100%"
     x-data="{ chart: null }"
     x-init="
@@ -130,7 +135,10 @@
     "
     data-options="{{ $optionsJson }}"
 >
+    {{-- wire:ignore, and it is not decoration: Livewire's morph wiped the
+         rendered SVG out of this node, leaving a bordered empty box. --}}
     <div
+        wire:ignore
         id="{{ $chartElementId }}"
         data-testid="all-accounts-aggregate-chart"
         data-chart-variant="line"
