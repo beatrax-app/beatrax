@@ -29,9 +29,13 @@
 
 <div class="space-y-6">
     <header>
-        <div class="flex items-baseline justify-between gap-4">
+        {{-- `shrink-0` and `flex-wrap` together, or the pair squeezes: the row
+             gave the two buttons 84.1px each and "Confirm" needs 84.3px, so it
+             broke mid-word. Now the group keeps its own width and drops below
+             the heading when the row cannot hold both. --}}
+        <div class="flex flex-wrap items-baseline justify-between gap-4">
             <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('import::preview.heading') }}</h1>
-            <div class="flex items-center gap-3">
+            <div class="flex shrink-0 items-center gap-3">
                 <x-core::secondary-button
                     class="disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="! $hasLivePreview"
