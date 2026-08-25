@@ -156,13 +156,9 @@ final class ImportPipeline
             }
         } catch (Throwable $e) {
             // A fatal adapter error is the file failing, not a row of it, and
-            // it stops the read where it was raised. Reported as a row it read
-            // as a transaction with no values; reported here it can say that
-            // nothing past this point was read. The trace goes to the log.
-            // The size and the row count, because without them the two ways
-            // this fails are indistinguishable in a log: a file that arrived
-            // empty and a file that died on its content both surface as the
-            // reader's export being unreadable. The path is not logged.
+            // it stops the read where it was raised. The size and the row count
+            // go with it: a file that arrived empty and a file that died on its
+            // content are one line apart in a log, and identical on the screen.
             $this->logger->warning('ImportPipeline: parse failed.', [
                 'source_format' => $sourceFormat,
                 'import_run_id' => $importRunId,

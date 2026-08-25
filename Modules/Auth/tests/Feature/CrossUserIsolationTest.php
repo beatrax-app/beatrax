@@ -22,6 +22,11 @@ use Modules\Ledger\Models\Transaction;
  */
 const ISOLATION_ROUTE_ALLOW_LIST = [
     'logout',
+    // A GET to /logout answers with the sign-in screen and reads nothing: it
+    // exists because the mobile shell re-requests the URL a sign-out was posted
+    // to, and met a 405 -- a stack trace with no navigation off it, on a phone.
+    // It logs nobody out either, or an <img> could.
+    'logout.landing',
     'auth.change-password',
     'auth.recovery-codes-display',
     'auth.users.create',
