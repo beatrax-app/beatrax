@@ -8,5 +8,6 @@ return [
     'subtitle' => 'Paruošk šį įrenginį, kad matytum savo finansus vienoje vietoje.',
     'create_account' => 'Sukurti paskyrą',
     'import' => 'Importuoti iš kito įrenginio',
+    'restore' => 'Atkurti iš atsarginės kopijos',
     'create_account_note' => 'Tai veikia ir savarankiškai, bet nustatyti kompiuteryje ir sinchronizuoti čia yra paprasčiau.',
 ];
