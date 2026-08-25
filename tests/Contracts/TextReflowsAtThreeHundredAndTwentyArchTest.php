@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Tests\Contracts\Support\UnlayeredCss;
+
 // Measured on an SM-S928B at the largest font size (2.0) and largest screen
 // zoom (720dpi) its own sliders offer: a 320px viewport with 32px text. Eleven
 // routes scrolled sideways, every one of them on a single run of characters
@@ -21,35 +23,9 @@ declare(strict_types=1);
 // sizing themselves to the unbroken run. `anywhere` counts, which is what
 // lets the parent shrink.
 
-/** @return string app.css with every balanced `@layer name { ... }` block removed */
-function reflowUnlayeredCss(): string
-{
-    $css = (string) file_get_contents(base_path('resources/css/app.css'));
-
-    $out = '';
-    $offset = 0;
-    while (preg_match('/@layer\s+[a-z]+\s*\{/', $css, $match, PREG_OFFSET_CAPTURE, $offset) === 1) {
-        $out .= substr($css, $offset, $match[0][1] - $offset);
-
-        $cursor = $match[0][1] + strlen($match[0][0]);
-        $depth = 1;
-        while ($depth > 0 && $cursor < strlen($css)) {
-            if ($css[$cursor] === '{') {
-                $depth++;
-            } elseif ($css[$cursor] === '}') {
-                $depth--;
-            }
-            $cursor++;
-        }
-        $offset = $cursor;
-    }
-
-    return $out.substr($css, $offset);
-}
-
 function reflowRule(): string
 {
-    $css = reflowUnlayeredCss();
+    $css = UnlayeredCss::read();
 
     $start = strpos($css, 'h1,'."\n".'    h2,'."\n".'    h3,');
 

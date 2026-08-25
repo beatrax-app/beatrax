@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Tests\Contracts\Support\UnlayeredCss;
+
 // The three routes still over 320px once long runs could break were all the
 // same shape: a row of controls whose labels do not shrink, in a container
 // with no wrap.
@@ -20,34 +22,8 @@ declare(strict_types=1);
 // so the rule follows the role rather than a class each one would have to
 // remember to add.
 
-/** @return string app.css with every balanced `@layer name { ... }` block removed */
-function tabStripUnlayeredCss(): string
-{
-    $css = (string) file_get_contents(base_path('resources/css/app.css'));
-
-    $out = '';
-    $offset = 0;
-    while (preg_match('/@layer\s+[a-z]+\s*\{/', $css, $match, PREG_OFFSET_CAPTURE, $offset) === 1) {
-        $out .= substr($css, $offset, $match[0][1] - $offset);
-
-        $cursor = $match[0][1] + strlen($match[0][0]);
-        $depth = 1;
-        while ($depth > 0 && $cursor < strlen($css)) {
-            if ($css[$cursor] === '{') {
-                $depth++;
-            } elseif ($css[$cursor] === '}') {
-                $depth--;
-            }
-            $cursor++;
-        }
-        $offset = $cursor;
-    }
-
-    return $out.substr($css, $offset);
-}
-
 it('wraps a strip of tabs instead of clipping the last one', function (): void {
-    $css = tabStripUnlayeredCss();
+    $css = UnlayeredCss::read();
 
     $start = strpos($css, "[role='tablist'],");
 

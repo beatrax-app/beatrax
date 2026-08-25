@@ -146,6 +146,23 @@
     --space-10: 40px;
     --space-12: 48px;
 
+    /*
+     * The subject column of a table that has restacked into cards. Every one
+     * of them puts the row's subject — a merchant, a rule's conditions — in a
+     * 1fr track beside an auto one holding its amount or its actions, and 1fr
+     * has no floor. Measured on an iPhone 12 mini at the largest iOS
+     * accessibility text size: the amount took 223px of a 309px row and the
+     * merchant was left 42, which is one glyph per line, forty lines deep.
+     * The floor is a rem so it grows with the reader's text. The other track
+     * is max-content rather than auto for the same reason: auto shrinks to
+     * min-content when the pair no longer fits, which turned every "Delete"
+     * on /rules into a five-line column of letters. Past the point where both
+     * fit, the row keeps both readable and moves into the horizontal scroll
+     * the table already has, which is where content wider than the screen
+     * belongs.
+     */
+    --restacked-row-subject: minmax(min(100%, 8rem), 1fr);
+
     /* Spacing — named scale.
      *
      * Tailwind v4 builds spacing utilities (p-md, gap-sm, bottom-md, …)
@@ -5332,7 +5349,7 @@ mark {
 
     .dash-recent-table tr {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: var(--restacked-row-subject) max-content;
         column-gap: var(--space-3);
         padding: var(--space-3) var(--space-4);
     }
@@ -5401,7 +5418,7 @@ mark {
 
     .triage-inbox-table tr {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: var(--restacked-row-subject) max-content;
         column-gap: var(--space-3);
         row-gap: var(--space-2);
         padding: var(--space-3) var(--space-4);
@@ -5477,7 +5494,7 @@ mark {
 
     .preview-rows-table tr {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: var(--restacked-row-subject) max-content;
         column-gap: var(--space-3);
         row-gap: var(--space-1);
         padding: var(--space-3) var(--space-4);
@@ -5840,9 +5857,115 @@ mark {
     }
 
     /* The floor above lists buttons, and a radio is not one, so these measured
-       32px at default text as well. */
+       32px at default text as well.
+
+       flex-1's 0% basis is what makes the options share one line equally, and
+       once their labels could break that handed "Original currency" half a row
+       and wrapped it onto two lines at the default text size. An auto basis
+       sizes each option to its own label again — 91px and 144px, as before —
+       and at the accessibility sizes it is what puts each option on a row of
+       its own, which is the width its label needs to wrap into. */
     [data-flux-radio-group-segmented] > [role='radio'] {
+        flex-basis: auto;
         min-height: 44px;
+    }
+
+    /*
+     * The label inside a control, at the five accessibility text sizes. A
+     * wrapping container is only half the fix once the root is 53px: "Save
+     * categories" measured 407px alone on its own row of a 375px display, and
+     * "Original currency" 427px beside its sibling. A label that cannot
+     * break takes the page sideways from inside a row that already wrapped.
+     * Breaking is a no-op wherever the label still fits on one line, which is
+     * every standard size.
+     */
+    button,
+    summary,
+    [role='button'],
+    [role='radio'],
+    [role='tab'],
+    .status-pill,
+    .type-chip,
+    .ptype-chip,
+    .tax-badge,
+    .chip-count,
+    .cp-stats .value,
+    .cp-stats .label {
+        white-space: normal;
+    }
+
+    /*
+     * And the run inside it. An amount, a date and a percentage each carry
+     * separators that are not break opportunities, and the prose rule above
+     * reaches neither a span nor a table cell.
+     */
+    span,
+    a,
+    label,
+    legend,
+    td,
+    th,
+    button,
+    summary,
+    [role='button'],
+    [role='radio'],
+    [role='tab'] {
+        overflow-wrap: anywhere;
+    }
+
+    /*
+     * The row the two of them sit in: a name opposite its amount, a category
+     * opposite its subtotal, a figure opposite its label. Each was built to
+     * hold both halves on one line, and at these sizes neither half fits
+     * beside the other.
+     */
+    .card-list-item,
+    .cp-stats,
+    .cp-head,
+    .tax-section-header {
+        flex-wrap: wrap;
+    }
+
+    /*
+     * A flexible item with a zero basis never widens the row it is in; it
+     * takes whatever the row has left over, and once a run can break anywhere
+     * that is one glyph. Measured on /notifications at the largest
+     * accessibility size: the body of every alert was a 4px column fifty-two
+     * lines deep, between a type chip and a timestamp that would not shrink.
+     * Sizing from content is what makes the row wrap around it instead.
+     */
+    .flex-1 {
+        flex-basis: auto;
+    }
+
+    /*
+     * A gutter is a distance from the edge of the glass, not a multiple of the
+     * reader's text. The design tokens above have always said so — every
+     * --space-* is a px — but the Tailwind padding utilities are rems, and
+     * they nest. Measured on /community at the largest accessibility size: an
+     * 80px page gutter, an 80px card inset inside it, and a 53px note inset
+     * inside THAT left the note a content box 0px wide. No run of characters
+     * fits in nothing, so nothing above can rescue it. The inline axis only:
+     * padding above and below a line IS about the text and grows with it.
+     */
+    .p-3,
+    .px-3 {
+        padding-inline: var(--space-3);
+    }
+
+    .p-4,
+    .px-4 {
+        padding-inline: var(--space-4);
+    }
+
+    .p-6,
+    .px-6 {
+        padding-inline: var(--space-6);
+    }
+
+    .p-8,
+    .px-8 {
+        padding-inline: var(--space-8);
     }
 
     /*
@@ -5885,7 +6008,7 @@ mark {
 
     .rules-table tr {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: var(--restacked-row-subject) max-content;
         column-gap: var(--space-3);
         row-gap: var(--space-2);
         padding: var(--space-3) var(--space-4);
