@@ -6347,3 +6347,14 @@ mark {
     background: var(--color-blue-bg, #dbeafe);
     color: var(--color-blue, #2563eb);
 }
+
+/*
+ * Livewire's 500 modal is a <dialog> holding a full-bleed <iframe>, and its
+ * close listener is on the dialog. A click cannot cross an iframe boundary, so
+ * the only thing that dismisses it is the backdrop — the one part of the screen
+ * with nothing on it, and on iOS the part under the system edge gestures.
+ * Padding gives the dialog a surface of its own to be tapped on.
+ */
+dialog#livewire-error {
+    padding: 12px;
+}
