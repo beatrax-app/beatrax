@@ -70,12 +70,12 @@ it('produces a chmod-600 .sqlite + .meta.json pair when invoked with --force', f
 
     $decoded = json_decode((string) file_get_contents($meta), true);
     expect($decoded)->toBeArray();
-    expect($decoded)->toHaveKeys(['data_version', 'started_at', 'completed_at', 'integrity']);
+    expect($decoded)->toHaveKeys(['content_sha256', 'started_at', 'completed_at', 'integrity']);
     expect($decoded['integrity'])->toBe('ok');
-    expect($decoded['data_version'])->toBeInt();
+    expect($decoded['content_sha256'])->toBeString();
 });
 
-it('skips a second invocation when data_version is unchanged and --force is absent', function (): void {
+it('skips a second invocation when the database is untouched and --force is absent', function (): void {
     $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
 
     /** @var string $backupsDir */
@@ -115,7 +115,7 @@ it('prunes pre-seeded historical backups outside the 7-daily + 4-Sunday keep set
         $files->put($backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$stamp.'.sqlite', 'seeded');
         $files->put(
             $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$stamp.'.sqlite.meta.json',
-            json_encode(['data_version' => 1, 'started_at' => 'x', 'completed_at' => 'x', 'integrity' => 'ok']) ?: '',
+            json_encode(['content_sha256' => 'seeded', 'started_at' => 'x', 'completed_at' => 'x', 'integrity' => 'ok']) ?: '',
         );
     }
 

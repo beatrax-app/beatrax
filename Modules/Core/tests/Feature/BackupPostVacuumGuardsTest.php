@@ -51,14 +51,14 @@ afterEach(function (): void {
 });
 
 it('alerts and fails when VACUUM INTO reports success but writes nothing', function (): void {
-    // Only the .sqlite output is claimed missing; every other path the command
+    // Only the staged copy is claimed missing; every other path the command
     // asks about still answers truthfully, so the branch under test is the
     // only thing that changes.
     $this->app->instance(Filesystem::class, new class extends Filesystem
     {
         public function exists($path)
         {
-            return str_ends_with((string) $path, '.sqlite') ? false : parent::exists($path);
+            return str_ends_with((string) $path, '.sqlite.partial') ? false : parent::exists($path);
         }
     });
 
@@ -94,9 +94,10 @@ it('deletes the backup and alerts when it cannot be narrowed to 0600', function 
 });
 
 // The corrupt-source tests never reach this branch: a truncated database fails
-// PRAGMA data_version first. Getting here needs a source SQLite is happy to read
+// the source probe first. Getting here needs a source SQLite is happy to read
 // and a destination it refuses to write — VACUUM INTO will not write over an
-// existing path, so occupying the one the command is about to choose does it.
+// existing path, so occupying the staging path the command is about to choose
+// does it.
 it('alerts and preserves the output as .suspect when VACUUM INTO refuses', function (): void {
     /** @var Clock $clock */
     $clock = $this->app->make(Clock::class);
@@ -105,7 +106,7 @@ it('alerts and preserves the output as .suspect when VACUUM INTO refuses', funct
     /** @var string $backupsDir */
     $backupsDir = $this->backupsDir;
     (new Filesystem)->ensureDirectoryExists($backupsDir);
-    file_put_contents($backupsDir.DIRECTORY_SEPARATOR.$basename, 'already here');
+    file_put_contents($backupsDir.DIRECTORY_SEPARATOR.$basename.'.partial', 'already here');
 
     $this->artisan('db:backup', ['--force' => true])->assertExitCode(1);
 

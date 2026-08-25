@@ -34,7 +34,7 @@ final class BackupDatabaseCommand extends Command
     private const BACKUP_CORRUPT_MESSAGE = 'Backup failed — the database did not pass its integrity check.';
 
     /** @var string */
-    protected $signature = 'db:backup {--force : Bypass the smart-skip data_version check and run unconditionally}';
+    protected $signature = 'db:backup {--force : Keep the copy even when it is identical to the last backup}';
 
     /** @var string */
     protected $description = 'Produce a consistent SQLite backup via VACUUM INTO with verification and retention pruning.';
@@ -69,30 +69,44 @@ final class BackupDatabaseCommand extends Command
     private function produceBackup(string $livePath, string $backupsDir, CarbonImmutable $startedAt): int
     {
         try {
-            $liveDataVersion = $this->readDataVersion($livePath);
+            $this->assertSourceReadable($livePath);
         } catch (PDOException $e) {
             // Corrupt source, caught before VACUUM INTO runs: no file exists
             // yet, so the alert carries a null suspect path.
             $destinationForAlert = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
             $this->failCorrupt($destinationForAlert, null, [
                 'pdo_exception' => $e->getMessage(),
-                'phase' => 'pragma_data_version',
+                'phase' => 'source_probe',
             ], self::BACKUP_CORRUPT_MESSAGE);
-        }
-
-        if ($this->option('force') !== true && $this->isSkippable($backupsDir, $liveDataVersion)) {
-            $this->info(sprintf('Skipped — no commits since last backup (data_version=%d).', $liveDataVersion));
-
-            return self::SUCCESS;
         }
 
         $destination = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
 
-        $this->vacuumInto($destination);
-        $this->assertOutputExists($destination);
-        $this->hardenBackupFile($destination);
-        $this->assertIntegrity($destination);
-        $this->writeSidecarOrFail($destination, $liveDataVersion, $startedAt);
+        // Staged beside the destination, because whether this copy is kept is
+        // only answerable once it exists: a run that turns out to be a
+        // duplicate must leave the timestamped name untouched.
+        $partial = $destination.'.partial';
+
+        $this->vacuumInto($partial, $destination);
+        $this->assertOutputExists($partial, $destination);
+        $this->hardenBackupFile($partial, $destination);
+        $this->assertIntegrity($partial, $destination);
+
+        // Decided on the finished copy rather than on the live file: VACUUM
+        // rebuilds pages in a canonical order, so equal data gives an equal
+        // digest, while the live file and its write-ahead log churn on every
+        // checkpoint and every unrelated session write.
+        $digest = $this->readBackupDigest($partial);
+
+        if ($this->option('force') !== true && $this->isSkippable($backupsDir, $digest)) {
+            $this->files->delete($partial);
+            $this->info('Skipped — the database is unchanged since the last backup.');
+
+            return self::SUCCESS;
+        }
+
+        $this->promoteOrFail($partial, $destination);
+        $this->writeSidecarOrFail($destination, $digest, $startedAt);
 
         $this->pruneRetention($backupsDir);
         $this->info(sprintf('Backup written: %s', $destination));
@@ -100,7 +114,7 @@ final class BackupDatabaseCommand extends Command
         return self::SUCCESS;
     }
 
-    private function vacuumInto(string $destination): void
+    private function vacuumInto(string $destination, string $reportAs): void
     {
         try {
             // VACUUM INTO's target is a parse-time constant with no bound
@@ -117,60 +131,60 @@ final class BackupDatabaseCommand extends Command
         } catch (PDOException $e) {
             // VACUUM INTO refused the source; keep any partial output as
             // .suspect so the operator can inspect it.
-            $suspect = $destination.'.suspect';
+            $suspect = $reportAs.'.suspect';
             if ($this->files->exists($destination)) {
                 $this->files->move($destination, $suspect);
             }
-            $this->failCorrupt($destination, $suspect, [
+            $this->failCorrupt($reportAs, $suspect, [
                 'pdo_exception' => $e->getMessage(),
                 'phase' => 'vacuum_into',
             ], self::BACKUP_CORRUPT_MESSAGE);
         }
     }
 
-    private function assertOutputExists(string $destination): void
+    private function assertOutputExists(string $destination, string $reportAs): void
     {
         if (! $this->files->exists($destination)) {
-            $this->failCorrupt($destination, null, [
+            $this->failCorrupt($reportAs, null, [
                 'phase' => 'vacuum_into',
                 'reason' => 'no output file produced',
             ], self::BACKUP_CORRUPT_MESSAGE);
         }
     }
 
-    private function hardenBackupFile(string $destination): void
+    private function hardenBackupFile(string $destination, string $reportAs): void
     {
         // SQLite created the file via open(2), bypassing PHP's umask narrowing.
         // Filesystem::chmod returns mixed (bool on write, string-octal on read),
         // hence the explicit `=== false` sentinel below.
         if ($this->files->chmod($destination, 0o600) === false) {
             $this->files->delete($destination);
-            $this->failCorrupt($destination, null, [
+            $this->failCorrupt($reportAs, null, [
                 'phase' => 'chmod',
                 'reason' => 'chmod 0600 failed on freshly-written backup file',
             ], self::BACKUP_CORRUPT_MESSAGE);
         }
     }
 
-    private function assertIntegrity(string $destination): void
+    private function assertIntegrity(string $destination, string $reportAs): void
     {
         $integrityRows = $this->readIntegrityCheck($destination);
 
         if ($integrityRows !== ['ok']) {
-            $suspect = $destination.'.suspect';
+            $suspect = $reportAs.'.suspect';
             $this->files->move($destination, $suspect);
-            $this->failCorrupt($destination, $suspect, [
+            $this->failCorrupt($reportAs, $suspect, [
                 'integrity_check' => $integrityRows,
                 'phase' => 'post_vacuum',
             ], self::BACKUP_CORRUPT_MESSAGE);
         }
     }
 
-    private function writeSidecarOrFail(string $destination, int $liveDataVersion, CarbonImmutable $startedAt): void
+    private function writeSidecarOrFail(string $destination, string $digest, CarbonImmutable $startedAt): void
     {
         $completedAt = $this->clock->now();
         try {
-            $this->writeSidecar($destination, $liveDataVersion, $startedAt->toIso8601String(), $completedAt->toIso8601String());
+            $this->writeSidecar($destination, $digest, $startedAt->toIso8601String(), $completedAt->toIso8601String());
         } catch (BackupIoException $e) {
             // A backup without its .meta.json makes the next run's smart-skip
             // read "no recent backup" and silently re-write, so the I/O failure
@@ -232,20 +246,39 @@ final class BackupDatabaseCommand extends Command
         return $backupsPath;
     }
 
-    // PRAGMA data_version is connection-local, so a fresh PDO is needed to
-    // dodge the Laravel pool's cached, stale value.
-    private function readDataVersion(string $sqlitePath): int
+    /**
+     * @throws PDOException when the source cannot be opened or read
+     */
+    private function assertSourceReadable(string $sqlitePath): void
     {
         $pdo = new PDO('sqlite:'.$sqlitePath, options: [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         ]);
-        $stmt = $pdo->query('PRAGMA data_version');
-        if ($stmt === false) {
-            return 0;
-        }
-        $value = $stmt->fetchColumn();
+        $pdo->query('PRAGMA schema_version');
+    }
 
-        return is_numeric($value) ? (int) $value : 0;
+    // rename() would overwrite silently, and the name is second-resolution:
+    // two runs inside one second must not let the later quietly replace the
+    // backup the earlier one already verified.
+    private function promoteOrFail(string $partial, string $destination): void
+    {
+        if ($this->files->exists($destination) || @rename($partial, $destination) === false) {
+            $suspect = $destination.'.suspect';
+            $this->files->move($partial, $suspect);
+            $this->failCorrupt($destination, $suspect, [
+                'phase' => 'promote',
+                'reason' => 'could not rename the staged backup onto its final name',
+            ], self::BACKUP_CORRUPT_MESSAGE);
+        }
+    }
+
+    // An unreadable digest is spelled so it can never equal a stored one:
+    // failing to fingerprint the copy must mean keeping it, not discarding it.
+    private function readBackupDigest(string $destination): string
+    {
+        $digest = @hash_file('sha256', $destination);
+
+        return $digest === false ? 'unavailable-'.bin2hex(random_bytes(8)) : $digest;
     }
 
     /**
@@ -272,7 +305,7 @@ final class BackupDatabaseCommand extends Command
 
     // Missing or unreadable sidecars must fall through to "not skippable":
     // a wrong skip silently writes no backup at all.
-    private function isSkippable(string $backupsDir, int $liveDataVersion): bool
+    private function isSkippable(string $backupsDir, string $digest): bool
     {
         $newest = $this->newestSidecarPath($backupsDir);
         if ($newest === null) {
@@ -280,9 +313,11 @@ final class BackupDatabaseCommand extends Command
         }
 
         $decoded = json_decode((string) file_get_contents($newest), true);
-        $stored = is_array($decoded) ? ($decoded['data_version'] ?? null) : null;
+        $stored = is_array($decoded) ? ($decoded['content_sha256'] ?? null) : null;
 
-        return is_int($stored) && $stored === $liveDataVersion;
+        // A sidecar written before this field existed carries none, and a
+        // backup nobody can date is one to redo rather than skip.
+        return is_string($stored) && $stored === $digest;
     }
 
     // Sorts basenames, not full paths, so a directory-shape change cannot flip
@@ -304,13 +339,13 @@ final class BackupDatabaseCommand extends Command
     // umask + tmp + rename + chmod, mirroring OAuthSecretsRepository::writeAtomic.
     // Every I/O return is checked so a disk-full or cross-device failure raises
     // instead of leaving a half-written or world-readable sidecar.
-    private function writeSidecar(string $destination, int $dataVersion, string $startedAt, string $completedAt): void
+    private function writeSidecar(string $destination, string $digest, string $startedAt, string $completedAt): void
     {
         $sidecar = $destination.'.meta.json';
         $tmp = $sidecar.'.tmp';
 
         $payload = json_encode([
-            'data_version' => $dataVersion,
+            'content_sha256' => $digest,
             'started_at' => $startedAt,
             'completed_at' => $completedAt,
             'integrity' => 'ok',
