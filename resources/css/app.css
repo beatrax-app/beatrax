@@ -5904,13 +5904,23 @@ mark {
     label,
     legend,
     td,
-    th,
+    th {
+        overflow-wrap: anywhere;
+    }
+
+    /*
+     * A control asks for its widest word before it breaks one. `anywhere`
+     * drops min-content to a single character, so a flex row squeezed
+     * "Discard import" into 80px and split it as "Discar / d / import" at
+     * the default text size. `break-word` still breaks a word that cannot
+     * fit alone; it just stops the row assuming one always can.
+     */
     button,
     summary,
     [role='button'],
     [role='radio'],
     [role='tab'] {
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
     }
 
     /*

@@ -179,3 +179,53 @@ it('caps the three controls whose shrink-0 is load-bearing', function (): void {
         implode("\n  - ", $offenders),
     ));
 });
+
+// A control breaks its label only where the word cannot fit alone. `anywhere`
+// drops min-content to one character, so a flex row squeezed a button to 80px
+// and rendered "Discard import" as "Discar / d / import" — at the default text
+// size, not only at an accessibility one.
+it('lets a control ask for its widest word before it breaks one', function (): void {
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
+    expect($css)->not->toBe('');
+
+    // Walked back from each declaration to the selector list that owns it.
+    // These rules sit inside @media, so top-level block matching finds the
+    // media query instead; and a regex over a file this size stopped reading
+    // once already, silently.
+    $rules = [];
+    $offset = 0;
+    while (($at = strpos($css, 'overflow-wrap:', $offset)) !== false) {
+        $offset = $at + 1;
+        $open = strrpos(substr($css, 0, $at), '{');
+        if ($open === false) {
+            continue;
+        }
+
+        $before = substr($css, 0, $open);
+        $stop = 0;
+        foreach (['{', '}', ';', '*/'] as $boundary) {
+            $found = strrpos($before, $boundary);
+            if ($found !== false && $found + strlen($boundary) > $stop) {
+                $stop = $found + strlen($boundary);
+            }
+        }
+
+        $prelude = trim(substr($css, $stop, $open - $stop));
+        $mode = trim(strtok(substr($css, $at + strlen('overflow-wrap:')), ';') ?: '');
+        $rules[] = [array_map(trim(...), explode(',', $prelude)), $mode];
+    }
+    expect($rules)->not->toBe([]);
+
+    foreach (['button', 'summary', "[role='button']", "[role='radio']", "[role='tab']"] as $selector) {
+        $modes = [];
+        foreach ($rules as [$selectors, $mode]) {
+            if (in_array($selector, $selectors, true)) {
+                $modes[] = $mode;
+            }
+        }
+
+        expect($modes)->not->toBe([], $selector.' has no overflow-wrap rule at all.');
+        expect(array_values(array_unique($modes)))->toBe(['break-word'],
+            $selector.' must use break-word: anywhere lets a flex row split its label mid-word.');
+    }
+});
