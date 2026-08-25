@@ -17,7 +17,7 @@
 @endphp
 
 <x-core::card tag="section" aria-label="{{ Lang::get('recurring::fixed_payments.heading') }}">
-    <header class="mb-4 flex items-baseline justify-between gap-4">
+    <header class="mb-4 flex flex-wrap items-baseline justify-between gap-4">
         <div>
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::fixed_payments.heading') }}</h2>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
@@ -25,7 +25,7 @@
             </p>
         </div>
         <div
-            class="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs dark:bg-slate-900 dark:border-slate-700"
+            class="inline-flex flex-wrap items-center rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs dark:bg-slate-900 dark:border-slate-700"
             role="group"
             aria-label="{{ Lang::get('recurring::fixed_payments.filter_aria') }}"
         >

@@ -20,12 +20,20 @@ it('lets the amounts drop below the category name rather than squeeze it out', f
         ->and($blade)->not->toContain('<li class="flex items-center justify-between gap-3 text-sm">');
 });
 
-it('keeps the two amounts together so they wrap as one', function (): void {
+// The pair still travels as one — it is a single flex item of the row above,
+// so it lands on the name's line or on its own, never split across the two.
+// What changed is what happens once it HAS a line of its own and still does not
+// fit: measured at the iOS accessibility sizes, a 53px root makes that pair
+// 505px — €1,499.99 at 200, −€212.36 at 265, 40 of gap — on a 375px display.
+// Held together it put / 191px past the screen; allowed to wrap inside itself
+// it measures 0, with the delta under the amount it belongs to rather than
+// beside it.
+it('keeps the two amounts together until neither of them fits', function (): void {
     $blade = (string) file_get_contents(
         base_path('Modules/Shell/Resources/views/livewire/spending-trend-card.blade.php')
     );
 
-    expect($blade)->toContain('<span class="ml-auto flex shrink-0 items-baseline gap-x-3">');
+    expect($blade)->toContain('<span class="ml-auto flex flex-wrap items-baseline justify-end gap-x-3">');
 });
 
 it('gives the name a basis to wrap from, not just room to vanish into', function (): void {

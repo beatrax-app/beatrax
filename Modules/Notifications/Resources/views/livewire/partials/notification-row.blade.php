@@ -1,7 +1,10 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Notification row (18-UI-SPEC.md § 2). Markup is a verbatim
-    clone of the UI-SPEC contract; the ONLY addition is the `x-on:click`
+    Notification row (18-UI-SPEC.md § 2). Markup follows the UI-SPEC
+    contract with two additions. flex-wrap on the row: at the reader's
+    accessibility text sizes the chip, the title and the relative time each
+    want the whole width, and a row that could not wrap put "4 hours ago"
+    280px past the screen. And the `x-on:click`
     below, which fires `markRead` in the background without intercepting
     the anchor's own navigation (Alpine's `$wire.call()` never calls
     `preventDefault()`) — the whole row stays the SINGLE click target
@@ -27,7 +30,7 @@
            {{ $notification->readAt ? '' : 'relative' }}
            {{ $notification->deepLinkDisabled ? 'cursor-default' : 'hover:bg-slate-50 dark:hover:bg-slate-900' }}"
 >
-    <div class="flex items-start gap-3">
+    <div class="flex flex-wrap items-start gap-3">
         @unless ($notification->readAt)
             <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400" aria-hidden="true"></span>
         @endunless

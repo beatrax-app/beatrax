@@ -48,17 +48,23 @@
          items-baseline, not items-start: the period title and the ‹ Today ›
          stepper are one control line, and aligning their boxes left the
          30px title and the 40px buttons reading off two different lines.
-         The stepper never shrinks, so its glyphs keep their tap targets
-         when a long month name takes the width it needs — which is why the
-         row has to STACK below sm rather than squeeze. Measured on an iPhone
-         12 mini: "Αύγουστος 2026" put the stepper's right edge at 397px on a
-         375pt screen, taking the next-period glyph off the display. --}}
+         The row STACKS below sm rather than squeezing, so a long month name
+         takes the width it needs. Measured on an iPhone 12 mini: "Αύγουστος
+         2026" put the stepper's right edge at 397px on a 375pt screen, taking
+         the next-period glyph off the display.
+
+         The stepper keeps shrink-0 and takes flex-wrap beside it. At the
+         reader's accessibility text sizes ‹ Today › is 464px of glyphs and
+         padding on a 375pt screen; unshrinkable and unwrappable together, the
+         only give left was inside the label, which broke into "Tod / ay" in a
+         button two lines too short to hold it. Wrapping gives the three
+         buttons a second row and their own widths back. --}}
     <header class="flex flex-col gap-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6 dashboard-phone-order-1">
         <div class="space-y-1">
             <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $summary->period->label }}</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.subtitle') }}</p>
         </div>
-        <div class="flex shrink-0 items-center gap-1">
+        <div class="flex shrink-0 flex-wrap items-center gap-1">
             <button
                 type="button"
                 wire:click="previousPeriod"

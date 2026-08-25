@@ -220,7 +220,7 @@
                                 class="tax-section-header cursor-pointer list-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                                 aria-controls="tax-section-body-{{ $sectionKey }}"
                             >
-                                <div class="flex min-w-0 flex-1 items-center gap-3">
+                                <div class="flex min-w-0 grow basis-auto items-center gap-3">
                                     <span style="font-size: var(--text-base); font-weight: 600; color: {{ $isNoCategory ? 'var(--color-text-faint)' : 'var(--color-text)' }};">
                                         {{ $isNoCategory ? Lang::get('tax::page.no_category') : $catName }}
                                     </span>

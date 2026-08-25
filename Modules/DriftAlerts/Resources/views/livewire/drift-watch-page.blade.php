@@ -50,7 +50,7 @@
 
 <div class="mx-auto max-w-3xl px-4 py-12">
     <header class="mb-8">
-        <div class="flex items-baseline justify-between gap-4">
+        <div class="flex flex-wrap items-baseline justify-between gap-4">
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.heading') }}</h1>
             <a href="{{ Destination::DriftAlerts->url() }}" class="tap-link text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::watch.drift_alerts_link') }}</a>
         </div>

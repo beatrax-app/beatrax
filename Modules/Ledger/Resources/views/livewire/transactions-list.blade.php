@@ -161,7 +161,7 @@
                                  padding + line-height), so side by side they stepped up and
                                  down and the row read as lumpy; h-5 on the group's children
                                  lands them all on the split badge's existing 20px. --}}
-                            <div class="flex shrink-0 items-center gap-3 [&>*]:h-5">
+                            <div class="flex flex-wrap items-center gap-3 [&>*]:h-5">
                                 {{-- Split badge: OUTSIDE the <a> (flex sibling) so toggling the
                                      legs never triggers navigation (UI-SPEC §5.1). No Livewire
                                      round trip — legs are already server-rendered below. --}}

@@ -49,7 +49,7 @@
 
     {{-- §6.1 Toolbar: month nav + Accounts popover --}}
     <div class="cal-toolbar">
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <button
                 wire:click="prevMonth"
                 class="flex h-11 w-11 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800"

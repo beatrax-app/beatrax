@@ -263,7 +263,7 @@
                          baseline, and the % rides inside the notify field so the
                          two right edges line up instead of staggering. --}}
                     <div class="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-                        <label class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <label class="flex flex-wrap items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                             <span>{{ Lang::get('budgets::messages.phone.notify_at') }}</span>
                             <span class="relative inline-flex items-center">
                                 <input

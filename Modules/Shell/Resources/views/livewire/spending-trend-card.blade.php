@@ -16,7 +16,7 @@
 <div>
     @if ($trend->hasComparison())
         <x-core::card tag="section" aria-label="{{ Lang::get('core::spending_trend.aria') }}">
-            <div class="flex items-baseline justify-between gap-4">
+            <div class="flex flex-wrap items-baseline justify-between gap-4">
                 <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::spending_trend.heading') }}</h2>
                 <span class="text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('core::spending_trend.vs', ['label' => $trend->previousLabel]) }}</span>
             </div>
@@ -36,9 +36,9 @@
                              beside a name squeezed to nothing do not. --}}
                         <li class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm">
                             <span class="min-w-0 flex-1 basis-32 truncate text-slate-700 dark:text-slate-300">{{ $mover->name }}</span>
-                            <span class="ml-auto flex shrink-0 items-baseline gap-x-3">
+                            <span class="ml-auto flex flex-wrap items-baseline justify-end gap-x-3">
                                 <span class="text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($mover->currentMinor) }}</span>
-                                <span class="w-20 text-right font-medium {{ $deltaClass($dir) }}" style="font-variant-numeric: tabular-nums;">{{ $signed($mover->deltaMinor) }}</span>
+                                <span class="min-w-20 text-right font-medium {{ $deltaClass($dir) }}" style="font-variant-numeric: tabular-nums;">{{ $signed($mover->deltaMinor) }}</span>
                             </span>
                         </li>
                     @endforeach

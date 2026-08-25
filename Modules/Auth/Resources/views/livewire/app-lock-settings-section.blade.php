@@ -303,7 +303,7 @@
     @endif
 
     {{-- ===== 3d: Idle timeout — shown always ===== --}}
-    <div class="flex items-center justify-between gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
         <label for="idle-timeout-select" class="text-sm text-slate-900 dark:text-slate-100">
             {{ Lang::get('auth::app_lock.auto_lock') }}
         </label>

@@ -18,12 +18,26 @@ it('stacks the period title and its stepper until there is room for both', funct
         ->and($blade)->not->toContain('<header class="flex items-baseline justify-between gap-6 dashboard-phone-order-1">');
 });
 
-it('leaves the stepper unshrinkable once it has its own row', function (): void {
+// Unshrinkable and unwrappable together leaves the label as the only thing
+// that can give: at the iOS accessibility text sizes ‹ Today › needs 464px of a
+// 375pt screen, and the row bought its fit by breaking "Today" into "Tod / ay"
+// inside a button two lines too short for it. The stepper keeps shrink-0 and
+// takes a second row instead.
+it('leaves the stepper unshrinkable, and lets it take a second row', function (): void {
     $blade = (string) file_get_contents(
         base_path('Modules/Shell/Resources/views/livewire/dashboard.blade.php')
     );
 
-    expect($blade)->toContain('flex shrink-0 items-center gap-1');
+    preg_match_all('/class="([^"]*)"/', $blade, $matches);
+
+    $stepper = array_values(array_filter(
+        $matches[1],
+        static fn (string $classes): bool => str_contains($classes, 'items-center') && str_contains($classes, 'gap-1'),
+    ));
+
+    expect($stepper)->not->toBe([], 'The period stepper row is gone.')
+        ->and($stepper[0])->toContain('shrink-0')
+        ->and($stepper[0])->toContain('flex-wrap');
 });
 
 // Same row shape one card down: a text-3xl figure beside a shrink-0
