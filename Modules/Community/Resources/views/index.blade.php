@@ -12,7 +12,7 @@
     two read as one activity — and leaves room for what comes next.
 --}}
 @section('content')
-        <div class="mx-auto max-w-3xl space-y-10 px-6 py-10 sm:px-8 sm:py-12">
+        <div class="mx-auto max-w-3xl space-y-10 px-4 py-10 sm:px-8 sm:py-12">
             <header class="space-y-2">
                 <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     {{ Lang::get('community::index.heading') }}
