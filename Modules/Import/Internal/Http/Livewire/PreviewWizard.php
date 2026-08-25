@@ -471,13 +471,15 @@ final class PreviewWizard extends Component
             return false;
         }
 
-        $paypalAccountCount = $db->connection()
+        // Whether THIS literal is claimed, not whether any wallet exists: a
+        // PayPal account on some other identifier suppressed the prompt, and
+        // the generic namer then had to validate PAYPAL as a real IBAN, which
+        // it can never be. The card path above already reads it this way.
+        return ! $db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
-            ->where('kind', AccountKind::Paypal->value)
-            ->count();
-
-        return $paypalAccountCount === 0;
+            ->where('iban', EnsurePaypalAccountAction::PAYPAL_OWN_IBAN)
+            ->exists();
     }
 
     // What confirming would actually write. A row that failed is not one of

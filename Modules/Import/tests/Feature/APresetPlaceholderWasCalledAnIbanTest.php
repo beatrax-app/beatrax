@@ -9,6 +9,7 @@ use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
+use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
 // N26, Revolut and Wise export a single account and carry no own-IBAN column,
