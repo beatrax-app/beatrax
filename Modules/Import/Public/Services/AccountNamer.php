@@ -55,6 +55,19 @@ final class AccountNamer implements NamesAccounts
             ]));
         }
 
+        // accounts.user_id + iban is unique, and a preview lists the IBANs it
+        // did not know when the file was parsed -- so a second file from the
+        // same new bank prompts for a name the first one already gave. An
+        // unconditional insert left that import with no way forward at all.
+        $existing = Account::query()
+            ->where('user_id', $user->id)
+            ->where('iban', $iban)
+            ->first();
+
+        if ($existing instanceof Account) {
+            return $existing->id;
+        }
+
         $account = Account::create([
             'user_id' => $user->id,
             'name' => $trimmed,
