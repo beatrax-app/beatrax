@@ -205,6 +205,31 @@ final readonly class ForecastQuery
         );
     }
 
+    /**
+     * @return list<string>
+     */
+    private function bookedDatesAhead(int $accountId, User $user, CarbonImmutable $asOf, int $horizonDays): array
+    {
+        $rows = $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('account_id', $accountId)
+            ->whereNotNull('booked_at')
+            ->where('posted_at', '>', $asOf->toDateString())
+            ->where('posted_at', '<=', $asOf->addDays($horizonDays)->toDateString().' 23:59:59')
+            ->distinct()
+            ->orderBy('posted_at')
+            ->pluck('posted_at');
+
+        $dates = [];
+        foreach ($rows as $value) {
+            if (is_string($value) && $value !== '') {
+                $dates[CarbonImmutable::parse($value)->toDateString()] = true;
+            }
+        }
+
+        return array_keys($dates);
+    }
+
     private function flatLineFallback(
         int $accountId,
         string $accountName,
@@ -216,13 +241,33 @@ final readonly class ForecastQuery
     ): ForecastDto {
         $anchorMinor = $this->balances->currentBalanceAsOf($accountId, $user, $asOf)->in($defaultCurrency);
 
+        // A booked row dated ahead of today is not a projection, it is a
+        // certainty already in the ledger, and a line that ignores it states
+        // the wrong balance for every day after it. Evaluated only on the days
+        // one falls, because between them the balance does not move -- and
+        // through the same summation the dashboard and reconcile use, so the
+        // baseline and the currency handling cannot drift from theirs.
+        $balanceOn = [];
+        foreach ($this->bookedDatesAhead($accountId, $user, $asOf, $horizonDays) as $date) {
+            $balanceOn[$date] = $this->balances
+                ->currentBalanceAsOf($accountId, $user, CarbonImmutable::parse($date)->endOfDay())
+                ->in($defaultCurrency);
+        }
+
         $points = [];
+        $runningMinor = $anchorMinor;
         for ($day = 0; $day <= $horizonDays; $day++) {
+            $date = $asOf->addDays($day)->toDateString();
+            $runningMinor = $balanceOn[$date] ?? $runningMinor;
+
+            // low == point == high: what is already booked carries no
+            // uncertainty, which is the whole reason it may be drawn at all
+            // without a projection behind it.
             $points[] = new ForecastPointDto(
-                date: $asOf->addDays($day)->toDateString(),
-                lowMinor: $anchorMinor,
-                pointMinor: $anchorMinor,
-                highMinor: $anchorMinor,
+                date: $date,
+                lowMinor: $runningMinor,
+                pointMinor: $runningMinor,
+                highMinor: $runningMinor,
                 currency: $defaultCurrency,
             );
         }

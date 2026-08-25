@@ -132,3 +132,47 @@ it('counts a foreign row at what the account was actually debited', function ():
 
     expect($forecast->todayBalanceMinor)->toBe(-12_07);
 });
+
+// The fallback drew today's balance on every day of the horizon, so a booked
+// row dated ahead of today never moved it. On a phone with three future rows
+// and no opening balance, /forecast rendered 366 points all at zero under the
+// words "projected over the next 30 days" -- for a ledger holding EUR3,400
+// arriving on 15 September. A wrong statement about someone's money, not a
+// missing feature.
+it('steps on a booked row dated ahead of today, because that is a certainty', function (): void {
+    $accountId = ffbAccount($this->db, $this->user->id);
+    ffbTransaction($this->db, $this->user->id, $accountId, 200_000, '2026-08-01');
+    ffbTransaction($this->db, $this->user->id, $accountId, -90_000, '2026-09-01');
+
+    /** @var ForecastQuery $query */
+    $query = $this->app->make(ForecastQuery::class);
+    $dto = $query->forUser($accountId, 30, null, $this->user);
+
+    /** @var array<string, int> $byDate */
+    $byDate = [];
+    foreach ($dto->points as $point) {
+        $byDate[$point->date] = $point->pointMinor;
+    }
+
+    expect($byDate['2026-08-23'])->toBe(200_000)
+        ->and($byDate['2026-08-31'])->toBe(200_000)
+        ->and($byDate['2026-09-01'])->toBe(110_000)
+        ->and($byDate['2026-09-22'])->toBe(110_000);
+});
+
+// What is already booked carries no uncertainty, which is the only reason it
+// may be drawn at all with no projection behind it.
+it('draws a booked step with no band around it', function (): void {
+    $accountId = ffbAccount($this->db, $this->user->id);
+    ffbTransaction($this->db, $this->user->id, $accountId, 200_000, '2026-08-01');
+    ffbTransaction($this->db, $this->user->id, $accountId, -90_000, '2026-09-01');
+
+    /** @var ForecastQuery $query */
+    $query = $this->app->make(ForecastQuery::class);
+    $dto = $query->forUser($accountId, 30, null, $this->user);
+
+    foreach ($dto->points as $point) {
+        expect($point->lowMinor)->toBe($point->pointMinor);
+        expect($point->highMinor)->toBe($point->pointMinor);
+    }
+});
