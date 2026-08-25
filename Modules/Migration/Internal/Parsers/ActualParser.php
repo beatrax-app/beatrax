@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Generator;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -252,7 +253,7 @@ final class ActualParser implements ParsesMigrationSource
 
     private function parseBudgetMonth(int $yyyymm): CarbonImmutable
     {
-        $parsed = CarbonImmutable::createFromFormat('!Ym', (string) $yyyymm);
+        $parsed = SafeDate::fromFormatOrNull('!Ym', (string) $yyyymm);
         if (! $parsed instanceof CarbonImmutable) {
             throw new UnrecognizedMigrationFileException("could not parse zero_budgets/reflect_budgets month value '{$yyyymm}' (expected YYYYMM)");
         }
@@ -262,7 +263,7 @@ final class ActualParser implements ParsesMigrationSource
 
     private function parseActualDate(int $yyyymmdd): CarbonImmutable
     {
-        $parsed = CarbonImmutable::createFromFormat('!Ymd', (string) $yyyymmdd);
+        $parsed = SafeDate::fromFormatOrNull('!Ymd', (string) $yyyymmdd);
         if (! $parsed instanceof CarbonImmutable) {
             throw new UnrecognizedMigrationFileException("could not parse transactions.date value '{$yyyymmdd}' (expected YYYYMMDD)");
         }
