@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Varukoopiat ei õnnestunud luua: :message',
         'confirm_phrase' => 'Kinnitamiseks sisesta :phrase — see asendab sinu praegused andmed.',
         'choose_file' => 'Vali taastamiseks krüpteeritud varukoopia fail (.enc).',
+        'upload_failed' => 'Faili üleslaadimine ei lõppenud. See võib olla selle seadme jaoks liiga suur — töölauarakenduses taastamine võtab vastu suurema varukoopia.',
         'enter_passphrase' => 'Sisesta paroolifraas, millega varukoopia krüpteeriti.',
         'unreadable' => 'Üleslaaditud faili ei õnnestunud lugeda. Proovi uuesti.',
     ],

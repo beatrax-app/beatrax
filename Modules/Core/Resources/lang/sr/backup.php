@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Rezervna kopija nije mogla da se napravi: :message',
         'confirm_phrase' => 'Upiši :phrase za potvrdu — ovo zamenjuje tvoje trenutne podatke.',
         'choose_file' => 'Izaberi šifrovanu datoteku rezervne kopije (.enc) za vraćanje.',
+        'upload_failed' => 'Otpremanje datoteke nije završeno. Možda je prevelika za ovaj uređaj — vraćanje u računarskoj aplikaciji prihvata veću rezervnu kopiju.',
         'enter_passphrase' => 'Unesi pristupnu frazu kojom je rezervna kopija šifrovana.',
         'unreadable' => 'Otpremljena datoteka nije mogla da se pročita. Pokušaj ponovo.',
     ],

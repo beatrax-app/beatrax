@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Nie udało się utworzyć kopii zapasowej: :message',
         'confirm_phrase' => 'Wpisz :phrase, aby potwierdzić — to zastąpi obecne dane.',
         'choose_file' => 'Wybierz zaszyfrowany plik kopii zapasowej (.enc) do przywrócenia.',
+        'upload_failed' => 'Plik nie został przesłany do końca. Może być zbyt duży dla tego urządzenia — przywracanie w aplikacji na komputer przyjmie większą kopię zapasową.',
         'enter_passphrase' => 'Podaj hasło, którym zaszyfrowano kopię zapasową.',
         'unreadable' => 'Nie udało się odczytać wgranego pliku. Spróbuj ponownie.',
     ],

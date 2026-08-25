@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Kunde inte skapa säkerhetskopian: :message',
         'confirm_phrase' => 'Skriv :phrase för att bekräfta — detta ersätter dina nuvarande data.',
         'choose_file' => 'Välj en krypterad säkerhetskopia (.enc) att återställa.',
+        'upload_failed' => 'Filen laddades inte upp färdigt. Den kan vara för stor för den här enheten — återställning i skrivbordsappen tar emot en större säkerhetskopia.',
         'enter_passphrase' => 'Ange lösenfrasen som säkerhetskopian krypterades med.',
         'unreadable' => 'Den uppladdade filen kunde inte läsas. Försök igen.',
     ],

@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Backup konnte nicht erstellt werden: :message',
         'confirm_phrase' => 'Tippe :phrase zur Bestätigung — das ersetzt deine aktuellen Daten.',
         'choose_file' => 'Wähle eine verschlüsselte Backup-Datei (.enc) zum Wiederherstellen.',
+        'upload_failed' => 'Die Datei wurde nicht vollständig hochgeladen. Sie ist möglicherweise zu groß für dieses Gerät — die Wiederherstellung in der Desktop-App akzeptiert eine größere Sicherung.',
         'enter_passphrase' => 'Gib die Passphrase ein, mit der das Backup verschlüsselt wurde.',
         'unreadable' => 'Die hochgeladene Datei konnte nicht gelesen werden. Versuche es erneut.',
     ],

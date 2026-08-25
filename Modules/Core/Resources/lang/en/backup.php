@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Could not create the backup: :message',
         'confirm_phrase' => 'Type :phrase to confirm — this replaces your current data.',
         'choose_file' => 'Choose an encrypted backup file (.enc) to restore.',
+        'upload_failed' => 'The file did not finish uploading. It may be too large for this device — restoring in the desktop app accepts a bigger backup.',
         'enter_passphrase' => 'Enter the passphrase the backup was encrypted with.',
         'unreadable' => 'The uploaded file could not be read. Try again.',
     ],

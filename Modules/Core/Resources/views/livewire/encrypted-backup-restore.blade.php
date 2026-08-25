@@ -19,10 +19,14 @@
                         {{-- `file:` utilities style the native button but cannot
                              relabel it: the words inside stay engine-supplied
                              English in every language. --}}
+                        {{-- Livewire fires this on the input when its own
+                             upload request comes back non-2xx, which is how a
+                             body refused by post_max_size arrives. --}}
                         <x-core::file-input
                             id="restore-file"
                             wire:model="backup"
                             accept=".enc"
+                            x-on:livewire-upload-error="$wire.uploadFailed()"
                         />
                         <div wire:loading wire:target="backup" class="text-xs text-slate-400">{{ Lang::get('core::backup.restore.uploading') }}</div>
                     </div>

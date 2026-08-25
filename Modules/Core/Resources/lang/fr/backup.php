@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Impossible de créer la sauvegarde : :message',
         'confirm_phrase' => 'Tape :phrase pour confirmer — cela remplace tes données actuelles.',
         'choose_file' => 'Choisis un fichier de sauvegarde chiffré (.enc) à restaurer.',
+        'upload_failed' => 'Le fichier n’a pas fini d’être téléversé. Il est peut-être trop volumineux pour cet appareil — la restauration dans l’application de bureau accepte une sauvegarde plus grande.',
         'enter_passphrase' => 'Saisis la phrase secrète avec laquelle la sauvegarde a été chiffrée.',
         'unreadable' => 'Le fichier envoyé n\'a pas pu être lu. Réessaie.',
     ],

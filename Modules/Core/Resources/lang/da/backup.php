@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Sikkerhedskopien kunne ikke oprettes: :message',
         'confirm_phrase' => 'Skriv :phrase for at bekræfte — det erstatter dine nuværende data.',
         'choose_file' => 'Vælg en krypteret sikkerhedskopi (.enc), der skal gendannes.',
+        'upload_failed' => 'Filen blev ikke uploadet færdig. Den er måske for stor til denne enhed — gendannelse i skrivebordsappen accepterer en større sikkerhedskopi.',
         'enter_passphrase' => 'Indtast den adgangssætning, sikkerhedskopien blev krypteret med.',
         'unreadable' => 'Den uploadede fil kunne ikke læses. Prøv igen.',
     ],

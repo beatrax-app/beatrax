@@ -12,6 +12,7 @@ use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
+use Modules\Core\Public\Support\Lang;
 
 beforeEach(function (): void {
     Storage::fake('livewire-tmp');
@@ -172,4 +173,33 @@ it('refuses a payload that decrypts but will not open as a database', function (
     foreach ([$live, $notADatabase, $enc] as $f) {
         @unlink($f);
     }
+});
+
+// Livewire uploads on a request of its own and drops the property when that
+// request fails, so restore() never runs and the component looks untouched.
+// On iOS a backup over 6.29 MB was refused by post_max_size and the reader saw
+// only "choose a file" -- the message for a field they had already filled.
+it('says the upload failed rather than telling the reader to choose the file they chose', function (): void {
+    $user = User::query()->create([
+        'username' => 'restore-upload-dropped',
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+
+    $component = Livewire::actingAs($user)
+        ->test(EncryptedBackupRestore::class)
+        ->call('uploadFailed');
+
+    expect($component->get('error'))->toBe(Lang::get('core::backup.errors.upload_failed'));
+    expect($component->get('error'))->not->toBe(Lang::get('core::backup.errors.choose_file'));
+});
+
+it('wires the file input to that method, or nothing ever calls it', function (): void {
+    $blade = (string) file_get_contents(
+        base_path('Modules/Core/Resources/views/livewire/encrypted-backup-restore.blade.php'),
+    );
+
+    expect($blade)->toContain('livewire-upload-error');
+    expect($blade)->toContain('uploadFailed()');
 });

@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Kunne ikke opprette sikkerhetskopien: :message',
         'confirm_phrase' => 'Skriv :phrase for å bekrefte — dette erstatter de nåværende dataene dine.',
         'choose_file' => 'Velg en kryptert sikkerhetskopi (.enc) som skal gjenopprettes.',
+        'upload_failed' => 'Filen ble ikke lastet opp ferdig. Den er kanskje for stor for denne enheten — gjenoppretting i skrivebordsappen godtar en større sikkerhetskopi.',
         'enter_passphrase' => 'Skriv inn passordfrasen sikkerhetskopien ble kryptert med.',
         'unreadable' => 'Den opplastede filen kunne ikke leses. Prøv igjen.',
     ],

@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Sigurnosnu kopiju nije bilo moguće stvoriti: :message',
         'confirm_phrase' => 'Upiši :phrase za potvrdu — ovo zamjenjuje tvoje trenutne podatke.',
         'choose_file' => 'Odaberi šifriranu datoteku sigurnosne kopije (.enc) za vraćanje.',
+        'upload_failed' => 'Datoteka nije do kraja učitana. Možda je prevelika za ovaj uređaj — vraćanje u stolnoj aplikaciji prihvaća veću sigurnosnu kopiju.',
         'enter_passphrase' => 'Unesi pristupnu frazu kojom je sigurnosna kopija šifrirana.',
         'unreadable' => 'Učitanu datoteku nije bilo moguće pročitati. Pokušaj ponovno.',
     ],

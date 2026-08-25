@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Neizdevās izveidot dublējumu: :message',
         'confirm_phrase' => 'Ievadiet :phrase, lai apstiprinātu — tas aizstās jūsu pašreizējos datus.',
         'choose_file' => 'Izvēlieties šifrētu dublējuma failu (.enc), ko atjaunot.',
+        'upload_failed' => 'Fails netika augšupielādēts līdz galam. Iespējams, tas ir pārāk liels šai ierīcei — atjaunošana datora lietotnē pieņem lielāku dublējumu.',
         'enter_passphrase' => 'Ievadiet paroles frāzi, ar kuru dublējums tika šifrēts.',
         'unreadable' => 'Augšupielādēto failu neizdevās nolasīt. Mēģiniet vēlreiz.',
     ],

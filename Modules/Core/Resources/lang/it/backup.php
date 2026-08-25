@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Impossibile creare il backup: :message',
         'confirm_phrase' => 'Digita :phrase per confermare — questa operazione sostituisce i tuoi dati attuali.',
         'choose_file' => 'Scegli un file di backup crittografato (.enc) da ripristinare.',
+        'upload_failed' => 'Il file non ha completato il caricamento. Potrebbe essere troppo grande per questo dispositivo: il ripristino nell’app desktop accetta un backup più grande.',
         'enter_passphrase' => 'Inserisci la passphrase con cui è stato crittografato il backup.',
         'unreadable' => 'Non è stato possibile leggere il file caricato. Riprova.',
     ],

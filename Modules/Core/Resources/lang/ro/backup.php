@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Copia de rezervă nu a putut fi creată: :message',
         'confirm_phrase' => 'Scrie :phrase pentru a confirma — asta îți înlocuiește datele actuale.',
         'choose_file' => 'Alege un fișier de copie de rezervă criptat (.enc) pentru restaurare.',
+        'upload_failed' => 'Fișierul nu s-a încărcat complet. Poate fi prea mare pentru acest dispozitiv — restaurarea în aplicația de desktop acceptă o copie mai mare.',
         'enter_passphrase' => 'Introdu fraza de acces cu care a fost criptată copia de rezervă.',
         'unreadable' => 'Fișierul încărcat nu a putut fi citit. Încearcă din nou.',
     ],

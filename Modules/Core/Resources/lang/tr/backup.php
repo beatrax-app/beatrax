@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Yedek oluşturulamadı: :message',
         'confirm_phrase' => 'Onaylamak için :phrase yaz — bu işlem mevcut verilerinin yerine geçer.',
         'choose_file' => 'Geri yüklemek için şifreli bir yedek dosyası (.enc) seç.',
+        'upload_failed' => 'Dosyanın yüklenmesi tamamlanmadı. Bu cihaz için çok büyük olabilir — masaüstü uygulamasında geri yükleme daha büyük bir yedeği kabul eder.',
         'enter_passphrase' => 'Yedeğin şifrelendiği parolayı gir.',
         'unreadable' => 'Yüklenen dosya okunamadı. Yeniden dene.',
     ],

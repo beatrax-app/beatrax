@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Não foi possível criar a cópia de segurança: :message',
         'confirm_phrase' => 'Escreve :phrase para confirmar — isto substitui os teus dados atuais.',
         'choose_file' => 'Escolhe um ficheiro de cópia de segurança encriptada (.enc) para restaurar.',
+        'upload_failed' => 'O ficheiro não terminou de ser carregado. Pode ser demasiado grande para este dispositivo — restaurar na aplicação de computador aceita uma cópia maior.',
         'enter_passphrase' => 'Introduz a frase-passe com que a cópia de segurança foi encriptada.',
         'unreadable' => 'Não foi possível ler o ficheiro carregado. Tenta novamente.',
     ],

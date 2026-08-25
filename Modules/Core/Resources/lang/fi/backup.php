@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Varmuuskopiota ei voitu luoda: :message',
         'confirm_phrase' => 'Kirjoita :phrase vahvistaaksesi — tämä korvaa nykyiset tietosi.',
         'choose_file' => 'Valitse palautettava salattu varmuuskopiotiedosto (.enc).',
+        'upload_failed' => 'Tiedoston lataus ei valmistunut. Se voi olla liian suuri tälle laitteelle — työpöytäsovelluksessa palauttaminen hyväksyy suuremman varmuuskopion.',
         'enter_passphrase' => 'Anna salalause, jolla varmuuskopio salattiin.',
         'unreadable' => 'Lähetettyä tiedostoa ei voitu lukea. Yritä uudelleen.',
     ],

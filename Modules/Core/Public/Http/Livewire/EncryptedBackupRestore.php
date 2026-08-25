@@ -31,6 +31,16 @@ final class EncryptedBackupRestore extends Component
 
     public string $snapshotPath = '';
 
+    // Livewire uploads the file on its own request, before restore() is ever
+    // called, and drops the property when that request fails. Without this the
+    // reader was told to choose a file they had already chosen: the only branch
+    // left was the null check, which cannot tell an empty field from a crossing
+    // that failed. On iOS the crossing failed at 6.29 MB, silently.
+    public function uploadFailed(): void
+    {
+        $this->error = Lang::get('core::backup.errors.upload_failed');
+    }
+
     public function restore(RestoreEncryptedBackup $restore): void
     {
         $this->error = '';

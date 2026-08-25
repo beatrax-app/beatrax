@@ -36,6 +36,7 @@ return [
         'create_failed' => 'A biztonsági mentés nem készült el: :message',
         'confirm_phrase' => 'A megerősítéshez írd be: :phrase — ez lecseréli a jelenlegi adataidat.',
         'choose_file' => 'Válassz egy titkosított mentésfájlt (.enc) a visszaállításhoz.',
+        'upload_failed' => 'A fájl feltöltése nem fejeződött be. Lehet, hogy túl nagy ehhez az eszközhöz — az asztali alkalmazásban nagyobb biztonsági mentés is visszaállítható.',
         'enter_passphrase' => 'Add meg a jelmondatot, amellyel a mentés titkosítva lett.',
         'unreadable' => 'A feltöltött fájlt nem sikerült beolvasni. Próbáld újra.',
     ],

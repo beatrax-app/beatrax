@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Zálohu sa nepodarilo vytvoriť: :message',
         'confirm_phrase' => 'Na potvrdenie napíš :phrase — nahradí to tvoje súčasné údaje.',
         'choose_file' => 'Vyber súbor šifrovanej zálohy (.enc), ktorý sa má obnoviť.',
+        'upload_failed' => 'Súbor sa nepodarilo úplne nahrať. Môže byť pre toto zariadenie príliš veľký — obnovenie v počítačovej aplikácii prijme väčšiu zálohu.',
         'enter_passphrase' => 'Zadaj prístupovú frázu, ktorou bola záloha zašifrovaná.',
         'unreadable' => 'Nahraný súbor sa nepodarilo prečítať. Skús to znova.',
     ],

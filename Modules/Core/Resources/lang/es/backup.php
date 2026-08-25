@@ -36,6 +36,7 @@ return [
         'create_failed' => 'No se pudo crear la copia de seguridad: :message',
         'confirm_phrase' => 'Escribe :phrase para confirmar — esto sustituye tus datos actuales.',
         'choose_file' => 'Elige un archivo de copia de seguridad cifrada (.enc) para restaurar.',
+        'upload_failed' => 'El archivo no terminó de subirse. Puede que sea demasiado grande para este dispositivo: restaurar en la aplicación de escritorio admite una copia más grande.',
         'enter_passphrase' => 'Introduce la frase de contraseña con la que se cifró la copia.',
         'unreadable' => 'No se ha podido leer el archivo subido. Inténtalo de nuevo.',
     ],

@@ -36,6 +36,7 @@ return [
         'create_failed' => 'Nepavyko sukurti atsarginės kopijos: :message',
         'confirm_phrase' => 'Įvesk :phrase, kad patvirtintum — tai pakeis dabartinius tavo duomenis.',
         'choose_file' => 'Pasirink šifruotos atsarginės kopijos failą (.enc), kurį nori atkurti.',
+        'upload_failed' => 'Failas nebuvo įkeltas iki galo. Jis gali būti per didelis šiam įrenginiui — atkūrimas kompiuterio programoje priima didesnę atsarginę kopiją.',
         'enter_passphrase' => 'Įvesk slaptafrazę, kuria atsarginė kopija buvo užšifruota.',
         'unreadable' => 'Įkelto failo perskaityti nepavyko. Bandyk dar kartą.',
     ],

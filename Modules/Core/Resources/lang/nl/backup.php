@@ -35,6 +35,7 @@ return [
         'create_failed' => 'Kon de back-up niet maken: :message',
         'confirm_phrase' => 'Typ :phrase om te bevestigen — dit vervangt je huidige gegevens.',
         'choose_file' => 'Kies een versleuteld back-upbestand (.enc) om te herstellen.',
+        'upload_failed' => 'Het bestand is niet volledig geüpload. Het is mogelijk te groot voor dit apparaat — herstellen in de desktop-app accepteert een grotere back-up.',
         'enter_passphrase' => 'Voer de wachtwoordzin in waarmee de back-up is versleuteld.',
         'unreadable' => 'Het geüploade bestand kon niet worden gelezen. Probeer het opnieuw.',
     ],
