@@ -100,8 +100,8 @@ it('does not skip a second invocation once rows have been committed since the la
     // skip answers is whether somebody else's commits have landed since.
     $writer = new PDO('sqlite:'.$sourcePath, options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     for ($i = 0; $i < 5; $i++) {
-        $writer->exec("INSERT INTO transactions (user_id, amount_minor, currency, booked_at)
-                       VALUES (1, ".(100 + $i).", 'EUR', '2026-08-25 00:00:00')");
+        $writer->exec('INSERT INTO transactions (user_id, amount_minor, currency, booked_at)
+                       VALUES (1, '.(100 + $i).", 'EUR', '2026-08-25 00:00:00')");
     }
     unset($writer);
 

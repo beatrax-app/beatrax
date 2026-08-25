@@ -55,7 +55,7 @@ it('refuses an ASN row dated 31 February rather than booking it in March', funct
     $header = 'Datum,Je rekening,Van / naar,Naam,Adres,Postcode,Woonplaats,Valuta saldo,'
         .'Saldo voor boeking,Valuta,Bedrag bij / af,Verwerkingsdatum,Valutadatum,Code,Type,'
         .'Volgnummer,Betalingskenmerk,Omschrijving,Afschriftnummer,Categorie';
-    $row = "31-02-2026,NL57ASNB0123456789,NL10BANK0000000101,Onmogelijke Datum BV,,,,EUR,"
+    $row = '31-02-2026,NL57ASNB0123456789,NL10BANK0000000101,Onmogelijke Datum BV,,,,EUR,'
         ."1000.00,EUR,-11.00,31-02-2026,31-02-2026,9714,EIC,900001,,'Een datum die niet bestaat',9,'Overig'";
 
     $path = tempnam(sys_get_temp_dir(), 'asn').'.csv';
