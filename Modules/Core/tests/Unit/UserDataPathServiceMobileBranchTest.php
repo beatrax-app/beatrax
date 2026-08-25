@@ -32,9 +32,13 @@ it('platform() reads a shell NativePHP names but this app does not model as null
         ->and(UserDataPathService::isMobileRuntime())->toBeTrue();
 });
 
-it('only the Android shell needs the redirect rewritten on the client', function (): void {
+// iOS was assumed not to need this, and every route on the phone came up
+// blank because of it: the scheme handler navigates only where the target has
+// no scheme, and Laravel's redirects are absolute, so a php:// target is
+// fetched onto the old address instead of moving to it.
+it('both shells need the redirect rewritten on the client', function (): void {
     expect(MobilePlatform::Android->needsClientSideRedirect())->toBeTrue()
-        ->and(MobilePlatform::Ios->needsClientSideRedirect())->toBeFalse();
+        ->and(MobilePlatform::Ios->needsClientSideRedirect())->toBeTrue();
 });
 
 it('storageBase() does not branch on NATIVEPHP_PLATFORM alone, but databaseFile() DOES branch to the persisted store the moment the mobile signal is present (NATIVEPHP_STORAGE_PATH absent)', function (): void {

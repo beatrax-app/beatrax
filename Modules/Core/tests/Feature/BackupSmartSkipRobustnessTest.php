@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Filesystem\Filesystem;
-use PDO;
 use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
