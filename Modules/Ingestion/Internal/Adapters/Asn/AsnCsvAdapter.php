@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Generator;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Internal\Adapters\Banking\BankAmountParser;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Asn\AsnDescriptionDelimiters;
@@ -119,7 +120,7 @@ final class AsnCsvAdapter implements SourceAdapter
 
     private function parseDate(string $cell): CarbonImmutable
     {
-        $parsed = CarbonImmutable::createFromFormat('!'.AsnCsvHeaderProfile::DATE_FORMAT, $cell);
+        $parsed = SafeDate::fromFormatOrNull('!'.AsnCsvHeaderProfile::DATE_FORMAT, $cell);
         if (! $parsed instanceof CarbonImmutable) {
             throw new InvalidAmountException(sprintf(
                 "Cannot parse date '%s' (expected format %s)",

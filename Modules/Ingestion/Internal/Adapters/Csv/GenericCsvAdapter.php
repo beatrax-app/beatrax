@@ -9,6 +9,7 @@ use Generator;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
 use League\Csv\SyntaxError;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
@@ -318,7 +319,7 @@ final class GenericCsvAdapter implements SourceAdapter
 
     private function parseDate(string $cell): CarbonImmutable
     {
-        $parsed = CarbonImmutable::createFromFormat('!'.$this->preset->dateFormat, trim($cell));
+        $parsed = SafeDate::fromFormatOrNull('!'.$this->preset->dateFormat, trim($cell));
         if (! $parsed instanceof CarbonImmutable) {
             throw new InvalidAmountException(sprintf(
                 "Cannot parse date '%s' (expected format %s).",

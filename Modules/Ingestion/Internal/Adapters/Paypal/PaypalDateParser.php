@@ -6,6 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
 use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Internal\Exceptions\InvalidDateException;
 
 final class PaypalDateParser
@@ -21,7 +22,7 @@ final class PaypalDateParser
         // display locale is, so day and month are never the other way round.
         if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $trimmed) === 1) {
             try {
-                $parsed = CarbonImmutable::createFromFormat('!n/j/Y', $trimmed);
+                $parsed = SafeDate::fromFormatOrNull('!n/j/Y', $trimmed);
             } catch (InvalidFormatException $e) {
                 throw new InvalidDateException(sprintf(
                     "Cannot parse PayPal date: '%s' (%s)",
@@ -37,7 +38,7 @@ final class PaypalDateParser
 
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $trimmed) === 1) {
             try {
-                $parsed = CarbonImmutable::createFromFormat('!Y-m-d', $trimmed);
+                $parsed = SafeDate::fromFormatOrNull('!Y-m-d', $trimmed);
             } catch (InvalidFormatException $e) {
                 throw new InvalidDateException(sprintf(
                     "Cannot parse PayPal date: '%s' (%s)",
