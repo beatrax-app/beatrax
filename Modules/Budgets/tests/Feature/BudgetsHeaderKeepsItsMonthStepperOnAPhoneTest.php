@@ -31,10 +31,21 @@ it('stacks the title and the month stepper until there is room for both', functi
         ->and($html)->not->toContain('<header class="mb-6 flex items-start justify-between gap-4">');
 });
 
-// shrink-0 is deliberate and must survive the stack: a stepper that shrinks
-// loses the 44px reach of the two glyphs, which is the defect the other way.
-it('leaves the stepper itself unshrinkable once it has its own row', function (): void {
+// shrink-0 keeps the two glyphs' 44px reach, and on its own it is not enough:
+// at AX5 the row squeezed "August 2026" to 180px and broke it as "Augus / t /
+// 2026" while the buttons shrank to 68px. flex-wrap beside it gives the label
+// its own row — 299px on one line, buttons back to 133px, same device.
+it('leaves the stepper unshrinkable, and lets it take a second row', function (): void {
     $html = Livewire::test(BudgetsPage::class)->html();
 
-    expect($html)->toContain('flex shrink-0 items-center gap-1');
+    preg_match_all('/class="([^"]*)"/', $html, $matches);
+
+    $stepper = array_values(array_filter(
+        $matches[1],
+        static fn (string $classes): bool => str_contains($classes, 'items-center') && str_contains($classes, 'gap-1'),
+    ));
+
+    expect($stepper)->not->toBe([], 'The month stepper row is gone.')
+        ->and($stepper[0])->toContain('shrink-0')
+        ->and($stepper[0])->toContain('flex-wrap');
 });

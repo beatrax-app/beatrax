@@ -33,7 +33,7 @@
                 {{ Lang::get('budgets::messages.page.subtitle', ['period' => $period->label]) }}
             </p>
         </div>
-        <div class="flex shrink-0 items-center gap-1">
+        <div class="flex shrink-0 flex-wrap items-center gap-1">
             <button
                 type="button"
                 wire:click="prevPeriod"

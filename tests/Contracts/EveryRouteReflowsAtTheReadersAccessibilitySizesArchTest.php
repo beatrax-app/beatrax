@@ -106,6 +106,8 @@ it('keeps the rows that had to wrap wrapping', function (): void {
         'Modules/Calendar/Resources/views/livewire/calendar-page.blade.php' => ['items-center', 'gap-2'],
         'Modules/Shell/Resources/views/livewire/spending-trend-card.blade.php' => ['items-baseline', 'justify-end'],
         'Modules/DriftAlerts/Resources/views/livewire/drift-watch-page.blade.php' => ['items-baseline', 'justify-between'],
+        'Modules/Shell/Resources/views/livewire/dashboard.blade.php' => ['shrink-0', 'items-center', 'gap-1'],
+        'Modules/Budgets/Resources/views/livewire/budgets-page.blade.php' => ['shrink-0', 'items-center', 'gap-1'],
     ];
 
     $offenders = [];
