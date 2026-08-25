@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Do prognózy tohto účtu zatiaľ nevstupuje žiadna séria.',
 
     'net_diff' => 'Čistý rozdiel',
+
+    'net_diff_unknown' => 'Pre tento horizont zatiaľ nevypočítané.',
     'net_diff_section_aria' => 'Čistý rozdiel medzi východiskom a scenárom v dňoch horizontu 30 / 60 / 90',
     'net_diff_delta_aria' => 'Čistý rozdiel v deň :day: :value, scenár je :state',
     'better_than_baseline' => 'lepší než východisko',

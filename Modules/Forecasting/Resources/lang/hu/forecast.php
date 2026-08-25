@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Ehhez a számlához még egyetlen sorozat sem járul hozzá az előrejelzésben.',
 
     'net_diff' => 'Nettó eltérés',
+
+    'net_diff_unknown' => 'Ehhez az időtávhoz még nincs kiszámítva.',
     'net_diff_section_aria' => 'Nettó eltérés az alapeset és a forgatókönyv között a 30., 60. és 90. napon',
     'net_diff_delta_aria' => 'Nettó eltérés a(z) :day. napon: :value, a forgatókönyv :state',
     'better_than_baseline' => 'jobb az alapesetnél',

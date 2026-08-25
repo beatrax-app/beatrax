@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Ingen serier bidrar til prognosen for denne kontoen ennå.',
 
     'net_diff' => 'Nettoforskjell',
+
+    'net_diff_unknown' => 'Ennå ikke beregnet for denne horisonten.',
     'net_diff_section_aria' => 'Nettoforskjell mellom baselinje og scenario ved horisontdagene 30 / 60 / 90',
     'net_diff_delta_aria' => 'Nettoforskjell på dag :day: :value, scenarioet er :state',
     'better_than_baseline' => 'bedre enn baselinjen',

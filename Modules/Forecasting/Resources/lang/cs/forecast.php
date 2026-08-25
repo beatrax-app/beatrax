@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Do předpovědi tohoto účtu zatím žádná řada nepřispívá.',
 
     'net_diff' => 'Rozdíl netto',
+
+    'net_diff_unknown' => 'Pro tento horizont zatím nespočítáno.',
     'net_diff_section_aria' => 'Rozdíl netto mezi základem a scénářem v horizontu 30 / 60 / 90 dní',
     'net_diff_delta_aria' => 'Rozdíl netto v den :day: :value, scénář je :state',
     'better_than_baseline' => 'lepší než základ',

@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => "No series contribute to this account's forecast yet.",
 
     'net_diff' => 'Net diff',
+
+    'net_diff_unknown' => 'Not calculated for this horizon yet.',
     'net_diff_section_aria' => 'Net diff between baseline and scenario at horizon days 30 / 60 / 90',
     'net_diff_delta_aria' => 'Net difference at day :day: :value, scenario is :state',
     'better_than_baseline' => 'better than baseline',

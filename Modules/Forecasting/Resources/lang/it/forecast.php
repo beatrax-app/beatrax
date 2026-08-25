@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Nessuna serie contribuisce ancora alla previsione di questo conto.',
 
     'net_diff' => 'Differenza netta',
+
+    'net_diff_unknown' => 'Non ancora calcolato per questo orizzonte.',
     'net_diff_section_aria' => 'Differenza netta tra riferimento e scenario agli orizzonti di 30 / 60 / 90 giorni',
     'net_diff_delta_aria' => 'Differenza netta al giorno :day: :value, lo scenario è :state',
     'better_than_baseline' => 'migliore del riferimento',

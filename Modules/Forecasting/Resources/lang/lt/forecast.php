@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Šios sąskaitos prognozei kol kas neprisideda nė viena serija.',
 
     'net_diff' => 'Grynasis skirtumas',
+
+    'net_diff_unknown' => 'Šiam laikotarpiui dar neapskaičiuota.',
     'net_diff_section_aria' => 'Grynasis skirtumas tarp bazinio varianto ir scenarijaus 30 / 60 / 90 horizonto dienomis',
     'net_diff_delta_aria' => 'Grynasis skirtumas :day dieną: :value, scenarijus yra :state',
     'better_than_baseline' => 'geresnis nei bazinis',

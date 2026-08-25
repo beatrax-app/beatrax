@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Ainda não há séries a contribuir para a previsão desta conta.',
 
     'net_diff' => 'Diferença líquida',
+
+    'net_diff_unknown' => 'Ainda não calculado para este horizonte.',
     'net_diff_section_aria' => 'Diferença líquida entre a referência e o cenário nos horizontes de 30 / 60 / 90 dias',
     'net_diff_delta_aria' => 'Diferença líquida no dia :day: :value, o cenário está :state',
     'better_than_baseline' => 'melhor do que a referência',

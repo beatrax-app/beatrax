@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Mikään sarja ei vielä vaikuta tämän tilin ennusteeseen.',
 
     'net_diff' => 'Nettoero',
+
+    'net_diff_unknown' => 'Ei vielä laskettu tälle aikavälille.',
     'net_diff_section_aria' => 'Nettoero perustason ja skenaarion välillä aikajänteen päivinä 30 / 60 / 90',
     'net_diff_delta_aria' => 'Nettoero päivänä :day: :value, skenaario on :state',
     'better_than_baseline' => 'parempi kuin perustaso',

@@ -138,9 +138,10 @@ trait BuildsForecastCharts
 
     // Exactly zero is neutral, not green: an unchanged balance is not an
     // improvement, and colouring it as one overstates the scenario.
-    private function panelColorFor(int $netDiffMinor): string
+    private function panelColorFor(?int $netDiffMinor): string
     {
         return match (true) {
+            $netDiffMinor === null => self::NEUTRAL_INK,
             $netDiffMinor > 0 => self::BETTER_OFF_INK,
             $netDiffMinor < 0 => self::WORSE_OFF_INK,
             default => self::NEUTRAL_INK,
@@ -148,13 +149,17 @@ trait BuildsForecastCharts
     }
 
     /**
-     * @return array<int, int>
+     * @return array<int, int|null> null where the loaded run does not reach
      */
     private function computeNetDiff(ForecastDto $baseline, ForecastDto $scenario): array
     {
+        // null, not 0: a checkpoint beyond the horizon currently loaded is
+        // UNKNOWN, and zero is a claim that the scenario changes nothing that
+        // far out. At horizon 90 the strip printed "EUR0.00 at day 365" while
+        // this app's own completed 365-day run held +EUR500.00.
         $result = [];
         foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
-            $result[$horizonKey] = 0;
+            $result[$horizonKey] = null;
         }
         foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
             if ($horizonKey > $baseline->horizonDays || $horizonKey > $scenario->horizonDays) {

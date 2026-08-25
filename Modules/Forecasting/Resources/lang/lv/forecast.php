@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Šī konta prognozē pagaidām neietilpst neviena sērija.',
 
     'net_diff' => 'Neto starpība',
+
+    'net_diff_unknown' => 'Šim periodam vēl nav aprēķināts.',
     'net_diff_section_aria' => 'Neto starpība starp bāzes līniju un scenāriju 30 / 60 / 90 dienu horizontā',
     'net_diff_delta_aria' => 'Neto starpība :day. dienā: :value, scenārijs ir :state',
     'better_than_baseline' => 'labāks par bāzes līniju',

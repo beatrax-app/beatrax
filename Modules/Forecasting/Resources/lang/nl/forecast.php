@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Nog geen reeksen dragen bij aan de prognose van deze rekening.',
 
     'net_diff' => 'Nettoverschil',
+
+    'net_diff_unknown' => 'Nog niet berekend voor deze horizon.',
     'net_diff_section_aria' => 'Nettoverschil tussen basislijn en scenario op horizondagen 30 / 60 / 90',
     'net_diff_delta_aria' => 'Nettoverschil op dag :day: :value, scenario is :state',
     'better_than_baseline' => 'beter dan de basislijn',

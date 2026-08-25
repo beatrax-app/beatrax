@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Ükski seeria ei mõjuta veel selle konto prognoosi.',
 
     'net_diff' => 'Netovahe',
+
+    'net_diff_unknown' => 'Selle horisondi jaoks veel arvutamata.',
     'net_diff_section_aria' => 'Netovahe baasjoone ja stsenaariumi vahel horisondi päevadel 30 / 60 / 90',
     'net_diff_delta_aria' => 'Netovahe päeval :day: :value, stsenaarium on :state',
     'better_than_baseline' => 'baasjoonest parem',

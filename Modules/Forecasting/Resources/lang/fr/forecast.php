@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Aucune série ne contribue encore à la prévision de ce compte.',
 
     'net_diff' => 'Écart net',
+
+    'net_diff_unknown' => 'Pas encore calculé pour cet horizon.',
     'net_diff_section_aria' => 'Écart net entre la référence et le scénario aux horizons 30 / 60 / 90 jours',
     'net_diff_delta_aria' => 'Écart net au jour :day : :value, le scénario est :state',
     'better_than_baseline' => 'meilleur que la référence',

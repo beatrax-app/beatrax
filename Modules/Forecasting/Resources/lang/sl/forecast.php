@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'K napovedi tega računa še ne prispeva nobena serija.',
 
     'net_diff' => 'Neto razlika',
+
+    'net_diff_unknown' => 'Za to obdobje še ni izračunano.',
     'net_diff_section_aria' => 'Neto razlika med izhodiščnim scenarijem in scenarijem pri obzorju 30 / 60 / 90 dni',
     'net_diff_delta_aria' => 'Neto razlika na dan :day: :value, scenarij je :state',
     'better_than_baseline' => 'boljši od izhodiščnega scenarija',

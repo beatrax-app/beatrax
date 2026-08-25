@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Bu hesabın tahminine katkıda bulunan henüz bir seri yok.',
 
     'net_diff' => 'Net fark',
+
+    'net_diff_unknown' => 'Bu ufuk için henüz hesaplanmadı.',
     'net_diff_section_aria' => '30 / 60 / 90 günlük ufuklarda referans ile senaryo arasındaki net fark',
     'net_diff_delta_aria' => ':day. gündeki net fark: :value, senaryo :state',
     'better_than_baseline' => 'referanstan daha iyi',

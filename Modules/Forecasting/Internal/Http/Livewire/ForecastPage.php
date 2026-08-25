@@ -336,10 +336,10 @@ final class ForecastPage extends Component
         ForecastDtoMapper $mapper,
         string $baseCurrency,
     ): array {
-        /** @var array<int, int> $netDiff */
+        /** @var array<int, int|null> $netDiff */
         $netDiff = [];
         foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
-            $netDiff[$horizonKey] = 0;
+            $netDiff[$horizonKey] = null;
         }
 
         $defaults = [

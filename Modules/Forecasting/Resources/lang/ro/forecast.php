@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Nicio serie nu contribuie încă la previziunea acestui cont.',
 
     'net_diff' => 'Diferență netă',
+
+    'net_diff_unknown' => 'Încă necalculat pentru acest orizont.',
     'net_diff_section_aria' => 'Diferența netă între scenariul de bază și scenariu la orizontul de 30 / 60 / 90 de zile',
     'net_diff_delta_aria' => 'Diferență netă în ziua :day: :value, scenariul este :state',
     'better_than_baseline' => 'mai bun decât scenariul de bază',

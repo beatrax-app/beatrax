@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Todavía no hay series que aporten a la previsión de esta cuenta.',
 
     'net_diff' => 'Diferencia neta',
+
+    'net_diff_unknown' => 'Aún no calculado para este horizonte.',
     'net_diff_section_aria' => 'Diferencia neta entre la referencia y el escenario en los horizontes de 30 / 60 / 90 días',
     'net_diff_delta_aria' => 'Diferencia neta en el día :day: :value, el escenario es :state',
     'better_than_baseline' => 'mejor que la referencia',

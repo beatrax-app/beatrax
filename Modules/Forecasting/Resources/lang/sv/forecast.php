@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Inga serier bidrar till prognosen för det här kontot än.',
 
     'net_diff' => 'Nettoskillnad',
+
+    'net_diff_unknown' => 'Ännu inte beräknat för denna horisont.',
     'net_diff_section_aria' => 'Nettoskillnad mellan baslinje och scenario vid horisontdagarna 30 / 60 / 90',
     'net_diff_delta_aria' => 'Nettoskillnad dag :day: :value, scenariot är :state',
     'better_than_baseline' => 'bättre än baslinjen',

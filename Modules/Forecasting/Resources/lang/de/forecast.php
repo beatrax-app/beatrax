@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Noch tragen keine Reihen zur Prognose dieses Kontos bei.',
 
     'net_diff' => 'Nettodifferenz',
+
+    'net_diff_unknown' => 'Für diesen Zeitraum noch nicht berechnet.',
     'net_diff_section_aria' => 'Nettodifferenz zwischen Basislinie und Szenario an den Horizonttagen 30 / 60 / 90',
     'net_diff_delta_aria' => 'Nettodifferenz an Tag :day: :value, Szenario ist :state',
     'better_than_baseline' => 'besser als die Basislinie',
