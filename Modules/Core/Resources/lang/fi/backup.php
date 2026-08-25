@@ -18,7 +18,7 @@ return [
         'heading' => 'Palauta varmuuskopiosta',
 
         'intro_html' => 'Korvaa nykyinen tietokantasi salatulla varmuuskopiolla. Tiedosto puretaan ja tarkistetaan ennen kuin mikään muuttuu, ja nykyisistä tiedoistasi tallennetaan ensin tilannevedos — mutta tämä silti <strong class="text-slate-700 dark:text-slate-200">korvaa kaiken</strong>, joten toiminto on suojattu. Sinut kirjataan ulos, sillä myös kirjautumisesi on tietokannassa.',
-        'restored' => 'Palautettu. Lataa sovellus uudelleen, niin näet palautetut tiedot.',
+        'restored' => 'Varmuuskopio palautettiin. Kirjaudu sisään käyttäjätunnuksella ja salasanalla, jotka olivat käytössä sitä tehtäessä.',
         'snapshot_saved_prefix' => 'Tilannevedos aiemmista tiedoistasi tallennettiin polkuun',
         'file_label' => 'Salattu varmuuskopio (.enc)',
         'uploading' => 'Lähetetään…',

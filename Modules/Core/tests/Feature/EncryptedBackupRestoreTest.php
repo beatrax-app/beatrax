@@ -203,3 +203,91 @@ it('wires the file input to that method, or nothing ever calls it', function ():
     expect($blade)->toContain('livewire-upload-error');
     expect($blade)->toContain('uploadFailed()');
 });
+
+// The screen promised "You will be signed out, because your sign-in lives in
+// the database too" and performed no sign-out at all. The session carries a
+// user id, and after the swap that id names whoever the backup says it does --
+// so the session would have carried on as a different person.
+it('signs the reader out after a restore, because the identity was replaced too', function (): void {
+    $base = sys_get_temp_dir().'/beatrax-signout-'.bin2hex(random_bytes(6));
+    $live = $base.'-live.sqlite';
+    $enc = $base.'-backup.sqlite.enc';
+    rbMakeSqlite($live, 'ORIGINAL');
+    rbMakeSqlite($base.'-backup.sqlite', 'RESTORED');
+    (new BackupEncryptor)->encrypt($base.'-backup.sqlite', $enc, 'pw');
+
+    $db = app(DatabaseManager::class);
+    Config::set('database.default', 'sqlite');
+    Config::set('database.connections.sqlite.database', $live);
+    $db->purge('sqlite');
+
+    try {
+        $component = Livewire::test(EncryptedBackupRestore::class)
+            ->set('backup', UploadedFile::fake()->createWithContent('b.enc', (string) file_get_contents($enc)))
+            ->set('passphrase', 'pw')
+            ->set('confirmation', EncryptedBackupRestore::CONFIRM_PHRASE)
+            ->call('restore');
+    } finally {
+        Config::set('database.default', 'sqlite_testing');
+        $db->purge('sqlite');
+    }
+
+    $component->assertRedirect(route('login'));
+    expect(auth()->check())->toBeFalse();
+
+    foreach ([$live, $enc, $base.'-backup.sqlite'] as $f) {
+        @unlink($f);
+    }
+});
+
+// On the phone the restore succeeded and then every route answered
+// `SQLSTATE[HY000]: General error: 10 disk I/O error` until the app was
+// force-quit. -shm is a shared-memory index a live WAL connection holds
+// mapped; unlinking it under one is what SQLite reports as code 10. The
+// service purged the connection named in config and left any other name
+// pointing at the same file holding it open.
+it('drops every connection to the live file, not only the one named in config', function (): void {
+    $base = sys_get_temp_dir().'/beatrax-twoconn-'.bin2hex(random_bytes(6));
+    $live = $base.'-live.sqlite';
+    $enc = $base.'-backup.sqlite.enc';
+    rbMakeSqlite($live, 'ORIGINAL');
+    rbMakeSqlite($base.'-backup.sqlite', 'RESTORED');
+    (new BackupEncryptor)->encrypt($base.'-backup.sqlite', $enc, 'pw');
+
+    $db = app(DatabaseManager::class);
+    Config::set('database.default', 'sqlite');
+    Config::set('database.connections.sqlite.database', $live);
+
+    // A SECOND name onto the same file, resolved and left open — the shape the
+    // persistent runtime holds and the reason one purge was not enough.
+    Config::set('database.connections.sqlite_second', array_merge(
+        (array) Config::get('database.connections.sqlite'),
+        ['database' => $live],
+    ));
+    $db->purge('sqlite');
+    $db->connection('sqlite_second')->select('select 1');
+
+    expect(array_keys($db->getConnections()))->toContain('sqlite_second');
+
+    try {
+        app(RestoreEncryptedBackup::class)($enc, 'pw');
+
+        // Read BEFORE any cleanup. Purging it here as part of teardown would
+        // assert the teardown rather than the service -- which is exactly what
+        // an earlier version of this test did, and it passed against the old
+        // single-name purge.
+        $stillOpen = array_keys($db->getConnections());
+    } finally {
+        Config::set('database.default', 'sqlite_testing');
+        $db->purge('sqlite');
+        $db->purge('sqlite_second');
+    }
+
+    // Purged means removed from the manager's resolved set. Left behind, this
+    // is the handle that was still mapping the -shm that just got unlinked.
+    expect($stillOpen)->not->toContain('sqlite_second');
+
+    foreach ([$live, $enc, $base.'-backup.sqlite'] as $f) {
+        @unlink($f);
+    }
+});

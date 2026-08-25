@@ -18,7 +18,7 @@ return [
         'heading' => 'Vraćanje iz rezervne kopije',
 
         'intro_html' => 'Zameni trenutnu bazu podataka šifrovanom rezervnom kopijom. Datoteka se dešifruje i proverava pre bilo kakve promene, a snimak trenutnih podataka se prvo sačuva — ali ovo i dalje <strong class="text-slate-700 dark:text-slate-200">prebrisuje sve</strong>, pa je dodatno zaštićeno. Бићеш одјављен, јер је и твоја пријава у бази података.',
-        'restored' => 'Vraćeno. Ponovo učitaj aplikaciju da vidiš vraćene podatke.',
+        'restored' => 'Rezervna kopija je vraćena. Prijavite se korisničkim imenom i lozinkom koji su važili kada je napravljena.',
         'snapshot_saved_prefix' => 'Snimak tvojih prethodnih podataka sačuvan je u',
         'file_label' => 'Šifrovana rezervna kopija (.enc)',
         'uploading' => 'Otpremanje…',

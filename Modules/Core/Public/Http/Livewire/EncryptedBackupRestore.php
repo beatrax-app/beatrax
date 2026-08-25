@@ -7,9 +7,11 @@ namespace Modules\Core\Public\Http\Livewire;
 use Illuminate\Config\Repository;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Session\Store as Session;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SqliteDatabase;
@@ -20,6 +22,8 @@ final class EncryptedBackupRestore extends Component
     use WithFileUploads;
 
     public const CONFIRM_PHRASE = 'RESTORE';
+
+    public const SNAPSHOT_FLASH_KEY = 'backup.snapshot_path';
 
     public ?TemporaryUploadedFile $backup = null;
 
@@ -41,7 +45,7 @@ final class EncryptedBackupRestore extends Component
         $this->error = Lang::get('core::backup.errors.upload_failed');
     }
 
-    public function restore(RestoreEncryptedBackup $restore): void
+    public function restore(RestoreEncryptedBackup $restore, LogoutAction $logout, Session $session): void
     {
         $this->error = '';
         $this->snapshotPath = '';
@@ -60,6 +64,17 @@ final class EncryptedBackupRestore extends Component
         }
 
         $this->reset('backup', 'passphrase', 'confirmation');
+
+        // The screen promised a sign-out and never performed one. That is not
+        // only a broken promise: the session holds a user id, and the row that
+        // id names now belongs to whoever the backup says it does, so the
+        // session would silently continue as a different person. Flashed after
+        // logout, because invalidate() drops anything put there before it.
+        $logout();
+
+        $session->flash(self::SNAPSHOT_FLASH_KEY, $this->snapshotPath);
+
+        $this->redirectRoute('login');
     }
 
     // Runs the four preflight checks in message-priority order and returns

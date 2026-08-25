@@ -18,7 +18,7 @@ return [
         'heading' => 'Gendan fra en sikkerhedskopi',
 
         'intro_html' => 'Erstat din nuværende database med en krypteret sikkerhedskopi. Filen dekrypteres og kontrolleres, før noget ændres, og et øjebliksbillede af dine nuværende data gemmes først — men det <strong class="text-slate-700 dark:text-slate-200">overskriver alt</strong>, så det er spærret. Du bliver logget ud, for din indlogning ligger også i databasen.',
-        'restored' => 'Gendannet. Genindlæs appen for at se dine gendannede data.',
+        'restored' => 'Din sikkerhedskopi er gendannet. Log ind med det brugernavn og den adgangskode, der var i brug, da den blev lavet.',
         'snapshot_saved_prefix' => 'Et øjebliksbillede af dine tidligere data blev gemt i',
         'file_label' => 'Krypteret sikkerhedskopi (.enc)',
         'uploading' => 'Uploader…',

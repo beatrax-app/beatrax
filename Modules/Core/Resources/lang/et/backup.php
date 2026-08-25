@@ -18,7 +18,7 @@ return [
         'heading' => 'Taasta varukoopiast',
 
         'intro_html' => 'Asenda praegune andmebaas krüpteeritud varukoopiaga. Fail dekrüpteeritakse ja kontrollitakse enne mis tahes muudatust ning praegustest andmetest salvestatakse esmalt taastamiseelne hetktõmmis — aga see <strong class="text-slate-700 dark:text-slate-200">kirjutab kõik üle</strong>, seega on see samm kaitstud. Sind logitakse välja, sest ka sinu sisselogimine on andmebaasis.',
-        'restored' => 'Taastatud. Laadi rakendus uuesti, et taastatud andmeid näha.',
+        'restored' => 'Varukoopia taastati. Logige sisse kasutajanime ja parooliga, mis kehtisid selle tegemise ajal.',
         'snapshot_saved_prefix' => 'Sinu varasemate andmete hetktõmmis salvestati asukohta',
         'file_label' => 'Krüpteeritud varukoopia (.enc)',
         'uploading' => 'Laadin üles…',

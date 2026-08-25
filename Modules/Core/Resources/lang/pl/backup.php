@@ -18,7 +18,7 @@ return [
         'heading' => 'Przywróć z kopii zapasowej',
 
         'intro_html' => 'Zastąp obecną bazę danych zaszyfrowaną kopią zapasową. Plik jest odszyfrowywany i sprawdzany, zanim cokolwiek się zmieni, a migawka obecnych danych zapisywana jest jeszcze przed przywracaniem — ale to nadal <strong class="text-slate-700 dark:text-slate-200">nadpisuje wszystko</strong>, więc jest dodatkowo zabezpieczone. Zostaniesz wylogowany, bo Twoje logowanie też jest w bazie danych.',
-        'restored' => 'Przywrócono. Odśwież aplikację, aby zobaczyć przywrócone dane.',
+        'restored' => 'Kopia zapasowa została przywrócona. Zaloguj się nazwą użytkownika i hasłem obowiązującymi w chwili jej utworzenia.',
         'snapshot_saved_prefix' => 'Migawka poprzednich danych została zapisana w',
         'file_label' => 'Zaszyfrowana kopia zapasowa (.enc)',
         'uploading' => 'Wgrywanie…',

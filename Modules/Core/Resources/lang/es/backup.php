@@ -18,7 +18,7 @@ return [
         'heading' => 'Restaurar desde una copia de seguridad',
 
         'intro_html' => 'Sustituye tu base de datos actual por una copia de seguridad cifrada. El archivo se descifra y se comprueba antes de cambiar nada, y primero se guarda una instantánea de tus datos actuales — pero aun así esto <strong class="text-slate-700 dark:text-slate-200">lo sobrescribe todo</strong>, así que está protegido. Se cerrará tu sesión, porque tu inicio de sesión también está en la base de datos.',
-        'restored' => 'Restaurado. Recarga la app para ver tus datos restaurados.',
+        'restored' => 'Tu copia de seguridad se restauró. Inicia sesión con el nombre de usuario y la contraseña vigentes cuando se creó.',
         'snapshot_saved_prefix' => 'Se ha guardado una instantánea de tus datos anteriores en',
         'file_label' => 'Copia de seguridad cifrada (.enc)',
         'uploading' => 'Subiendo…',

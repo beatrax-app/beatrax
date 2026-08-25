@@ -18,7 +18,7 @@ return [
         'heading' => 'Ripristina da un backup',
 
         'intro_html' => 'Sostituisci il database attuale con un backup crittografato. Il file viene decrittato e verificato prima che qualcosa cambi, e prima del ripristino viene salvato uno snapshot dei dati attuali — ma questa operazione <strong class="text-slate-700 dark:text-slate-200">sovrascrive tutto</strong>, quindi è protetta. Verrai disconnesso, perché anche il tuo accesso si trova nel database.',
-        'restored' => "Ripristino completato. Ricarica l'app per vedere i dati ripristinati.",
+        'restored' => 'Il backup è stato ripristinato. Accedi con il nome utente e la password in uso quando è stato creato.',
         'snapshot_saved_prefix' => 'Uno snapshot dei tuoi dati precedenti è stato salvato in',
         'file_label' => 'Backup crittografato (.enc)',
         'uploading' => 'Caricamento…',

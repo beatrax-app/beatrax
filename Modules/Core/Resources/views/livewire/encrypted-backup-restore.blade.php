@@ -7,12 +7,8 @@
                 {!! Lang::get('core::backup.restore.intro_html') !!}
             </p>
 
-            @if ($snapshotPath !== '')
-                <x-core::alert tone="positive" class="mt-3">
-                    <p>{{ Lang::get('core::backup.restore.restored') }}</p>
-                    <p class="mt-1 text-xs opacity-80">{{ Lang::get('core::backup.restore.snapshot_saved_prefix') }} <code class="font-mono">{{ $snapshotPath }}</code>.</p>
-                </x-core::alert>
-            @else
+            {{-- No success branch: a completed restore signs the reader out and
+                 lands on /login, which is where the confirmation is shown. --}}
                 <form wire:submit="restore" class="mt-3 space-y-3">
                     <div class="space-y-1">
                         <label for="restore-file" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::backup.restore.file_label') }}</label>
@@ -66,7 +62,6 @@
                         <span wire:loading wire:target="restore">{{ Lang::get('core::backup.restore.restoring') }}</span>
                     </button>
                 </form>
-            @endif
         </div>
     @endif
 </div>

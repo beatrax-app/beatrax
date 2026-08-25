@@ -18,7 +18,7 @@ return [
         'heading' => 'Obnovenie zo zálohy',
 
         'intro_html' => 'Nahradí tvoju súčasnú databázu šifrovanou zálohou. Súbor sa pred akoukoľvek zmenou dešifruje a skontroluje a najprv sa uloží snímka tvojich súčasných údajov — aj tak to však <strong class="text-slate-700 dark:text-slate-200">prepíše všetko</strong>, preto je tento krok zabezpečený. Budeš odhlásený, pretože aj tvoje prihlásenie je v databáze.',
-        'restored' => 'Obnovené. Znovu načítaj aplikáciu a uvidíš obnovené údaje.',
+        'restored' => 'Vaša záloha bola obnovená. Prihláste sa používateľským menom a heslom, ktoré platili v čase jej vytvorenia.',
         'snapshot_saved_prefix' => 'Snímka tvojich predchádzajúcich údajov bola uložená do',
         'file_label' => 'Šifrovaná záloha (.enc)',
         'uploading' => 'Nahráva sa…',

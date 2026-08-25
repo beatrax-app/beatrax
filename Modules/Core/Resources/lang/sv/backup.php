@@ -18,7 +18,7 @@ return [
         'heading' => 'Återställ från en säkerhetskopia',
 
         'intro_html' => 'Ersätt din nuvarande databas med en krypterad säkerhetskopia. Filen dekrypteras och kontrolleras innan något ändras, och en ögonblicksbild av dina nuvarande data sparas först — men detta <strong class="text-slate-700 dark:text-slate-200">skriver över allt</strong>, så det är spärrat. Du loggas ut, eftersom din inloggning också ligger i databasen.',
-        'restored' => 'Återställt. Ladda om appen för att se dina återställda data.',
+        'restored' => 'Din säkerhetskopia har återställts. Logga in med det användarnamn och lösenord som gällde när den skapades.',
         'snapshot_saved_prefix' => 'En ögonblicksbild av dina tidigare data sparades i',
         'file_label' => 'Krypterad säkerhetskopia (.enc)',
         'uploading' => 'Laddar upp…',

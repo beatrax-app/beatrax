@@ -18,7 +18,7 @@ return [
         'heading' => 'Restaurar a partir de uma cópia de segurança',
 
         'intro_html' => 'Substitui a tua base de dados atual por uma cópia de segurança encriptada. O ficheiro é desencriptado e verificado antes de alguma coisa mudar, e é guardado primeiro um instantâneo dos teus dados atuais — mas isto continua a <strong class="text-slate-700 dark:text-slate-200">substituir tudo</strong>, por isso está protegido. A tua sessão será terminada, porque o teu início de sessão também está na base de dados.',
-        'restored' => 'Restaurado. Recarrega a app para veres os dados restaurados.',
+        'restored' => 'A sua cópia de segurança foi restaurada. Inicie sessão com o nome de utilizador e a palavra-passe em uso quando foi criada.',
         'snapshot_saved_prefix' => 'Foi guardado um instantâneo dos teus dados anteriores em',
         'file_label' => 'Cópia de segurança encriptada (.enc)',
         'uploading' => 'A carregar…',

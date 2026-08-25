@@ -18,7 +18,7 @@ return [
         'heading' => 'Yedekten geri yükle',
 
         'intro_html' => 'Mevcut veritabanının yerine şifreli bir yedek koy. Dosya, hiçbir şey değişmeden önce çözülür ve denetlenir; ayrıca geri yüklemeden önce mevcut verilerinin anlık görüntüsü kaydedilir — ancak bu işlem yine de <strong class="text-slate-700 dark:text-slate-200">her şeyin üzerine yazar</strong>, bu yüzden korumalıdır. Oturumun kapatılacak, çünkü girişin de veritabanında tutuluyor.',
-        'restored' => 'Geri yüklendi. Geri yüklenen verilerini görmek için uygulamayı yeniden yükle.',
+        'restored' => 'Yedeğiniz geri yüklendi. Oluşturulduğunda geçerli olan kullanıcı adı ve parolayla oturum açın.',
         'snapshot_saved_prefix' => 'Önceki verilerinin anlık görüntüsü şuraya kaydedildi:',
         'file_label' => 'Şifreli yedek (.enc)',
         'uploading' => 'Yükleniyor…',

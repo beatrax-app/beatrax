@@ -17,7 +17,7 @@ return [
     'restore' => [
         'heading' => 'Herstellen vanaf een back-up',
         'intro_html' => 'Vervang je huidige database door een versleutelde back-up. Het bestand wordt ontsleuteld en gecontroleerd voordat er iets verandert, en er wordt eerst een momentopname van je huidige gegevens opgeslagen — maar dit <strong class="text-slate-700 dark:text-slate-200">overschrijft alles</strong>, dus het is beveiligd. Je wordt afgemeld, want je aanmelding staat ook in de database.',
-        'restored' => 'Hersteld. Herlaad de app om je herstelde gegevens te zien.',
+        'restored' => 'Je back-up is hersteld. Meld je aan met de gebruikersnaam en het wachtwoord die golden toen die werd gemaakt.',
         'snapshot_saved_prefix' => 'Er is een momentopname van je vorige gegevens opgeslagen in',
         'file_label' => 'Versleutelde back-up (.enc)',
         'uploading' => 'Bezig met uploaden…',

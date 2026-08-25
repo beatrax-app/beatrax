@@ -13,6 +13,7 @@ use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Support\SqliteDatabase;
+use Throwable;
 
 final class RestoreEncryptedBackup
 {
@@ -56,18 +57,66 @@ final class RestoreEncryptedBackup
             //    state is always recoverable if the swap goes wrong.
             $snapshotPath = $this->snapshotCurrent($connection);
 
-            // 4. Swap: drop the live connection, copy the verified file over the
-            //    live path, and clear the stale WAL/SHM sidecars.
-            $this->db->purge($connection);
+            // 4. Fold the WAL back into the database and truncate it, so the
+            //    sidecars carry nothing that matters before they are removed.
+            $this->checkpoint($connection);
+
+            // 5. Swap. Every connection to this file is dropped first, not just
+            //    the one named in config: -shm is a shared-memory index a live
+            //    WAL connection holds mapped, and unlinking it under one is
+            //    what SQLite reports as `disk I/O error` (code 10). On a
+            //    request-per-process SAPI nothing survives to notice. The phone
+            //    runs a persistent interpreter, where a second connection to
+            //    the same path outlives the request and every later query --
+            //    `select count(*) from users` included -- died on it until the
+            //    app was force-quit.
+            $this->purgeEveryConnectionTo($livePath);
+
             if ($this->files->copy($decryptedPath, $livePath) === false) {
                 throw new BackupIoException('Restore copy failed; the pre-restore snapshot is at '.$snapshotPath.'.');
             }
+
             $this->files->delete([$livePath.'-wal', $livePath.'-shm']);
-            $this->db->purge($connection);
+            $this->purgeEveryConnectionTo($livePath);
 
             return $snapshotPath;
         } finally {
             $this->files->delete($decryptedPath);
+        }
+    }
+
+    // A checkpoint that cannot run is not a reason to abandon a restore: the
+    // sidecars are removed either way, and the database being copied over is
+    // the one that was just integrity-checked.
+    private function checkpoint(string $connection): void
+    {
+        try {
+            $this->db->connection($connection)->select('PRAGMA wal_checkpoint(TRUNCATE)');
+        } catch (Throwable) {
+            // Nothing to fold back, or no WAL at all.
+        }
+    }
+
+    // Laravel resolves a connection per NAME, and more than one name can point
+    // at the same file -- this app has had `sqlite` and the platform default
+    // both open at once. Purging by config name alone left the others holding
+    // the file.
+    private function purgeEveryConnectionTo(string $livePath): void
+    {
+        $target = realpath($livePath);
+
+        foreach ($this->db->getConnections() as $name => $open) {
+            $configured = $open->getConfig('database');
+
+            if (! is_string($configured)) {
+                continue;
+            }
+
+            $resolved = realpath($configured);
+
+            if ($configured === $livePath || ($target !== false && $resolved === $target)) {
+                $this->db->purge($name);
+            }
         }
     }
 
@@ -102,7 +151,7 @@ final class RestoreEncryptedBackup
         try {
             $this->db->purge($connectionName);
             $result = $this->db->connection($connectionName)->scalar('PRAGMA integrity_check');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             throw new BackupFormatException('The backup is not a readable database.', 0, $e);
         } finally {
             $this->db->purge($connectionName);

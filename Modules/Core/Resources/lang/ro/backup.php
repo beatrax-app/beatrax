@@ -18,7 +18,7 @@ return [
         'heading' => 'Restaurează dintr-o copie de rezervă',
 
         'intro_html' => 'Înlocuiește baza de date actuală cu o copie de rezervă criptată. Fișierul este decriptat și verificat înainte să se schimbe ceva, iar un instantaneu al datelor tale actuale este salvat mai întâi — dar tot <strong class="text-slate-700 dark:text-slate-200">suprascrie totul</strong>, așa că acțiunea este protejată. Vei fi deconectat, deoarece și autentificarea ta se află în baza de date.',
-        'restored' => 'Restaurat. Reîncarcă aplicația ca să vezi datele restaurate.',
+        'restored' => 'Copia de rezervă a fost restaurată. Autentifică-te cu numele de utilizator și parola valabile când a fost creată.',
         'snapshot_saved_prefix' => 'Un instantaneu al datelor tale anterioare a fost salvat în',
         'file_label' => 'Copie de rezervă criptată (.enc)',
         'uploading' => 'Se încarcă…',
