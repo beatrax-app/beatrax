@@ -36,9 +36,22 @@ function iosStockPhpIni(): string
 SWIFT;
 }
 
+// Resolved from this file, never base_path(): the mobile-app composer root
+// points base_path() at mobile-app/, which has no scripts/ directory, and
+// `php <missing file>` exits 1 with nothing to read -- so this whole file
+// failed there as "1 is not identical to 0" and said nothing about why.
+function iosUploadLimitsScript(): string
+{
+    $script = dirname(__DIR__, 4).'/scripts/nativephp_ios_upload_limits.php';
+
+    expect(is_file($script))->toBeTrue("The patch script is not at {$script}.");
+
+    return $script;
+}
+
 function runIosUploadLimits(string $root): array
 {
-    $script = base_path('scripts/nativephp_ios_upload_limits.php');
+    $script = iosUploadLimitsScript();
     $process = proc_open(
         ['php', $script],
         [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
