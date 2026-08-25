@@ -12,9 +12,8 @@ final class PaypalAmountParser
 {
     // Integer-only, mirroring BankAmountParser: no float cast, so "0,29" returns exactly 29.
     // US-locale period-decimal is rejected rather than accepting both separator conventions.
-    // The whole part carries the same MAX_WHOLE_DIGITS ceiling, so an over-range
-    // gross reaches PaypalTransactionRollup as the InvalidAmountException its
-    // skip-the-row catch is written for.
+    // MAX_WHOLE_DIGITS bounds the whole part, so an over-range gross reaches
+    // PaypalTransactionRollup as the InvalidAmountException its catch names.
     public function parseMinor(string $raw): int
     {
         $normalized = trim($raw);

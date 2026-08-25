@@ -12,9 +12,8 @@ final class BankAmountParser
 {
     // Integer-only, never a float cast: (int)((float) '0.29' * 100) yields a
     // silent 28 under 64-bit floating point, where this yields exactly 29.
-    // The whole part is bounded by the same MAX_WHOLE_DIGITS the ledger holds,
-    // so a wider amount is refused here rather than overflowing the minor-unit
-    // multiplication into a float the int return type rejects.
+    // MAX_WHOLE_DIGITS bounds the whole part, so an amount wider than the
+    // ledger holds is refused rather than overflowing the int return type.
     public function parseMinor(string $raw): int
     {
         $normalized = trim($raw);
