@@ -9,6 +9,10 @@ return [
         'title' => 'Seda lehte ei ole',
         'body' => 'Link võib olla vana või leht on ümber nimetatud. Sinu andmetega on kõik korras.',
     ],
+    '4xx' => [
+        'title' => 'Seda päringut ei saa täita',
+        'body' => 'Leht avati viisil, mida see ei oota. Teie andmed on muutumatud.',
+    ],
 
     '419' => [
         'title' => 'Sinu sessioon aegus',

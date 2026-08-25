@@ -9,6 +9,10 @@ return [
         'title' => 'Ta stran ne obstaja',
         'body' => 'Povezava je morda stara ali pa se je stran preimenovala. S tvojimi podatki je vse v redu.',
     ],
+    '4xx' => [
+        'title' => 'Te zahteve ni mogoče obdelati',
+        'body' => 'Stran se je odprla na način, ki ga ne pričakuje. Vaši podatki so nespremenjeni.',
+    ],
 
     '419' => [
         'title' => 'Tvoja seja je potekla',

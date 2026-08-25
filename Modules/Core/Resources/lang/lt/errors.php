@@ -9,6 +9,10 @@ return [
         'title' => 'Tokio puslapio nėra',
         'body' => 'Nuoroda gali būti sena arba puslapis pervadintas. Su tavo duomenimis viskas gerai.',
     ],
+    '4xx' => [
+        'title' => 'Ši užklausa negali būti apdorota',
+        'body' => 'Puslapis atidarytas būdu, kurio jis nesitiki. Jūsų duomenys nepakito.',
+    ],
 
     '419' => [
         'title' => 'Tavo sesija baigėsi',

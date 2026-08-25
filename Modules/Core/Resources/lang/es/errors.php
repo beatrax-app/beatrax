@@ -9,6 +9,10 @@ return [
         'title' => 'Esta página no existe',
         'body' => 'Puede que el enlace sea antiguo o que la página haya cambiado de nombre. Tus datos están bien.',
     ],
+    '4xx' => [
+        'title' => 'Esta solicitud no se puede procesar',
+        'body' => 'La página se abrió de una forma que no espera. Tus datos no han cambiado.',
+    ],
 
     '419' => [
         'title' => 'Tu sesión ha caducado',

@@ -9,6 +9,10 @@ return [
         'title' => 'Deze pagina bestaat niet',
         'body' => 'De link is misschien oud, of de pagina heeft een andere naam gekregen. Met je gegevens is niets mis.',
     ],
+    '4xx' => [
+        'title' => 'Deze aanvraag kan niet worden verwerkt',
+        'body' => 'De pagina is geopend op een manier die hij niet verwacht. Je gegevens zijn ongewijzigd.',
+    ],
 
     '419' => [
         'title' => 'Je sessie is verlopen',

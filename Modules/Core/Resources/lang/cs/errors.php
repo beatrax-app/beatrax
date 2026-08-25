@@ -9,6 +9,10 @@ return [
         'title' => 'Tahle stránka neexistuje',
         'body' => 'Odkaz může být starý, nebo se stránka přejmenovala. S tvými daty je všechno v pořádku.',
     ],
+    '4xx' => [
+        'title' => 'Tento požadavek nelze zpracovat',
+        'body' => 'Stránka byla otevřena způsobem, který neočekává. Vaše data se nezměnila.',
+    ],
 
     '419' => [
         'title' => 'Tvoje relace vypršela',

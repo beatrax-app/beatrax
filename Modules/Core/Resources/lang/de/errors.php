@@ -9,6 +9,10 @@ return [
         'title' => 'Diese Seite gibt es nicht',
         'body' => 'Der Link ist womöglich alt, oder die Seite wurde umbenannt. Mit deinen Daten ist alles in Ordnung.',
     ],
+    '4xx' => [
+        'title' => 'Diese Anfrage kann nicht verarbeitet werden',
+        'body' => 'Die Seite wurde auf eine Weise geöffnet, die sie nicht erwartet. Ihre Daten sind unverändert.',
+    ],
 
     '419' => [
         'title' => 'Deine Sitzung ist abgelaufen',

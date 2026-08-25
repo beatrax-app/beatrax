@@ -9,6 +9,10 @@ return [
         'title' => 'Pagina asta nu există',
         'body' => 'Linkul poate fi vechi sau pagina a fost redenumită. Datele tale sunt în regulă.',
     ],
+    '4xx' => [
+        'title' => 'Această solicitare nu poate fi procesată',
+        'body' => 'Pagina a fost deschisă într-un mod pe care nu îl așteaptă. Datele tale sunt neschimbate.',
+    ],
 
     '419' => [
         'title' => 'Sesiunea ta a expirat',
