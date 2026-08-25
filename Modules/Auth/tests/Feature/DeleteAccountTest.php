@@ -10,6 +10,7 @@ use Modules\Auth\Public\Actions\DeleteAccountAction;
 use Modules\Auth\Public\Http\Livewire\DeleteAccountSection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Lang;
 
 // Not that the users row goes, but that everything it owned goes with it, that
 // a household member's identical-looking data does not, and that nobody is
@@ -430,4 +431,17 @@ it('takes the queued work of the account with it', function (): void {
     expect($remaining)->toHaveCount(1);
     expect($remaining[0])->toContain('userId');
     expect($remaining[0])->toContain('i:'.$staying->id.';');
+});
+
+// The heading was static and the body conditional, so on a device with no
+// paired peer -- the default install -- a 600-weight amber line read "Your
+// other devices keep their own copy" directly above the sentence saying this
+// is the only copy, directly above the one irreversible action in the app.
+it('does not promise another copy exists on a device that has no paired peer', function (): void {
+    $user = deleteAccountUser('delete-copy-claim', false);
+
+    $rendered = Livewire::actingAs($user)->test(DeleteAccountSection::class)->html();
+
+    expect($rendered)->toContain(Lang::get('auth::delete_account.devices_heading_none'));
+    expect($rendered)->not->toContain(Lang::get('auth::delete_account.devices_heading'));
 });

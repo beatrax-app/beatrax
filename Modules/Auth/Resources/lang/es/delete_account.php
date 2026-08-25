@@ -7,6 +7,7 @@ return [
     'body' => 'Al eliminar tu cuenta desaparece de este dispositivo junto con todo lo que le pertenece. No se puede deshacer.',
     'removes' => 'Se van tus movimientos, cuentas, presupuestos, objetivos e informes, junto con tus reglas, preferencias, códigos de recuperación, identidad de sincronización y claves de cifrado.',
     'devices_heading' => 'Tus otros dispositivos conservan su propia copia',
+    'devices_heading_none' => 'Esta es la única copia de tus datos',
     'devices_body' => 'Beatrax no tiene servidor, así que nada puede borrarse a distancia. Este dispositivo sigue guardando una copia completa y hay que resolverlo en él — :devices|Beatrax no tiene servidor, así que nada puede borrarse a distancia. Estos dispositivos siguen guardando una copia completa y hay que resolverlo en cada uno — :devices',
     'devices_none' => 'Ningún otro dispositivo está emparejado con este, así que esta es la única copia de tus datos.',
     'successor' => 'Tú administras este dispositivo, así que :username asume ese papel cuando tu cuenta desaparezca.',
