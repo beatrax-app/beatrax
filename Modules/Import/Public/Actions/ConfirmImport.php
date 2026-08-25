@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Anomaly\Public\Contracts\DispatchesAnomalyDetection;
 use Modules\Chains\Models\ChainResolutionRun;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 use Modules\Chains\Public\Contracts\UpsertsCardStatements;
@@ -41,6 +42,7 @@ final class ConfirmImport implements ConfirmsImports
         private readonly AppliesEnrichments $applyEnrichments,
         private readonly PreviewCache $cache,
         private readonly Clock $clock,
+        private readonly DispatchesAnomalyDetection $anomalyDispatcher,
         private readonly DispatchesChainResolution $chainDispatcher,
         private readonly DispatchesRecurringDetection $recurringDispatcher,
         private readonly UpsertsCardStatements $cardStatementUpserter,
@@ -159,6 +161,11 @@ final class ConfirmImport implements ConfirmsImports
                 // dispatchSync, so the decrypt work runs in-process while the
                 // KEK is still available.
                 $this->recurringDispatcher->dispatchForUser($user->id);
+
+                // Once for the run, not once per row: the job used to be
+                // dispatched from a per-transaction event, and its unique key
+                // was per-transaction too, so nothing deduplicated.
+                $this->anomalyDispatcher->dispatchForImportRun($user->id, $importRunId);
             }
         }
 
