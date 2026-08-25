@@ -32,4 +32,14 @@ final class UploadStagingException extends RuntimeException
     {
         return new self('Stable storage disk does not expose absolute paths.');
     }
+
+    public static function stagedCopyIsShort(string $relativePath, int $expected, int $written): self
+    {
+        return new self(sprintf(
+            'Staged upload is %d bytes, not %d: %s',
+            $written,
+            $expected,
+            $relativePath,
+        ));
+    }
 }

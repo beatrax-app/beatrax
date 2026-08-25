@@ -136,8 +136,10 @@ final class RunImport implements RunsImports
         };
         $relative = sprintf('%s/%d/%s.%s', self::STORAGE_PREFIX, $user->id, $sha, $extension);
 
-        $contents = @file_get_contents($sourcePath);
-        if ($contents === false) {
+        $expectedBytes = @filesize($sourcePath);
+        $source = @fopen($sourcePath, 'rb');
+
+        if ($expectedBytes === false || $source === false) {
             throw UploadStagingException::sourceUnreadable($sourcePath);
         }
 
@@ -146,7 +148,13 @@ final class RunImport implements RunsImports
         // is the content hash, so either copy holds the same bytes.
         $staged = $relative.'.'.bin2hex(random_bytes(8)).'.part';
 
-        if (! $disk->put($staged, $contents)) {
+        try {
+            $written = $disk->writeStream($staged, $source);
+        } finally {
+            fclose($source);
+        }
+
+        if ($written === false) {
             throw UploadStagingException::persistFailed($relative);
         }
 
@@ -157,6 +165,18 @@ final class RunImport implements RunsImports
             $disk->delete($staged);
 
             throw UploadStagingException::absolutePathsUnsupported();
+        }
+
+        // A short write is not an error to file_put_contents and Flysystem only
+        // checks for false, so a device out of space stages a truncated
+        // statement that still carries a valid header -- and a statement
+        // imported short is a wrong number in the ledger.
+        $stagedBytes = @filesize($stagedAbsolute);
+
+        if ($stagedBytes !== $expectedBytes) {
+            $disk->delete($staged);
+
+            throw UploadStagingException::stagedCopyIsShort($relative, $expectedBytes, $stagedBytes === false ? 0 : $stagedBytes);
         }
 
         if (! @rename($stagedAbsolute, $absolute)) {
