@@ -11,7 +11,7 @@ return [
     ],
     '4xx' => [
         'title' => 'Ezt a kérést nem lehet feldolgozni',
-        'body' => 'Az oldal olyan módon nyílt meg, amelyre nem számít. Az adatai változatlanok.',
+        'body' => 'Az oldal olyan módon nyílt meg, amelyre nem számít. Az adataid változatlanok.',
     ],
 
     '419' => [

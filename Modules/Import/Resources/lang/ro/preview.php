@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Deblocați aplicația pentru a importa: cheile de criptare nu pot fi folosite cât timp este blocată.',
+        'file_stopped_short' => 'Rândul de antet se potrivea, deci formatul este corect. Citirea s-a oprit înainte de sfârșitul fișierului. O singură linie ilizibilă face asta, la fel și un fișier prea mare pentru acest dispozitiv. Încearcă o perioadă mai scurtă.',
         'file_unreadable' => 'Acest fișier nu a putut fi citit.',
         'iban_not_in_preview' => 'Acest IBAN nu face parte din previzualizarea curentă.',
         'pdf_reader_unavailable' => 'Extrasele PDF au nevoie de programul pdftotext, care nu este instalat aici. Importă acest fișier pe un computer care îl are sau folosește un export CSV de la bancă.',

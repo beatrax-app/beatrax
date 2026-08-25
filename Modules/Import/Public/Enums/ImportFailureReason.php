@@ -20,11 +20,14 @@ enum ImportFailureReason: string
 
     case FileUnreadable = 'file_unreadable';
 
+    case FileStoppedShort = 'file_stopped_short';
+
     case PdfReaderUnavailable = 'pdf_reader_unavailable';
 
-    // The line under "This file could not be read". Only the default names the
-    // header row, which is the wrong advice for a file that failed for a reason
-    // already known -- a locked app, or a PDF reader this install does not have.
+    // The line under "This file could not be read". Only FileUnreadable names
+    // the header row, and it is reached only when the format check itself
+    // refused the file. Past that check the header is known to match, so the
+    // same advice would send the reader to re-download a statement that is fine.
     public function fileCause(): string
     {
         return $this === self::FileUnreadable

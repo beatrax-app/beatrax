@@ -11,7 +11,7 @@ return [
     ],
     '4xx' => [
         'title' => 'Bu istek işlenemiyor',
-        'body' => 'Sayfa, beklemediği bir şekilde açıldı. Verileriniz değişmedi.',
+        'body' => 'Sayfa, beklemediği bir şekilde açıldı. Verilerin değişmedi.',
     ],
 
     '419' => [

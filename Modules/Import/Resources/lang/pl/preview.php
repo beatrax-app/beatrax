@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Odblokuj aplikację, aby zaimportować: kluczy szyfrowania nie można użyć, gdy jest zablokowana.',
+        'file_stopped_short' => 'Wiersz nagłówka pasował, więc format jest właściwy. Odczyt zatrzymał się przed końcem pliku. Powoduje to jeden nieczytelny wiersz, a także plik zbyt duży dla tego urządzenia. Spróbuj krótszego zakresu dat.',
         'file_unreadable' => 'Nie udało się odczytać tego pliku.',
         'iban_not_in_preview' => 'Ten IBAN nie należy do bieżącego podglądu.',
         'pdf_reader_unavailable' => 'Wyciągi PDF wymagają programu pdftotext, którego tu nie zainstalowano. Zaimportuj ten plik na komputerze, który go ma, albo użyj eksportu CSV z banku.',

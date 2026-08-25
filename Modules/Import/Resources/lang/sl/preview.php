@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Odklenite aplikacijo za uvoz: šifrirnih ključev ni mogoče uporabiti, dokler je zaklenjena.',
+        'file_stopped_short' => 'Glava se je ujemala, zato je oblika prava. Branje se je ustavilo pred koncem datoteke. To povzroči ena neberljiva vrstica, prav tako datoteka, ki je prevelika za to napravo. Poskusi s krajšim obdobjem.',
         'file_unreadable' => 'Te datoteke ni bilo mogoče prebrati.',
         'iban_not_in_preview' => 'Ta IBAN ni del trenutnega predogleda.',
         'pdf_reader_unavailable' => 'Izpiski v PDF potrebujejo program pdftotext, ki tukaj ni nameščen. Uvozi to datoteko na računalniku, kjer je, ali pa raje uporabi izvoz CSV iz banke.',

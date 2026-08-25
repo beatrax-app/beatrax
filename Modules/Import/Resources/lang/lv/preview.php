@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Atbloķējiet lietotni, lai importētu: šifrēšanas atslēgas nevar izmantot, kamēr tā ir bloķēta.',
+        'file_stopped_short' => 'Galvenes rinda sakrita, tātad formāts ir pareizs. Lasīšana apstājās pirms faila beigām. To izraisa viena nenolasāma rinda, kā arī šai ierīcei pārāk liels fails. Pamēģini īsāku laikposmu.',
         'file_unreadable' => 'Šo failu neizdevās nolasīt.',
         'iban_not_in_preview' => 'Šis IBAN nav daļa no pašreizējā priekšskatījuma.',
         'pdf_reader_unavailable' => 'PDF izrakstiem nepieciešama programma pdftotext, kas šeit nav uzstādīta. Importē šo failu datorā, kurā tā ir, vai izmanto bankas CSV eksportu.',

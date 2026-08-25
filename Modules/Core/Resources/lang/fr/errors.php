@@ -11,7 +11,7 @@ return [
     ],
     '4xx' => [
         'title' => 'Cette requête ne peut pas être traitée',
-        'body' => 'La page a été ouverte d’une manière qu’elle n’attend pas. Vos données sont inchangées.',
+        'body' => 'La page a été ouverte d’une manière qu’elle n’attend pas. Tes données sont inchangées.',
     ],
 
     '419' => [

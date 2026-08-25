@@ -11,7 +11,7 @@ return [
     ],
     '4xx' => [
         'title' => 'Túto požiadavku nemožno spracovať',
-        'body' => 'Stránka sa otvorila spôsobom, ktorý neočakáva. Vaše údaje sa nezmenili.',
+        'body' => 'Stránka sa otvorila spôsobom, ktorý neočakáva. Tvoje údaje sa nezmenili.',
     ],
 
     '419' => [

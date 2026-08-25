@@ -11,7 +11,7 @@ return [
     ],
     '4xx' => [
         'title' => 'Este pedido não pode ser processado',
-        'body' => 'A página foi aberta de uma forma que não espera. Os seus dados não foram alterados.',
+        'body' => 'A página foi aberta de uma forma que não espera. Os teus dados não foram alterados.',
     ],
 
     '419' => [

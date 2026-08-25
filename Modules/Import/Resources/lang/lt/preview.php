@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Atrakinkite programėlę, kad importuotumėte: šifravimo raktų negalima naudoti, kol ji užrakinta.',
+        'file_stopped_short' => 'Antraštės eilutė atitiko, tad formatas teisingas. Skaitymas sustojo nepasiekęs failo pabaigos. Taip nutinka dėl vienos neperskaitomos eilutės arba dėl šiam įrenginiui per didelio failo. Pabandyk trumpesnį laikotarpį.',
         'file_unreadable' => 'Šio failo nepavyko perskaityti.',
         'iban_not_in_preview' => 'Šis IBAN nėra dabartinės peržiūros dalis.',
         'pdf_reader_unavailable' => 'PDF išrašams reikia programos pdftotext, kuri čia neįdiegta. Importuok šį failą kompiuteryje, kuriame ji yra, arba naudok banko CSV eksportą.',

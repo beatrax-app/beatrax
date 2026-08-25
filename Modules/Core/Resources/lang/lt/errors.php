@@ -11,7 +11,7 @@ return [
     ],
     '4xx' => [
         'title' => 'Ši užklausa negali būti apdorota',
-        'body' => 'Puslapis atidarytas būdu, kurio jis nesitiki. Jūsų duomenys nepakito.',
+        'body' => 'Puslapis atidarytas būdu, kurio jis nesitiki. Tavo duomenys nepakito.',
     ],
 
     '419' => [

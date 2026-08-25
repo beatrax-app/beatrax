@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Importimiseks avage rakendus: krüpteerimisvõtmeid ei saa lukustatuna kasutada.',
+        'file_stopped_short' => 'Päiserida klappis, seega on vorming õige. Lugemine peatus enne faili lõppu. Selle põhjustab üks loetamatu rida, samuti selle seadme jaoks liiga suur fail. Proovi lühemat ajavahemikku.',
         'file_unreadable' => 'Seda faili ei õnnestunud lugeda.',
         'iban_not_in_preview' => 'See IBAN ei kuulu praegusesse eelvaatesse.',
         'pdf_reader_unavailable' => 'PDF-väljavõtted vajavad programmi pdftotext, mida siin pole paigaldatud. Impordi see fail arvutis, kus see olemas on, või kasuta hoopis panga CSV-eksporti.',

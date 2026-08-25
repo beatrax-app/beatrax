@@ -11,7 +11,7 @@ return [
     ],
     '4xx' => [
         'title' => 'Te zahteve ni mogoče obdelati',
-        'body' => 'Stran se je odprla na način, ki ga ne pričakuje. Vaši podatki so nespremenjeni.',
+        'body' => 'Stran se je odprla na način, ki ga ne pričakuje. Tvoji podatki so nespremenjeni.',
     ],
 
     '419' => [

@@ -11,7 +11,7 @@ return [
     ],
     '4xx' => [
         'title' => 'Seda päringut ei saa täita',
-        'body' => 'Leht avati viisil, mida see ei oota. Teie andmed on muutumatud.',
+        'body' => 'Leht avati viisil, mida see ei oota. Sinu andmed on muutumatud.',
     ],
 
     '419' => [

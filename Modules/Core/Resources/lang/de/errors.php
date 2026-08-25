@@ -11,7 +11,7 @@ return [
     ],
     '4xx' => [
         'title' => 'Diese Anfrage kann nicht verarbeitet werden',
-        'body' => 'Die Seite wurde auf eine Weise geöffnet, die sie nicht erwartet. Ihre Daten sind unverändert.',
+        'body' => 'Die Seite wurde auf eine Weise geöffnet, die sie nicht erwartet. Deine Daten sind unverändert.',
     ],
 
     '419' => [

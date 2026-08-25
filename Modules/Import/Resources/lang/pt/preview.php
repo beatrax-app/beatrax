@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Desbloqueie a aplicação para importar: as chaves de encriptação não podem ser usadas enquanto estiver bloqueada.',
+        'file_stopped_short' => 'A linha de cabeçalho correspondia, por isso o formato está certo. A leitura parou antes do fim do ficheiro. Basta uma linha ilegível, ou um ficheiro demasiado grande para este dispositivo. Experimenta um período mais curto.',
         'file_unreadable' => 'Não foi possível ler este ficheiro.',
         'iban_not_in_preview' => 'Este IBAN não faz parte da pré-visualização atual.',
         'pdf_reader_unavailable' => 'Os extratos em PDF precisam do programa pdftotext, que não está instalado aqui. Importa este ficheiro num computador que o tenha, ou usa antes uma exportação CSV do teu banco.',

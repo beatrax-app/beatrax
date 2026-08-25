@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Avaa sovelluksen lukitus tuodaksesi: salausavaimia ei voi käyttää lukittuna.',
+        'file_stopped_short' => 'Otsikkorivi täsmäsi, joten muoto on oikea. Lukeminen pysähtyi ennen tiedoston loppua. Sen aiheuttaa yksi lukukelvoton rivi, samoin tälle laitteelle liian suuri tiedosto. Kokeile lyhyempää ajanjaksoa.',
         'file_unreadable' => 'Tätä tiedostoa ei voitu lukea.',
         'iban_not_in_preview' => 'Tämä IBAN ei kuulu nykyiseen esikatseluun.',
         'pdf_reader_unavailable' => 'PDF-tiliotteet tarvitsevat pdftotext-ohjelman, jota ei ole täällä asennettu. Tuo tämä tiedosto tietokoneella, jossa se on, tai käytä pankkisi CSV-vientiä.',

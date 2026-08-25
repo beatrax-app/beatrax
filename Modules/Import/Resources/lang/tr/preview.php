@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'İçe aktarmak için uygulamanın kilidini açın: kilitliyken şifreleme anahtarları kullanılamaz.',
+        'file_stopped_short' => 'Başlık satırı eşleşti, yani biçim doğru. Okuma dosyanın sonuna gelmeden durdu. Tek bir okunamayan satır buna yol açar, bu cihaz için fazla büyük bir dosya da öyle. Daha kısa bir tarih aralığı dene.',
         'file_unreadable' => 'Bu dosya okunamadı.',
         'iban_not_in_preview' => 'Bu IBAN geçerli önizlemenin bir parçası değil.',
         'pdf_reader_unavailable' => 'PDF ekstreleri için pdftotext programı gerekir, o da burada kurulu değil. Bu dosyayı programın kurulu olduğu bir bilgisayarda içe aktar ya da bankandan CSV dışa aktarımı kullan.',

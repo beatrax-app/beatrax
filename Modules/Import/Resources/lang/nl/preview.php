@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Ontgrendel de app om te importeren: de versleutelingssleutels kunnen niet worden gebruikt zolang hij vergrendeld is.',
+        'file_stopped_short' => 'De kopregel klopte, dus het formaat is goed. Het lezen stopte voor het einde van het bestand. Eén onleesbare regel doet dat, en een bestand dat te groot is voor dit apparaat ook. Probeer een kortere periode.',
         'file_unreadable' => 'Dit bestand kon niet worden gelezen.',
         'iban_not_in_preview' => 'Dit IBAN maakt geen deel uit van de huidige voorvertoning.',
         'pdf_reader_unavailable' => 'Voor pdf-afschriften is het programma pdftotext nodig, en dat is hier niet geïnstalleerd. Importeer dit bestand op een desktop waar het wel staat, of gebruik een CSV-export van je bank.',

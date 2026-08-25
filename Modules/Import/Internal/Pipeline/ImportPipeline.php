@@ -29,6 +29,7 @@ use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
+use Modules\Ingestion\Public\Contracts\NamesAFormatMismatch;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
@@ -186,7 +187,7 @@ final class ImportPipeline
                 'exception_message' => $e instanceof MessageNamesNoUserData ? $e->getMessage() : null,
                 'exception_trace' => $e->getTraceAsString(),
             ]);
-            $fileFailureReason = self::reasonFor($e, ImportFailureReason::FileUnreadable);
+            $fileFailureReason = self::fileReasonFor($e);
             $fileFailureDetail = self::safeDetail($e);
             // One preview row per source row, so the count is the index of the
             // one being read when it stopped. Counted rather than read out of
@@ -325,6 +326,16 @@ final class ImportPipeline
             $user,
             $metadata->withImportRunId($importRunId)->withAccountId($accountId),
         );
+    }
+
+    // The format check runs before the first row is read, so anything that
+    // throws after it has already agreed the header matches. Blaming the header
+    // there sent the reader to their bank for a file their bank sent correctly.
+    private static function fileReasonFor(Throwable $e): ImportFailureReason
+    {
+        return $e instanceof NamesAFormatMismatch
+            ? ImportFailureReason::FileUnreadable
+            : self::reasonFor($e, ImportFailureReason::FileStoppedShort);
     }
 
     // The app-lock case is the one a reader can act on, and the only failure

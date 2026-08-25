@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Lås appen op for at importere: krypteringsnøglerne kan ikke bruges, mens den er låst.',
+        'file_stopped_short' => 'Overskriftsrækken passede, så formatet er rigtigt. Læsningen stoppede før slutningen af filen. Det sker ved én ulæselig række, og også hvis filen er for stor til denne enhed. Prøv en kortere periode.',
         'file_unreadable' => 'Denne fil kunne ikke læses.',
         'iban_not_in_preview' => 'Dette IBAN indgår ikke i den aktuelle forhåndsvisning.',
         'pdf_reader_unavailable' => 'PDF-kontoudtog kræver programmet pdftotext, som ikke er installeret her. Importér filen på en computer, der har det, eller brug en CSV-eksport fra din bank i stedet.',

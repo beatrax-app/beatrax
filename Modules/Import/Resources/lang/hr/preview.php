@@ -65,6 +65,7 @@ return [
 
     'errors' => [
         'app_locked' => 'Otključajte aplikaciju za uvoz: ključevi za šifriranje ne mogu se upotrijebiti dok je zaključana.',
+        'file_stopped_short' => 'Zaglavlje je odgovaralo, pa je format ispravan. Čitanje je stalo prije kraja datoteke. To izaziva jedan nečitljiv redak, kao i datoteka prevelika za ovaj uređaj. Pokušaj s kraćim razdobljem.',
         'file_unreadable' => 'Ovu datoteku nije bilo moguće pročitati.',
         'iban_not_in_preview' => 'Ovaj IBAN nije dio trenutnog pregleda.',
         'pdf_reader_unavailable' => 'PDF izvodi trebaju program pdftotext, koji ovdje nije instaliran. Uvezi ovu datoteku na računalu koje ga ima ili radije upotrijebi CSV izvoz iz banke.',
