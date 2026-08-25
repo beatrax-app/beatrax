@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
-use Livewire\Livewire;
 use Modules\Sync\Public\Http\Livewire\SyncStatusSection;
 
 // The status line reads the sync_sessions table, and with none it fell to the

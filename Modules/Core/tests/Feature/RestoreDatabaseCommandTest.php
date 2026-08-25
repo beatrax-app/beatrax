@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Config\Repository;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Artisan;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
