@@ -13,6 +13,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Support\ByteSize;
 use Modules\DevMode\Internal\System\ConfigFlattener;
 use Throwable;
 
@@ -57,8 +58,42 @@ final class SystemSnapshotPage extends Component
             'version' => PHP_VERSION,
             'sapi' => PHP_SAPI,
             'ini_path' => is_string($iniPath) ? $iniPath : '(none)',
+            'limits' => self::limitFacts(),
             'extensions' => get_loaded_extensions(),
         ];
+    }
+
+    // The ceilings an import has to fit inside, and how close this run came.
+    // The mobile shell writes its own php.ini and sets only the two upload
+    // directives, so memory_limit there is whatever the embedded interpreter
+    // was compiled with -- a number readable from nowhere in the app.
+    /**
+     * @return array<string, string>
+     */
+    private static function limitFacts(): array
+    {
+        $free = @disk_free_space(UserDataPathService::storageBase());
+
+        return [
+            'memory_limit' => self::iniValue('memory_limit'),
+            'post_max_size' => self::iniValue('post_max_size'),
+            'upload_max_filesize' => self::iniValue('upload_max_filesize'),
+            'max_execution_time' => self::iniValue('max_execution_time'),
+            'memory_get_peak_usage()' => self::bytes(memory_get_peak_usage(true)),
+            'disk_free_space()' => is_float($free) ? self::bytes((int) $free) : '(unreadable)',
+        ];
+    }
+
+    private static function iniValue(string $directive): string
+    {
+        $value = ini_get($directive);
+
+        return $value === false || $value === '' ? '(unset)' : $value;
+    }
+
+    private static function bytes(int $bytes): string
+    {
+        return sprintf('%s (%d bytes)', ByteSize::human($bytes), $bytes);
     }
 
     /**
