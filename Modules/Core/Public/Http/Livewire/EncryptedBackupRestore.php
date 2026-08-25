@@ -35,11 +35,10 @@ final class EncryptedBackupRestore extends Component
 
     public string $snapshotPath = '';
 
-    // Livewire uploads the file on its own request, before restore() is ever
-    // called, and drops the property when that request fails. Without this the
-    // reader was told to choose a file they had already chosen: the only branch
-    // left was the null check, which cannot tell an empty field from a crossing
-    // that failed. On iOS the crossing failed at 6.29 MB, silently.
+    // Livewire uploads on its own request, before restore() runs, and drops
+    // the property when that request fails. Without this the only branch left
+    // was the null check, which cannot tell an empty field from a crossing that
+    // failed -- so the reader was told to choose a file they had chosen.
     public function uploadFailed(): void
     {
         $this->error = Lang::get('core::backup.errors.upload_failed');
@@ -65,11 +64,10 @@ final class EncryptedBackupRestore extends Component
 
         $this->reset('backup', 'passphrase', 'confirmation');
 
-        // The screen promised a sign-out and never performed one. That is not
-        // only a broken promise: the session holds a user id, and the row that
-        // id names now belongs to whoever the backup says it does, so the
-        // session would silently continue as a different person. Flashed after
-        // logout, because invalidate() drops anything put there before it.
+        // The screen promised a sign-out and performed none. The session holds
+        // a user id, and that id now names whoever the backup says it does, so
+        // it would have continued as a different person. Flashed after logout,
+        // because invalidate() drops anything put there before it.
         $logout();
 
         $session->flash(self::SNAPSHOT_FLASH_KEY, $this->snapshotPath);

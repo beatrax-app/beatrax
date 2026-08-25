@@ -22,6 +22,9 @@ final class MobileEnsureDatabaseReady
         'mobile.welcome',
         'signup',
         'mobile.import',
+        // The route back from a wipe. It exists to be reached when there is
+        // no user, which is exactly the state this gate redirects out of.
+        'mobile.restore',
         'mobile.pair',
         'mobile.setup',
         'setup',

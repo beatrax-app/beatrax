@@ -15,11 +15,10 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use RuntimeException;
 
-// The route back from a wipe. Before this, a reader holding a .enc had to
-// invent a throwaway account, find an unadvertised page, restore, be signed
-// out, and sign in as the user inside the backup -- leaving the throwaway
-// behind. The welcome screen offered pairing, which needs a second live
-// device, and nothing else.
+// The route back from a wipe. Before this a reader holding a .enc had to
+// invent a throwaway account, find an unadvertised page, restore, and sign in
+// as the user inside the backup -- leaving the throwaway behind. The welcome
+// screen offered pairing, which needs a second live device, and nothing else.
 final class MobileRestoreFromBackup extends Component
 {
     use WithFileUploads;
@@ -47,10 +46,9 @@ final class MobileRestoreFromBackup extends Component
         $this->error = '';
 
         // Checked again here, not only in mount(). A Livewire action does not
-        // re-run mount, so the guard that keeps this surface off a set-up
-        // device has to sit on the thing that replaces the database, or a
-        // client that calls the method directly walks past it. Zero users is
-        // the whole bound on what this can destroy.
+        // re-run mount, so the guard has to sit on the thing that replaces the
+        // database or a direct call walks past it. Zero users is the whole
+        // bound on what this can destroy.
         if (! $bootstrap->isFreshInstall()) {
             $this->redirectRoute(Destination::Dashboard->routeName());
 

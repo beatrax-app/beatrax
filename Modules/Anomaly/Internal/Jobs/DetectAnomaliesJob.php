@@ -37,12 +37,9 @@ final class DetectAnomaliesJob implements ShouldBeUniqueUntilProcessing, ShouldQ
     ) {}
 
     // Set only by unserialising a payload queued before this job took an
-    // import run instead of a single row. PHP leaves $importRunId
-    // uninitialised for those, and reading a typed property in that state is a
-    // fatal Error -- raised from uniqueId(), which the queue calls OUTSIDE the
-    // handler's try/catch, so nothing was ever recorded as failed and every
-    // such job retried forever. The population most likely to hold thousands
-    // of them is exactly the one upgrading to the fix that stops making them.
+    // import run. PHP leaves $importRunId uninitialised for those, and reading
+    // it is a fatal Error -- from uniqueId(), which the queue calls outside the
+    // handler's try/catch, so none was recorded failed and all retried forever.
     public ?int $transactionId = null;
 
     public function uniqueId(): string

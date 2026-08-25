@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\MobileRestoreFromBackup;
+use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
 
 function restoreScreenUser(string $username): User
 {
@@ -91,3 +92,25 @@ it('does not demand a confirmation phrase, because there is nothing here to over
     expect($source)->not->toContain('CONFIRM_PHRASE');
     expect($source)->not->toContain('confirmation');
 });
+
+// The component was proved in isolation with Livewire::test, which mounts it
+// directly and runs no middleware at all -- so a route that never reached the
+// component passed every test written for it. On the phone the link rendered
+// and following it returned the welcome screen: MobileEnsureDatabaseReady
+// redirects anything outside its exempt list while `users` is empty, which is
+// the one state this route exists to serve.
+//
+// Both gates are registered in mobile-app/bootstrap/app.php only, so this
+// asserts nothing from the repo root and says so rather than passing vacuously.
+it('is reachable through the real middleware stack on a device with no users', function (): void {
+    expect(User::query()->count())->toBe(0);
+
+    $this->get(route('mobile.restore'))->assertOk();
+})->skip(
+    fn (): bool => ! in_array(
+        MobileEnsureDatabaseReady::class,
+        app('router')->getMiddlewareGroups()['web'] ?? [],
+        true,
+    ),
+    'the mobile gates are registered from the mobile-app root only',
+);

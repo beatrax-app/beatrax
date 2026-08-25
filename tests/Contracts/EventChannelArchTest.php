@@ -38,6 +38,12 @@ const EVENT_CHANNEL_BROWSER_EVENTS = [
     'alpine:init', 'alpine:initialized', 'alpine:initializing',
     'livewire:init', 'livewire:initialized', 'livewire:navigate',
     'livewire:navigated', 'livewire:navigating',
+    // Livewire raises these on the file input itself, not through the app's
+    // channel. `livewire-upload-error` is how a body refused by post_max_size
+    // reaches a reader at all.
+    'livewire-upload-start', 'livewire-upload-finish',
+    'livewire-upload-error', 'livewire-upload-progress',
+    'livewire-upload-cancel',
 ];
 
 /**

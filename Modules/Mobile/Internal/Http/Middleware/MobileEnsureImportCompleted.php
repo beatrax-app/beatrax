@@ -29,6 +29,9 @@ final readonly class MobileEnsureImportCompleted
         'mobile.setup',
         'mobile.lock',
         'mobile.import',
+        // A reader who abandoned setup half-way and reaches for a backup is
+        // still restoring onto a device with no ledger of its own.
+        'mobile.restore',
         'mobile.welcome',
         'auth.lock',
         'logout',

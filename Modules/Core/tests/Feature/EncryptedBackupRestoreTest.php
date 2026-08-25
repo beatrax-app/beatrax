@@ -291,3 +291,54 @@ it('drops every connection to the live file, not only the one named in config', 
         @unlink($f);
     }
 });
+
+// Replacing the file left a live interpreter holding state SQLite could not
+// reconcile: a brand NEW connection running `PRAGMA journal_mode = WAL`
+// reported code 11, `database disk image is malformed`, on a file whose own
+// integrity_check passed when pulled off the phone.
+//
+// The inode is NOT what differs -- PHP's copy() truncates in place, so it
+// survived either way, and macOS does not reproduce the iOS symptom at all.
+// What this pins is the one thing that did change: the copy path unlinks -wal
+// and -shm under a process that may have them mapped, and the backup API
+// writes pages through SQLite and leaves that bookkeeping alone.
+it('does not unlink the WAL sidecars a live connection has mapped', function (): void {
+    $base = sys_get_temp_dir().'/beatrax-shm-'.bin2hex(random_bytes(6));
+    $live = $base.'-live.sqlite';
+    $enc = $base.'-backup.sqlite.enc';
+    rbMakeSqlite($live, 'ORIGINAL');
+    rbMakeSqlite($base.'-backup.sqlite', 'RESTORED');
+    (new BackupEncryptor)->encrypt($base.'-backup.sqlite', $enc, 'pw');
+
+    // A resident WAL connection is what creates -shm and keeps it mapped --
+    // the state the phone's persistent interpreter is always in.
+    $resident = new SQLite3($live, SQLITE3_OPEN_READWRITE);
+    $resident->exec('PRAGMA journal_mode = WAL');
+    $resident->exec("INSERT INTO marker (val) VALUES ('touch')");
+    expect(file_exists($live.'-shm'))->toBeTrue();
+
+    $db = app(DatabaseManager::class);
+    Config::set('database.default', 'sqlite');
+    Config::set('database.connections.sqlite.database', $live);
+    $db->purge('sqlite');
+
+    try {
+        app(RestoreEncryptedBackup::class)($enc, 'pw');
+    } finally {
+        Config::set('database.default', 'sqlite_testing');
+        $db->purge('sqlite');
+    }
+
+    clearstatcache();
+    $shmSurvived = file_exists($live.'-shm');
+    $resident->close();
+
+    expect($shmSurvived)->toBeTrue();
+    expect(rbReadMarker($live))->toBe('RESTORED');
+
+    foreach ([$live, $enc, $base.'-backup.sqlite'] as $f) {
+        @unlink($f);
+        @unlink($f.'-wal');
+        @unlink($f.'-shm');
+    }
+})->skip(fn (): bool => ! method_exists(SQLite3::class, 'backup'), 'needs the sqlite3 backup API');

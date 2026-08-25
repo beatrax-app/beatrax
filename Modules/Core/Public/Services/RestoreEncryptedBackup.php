@@ -13,6 +13,7 @@ use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Support\SqliteDatabase;
+use SQLite3;
 use Throwable;
 
 final class RestoreEncryptedBackup
@@ -57,26 +58,12 @@ final class RestoreEncryptedBackup
             //    state is always recoverable if the swap goes wrong.
             $snapshotPath = $this->snapshotCurrent($connection);
 
-            // 4. Fold the WAL back into the database and truncate it, so the
-            //    sidecars carry nothing that matters before they are removed.
-            $this->checkpoint($connection);
-
-            // 5. Swap. Every connection to this file is dropped first, not just
-            //    the one named in config: -shm is a shared-memory index a live
-            //    WAL connection holds mapped, and unlinking it under one is
-            //    what SQLite reports as `disk I/O error` (code 10). On a
-            //    request-per-process SAPI nothing survives to notice. The phone
-            //    runs a persistent interpreter, where a second connection to
-            //    the same path outlives the request and every later query --
-            //    `select count(*) from users` included -- died on it until the
-            //    app was force-quit.
+            // 4. Write the verified pages INTO the live database, not over
+            //    it. Replacing the file left a new connection running
+            //    `PRAGMA journal_mode = WAL` reporting code 11, on a file
+            //    whose own integrity_check passed when pulled off the device.
             $this->purgeEveryConnectionTo($livePath);
-
-            if ($this->files->copy($decryptedPath, $livePath) === false) {
-                throw new BackupIoException('Restore copy failed; the pre-restore snapshot is at '.$snapshotPath.'.');
-            }
-
-            $this->files->delete([$livePath.'-wal', $livePath.'-shm']);
+            $this->transplant($decryptedPath, $livePath, $snapshotPath);
             $this->purgeEveryConnectionTo($livePath);
 
             return $snapshotPath;
@@ -85,16 +72,37 @@ final class RestoreEncryptedBackup
         }
     }
 
-    // A checkpoint that cannot run is not a reason to abandon a restore: the
-    // sidecars are removed either way, and the database being copied over is
-    // the one that was just integrity-checked.
-    private function checkpoint(string $connection): void
+    // The backup API copies pages through SQLite, so the WAL and -shm
+    // bookkeeping stays coherent and nothing is unlinked under a process
+    // holding it mapped. The file copy remains only for a runtime without the
+    // sqlite3 extension: it is the path that poisoned the phone.
+    private function transplant(string $decryptedPath, string $livePath, string $snapshotPath): void
     {
-        try {
-            $this->db->connection($connection)->select('PRAGMA wal_checkpoint(TRUNCATE)');
-        } catch (Throwable) {
-            // Nothing to fold back, or no WAL at all.
+        if (class_exists(SQLite3::class)) {
+            $source = new SQLite3($decryptedPath, SQLITE3_OPEN_READONLY);
+
+            try {
+                $destination = new SQLite3($livePath, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
+
+                try {
+                    if ($source->backup($destination) !== true) {
+                        throw new BackupIoException('Restore could not write the backup into the live database; the pre-restore snapshot is at '.$snapshotPath.'.');
+                    }
+                } finally {
+                    $destination->close();
+                }
+            } finally {
+                $source->close();
+            }
+
+            return;
         }
+
+        if ($this->files->copy($decryptedPath, $livePath) === false) {
+            throw new BackupIoException('Restore copy failed; the pre-restore snapshot is at '.$snapshotPath.'.');
+        }
+
+        $this->files->delete([$livePath.'-wal', $livePath.'-shm']);
     }
 
     // Laravel resolves a connection per NAME, and more than one name can point
