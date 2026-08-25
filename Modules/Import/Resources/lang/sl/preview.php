@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'za ponovni poskus ali pregled.',
     ],
 
+    'rows_shown' => 'Prikazane vrstice: :shown od :total',
+
+    'show_more' => 'Pokaži več vrstic',
+
     'errors' => [
         'app_locked' => 'Odklenite aplikacijo za uvoz: šifrirnih ključev ni mogoče uporabiti, dokler je zaklenjena.',
         'file_stopped_short' => 'Glava se je ujemala, zato je oblika prava. Branje se je ustavilo pred koncem datoteke. To povzroči ena neberljiva vrstica, prav tako datoteka, ki je prevelika za to napravo. Poskusi s krajšim obdobjem.',

@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'a zkus to znovu nebo se podívej, co se stalo.',
     ],
 
+    'rows_shown' => 'Zobrazené řádky: :shown z :total',
+
+    'show_more' => 'Zobrazit více řádků',
+
     'errors' => [
         'app_locked' => 'Odemkněte aplikaci pro import: šifrovací klíče nelze použít, dokud je zamčená.',
         'file_stopped_short' => 'Hlavičkový řádek odpovídal, takže formát je správný. Čtení se zastavilo před koncem souboru. Způsobí to jeden nečitelný řádek i soubor příliš velký pro toto zařízení. Zkus kratší období.',

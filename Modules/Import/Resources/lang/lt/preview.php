@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'ir pakartok arba patikrink.',
     ],
 
+    'rows_shown' => 'Rodomos eilutės: :shown iš :total',
+
+    'show_more' => 'Rodyti daugiau eilučių',
+
     'errors' => [
         'app_locked' => 'Atrakinkite programėlę, kad importuotumėte: šifravimo raktų negalima naudoti, kol ji užrakinta.',
         'file_stopped_short' => 'Antraštės eilutė atitiko, tad formatas teisingas. Skaitymas sustojo nepasiekęs failo pabaigos. Taip nutinka dėl vienos neperskaitomos eilutės arba dėl šiam įrenginiui per didelio failo. Pabandyk trumpesnį laikotarpį.',

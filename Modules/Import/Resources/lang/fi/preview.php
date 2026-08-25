@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'ja yritä uudelleen tai tarkastele tilannetta.',
     ],
 
+    'rows_shown' => 'Näytetyt rivit: :shown / :total',
+
+    'show_more' => 'Näytä lisää rivejä',
+
     'errors' => [
         'app_locked' => 'Avaa sovelluksen lukitus tuodaksesi: salausavaimia ei voi käyttää lukittuna.',
         'file_stopped_short' => 'Otsikkorivi täsmäsi, joten muoto on oikea. Lukeminen pysähtyi ennen tiedoston loppua. Sen aiheuttaa yksi lukukelvoton rivi, samoin tälle laitteelle liian suuri tiedosto. Kokeile lyhyempää ajanjaksoa.',

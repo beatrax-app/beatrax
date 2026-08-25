@@ -25,7 +25,6 @@ use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
-use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
@@ -45,11 +44,20 @@ final class PreviewWizard extends Component
     // (iban, user_id), so one instance-wide literal stays unambiguous.
     private const ICS_OWN_IBAN = 'ICS-CARD';
 
+    private const int ROW_PAGE = 100;
+
     // Locked because a Livewire property is client-mutable between requests:
     // unlocked, a mount()-only ownership check is bypassed by setting this to
     // another user's sequential, guessable run id and re-rendering.
     #[Locked]
     public int $importRunId = 0;
+
+    // How many rows the table draws. A 7 MB statement is 27,777 of them, and
+    // drawn whole they were a 46.8 MB document -- more than the phone's webview
+    // will accept as one page, on the screen the phone is most used for.
+    // Locked, so the window only ever grows through showMoreRows().
+    #[Locked]
+    public int $visibleRows = self::ROW_PAGE;
 
     public string $accountName = '';
 
@@ -353,7 +361,10 @@ final class PreviewWizard extends Component
     ): View {
         $this->assertOwnedRun($currentUser);
 
-        $preview = $cache->getPreview($this->importRunId);
+        $head = $cache->head($this->importRunId);
+        $preview = $head === null
+            ? null
+            : PreviewCache::resultFrom($head, $cache->rows($this->importRunId, 0, $this->visibleRows));
         $needsIcsAccountName = $this->needsIcsAccountName($currentUser, $cache, $db);
         $needsPaypalAccountName = $this->needsPaypalAccountName($currentUser, $cache, $db);
 
@@ -367,6 +378,13 @@ final class PreviewWizard extends Component
             'failedRowCount' => self::failedRowCount($preview),
             'presetIssuedIdentifiers' => self::presetIssuedIdentifiers($preview, $presets),
         ]);
+    }
+
+    // The window grows rather than paging: a reader scanning a statement for
+    // one row loses their place if the rows above it are taken away.
+    public function showMoreRows(): void
+    {
+        $this->visibleRows += self::ROW_PAGE;
     }
 
     /**
@@ -486,26 +504,11 @@ final class PreviewWizard extends Component
     // them, and neither is the file-level failure, which is not a row at all.
     private static function importableRowCount(?ImportPreviewResult $preview): int
     {
-        if ($preview === null) {
-            return 0;
-        }
-
-        return count($preview->rows) - self::failedRowCount($preview);
+        return $preview?->importableRows() ?? 0;
     }
 
     private static function failedRowCount(?ImportPreviewResult $preview): int
     {
-        if ($preview === null) {
-            return 0;
-        }
-
-        $failed = 0;
-        foreach ($preview->rows as $row) {
-            if ($row->status === PreviewRowStatus::Error) {
-                $failed++;
-            }
-        }
-
-        return $failed;
+        return $preview?->errorRows() ?? 0;
     }
 }

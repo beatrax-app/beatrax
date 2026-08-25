@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'lai mēģinātu vēlreiz vai pārbaudītu.',
     ],
 
+    'rows_shown' => 'Rādītās rindas: :shown no :total',
+
+    'show_more' => 'Rādīt vairāk rindu',
+
     'errors' => [
         'app_locked' => 'Atbloķējiet lietotni, lai importētu: šifrēšanas atslēgas nevar izmantot, kamēr tā ir bloķēta.',
         'file_stopped_short' => 'Galvenes rinda sakrita, tātad formāts ir pareizs. Lasīšana apstājās pirms faila beigām. To izraisa viena nenolasāma rinda, kā arī šai ierīcei pārāk liels fails. Pamēģini īsāku laikposmu.',

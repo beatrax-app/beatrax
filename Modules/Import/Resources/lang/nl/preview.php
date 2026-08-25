@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'om opnieuw te proberen of te inspecteren.',
     ],
 
+    'rows_shown' => 'Regels getoond: :shown van :total',
+
+    'show_more' => 'Meer regels tonen',
+
     'errors' => [
         'app_locked' => 'Ontgrendel de app om te importeren: de versleutelingssleutels kunnen niet worden gebruikt zolang hij vergrendeld is.',
         'file_stopped_short' => 'De kopregel klopte, dus het formaat is goed. Het lezen stopte voor het einde van het bestand. Eén onleesbare regel doet dat, en een bestand dat te groot is voor dit apparaat ook. Probeer een kortere periode.',

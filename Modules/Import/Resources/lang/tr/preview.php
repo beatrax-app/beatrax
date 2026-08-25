@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'yeniden denemek veya incelemek için.',
     ],
 
+    'rows_shown' => 'Gösterilen satırlar: :shown / :total',
+
+    'show_more' => 'Daha fazla satır göster',
+
     'errors' => [
         'app_locked' => 'İçe aktarmak için uygulamanın kilidini açın: kilitliyken şifreleme anahtarları kullanılamaz.',
         'file_stopped_short' => 'Başlık satırı eşleşti, yani biçim doğru. Okuma dosyanın sonuna gelmeden durdu. Tek bir okunamayan satır buna yol açar, bu cihaz için fazla büyük bir dosya da öyle. Daha kısa bir tarih aralığı dene.',

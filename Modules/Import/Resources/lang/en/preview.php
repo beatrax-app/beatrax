@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'to retry or inspect.',
     ],
 
+    'rows_shown' => 'Rows shown: :shown of :total',
+
+    'show_more' => 'Show more rows',
+
     'errors' => [
         'app_locked' => 'Unlock the app to import: the encryption keys cannot be used while it is locked.',
         'file_stopped_short' => 'The header matched, so the format is right. Reading stopped before the end of the file. One unreadable row does this, and so does a file too large for this device. Try a shorter date range.',

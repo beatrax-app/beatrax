@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'per riprovare o ispezionare.',
     ],
 
+    'rows_shown' => 'Righe mostrate: :shown su :total',
+
+    'show_more' => 'Mostra altre righe',
+
     'errors' => [
         'app_locked' => 'Sblocca l\'app per importare: le chiavi di crittografia non possono essere usate mentre è bloccata.',
         'file_stopped_short' => 'La riga di intestazione corrispondeva, quindi il formato è giusto. La lettura si è fermata prima della fine del file. Basta una riga illeggibile, oppure un file troppo grande per questo dispositivo. Prova un periodo più breve.',

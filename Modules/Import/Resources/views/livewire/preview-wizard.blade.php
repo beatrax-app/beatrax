@@ -1,6 +1,7 @@
 @use('Modules\Core\Public\Enums\JobRunStatus')
 @use('Modules\Core\Public\Support\Lang')
 @php
+    use Modules\Core\Public\Support\Fmt;
     use Modules\Import\Public\Enums\ImportFailureReason;
     use Modules\Import\Public\Enums\PreviewRowStatus;
     use Modules\Ledger\Public\ValueObjects\Money;
@@ -23,7 +24,8 @@
     // that are missing rather than present-and-failed.
     $fileFailure = $hasLivePreview && $preview->fileFailureReason !== null;
     $fileFailureDetail = $hasLivePreview ? $preview->fileFailureDetail : null;
-    $parsedRowCount = $hasLivePreview ? count($preview->rows) : 0;
+    $parsedRowCount = $hasLivePreview ? $preview->totalRows() : 0;
+    $shownRowCount = $hasLivePreview ? count($preview->rows) : 0;
     $nothingToImport = $hasLivePreview && $importableRowCount === 0;
 @endphp
 
@@ -217,7 +219,7 @@
                 </x-slot:head>
 
                 @foreach ($preview->rows as $row)
-                    <tr>
+                    <tr data-row-index="{{ $row->rowIndex }}">
                         <td class="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">{{ $row->bookedAt ?? '—' }}</td>
                         {{-- Funding source: counterparty IBAN that funded this row,
                              rendered monospace so it lines up legibly with the
@@ -301,6 +303,20 @@
                     </tr>
                 @endforeach
             </x-core::data-table>
+
+            {{-- Never a silent cap: the table draws a window, and the count
+                 beside it is the run's, so a reader who imported 27,777 rows
+                 is not left believing the hundred on screen are all of them. --}}
+            @if ($shownRowCount < $parsedRowCount)
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-sm text-slate-500 dark:text-slate-400" aria-live="polite">
+                        {{ Lang::get('import::preview.rows_shown', ['shown' => Fmt::number($shownRowCount), 'total' => Fmt::number($parsedRowCount)]) }}
+                    </p>
+                    <x-core::secondary-button type="button" wire:click="showMoreRows" wire:loading.attr="disabled">
+                        {{ Lang::get('import::preview.show_more') }}
+                    </x-core::secondary-button>
+                </div>
+            @endif
             @endif
         @endif
     @endif

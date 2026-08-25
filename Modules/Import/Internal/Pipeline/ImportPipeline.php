@@ -14,6 +14,7 @@ use Modules\Core\Public\Support\MessageNamesNoUserData;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
+use Modules\Import\Internal\Dto\PreviewHead;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
@@ -63,10 +64,7 @@ final class ImportPipeline
         private readonly Application $app,
     ) {}
 
-    /**
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?ImportFailureReason, fileFailureDetail: ?string, fileFailureRowIndex: ?int}
-     */
-    public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, ?BankCsvFormatHint $formatHint = null): array
+    public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer, ?BankCsvFormatHint $formatHint = null): PreviewHead
     {
         // The backstop at the contract boundary: CSV cannot self-disambiguate,
         // so a caller that skipped the wizard's validation is still refused.
@@ -80,56 +78,33 @@ final class ImportPipeline
             $accounts,
             $user,
             $importRunId,
+            $writer,
         );
 
         $this->persistStatementMetadata($sourceFormat, $importRunId, $built['lastResolvedAccountId'], $user);
 
-        return [
-            'rows' => $built['rows'],
-            'canonical' => $built['canonical'],
-            'enrichments' => $built['enrichments'],
-            'unknownIbans' => $built['unknownIbans'],
-            'fileFailureReason' => $built['fileFailureReason'],
-            'fileFailureDetail' => $built['fileFailureDetail'],
-            'fileFailureRowIndex' => $built['fileFailureRowIndex'],
-        ];
+        return $built['head'];
     }
 
     /**
      * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
      *
      * @param  Generator<int, SourceTransactionDto>  $sourceRows
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?ImportFailureReason, fileFailureDetail: ?string, fileFailureRowIndex: ?int}
      */
-    public function previewFromGenerator(Generator $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
+    public function previewFromGenerator(Generator $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer): PreviewHead
     {
-        $built = $this->buildPreviewRows($sourceRows, $sourceFormat, $accounts, $user, $importRunId);
-
-        return [
-            'rows' => $built['rows'],
-            'canonical' => $built['canonical'],
-            'enrichments' => $built['enrichments'],
-            'unknownIbans' => $built['unknownIbans'],
-            'fileFailureReason' => $built['fileFailureReason'],
-            'fileFailureDetail' => $built['fileFailureDetail'],
-            'fileFailureRowIndex' => $built['fileFailureRowIndex'],
-        ];
+        return $this->buildPreviewRows($sourceRows, $sourceFormat, $accounts, $user, $importRunId, $writer)['head'];
     }
 
     /**
      * @param  iterable<int, SourceTransactionDto>  $sourceRows
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?ImportFailureReason, fileFailureDetail: ?string, fileFailureRowIndex: ?int, lastResolvedAccountId: ?int}
+     * @return array{head: PreviewHead, lastResolvedAccountId: ?int}
      */
-    private function buildPreviewRows(iterable $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
+    private function buildPreviewRows(iterable $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer): array
     {
-        /** @var list<PreviewRowDto> $preview */
-        $preview = [];
-        /** @var list<CanonicalTransaction> $canonical */
-        $canonical = [];
-        /** @var list<PendingEnrichment> $enrichments */
-        $enrichments = [];
         /** @var array<string, UnknownIban> $unknownIbans */
         $unknownIbans = [];
+        $rowsWritten = 0;
         $lastResolvedAccountId = null;
         $fileFailureReason = null;
         $fileFailureDetail = null;
@@ -144,7 +119,8 @@ final class ImportPipeline
                         iban: $source->ownIban,
                         seenCounterpartyName: $source->counterpartyName,
                     );
-                    $preview[] = self::failedRow($source, null, ImportFailureReason::UnknownAccount);
+                    $writer->addRow(self::failedRow($source, null, ImportFailureReason::UnknownAccount));
+                    $rowsWritten++;
 
                     continue;
                 }
@@ -155,24 +131,26 @@ final class ImportPipeline
 
                 $enriched = $this->enrichRow($source, $accountId, $user, $importRunId, $sourceFormat);
                 if ($enriched instanceof PreviewRowDto) {
-                    $preview[] = $enriched;
+                    $writer->addRow($enriched);
+                    $rowsWritten++;
 
                     continue;
                 }
 
                 $disposition = $this->fingerprint->classify($enriched, $user);
-                $preview[] = $this->acceptedRow($source, $accountId, $enriched, $disposition, $user);
+                $writer->addRow($this->acceptedRow($source, $accountId, $enriched, $disposition, $user));
+                $rowsWritten++;
 
                 if ($disposition->isNew()) {
-                    $canonical[] = $enriched;
+                    $writer->addCanonical($enriched);
                 } elseif ($disposition instanceof EnrichedDisposition) {
-                    $enrichments[] = new PendingEnrichment(
+                    $writer->addEnrichment(new PendingEnrichment(
                         existingTransactionId: $disposition->existingTransactionId,
                         newSourceRef: $disposition->toSourceRef,
                         importRunId: $importRunId,
                         sourceFormat: $sourceFormat,
                         conflictingFields: $disposition->conflictingFields,
-                    );
+                    ));
                 }
             }
         } catch (Throwable $e) {
@@ -193,17 +171,16 @@ final class ImportPipeline
             // one being read when it stopped. Counted rather than read out of
             // the message, which for most of these adapters quotes a cell and
             // so cannot be shown or stored.
-            $fileFailureRowIndex = $preview === [] ? null : count($preview);
+            $fileFailureRowIndex = $rowsWritten === 0 ? null : $rowsWritten;
         }
 
         return [
-            'rows' => $preview,
-            'canonical' => $canonical,
-            'enrichments' => $enrichments,
-            'unknownIbans' => array_values($unknownIbans),
-            'fileFailureReason' => $fileFailureReason,
-            'fileFailureDetail' => $fileFailureDetail,
-            'fileFailureRowIndex' => $fileFailureRowIndex,
+            'head' => $writer->finish(
+                array_values($unknownIbans),
+                $fileFailureReason,
+                $fileFailureDetail,
+                $fileFailureRowIndex,
+            ),
             'lastResolvedAccountId' => $lastResolvedAccountId,
         ];
     }

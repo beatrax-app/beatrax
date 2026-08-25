@@ -12,16 +12,12 @@ use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
-use Modules\Import\Internal\Dto\ImportRowIssue;
-use Modules\Import\Internal\Enums\ImportIssueKind;
 use Modules\Import\Internal\Exceptions\PreviewExpiredException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
-use Modules\Import\Public\Dto\ImportPreviewResult;
-use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
@@ -32,11 +28,6 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
  */
 final class ConfirmImport implements ConfirmsImports
 {
-    // The results screen lists what was skipped, and an all-duplicate re-import
-    // of a year of statements would otherwise write thousands of entries into
-    // one column. Past the cap the screen falls back to the run's own counts.
-    private const MAX_STORED_ISSUES_PER_KIND = 50;
-
     public function __construct(
         private readonly RecordsTransactions $recorder,
         private readonly AppliesEnrichments $applyEnrichments,
@@ -70,7 +61,7 @@ final class ConfirmImport implements ConfirmsImports
 
         $canonical = $this->cache->getCanonical($importRunId);
         $enrichments = $this->cache->getEnrichments($importRunId) ?? [];
-        $preview = $this->cache->getPreview($importRunId);
+        $head = $this->cache->head($importRunId);
 
         if ($canonical === null) {
             // The run keeps its previous status, or RunImport's SHA256
@@ -80,21 +71,15 @@ final class ConfirmImport implements ConfirmsImports
 
         $errorCount = 0;
         $previewDuplicateCount = 0;
-        if ($preview !== null) {
+        if ($head !== null) {
             // A file that failed to parse is one error even though it is no
             // row, so the summary count keeps meaning "things that went wrong"
             // now that the failure is no longer smuggled in as a row.
-            $errorCount = $preview->fileFailureReason === null ? 0 : 1;
-            foreach ($preview->rows as $row) {
-                if ($row->status === PreviewRowStatus::Error) {
-                    $errorCount++;
-                } elseif ($row->status === PreviewRowStatus::Duplicate) {
-                    $previewDuplicateCount++;
-                }
-            }
+            $errorCount = ($head->fileFailureReason === null ? 0 : 1) + $head->errorCount;
+            $previewDuplicateCount = $head->duplicateCount;
         }
 
-        $rowIssues = self::rowIssues($preview);
+        $rowIssues = $head === null ? [] : $head->rowIssues;
 
         // captureForSync: false — this action captures run, accounts and
         // transactions itself below, parents first. Capturing in the recorder
@@ -170,53 +155,5 @@ final class ConfirmImport implements ConfirmsImports
         }
 
         return $result;
-    }
-
-    // The preview cache is dropped moments from here, so anything the results
-    // screen needs to name what it skipped has to be copied onto the run
-    // first. Counterparty names and descriptions are deliberately not among it.
-    /**
-     * @return list<array{kind: string, row: int|null, reason: string|null, detail: string|null}>
-     */
-    private static function rowIssues(?ImportPreviewResult $preview): array
-    {
-        if ($preview === null) {
-            return [];
-        }
-
-        $issues = [];
-        if ($preview->fileFailureReason !== null) {
-            $issues[] = new ImportRowIssue(
-                kind: ImportIssueKind::FileError,
-                rowIndex: $preview->fileFailureRowIndex,
-                reason: $preview->fileFailureReason,
-                detail: $preview->fileFailureDetail,
-            );
-        }
-
-        $errorsKept = 0;
-        $duplicatesKept = 0;
-        foreach ($preview->rows as $row) {
-            if ($row->status === PreviewRowStatus::Error && $errorsKept < self::MAX_STORED_ISSUES_PER_KIND) {
-                $issues[] = new ImportRowIssue(
-                    kind: ImportIssueKind::RowError,
-                    rowIndex: $row->rowIndex,
-                    reason: $row->errorReason,
-                    detail: $row->errorDetail,
-                );
-                $errorsKept++;
-            }
-            if ($row->status === PreviewRowStatus::Duplicate && $duplicatesKept < self::MAX_STORED_ISSUES_PER_KIND) {
-                $issues[] = new ImportRowIssue(
-                    kind: ImportIssueKind::Duplicate,
-                    rowIndex: $row->rowIndex,
-                    reason: null,
-                    detail: null,
-                );
-                $duplicatesKept++;
-            }
-        }
-
-        return array_map(static fn (ImportRowIssue $issue): array => $issue->toStored(), $issues);
     }
 }

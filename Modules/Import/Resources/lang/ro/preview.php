@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'pentru a reîncerca sau a inspecta.',
     ],
 
+    'rows_shown' => 'Rânduri afișate: :shown din :total',
+
+    'show_more' => 'Afișează mai multe rânduri',
+
     'errors' => [
         'app_locked' => 'Deblocați aplicația pentru a importa: cheile de criptare nu pot fi folosite cât timp este blocată.',
         'file_stopped_short' => 'Rândul de antet se potrivea, deci formatul este corect. Citirea s-a oprit înainte de sfârșitul fișierului. O singură linie ilizibilă face asta, la fel și un fișier prea mare pentru acest dispozitiv. Încearcă o perioadă mai scurtă.',

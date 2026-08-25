@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'pour réessayer ou inspecter.',
     ],
 
+    'rows_shown' => 'Lignes affichées : :shown sur :total',
+
+    'show_more' => 'Afficher plus de lignes',
+
     'errors' => [
         'app_locked' => 'Déverrouillez l\'application pour importer : les clés de chiffrement ne peuvent pas être utilisées tant qu\'elle est verrouillée.',
         'file_stopped_short' => 'La ligne d\'en-tête correspondait, le format est donc le bon. La lecture s\'est arrêtée avant la fin du fichier. Une seule ligne illisible suffit, tout comme un fichier trop volumineux pour cet appareil. Essaie une période plus courte.',

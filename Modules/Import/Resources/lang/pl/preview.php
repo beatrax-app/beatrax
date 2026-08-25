@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'aby ponowić lub sprawdzić.',
     ],
 
+    'rows_shown' => 'Pokazane wiersze: :shown z :total',
+
+    'show_more' => 'Pokaż więcej wierszy',
+
     'errors' => [
         'app_locked' => 'Odblokuj aplikację, aby zaimportować: kluczy szyfrowania nie można użyć, gdy jest zablokowana.',
         'file_stopped_short' => 'Wiersz nagłówka pasował, więc format jest właściwy. Odczyt zatrzymał się przed końcem pliku. Powoduje to jeden nieczytelny wiersz, a także plik zbyt duży dla tego urządzenia. Spróbuj krótszego zakresu dat.',

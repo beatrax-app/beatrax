@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'zum erneuten Versuch oder zur Prüfung.',
     ],
 
+    'rows_shown' => 'Angezeigte Zeilen: :shown von :total',
+
+    'show_more' => 'Mehr Zeilen anzeigen',
+
     'errors' => [
         'app_locked' => 'Entsperren Sie die App zum Importieren: Die Verschlüsselungsschlüssel können im gesperrten Zustand nicht verwendet werden.',
         'file_stopped_short' => 'Die Kopfzeile passte, das Format ist also richtig. Das Lesen hörte vor dem Ende der Datei auf. Eine einzige unlesbare Zeile führt dazu, eine für dieses Gerät zu große Datei ebenfalls. Versuch es mit einem kürzeren Zeitraum.',

@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'för att försöka igen eller undersöka närmare.',
     ],
 
+    'rows_shown' => 'Visade rader: :shown av :total',
+
+    'show_more' => 'Visa fler rader',
+
     'errors' => [
         'app_locked' => 'Lås upp appen för att importera: krypteringsnycklarna kan inte användas medan den är låst.',
         'file_stopped_short' => 'Rubrikraden stämde, så formatet är rätt. Läsningen stannade före filens slut. En enda oläslig rad gör det, och det gör även en fil som är för stor för den här enheten. Prova en kortare period.',

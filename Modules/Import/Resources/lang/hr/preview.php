@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'za ponovni pokušaj ili pregled.',
     ],
 
+    'rows_shown' => 'Prikazani redci: :shown od :total',
+
+    'show_more' => 'Prikaži više redaka',
+
     'errors' => [
         'app_locked' => 'Otključajte aplikaciju za uvoz: ključevi za šifriranje ne mogu se upotrijebiti dok je zaključana.',
         'file_stopped_short' => 'Zaglavlje je odgovaralo, pa je format ispravan. Čitanje je stalo prije kraja datoteke. To izaziva jedan nečitljiv redak, kao i datoteka prevelika za ovaj uređaj. Pokušaj s kraćim razdobljem.',

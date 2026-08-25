@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'for at prøve igen eller undersøge nærmere.',
     ],
 
+    'rows_shown' => 'Viste rækker: :shown af :total',
+
+    'show_more' => 'Vis flere rækker',
+
     'errors' => [
         'app_locked' => 'Lås appen op for at importere: krypteringsnøglerne kan ikke bruges, mens den er låst.',
         'file_stopped_short' => 'Overskriftsrækken passede, så formatet er rigtigt. Læsningen stoppede før slutningen af filen. Det sker ved én ulæselig række, og også hvis filen er for stor til denne enhed. Prøv en kortere periode.',

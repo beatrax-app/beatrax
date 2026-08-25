@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'et uuesti proovida või uurida.',
     ],
 
+    'rows_shown' => 'Kuvatud read: :shown / :total',
+
+    'show_more' => 'Näita rohkem ridu',
+
     'errors' => [
         'app_locked' => 'Importimiseks avage rakendus: krüpteerimisvõtmeid ei saa lukustatuna kasutada.',
         'file_stopped_short' => 'Päiserida klappis, seega on vorming õige. Lugemine peatus enne faili lõppu. Selle põhjustab üks loetamatu rida, samuti selle seadme jaoks liiga suur fail. Proovi lühemat ajavahemikku.',

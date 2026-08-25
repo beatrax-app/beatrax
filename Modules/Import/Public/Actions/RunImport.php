@@ -9,6 +9,7 @@ use Illuminate\Contracts\Filesystem\Factory as StorageFactory;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Internal\Dto\PreviewHead;
 use Modules\Import\Internal\Exceptions\RacedImportRunVanishedException;
 use Modules\Import\Internal\Exceptions\UploadStagingException;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
@@ -17,7 +18,6 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
-use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Services\EloquentAccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Enums\SourceFormat;
@@ -96,28 +96,16 @@ final class RunImport implements RunsImports
         }
 
         $accounts = new EloquentAccountResolver($user);
-        $result = $this->pipeline->preview($stablePath, $sourceFormat, $accounts, $user, $importRun->id, $formatHint);
 
-        $enrichedCount = 0;
-        foreach ($result['rows'] as $row) {
-            if ($row->status === PreviewRowStatus::Enriched) {
-                $enrichedCount++;
-            }
-        }
-
-        $previewResult = new ImportPreviewResult(
-            importRunId: $importRun->id,
-            rows: $result['rows'],
-            accountsToName: $result['unknownIbans'],
-            enrichedCount: $enrichedCount,
-            fileFailureReason: $result['fileFailureReason'],
-            fileFailureDetail: $result['fileFailureDetail'],
-            fileFailureRowIndex: $result['fileFailureRowIndex'],
-        );
-
-        $this->cache->put($importRun->id, $previewResult, $result['canonical'], $result['enrichments']);
-
-        return $previewResult;
+        return $this->windowOnto($this->pipeline->preview(
+            $stablePath,
+            $sourceFormat,
+            $accounts,
+            $user,
+            $importRun->id,
+            $this->cache->writer($importRun->id),
+            $formatHint,
+        ));
     }
 
     // The name is the content hash, so a second upload of the same file
@@ -248,28 +236,26 @@ final class RunImport implements RunsImports
         }
 
         $accounts = new EloquentAccountResolver($user);
-        $result = $this->pipeline->previewFromGenerator($sourceRows, $sourceFormat, $accounts, $user, $importRun->id);
 
-        $enrichedCount = 0;
-        foreach ($result['rows'] as $row) {
-            if ($row->status === PreviewRowStatus::Enriched) {
-                $enrichedCount++;
-            }
-        }
+        return $this->windowOnto($this->pipeline->previewFromGenerator(
+            $sourceRows,
+            $sourceFormat,
+            $accounts,
+            $user,
+            $importRun->id,
+            $this->cache->writer($importRun->id),
+        ));
+    }
 
-        $previewResult = new ImportPreviewResult(
-            importRunId: $importRun->id,
-            rows: $result['rows'],
-            accountsToName: $result['unknownIbans'],
-            enrichedCount: $enrichedCount,
-            fileFailureReason: $result['fileFailureReason'],
-            fileFailureDetail: $result['fileFailureDetail'],
-            fileFailureRowIndex: $result['fileFailureRowIndex'],
+    // The rows come back off the chunks the pipeline just wrote, a window at a
+    // time, rather than being carried out of it. What the caller gets is the
+    // head plus that window; past it rowsAreComplete() is false and says so.
+    private function windowOnto(PreviewHead $head): ImportPreviewResult
+    {
+        return PreviewCache::resultFrom(
+            $head,
+            $this->cache->rows($head->importRunId, 0, PreviewCache::RESULT_ROW_WINDOW),
         );
-
-        $this->cache->put($importRun->id, $previewResult, $result['canonical'], $result['enrichments']);
-
-        return $previewResult;
     }
 
     // raw_file_path is a required audit string with no FK to storage, so the

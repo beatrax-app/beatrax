@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'na opakovanie alebo kontrolu.',
     ],
 
+    'rows_shown' => 'Zobrazené riadky: :shown z :total',
+
+    'show_more' => 'Zobraziť viac riadkov',
+
     'errors' => [
         'app_locked' => 'Odomknite aplikáciu na import: šifrovacie kľúče sa nedajú použiť, kým je zamknutá.',
         'file_stopped_short' => 'Hlavičkový riadok zodpovedal, takže formát je správny. Čítanie sa zastavilo pred koncom súboru. Spôsobí to jeden nečitateľný riadok aj súbor príliš veľký pre toto zariadenie. Skús kratšie obdobie.',

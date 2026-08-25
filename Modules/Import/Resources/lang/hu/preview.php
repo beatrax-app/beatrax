@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'az újrapróbáláshoz vagy a megtekintéshez.',
     ],
 
+    'rows_shown' => 'Megjelenített sorok: :shown / :total',
+
+    'show_more' => 'Több sor megjelenítése',
+
     'errors' => [
         'app_locked' => 'Oldja fel az alkalmazást az importáláshoz: a titkosítási kulcsok zárolt állapotban nem használhatók.',
         'file_stopped_short' => 'A fejléc egyezett, tehát a formátum jó. Az olvasás a fájl vége előtt megállt. Ezt egyetlen olvashatatlan sor is okozza, és az is, ha a fájl túl nagy ehhez az eszközhöz. Próbálj rövidebb időszakot.',

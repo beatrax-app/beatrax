@@ -63,6 +63,10 @@ return [
         'failed_suffix' => 'para repetir ou inspecionar.',
     ],
 
+    'rows_shown' => 'Linhas mostradas: :shown de :total',
+
+    'show_more' => 'Mostrar mais linhas',
+
     'errors' => [
         'app_locked' => 'Desbloqueie a aplicação para importar: as chaves de encriptação não podem ser usadas enquanto estiver bloqueada.',
         'file_stopped_short' => 'A linha de cabeçalho correspondia, por isso o formato está certo. A leitura parou antes do fim do ficheiro. Basta uma linha ilegível, ou um ficheiro demasiado grande para este dispositivo. Experimenta um período mais curto.',
