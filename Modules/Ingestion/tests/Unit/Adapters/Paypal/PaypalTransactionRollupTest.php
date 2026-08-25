@@ -8,6 +8,7 @@ use Modules\Ingestion\Internal\Adapters\Paypal\PaypalDateParser;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalTransactionRollup;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 beforeEach(function (): void {
     $this->rollup = new PaypalTransactionRollup(
@@ -250,6 +251,32 @@ it('skips a parent row with a malformed Bruto cell and bumps skippedMalformedRow
     expect($dtos[0]->sourceRef)->toBe('O-00000000000000001');
     expect($this->rollup->skippedMalformedRowCount())->toBe(1);
 })->group('phase-4');
+
+// The skip-the-row catch names InvalidAmountException, so an over-range Bruto
+// that raised anything else walked straight past it and took the whole export
+// down instead of dropping one row.
+it('skips a parent row whose Bruto is wider than the ledger can hold', function (): void {
+    $overRange = str_repeat('9', MoneyInput::MAX_WHOLE_DIGITS + 2);
+
+    $rows = [
+        paypalRow([
+            'Transactiereferentie' => 'O-00000000000000001',
+            'Bruto ' => '-8,10',
+            'Netto' => '-8,10',
+        ]),
+        paypalRow([
+            'Transactiereferentie' => 'O-00000000000000002',
+            'Bruto ' => $overRange.',99',
+            'Netto' => '-1,00',
+        ]),
+    ];
+
+    $dtos = $this->rollup->rollup($rows, 'nl');
+
+    expect($dtos)->toHaveCount(1)
+        ->and($dtos[0]->sourceRef)->toBe('O-00000000000000001')
+        ->and($this->rollup->skippedMalformedRowCount())->toBe(1);
+});
 
 it('drops a malformed FX child but still emits the parent DTO without the FX pair filled in', function (): void {
     $parent = paypalRow([

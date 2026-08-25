@@ -6,16 +6,20 @@ namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 final class BankAmountParser
 {
     // Integer-only, never a float cast: (int)((float) '0.29' * 100) yields a
     // silent 28 under 64-bit floating point, where this yields exactly 29.
+    // The whole part is bounded by the same MAX_WHOLE_DIGITS the ledger holds,
+    // so a wider amount is refused here rather than overflowing the minor-unit
+    // multiplication into a float the int return type rejects.
     public function parseMinor(string $raw): int
     {
         $normalized = trim($raw);
 
-        if (preg_match('/^([+-]?)(\d+)\.(\d{2})$/', $normalized, $m) !== 1) {
+        if (preg_match('/^([+-]?)(\d{1,'.MoneyInput::MAX_WHOLE_DIGITS.'})\.(\d{2})$/', $normalized, $m) !== 1) {
             throw new InvalidAmountException(sprintf(
                 "Cannot parse amount: '%s' (expected period-decimal with two fractional digits, e.g. '-12.34')",
                 $raw,
