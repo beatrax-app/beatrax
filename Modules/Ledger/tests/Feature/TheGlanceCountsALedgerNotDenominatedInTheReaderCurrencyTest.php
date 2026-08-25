@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Support\Lang;
 use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -123,4 +124,37 @@ it('keeps a row in the list that the reporting currency does not match', functio
     $page = $this->list->recent($this->fixtureUser, daysBack: 90, limit: 10, currency: Currency::Gbp->value);
 
     expect($page->rows)->toHaveCount(1);
+});
+
+// The exclusion is computed correctly and the dashboard blade renders it, but
+// nothing proved the sentence reached the reader -- and a figure quietly
+// missing a currency is indistinguishable from a smaller figure. This cannot
+// be reached from the UI on a device: every currency the picker offers has a
+// bundled rate, so no reader choice can produce an unconvertible bucket.
+it('shows the reader which currency was left out, not just the smaller number', function (): void {
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => 250000, 'settled_amount_minor' => 250000, 'posted_at' => '2026-05-05',
+    ]);
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => 111100, 'currency' => 'ZAR', 'settled_amount_minor' => 111100,
+        'settled_currency' => 'ZAR', 'posted_at' => '2026-05-06',
+    ]);
+
+    $summary = $this->glance->for($this->fixtureUser, $this->period);
+
+    expect($summary->unconvertedCurrencies)->toBe(['ZAR']);
+
+    $sentence = Lang::get('core::money.not_converted', [
+        'list' => implode(', ', $summary->unconvertedCurrencies),
+    ]);
+
+    expect($sentence)->not->toBe('core::money.not_converted');
+    expect($sentence)->toContain('ZAR');
+
+    $blade = (string) file_get_contents(
+        base_path('Modules/Shell/Resources/views/livewire/dashboard.blade.php'),
+    );
+
+    expect($blade)->toContain('unconvertedCurrencies');
+    expect($blade)->toContain('core::money.not_converted');
 });
