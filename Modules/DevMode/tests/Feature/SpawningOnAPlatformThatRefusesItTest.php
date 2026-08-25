@@ -10,6 +10,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
+use Modules\DevMode\Internal\Http\Livewire\CommandArgPromptModal;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
@@ -116,4 +117,21 @@ it('names the platform, not the file, in the message the reader is given', funct
 
     expect($message)->not->toBe('dev::runner.spawning_unavailable');
     expect($message)->toContain('process');
+});
+
+it('surfaces the platform message from the arg-prompt modal instead of throwing out of submit()', function (): void {
+    $user = interpreterlessDeveloper('arg-modal-no-interpreter');
+    bindInterpreterlessSpawner();
+
+    // The phone's repro exactly: db:backup picked from the palette, whose only
+    // arg is optional, submitted blank. The modal spawns directly rather than
+    // dispatching to ArtisanRunnerPage, so it needs its own answer.
+    $component = Livewire::actingAs($user)
+        ->test(CommandArgPromptModal::class)
+        ->dispatch('command-args:prompt', name: 'db:backup', tier: 'safe', prefill: [])
+        ->set('values.destination', '')
+        ->call('submit')
+        ->assertNotDispatched('toast');
+
+    expect($component->get('submitError'))->toBe(Lang::get('dev::runner.spawning_unavailable'));
 });
