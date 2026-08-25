@@ -10,14 +10,14 @@ enum MobilePlatform: string
 
     case Ios = 'ios';
 
-    // The Android WebView can only be handed a body for the URL it already
-    // asked for, so a Location header never moves its address bar. The iOS
-    // PHPSchemeHandler follows Location with a real navigation instead.
+    // Neither shell moves its address bar on a Location header. Android's
+    // WebView can only be handed a body for the URL it already asked for. iOS
+    // navigates only where the target has no scheme, and Laravel's redirects
+    // are absolute, so a php:// target is fetched onto the old address instead.
     public function needsClientSideRedirect(): bool
     {
         return match ($this) {
-            self::Android => true,
-            self::Ios => false,
+            self::Android, self::Ios => true,
         };
     }
 
