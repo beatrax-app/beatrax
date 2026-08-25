@@ -257,7 +257,7 @@
                 min="0"
                 max="100000000"
                 :label="Lang::get('core::settings.recurring.income_label')"
-                :hint="Lang::get('core::settings.recurring.income_help', ['example' => Money::ofMinor(200000, $baseCurrency)->format()])"
+                :hint="Lang::get('core::settings.recurring.income_help', ['example' => Money::ofMinor(200000, $exampleCurrency)->format()])"
                 wire:model="recurringIncomeMinAmountMinor"
                 class="max-w-xs"
             />

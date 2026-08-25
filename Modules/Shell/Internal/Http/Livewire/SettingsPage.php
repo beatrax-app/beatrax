@@ -302,7 +302,19 @@ final class SettingsPage extends Component
             'accounts' => $this->mapAccounts($accounts, $baseCurrency->code()),
             'currencyOptions' => $this->mapCurrencyOptions($currencyRows),
             'countryOptions' => $countries->options(),
+            'exampleCurrency' => $this->exampleCurrency(),
         ]);
+    }
+
+    // baseCurrency is a form field on this page, so between an edit and a save
+    // it holds whatever was typed — including a code brick/money refuses. Both
+    // the worked example in the view and the bound in the validation copy were
+    // formatted in it, and threw over the very input they were describing.
+    private function exampleCurrency(): string
+    {
+        return Money::tryOfMinor(0, $this->baseCurrency) instanceof Money
+            ? $this->baseCurrency
+            : Currency::Eur->value;
     }
 
     /**
@@ -381,7 +393,7 @@ final class SettingsPage extends Component
         // is reflected in the validation copy.
         $periodDay = Lang::get('core::settings.errors.period_day');
         $windowMonths = Lang::get('core::settings.errors.window_months');
-        $amount = Lang::get('core::settings.errors.amount', ['zero' => Money::ofMinor(0, $this->baseCurrency)->formatWholeUnits()]);
+        $amount = Lang::get('core::settings.errors.amount', ['zero' => Money::ofMinor(0, $this->exampleCurrency())->formatWholeUnits()]);
         $threshold = Lang::get('core::settings.errors.threshold');
         $currencyRequired = Lang::get('core::settings.errors.currency_required');
         $currencyView = Lang::get('core::settings.errors.currency_view');
