@@ -34,6 +34,7 @@ final readonly class UserScopedDataPurge
 
         $this->sweep($connection, $tables, $userId);
         $this->sweepRelayMailbox($connection, $deviceIds);
+        $this->sweepQueuedWork($connection, $userId);
         $this->sweepOrphanedChildren($connection);
 
         $connection->table('users')->where('id', $userId)->delete();
@@ -90,6 +91,36 @@ final readonly class UserScopedDataPurge
             }
 
             $pending = $blocked;
+        }
+    }
+
+    // `jobs` carries no user_id -- the owner is serialised inside the payload --
+    // so the schema sweep is blind to it. Deleting an account left 2,385 jobs
+    // behind that named it, and the next account to sign up on that device
+    // queued its work behind all of them. The screen's own copy lists what it
+    // removes; the queue was not on the list and was not empty.
+    private function sweepQueuedWork(Connection $connection, int $userId): void
+    {
+        // Matches a serialised int property named userId at either visibility:
+        // a private one is prefixed with null bytes and its class, so only the
+        // tail of the name is common to both. No job declares a property whose
+        // name merely ends in userId, which is what would otherwise collide.
+        //
+        // Two patterns because the column is JSON and the serialised command
+        // lives inside a JSON string, where every quote is backslash-escaped.
+        // Matching only the bare form found nothing at all.
+        $bare = '%"userId";i:'.$userId.';%';
+        $escaped = '%userId\\";i:'.$userId.';%';
+
+        foreach (['jobs', 'failed_jobs'] as $table) {
+            if (! $connection->getSchemaBuilder()->hasTable($table)) {
+                continue;
+            }
+
+            $connection->table($table)
+                ->where('payload', 'like', $bare)
+                ->orWhere('payload', 'like', $escaped)
+                ->delete();
         }
     }
 

@@ -392,3 +392,42 @@ it('does not tell the user nothing changed when the account is already gone', fu
 
     expect(User::query()->where('id', $owner->id)->exists())->toBeFalse();
 });
+
+// `jobs` carries no user_id -- the owner is serialised inside the payload --
+// so the schema sweep that finds every other table is blind to it. Measured on
+// a phone: deleting an account left 2,385 jobs naming it, and the account that
+// signed up next queued its own work behind all of them. The screen lists what
+// it removes; the queue was not on the list and was not empty.
+it('takes the queued work of the account with it', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $leaving = deleteAccountUser('queue-leaving', true);
+    $staying = deleteAccountUser('queue-staying', false);
+
+    $queue = function (int $userId, string $uuid) use ($db): void {
+        $db->connection()->table('jobs')->insert([
+            'queue' => 'default',
+            'payload' => json_encode([
+                'uuid' => $uuid,
+                'displayName' => 'Modules\\Anomaly\\Internal\\Jobs\\DetectAnomaliesJob',
+                'data' => ['command' => 'O:48:"Modules\\Anomaly\\Internal\\Jobs\\DetectAnomaliesJob":1:{s:6:"userId";i:'.$userId.';}'],
+            ], JSON_THROW_ON_ERROR),
+            'attempts' => 0,
+            'available_at' => 0,
+            'created_at' => 0,
+        ]);
+    };
+
+    $queue($leaving->id, 'leaving-1');
+    $queue($leaving->id, 'leaving-2');
+    $queue($staying->id, 'staying-1');
+
+    app(DeleteAccountAction::class)($leaving, 'queue-leaving-password-12');
+
+    $remaining = $db->connection()->table('jobs')->pluck('payload')->all();
+
+    expect($remaining)->toHaveCount(1);
+    expect($remaining[0])->toContain('userId');
+    expect($remaining[0])->toContain('i:'.$staying->id.';');
+});
