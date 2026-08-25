@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Rinomina questa controparte',
 
     'unknown_iban_prefix' => 'Abbiamo trovato un IBAN sconosciuto:',
+
+    'unknown_account_prefix' => 'Abbiamo trovato un conto sconosciuto:',
     'unknown_iban_suffix' => 'Dai un nome a questo conto.',
 
     'ics' => [

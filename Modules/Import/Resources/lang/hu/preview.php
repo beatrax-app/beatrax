@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Ennek a partnernek az átnevezése',
 
     'unknown_iban_prefix' => 'Ismeretlen IBAN-t találtunk:',
+
+    'unknown_account_prefix' => 'Ismeretlen számlát találtunk:',
     'unknown_iban_suffix' => 'Nevezd el ezt a számlát.',
 
     'ics' => [

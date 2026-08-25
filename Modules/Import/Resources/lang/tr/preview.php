@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Bu karşı tarafı yeniden adlandır',
 
     'unknown_iban_prefix' => 'Tanımadığımız bir IBAN bulduk:',
+
+    'unknown_account_prefix' => 'Tanımadığımız bir hesap bulduk:',
     'unknown_iban_suffix' => 'Bu hesaba bir ad ver.',
 
     'ics' => [

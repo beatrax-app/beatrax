@@ -129,7 +129,9 @@
                 @foreach ($preview->accountsToName as $unknown)
                     <div class="space-y-3">
                         <p class="text-sm text-slate-900 dark:text-slate-100">
-                            {{ Lang::get('import::preview.unknown_iban_prefix') }} <strong class="font-medium">{{ $unknown->iban }}</strong>. {{ Lang::get('import::preview.unknown_iban_suffix') }}
+                            {{ in_array($unknown->iban, $presetIssuedIdentifiers, true)
+                                ? Lang::get('import::preview.unknown_account_prefix')
+                                : Lang::get('import::preview.unknown_iban_prefix') }} <strong class="font-medium">{{ $unknown->iban }}</strong>. {{ Lang::get('import::preview.unknown_iban_suffix') }}
                         </p>
                         <div class="flex items-end gap-2">
                             <div class="flex-1">

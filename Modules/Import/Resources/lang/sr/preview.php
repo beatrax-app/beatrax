@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Preimenuj ovu drugu stranu',
 
     'unknown_iban_prefix' => 'Pronašli smo nepoznat IBAN:',
+
+    'unknown_account_prefix' => 'Pronašli smo nepoznat račun:',
     'unknown_iban_suffix' => 'Imenuj ovaj račun.',
 
     'ics' => [

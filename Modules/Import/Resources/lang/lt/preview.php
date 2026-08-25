@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Pervadinti šią kitą šalį',
 
     'unknown_iban_prefix' => 'Radome nepažįstamą IBAN:',
+
+    'unknown_account_prefix' => 'Radome nepažįstamą sąskaitą:',
     'unknown_iban_suffix' => 'Pavadink šią sąskaitą.',
 
     'ics' => [

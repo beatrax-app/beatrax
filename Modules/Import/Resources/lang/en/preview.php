@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Rename this counterparty',
 
     'unknown_iban_prefix' => 'We found an unfamiliar IBAN:',
+
+    'unknown_account_prefix' => 'We found an unfamiliar account:',
     'unknown_iban_suffix' => 'Name this account.',
 
     'ics' => [

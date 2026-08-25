@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Byt namn på den här motparten',
 
     'unknown_iban_prefix' => 'Vi hittade ett okänt IBAN:',
+
+    'unknown_account_prefix' => 'Vi hittade ett okänt konto:',
     'unknown_iban_suffix' => 'Ge det här kontot ett namn.',
 
     'ics' => [

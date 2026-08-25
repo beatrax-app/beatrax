@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Nimeta see vastaspool ümber',
 
     'unknown_iban_prefix' => 'Leidsime tundmatu IBAN-i:',
+
+    'unknown_account_prefix' => 'Leidsime tundmatu konto:',
     'unknown_iban_suffix' => 'Anna sellele kontole nimi.',
 
     'ics' => [

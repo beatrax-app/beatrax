@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Gi denne motparten nytt navn',
 
     'unknown_iban_prefix' => 'Vi fant et ukjent IBAN:',
+
+    'unknown_account_prefix' => 'Vi fant en ukjent konto:',
     'unknown_iban_suffix' => 'Gi denne kontoen et navn.',
 
     'ics' => [

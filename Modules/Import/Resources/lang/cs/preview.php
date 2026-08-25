@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Přejmenovat tuto protistranu',
 
     'unknown_iban_prefix' => 'Našli jsme neznámý IBAN:',
+
+    'unknown_account_prefix' => 'Našli jsme neznámý účet:',
     'unknown_iban_suffix' => 'Pojmenuj tento účet.',
 
     'ics' => [

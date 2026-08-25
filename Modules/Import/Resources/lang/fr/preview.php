@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Renommer ce tiers',
 
     'unknown_iban_prefix' => 'Nous avons trouvé un IBAN inconnu :',
+
+    'unknown_account_prefix' => 'Nous avons trouvé un compte inconnu :',
     'unknown_iban_suffix' => 'Donne un nom à ce compte.',
 
     'ics' => [

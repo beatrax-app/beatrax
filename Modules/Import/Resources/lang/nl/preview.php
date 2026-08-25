@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Deze tegenpartij hernoemen',
 
     'unknown_iban_prefix' => 'We vonden een onbekend IBAN:',
+
+    'unknown_account_prefix' => 'We vonden een onbekende rekening:',
     'unknown_iban_suffix' => 'Geef deze rekening een naam.',
 
     'ics' => [

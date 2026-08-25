@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Nimeä tämä vastapuoli uudelleen',
 
     'unknown_iban_prefix' => 'Löysimme tuntemattoman IBANin:',
+
+    'unknown_account_prefix' => 'Löysimme tuntemattoman tilin:',
     'unknown_iban_suffix' => 'Nimeä tämä tili.',
 
     'ics' => [

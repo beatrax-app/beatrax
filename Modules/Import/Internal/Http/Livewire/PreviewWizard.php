@@ -28,6 +28,7 @@ use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
@@ -348,6 +349,7 @@ final class PreviewWizard extends Component
         PreviewCache $cache,
         CurrentUser $currentUser,
         DatabaseManager $db,
+        CsvPresetRegistry $presets,
     ): View {
         $this->assertOwnedRun($currentUser);
 
@@ -363,7 +365,27 @@ final class PreviewWizard extends Component
             'needsPaypalAccountName' => $needsPaypalAccountName,
             'importableRowCount' => self::importableRowCount($preview),
             'failedRowCount' => self::failedRowCount($preview),
+            'presetIssuedIdentifiers' => self::presetIssuedIdentifiers($preview, $presets),
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function presetIssuedIdentifiers(?ImportPreviewResult $preview, CsvPresetRegistry $presets): array
+    {
+        if ($preview === null) {
+            return [];
+        }
+
+        $issued = [];
+        foreach ($preview->accountsToName as $unknown) {
+            if ($presets->issuesOwnAccountIdentifier($unknown->iban)) {
+                $issued[] = $unknown->iban;
+            }
+        }
+
+        return $issued;
     }
 
     // A confirmed run has no preview left, indistinguishable from an expired one

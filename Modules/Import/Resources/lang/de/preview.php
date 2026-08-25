@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Diesen Zahlungspartner umbenennen',
 
     'unknown_iban_prefix' => 'Wir haben eine unbekannte IBAN gefunden:',
+
+    'unknown_account_prefix' => 'Wir haben ein unbekanntes Konto gefunden:',
     'unknown_iban_suffix' => 'Gib diesem Konto einen Namen.',
 
     'ics' => [

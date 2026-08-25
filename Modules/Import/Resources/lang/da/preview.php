@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Omdøb denne modpart',
 
     'unknown_iban_prefix' => 'Vi fandt et ukendt IBAN:',
+
+    'unknown_account_prefix' => 'Vi fandt en ukendt konto:',
     'unknown_iban_suffix' => 'Giv denne konto et navn.',
 
     'ics' => [

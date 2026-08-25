@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Redenumește această contraparte',
 
     'unknown_iban_prefix' => 'Am găsit un IBAN necunoscut:',
+
+    'unknown_account_prefix' => 'Am găsit un cont necunoscut:',
     'unknown_iban_suffix' => 'Denumește acest cont.',
 
     'ics' => [

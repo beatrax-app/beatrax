@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Pārdēvēt šo darījuma partneri',
 
     'unknown_iban_prefix' => 'Atradām nepazīstamu IBAN:',
+
+    'unknown_account_prefix' => 'Atradām nepazīstamu kontu:',
     'unknown_iban_suffix' => 'Piešķiriet šim kontam nosaukumu.',
 
     'ics' => [

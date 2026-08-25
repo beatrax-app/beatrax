@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Μετονομασία αυτού του αντισυμβαλλόμενου',
 
     'unknown_iban_prefix' => 'Βρήκαμε ένα άγνωστο IBAN:',
+
+    'unknown_account_prefix' => 'Βρήκαμε έναν άγνωστο λογαριασμό:',
     'unknown_iban_suffix' => 'Δώσε όνομα σε αυτόν τον λογαριασμό.',
 
     'ics' => [

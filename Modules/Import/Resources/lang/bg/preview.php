@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Преименувай този контрагент',
 
     'unknown_iban_prefix' => 'Открихме непознат IBAN:',
+
+    'unknown_account_prefix' => 'Открихме непозната сметка:',
     'unknown_iban_suffix' => 'Дай име на тази сметка.',
 
     'ics' => [

@@ -21,6 +21,8 @@ return [
     'rename_aria' => 'Перейменувати цього контрагента',
 
     'unknown_iban_prefix' => 'Ми знайшли незнайомий IBAN:',
+
+    'unknown_account_prefix' => 'Ми знайшли незнайомий рахунок:',
     'unknown_iban_suffix' => 'Назви цей рахунок.',
 
     'ics' => [
