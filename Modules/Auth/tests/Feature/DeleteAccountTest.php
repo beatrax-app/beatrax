@@ -445,3 +445,37 @@ it('does not promise another copy exists on a device that has no paired peer', f
     expect($rendered)->toContain(Lang::get('auth::delete_account.devices_heading_none'));
     expect($rendered)->not->toContain(Lang::get('auth::delete_account.devices_heading'));
 });
+
+// The delete screen says everything above is removed from this device. Cache
+// rows are keyed by user id rather than by a user_id column, so the schema
+// sweep never saw them: `nav-counts:<id>` held the deleted account's own badge
+// counts for the rest of its TTL. Ids are not reused -- the table is
+// AUTOINCREMENT -- so no later account can read them, but they are still the
+// account's data outliving the sentence that promised otherwise.
+it('takes the derived cache of the account with it', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $leaving = deleteAccountUser('cache-leaving', true);
+    $staying = deleteAccountUser('cache-staying', false);
+
+    $put = function (string $key) use ($db): void {
+        $db->connection()->table('cache')->insert([
+            'key' => $key,
+            'value' => serialize(['transactions' => 3]),
+            'expiration' => time() + 3600,
+        ]);
+    };
+
+    $put('nav-counts:'.$leaving->id);
+    $put('savings-insights:'.$leaving->id);
+    $put('nav-counts:'.$staying->id);
+
+    app(DeleteAccountAction::class)($leaving, 'cache-leaving-password-12');
+
+    $keys = $db->connection()->table('cache')->pluck('key')->all();
+
+    expect($keys)->not->toContain('nav-counts:'.$leaving->id);
+    expect($keys)->not->toContain('savings-insights:'.$leaving->id);
+    expect($keys)->toContain('nav-counts:'.$staying->id);
+});

@@ -1870,6 +1870,10 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
     // where one module changes another module's state, which is the coupling.
     $pinned = [
         'Modules/Anomaly/Internal/Jobs/BackfillAnomaliesJob.php users 1',
+        // Framework tables, both keyed by user id rather than by a user_id
+        // column, so the schema sweep beside this cannot reach either. Deleting
+        // an account left 2,385 jobs and its own cached badge counts behind.
+        'Modules/Auth/Internal/Account/UserScopedDataPurge.php cache 1',
         'Modules/Auth/Internal/Account/UserScopedDataPurge.php relay_mailbox 1',
         'Modules/Auth/Internal/Account/UserScopedDataPurge.php users 1',
         'Modules/Auth/Internal/Console/ResetPasswordCommand.php users 1',

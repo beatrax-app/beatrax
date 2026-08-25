@@ -308,22 +308,34 @@ window.beatraxApplyChartTheme = function (options) {
  * Alpine has initialised that node. A drawer Livewire morphs back into the
  * page can carry the attribute without the binding, and then the native submit
  * runs: the mobile shell replays it without the method, and the reader is
- * dropped on Laravel's 405 page for `GET /logout` -- which under a dev build's
- * APP_DEBUG renders the app's own source at them.
+ * dropped on Laravel's 405 page for `GET /logout`.
  *
- * Capture phase, so it runs whether or not Alpine ever bound. Scoped to forms
- * that opted in, so no other POST form changes behaviour.
+ * Deliberately the WEAKEST listener that can still do that job. The first
+ * version of this ran in the capture phase and unqualified, and sign-in broke
+ * on the build that carried it -- a Livewire form with no action submitted
+ * natively to its own URL and the page simply reloaded, with a wrong password
+ * producing no message at all. Three properties keep it out of the way now,
+ * and each is load-bearing:
+ *
+ *   - bubble phase, so every node-level handler has already run;
+ *   - `defaultPrevented`, so anything that claimed the submit keeps it --
+ *     Livewire's `wire:submit` prevents default, so it always wins;
+ *   - a real `action`, because a form without one is somebody else's.
  */
 document.addEventListener('submit', (event) => {
     const form = event.target;
 
-    if (! (form instanceof HTMLFormElement) || ! form.hasAttribute('data-beatrax-post')) {
+    if (event.defaultPrevented
+        || ! (form instanceof HTMLFormElement)
+        || ! form.hasAttribute('data-beatrax-post')
+        || ! form.getAttribute('action')
+    ) {
         return;
     }
 
     event.preventDefault();
     window.beatraxSubmitPostForm(form, event.submitter);
-}, true);
+});
 
 window.beatraxSubmitPostForm = async function (form, submitter) {
     const payload = Object.fromEntries(new FormData(form));

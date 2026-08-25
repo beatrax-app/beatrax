@@ -45,9 +45,17 @@ it('gives every form routed through the post helper the marker the delegate read
     expect($offenders)->toBe([]);
 });
 
-it('keeps the delegate listening in the capture phase, where a missing binding cannot beat it', function (): void {
+// The delegate must never claim a submit another handler wanted. Capture
+// phase and unqualified, it preempted Livewire: a wire:submit form with no
+// action submitted natively to its own URL, sign-in silently reloaded the
+// page, and a wrong password produced no message at all.
+it('keeps the delegate weaker than every handler that could own a submit', function (): void {
     $js = (string) file_get_contents(base_path('resources/js/app.js'));
 
     expect($js)->toContain('data-beatrax-post');
-    expect($js)->toContain('}, true);');
+    expect($js)->toContain('event.defaultPrevented');
+    expect($js)->toContain("form.getAttribute('action')");
+
+    // The third argument is what put it ahead of Livewire.
+    expect($js)->not->toContain(', true)');
 });
