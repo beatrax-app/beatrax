@@ -134,11 +134,12 @@ return Application::configure(basePath: dirname(__DIR__))
         if (! is_dir(dirname($canonicalDb))) {
             @mkdir(dirname($canonicalDb), 0775, true);
         }
-        $app->make('config')->set(
-            SqliteDatabase::LIVE_PATH_CONFIG_KEY,
+        $config = $app->make('config');
+        $config->set(
+            SqliteDatabase::livePathKey($config),
             $canonicalDb,
         );
-        $app->make('db')->purge('sqlite');
+        $app->make('db')->purge(SqliteDatabase::connectionName($config));
 
         // The native app-copy strips storage/framework, so at config-load
         // realpath(storage_path('framework/views')) is false, view.compiled
