@@ -105,6 +105,7 @@
     action="{{ route('locale.switch') }}"
     class="{{ $formClass }}"
     x-data
+    data-beatrax-post
     x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)"
 >
     @csrf

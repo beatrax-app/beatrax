@@ -84,7 +84,7 @@
              Grouped with the plain sign-out so three lines of copy cost one
              gap on a screen the keypad has already nearly filled. --}}
         <div class="space-y-1">
-            <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
+            <form method="POST" action="{{ route('logout') }}" data-beatrax-post x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
                 @csrf
                 <button
                     type="submit"
@@ -97,7 +97,7 @@
                 </button>
             </form>
 
-            <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
+            <form method="POST" action="{{ route('logout') }}" data-beatrax-post x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
                 @csrf
                 <button
                     type="submit"

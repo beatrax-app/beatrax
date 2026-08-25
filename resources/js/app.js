@@ -303,6 +303,28 @@ window.beatraxApplyChartTheme = function (options) {
  * one shape for every form. Laravel merges a JSON body into the input bag, so
  * `$request->string('code')` reads it unchanged on desktop.
  */
+/*
+ * Delegated, because the per-form `x-on:submit.prevent` only intercepts once
+ * Alpine has initialised that node. A drawer Livewire morphs back into the
+ * page can carry the attribute without the binding, and then the native submit
+ * runs: the mobile shell replays it without the method, and the reader is
+ * dropped on Laravel's 405 page for `GET /logout` -- which under a dev build's
+ * APP_DEBUG renders the app's own source at them.
+ *
+ * Capture phase, so it runs whether or not Alpine ever bound. Scoped to forms
+ * that opted in, so no other POST form changes behaviour.
+ */
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+
+    if (! (form instanceof HTMLFormElement) || ! form.hasAttribute('data-beatrax-post')) {
+        return;
+    }
+
+    event.preventDefault();
+    window.beatraxSubmitPostForm(form, event.submitter);
+}, true);
+
 window.beatraxSubmitPostForm = async function (form, submitter) {
     const payload = Object.fromEntries(new FormData(form));
 
