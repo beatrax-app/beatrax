@@ -17,7 +17,7 @@
             </a>
         </x-core::empty-state>
     @else
-        <header class="flex items-baseline justify-between gap-4">
+        <header class="flex flex-wrap items-baseline justify-between gap-4">
             <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('migration::index.heading') }}</h1>
             <a
                 href="{{ route('migrations.new') }}"

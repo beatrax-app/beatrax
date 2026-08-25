@@ -269,7 +269,7 @@
                             {{-- The name truncates and the amount holds its width:
                                  without this a long category pushed the figure
                                  straight off the right edge of a phone. --}}
-                            <div class="flex items-baseline justify-between gap-2 text-sm">
+                            <div class="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                                 <span class="min-w-0 truncate text-slate-900 dark:text-slate-100">{{ $cat->name }}</span>
                                 <span class="shrink-0 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                     {{ $fmt($cat->spend) }}

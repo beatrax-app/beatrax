@@ -37,7 +37,7 @@
 
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-12">
-        <div class="flex items-baseline justify-between gap-4">
+        <div class="flex flex-wrap items-baseline justify-between gap-4">
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('chains::review.heading') }}</h1>
             @if (($hintCount ?? 0) > 0)
                 <a

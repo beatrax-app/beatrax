@@ -35,7 +35,13 @@
 
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8">
-        <div class="flex items-baseline justify-between gap-4">
+        {{-- The button takes 172 of 343px and left the heading 154, which is
+             15px under what "Terugkerend" measures, so the heading broke
+             mid-word in Dutch. `flex-wrap` alone: unlike the import preview,
+             the squeezed party here is the heading, so pinning the button
+             would only give it more to absorb. Measured at 343px against the
+             built stylesheet: h1 136px over two lines, 151.7px over one. --}}
+        <div class="flex flex-wrap items-baseline justify-between gap-4">
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::index.title') }}</h1>
             <x-core::secondary-button
                 size="sm"

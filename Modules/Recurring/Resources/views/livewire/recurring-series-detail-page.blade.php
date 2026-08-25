@@ -103,7 +103,7 @@
     </header>
 
     <section class="mb-8 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-        <div class="mb-4 flex items-baseline justify-between">
+        <div class="mb-4 flex flex-wrap items-baseline justify-between">
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::detail.amount_over_time') }}</h2>
             <button
                 type="button"

@@ -152,7 +152,7 @@
                         <li data-testid="recent-run-row">
                             <a
                                 href="{{ $run['href'] }}"
-                                class="flex items-baseline justify-between gap-2 hover:underline"
+                                class="flex flex-wrap items-baseline justify-between gap-2 hover:underline"
                             >
                                 <span class="text-sm font-mono truncate">{{ $run['command'] }}</span>
                                 <span
