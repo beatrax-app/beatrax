@@ -196,6 +196,7 @@ final class ReportBuilder extends Component
                 echo $exporter->export($user, $definition);
             },
             "beatrax-report-{$definition->slug()}.csv",
+            ['Content-Type' => 'text/csv; charset=UTF-8'],
         );
     }
 

@@ -38,6 +38,7 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
                 echo $exporter->export($user, $definition);
             },
             "beatrax-report-{$definition->slug()}.csv",
+            ['Content-Type' => 'text/csv; charset=UTF-8'],
         );
     })->name('reports.export');
 
