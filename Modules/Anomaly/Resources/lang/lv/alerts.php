@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'bāze :baseline → faktiski: :actual',
     'detected' => 'atklāts :date',
-    'sensitivity' => 'jutīgums :percent of 100',
+    'sensitivity' => 'jutīgums :percent no 100',
 
     'actions_summary' => 'Darbības',
 

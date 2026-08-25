@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'alapérték :baseline → tényleges: :actual',
     'detected' => 'észlelve: :date',
-    'sensitivity' => 'érzékenység :percent of 100',
+    'sensitivity' => 'érzékenység :percent a 100-ból',
 
     'actions_summary' => 'Műveletek',
 

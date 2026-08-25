@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'referință :baseline → real: :actual',
     'detected' => 'detectat :date',
-    'sensitivity' => 'sensibilitate :percent of 100',
+    'sensitivity' => 'sensibilitate :percent din 100',
 
     'actions_summary' => 'Acțiuni',
 
