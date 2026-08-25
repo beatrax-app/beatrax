@@ -79,6 +79,7 @@ final class ImportPipeline
             $user,
             $importRunId,
             $writer,
+            $localPath,
         );
 
         $this->persistStatementMetadata($sourceFormat, $importRunId, $built['lastResolvedAccountId'], $user);
@@ -100,7 +101,7 @@ final class ImportPipeline
      * @param  iterable<int, SourceTransactionDto>  $sourceRows
      * @return array{head: PreviewHead, lastResolvedAccountId: ?int}
      */
-    private function buildPreviewRows(iterable $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer): array
+    private function buildPreviewRows(iterable $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer, ?string $localPath = null): array
     {
         /** @var array<string, UnknownIban> $unknownIbans */
         $unknownIbans = [];
@@ -158,9 +159,15 @@ final class ImportPipeline
             // it stops the read where it was raised. Reported as a row it read
             // as a transaction with no values; reported here it can say that
             // nothing past this point was read. The trace goes to the log.
+            // The size and the row count, because without them the two ways
+            // this fails are indistinguishable in a log: a file that arrived
+            // empty and a file that died on its content both surface as the
+            // reader's export being unreadable. The path is not logged.
             $this->logger->warning('ImportPipeline: parse failed.', [
                 'source_format' => $sourceFormat,
                 'import_run_id' => $importRunId,
+                'source_bytes' => self::sourceBytes($localPath),
+                'rows_read' => $rowsWritten,
                 ...SafeExceptionContext::describe($e),
                 'exception_message' => $e instanceof MessageNamesNoUserData ? $e->getMessage() : null,
                 'exception_trace' => $e->getTraceAsString(),
@@ -336,6 +343,17 @@ final class ImportPipeline
     // has not declared itself free of user data never enters the preview at all.
     // The sniffer's own "this CSV is missing column X" is the one worth keeping,
     // and it is declared safe.
+    private static function sourceBytes(?string $localPath): ?int
+    {
+        if ($localPath === null || ! is_file($localPath)) {
+            return null;
+        }
+
+        $bytes = @filesize($localPath);
+
+        return $bytes === false ? null : $bytes;
+    }
+
     private static function safeDetail(Throwable $e): ?string
     {
         if (! $e instanceof MessageNamesNoUserData) {
