@@ -16,6 +16,7 @@ A topic in this subtree answers "how does X work across the codebase?" rather th
 | [Ingestion pipeline](ingestion-pipeline.md) | The end-to-end flow from raw source file (CSV / CAMT / MT940 / PDF / `.eml`) to canonical `Transaction` row, including the idempotency contract |
 | [Chain resolution](chain-resolution.md) | PayPal funding chains, ICS bulk-iDEAL settlement chains, the `pair_transaction_id` linkage, and the known-counterparty-IBAN alias bridge |
 | [Categorization](categorization.md) | The two-layer rule-and-memory categorizer, the ≥40% confidence gate, and the receipt-vs-statement enrichment conflict resolver |
+| [SQLite write locks](sqlite-write-locks.md) | Why `busy_timeout` cannot save a read-then-write transaction, and the `transaction_mode = IMMEDIATE` that decides who waits |
 | [Navigation destinations](navigation-destinations.md) | The one vocabulary of user-facing screens, why it lives in `Core` rather than `Shell`, and the invariant that keeps the shell a sink |
 | [Data model](https://github.com/beatrax-app/spec/blob/main/20-architecture/data-model.md) | Table-by-table layout grouped by owning module, the trust-boundary columns, and the state-machine sole-mutator rule |
 
