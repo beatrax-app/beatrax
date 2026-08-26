@@ -377,6 +377,18 @@ having lost:
   switch shipped as a small circle inside a bigger one. Anything the floor would
   deform opts out and takes its touch reach from a pseudo-element instead, which
   costs no layout.
+
+  **Measuring it.** `getBoundingClientRect()` answers about the paint, and the
+  paint is deliberately smaller than the reach. A device walk that measures
+  boxes will report the welcome screen's links at 327x36, the report chips at
+  29px and the search toggles at 20px, and every one of those is the design
+  working: `.tap-chip`, `.chip`, `.srch-chip-toggle` and the rest carry a
+  `::after` sized `max(100%, 44px)` under `@media (pointer: coarse)`. Three
+  device rounds have now filed them as defects. The measurement that answers
+  the actual question is `document.elementFromPoint()` at the corners of the
+  44px band — and the failure it *can* find is a real one, because an ancestor
+  with `overflow: hidden` (a `truncate` utility, most often) clips the halo
+  away while leaving the box exactly where it was.
 - **A duplicated dialog name.** The same sheet is both "create" and "edit". A
   duplicated string went stale on the Livewire round-trip that updated the
   heading, so the dialog announced "create" while the form was editing.
