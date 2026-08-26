@@ -7,6 +7,7 @@ namespace Modules\Search\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
@@ -21,6 +22,7 @@ use Modules\Search\Internal\Services\QueryParser;
 use Modules\Search\Internal\Services\SearchRowMapper;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Dto\SearchResultPage;
+use Modules\Search\Public\Dto\SearchRowDto;
 
 // Full-text search read entry point for /transactions and the ⌘K
 // palette: FTS5 MATCH + SQL filters + highlight + cursor pagination.
@@ -105,29 +107,7 @@ final class SearchQuery
         // in it reported nothing at all over a ledger denominated elsewhere.
         $base = $this->baseCurrency->forUser($user);
 
-        $summary = (clone $query)->selectRaw(
-            'COUNT(*) as total_count,
-             settled_currency as bucket_currency,
-             SUM(CASE WHEN settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
-             SUM(CASE WHEN settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in',
-        )->groupBy('settled_currency')->get();
-
-        $totalCount = 0;
-        $outByCurrency = [];
-        $inByCurrency = [];
-        foreach ($summary as $bucket) {
-            $bucketCurrency = is_string($bucket->bucket_currency ?? null) ? $bucket->bucket_currency : '';
-            $totalCount += is_numeric($bucket->total_count ?? null) ? (int) $bucket->total_count : 0;
-            if ($bucketCurrency === '') {
-                continue;
-            }
-            $outByCurrency[$bucketCurrency] = is_numeric($bucket->total_out ?? null) ? (int) $bucket->total_out : 0;
-            $inByCurrency[$bucketCurrency] = is_numeric($bucket->total_in ?? null) ? (int) $bucket->total_in : 0;
-        }
-
-        $rates = $this->fx->ratesTo(array_keys($outByCurrency), $base);
-        $totalOut = $this->fx->withRates($outByCurrency, $base, $rates)->minor;
-        $totalIn = $this->fx->withRates($inByCurrency, $base, $rates)->minor;
+        ['count' => $totalCount, 'out' => $totalOut, 'in' => $totalIn] = $this->totals($query, $base);
 
         $query->limit($limit + 1);
         TransactionCursor::apply($query, $cursorPostedAt, $cursorId);
@@ -141,16 +121,8 @@ final class SearchQuery
             $highlights = $this->ftsResolver->loadHighlights($user, $textQuery, self::toIntList($sliced->pluck('id')->all()));
         }
 
-        $dtos = [];
-        $lastId = null;
-        $lastPostedAt = null;
-        foreach ($sliced as $row) {
-            $rowId = self::toInt($row->id);
-            $highlight = $highlights[$rowId] ?? null;
-            $dtos[] = $this->rowMapper->map($row, $highlight, $user->id);
-            $lastId = $rowId;
-            $lastPostedAt = self::toString($row->posted_at);
-        }
+        ['rows' => $dtos, 'lastId' => $lastId, 'lastPostedAt' => $lastPostedAt]
+            = $this->mapRows($sliced, $highlights, $user);
 
         $didYouMean = null;
         if ($totalCount === 0 && $textQuery !== '') {
@@ -487,6 +459,70 @@ final class SearchQuery
         } elseif ($filters->amountDirection === AmountDirection::Out->value) {
             $query->where('transactions.amount_minor', '<', 0);
         }
+    }
+
+    /**
+     * Bucketed by the currency each row settled in, then converted — counting
+     * only rows already in the reader's currency reported nothing at all over a
+     * ledger denominated elsewhere. A bucket with no currency still counts
+     * toward the total; it just cannot be converted.
+     *
+     * @return array{count: int, out: int, in: int}
+     */
+    private function totals(Builder $query, string $base): array
+    {
+        $summary = (clone $query)->selectRaw(
+            'COUNT(*) as total_count,
+             settled_currency as bucket_currency,
+             SUM(CASE WHEN settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
+             SUM(CASE WHEN settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in',
+        )->groupBy('settled_currency')->get();
+
+        $count = 0;
+        $outByCurrency = [];
+        $inByCurrency = [];
+
+        foreach ($summary as $bucket) {
+            $bucketCurrency = is_string($bucket->bucket_currency ?? null) ? $bucket->bucket_currency : '';
+            $count += is_numeric($bucket->total_count ?? null) ? (int) $bucket->total_count : 0;
+            if ($bucketCurrency === '') {
+                continue;
+            }
+            $outByCurrency[$bucketCurrency] = is_numeric($bucket->total_out ?? null) ? (int) $bucket->total_out : 0;
+            $inByCurrency[$bucketCurrency] = is_numeric($bucket->total_in ?? null) ? (int) $bucket->total_in : 0;
+        }
+
+        $rates = $this->fx->ratesTo(array_keys($outByCurrency), $base);
+
+        return [
+            'count' => $count,
+            'out' => $this->fx->withRates($outByCurrency, $base, $rates)->minor,
+            'in' => $this->fx->withRates($inByCurrency, $base, $rates)->minor,
+        ];
+    }
+
+    /**
+     * The cursor is the LAST row mapped, so it is carried out of the loop
+     * rather than re-derived from a collection the caller has already sliced.
+     *
+     * @param  Collection<int, \stdClass>  $sliced
+     * @param  array<int, \stdClass>  $highlights
+     * @return array{rows: list<SearchRowDto>, lastId: int|null, lastPostedAt: string|null}
+     */
+    private function mapRows(Collection $sliced, array $highlights, User $user): array
+    {
+        $rows = [];
+        $lastId = null;
+        $lastPostedAt = null;
+
+        foreach ($sliced as $row) {
+            $rowId = self::toInt($row->id);
+            $rows[] = $this->rowMapper->map($row, $highlights[$rowId] ?? null, $user->id);
+            $lastId = $rowId;
+            $lastPostedAt = self::toString($row->posted_at);
+        }
+
+        return ['rows' => $rows, 'lastId' => $lastId, 'lastPostedAt' => $lastPostedAt];
     }
 
     /**
