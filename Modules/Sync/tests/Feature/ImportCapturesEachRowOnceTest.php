@@ -72,11 +72,15 @@ it('keeps the opt-out off by default, so every other writer stays captured', fun
     expect($source)->toContain('bool $captureForSync = true');
 });
 
+// Matched on the two arguments that carry the decision rather than on the whole
+// call: what the rows are wrapped in is the import path's business, and pinning
+// that spelling made this go red when they became a generator. The `false` is
+// the opt-out, and the single capture call is the thing it opts out in favour of.
 it('leaves exactly one capture call on the import path', function (): void {
     $confirm = (string) file_get_contents(
         base_path('Modules/Import/Public/Actions/ConfirmImport.php')
     );
 
-    expect($confirm)->toContain('($this->recorder)($canonical, $user, false)')
+    expect($confirm)->toMatch('/\(\$this->recorder\)\([^;]*, \$user, false\)/')
         ->and(substr_count($confirm, '$this->syncCapture->capture('))->toBe(1);
 });

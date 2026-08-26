@@ -83,14 +83,10 @@ final class ConfirmImport implements ConfirmsImports
 
         $rowIssues = $head === null ? [] : $head->rowIssues;
 
-        // Chunk by chunk, never as one list: the recorder already buffers what
-        // it is given into transactions, but reading the whole run out of the
-        // cache first put 27,777 rows in memory to hand them over, and the
-        // phone died mid-confirm with nothing written and nothing logged.
-        //
-        // captureForSync: false — this action captures run, accounts and
-        // transactions itself below, parents first. Capturing in the recorder
-        // as well wrote every imported row to the op log twice.
+        // Chunk by chunk, never as one list: reading the whole run out of the
+        // cache to hand it to a recorder that already buffers what it is given
+        // killed the app mid-confirm with nothing written. captureForSync is
+        // false because this action captures the run and its parents itself.
         $recorderResult = ($this->recorder)(self::rowsOf($canonical), $user, false);
 
         // The pipeline already filtered fingerprint-duplicates out of
