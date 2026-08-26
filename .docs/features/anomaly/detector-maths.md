@@ -220,7 +220,7 @@ Two properties make the window safe to leave that wide:
 - **Both-on-a-series is excluded.** A weekly or fortnightly subscription
   falls inside seven days, so the detector resolves series membership for
   the candidate and the sibling through Recurring's
-  `RecurringSeriesQuery::seriesMembershipForTransactionIds()` and does not
+  `TransactionSeriesMembershipQuery::seriesMembershipForTransactionIds()` and does not
   fire when *both* are approved members. The condition is deliberately AND,
   not OR: a one-off duplicate of a subscription charge — the subscription
   billed twice — has only one member on the series, and still fires.

@@ -288,7 +288,7 @@ whose neighbouring occurrences overlap — cannot swallow the horizon.
 `BookedEntryPlacer` reads the same helper for the calendar, where entries sit on
 the occurrence dates themselves and the run is therefore always a single day.
 
-Membership is answered by `RecurringSeriesQuery::seriesIdsForTransactionIds()`,
+Membership is answered by `TransactionSeriesMembershipQuery::seriesIdsForTransactionIds()`,
 which resolves in two steps, and the second is the one that matters:
 
 1. **`recurring_series_occurrences.transaction_id`** — the authoritative link,

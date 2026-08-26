@@ -12,7 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
-use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Recurring\Public\Services\TransactionSeriesMembershipQuery;
 
 /**
  * @link ../../../../.docs/features/anomaly/detector-maths.md
@@ -26,7 +26,7 @@ final readonly class DuplicateChargeDetector
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
-        private RecurringSeriesQuery $recurringQuery,
+        private TransactionSeriesMembershipQuery $seriesMembership,
         private BaseCurrency $baseCurrency,
     ) {}
 
@@ -72,7 +72,7 @@ final readonly class DuplicateChargeDetector
 
         $siblingId = self::toInt($siblingId);
 
-        $membership = $this->recurringQuery->seriesMembershipForTransactionIds([$thisId, $siblingId], $user);
+        $membership = $this->seriesMembership->seriesMembershipForTransactionIds([$thisId, $siblingId], $user);
         $bothOnSeries = ($membership[$thisId] ?? false) && ($membership[$siblingId] ?? false);
 
         return ! $bothOnSeries;

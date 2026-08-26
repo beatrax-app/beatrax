@@ -8,7 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\BookedFutureRowDto;
 use Modules\Ledger\Public\Services\BookedFutureRowQuery;
-use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Recurring\Public\Services\TransactionSeriesMembershipQuery;
 use Modules\Recurring\Public\Support\OccurrenceSupersession;
 
 /**
@@ -23,7 +23,7 @@ final readonly class BookedRowProjector
 
     public function __construct(
         private BookedFutureRowQuery $bookedRows,
-        private RecurringSeriesQuery $seriesQuery,
+        private TransactionSeriesMembershipQuery $seriesMembership,
     ) {}
 
     /**
@@ -90,7 +90,7 @@ final readonly class BookedRowProjector
      */
     private function withoutSuperseded(array $seriesContributions, array $rows, User $user): array
     {
-        $seriesByTransaction = $this->seriesQuery->seriesIdsForTransactionIds(
+        $seriesByTransaction = $this->seriesMembership->seriesIdsForTransactionIds(
             array_map(static fn (BookedFutureRowDto $row): int => $row->transactionId, $rows),
             $user,
         );

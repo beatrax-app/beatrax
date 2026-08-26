@@ -6,17 +6,14 @@ namespace Modules\Recurring\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Ledger\Public\Enums\Direction;
-use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
-use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Internal\Queries\RecurringSeriesProjector;
 use Modules\Recurring\Internal\Queries\SeriesAccountResolver;
 use Modules\Recurring\Internal\Support\SeriesIds;
+use Modules\Recurring\Internal\Support\SeriesTables;
 use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
@@ -26,15 +23,6 @@ use stdClass;
 final readonly class RecurringSeriesQuery
 {
     use CoercesScalars;
-
-    private const string OCCURRENCES = 'recurring_series_occurrences as o';
-
-    private const string TRANSACTIONS = 'transactions as t';
-
-    private const string SERIES = 'recurring_series as s';
-
-    /** @var list<string> the two states allApprovedForUser walks, and so the only two a booked row can be reconciled against */
-    private const array PROJECTABLE_STATES = [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value];
 
     public function __construct(
         private DatabaseManager $db,
@@ -59,7 +47,7 @@ final readonly class RecurringSeriesQuery
     {
         return $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
-            ->whereIn('state', self::PROJECTABLE_STATES)
+            ->whereIn('state', RecurringSeriesState::projectableValues())
             ->exists();
     }
 
@@ -250,134 +238,13 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * @param  array<int|string, mixed>  $transactionIds
-     * @return array<int, bool> transaction_id => is a member of some recurring series.
-     *                          Anomaly's duplicate-charge detector uses it to spare a fortnightly/weekly
-     *                          subscription that legitimately lands twice inside the duplicate window.
-     *                          user_id is filtered explicitly: the global scope does not fire on the
-     *                          queue/console where the evaluator runs
-     */
-    public function seriesMembershipForTransactionIds(array $transactionIds, User $user): array
-    {
-        $clean = [];
-        foreach ($transactionIds as $id) {
-            $i = is_numeric($id) ? (int) $id : 0;
-            if ($i > 0) {
-                $clean[] = $i;
-            }
-        }
-        $unique = array_values(array_unique($clean));
-        if ($unique === []) {
-            return [];
-        }
-
-        $members = $this->db->connection()->table('recurring_series_occurrences')
-            ->where('user_id', $user->id)
-            ->whereIn('transaction_id', $unique)
-            ->distinct()
-            ->pluck('transaction_id');
-
-        $memberSet = [];
-        foreach ($members as $value) {
-            $memberSet[self::toInt($value)] = true;
-        }
-
-        $map = [];
-        foreach ($unique as $id) {
-            $map[$id] = isset($memberSet[$id]);
-        }
-
-        return $map;
-    }
-
-    /**
-     * @param  array<int|string, mixed>  $transactionIds
-     * @return array<int, int> transaction_id => the projectable series the row belongs to.
-     *                         Rows belonging to none are silently absent
-     *
-     * @link ../../../../.docs/features/forecasting/architecture.md#booked-future-dated-rows
-     */
-    public function seriesIdsForTransactionIds(array $transactionIds, User $user): array
-    {
-        $unique = SeriesIds::normalise($transactionIds);
-        if ($unique === []) {
-            return [];
-        }
-
-        $linked = $this->linkedSeriesIds($unique, $user);
-
-        // A detection sweep has not read a row imported since it last ran, so
-        // the occurrence link is missing for exactly the future-dated rows a
-        // projection has to reconcile against its own estimate. The cluster
-        // identity the detector groups on is already on the row.
-        $unlinked = array_values(array_filter($unique, static fn (int $id): bool => ! isset($linked[$id])));
-
-        return $unlinked === [] ? $linked : $linked + $this->clusteredSeriesIds($unlinked, $user);
-    }
-
-    /**
-     * @param  list<int>  $transactionIds
-     * @return array<int, int>
-     */
-    private function linkedSeriesIds(array $transactionIds, User $user): array
-    {
-        $rows = $this->db->connection()->table(self::OCCURRENCES)
-            ->join(self::SERIES, 's.id', '=', 'o.recurring_series_id')
-            ->where('o.user_id', $user->id)
-            ->whereIn('o.transaction_id', $transactionIds)
-            ->whereIn('s.state', self::PROJECTABLE_STATES)
-            ->get(['o.transaction_id as transaction_id', 'o.recurring_series_id as series_id']);
-
-        $map = [];
-        foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $map[self::toInt($row->transaction_id)] = self::toInt($row->series_id);
-        }
-
-        return $map;
-    }
-
-    /**
-     * @param  list<int>  $transactionIds
-     * @return array<int, int>
-     */
-    private function clusteredSeriesIds(array $transactionIds, User $user): array
-    {
-        // UNIQUE(user_id, direction, cluster_counterparty_key, latest_currency)
-        // makes the joined triple plus a direction at most one series, so no
-        // tie-break is needed once the direction filter below has run.
-        $rows = $this->db->connection()->table(self::TRANSACTIONS)
-            ->join(self::SERIES, function (JoinClause $join): void {
-                $join->on('s.user_id', '=', 't.user_id')
-                    ->on('s.cluster_counterparty_key', '=', 't.counterparty_normalized')
-                    ->on('s.latest_currency', '=', 't.currency');
-            })
-            ->where('t.user_id', $user->id)
-            ->whereIn('t.id', $transactionIds)
-            ->where('t.counterparty_normalized', '!=', CounterpartyKey::NONE)
-            ->whereIn('s.state', self::PROJECTABLE_STATES)
-            ->get(['t.id as transaction_id', 't.type as type', 's.id as series_id', 's.direction as direction']);
-
-        $map = [];
-        foreach ($rows as $row) {
-            /** @var stdClass $row */
-            if (TransactionType::directionOf($row->type) !== Direction::tryFrom(self::toString($row->direction))) {
-                continue;
-            }
-            $map[self::toInt($row->transaction_id)] = self::toInt($row->series_id);
-        }
-
-        return $map;
-    }
-
-    /**
      * @return int|null the most frequent transactions.counterparty_id across the series'
      *                  occurrences, or null when none resolved to a counterparty
      */
     public function counterpartyIdForSeries(int $seriesId, User $user): ?int
     {
-        $row = $this->db->connection()->table(self::OCCURRENCES)
-            ->join(self::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
+        $row = $this->db->connection()->table(SeriesTables::OCCURRENCES)
+            ->join(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('o.recurring_series_id', $seriesId)
             ->where('o.user_id', $user->id)
             ->whereNotNull('t.counterparty_id')
@@ -407,8 +274,8 @@ final readonly class RecurringSeriesQuery
             return [];
         }
 
-        $rows = $this->db->connection()->table(self::OCCURRENCES)
-            ->join(self::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
+        $rows = $this->db->connection()->table(SeriesTables::OCCURRENCES)
+            ->join(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->whereIn('o.recurring_series_id', $unique)
             ->where('o.user_id', $user->id)
             ->whereNotNull('t.counterparty_id')
@@ -441,12 +308,12 @@ final readonly class RecurringSeriesQuery
      */
     public function approvedSeriesForCounterparty(int $counterpartyId, User $user): array
     {
-        $ids = $this->db->connection()->table(self::SERIES)
-            ->join(self::OCCURRENCES, 'o.recurring_series_id', '=', 's.id')
-            ->join(self::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
+        $ids = $this->db->connection()->table(SeriesTables::SERIES)
+            ->join(SeriesTables::OCCURRENCES, 'o.recurring_series_id', '=', 's.id')
+            ->join(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('s.user_id', $user->id)
             ->where('t.counterparty_id', $counterpartyId)
-            ->whereIn('s.state', self::PROJECTABLE_STATES)
+            ->whereIn('s.state', RecurringSeriesState::projectableValues())
             ->distinct()
             ->pluck('s.id')
             ->map(static fn (mixed $v): int => self::toInt($v))
@@ -495,7 +362,7 @@ final readonly class RecurringSeriesQuery
 
         $effectiveLimit = max(1, $maxPoints);
         $rows = $this->db->connection()->table('recurring_series_occurrences as rso')
-            ->leftJoin(self::TRANSACTIONS, 't.id', '=', 'rso.transaction_id')
+            ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'rso.transaction_id')
             ->where('rso.recurring_series_id', $seriesId)
             ->where('rso.user_id', $user->id)
             ->orderByDesc('rso.observed_at')
@@ -553,7 +420,7 @@ final readonly class RecurringSeriesQuery
     {
         $rows = $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
-            ->whereIn('state', self::PROJECTABLE_STATES)
+            ->whereIn('state', RecurringSeriesState::projectableValues())
             ->orderByDesc('monthly_equivalent_minor')
             ->orderByDesc('id')
             ->get();

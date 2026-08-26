@@ -12,7 +12,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Dto\BookedFutureRowDto;
 use Modules\Ledger\Public\Services\BookedFutureRowQuery;
-use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Recurring\Public\Services\TransactionSeriesMembershipQuery;
 use Modules\Recurring\Public\Support\OccurrenceSupersession;
 
 // A payment the ledger already holds, dated ahead. SeriesEntryPlacer answers
@@ -25,7 +25,7 @@ final readonly class BookedEntryPlacer
 {
     public function __construct(
         private BookedFutureRowQuery $bookedRows,
-        private RecurringSeriesQuery $seriesQuery,
+        private TransactionSeriesMembershipQuery $seriesMembership,
         private AccountResolver $accountResolver,
         private Clock $clock,
     ) {}
@@ -88,7 +88,7 @@ final readonly class BookedEntryPlacer
      */
     private function withoutSuperseded(array $seriesEntries, array $rows, User $user, CarbonImmutable $today): array
     {
-        $seriesByTransaction = $this->seriesQuery->seriesIdsForTransactionIds(
+        $seriesByTransaction = $this->seriesMembership->seriesIdsForTransactionIds(
             array_map(static fn (BookedFutureRowDto $row): int => $row->transactionId, $rows),
             $user,
         );

@@ -66,7 +66,7 @@ excluded from suppression-rule matching (see below), the per-merchant
   the pair, regardless of which evaluation path (reactive import,
   backfill, safety-net sweep) processes the rows first. When both sides of
   a pair are members of an approved recurring series (resolved through
-  Recurring's Public `seriesMembershipForTransactionIds`), the detector
+  Recurring's Public `TransactionSeriesMembershipQuery`), the detector
   does not fire — a legit cadence landing twice is not a duplicate.
 
 All three detectors share a minimum-amount floor that gates evaluation
