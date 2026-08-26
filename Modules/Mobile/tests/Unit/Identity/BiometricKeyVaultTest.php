@@ -30,6 +30,14 @@ class FakeBiometricKeyVault extends BiometricKeyVault
         return $this->available;
     }
 
+    // The enclave path is iOS, which reports Darwin. Unpinned, the fake inherits
+    // the HOST's PHP_OS_FAMILY, so platformCanStore() answers false on a Linux
+    // runner and every availability assertion passes on a Mac and fails in CI.
+    protected function platformFamily(): string
+    {
+        return 'Darwin';
+    }
+
     protected function pollRecovered(): ?string
     {
         return $this->pollValue;

@@ -35,6 +35,15 @@ function settingsVault(bool $available = true): BiometricKeyVault
             return $this->avail;
         }
 
+        // The enclave path is iOS, which reports Darwin. Without pinning it the
+        // fake inherits the HOST's PHP_OS_FAMILY, so platformCanStore() answers
+        // false on a Linux runner and every availability assertion here passes
+        // on a Mac and fails in CI.
+        protected function platformFamily(): string
+        {
+            return 'Darwin';
+        }
+
         public function enroll(string $dataKey): bool
         {
             return true;
