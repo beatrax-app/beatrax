@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Avviksvarsler',
-    'heading' => 'Varsler',
+    'heading' => 'Avviksvarsler',
     'intro_anomaly' => 'Enkeltbelastninger som ser uvanlige ut for deg.',
     'intro_drift' => 'Godkjente gjentakende serier der den siste belastningen havnet utenfor terskelen din.',
     'adjust_threshold' => 'Juster terskel →',

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Afwijkingswaarschuwingen',
-    'heading' => 'Meldingen',
+    'heading' => 'Driftmeldingen',
     'intro_anomaly' => 'Losse afschrijvingen die er voor jou ongewoon uitzien.',
     'intro_drift' => 'Goedgekeurde terugkerende reeksen waarvan de laatste afschrijving buiten je drempel valt.',
     'adjust_threshold' => 'Drempel aanpassen →',

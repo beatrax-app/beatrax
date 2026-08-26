@@ -5,13 +5,18 @@ declare(strict_types=1);
 // Dutch titled both /drift and /notifications "Meldingen", so the reader could
 // not tell from the header which screen they had opened. Parity cannot see it:
 // both keys exist and both are translated. What is wrong is the relationship
-// between two values, which only English fixes — it names those screens
-// "Drift Alerts" and "Notifications", and a locale is not free to merge them.
-// Where a language has one word for both (a plural equal to its singular), the
-// title has to carry a distinguishing word instead.
+// between two values, which only English fixes — it names those screens apart,
+// and a locale is not free to merge them. Where a language has one word for
+// both (a plural equal to its singular), the name carries a distinguishing
+// word instead.
+//
+// Both keys, because fixing page_title alone left the defect on screen: the
+// tab read "Afwijkingswaarschuwingen" while the h1 under it still said
+// "Meldingen", and this test passed. page_title is what the window says;
+// heading is what the reader sees.
 
-/** @return array<string, array<string, string>> locale => "Module/file" => page title */
-function pageTitlesByLocale(): array
+/** @return array<string, array<string, string>> locale => "Module/file" => value */
+function pageTitlesByLocale(string $key = 'page_title'): array
 {
     $titles = [];
 
@@ -21,19 +26,26 @@ function pageTitlesByLocale(): array
         }
 
         $lines = require $file;
-        if (! is_array($lines) || ! isset($lines['page_title']) || ! is_string($lines['page_title'])) {
+        if (! is_array($lines) || ! isset($lines[$key]) || ! is_string($lines[$key])) {
             continue;
         }
 
-        $titles[$match[2]][$match[1].'/'.$match[3]] = $lines['page_title'];
+        $titles[$match[2]][$match[1].'/'.$match[3]] = $lines[$key];
     }
 
     return $titles;
 }
 
-it('never gives one locale the same title for two screens English names apart', function (): void {
-    $titles = pageTitlesByLocale();
+it('never gives one locale the same name for two screens English names apart', function (string $key): void {
+    $titles = pageTitlesByLocale($key);
     $english = $titles['en'] ?? [];
+
+    // A screen is a lang file that names a page. `heading` also labels cards
+    // and tiles, and English distinguishes those by context rather than by
+    // destination — the drift page is headed "Alerts" while the dashboard card
+    // pointing at it says "Drift alerts", and neither is a second screen.
+    $screens = pageTitlesByLocale()['en'] ?? [];
+    $english = array_intersect_key($english, $screens);
 
     expect(count($english))->toBeGreaterThan(20, 'No English page titles were found to compare against.');
 
@@ -64,6 +76,6 @@ it('never gives one locale the same title for two screens English names apart', 
 
     expect($merged)->toBe(
         [],
-        "These locales title two different screens identically:\n  ".implode("\n  ", $merged)
+        "These locales give two different screens one {$key}:\n  ".implode("\n  ", $merged)
     );
-});
+})->with(['page_title', 'heading']);

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Detail transakce',
-    'heading' => 'Transakce',
+    'heading' => 'Detail transakce',
 
     'counterparty' => 'Protistrana',
     'description' => 'Popis',
