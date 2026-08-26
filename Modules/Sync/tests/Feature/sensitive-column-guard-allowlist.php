@@ -20,5 +20,5 @@ return [
     'Modules/Onboarding/Internal/Http/Livewire/Steps/ConnectCardStep.php' => 'where(\'iban\', ...) targets accounts.iban (ICS own-account existence check during onboarding) — Section E safe.',
     'Modules/Onboarding/Internal/Http/Livewire/Steps/ConnectBankStep.php' => 'where(\'iban\', ...) targets accounts.iban (ASN own-account existence check during onboarding) — Section E safe.',
     'Modules/Import/Public/Services/AccountNamer.php' => 'where(\'iban\', ...) targets accounts.iban (adopting the account a second preview already named, rather than inserting a duplicate against the user_id+iban unique index) — Section E safe.',
-    'Modules/Import/Internal/Http/Livewire/PreviewWizard.php' => 'where(\'iban\', ...) targets accounts.iban (ICS own-account existence check, the same one ConnectCardStep makes, deciding whether the preview must ask for a card-account name) — Section E safe.',
+    'Modules/Import/Internal/Services/OwnAccountPrompt.php' => 'where(\'iban\', ...) targets accounts.iban (ICS and PayPal own-account existence checks, the same one ConnectCardStep makes, deciding whether the preview must ask for a card- or wallet-account name) — Section E safe.',
 ];

@@ -18,6 +18,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
 use Modules\Import\Internal\Exceptions\PreviewExpiredException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
+use Modules\Import\Internal\Services\OwnAccountPrompt;
 use Modules\Import\Public\Actions\DiscardImport;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
 use Modules\Import\Public\Contracts\ConfirmsImports;
@@ -40,10 +41,6 @@ use Modules\Ledger\Public\Services\BaseCurrency;
  */
 final class PreviewWizard extends Component
 {
-    // The literal IcsPdfAdapter emits. AccountResolver scopes lookups by
-    // (iban, user_id), so one instance-wide literal stays unambiguous.
-    private const ICS_OWN_IBAN = 'ICS-CARD';
-
     private const int ROW_PAGE = 100;
 
     // Locked because a Livewire property is client-mutable between requests:
@@ -194,7 +191,7 @@ final class PreviewWizard extends Component
     public function saveIcsAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
-        PreviewCache $cache,
+        OwnAccountPrompt $prompt,
         AccountSlugResolver $slugs,
         BaseCurrency $baseCurrency,
     ): void {
@@ -203,7 +200,7 @@ final class PreviewWizard extends Component
         // The same guard the prompt is drawn behind, on the write side: the
         // form is gone by the next render, and a submit already in flight
         // would otherwise still land the account.
-        if ($this->previewReadNothing($cache)) {
+        if ($prompt->previewReadNothing($this->importRunId)) {
             return;
         }
 
@@ -224,7 +221,7 @@ final class PreviewWizard extends Component
             'name' => $trimmed,
             'slug' => $slugs->resolveUnique($user->id, $trimmed),
             'kind' => AccountKind::IcsCard->value,
-            'iban' => self::ICS_OWN_IBAN,
+            'iban' => OwnAccountPrompt::ICS_OWN_IBAN,
             'default_currency' => $baseCurrency->code(),
         ]);
 
@@ -248,12 +245,12 @@ final class PreviewWizard extends Component
     public function savePaypalAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
-        PreviewCache $cache,
+        OwnAccountPrompt $prompt,
         EnsurePaypalAccountAction $ensurePaypal,
     ): void {
         $this->resetErrorBag('paypalAccountName');
 
-        if ($this->previewReadNothing($cache)) {
+        if ($prompt->previewReadNothing($this->importRunId)) {
             return;
         }
 
@@ -303,9 +300,9 @@ final class PreviewWizard extends Component
         CurrentUser $currentUser,
         UrlGenerator $urls,
         PreviewCache $cache,
-        DatabaseManager $db,
+        OwnAccountPrompt $prompt,
     ): void {
-        if ($this->confirmationIsBlocked($currentUser, $cache, $db)) {
+        if ($this->confirmationIsBlocked($currentUser, $cache, $prompt)) {
             return;
         }
 
@@ -327,10 +324,10 @@ final class PreviewWizard extends Component
     // this is the one that counts. Nothing importable is blocked too, because
     // confirming it wrote a confirmed run whose own summary reported zero of
     // everything. A missing preview is a different case and stays expired.
-    private function confirmationIsBlocked(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
+    private function confirmationIsBlocked(CurrentUser $currentUser, PreviewCache $cache, OwnAccountPrompt $prompt): bool
     {
-        if ($this->needsIcsAccountName($currentUser, $cache, $db)
-            || $this->needsPaypalAccountName($currentUser, $cache, $db)) {
+        if ($prompt->needsIcsAccountName($this->importRunId, $currentUser)
+            || $prompt->needsPaypalAccountName($this->importRunId, $currentUser)) {
             return true;
         }
 
@@ -358,6 +355,7 @@ final class PreviewWizard extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         CsvPresetRegistry $presets,
+        OwnAccountPrompt $prompt,
     ): View {
         $this->assertOwnedRun($currentUser);
 
@@ -365,8 +363,8 @@ final class PreviewWizard extends Component
         $preview = $head === null
             ? null
             : PreviewCache::resultFrom($head, $cache->rows($this->importRunId, 0, $this->visibleRows));
-        $needsIcsAccountName = $this->needsIcsAccountName($currentUser, $cache, $db);
-        $needsPaypalAccountName = $this->needsPaypalAccountName($currentUser, $cache, $db);
+        $needsIcsAccountName = $prompt->needsIcsAccountName($this->importRunId, $currentUser);
+        $needsPaypalAccountName = $prompt->needsPaypalAccountName($this->importRunId, $currentUser);
 
         return $views->make('import::livewire.preview-wizard', [
             'preview' => $preview,
@@ -416,69 +414,6 @@ final class PreviewWizard extends Component
             ->table('import_runs')
             ->where('id', $this->importRunId)
             ->where('status', ImportRunStatus::Confirmed->value)
-            ->exists();
-    }
-
-    // A run that read nothing has no account to name: the two synthetic-IBAN
-    // prompts fire on source_format alone, so they asked for a durable account
-    // on the strength of a file the reader is about to be told could not be
-    // read at all. Rows that DID read still need theirs, hence the row count.
-    private function previewReadNothing(PreviewCache $cache): bool
-    {
-        $preview = $cache->getPreview($this->importRunId);
-
-        return $preview !== null
-            && $preview->fileFailureReason !== null
-            && self::importableRowCount($preview) === 0;
-    }
-
-    // Anchored on source_format rather than the unknown-IBAN list, so drift in
-    // the synthetic IBAN literal still raises the prompt. The card and the wallet
-    // ask the same question of the same three things, differing only in which
-    // format raises it and which own-IBAN literal answers it.
-    private function needsIcsAccountName(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
-    {
-        return $this->needsOwnAccountNamed(SourceFormat::IcsPdf, self::ICS_OWN_IBAN, $currentUser, $cache, $db);
-    }
-
-    private function needsPaypalAccountName(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
-    {
-        return $this->needsOwnAccountNamed(
-            SourceFormat::PaypalCsv,
-            EnsurePaypalAccountAction::PAYPAL_OWN_IBAN,
-            $currentUser,
-            $cache,
-            $db,
-        );
-    }
-
-    // Whether THIS literal is claimed, not whether any account of the kind
-    // exists: an account on some other IBAN suppressed the prompt, and the
-    // generic namer then had to validate ICS-CARD or PAYPAL as a real IBAN,
-    // which neither can ever be. Drift in the literal still raises the prompt.
-    private function needsOwnAccountNamed(
-        SourceFormat $format,
-        string $ownIban,
-        CurrentUser $currentUser,
-        PreviewCache $cache,
-        DatabaseManager $db,
-    ): bool {
-        $user = $currentUser->user();
-
-        /** @var ImportRun|null $importRun */
-        $importRun = ImportRun::query()
-            ->where('id', $this->importRunId)
-            ->where('user_id', $user->id)
-            ->first();
-
-        $raisesThePrompt = $importRun !== null
-            && $importRun->source_format === $format->value
-            && ! $this->previewReadNothing($cache);
-
-        return $raisesThePrompt && ! $db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('iban', $ownIban)
             ->exists();
     }
 

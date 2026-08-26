@@ -599,14 +599,19 @@ unknown-IBAN branch needs no guard at all: its allow-list is
 read nothing offers no IBAN to name in the first place — and when it IS
 populated, naming is exactly what unblocks those rows.
 
-`needsIcsAccountName()` / `needsPaypalAccountName()` anchor the naming
-prompt on the run's `source_format` rather than the unknown-IBAN list,
-so a future synthetic-IBAN drift (e.g. `'ICS-CARD-PRIMARY'`) still
-triggers the prompt. Both use the raw query builder (via injected
-`DatabaseManager`) rather than the Eloquent Builder to keep
-phpstan-strict-rules' `staticMethod.dynamicCall` rule quiet — the same
-convention the dashboard queries under `Modules/Ledger/Public/Services/`
-follow.
+`OwnAccountPrompt` owns both questions —
+`needsIcsAccountName()` / `needsPaypalAccountName()` — and anchors the
+naming prompt on the run's `source_format` rather than the unknown-IBAN
+list, so a future synthetic-IBAN drift (e.g. `'ICS-CARD-PRIMARY'`) still
+triggers the prompt. It holds `ICS_OWN_IBAN`, the literal
+`IcsPdfAdapter` emits, and `previewReadNothing()`, the same guard the
+two save actions re-ask on the write side. `CurrentUser` arrives per
+call rather than through its constructor, so the container may hand the
+prompt out as a singleton without freezing a user into it. Both checks
+use the raw query builder (via injected `DatabaseManager`) rather than
+the Eloquent Builder to keep phpstan-strict-rules'
+`staticMethod.dynamicCall` rule quiet — the same convention the
+dashboard queries under `Modules/Ledger/Public/Services/` follow.
 
 The locked Blade copy for the two naming prompts (source of truth lives
 in `preview-wizard.blade.php`):
