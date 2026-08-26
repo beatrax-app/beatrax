@@ -3992,6 +3992,16 @@ td.date,
     gap: var(--space-6, 24px);
 }
 
+/* A tile that decided it had nothing to show still leaves Livewire's mandatory
+ * root element behind, and a zero-height flex child costs a full gap on each
+ * side of itself. On a fresh install four of the twelve were empty and three
+ * sat together under the header: 96px of nothing between it and the first
+ * figure, on the screen the app opens to. `> * > *` is the tile's own content
+ * — the root is always there, whatever it wrapped is not. */
+.dashboard-main > .dashboard-tile:not(:has(> * > *)) {
+    display: none;
+}
+
 @media (max-width: 767px) {
     .dashboard-main {
         gap: var(--space-8, 2rem);

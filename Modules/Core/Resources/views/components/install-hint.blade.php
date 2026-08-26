@@ -55,6 +55,7 @@
     }"
     x-show="shown"
     x-cloak
+    {{ $attributes }}
 >
     <aside
         class="card"

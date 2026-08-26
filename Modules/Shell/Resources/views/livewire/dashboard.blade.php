@@ -91,14 +91,14 @@
          the user has zero open drift alerts; the dashboard collapses
          gracefully on a quiet day. Cross-user scoping happens inside
          DriftAlertQuery. --}}
-    <div class="dashboard-phone-order-2">
+    <div class="dashboard-phone-order-2 dashboard-tile">
         @livewire('drift-alerts.dashboard-drift-badge')
     </div>
 
     {{-- Unusual charges tile: a distinct anomaly indicator,
          separate from the drift tile, hidden when there are zero open
          anomalies. Cross-user scoping happens inside AnomalyAlertQuery. --}}
-    <div class="dashboard-phone-order-2">
+    <div class="dashboard-phone-order-2 dashboard-tile">
         @livewire('anomaly.dashboard-anomaly-badge')
     </div>
 
@@ -180,14 +180,14 @@
 
     {{-- Goals summary card (order 4 on phone) — up to 3 nearest-finishing active goals.
          Renders a calm empty-state when the user has no goals. --}}
-    <div class="dashboard-phone-order-4">
+    <div class="dashboard-phone-order-4 dashboard-tile">
         @livewire('goals.summary-card')
     </div>
 
     {{-- Tax summary card — tagged total + item count for the seasonal
          tax year (Jan-Apr → previous year; May-Dec → current year). Links to /tax.
          Seasonal, so it joins the order-6 tail on phones. --}}
-    <div class="dashboard-phone-order-6">
+    <div class="dashboard-phone-order-6 dashboard-tile">
         @livewire('tax.summary-card')
     </div>
 
@@ -195,7 +195,7 @@
          from the envelope model, plus an amber over-budget pill. Renders
          nothing when the user has zero expense categories. Sits with the
          goals card (order 4): both answer "am I on plan this period?". --}}
-    <div class="dashboard-phone-order-4">
+    <div class="dashboard-phone-order-4 dashboard-tile">
         @livewire('budgets.envelope-glance-card')
     </div>
 
@@ -203,7 +203,7 @@
          reports the user pinned via TogglePin (/reports/library). Renders
          nothing when zero pins, same convention as goals.summary-card /
          tax.summary-card / budgets.envelope-glance-card above. --}}
-    <div class="dashboard-phone-order-6">
+    <div class="dashboard-phone-order-6 dashboard-tile">
         @livewire('reports.pinned-reports-row')
     </div>
 
@@ -335,9 +335,10 @@
     {{-- "Also want to see your data on your phone?" standing promo card.
          The install-hint component owns the copy and the
          beforeinstallprompt / iOS fallback logic. --}}
-    <div class="dashboard-phone-order-8">
-        <x-core::install-hint />
-    </div>
+    {{-- The order class is the component's own, not a wrapper's: Alpine hides
+         the root with display:none, and a wrapper around it would stay a flex
+         item and keep its gap. --}}
+    <x-core::install-hint class="dashboard-phone-order-8" />
 
     </div>{{-- end .dashboard-main --}}
 
