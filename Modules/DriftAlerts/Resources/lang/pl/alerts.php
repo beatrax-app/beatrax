@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Alerty',
+    'page_title' => 'Alerty odchyleń',
     'heading' => 'Alerty',
     'intro_anomaly' => 'Pojedyncze obciążenia, które wyglądają nietypowo na tle Twoich wydatków.',
     'intro_drift' => 'Zatwierdzone serie cykliczne, w których ostatnie obciążenie wyszło poza próg.',

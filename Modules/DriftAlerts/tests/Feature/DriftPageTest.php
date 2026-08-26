@@ -148,7 +148,7 @@ it('renders the page with the empty-state hero on the Open tab when no alerts ex
     $this->actingAs($this->user)
         ->get('/drift')
         ->assertOk()
-        ->assertSeeText('Alerts')
+        ->assertSeeText('Drift Alerts')
         ->assertSeeText('No open drift alerts')
         ->assertDontSeeText('Acknowledge');
 });

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Upozornění',
+    'page_title' => 'Upozornění na odchylky',
     'heading' => 'Upozornění',
     'intro_anomaly' => 'Jednotlivé platby, které u tebe vypadají neobvykle.',
     'intro_drift' => 'Schválené opakované série, jejichž poslední platba vybočila z tvého prahu.',

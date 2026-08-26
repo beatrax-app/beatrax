@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Hälytykset',
+    'page_title' => 'Hinnanmuutoshälytykset',
     'heading' => 'Hälytykset',
     'intro_anomaly' => 'Yksittäiset veloitukset, jotka näyttävät sinulle epätavallisilta.',
     'intro_drift' => 'Hyväksytyt toistuvat sarjat, joiden viimeisin veloitus ylitti asettamasi rajan.',

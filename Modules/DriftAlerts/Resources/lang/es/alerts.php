@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Alertas',
+    'page_title' => 'Alertas de desviación',
     'heading' => 'Alertas',
     'intro_anomaly' => 'Cargos concretos que parecen fuera de lo habitual en tu caso.',
     'intro_drift' => 'Series recurrentes aprobadas cuyo último cargo se ha salido de tu umbral.',

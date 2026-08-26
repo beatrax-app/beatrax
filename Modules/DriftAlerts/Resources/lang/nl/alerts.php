@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Meldingen',
+    'page_title' => 'Afwijkingswaarschuwingen',
     'heading' => 'Meldingen',
     'intro_anomaly' => 'Losse afschrijvingen die er voor jou ongewoon uitzien.',
     'intro_drift' => 'Goedgekeurde terugkerende reeksen waarvan de laatste afschrijving buiten je drempel valt.',

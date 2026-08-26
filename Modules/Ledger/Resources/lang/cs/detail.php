@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Transakce',
+    'page_title' => 'Detail transakce',
     'heading' => 'Transakce',
 
     'counterparty' => 'Protistrana',

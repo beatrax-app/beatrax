@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Warnungen',
+    'page_title' => 'Abweichungswarnungen',
     'heading' => 'Warnungen',
     'intro_anomaly' => 'Einzelne Abbuchungen, die für dich ungewöhnlich aussehen.',
     'intro_drift' => 'Bestätigte wiederkehrende Reihen, deren letzte Abbuchung außerhalb deiner Schwelle liegt.',

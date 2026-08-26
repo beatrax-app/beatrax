@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Tiers',
+    'page_title' => 'Profil du tiers',
     'fallback_account' => 'Compte',
     'fallback_counterparty' => 'Tiers',
 

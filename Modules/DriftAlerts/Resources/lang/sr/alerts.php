@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Upozorenja',
+    'page_title' => 'Upozorenja o odstupanju',
     'heading' => 'Upozorenja',
     'intro_anomaly' => 'Pojedinačna zaduženja koja za tebe izgledaju neuobičajeno.',
     'intro_drift' => 'Odobrene ponavljajuće serije čije je poslednje zaduženje izašlo izvan tvog praga.',
