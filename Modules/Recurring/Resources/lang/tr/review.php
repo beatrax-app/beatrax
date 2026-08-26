@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Sonraki',
+    'overdue' => 'Gecikmiş',
     'cadence_changed_note' => 'sıklık değişti',
     'un_reject' => 'Reddi geri al',
     'approve' => 'Onayla',

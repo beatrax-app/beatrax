@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Nākamais',
+    'overdue' => 'Nokavēts',
     'cadence_changed_note' => 'biežums mainījies',
     'un_reject' => 'Atsaukt noraidījumu',
     'approve' => 'Apstiprināt',

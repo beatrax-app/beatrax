@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Kitas',
+    'overdue' => 'Vėluoja',
     'cadence_changed_note' => 'pasikeitė dažnumas',
     'un_reject' => 'Grąžinti iš atmestų',
     'approve' => 'Patvirtinti',

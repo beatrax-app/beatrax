@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Regulārie ieņēmumi',
 
     'next' => 'Nākamais',
+    'overdue' => 'Nokavēts',
     'chain' => 'ķēde',
     'chain_aria' => 'Finansēts caur ķēdi',
     'per_month_suffix' => '/mēn.',

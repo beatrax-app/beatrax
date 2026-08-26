@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Ďalšia',
+    'overdue' => 'Po termíne',
     'cadence_changed_note' => 'zmenená frekvencia',
     'un_reject' => 'Zrušiť zamietnutie',
     'approve' => 'Schváliť',

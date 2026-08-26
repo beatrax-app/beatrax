@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Următoarea',
+    'overdue' => 'Restant',
     'cadence_changed_note' => 'frecvență schimbată',
     'un_reject' => 'Anulează respingerea',
     'approve' => 'Aprobă',

@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Nächste',
+    'overdue' => 'Überfällig',
     'cadence_changed_note' => 'Rhythmus geändert',
     'un_reject' => 'Ablehnung aufheben',
     'approve' => 'Bestätigen',

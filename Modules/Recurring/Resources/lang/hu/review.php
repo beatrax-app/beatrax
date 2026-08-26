@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Következő',
+    'overdue' => 'Lejárt',
     'cadence_changed_note' => 'a gyakoriság módosult',
     'un_reject' => 'Elutasítás visszavonása',
     'approve' => 'Jóváhagyás',

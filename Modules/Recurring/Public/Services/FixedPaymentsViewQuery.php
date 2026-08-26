@@ -178,11 +178,10 @@ final readonly class FixedPaymentsViewQuery
         $rows = $this->db->connection()
             ->table('recurring_series as rs')
             ->leftJoin('chain_links as cl', 'cl.id', '=', 'rs.latest_funding_chain_link_id')
-            ->where('rs.user_id', $user->id)
-            ->where('rs.state', RecurringSeriesState::Approved->value)
-            ->orderByDesc('rs.monthly_equivalent_minor')
-            ->orderByDesc('rs.id')
-            ->get([
+            // Named in the builder rather than passed to get(): selectSub() makes
+            // the column list non-null, and get() only applies its own argument
+            // when there is none, so the whole list would be dropped silently.
+            ->select([
                 'rs.id',
                 'rs.user_id',
                 'rs.direction',
@@ -202,7 +201,20 @@ final readonly class FixedPaymentsViewQuery
                 'rs.cluster_key',
                 'rs.cluster_counterparty_key',
                 'cl.state as chain_link_state',
-            ]);
+            ])
+            // The day this series last saw money, which is what tells a passed
+            // next-expected date apart from a charge that landed after it.
+            ->selectSub(
+                $this->db->connection()->table('recurring_series_occurrences')
+                    ->selectRaw('MAX(observed_at)')
+                    ->whereColumn('recurring_series_occurrences.recurring_series_id', 'rs.id'),
+                'latest_observed_at',
+            )
+            ->where('rs.user_id', $user->id)
+            ->where('rs.state', RecurringSeriesState::Approved->value)
+            ->orderByDesc('rs.monthly_equivalent_minor')
+            ->orderByDesc('rs.id')
+            ->get();
 
         $list = [];
         foreach ($rows as $row) {

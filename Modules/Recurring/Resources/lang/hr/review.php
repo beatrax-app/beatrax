@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Sljedeće',
+    'overdue' => 'Kasni',
     'cadence_changed_note' => 'učestalost promijenjena',
     'un_reject' => 'Poništi odbijanje',
     'approve' => 'Odobri',

@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Volgende',
+    'overdue' => 'Verlopen',
     'cadence_changed_note' => 'frequentie gewijzigd',
     'un_reject' => 'Afwijzing ongedaan maken',
     'approve' => 'Goedkeuren',

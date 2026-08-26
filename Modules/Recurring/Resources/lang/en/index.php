@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Recurring income',
 
     'next' => 'Next',
+    'overdue' => 'Overdue',
     'chain' => 'chain',
     'chain_aria' => 'Funded via chain',
     'per_month_suffix' => '/mo',

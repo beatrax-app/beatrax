@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Neste',
+    'overdue' => 'Forfalt',
     'cadence_changed_note' => 'intervallet endret',
     'un_reject' => 'Angre avvisning',
     'approve' => 'Godkjenn',

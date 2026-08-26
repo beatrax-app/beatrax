@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Receitas recorrentes',
 
     'next' => 'Próxima',
+    'overdue' => 'Em atraso',
     'chain' => 'cadeia',
     'chain_aria' => 'Financiado através de cadeia',
     'per_month_suffix' => '/mês',

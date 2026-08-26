@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Ponavljajući prihodi',
 
     'next' => 'Sledeće',
+    'overdue' => 'Kasni',
     'chain' => 'lanac',
     'chain_aria' => 'Finansirano preko lanca',
     'per_month_suffix' => '/mes',

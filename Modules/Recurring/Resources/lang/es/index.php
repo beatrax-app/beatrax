@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Ingresos recurrentes',
 
     'next' => 'Siguiente',
+    'overdue' => 'Vencido',
     'chain' => 'cadena',
     'chain_aria' => 'Financiado mediante una cadena',
     'per_month_suffix' => '/mes',

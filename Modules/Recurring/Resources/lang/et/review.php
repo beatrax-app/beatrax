@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Järgmine',
+    'overdue' => 'Tähtaeg möödas',
     'cadence_changed_note' => 'sagedus muutus',
     'un_reject' => 'Võta tagasilükkamine tagasi',
     'approve' => 'Kinnita',

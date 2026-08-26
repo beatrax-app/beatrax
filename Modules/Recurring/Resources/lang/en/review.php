@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Next',
+    'overdue' => 'Overdue',
     'cadence_changed_note' => 'cadence changed',
     'un_reject' => 'Un-reject',
     'approve' => 'Approve',

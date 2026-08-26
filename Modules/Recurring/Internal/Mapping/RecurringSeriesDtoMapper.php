@@ -58,6 +58,12 @@ final class RecurringSeriesDtoMapper
             $nextExpectedAt = CarbonImmutable::parse($rawNext);
         }
 
+        $latestObservedAt = null;
+        $rawObserved = $row->latest_observed_at ?? null;
+        if (is_string($rawObserved) && $rawObserved !== '') {
+            $latestObservedAt = CarbonImmutable::parse($rawObserved);
+        }
+
         $snoozedUntil = null;
         $rawSnooze = $row->snoozed_until ?? null;
         if (is_string($rawSnooze) && $rawSnooze !== '') {
@@ -96,6 +102,7 @@ final class RecurringSeriesDtoMapper
             monthlyEquivalentInBase: $monthlyEquivalent->currency() === $baseCurrency
                 ? $monthlyEquivalent
                 : $fx->convert($monthlyEquivalent, $baseCurrency, $rates),
+            latestObservedAt: $latestObservedAt,
         );
     }
 }

@@ -102,7 +102,7 @@
                                 <p class="secondary mt-0.5 truncate">
                                     {{ $row->cadence->label() }}
                                     @if ($row->nextExpectedAt)
-                                        · {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
+                                        · @if ($row->expectedChargeIsLate($today)){{ Lang::get('recurring::index.overdue') }} @endif{{ $row->nextExpectedAt->translatedFormat('d M Y') }}
                                     @endif
                                     @if ($row->latestFundingChainLinkId !== null)
                                         · {{ Lang::get('recurring::index.chain') }}
@@ -139,7 +139,7 @@
                                     >
                                         {{ $row->cadence->label() }}
                                         @if ($row->nextExpectedAt)
-                                            · {{ Lang::get('recurring::index.next') }} {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
+                                            · {{ Lang::get($row->expectedChargeIsLate($today) ? 'recurring::index.overdue' : 'recurring::index.next') }} {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
                                         @endif
                                     </p>
                                 </div>
@@ -180,7 +180,7 @@
                                 <p class="secondary mt-0.5 truncate">
                                     {{ $row->cadence->label() }}
                                     @if ($row->nextExpectedAt)
-                                        · {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
+                                        · @if ($row->expectedChargeIsLate($today)){{ Lang::get('recurring::index.overdue') }} @endif{{ $row->nextExpectedAt->translatedFormat('d M Y') }}
                                     @endif
                                 </p>
                             </div>
@@ -214,7 +214,7 @@
                                     >
                                         {{ $row->cadence->label() }}
                                         @if ($row->nextExpectedAt)
-                                            · {{ Lang::get('recurring::index.next') }} {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
+                                            · {{ Lang::get($row->expectedChargeIsLate($today) ? 'recurring::index.overdue' : 'recurring::index.next') }} {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
                                         @endif
                                     </p>
                                 </div>

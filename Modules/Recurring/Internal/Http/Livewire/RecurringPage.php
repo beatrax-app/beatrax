@@ -8,6 +8,7 @@ use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
@@ -47,6 +48,7 @@ final class RecurringPage extends Component
         CurrentUser $currentUser,
         FixedPaymentsViewQuery $query,
         ViewFactory $views,
+        Clock $clock,
     ): View {
         $user = $currentUser->user();
         $sections = $query->viewForUser($user);
@@ -56,6 +58,7 @@ final class RecurringPage extends Component
             'sections' => $sections,
             'totals' => $totals,
             'transfersExpanded' => $this->transfersExpanded,
+            'today' => $clock->now(),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

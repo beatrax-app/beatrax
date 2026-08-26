@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Następna',
+    'overdue' => 'Po terminie',
     'cadence_changed_note' => 'zmieniona częstotliwość',
     'un_reject' => 'Cofnij odrzucenie',
     'approve' => 'Zatwierdź',

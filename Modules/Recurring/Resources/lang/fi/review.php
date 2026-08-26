@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Seuraava',
+    'overdue' => 'Myöhässä',
     'cadence_changed_note' => 'maksuväli muuttui',
     'un_reject' => 'Peru hylkäys',
     'approve' => 'Hyväksy',

@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Næste',
+    'overdue' => 'Overskredet',
     'cadence_changed_note' => 'interval ændret',
     'un_reject' => 'Fortryd afvisning',
     'approve' => 'Godkend',

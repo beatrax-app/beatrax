@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Terugkerende inkomsten',
 
     'next' => 'Volgende',
+    'overdue' => 'Verlopen',
     'chain' => 'keten',
     'chain_aria' => 'Gefinancierd via keten',
     'per_month_suffix' => '/mnd',

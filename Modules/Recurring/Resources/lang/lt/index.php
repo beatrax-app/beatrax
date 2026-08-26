@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Pasikartojančios pajamos',
 
     'next' => 'Kitas',
+    'overdue' => 'Vėluoja',
     'chain' => 'grandinė',
     'chain_aria' => 'Finansuojama per grandinę',
     'per_month_suffix' => '/mėn.',

@@ -31,6 +31,8 @@ final readonly class RecurringSeriesProjector
     public function scoped(User $user, array $states, ?int $cursorId, int $limit, string $primarySort): array
     {
         $query = $this->db->connection()->table('recurring_series')
+            ->select('recurring_series.*')
+            ->selectSub($this->latestObservedAt(), 'latest_observed_at')
             ->where('user_id', $user->id)
             ->whereIn('state', $states)
             ->limit($limit);
@@ -65,6 +67,17 @@ final readonly class RecurringSeriesProjector
         }
 
         return $this->toDtos($query->get()->all());
+    }
+
+    // The day the series last actually saw money, which is what tells a passed
+    // next-expected date apart from a charge that simply landed after it. The
+    // (recurring_series_id, observed_at) index serves the MAX, so it costs one
+    // indexed lookup per row rather than a second pass over the occurrences.
+    private function latestObservedAt(): Builder
+    {
+        return $this->db->connection()->table('recurring_series_occurrences')
+            ->selectRaw('MAX(observed_at)')
+            ->whereColumn('recurring_series_occurrences.recurring_series_id', 'recurring_series.id');
     }
 
     // Batched on purpose: ratesTo() reads the whole exchange_rates table per

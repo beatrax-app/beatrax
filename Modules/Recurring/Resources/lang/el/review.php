@@ -27,6 +27,7 @@ return [
     ],
 
     'next' => 'Επόμενη',
+    'overdue' => 'Εκπρόθεσμος',
     'cadence_changed_note' => 'άλλαξε η συχνότητα',
     'un_reject' => 'Αναίρεση απόρριψης',
     'approve' => 'Έγκριση',

@@ -41,10 +41,23 @@ final class RecurringSeriesDto extends Data
         public readonly ?CarbonImmutable $snoozedUntil,
         public readonly ?float $latestFxRateUsed = null,
         public readonly ?Money $monthlyEquivalentInBase = null,
+        public readonly ?CarbonImmutable $latestObservedAt = null,
     ) {}
 
     public function displayName(): string
     {
         return $this->displayNameOverride ?? $this->detectedName;
+    }
+
+    // The expected date itself is one cadence step past the most recent
+    // occurrence and stays that. What has to change once that day goes by with
+    // nothing landing is the word in front of it: a list still calling it
+    // "next" is naming a day that is already behind the reader.
+    public function expectedChargeIsLate(CarbonImmutable $today): bool
+    {
+        return $this->nextExpectedAt !== null
+            && $this->nextExpectedAt->startOfDay()->lessThan($today->startOfDay())
+            && ($this->latestObservedAt === null
+                || $this->latestObservedAt->startOfDay()->lessThan($this->nextExpectedAt->startOfDay()));
     }
 }
