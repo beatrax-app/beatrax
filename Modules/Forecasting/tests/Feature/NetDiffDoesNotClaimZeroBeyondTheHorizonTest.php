@@ -25,7 +25,7 @@ it('draws a checkpoint the loaded run cannot reach as unknown, not as zero', fun
 
 it('initialises every checkpoint to unknown rather than to nothing-changed', function (): void {
     $source = (string) file_get_contents(
-        base_path('Modules/Forecasting/Internal/Http/Livewire/Concerns/BuildsForecastCharts.php'),
+        base_path('Modules/Forecasting/Internal/Support/ForecastChartView.php'),
     );
 
     expect($source)->toContain('$result[$horizonKey] = null;');

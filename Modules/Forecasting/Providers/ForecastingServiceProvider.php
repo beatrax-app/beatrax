@@ -28,6 +28,7 @@ use Modules\Forecasting\Internal\Pipeline\RangeProjector;
 use Modules\Forecasting\Internal\Pipeline\ScenarioApplier;
 use Modules\Forecasting\Internal\Pipeline\ShortfallDetector;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
+use Modules\Forecasting\Internal\Support\ForecastChartView;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
 use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
 use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
@@ -68,6 +69,7 @@ final class ForecastingServiceProvider extends ServiceProvider
         // so it is dispatched rather than container-resolved.
         $this->app->singleton(BalanceAnchorResolver::class);
         $this->app->singleton(NetWorthQuery::class);
+        $this->app->singleton(ForecastChartView::class);
         $this->app->singleton(CadenceWalk::class);
         $this->app->singleton(RangeProjector::class);
         $this->app->singleton(DailyFold::class);
