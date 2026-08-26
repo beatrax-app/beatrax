@@ -1920,6 +1920,8 @@ td.date,
         display: flex;
         align-items: center;
         gap: var(--space-2);
+        flex-wrap: wrap;
+        row-gap: var(--space-1);
     }
 
     .preview-section-eyebrow .ready {
@@ -5923,6 +5925,18 @@ mark {
         overflow-wrap: break-word;
     }
 
+    /*
+     * A row that is not allowed to wrap needs the same restraint. The
+     * first-import step's per-source eyebrow is three spans in a nowrap flex
+     * row, and with `anywhere` each one's min-content is a single character:
+     * all three were squeezed and broken mid-word, so "· ✓ READY" rendered as
+     * "READ" over "Y" in 42px of a 243px row. The row is allowed to wrap where
+     * it declares its flex, and its parts break here only where a word
+     * genuinely cannot fit on a line of its own.
+     */
+    .preview-section-eyebrow > span {
+        overflow-wrap: break-word;
+    }
 
     /*
      * The row the two of them sit in: a name opposite its amount, a category

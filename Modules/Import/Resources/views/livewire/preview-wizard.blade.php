@@ -81,7 +81,11 @@
                 {{-- {!! !!}: app-static copy whose apostrophe must reach the DOM
                      literally (not as &#039;). No user data is interpolated. --}}
                 <p class="text-sm text-slate-500 dark:text-slate-400">{!! Lang::get('import::preview.ics.help') !!}</p>
-                <div class="flex items-end gap-2">
+                {{-- Stacked below sm, here and at the two rows below it: side by
+                     side on a 375px screen the input measured 173px against a
+                     placeholder needing 197, and the squeezed button broke
+                     "Save name" over two lines and outgrew its own row. --}}
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
                     <div class="flex-1">
                         <x-core::form-field
                             name="icsAccountName"
@@ -95,7 +99,7 @@
                     <button
                         type="button"
                         wire:click="saveIcsAccountName"
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                        class="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                     >
                         {{ Lang::get('import::preview.save_name') }}
                     </button>
@@ -109,7 +113,7 @@
                 {{-- {!! !!}: app-static copy whose apostrophe must reach the DOM
                      literally (not as &#039;). No user data is interpolated. --}}
                 <p class="text-sm text-slate-500 dark:text-slate-400">{!! Lang::get('import::preview.paypal.help') !!}</p>
-                <div class="flex items-end gap-2">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
                     <div class="flex-1">
                         <x-core::form-field
                             name="paypalAccountName"
@@ -123,7 +127,7 @@
                     <button
                         type="button"
                         wire:click="savePaypalAccountName"
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                        class="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                     >
                         {{ Lang::get('import::preview.save_name') }}
                     </button>
@@ -140,7 +144,7 @@
                                 ? Lang::get('import::preview.unknown_account_prefix')
                                 : Lang::get('import::preview.unknown_iban_prefix') }} <strong class="font-medium">{{ Iban::grouped($unknown->iban) }}</strong>. {{ Lang::get('import::preview.unknown_iban_suffix') }}
                         </p>
-                        <div class="flex items-end gap-2">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
                             <div class="flex-1">
                                 <x-core::form-field
                                     name="accountName"
@@ -154,7 +158,7 @@
                             <button
                                 type="button"
                                 wire:click="nameAccount(@js($unknown->iban), $wire.accountName)"
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                                class="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                             >
                                 {{ Lang::get('import::preview.save_name') }}
                             </button>
