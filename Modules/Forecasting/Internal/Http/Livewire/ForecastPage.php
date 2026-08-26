@@ -86,6 +86,28 @@ final class ForecastPage extends Component
         $this->dispatch('forecast-updated');
     }
 
+    // The chart card names the scenario it is drawing. It used to name the
+    // baseline whatever was selected, so picking a scenario lit its tab and left
+    // the card saying Baseline -- and on a scenario with no mutations yet the
+    // heading is the only thing telling the two apart.
+    /**
+     * @param  iterable<int, object{id: int, name: string}>  $scenarios
+     */
+    private static function scenarioName(iterable $scenarios, ?int $activeScenarioId): ?string
+    {
+        if ($activeScenarioId === null) {
+            return null;
+        }
+
+        foreach ($scenarios as $scenario) {
+            if ($scenario->id === $activeScenarioId) {
+                return $scenario->name;
+            }
+        }
+
+        return null;
+    }
+
     public function setScenario(?int $scenarioId): void
     {
         $this->scenarioId = $scenarioId;
@@ -242,6 +264,7 @@ final class ForecastPage extends Component
                 'isEmpty' => $isEmpty,
                 'scenarios' => $scenarios,
                 'activeScenarioId' => $this->scenarioId,
+                'activeScenarioName' => self::scenarioName($scenarios, $this->scenarioId),
                 'viewByFunder' => $this->viewByFunder,
                 'confirmingDeleteForScenarioId' => $this->confirmingDeleteForScenarioId,
                 'creatingScenario' => $this->creatingScenario,

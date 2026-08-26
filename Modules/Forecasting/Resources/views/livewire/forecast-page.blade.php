@@ -209,7 +209,7 @@
             @if ($isAllAccountsView)
                 <section class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
                     <header class="mb-3">
-                        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.all_accounts') }} · {{ Lang::get('forecasting::forecast.baseline') }}</h2>
+                        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.all_accounts') }} · {{ $activeScenarioName ?? Lang::get('forecasting::forecast.baseline') }}</h2>
                         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                             {{ Lang::choice('forecasting::forecast.aggregate_subtitle', $horizon, ['days' => $horizon]) }}
                         </p>
