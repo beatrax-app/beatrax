@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Presupuestos',
-        'subtitle' => 'Asigna cada euro — :period.',
+        'subtitle' => 'Asígnalo todo — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Arrastra el negativo',
-        'non_eur_aria' => 'El gasto en moneda distinta del EUR de esta categoría no se muestra aquí — consulta el panel',
-        'non_eur_title' => 'El gasto no EUR no se muestra aquí — consulta el panel',
+        'unconverted_aria' => 'El gasto en una moneda sin tipo de cambio disponible no se cuenta aquí — consulta el panel',
+        'unconverted_title' => 'El gasto sin tipo de cambio disponible no se cuenta aquí — consulta el panel',
         'over_budget' => ':count por encima del presupuesto',
     ],
 

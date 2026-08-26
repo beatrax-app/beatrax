@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Riasztás érzékenysége',
-    'sensitivity_help' => 'Jelölje meg azokat a terheléseket, amelyek több mint :percent%-kal haladják meg az adott kereskedőnél vagy kategóriában szokásos költésedet.',
+    'sensitivity_help' => 'Mennyire könnyen minősíti a Beatrax szokatlannak egy terhelést ennél a kereskedőnél vagy kategóriánál, 1-től 100-ig. Magasabb érték többet jelöl meg.',
 
     'min_amount_label' => 'Minimális terhelési összeg',
-    'min_amount_help' => 'Az ennél kisebb terheléseknél ne jelezzen anomáliát. Centben tárolva (€) — az 1000 azt jelenti: 10,00 €.',
+    'min_amount_help' => 'Az ennél kisebb terheléseknél ne jelezzen anomáliát. Centben tárolva (:symbol) — az 1000 azt jelenti: :example.',
 
     'save' => 'Anomáliabeállítások mentése',
     'saved' => 'Mentve.',

@@ -10,8 +10,10 @@
     uses the project's nl_NL EUR convention.
 
     Inputs:
-      - $netDiff: array<int, int> keyed by horizon day with signed
-        minor-unit deltas (scenario - baseline).
+      - $netDiff: array<int, int|null> keyed by horizon day with signed
+        minor-unit deltas (scenario - baseline). null where the loaded
+        run does not reach that day, drawn as an em dash rather than
+        as a zero that would claim the scenario changes nothing.
       - $netDiffCurrency: ISO 4217 currency string for the formatter.
       - $horizonDays: list<int> of horizon days to render (the constant
         ProjectForecastJob::HORIZON_DAYS passed in from ForecastPage so
@@ -29,14 +31,21 @@
     <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-3">
         @foreach (($horizonDays ?? [30, 60, 90]) as $horizonKey)
             @php
-                $delta = $netDiff[$horizonKey] ?? 0;
+                // null is a checkpoint the loaded run does not reach. It used
+                // to arrive here as 0, which reads as "this scenario changes
+                // nothing that far out" -- a claim, and the wrong one.
+                $delta = $netDiff[$horizonKey] ?? null;
+                $unknown = $delta === null;
+                $delta ??= 0;
                 $sign = $delta > 0 ? '+' : ($delta < 0 ? '−' : '');
                 $tint = $delta > 0
                     ? 'text-emerald-700 dark:text-emerald-500'
                     : ($delta < 0 ? 'text-rose-700 dark:text-rose-500' : 'text-slate-900 dark:text-slate-100');
-                $aria = $delta > 0
-                    ? Lang::get('forecasting::forecast.better_than_baseline')
-                    : ($delta < 0 ? Lang::get('forecasting::forecast.worse_than_baseline') : Lang::get('forecasting::forecast.equal_to_baseline'));
+                $aria = $unknown
+                    ? Lang::get('forecasting::forecast.net_diff_unknown')
+                    : ($delta > 0
+                        ? Lang::get('forecasting::forecast.better_than_baseline')
+                        : ($delta < 0 ? Lang::get('forecasting::forecast.worse_than_baseline') : Lang::get('forecasting::forecast.equal_to_baseline')));
                 $formatted = $fmt(abs($delta), $netDiffCurrency ?? BaseCurrency::value());
             @endphp
             <div>
@@ -45,7 +54,7 @@
                     class="text-3xl font-semibold {{ $tint }}"
                     style="font-variant-numeric: tabular-nums;"
                     aria-label="{{ Lang::get('forecasting::forecast.net_diff_delta_aria', ['day' => $horizonKey, 'value' => $sign.$formatted, 'state' => $aria]) }}"
-                >{{ $sign }}{{ $formatted }}</p>
+                >{{ $unknown ? '—' : $sign.$formatted }}</p>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('forecasting::forecast.at_day', ['day' => $horizonKey]) }}</p>
             </div>
         @endforeach

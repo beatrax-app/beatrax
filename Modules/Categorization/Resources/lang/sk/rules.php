@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Zhody',
     'col_created' => 'Vytvorené',
     'col_row_actions' => 'Akcie',
+    'inactive_badge' => 'Vypnuté',
+    'inactive_title' => 'Toto pravidlo nebeží. Pravidlo sa vypne, keď sa zmaže kategória alebo protistrana, na ktorú odkazuje.',
 
     'more_conditions' => '+:count ďalších',
 

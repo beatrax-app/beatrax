@@ -27,19 +27,20 @@ return [
     ],
 
     'next' => 'Kitas',
+    'overdue' => 'Vėluoja',
     'cadence_changed_note' => 'pasikeitė dažnumas',
-
-    'select_aria' => 'Pasirinkti pasikartojančią seriją :id',
     'un_reject' => 'Grąžinti iš atmestų',
     'approve' => 'Patvirtinti',
     'approve_aria' => 'Patvirtinti pasikartojančią seriją :id',
     'reject' => 'Atmesti',
     'reject_aria' => 'Atmesti pasikartojančią seriją :id',
     'snooze' => 'Atidėti',
+    'snooze_aria' => 'Atidėti pasikartojančią seriją :id',
     'snooze_1w' => '1 savaitė',
     'snooze_1m' => '1 mėnuo',
     'snooze_3m' => '3 mėnesiai',
     'edit_name' => 'Redaguoti pavadinimą',
+    'edit_name_aria' => 'Pervadinti pasikartojančią seriją :id',
     'new_name_label' => 'Naujas šios serijos pavadinimas',
     'save' => 'Išsaugoti',
 

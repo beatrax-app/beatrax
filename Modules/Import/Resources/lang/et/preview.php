@@ -9,6 +9,10 @@ return [
     'confirm' => 'Kinnita import',
     'subtitle' => 'Vaata töödeldud read üle. Enne kinnitamist ei salvestata pearaamatusse midagi.',
 
+    'already_imported' => 'See fail on juba imporditud.',
+
+    'already_imported_link' => 'Vaata impordi tulemust',
+
     'expired_html' => 'Eelvaade on aegunud. <a href="/imports/new" class="underline">Laadi fail uuesti üles</a> ja proovi uuesti.',
 
     'save_name' => 'Salvesta nimi',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Nimeta see vastaspool ümber',
 
     'unknown_iban_prefix' => 'Leidsime tundmatu IBAN-i:',
+
+    'unknown_account_prefix' => 'Leidsime tundmatu konto:',
     'unknown_iban_suffix' => 'Anna sellele kontole nimi.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'et uuesti proovida või uurida.',
     ],
 
+    'rows_shown' => 'Kuvatud read: :shown / :total',
+
+    'show_more' => 'Näita rohkem ridu',
+
     'errors' => [
         'app_locked' => 'Importimiseks avage rakendus: krüpteerimisvõtmeid ei saa lukustatuna kasutada.',
+        'file_stopped_short' => 'Päiserida klappis, seega on vorming õige. Lugemine peatus enne faili lõppu. Selle põhjustab üks loetamatu rida, samuti selle seadme jaoks liiga suur fail. Proovi lühemat ajavahemikku.',
         'file_unreadable' => 'Seda faili ei õnnestunud lugeda.',
         'iban_not_in_preview' => 'See IBAN ei kuulu praegusesse eelvaatesse.',
+        'pdf_reader_unavailable' => 'PDF-väljavõtted vajavad programmi pdftotext, mida siin pole paigaldatud. Impordi see fail arvutis, kus see olemas on, või kasuta hoopis panga CSV-eksporti.',
         'row_unreadable' => 'Seda rida ei õnnestunud lugeda.',
         'unknown_account' => 'See rida kuulub kontole, millele sa pole veel nime andnud.',
     ],

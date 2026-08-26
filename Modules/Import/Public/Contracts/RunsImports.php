@@ -16,8 +16,8 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
  */
 interface RunsImports
 {
-    // $formatHint is required for asn-csv and ing-csv, the only statement
-    // formats that cannot be sniffed reliably; null on either raises
+    // $formatHint is required for asn-csv, the one statement format whose
+    // dialect its own id does not name; null there raises
     // InvalidArgumentException. Ignored on every other format.
     public function runFromUpload(string $localPath, string $sourceFormat, User $user, string $originalFilename, ?BankCsvFormatHint $formatHint = null): ImportPreviewResult;
 

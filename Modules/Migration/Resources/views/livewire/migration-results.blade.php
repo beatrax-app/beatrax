@@ -45,7 +45,7 @@
 
     @if ($unmapped !== null && $stillNeedsAttention > 0)
         <section class="space-y-3">
-            @foreach (['category' => Lang::get('migration::results.groups.category'), 'payee' => Lang::get('migration::results.groups.payee'), 'extra' => Lang::get('migration::results.groups.extra'), 'conflict' => Lang::get('migration::results.groups.conflict')] as $groupKey => $groupLabel)
+            @foreach (['extra' => Lang::get('migration::results.groups.extra'), 'conflict' => Lang::get('migration::results.groups.conflict')] as $groupKey => $groupLabel)
                 @if ($unmapped[$groupKey]['count'] > 0)
                     <details class="rounded-md border border-slate-200 dark:border-slate-700">
                         <summary class="cursor-pointer px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">

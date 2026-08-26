@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Coincidencias',
     'col_created' => 'Creada',
     'col_row_actions' => 'Acciones',
+    'inactive_badge' => 'Inactiva',
+    'inactive_title' => 'Esta regla no se ejecuta. Una regla se desactiva cuando se elimina la categoría o la contraparte a la que apunta.',
 
     'more_conditions' => '+:count más',
 

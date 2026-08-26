@@ -25,6 +25,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\AcceptsPairingCode;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\ChoosesCodeEntryArm;
+use Modules\Mobile\Internal\Http\PairingEntryUrl;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Enums\PairingSide;
@@ -44,6 +45,10 @@ final class MobilePairingScan extends Component
     // Read once by MobileLockScreen::mount(). A public property cannot carry
     // it across navigate:false, which is a full page load.
     public const LOCKED_IDENTITY_FLASH = 'mobile.pairing.locked_identity';
+
+    // Put, not flashed: the lock screen render, the PIN post and the redirect
+    // back are three requests, and a flash survives only the first.
+    public const TYPED_CODE_SESSION = 'mobile.pairing.typed_code';
 
     // `native:` plus the PHP event class the plugin fired. Plain strings
     // because the plugin lives only in mobile-app/vendor, unresolvable here.
@@ -124,7 +129,7 @@ final class MobilePairingScan extends Component
         // Echo the param into the durable marker the moment it is observed, then
         // read the marker back: it is the only one of the two a back button or
         // a relaunch cannot lose.
-        if ($request->query('mode') === 'import') {
+        if ($request->query(PairingEntryUrl::MODE_PARAM) === PairingEntryUrl::MODE_IMPORT) {
             $importIntent->markImporting($userId);
         }
 
@@ -183,6 +188,22 @@ final class MobilePairingScan extends Component
         }
 
         $this->enterACode($qrBridge);
+        $this->restoreCodeTypedBeforeTheLock($session);
+    }
+
+    // enterACode() has just cleared wordCode and sent a camera-capable device to
+    // the scanner, which is the right default for an arrival and the wrong one
+    // for a return: this reader had typed a code and was interrupted.
+    private function restoreCodeTypedBeforeTheLock(Session $session): void
+    {
+        $typed = $session->pull(self::TYPED_CODE_SESSION);
+
+        if (! is_string($typed) || $typed === '') {
+            return;
+        }
+
+        $this->wordCode = $typed;
+        $this->useWordCode();
     }
 
     private function currentStep(): PairingWizardStep
@@ -248,14 +269,21 @@ final class MobilePairingScan extends Component
         // component's property sent the user to a PIN pad with no explanation.
         $session->flash(self::LOCKED_IDENTITY_FLASH, Lang::get('mobile::pairing.errors.identity_locked'));
 
+        // The code is already typed, and mount() clears it on the way back, so
+        // the reader retyped 26 characters against a ten-minute TTL the lock
+        // had just spent five minutes of.
+        if ($this->wordCode !== '') {
+            $session->put(self::TYPED_CODE_SESSION, $this->wordCode);
+        }
+
         // Come back carrying the import: the bare route is the spelling a device
         // that is NOT importing gets, and the gate that guards an unfinished
         // import redirects to the other one, so returning here loses the flow.
         $session->put(
             MobileLockGateway::SESSION_INTENDED_URL,
             $this->importing
-                ? $urls->route('mobile.pair').'?mode=import'
-                : $urls->route('mobile.pair'),
+                ? PairingEntryUrl::importingFrom($urls)
+                : PairingEntryUrl::bareFrom($urls),
         );
 
         $this->redirect($urls->route('mobile.lock'), navigate: false);

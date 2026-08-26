@@ -13,9 +13,13 @@ use Modules\Forecasting\Public\Dto\BalanceAnchorDto;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
+/**
+ * @link ../../../../.docs/features/forecasting/architecture.md#balance-anchor-resolution
+ */
 final readonly class BalanceAnchorResolver
 {
     use CoercesScalars;
@@ -24,6 +28,7 @@ final readonly class BalanceAnchorResolver
         private DatabaseManager $db,
         private Clock $clock,
         private BaseCurrency $baseCurrency,
+        private AccountBalanceQuery $balances,
     ) {}
 
     public function forAccount(int $accountId, User $user): BalanceAnchorDto
@@ -34,30 +39,39 @@ final readonly class BalanceAnchorResolver
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        $kind = self::toString($account->getAttribute('kind'));
         $defaultCurrency = self::toString($account->getAttribute('default_currency'));
 
-        $anchor = $this->fromStatementAnchor($kind, $accountId, $user->id)
-            ?? $this->fromUserInputOpeningBalance($account);
-        if ($anchor !== null) {
-            return $anchor;
+        // A card takes its statement, then a baseline the reader confirmed,
+        // then zero, rather than the ledger balance: with nothing to anchor on,
+        // summing would double-count the billing events the projection is
+        // about to re-emit.
+        if (self::toString($account->getAttribute('kind')) === AccountKind::IcsCard->value) {
+            return $this->fromCardStatements($accountId, $user, $defaultCurrency)
+                ?? ($this->hasReaderConfirmedBaseline($account)
+                    ? $this->fromLedgerBalance($accountId, $user, $defaultCurrency)
+                    : $this->icsCardZeroAnchor($accountId, $defaultCurrency));
         }
 
-        // A card with no anchor at all takes zero rather than a transaction
-        // sum: summing would double-count the billing events the projection
-        // is about to re-emit. Every other kind sums.
-        return $kind === AccountKind::IcsCard->value
-            ? $this->icsCardZeroAnchor($accountId, $defaultCurrency)
-            : $this->fromTransactionsSum($accountId, $user->id, $defaultCurrency);
+        return $this->fromLedgerBalance($accountId, $user, $defaultCurrency);
     }
 
-    // null means no statement exists at all — an API-connected account, or one
-    // with nothing imported yet — and the caller falls through.
-    private function fromStatementAnchor(string $kind, int $accountId, int $userId): ?BalanceAnchorDto
+    // Where the account stands today, the one figure the dashboard, pots and
+    // /reconcile also read. Anchored on a statement that closed on 11 April
+    // instead, the forecast opened EUR929.98 under the money on the account
+    // and the calendar's line stepped down on today to meet it.
+    private function fromLedgerBalance(int $accountId, User $user, string $defaultCurrency): BalanceAnchorDto
     {
-        return $kind === AccountKind::IcsCard->value
-            ? $this->fromCardStatements($accountId, $userId)
-            : $this->fromStatementSummaries($accountId, $userId);
+        $asOf = $this->clock->now()->startOfDay();
+        $currency = $defaultCurrency !== '' ? $defaultCurrency : $this->baseCurrency->code();
+
+        // A projection runs in one currency, so it opens on the line the
+        // account is denominated in and leaves any other line it holds out.
+        return new BalanceAnchorDto(
+            accountId: $accountId,
+            openingBalanceMinor: $this->balances->currentBalanceAsOf($accountId, $user, $asOf)->in($currency),
+            currency: $currency,
+            source: 'sum_of_transactions',
+        );
     }
 
     private function icsCardZeroAnchor(int $accountId, string $defaultCurrency): BalanceAnchorDto
@@ -66,48 +80,16 @@ final readonly class BalanceAnchorResolver
             accountId: $accountId,
             openingBalanceMinor: 0,
             currency: $defaultCurrency !== '' ? $defaultCurrency : $this->baseCurrency->code(),
-            asOfDate: $this->clock->now()->startOfDay(),
             source: 'ics_card_zero_anchor',
         );
     }
 
-    private function fromStatementSummaries(int $accountId, int $userId): ?BalanceAnchorDto
-    {
-        $row = $this->db->connection()->table('statement_summaries')
-            ->where('user_id', $userId)
-            ->where('account_id', $accountId)
-            ->whereNotNull('closing_balance_minor')
-            ->orderByDesc('period_end')
-            ->orderByDesc('id')
-            ->first();
-
-        if ($row === null) {
-            return null;
-        }
-
-        /** @var stdClass $row */
-        $currency = self::toString($row->closing_balance_currency ?? null);
-        if ($currency === '') {
-            $currency = $this->baseCurrency->code();
-        }
-        $rawAsOf = self::toString($row->closing_balance_date ?? $row->period_end ?? null);
-        $asOf = $rawAsOf !== ''
-            ? CarbonImmutable::parse($rawAsOf)
-            : $this->clock->now();
-
-        return new BalanceAnchorDto(
-            accountId: $accountId,
-            openingBalanceMinor: self::toInt($row->closing_balance_minor),
-            currency: $currency,
-            asOfDate: $asOf,
-            source: 'asn_statement_summary',
-        );
-    }
-
-    private function fromCardStatements(int $accountId, int $userId): ?BalanceAnchorDto
+    // null means the card has no statement imported yet, and the caller falls
+    // through to the reader's own figure.
+    private function fromCardStatements(int $accountId, User $user, string $defaultCurrency): ?BalanceAnchorDto
     {
         $row = $this->db->connection()->table('card_statements')
-            ->where('user_id', $userId)
+            ->where('user_id', $user->id)
             ->where('account_id', $accountId)
             ->orderByDesc('period_end')
             ->orderByDesc('id')
@@ -121,77 +103,42 @@ final readonly class BalanceAnchorResolver
         // open_balance_minor is the amount owed, stored positive. A running
         // balance is a position, so owing it makes it negative.
         $openBalance = self::toInt($row->open_balance_minor);
-        $signedAnchor = -$openBalance;
 
         $rawPeriodEnd = self::toString($row->period_end ?? null);
-        $asOf = $rawPeriodEnd !== ''
+        $closedOn = $rawPeriodEnd !== ''
             ? CarbonImmutable::parse($rawPeriodEnd)
             : $this->clock->now();
 
+        $currency = $defaultCurrency !== '' ? $defaultCurrency : Currency::Eur->value;
+
         return new BalanceAnchorDto(
             accountId: $accountId,
-            openingBalanceMinor: $signedAnchor,
-            currency: Currency::Eur->value,
-            asOfDate: $asOf,
+            openingBalanceMinor: -$openBalance + $this->chargedSince($accountId, $user->id, $closedOn, $currency),
+            currency: $currency,
             source: 'ics_card_statement',
         );
     }
 
-    private function fromUserInputOpeningBalance(Account $account): ?BalanceAnchorDto
+    // What the card has run up since its statement closed. Without it the
+    // forecast opens on the balance the card carried at close and every charge
+    // made since is missing from the curve. Bounded at today because a charge
+    // dated ahead is not owed yet, and to one currency because the anchor is.
+    private function chargedSince(int $accountId, int $userId, CarbonImmutable $closedOn, string $currency): int
     {
-        $rawMinor = $account->getAttribute('opening_balance_minor');
-        if (! is_numeric($rawMinor)) {
-            return null;
-        }
-        $rawAsOf = $account->getAttribute('opening_balance_as_of_date');
-        $asOfString = self::carbonOrStringToString($rawAsOf);
-        if ($asOfString === '') {
-            return null;
-        }
-
-        $defaultCurrency = self::toString($account->getAttribute('default_currency'));
-        if ($defaultCurrency === '') {
-            $defaultCurrency = $this->baseCurrency->code();
-        }
-
-        return new BalanceAnchorDto(
-            accountId: self::toInt($account->getAttribute('id')),
-            openingBalanceMinor: (int) $rawMinor,
-            currency: $defaultCurrency,
-            asOfDate: CarbonImmutable::parse($asOfString),
-            source: 'user_input_opening_balance',
-        );
-    }
-
-    private function fromTransactionsSum(int $accountId, int $userId, string $defaultCurrency): BalanceAnchorDto
-    {
-        $sum = (int) $this->db->connection()->table('transactions')
+        return (int) $this->db->connection()->table('transactions')
             ->where('user_id', $userId)
             ->where('account_id', $accountId)
-            ->sum('amount_minor');
-
-        if ($defaultCurrency === '') {
-            $defaultCurrency = $this->baseCurrency->code();
-        }
-
-        return new BalanceAnchorDto(
-            accountId: $accountId,
-            openingBalanceMinor: $sum,
-            currency: $defaultCurrency,
-            asOfDate: CarbonImmutable::parse('1970-01-01'),
-            source: 'sum_of_transactions',
-        );
+            ->where('settled_currency', $currency)
+            ->where('posted_at', '>', $closedOn->toDateString())
+            ->where('posted_at', '<=', $this->clock->now()->startOfDay()->toDateString())
+            ->sum('settled_amount_minor');
     }
 
-    private static function carbonOrStringToString(mixed $value): string
+    // Both columns AccountStartingBalanceQuery reads: the Settings override the
+    // reader types, and the baseline the wizard asks every new user to confirm.
+    private function hasReaderConfirmedBaseline(Account $account): bool
     {
-        if ($value instanceof CarbonImmutable) {
-            return $value->toDateString();
-        }
-        if ($value instanceof \DateTimeInterface) {
-            return $value->format('Y-m-d');
-        }
-
-        return self::toString($value);
+        return is_numeric($account->getAttribute('opening_balance_minor'))
+            || is_numeric($account->getAttribute('starting_balance_minor'));
     }
 }

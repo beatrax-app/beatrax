@@ -16,13 +16,10 @@ return [
         'budget' => 'Mjeseci proračuna',
     ],
 
-    'fully_mapped' => '✓ potpuno mapirano',
     'all_clean' => 'Sve je uredno mapirano — ništa ne traži tvoju pažnju prije potvrde.',
 
     'groups' => [
         'conflict' => 'Traži tvoju odluku',
-        'category' => 'Neriješene kategorije',
-        'payee' => 'Neriješeni primatelji',
         'extra' => 'Nije uvezeno',
     ],
 

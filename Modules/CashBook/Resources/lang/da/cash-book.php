@@ -11,7 +11,7 @@ return [
     'expense' => 'Udgift',
     'income' => 'Indtægt',
 
-    'amount' => 'Beløb (€)',
+    'amount' => 'Beløb (:symbol)',
     'date' => 'Dato',
     'counterparty' => 'Modpart',
     'counterparty_placeholder' => 'f.eks. Bager',

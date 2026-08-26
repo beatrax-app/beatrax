@@ -18,7 +18,7 @@ final class EnvelopeRow extends Data
         public readonly int $availableMinor,
         public readonly string $overspendMode,
         public readonly string $currency,
-        public readonly int $nonEurSpentMinor = 0,
+        public readonly int $unconvertedSpentMinor = 0,
         public readonly int $notifyThresholdPercent = 90,
         // $categoryName is already resolved for whoever asked. These two carry
         // the provenance behind it, so a nudge built in a queue worker can

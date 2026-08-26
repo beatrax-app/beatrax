@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Prikaz valute',
         'label' => 'Podrazumevani prikaz na listi transakcija',
-        'eur_only' => 'Samo EUR',
+        'eur_only' => 'Samo :code',
         'original' => 'Originalna valuta',
         'help' => 'Prikaz i dalje možeš da promeniš za svaku stranicu sa liste transakcija.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Prozor otkrivanja (meseci)',
         'window_help' => 'Koliko meseci istorije pretražiti pri grupisanju transakcija u ponavljajuće obrasce.',
         'income_label' => 'Najmanji prihod (centi)',
-        'income_help' => 'Prihodi ispod ovog praga ne grupišu se automatski. Čuva se u centima — 200000 znači €2,000.00. Postavi 0 da isključiš prag.',
+        'income_help' => 'Prihodi ispod ovog praga ne grupišu se automatski. Čuva se u centima — 200000 znači :example. Postavi 0 da isključiš prag.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Izaberi valutu.',
         'window_months' => 'Izaberi između 2 i 60 meseci.',
         'threshold' => 'Izaberi prag: 1%, 2%, 5%, 10%, 25% ili 50%.',
-        'amount' => 'Unesi iznos od €0 naviše.',
+        'amount' => 'Unesi iznos od :zero naviše.',
         'period_day' => 'Izaberi dan od 1 do 28.',
         'currency_view' => 'Izaberi jednu od dostupnih opcija.',
     ],

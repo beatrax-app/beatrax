@@ -25,6 +25,7 @@
         "ext-posix": "*",
         "ext-simplexml": "*",
         "ext-sodium": "*",
+        "ext-sqlite3": "*",
         "ext-tokenizer": "*",
         "ext-zip": "*",
         "composer-runtime-api": "^2.0",

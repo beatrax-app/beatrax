@@ -44,7 +44,7 @@
 --}}
 <div class="mx-auto max-w-3xl px-4 py-12">
     {{-- Page header --}}
-    <header class="mb-8 flex items-start justify-between gap-4">
+    <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('goals::messages.page.title') }}</h1>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.page.subtitle') }}</p>
@@ -202,7 +202,7 @@
                     @endif
 
                     {{-- Contributed / target + projected date --}}
-                    <div class="mt-3 flex items-baseline justify-between gap-4">
+                    <div class="mt-3 flex flex-wrap items-baseline justify-between gap-4">
                         <p class="text-sm" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                             {{ $fmt($row->contributedMinor, $row->currency) }}
                             <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">/</span>
@@ -282,7 +282,7 @@
                                 <p class="min-w-0 truncate text-sm font-semibold text-slate-500 dark:text-slate-400">{{ $row->name }}</p>
                                 <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('goals::messages.status.archived') }}</span>
                             </div>
-                            <div class="mt-3 flex items-baseline justify-between gap-4">
+                            <div class="mt-3 flex flex-wrap items-baseline justify-between gap-4">
                                 <p class="text-sm" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                                     {{ $fmt($row->contributedMinor, $row->currency) }}
                                     <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">/</span>

@@ -34,6 +34,10 @@ final class CadenceInferrer
 
     private const CONFIDENCE_LOW_STDDEV_THRESHOLD = 5.0;
 
+    private const DAYS_PER_WEEK = 7;
+
+    private const MONTHS_PER_QUARTER = 3;
+
     /**
      * @param  list<CarbonImmutable>  $sortedTimestamps  ascending
      * @return array{
@@ -108,7 +112,7 @@ final class CadenceInferrer
         $nextExpectedAt = null;
         if ($cadence->isRegular()) {
             $last = $sortedTimestamps[count($sortedTimestamps) - 1];
-            $nextExpectedAt = $last->addDays((int) round($refinedMedian));
+            $nextExpectedAt = self::stepOnePeriod($last, $sortedTimestamps[0], $cadence);
         }
 
         return [
@@ -118,6 +122,29 @@ final class CadenceInferrer
             'confidence_low' => $confidenceLow,
             'missed_count' => $missedCount,
         ];
+    }
+
+    // A day count drifts a monthly bill off its own day of the month every
+    // period, so the projection steps the calendar unit the band names. A band
+    // with no step of its own answers null and the caller falls back to the
+    // day median.
+    private static function stepOnePeriod(CarbonImmutable $last, CarbonImmutable $first, SeriesCadence $cadence): ?CarbonImmutable
+    {
+        return match ($cadence) {
+            SeriesCadence::Weekly => $last->addDays(self::DAYS_PER_WEEK),
+            SeriesCadence::Monthly => self::onBillingDay($last->addMonthNoOverflow(), $first),
+            SeriesCadence::Quarterly => self::onBillingDay($last->addMonthsNoOverflow(self::MONTHS_PER_QUARTER), $first),
+            SeriesCadence::Yearly => self::onBillingDay($last->addYearNoOverflow(), $first),
+            SeriesCadence::Irregular => null,
+        };
+    }
+
+    // February clamps a bill charged on the 31st to the 28th, and a stepped date
+    // never recovers the 31st from there. The billing day is read off the first
+    // posting every time instead, so the step out of February restores it.
+    private static function onBillingDay(CarbonImmutable $stepped, CarbonImmutable $first): CarbonImmutable
+    {
+        return $stepped->setDay(min($first->day, $stepped->daysInMonth));
     }
 
     private static function snapToBand(float $medianDays): SeriesCadence

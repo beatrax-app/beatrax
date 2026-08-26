@@ -6,6 +6,40 @@ declare(strict_types=1);
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#two-phone-constraints-and-three-dialog-naming-failures
  */
 
+// Brace counting, not a nested-quantifier regex: the coarse-pointer floor grew
+// past PCRE's JIT stack, and preg_match_all answered a truncated list rather
+// than failing — the guard stopped looking and said the rules were gone. Depth
+// also lets a block hold an @supports, which one of them does.
+/**
+ * @return list<array{0: int, 1: int}> the offset and length of every balanced
+ *                                     `<at-rule> { ... }` run in $css
+ */
+function phoneUiBalancedSpans(string $css, string $opening): array
+{
+    $spans = [];
+    $offset = 0;
+    $length = strlen($css);
+
+    while (preg_match($opening, $css, $match, PREG_OFFSET_CAPTURE, $offset) === 1) {
+        $start = $match[0][1];
+        $cursor = $start + strlen($match[0][0]);
+        $depth = 1;
+        while ($depth > 0 && $cursor < $length) {
+            if ($css[$cursor] === '{') {
+                $depth++;
+            } elseif ($css[$cursor] === '}') {
+                $depth--;
+            }
+            $cursor++;
+        }
+
+        $spans[] = [$start, $cursor - $start];
+        $offset = $cursor;
+    }
+
+    return $spans;
+}
+
 /**
  * @return string the stylesheet with every balanced `@layer name { ... }` block
  *                removed, so what is left is exactly the unlayered rules
@@ -16,20 +50,9 @@ function phoneUiUnlayeredCss(): string
 
     $out = '';
     $offset = 0;
-    while (preg_match('/@layer\s+[a-z]+\s*\{/', $css, $match, PREG_OFFSET_CAPTURE, $offset) === 1) {
-        $out .= substr($css, $offset, $match[0][1] - $offset);
-
-        $cursor = $match[0][1] + strlen($match[0][0]);
-        $depth = 1;
-        while ($depth > 0 && $cursor < strlen($css)) {
-            if ($css[$cursor] === '{') {
-                $depth++;
-            } elseif ($css[$cursor] === '}') {
-                $depth--;
-            }
-            $cursor++;
-        }
-        $offset = $cursor;
+    foreach (phoneUiBalancedSpans($css, '/@layer\s+[a-z]+\s*\{/') as [$start, $length]) {
+        $out .= substr($css, $offset, $start - $offset);
+        $offset = $start + $length;
     }
 
     return $out.substr($css, $offset);
@@ -38,13 +61,14 @@ function phoneUiUnlayeredCss(): string
 /** @return list<string> every `@media (pointer: coarse)` block that is not inside a cascade layer */
 function phoneUiCoarsePointerBlocks(): array
 {
-    preg_match_all(
-        '/@media \(pointer: coarse\) \{(?:[^{}]|\{[^{}]*\})*\}/',
-        phoneUiUnlayeredCss(),
-        $matches
-    );
+    $css = phoneUiUnlayeredCss();
 
-    return $matches[0];
+    $blocks = [];
+    foreach (phoneUiBalancedSpans($css, '/@media \(pointer: coarse\)\s*\{/') as [$start, $length]) {
+        $blocks[] = substr($css, $start, $length);
+    }
+
+    return $blocks;
 }
 
 /**

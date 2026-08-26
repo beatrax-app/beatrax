@@ -15,8 +15,10 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Goals\Internal\Enums\GoalProgressState')
 <p class="{{ $class }}">
-    @if ($row->isCompleted() || $row->progressState === GoalProgressState::Reached->value)
+    @if ($row->progressState === GoalProgressState::Reached->value)
         {{ Lang::get('goals::messages.projection.target_reached') }}
+    @elseif ($row->isCompleted())
+        {{ Lang::get('goals::messages.projection.closed_short') }}
     @elseif ($row->projectedFinishDate === null && $row->contributedMinor <= 0)
         {{ Lang::get('goals::messages.projection.add_contributions') }}
     @elseif ($row->projectedFinishDate === null && $row->projectionStalled)

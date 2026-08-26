@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
 use Modules\Ingestion\Internal\Exceptions\PdfExtractionFailed;
+use Modules\Ingestion\Public\Exceptions\PdfReaderUnavailableException;
 
 function tinyPdfPathForExtractorTest(): string
 {
@@ -20,8 +21,17 @@ it('returns the extracted text via the spatie/pdf-to-text wrapper', function ():
     expect($text)->toContain('SYNTHETIC');
 })->group('phase-3');
 
-it('throws PdfExtractionFailed when the binary is missing or non-zero exits', function (): void {
+it('throws PdfReaderUnavailableException when there is no binary to run', function (): void {
+    // Separated from the case below because they are not the same news: this
+    // one is answered by installing poppler, and on a phone not at all.
     $extractor = new PdfTextExtractor('/usr/bin/this-binary-does-not-exist');
+
+    expect(fn () => $extractor->extract(tinyPdfPathForExtractorTest()))
+        ->toThrow(PdfReaderUnavailableException::class);
+})->group('phase-3');
+
+it('throws PdfExtractionFailed when the binary runs and exits non-zero', function (): void {
+    $extractor = new PdfTextExtractor('/usr/bin/false');
 
     expect(fn () => $extractor->extract(tinyPdfPathForExtractorTest()))
         ->toThrow(PdfExtractionFailed::class);

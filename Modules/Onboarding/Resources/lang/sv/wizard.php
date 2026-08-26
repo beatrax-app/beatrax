@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Steg :number av :total',
 
+    'back' => 'Tillbaka',
+    'back_aria' => 'Tillbaka — går tillbaka till föregående konfigurationssteg',
+
     'resume_later' => 'Fortsätt senare',
     'resume_later_aria' => 'Fortsätt senare — sparar ditt förlopp och stänger installationsguiden',
     'resume_banner' => 'Välkommen tillbaka — vi fortsätter där du slutade.',

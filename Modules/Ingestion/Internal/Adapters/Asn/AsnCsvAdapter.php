@@ -8,8 +8,10 @@ use Carbon\CarbonImmutable;
 use Generator;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Internal\Adapters\Banking\BankAmountParser;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Public\Asn\AsnDescriptionDelimiters;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
@@ -118,7 +120,7 @@ final class AsnCsvAdapter implements SourceAdapter
 
     private function parseDate(string $cell): CarbonImmutable
     {
-        $parsed = CarbonImmutable::createFromFormat('!'.AsnCsvHeaderProfile::DATE_FORMAT, $cell);
+        $parsed = SafeDate::fromFormatOrNull('!'.AsnCsvHeaderProfile::DATE_FORMAT, $cell);
         if (! $parsed instanceof CarbonImmutable) {
             throw new InvalidAmountException(sprintf(
                 "Cannot parse date '%s' (expected format %s)",
@@ -142,7 +144,7 @@ final class AsnCsvAdapter implements SourceAdapter
     {
         $parts = [];
         foreach ([AsnCsvColumnMap::PAYMENT_REF, AsnCsvColumnMap::DESCRIPTION] as $col) {
-            $value = trim($row[$col]);
+            $value = AsnDescriptionDelimiters::unwrap(trim($row[$col]));
             if ($value !== '') {
                 $parts[] = $value;
             }
@@ -152,7 +154,7 @@ final class AsnCsvAdapter implements SourceAdapter
             return null;
         }
 
-        $combined = implode(' / ', $parts);
+        $combined = implode(AsnDescriptionDelimiters::SEPARATOR, $parts);
         // ASN historically emits literal \r within this field; normalise
         // both CR and LF to a single space before collapsing whitespace.
         $combined = str_replace(["\r", "\n"], ' ', $combined);

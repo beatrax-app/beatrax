@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Services\NetWorthQuery;
+use Modules\FX\Public\Support\BundledRates;
 
 // NetWorthQueryTest.php declares the same helper, so the two files running
 // together would be a redeclaration fatal without this guard.
@@ -29,6 +30,13 @@ function fxRate(DatabaseManager $db, string $quote, string $rate, string $date =
 }
 
 beforeEach(function (): void {
+    // This suite builds its own rate world, so the bundled baseline the install
+    // seeds is cleared first: several cases turn on a pair having no rate at
+    // all, and one on a hand-dated rate being the newest there is.
+    app(DatabaseManager::class)->connection()
+        ->table('exchange_rates')
+        ->where('source', BundledRates::SOURCE)
+        ->delete();
     $this->db = app(DatabaseManager::class);
     $this->user = User::create([
         'username' => 'fx-networth-fixture',
@@ -49,7 +57,7 @@ it('includes a non-EUR account in the total after FX conversion', function (): v
     expect($netWorth->totalMinor)->toBeGreaterThan(200_000);
     expect($netWorth->currency)->toBe('EUR');
     expect($netWorth->hasExcludedAccounts)->toBeFalse();
-    expect($netWorth->accountsWithoutRate)->toBe(0);
+    expect($netWorth->balancesWithoutRate)->toBe(0);
 });
 
 it('preserves the original currency on each account balance line', function (): void {
@@ -64,7 +72,7 @@ it('preserves the original currency on each account balance line', function (): 
     expect($usdLine->balanceMinor)->toBe(10_000);
 });
 
-it('sets hasExcludedAccounts=false and accountsWithoutRate=0 when all accounts have a rate', function (): void {
+it('sets hasExcludedAccounts=false and balancesWithoutRate=0 when all accounts have a rate', function (): void {
     nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwAccount($this->db, $this->user->id, 'GBP wallet', 'paypal', 50_000, 'GBP');
     fxRate($this->db, 'GBP', '0.86');
@@ -72,7 +80,7 @@ it('sets hasExcludedAccounts=false and accountsWithoutRate=0 when all accounts h
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
 
     expect($netWorth->hasExcludedAccounts)->toBeFalse();
-    expect($netWorth->accountsWithoutRate)->toBe(0);
+    expect($netWorth->balancesWithoutRate)->toBe(0);
 });
 
 it('excludes an account and sets hasExcludedAccounts=true when no rate exists for the pair', function (): void {
@@ -82,7 +90,7 @@ it('excludes an account and sets hasExcludedAccounts=true when no rate exists fo
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
 
     expect($netWorth->hasExcludedAccounts)->toBeTrue();
-    expect($netWorth->accountsWithoutRate)->toBe(1);
+    expect($netWorth->balancesWithoutRate)->toBe(1);
     expect($netWorth->totalMinor)->toBe(200_000);
 });
 

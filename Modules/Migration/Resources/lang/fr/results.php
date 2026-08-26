@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Toujours pas importées — catégories',
-        'payee' => 'Toujours pas importés — tiers',
         'extra' => 'Non importés',
         'conflict' => 'Ta décision est requise',
     ],

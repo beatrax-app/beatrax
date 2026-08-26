@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Entrate ricorrenti',
 
     'next' => 'Prossimo',
+    'overdue' => 'In ritardo',
     'chain' => 'catena',
     'chain_aria' => 'Alimentato tramite catena',
     'per_month_suffix' => '/mese',

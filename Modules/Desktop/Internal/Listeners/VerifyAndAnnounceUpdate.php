@@ -47,6 +47,10 @@ final readonly class VerifyAndAnnounceUpdate
             return;
         }
 
-        ($this->record)($manifest);
+        ($this->record)(
+            $manifest,
+            $this->channel->alertKindFor($manifest),
+            $this->channel->installedVersion(),
+        );
     }
 }

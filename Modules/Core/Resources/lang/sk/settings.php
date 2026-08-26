@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Zobrazenie meny',
         'label' => 'Predvolené zobrazenie v zozname transakcií',
-        'eur_only' => 'Len EUR',
+        'eur_only' => 'Len :code',
         'original' => 'Pôvodná mena',
         'help' => 'V zozname transakcií to môžeš kedykoľvek prepnúť pre jednotlivé stránky.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Okno rozpoznávania (mesiace)',
         'window_help' => 'Koľko mesiacov histórie sa prehľadá pri zhlukovaní transakcií do opakovaných vzorov.',
         'income_label' => 'Minimálny príjem (centy)',
-        'income_help' => 'Príjmy pod touto hranicou sa automaticky nezhlukujú. Ukladá sa v centoch — 200000 znamená 2000,00 €. Nastav 0, ak chceš hranicu vypnúť.',
+        'income_help' => 'Príjmy pod touto hranicou sa automaticky nezhlukujú. Ukladá sa v centoch — 200000 znamená :example. Nastav 0, ak chceš hranicu vypnúť.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Vyber menu.',
         'window_months' => 'Zvoľ hodnotu od 2 do 60 mesiacov.',
         'threshold' => 'Zvoľ prah 1%, 2%, 5%, 10%, 25% alebo 50%.',
-        'amount' => 'Zadaj sumu od €0 vyššie.',
+        'amount' => 'Zadaj sumu od :zero vyššie.',
         'period_day' => 'Zvoľ deň od 1 do 28.',
         'currency_view' => 'Vyber jednu z dostupných možností.',
     ],

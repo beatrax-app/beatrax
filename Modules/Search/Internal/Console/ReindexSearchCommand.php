@@ -12,6 +12,7 @@ use Illuminate\Support\Collection;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\RowChunk;
+use Modules\Search\Internal\Services\SearchDocumentBody;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -189,7 +190,7 @@ final class ReindexSearchCommand extends Command
             $docs[] = [
                 'transaction_id' => $txId,
                 'user_id' => $userId,
-                'search_body' => $counterparty.chr(12).$description.chr(12).$note,
+                'search_body' => SearchDocumentBody::join($counterparty, $description, $note),
             ];
         }
 

@@ -13,6 +13,7 @@ use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
 use Modules\Reports\Internal\Enums\ReportGranularity;
@@ -31,6 +32,7 @@ final class NetWorthSeriesQuery
         private readonly ExchangeRateService $fx,
         private readonly DatabaseManager $db,
         private readonly TimeBucketGenerator $timeBucketGenerator,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -39,14 +41,14 @@ final class NetWorthSeriesQuery
     public function forUser(User $user, Period $period, ?ReportGranularity $granularity = null): array
     {
         $buckets = $this->timeBucketGenerator->generate($period, $granularity ?? ReportGranularity::default());
-        $baseCurrency = $user->base_currency;
+        $baseCurrency = $this->baseCurrency->forUser($user);
 
         /** @var Collection<int, stdClass> $accounts */
         $accounts = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
             ->whereNotIn('kind', self::EXCLUDED_KINDS)
             ->orderBy('id')
-            ->get(['id', 'default_currency']);
+            ->get(['id']);
 
         $points = [];
         foreach ($buckets as $bucket) {
@@ -77,29 +79,28 @@ final class NetWorthSeriesQuery
 
         foreach ($accounts as $account) {
             $accountId = self::toInt($account->id);
-            $currency = self::toStr($account->default_currency);
+            $balance = $this->accountBalanceQuery->clearedBalanceAsOf($accountId, $user, $asOf);
 
-            $balanceMinor = $this->accountBalanceQuery->clearedBalanceAsOf($accountId, $user, $asOf);
-            $money = Money::ofMinor($balanceMinor, $currency);
-            $result = $this->fx->convertAtDate($money, $baseCurrency, $asOf->toDateString());
+            // One account can hold several currencies, so each line is
+            // converted at its own rate rather than the account being credited
+            // with one currency it happens to be labelled with.
+            foreach ($balance->lines() as $currency => $balanceMinor) {
+                $money = Money::ofMinor($balanceMinor, $currency);
+                $result = $this->fx->convertAtDate($money, $baseCurrency, $asOf->toDateString());
 
-            // Never a silent 1:1 fallback: with no rate available the service
-            // returns a passthrough in the original currency, so a mismatch
-            // here means excluded, not rate 1.
-            if ($result->converted->currency() !== $baseCurrency) {
-                $excludedCount++;
+                // Never a silent 1:1 fallback: with no rate available the service
+                // returns a passthrough in the original currency, so a mismatch
+                // here means excluded, not rate 1.
+                if ($result->converted->currency() !== $baseCurrency) {
+                    $excludedCount++;
 
-                continue;
+                    continue;
+                }
+
+                $total += $result->converted->toMinor();
             }
-
-            $total += $result->converted->toMinor();
         }
 
         return [$total, $excludedCount];
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : '';
     }
 }

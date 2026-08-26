@@ -137,18 +137,25 @@ window.beatraxLocaliseChart = function (options) {
     });
 
     // Axis numbers are money on every chart this app draws. The currency is
-    // what is being drawn; `tag` — the same locale Money::format() reads —
-    // decides the separators and which side the symbol falls on, so the axis
-    // and the tile beside it cannot end up in two notations.
-    const currency = document.documentElement.dataset.baseCurrency || 'EUR';
+    // what is being drawn, which only the chart knows: a per-account forecast
+    // panel draws that account's own currency, not the reader's, and stamping
+    // the page-level one on it printed euro points under a dollar sign.
+    const currency = options.beatraxCurrency
+        || document.documentElement.dataset.baseCurrency
+        || 'EUR';
+    delete options.beatraxCurrency;
     const money = new Intl.NumberFormat(tag, {
         style: 'currency',
         currency,
         maximumFractionDigits: 0,
     });
 
+    // A chart that declares no y axis at all still draws money on it — the
+    // recurring series chart left the axis out and ApexCharts printed
+    // `-1449.5` where every other number on the page reads `-EUR1,450.00`.
     const withFormatter = (axis) => {
-        if (!axis || Array.isArray(axis)) return axis;
+        if (Array.isArray(axis)) return axis;
+        axis = axis || {};
         const labels = axis.labels || {};
         if (labels.formatter) return axis;
 
@@ -296,6 +303,40 @@ window.beatraxApplyChartTheme = function (options) {
  * one shape for every form. Laravel merges a JSON body into the input bag, so
  * `$request->string('code')` reads it unchanged on desktop.
  */
+/*
+ * Delegated, because the per-form `x-on:submit.prevent` only intercepts once
+ * Alpine has initialised that node. A drawer Livewire morphs back into the
+ * page can carry the attribute without the binding, and then the native submit
+ * runs: the mobile shell replays it without the method, and the reader is
+ * dropped on Laravel's 405 page for `GET /logout`.
+ *
+ * Deliberately the WEAKEST listener that can still do that job. The first
+ * version of this ran in the capture phase and unqualified, and sign-in broke
+ * on the build that carried it -- a Livewire form with no action submitted
+ * natively to its own URL and the page simply reloaded, with a wrong password
+ * producing no message at all. Three properties keep it out of the way now,
+ * and each is load-bearing:
+ *
+ *   - bubble phase, so every node-level handler has already run;
+ *   - `defaultPrevented`, so anything that claimed the submit keeps it --
+ *     Livewire's `wire:submit` prevents default, so it always wins;
+ *   - a real `action`, because a form without one is somebody else's.
+ */
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+
+    if (event.defaultPrevented
+        || ! (form instanceof HTMLFormElement)
+        || ! form.hasAttribute('data-beatrax-post')
+        || ! form.getAttribute('action')
+    ) {
+        return;
+    }
+
+    event.preventDefault();
+    window.beatraxSubmitPostForm(form, event.submitter);
+});
+
 window.beatraxSubmitPostForm = async function (form, submitter) {
     const payload = Object.fromEntries(new FormData(form));
 
@@ -621,6 +662,55 @@ document.addEventListener('step-changed', () => {
     window.scrollTo({ top: 0 });
 });
 
+/**
+ * Let the platform's back gesture step the wizard back instead of leaving it.
+ *
+ * The nine steps share one URL, so advancing writes nothing to history and the
+ * newest entry is still whatever came before the wizard. On the phone that is
+ * the recovery-codes screen, which is deliberately a 404 once the ceremony is
+ * over — so the Android back button, pressed on step six of first-run setup,
+ * showed "This page does not exist".
+ *
+ * One entry is pushed while a previous step exists, and consumed by the gesture
+ * that pops it. The step itself is read from the DOM at pop time rather than
+ * carried in the state object, because a re-render between push and pop is the
+ * normal case here.
+ */
+(function wizardOwnsTheBackGesture() {
+    const ATTRIBUTE = 'data-wizard-previous-step';
+    const MARKER = 'beatrax-wizard-step';
+
+    const wizard = () => document.querySelector('[' + ATTRIBUTE + ']');
+
+    const arm = () => {
+        if (! wizard() || window.history.state?.[MARKER]) {
+            return;
+        }
+
+        window.history.pushState({ [MARKER]: true }, '', window.location.href);
+    };
+
+    window.addEventListener('popstate', () => {
+        const element = wizard();
+
+        if (! element || ! window.Livewire) {
+            return;
+        }
+
+        const component = window.Livewire.find(element.getAttribute('wire:id'));
+
+        if (! component) {
+            return;
+        }
+
+        component.call('goToStep', element.getAttribute(ATTRIBUTE));
+    });
+
+    document.addEventListener('step-changed', arm);
+    document.addEventListener('DOMContentLoaded', arm);
+    arm();
+})();
+
 document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);
@@ -632,11 +722,27 @@ document.addEventListener('alpine:init', () => {
         window.Alpine.data('copyToClipboard', copyToClipboard);
 
         // Mobile navigation drawer state
+        // Which overlays are covering the page, by name. The layout marks
+        // <main> inert while any of them is up: aria-modal is a promise to a
+        // screen reader that everything behind is unreachable, and nothing was
+        // keeping it. Read from the real iOS tree with the drawer open, the
+        // dashboard behind the scrim was still being announced.
+        //
+        // Names rather than a counter, so a double open() cannot leave the app
+        // inert forever.
+        window.Alpine.store('overlay', {
+            names: [],
+            add(name) { if (!this.names.includes(name)) { this.names.push(name); } },
+            remove(name) { this.names = this.names.filter((n) => n !== name); },
+            has(name) { return this.names.includes(name); },
+            get blocking() { return this.names.length > 0; },
+        });
+
         window.Alpine.store('mobileNav', {
             drawerOpen: false,
-            open() { this.drawerOpen = true; },
-            close() { this.drawerOpen = false; },
-            toggle() { this.drawerOpen = !this.drawerOpen; },
+            open() { this.drawerOpen = true; window.Alpine.store('overlay').add('drawer'); },
+            close() { this.drawerOpen = false; window.Alpine.store('overlay').remove('drawer'); },
+            toggle() { this.drawerOpen ? this.close() : this.open(); },
         });
 
         // Alpine stores survive a wire:navigate page swap, so a drawer opened

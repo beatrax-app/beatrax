@@ -1,6 +1,6 @@
 # The forecast fixture corpus
 
-`Modules/Forecasting/tests/fixtures/forecast-corpus/` holds ten
+`Modules/Forecasting/tests/fixtures/forecast-corpus/` holds eleven
 hand-built financial situations. Each is a plain PHP file returning an
 array of synthetic accounts, synthetic approved recurring series, and
 the projection the pipeline is expected to produce from them.
@@ -62,30 +62,73 @@ malformed:
   `ends_at`, `lowest_balance_minor`, `currency` and
   `buffer_used_minor`.
 
-Two fixtures add a fourth key: `ics-settlement-chain` declares
-`chain_state`, and `scenario-with-each-mutation-kind` declares
-`expected.scenarios`.
+Three fixtures add a fourth key: `ics-settlement-chain` declares
+`chain_state`, `scenario-with-each-mutation-kind` declares
+`expected.scenarios`, and `booked-future-row` declares `booked_rows` —
+a list of `account_id`, `counterparty`, `direction`, `date`,
+`settled_amount_minor` and `settled_currency`, seeded as real
+`transactions` rows with no occurrence link behind them.
 
-Every fixture is anchored to the same notional "today" of early May
-2026, so dates can be compared across files.
+### The clock every fixture is read against
 
-## What the corpus is currently checked against
+Every fixture is anchored to the same notional "today" of 1 May 2026,
+so dates can be compared across files. `ForecastCorpus::TODAY` is the
+single place that date is written down; the shape test and the
+end-to-end contract test both read it from there rather than repeating
+a literal.
 
-Be precise about this, because the corpus reads like a golden-output
-suite and is not yet one. `FixtureCorpusTest` asserts the **shape**:
-that there are exactly ten files, that every required key is present,
-that enumerated values are in range, and that
-`low_minor <= point_minor <= high_minor` holds on every projection
-entry.
+That anchor carries a corpus-wide invariant, and it is the one thing
+to hold on to when editing any fixture in this directory:
 
-It does **not** run the projection pipeline and compare its output to
-`expected`. Those numbers are hand-computed and are documentation of
-intent, not a live assertion. A maths change that moved them would not
-fail this test today. Wiring the corpus to a real
-`ProjectionPipeline` run is the outstanding work that would turn it
-into the regression net the file layout implies.
+> **Every occurrence is dated strictly before the clock. A row dated
+> on or after it is a booked row, not an occurrence.**
 
-## The ten fixtures
+An occurrence is *observed history* — a charge the ledger has already
+seen. A transaction dated after "today" is a *booked future row* — a
+movement the bank has scheduled but not yet posted. No real ledger
+observes a payment that has not happened, so no row can honestly be
+both, and the pipeline treats the two completely differently:
+`RangeProjector` turns a series' history into a banded estimate, while
+`BookedRowProjector` turns a booked row into a certainty with no band
+at all and drops the estimate it supersedes.
+
+The distinction used to be silently violated. Nine fixtures listed
+their `next_expected_date` a second time inside `occurrences`, which
+seeded a transaction dated ahead of the clock; once
+`BookedRowProjector` existed those rows were read as certainties and
+the corpus's bands collapsed to `low = point = high`. Only
+`salary-and-side-income` had a band wide enough to breach the test's
+tolerance and fail — the rest passed while testing nothing they
+claimed to. `FixtureCorpusTest` now asserts the invariant in both
+directions, so the same drift cannot return unannounced.
+
+## What the corpus is checked against
+
+Two tests read these files, and they check different things.
+
+`FixtureCorpusTest` asserts the **shape**: that there are exactly
+eleven files, that every required key is present, that enumerated
+values are in range, that `low_minor <= point_minor <= high_minor`
+holds on every projection entry, and that the clock invariant above
+holds on every occurrence and every booked row.
+
+`tests/Contracts/ForecastingProjectionContractTest.php` asserts the
+**numbers**. It seeds each fixture into a real database, freezes the
+clock to `ForecastCorpus::TODAY`, dispatches a real
+`ProjectForecastJob` at 30, 60 and 90 days, and compares every
+`expected.projection` entry against what the pipeline actually
+emitted. Every triple in this directory is now derived from the
+arithmetic in [projection math](projection-math.md) rather than
+approximated, so the comparison runs at a tolerance of 5 minor units —
+wide enough only for `DailyFold`'s integer FX rounding. It covers
+every fixture except `ics-settlement-chain`, whose `chain_state` block
+the harness does not seed; that fixture's numbers remain documentation
+of intent.
+
+A band that quietly collapsed to its own point estimate used to sit
+unnoticed inside a thousands-wide allowance. At 5 it cannot.
+
+## The eleven fixtures
 
 ### `stable-monthly-subscription`
 
@@ -155,11 +198,22 @@ folding at face value.
 One bank account with two income series — €3,500/month salary and
 €450/month side income.
 
-Sign coverage. Almost every other fixture is expense-dominated, and
-the sign handling in the envelope formula is asymmetric by
-construction: for income the larger magnitude belongs in `highMinor`,
-for an expense it belongs in `lowMinor`. A sign bug that inverts the
-band is invisible on an expense-only corpus and obvious here.
+Sign coverage. Almost every other fixture is expense-dominated, so
+this is the one that would notice an income series folded as an
+outflow: 25 May lands on €5,450 with a band of ±€175, and a sign
+dropped anywhere between `RangeProjector` and `DailyFold` sends the
+curve down instead of up by thousands.
+
+Be precise about the half of the sign rule it does *not* reach. The
+envelope formula is asymmetric by construction — for income the larger
+magnitude belongs in `highMinor`, for an expense it belongs in
+`lowMinor` — but `DailyFold` keeps only `|high - low| / 2`, so a
+transposition of the two leaves the balance curve numerically
+identical. `RangeProjectorTest` pins that ordering directly on the
+contribution, which is the only place it is still visible. What this
+fixture guarantees is that there is a band here at all: while its
+occurrences were mis-dated the band collapsed to `low = point = high`,
+and a collapsed band has nothing left to get wrong.
 
 ### `buffer-crossing`
 
@@ -169,10 +223,17 @@ monthly expense series totalling €200/month.
 The only fixture that produces a shortfall, and the reason it exists
 is that the shortfall semantics are entirely about boundaries. The
 balance drops below the €500 buffer on 7 May when the largest expense
-lands and recovers on 22 May, so exactly one window is expected, with
-`starts_at` on the first day below and `ends_at` on the day *before*
-recovery. `buffer_used_minor` is captured as 50000 in the row, which
-is what makes a later buffer edit unable to rewrite history.
+lands, and there is no income series to lift it back — it goes on
+falling, so exactly one window is expected and it never closes on a
+recovery. That is the third of `ShortfallDetector`'s boundary rules:
+a window still open at the end of the horizon closes on the last
+observed day rather than being discarded, because a dip that has not
+recovered by the end of the chart is the most important one on it. The
+declared window is the 30-day one — `starts_at` 7 May, `ends_at` 31
+May, `lowest_balance_minor` €400 — and the 60- and 90-day runs extend
+the same window further down. `buffer_used_minor` is captured as 50000
+in the row, which is what makes a later buffer edit unable to rewrite
+history.
 
 ### `ics-settlement-chain`
 
@@ -200,6 +261,34 @@ own currency, and the PayPal account's tiny €50 opening balance does
 not borrow headroom from the €2,000 bank account. It also covers the
 ICS card's zero-anchor fallback, since account 2 has neither a
 statement nor a user-entered opening balance.
+
+### `booked-future-row`
+
+One bank account (€3,000 opening) and one €800/month rent series with
+a 10% tolerance, plus a `booked_rows` entry: a real transaction on
+account 1 dated 5 May for €805, which is the day the series' next
+occurrence was expected.
+
+The booked-row fixture, and the only one whose expected band is
+deliberately zero-width. A row the bank has already scheduled is not
+an estimate of a charge, it is the charge, so `BookedRowProjector`
+emits it with `low = point = high` and drops the series contribution
+it supersedes. Both halves of that are pinned here, and the €5
+difference between the booked amount and the series' latest is what
+makes them legible: 5 May folds to exactly €2,195, where the estimate
+alone would give €2,200 ± €80 and counting both would give €1,315.
+
+Two details of the situation are the point of it. The booked row
+carries **no occurrence link** — the detection sweep has not reached a
+row imported since it last ran, which is precisely the state a
+future-dated row is in — so `RecurringSeriesQuery` has to resolve it
+back to its series on cluster identity alone. And supersession is
+one-to-one: the booked row retires the 5 May estimate and nothing
+else, so June's unbooked occurrence survives as a normal banded
+estimate at €1,395 ± €80. On a monthly series the next occurrence is a
+month clear of the booked date and could never have collided; on a
+weekly one the pairing rule is what stops a single booked row from
+retiring two estimates.
 
 ### `scenario-with-each-mutation-kind`
 

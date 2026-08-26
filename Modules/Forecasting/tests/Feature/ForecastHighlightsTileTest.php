@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Chains\Models\CardStatement;
 use Modules\Core\Models\User;
+use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 uses(RefreshDatabase::class);
 
@@ -46,7 +50,7 @@ function fhtIcsAccount(User $user, string $slug): Account
     ]);
 }
 
-function fhtAsnAccount(User $user, string $slug): Account
+function fhtAsnAccount(User $user, string $slug, string $currency = 'EUR'): Account
 {
     return Account::query()->create([
         'user_id' => $user->id,
@@ -54,7 +58,38 @@ function fhtAsnAccount(User $user, string $slug): Account
         'slug' => $slug,
         'kind' => 'bank',
         'iban' => 'NL57FHT'.strtoupper($slug),
-        'default_currency' => 'EUR',
+        'default_currency' => $currency,
+    ]);
+}
+
+/**
+ * @param  array<int, array{currency: string, lowest: int}>  $byAccount
+ */
+function fhtRunDipping(DatabaseManager $db, User $user, array $byAccount): void
+{
+    $accounts = [];
+    foreach ($byAccount as $accountId => $spec) {
+        $accounts[(string) $accountId] = [
+            'account_id' => $accountId,
+            'account_name' => 'fht '.$accountId,
+            'default_currency' => $spec['currency'],
+            'today_balance_minor' => 0,
+            'anchor_source' => 'user_input_opening_balance',
+            'points' => [
+                ['date' => '2026-05-19', 'low_minor' => 0, 'point_minor' => 0, 'high_minor' => 0, 'currency' => $spec['currency']],
+                ['date' => '2026-05-20', 'low_minor' => $spec['lowest'], 'point_minor' => $spec['lowest'], 'high_minor' => $spec['lowest'], 'currency' => $spec['currency']],
+            ],
+        ];
+    }
+
+    $db->connection()->table('forecast_runs')->insert([
+        'user_id' => $user->id,
+        'scenario_id' => null,
+        'horizon_days' => 30,
+        'status' => 'complete',
+        'result_json' => json_encode(['as_of' => '2026-05-19', 'horizon_days' => 30, 'accounts' => $accounts]),
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
     ]);
 }
 
@@ -89,6 +124,11 @@ beforeEach(function (): void {
 });
 
 it('renders the next ICS settlement amount when one is upcoming', function (): void {
+    // Before the statement's own due date, which is what "upcoming" means:
+    // read at today's date this fixture is months overdue, and the tile now
+    // says so.
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-05-01 09:00:00'));
+
     CardStatement::query()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->ics->id,
@@ -105,6 +145,8 @@ it('renders the next ICS settlement amount when one is upcoming', function (): v
         ->assertOk()
         ->assertSeeText('Forecast highlights')
         ->assertSeeText('Next ICS settlement');
+
+    CarbonImmutable::setTestNow();
 });
 
 it('hides the Forecast highlights tile when no settlement is upcoming AND no projection exists', function (): void {
@@ -337,4 +379,109 @@ it('does not surface another user shortfall in the tile (cross-user isolation)',
         ->assertOk()
         ->assertDontSeeText('active shortfall')
         ->assertDontSeeText('999,99');
+});
+
+it('keeps the display line to the figure and moves the words beneath it', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $db->connection()->table('forecast_runs')->insert([
+        'user_id' => $this->user->id,
+        'scenario_id' => null,
+        'horizon_days' => 30,
+        'status' => 'complete',
+        'result_json' => json_encode([
+            'as_of' => '2026-05-19',
+            'horizon_days' => 30,
+            'accounts' => [
+                (string) $this->asn->id => [
+                    'account_id' => $this->asn->id,
+                    'account_name' => $this->asn->name,
+                    'default_currency' => 'EUR',
+                    'today_balance_minor' => 50000,
+                    'anchor_source' => 'user_input_opening_balance',
+                    'points' => [
+                        ['date' => '2026-05-19', 'low_minor' => 50000, 'point_minor' => 50000, 'high_minor' => 50000, 'currency' => 'EUR'],
+                        ['date' => '2026-05-20', 'low_minor' => 30000, 'point_minor' => 30000, 'high_minor' => 30000, 'currency' => 'EUR'],
+                    ],
+                ],
+            ],
+        ]),
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $response = $this->actingAs($this->user)->get('/');
+    $response->assertOk();
+    $body = (string) $response->getContent();
+
+    // A whole sentence in the figure slot is 34px type: on a 375pt phone the
+    // tile grew to five lines and 200px, one word of "Lowest in 30 days"
+    // per line, beside a net-worth card that shows label, figure, meta.
+    $tile = mb_substr($body, (int) mb_strpos($body, 'Forecast highlights'));
+    preg_match('/<p class="[^"]*text-3xl[^"]*"[^>]*>\s*(.*?)\s*<\/p>/s', $tile, $matches);
+    expect(trim(html_entity_decode($matches[1] ?? '')))->toBe('€300.00');
+
+    $response->assertSeeText('Lowest in 30 days');
+    $response->assertSeeText('fht bank');
+});
+
+// Measured with the /settings account-currency picker set to USD on a second
+// account: -USD1,100.00 is the smaller integer but the larger balance, so the
+// tile named the dollar account and printed its figure under the euro sign.
+// The bundled snapshot prices USD1,100.00 at EUR968.40.
+it('ranks the lowest projected balance on one currency, not on the raw minor units', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $dollar = fhtAsnAccount($this->user, 'revolut', currency: 'USD');
+
+    fhtRunDipping($db, $this->user, [
+        $this->asn->id => ['currency' => 'EUR', 'lowest' => -100000],
+        $dollar->id => ['currency' => 'USD', 'lowest' => -110000],
+    ]);
+
+    $dto = app(ForecastHighlightsQuery::class)->forUser($this->user);
+
+    expect($dto->lowestProjectedAccountId)->toBe($this->asn->id);
+    expect($dto->lowestProjectedBalanceMinor)->toBe(-100000);
+    expect($dto->lowestProjectedBalanceCurrency)->toBe('EUR');
+});
+
+// The race runs in the reader's currency, and a conversion reads the whole
+// exchange_rates table: pricing each account as its turn came round asked for
+// the same pair once per account holding it.
+it('prices each currency in the race once, not once per account', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $byAccount = [$this->asn->id => ['currency' => 'EUR', 'lowest' => -1000]];
+    for ($i = 0; $i < 8; $i++) {
+        $dollar = fhtAsnAccount($this->user, 'revolut-'.$i, currency: 'USD');
+        $byAccount[$dollar->id] = ['currency' => 'USD', 'lowest' => -2000 - $i];
+    }
+    fhtRunDipping($db, $this->user, $byAccount);
+
+    $reads = 0;
+    DB::listen(function (QueryExecuted $query) use (&$reads): void {
+        if (str_contains($query->sql, 'exchange_rates')) {
+            $reads++;
+        }
+    });
+
+    app(ForecastHighlightsQuery::class)->forUser($this->user);
+
+    expect($reads)->toBe(1);
+});
+
+it('prints the lowest projected balance under the account own currency sign', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $dollar = fhtAsnAccount($this->user, 'revolut', currency: 'USD');
+
+    fhtRunDipping($db, $this->user, [$dollar->id => ['currency' => 'USD', 'lowest' => -110000]]);
+
+    $this->actingAs($this->user)
+        ->get('/')
+        ->assertOk()
+        ->assertSee(Money::ofMinor(-110000, 'USD')->format());
 });

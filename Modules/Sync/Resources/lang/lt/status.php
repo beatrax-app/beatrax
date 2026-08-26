@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Pašalintas įrenginys',
     'dismiss_peer' => 'Slėpti šį įrenginį',
     'dismiss_stale' => 'Išvalyti nebesusietus įrenginius',
-    'no_devices' => 'Dar nesinchronizuotas nė vienas įrenginys',
+    'not_synced_yet' => 'Dar nesinchronizuota',
     'error' => 'Sinchronizavimo klaida viename ar keliuose įrenginiuose',
     'syncing' => 'Sinchronizuojama…',
     'offline' => 'Įrenginiai neprisijungę',

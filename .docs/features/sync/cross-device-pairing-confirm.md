@@ -42,13 +42,17 @@ Two tempting shortcuts fail:
 
 ## The three answers `applyPeerConfirm()` can give
 
+They arrive as a `PeerConfirmResult`, or as `null`. Deferral is deliberately not spelled with a
+`PairingState`: a deferred frame moves no row, so there is no state to name, and putting one on
+the enum would make it a value the `state` column could be written from.
+
 | Result | Meaning |
 | --- | --- |
-| `'confirmed'` | Signature verified and the local human had already confirmed. The peer is admitted. |
-| `'deferred'` | Signature verified, but the local human has *not* confirmed yet. **No confirmation is recorded.** |
+| `PeerConfirmResult::applied(PairingState::Confirmed)` | Signature verified and the local human had already confirmed. The peer is admitted. |
+| `PeerConfirmResult::deferred()` | Signature verified, but the local human has *not* confirmed yet. **No confirmation is recorded**, and the answer carries no state at all. |
 | `null` | Rejected: bad signature, or the local row is expired or cancelled. |
 
-`'deferred'` is the load-bearing one. A correctly-signed frame can never complete a pairing on
+Deferral is the load-bearing one. A correctly-signed frame can never complete a pairing on
 its own — arriving early, the row stays `awaiting_confirm` with the peer column unset. Both
 halves of the gate are local: your own human, and the peer's signature.
 

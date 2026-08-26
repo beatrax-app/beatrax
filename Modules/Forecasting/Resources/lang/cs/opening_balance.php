@@ -13,15 +13,18 @@ return [
     'as_of_label' => 'Počáteční zůstatek k datu',
     'as_of_help' => 'Datum, ke kterému částka výše platí.',
 
-    'divergence' => 'Je to o víc než 500 € mimo zůstatek, který Beatrax počítá z tvých importovaných transakcí. Určitě?',
+    'divergence' => 'Je to o víc než :threshold mimo zůstatek, který Beatrax počítá z tvých importovaných transakcí. Určitě?',
     'use_beatrax' => 'Použít číslo z Beatraxu',
     'use_mine' => 'Použít moje číslo',
 
     'save' => 'Uložit počáteční zůstatek',
+    'remove' => 'Odebrat počáteční zůstatek',
     'saved' => 'Uloženo.',
+    'removed' => 'Odebráno.',
 
     'toast' => [
         'updated' => 'Počáteční zůstatek aktualizován.',
+        'removed' => 'Počáteční zůstatek odebrán.',
     ],
 
     'errors' => [

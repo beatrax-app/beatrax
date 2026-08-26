@@ -21,6 +21,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\CommandTier;
+use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\ProcessLiveness;
@@ -78,18 +79,40 @@ final class ArtisanRunnerPage extends Component
         CurrentUser $user,
         DevCommandRegistry $registry,
     ): void {
+        if ($this->refused($command, $args, $registry)) {
+            return;
+        }
+
+        try {
+            $runId = $spawner->start($command, $args, $user->id(), CommandTier::Safe);
+        } catch (ProcessSpawningUnavailableException $e) {
+            $this->toast($e->readerMessage());
+
+            return;
+        }
+
+        $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
+    }
+
+    // Every reason this command does not reach the spawner, and the answer the
+    // operator gets for it. True means answered — the caller stops.
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    private function refused(string $command, array $args, DevCommandRegistry $registry): bool
+    {
         try {
             $spec = $registry->find($command);
         } catch (\InvalidArgumentException) {
             $this->toast(Lang::get('dev::runner.toast.unknown_command', ['command' => $command]));
 
-            return;
+            return true;
         }
 
         if (! $spec->tier->reachesThePalette()) {
             $this->dispatch('triple-gate:open', command: $command, args: $args);
 
-            return;
+            return true;
         }
 
         // A palette pick dispatches `args: []`, so a SAFE command with a
@@ -104,12 +127,9 @@ final class ArtisanRunnerPage extends Component
                     'list' => implode(', ', $missing),
                 ]),
             );
-
-            return;
         }
 
-        $runId = $spawner->start($command, $args, $user->id(), CommandTier::Safe);
-        $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
+        return $missing !== [];
     }
 
     /**
@@ -177,7 +197,14 @@ final class ArtisanRunnerPage extends Component
             return;
         }
 
-        $newRunId = $spawner->start($record->command, $record->args, $user->id(), CommandTier::Safe);
+        try {
+            $newRunId = $spawner->start($record->command, $record->args, $user->id(), CommandTier::Safe);
+        } catch (ProcessSpawningUnavailableException $e) {
+            $this->toast($e->readerMessage());
+
+            return;
+        }
+
         $this->toast(Lang::get('dev::runner.toast.reran', ['command' => $record->command, 'runId' => $newRunId]));
     }
 

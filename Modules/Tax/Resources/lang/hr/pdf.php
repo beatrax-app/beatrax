@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Protustranka',
     'col_description' => 'Opis',
     'col_note' => 'Bilješka',
-    'col_amount' => 'Iznos (EUR)',
+    'col_amount' => 'Iznos',
 
     'subtotal' => 'Međuzbroj',
 

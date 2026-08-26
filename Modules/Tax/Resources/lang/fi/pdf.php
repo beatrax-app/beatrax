@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Vastapuoli',
     'col_description' => 'Kuvaus',
     'col_note' => 'Muistiinpano',
-    'col_amount' => 'Summa (EUR)',
+    'col_amount' => 'Summa',
 
     'subtotal' => 'Välisumma',
 

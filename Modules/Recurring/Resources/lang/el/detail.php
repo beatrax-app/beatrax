@@ -22,7 +22,7 @@ return [
         'transaction' => 'Συναλλαγή',
     ],
 
-    'eur_equivalent' => 'Ισοδύναμο σε EUR',
+    'settled_equivalent' => 'Εκκαθάριση σε :code',
     'chart_requires_js' => 'Το γράφημα απαιτεί JavaScript.',
 
     'tolerance_toast' => 'Ανοχή: :percent%',

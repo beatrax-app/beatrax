@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Kita šalis',
     'description' => 'Aprašymas',
     'amount_native' => 'Suma (originali valiuta)',
-    'amount_settled' => 'Suma (atsiskaityta, EUR)',
+    'amount_settled' => 'Suma (atsiskaityta)',
     'effective_rate' => 'Faktinis kursas',
     'ics_markup' => 'Įskaičiuotas ICS antkainis, jei jis taikytas.',
 

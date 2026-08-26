@@ -36,6 +36,7 @@ use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Http\Livewire\FixedPaymentsCard;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Recurring\Public\Services\TransactionSeriesMembershipQuery;
 use Psr\Log\LoggerInterface;
 
 final class RecurringServiceProvider extends ServiceProvider
@@ -78,6 +79,7 @@ final class RecurringServiceProvider extends ServiceProvider
 
         $this->app->singleton(RecurringSeriesProjector::class);
         $this->app->singleton(RecurringSeriesQuery::class);
+        $this->app->singleton(TransactionSeriesMembershipQuery::class);
         $this->app->singleton(FixedPaymentsViewQuery::class);
         $this->app->singleton(ApproveRecurringSeries::class);
         $this->app->singleton(RejectRecurringSeries::class);

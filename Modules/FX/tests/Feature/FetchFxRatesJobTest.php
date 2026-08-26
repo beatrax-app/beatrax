@@ -10,6 +10,7 @@ use Modules\FX\Internal\Jobs\FetchFxRatesJob;
 use Modules\FX\Internal\Providers\EcbRateProvider;
 use Modules\FX\Internal\RateProviderRegistry;
 use Modules\FX\Public\Contracts\RateProvider;
+use Modules\FX\Public\Support\BundledRates;
 use Psr\Log\LoggerInterface;
 
 // The job re-checks fx_online_enabled as a privacy gate of its own, so every
@@ -206,7 +207,9 @@ describe('FetchFxRatesJob', function (): void {
         $job = new FetchFxRatesJob($disabledUser->id);
         $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class));
 
-        expect(DB::table('exchange_rates')->count())->toBe(0);
+        // Not a bare count: the bundled snapshot is seeded at migrate time, so
+        // what this asserts is that no provider wrote anything on top of it.
+        expect(DB::table('exchange_rates')->where('source', '!=', BundledRates::SOURCE)->count())->toBe(0);
     });
 
     it('no-ops for a non-existent user id', function (): void {
@@ -215,6 +218,6 @@ describe('FetchFxRatesJob', function (): void {
         $job = new FetchFxRatesJob(999_999);
         $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class));
 
-        expect(DB::table('exchange_rates')->count())->toBe(0);
+        expect(DB::table('exchange_rates')->where('source', '!=', BundledRates::SOURCE)->count())->toBe(0);
     });
 });

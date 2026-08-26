@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Minimalny bufor — konto: :name',
     'save' => 'Zapisz bufor',
     'cancel' => 'Anuluj',
-    'clear' => 'Wyczyść bufor (użyj progu €0)',
+    'clear' => 'Wyczyść bufor (użyj progu :zero)',
 
     'toast' => [
         'updated' => 'Bufor zaktualizowany.',

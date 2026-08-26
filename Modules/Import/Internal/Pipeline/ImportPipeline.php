@@ -14,6 +14,7 @@ use Modules\Core\Public\Support\MessageNamesNoUserData;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
+use Modules\Import\Internal\Dto\PreviewHead;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
@@ -29,10 +30,12 @@ use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
+use Modules\Ingestion\Public\Contracts\NamesAFormatMismatch;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
 use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Exceptions\PdfReaderUnavailableException;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -61,14 +64,11 @@ final class ImportPipeline
         private readonly Application $app,
     ) {}
 
-    /**
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?ImportFailureReason, fileFailureDetail: ?string, fileFailureRowIndex: ?int}
-     */
-    public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, ?BankCsvFormatHint $formatHint = null): array
+    public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer, ?BankCsvFormatHint $formatHint = null): PreviewHead
     {
         // The backstop at the contract boundary: CSV cannot self-disambiguate,
         // so a caller that skipped the wizard's validation is still refused.
-        if ($formatHint === null && in_array($sourceFormat, [SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value], strict: true)) {
+        if ($formatHint === null && $sourceFormat === SourceFormat::AsnCsv->value) {
             throw new InvalidArgumentException('CSV imports require a format hint.');
         }
 
@@ -78,56 +78,34 @@ final class ImportPipeline
             $accounts,
             $user,
             $importRunId,
+            $writer,
+            $localPath,
         );
 
         $this->persistStatementMetadata($sourceFormat, $importRunId, $built['lastResolvedAccountId'], $user);
 
-        return [
-            'rows' => $built['rows'],
-            'canonical' => $built['canonical'],
-            'enrichments' => $built['enrichments'],
-            'unknownIbans' => $built['unknownIbans'],
-            'fileFailureReason' => $built['fileFailureReason'],
-            'fileFailureDetail' => $built['fileFailureDetail'],
-            'fileFailureRowIndex' => $built['fileFailureRowIndex'],
-        ];
+        return $built['head'];
     }
 
     /**
      * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
      *
      * @param  Generator<int, SourceTransactionDto>  $sourceRows
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?ImportFailureReason, fileFailureDetail: ?string, fileFailureRowIndex: ?int}
      */
-    public function previewFromGenerator(Generator $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
+    public function previewFromGenerator(Generator $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer): PreviewHead
     {
-        $built = $this->buildPreviewRows($sourceRows, $sourceFormat, $accounts, $user, $importRunId);
-
-        return [
-            'rows' => $built['rows'],
-            'canonical' => $built['canonical'],
-            'enrichments' => $built['enrichments'],
-            'unknownIbans' => $built['unknownIbans'],
-            'fileFailureReason' => $built['fileFailureReason'],
-            'fileFailureDetail' => $built['fileFailureDetail'],
-            'fileFailureRowIndex' => $built['fileFailureRowIndex'],
-        ];
+        return $this->buildPreviewRows($sourceRows, $sourceFormat, $accounts, $user, $importRunId, $writer)['head'];
     }
 
     /**
      * @param  iterable<int, SourceTransactionDto>  $sourceRows
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?ImportFailureReason, fileFailureDetail: ?string, fileFailureRowIndex: ?int, lastResolvedAccountId: ?int}
+     * @return array{head: PreviewHead, lastResolvedAccountId: ?int}
      */
-    private function buildPreviewRows(iterable $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
+    private function buildPreviewRows(iterable $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer, ?string $localPath = null): array
     {
-        /** @var list<PreviewRowDto> $preview */
-        $preview = [];
-        /** @var list<CanonicalTransaction> $canonical */
-        $canonical = [];
-        /** @var list<PendingEnrichment> $enrichments */
-        $enrichments = [];
         /** @var array<string, UnknownIban> $unknownIbans */
         $unknownIbans = [];
+        $rowsWritten = 0;
         $lastResolvedAccountId = null;
         $fileFailureReason = null;
         $fileFailureDetail = null;
@@ -142,7 +120,8 @@ final class ImportPipeline
                         iban: $source->ownIban,
                         seenCounterpartyName: $source->counterpartyName,
                     );
-                    $preview[] = self::failedRow($source, null, ImportFailureReason::UnknownAccount);
+                    $writer->addRow(self::failedRow($source, null, ImportFailureReason::UnknownAccount));
+                    $rowsWritten++;
 
                     continue;
                 }
@@ -153,55 +132,58 @@ final class ImportPipeline
 
                 $enriched = $this->enrichRow($source, $accountId, $user, $importRunId, $sourceFormat);
                 if ($enriched instanceof PreviewRowDto) {
-                    $preview[] = $enriched;
+                    $writer->addRow($enriched);
+                    $rowsWritten++;
 
                     continue;
                 }
 
                 $disposition = $this->fingerprint->classify($enriched, $user);
-                $preview[] = $this->acceptedRow($source, $accountId, $enriched, $disposition, $user);
+                $writer->addRow($this->acceptedRow($source, $accountId, $enriched, $disposition, $user));
+                $rowsWritten++;
 
                 if ($disposition->isNew()) {
-                    $canonical[] = $enriched;
+                    $writer->addCanonical($enriched);
                 } elseif ($disposition instanceof EnrichedDisposition) {
-                    $enrichments[] = new PendingEnrichment(
+                    $writer->addEnrichment(new PendingEnrichment(
                         existingTransactionId: $disposition->existingTransactionId,
                         newSourceRef: $disposition->toSourceRef,
                         importRunId: $importRunId,
                         sourceFormat: $sourceFormat,
                         conflictingFields: $disposition->conflictingFields,
-                    );
+                    ));
                 }
             }
         } catch (Throwable $e) {
             // A fatal adapter error is the file failing, not a row of it, and
-            // it stops the read where it was raised. Reported as a row it read
-            // as a transaction with no values; reported here it can say that
-            // nothing past this point was read. The trace goes to the log.
+            // it stops the read where it was raised. The size and the row count
+            // go with it: a file that arrived empty and a file that died on its
+            // content are one line apart in a log, and identical on the screen.
             $this->logger->warning('ImportPipeline: parse failed.', [
                 'source_format' => $sourceFormat,
                 'import_run_id' => $importRunId,
+                'source_bytes' => self::sourceBytes($localPath),
+                'rows_read' => $rowsWritten,
                 ...SafeExceptionContext::describe($e),
                 'exception_message' => $e instanceof MessageNamesNoUserData ? $e->getMessage() : null,
                 'exception_trace' => $e->getTraceAsString(),
             ]);
-            $fileFailureReason = self::reasonFor($e, ImportFailureReason::FileUnreadable);
+            $fileFailureReason = self::fileReasonFor($e);
             $fileFailureDetail = self::safeDetail($e);
             // One preview row per source row, so the count is the index of the
             // one being read when it stopped. Counted rather than read out of
             // the message, which for most of these adapters quotes a cell and
             // so cannot be shown or stored.
-            $fileFailureRowIndex = $preview === [] ? null : count($preview);
+            $fileFailureRowIndex = $rowsWritten === 0 ? null : $rowsWritten;
         }
 
         return [
-            'rows' => $preview,
-            'canonical' => $canonical,
-            'enrichments' => $enrichments,
-            'unknownIbans' => array_values($unknownIbans),
-            'fileFailureReason' => $fileFailureReason,
-            'fileFailureDetail' => $fileFailureDetail,
-            'fileFailureRowIndex' => $fileFailureRowIndex,
+            'head' => $writer->finish(
+                array_values($unknownIbans),
+                $fileFailureReason,
+                $fileFailureDetail,
+                $fileFailureRowIndex,
+            ),
             'lastResolvedAccountId' => $lastResolvedAccountId,
         ];
     }
@@ -292,7 +274,11 @@ final class ImportPipeline
             error: null,
             diff: $diff,
             paymentType: $normalized->paymentType,
-            aliasFriendlyName: $rowDescription === null
+            // Resolved from the description, and the three blades rendering the
+            // counterparty column read it first — so on a row whose file also
+            // names the counterparty it hid that name and previewed something
+            // the commit never writes. It stands in for one; it never overrules.
+            aliasFriendlyName: $rowDescription === null || self::hasText($source->counterpartyName)
                 ? null
                 : $this->merchantNameResolver->resolve($rowDescription, $user->id),
         );
@@ -322,21 +308,48 @@ final class ImportPipeline
         );
     }
 
+    // The format check runs before the first row is read, so anything that
+    // throws after it has already agreed the header matches. Blaming the header
+    // there sent the reader to their bank for a file their bank sent correctly.
+    private static function fileReasonFor(Throwable $e): ImportFailureReason
+    {
+        return $e instanceof NamesAFormatMismatch
+            ? ImportFailureReason::FileUnreadable
+            : self::reasonFor($e, ImportFailureReason::FileStoppedShort);
+    }
+
     // The app-lock case is the one a reader can act on, and the only failure
     // whose own message names an internal class and their user id. It arrives
     // by two doors — the matching key cannot be derived, or the AEAD column
     // cannot be sealed — and both mean "unlock the app and try again".
     private static function reasonFor(Throwable $e, ImportFailureReason $default): ImportFailureReason
     {
-        return $e instanceof BlindIndexKeyUnavailableException || $e instanceof SensitiveColumnKeyUnavailableException
-            ? ImportFailureReason::AppLocked
-            : $default;
+        return match (true) {
+            $e instanceof BlindIndexKeyUnavailableException,
+            $e instanceof SensitiveColumnKeyUnavailableException => ImportFailureReason::AppLocked,
+            // Nothing about the file is wrong, so the header-row advice the
+            // default carries would send the reader to re-download a statement
+            // that would fail again the same way.
+            $e instanceof PdfReaderUnavailableException => ImportFailureReason::PdfReaderUnavailable,
+            default => $default,
+        };
     }
 
     // The same seam the log path uses, applied one step earlier: a message that
     // has not declared itself free of user data never enters the preview at all.
     // The sniffer's own "this CSV is missing column X" is the one worth keeping,
     // and it is declared safe.
+    private static function sourceBytes(?string $localPath): ?int
+    {
+        if ($localPath === null || ! is_file($localPath)) {
+            return null;
+        }
+
+        $bytes = @filesize($localPath);
+
+        return $bytes === false ? null : $bytes;
+    }
+
     private static function safeDetail(Throwable $e): ?string
     {
         if (! $e instanceof MessageNamesNoUserData) {
@@ -359,5 +372,10 @@ final class ImportPipeline
         $trimmed = trim($value);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    private static function hasText(?string $value): bool
+    {
+        return self::trimToNull($value) !== null;
     }
 }

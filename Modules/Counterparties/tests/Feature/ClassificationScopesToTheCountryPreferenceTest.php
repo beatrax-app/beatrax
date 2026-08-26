@@ -122,7 +122,9 @@ it('still names a merchant from another region while no country is chosen', func
     $resolved = resolveDescription($this->user, $this->account, 'COLRUYT 4471 HALLE');
 
     expect($resolved?->type)->toBe(CounterpartyType::Merchant->value);
-    expect($resolved?->displayName)->toBe('Colruyt');
+    // merchantName, not displayName: the corpus naming the row is what this
+    // asserts, and the display name is the counterparty the row itself names.
+    expect($resolved?->merchantName)->toBe('Colruyt');
 });
 
 // The column, not the seam: a resolver still reading users.tax_country_code

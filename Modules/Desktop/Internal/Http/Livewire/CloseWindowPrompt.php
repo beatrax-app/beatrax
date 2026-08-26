@@ -51,13 +51,20 @@ final class CloseWindowPrompt extends Component
 
     public function render(ViewFactory $views): View
     {
-        return $views->make('desktop::close-window-prompt', [
-            'title' => Lang::get('desktop::screens.close.title'),
+        $title = Lang::get('desktop::screens.close.title');
+
+        $view = $views->make('desktop::close-window-prompt', [
+            'title' => $title,
             'body' => Lang::get('desktop::screens.close.body'),
             'buttonQuit' => Lang::get('desktop::screens.close.button_quit'),
             'buttonKeepInTray' => Lang::get('desktop::screens.close.button_keep_in_tray'),
             'checkboxRemember' => Lang::get('desktop::screens.close.checkbox_remember'),
             'modalName' => self::MODAL_NAME,
         ]);
+
+        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
+        $view->extends('layouts.app', ['title' => $title.' · Beatrax']);
+
+        return $view;
     }
 }

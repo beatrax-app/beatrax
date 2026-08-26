@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Šios sąskaitos prognozei kol kas neprisideda nė viena serija.',
 
     'net_diff' => 'Grynasis skirtumas',
+
+    'net_diff_unknown' => 'Šiam laikotarpiui dar neapskaičiuota.',
     'net_diff_section_aria' => 'Grynasis skirtumas tarp bazinio varianto ir scenarijaus 30 / 60 / 90 horizonto dienomis',
     'net_diff_delta_aria' => 'Grynasis skirtumas :day dieną: :value, scenarijus yra :state',
     'better_than_baseline' => 'geresnis nei bazinis',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Prognozės akcentai',
     'highlights_shortfall_aria' => ':count aktyvus trūkumo laikotarpis per artimiausias :days dienas|:count aktyvūs trūkumo laikotarpiai per artimiausias :days dienas|:count aktyvių trūkumo laikotarpių per artimiausias :days dienas',
-    'dips_to' => ':name nukrenta iki :amount',
     'on_date_suffix' => ' :date',
     'shortfall_window' => ':count aktyvus trūkumo laikotarpis|:count aktyvūs trūkumo laikotarpiai|:count aktyvių trūkumo laikotarpių',
-    'lowest_in_30' => 'Mažiausias per 30 dienų: :amount',
+    'lowest_in_30_label' => 'Mažiausias per 30 dienų',
     'next_ics' => 'Kitas ICS atsiskaitymas: :amount :date',
+    'ics_overdue' => 'ICS atsiskaitymas pradelstas: :amount, terminas buvo :date',
 ];

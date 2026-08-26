@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => 'Dieses Telefon kann eine Datei, die die App übergibt, nicht speichern — das verschlüsselte Backup entsteht daher in der Desktop-App. Koppele dieses Gerät, um beide synchron zu halten.',
         'unavailable' => 'Verschlüsselte Backups gibt es in der Desktop-Version (SQLite). Nutze bei einer Server-Datenbank die eigenen Backup-Werkzeuge deiner Datenbank.',
         'intro' => 'Lade eine mit einer Passphrase verschlüsselte Kopie deiner gesamten Datenbank herunter — du kannst sie bedenkenlos auf einer externen Festplatte oder in der Cloud aufbewahren, denn ohne die Passphrase ist sie unlesbar (quantensicheres XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Passphrase',
@@ -16,8 +17,8 @@ return [
     'restore' => [
         'heading' => 'Aus einem Backup wiederherstellen',
 
-        'intro_html' => 'Ersetze deine aktuelle Datenbank durch ein verschlüsseltes Backup. Die Datei wird entschlüsselt und geprüft, bevor sich etwas ändert, und zuerst wird eine Momentaufnahme deiner aktuellen Daten gesichert — trotzdem <strong class="text-slate-700 dark:text-slate-200">überschreibt das alles</strong>, deshalb ist es abgesichert.',
-        'restored' => 'Wiederhergestellt. Lade die App neu, um deine wiederhergestellten Daten zu sehen.',
+        'intro_html' => 'Ersetze deine aktuelle Datenbank durch ein verschlüsseltes Backup. Die Datei wird entschlüsselt und geprüft, bevor sich etwas ändert, und zuerst wird eine Momentaufnahme deiner aktuellen Daten gesichert — trotzdem <strong class="text-slate-700 dark:text-slate-200">überschreibt das alles</strong>, deshalb ist es abgesichert. Du wirst abgemeldet, denn deine Anmeldung liegt ebenfalls in der Datenbank.',
+        'restored' => 'Ihre Sicherung wurde wiederhergestellt. Melden Sie sich mit dem Benutzernamen und Passwort an, die bei ihrer Erstellung galten.',
         'snapshot_saved_prefix' => 'Eine Momentaufnahme deiner bisherigen Daten wurde gespeichert unter',
         'file_label' => 'Verschlüsseltes Backup (.enc)',
         'uploading' => 'Wird hochgeladen…',
@@ -35,6 +36,7 @@ return [
         'create_failed' => 'Backup konnte nicht erstellt werden: :message',
         'confirm_phrase' => 'Tippe :phrase zur Bestätigung — das ersetzt deine aktuellen Daten.',
         'choose_file' => 'Wähle eine verschlüsselte Backup-Datei (.enc) zum Wiederherstellen.',
+        'upload_failed' => 'Die Datei wurde nicht vollständig hochgeladen. Sie ist möglicherweise zu groß für dieses Gerät — die Wiederherstellung in der Desktop-App akzeptiert eine größere Sicherung.',
         'enter_passphrase' => 'Gib die Passphrase ein, mit der das Backup verschlüsselt wurde.',
         'unreadable' => 'Die hochgeladene Datei konnte nicht gelesen werden. Versuche es erneut.',
     ],

@@ -37,7 +37,7 @@ return [
     'col_account' => 'Számla',
     'col_counterparty' => 'Partner',
     'col_note' => 'Megjegyzés',
-    'col_settled_eur' => 'Elszámolt EUR',
+    'col_settled' => 'Elszámolt',
     'col_original' => 'Eredeti',
     'col_year' => 'Év',
 

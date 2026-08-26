@@ -11,7 +11,7 @@ return [
     'expense' => 'Kiadás',
     'income' => 'Bevétel',
 
-    'amount' => 'Összeg (€)',
+    'amount' => 'Összeg (:symbol)',
     'date' => 'Dátum',
     'counterparty' => 'Partner',
     'counterparty_placeholder' => 'pl. Pékség',

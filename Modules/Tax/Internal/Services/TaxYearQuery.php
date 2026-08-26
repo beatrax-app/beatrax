@@ -9,7 +9,9 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\TaxYearData;
 
@@ -24,6 +26,8 @@ final class TaxYearQuery
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
         private readonly SessionFactory $session,
+        private readonly CrossCurrencyTotal $fx,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function forUser(int $userId, int $year): TaxYearData
@@ -37,6 +41,7 @@ final class TaxYearQuery
                 incomeTotalMinor: 0,
                 itemCount: 0,
                 categories: [],
+                currency: $this->baseCurrency->code(),
             );
         }
 
@@ -105,36 +110,43 @@ final class TaxYearQuery
             ->get();
     }
 
+    // A tagged row is worth what its own settled_currency says, so every total
+    // here buckets by currency and converts each bucket before adding. The
+    // magnitude carried down into the groups is the bucket key too, so a
+    // category subtotal is converted on the same terms as the year's.
     /**
      * @param  Collection<int, \stdClass>  $rawRows
      */
     private function buildYearData(int $userId, int $year, Collection $rawRows): TaxYearData
     {
-        /** @var array<int|string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>}> $groups */
+        /** @var array<int|string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>, byCurrency: array<string, int>}> $groups */
         $groups = [];
-        /** @var array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>}|null $noCategory */
+        /** @var array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>, byCurrency: array<string, int>}|null $noCategory */
         $noCategory = null;
 
-        $deductionsTotal = 0;
-        $incomeTotal = 0;
+        /** @var array<string, int> $deductionsByCurrency */
+        $deductionsByCurrency = [];
+        /** @var array<string, int> $incomeByCurrency */
+        $incomeByCurrency = [];
 
         foreach ($rawRows as $row) {
             $signedMinor = self::toInt($row->settled_amount_minor);
             $magnitudeMinor = abs($signedMinor);
+            $currency = self::toString($row->settled_currency);
             $isIncome = self::toString($row->transaction_type) === TransactionType::Income->value;
 
             if ($isIncome) {
-                $incomeTotal += $magnitudeMinor;
+                $incomeByCurrency[$currency] = ($incomeByCurrency[$currency] ?? 0) + $magnitudeMinor;
             } else {
-                $deductionsTotal += $magnitudeMinor;
+                $deductionsByCurrency[$currency] = ($deductionsByCurrency[$currency] ?? 0) + $magnitudeMinor;
             }
 
             $rowData = $this->mapRow($row, $userId, $signedMinor);
 
             if ($row->category_id === null) {
-                $noCategory = $this->accumulateNoCategory($noCategory, $rowData, $magnitudeMinor);
+                $noCategory = $this->accumulateNoCategory($noCategory, $rowData, $magnitudeMinor, $currency);
             } else {
-                $groups = $this->accumulateCategory($groups, $row, $rowData, $magnitudeMinor);
+                $groups = $this->accumulateCategory($groups, $row, $rowData, $magnitudeMinor, $currency);
             }
         }
 
@@ -143,13 +155,44 @@ final class TaxYearQuery
             $categories[] = $noCategory;
         }
 
+        $baseCurrency = $this->baseCurrency->code();
+        $rates = $this->fx->ratesTo(
+            array_merge(array_keys($deductionsByCurrency), array_keys($incomeByCurrency)),
+            $baseCurrency,
+        );
+
+        $deductions = $this->fx->withRates($deductionsByCurrency, $baseCurrency, $rates);
+        $income = $this->fx->withRates($incomeByCurrency, $baseCurrency, $rates);
+
+        $unconverted = array_values(array_unique([...$deductions->unconverted, ...$income->unconverted]));
+        sort($unconverted);
+
         return new TaxYearData(
             year: $year,
-            deductionsTotalMinor: $deductionsTotal,
-            incomeTotalMinor: $incomeTotal,
+            deductionsTotalMinor: $deductions->minor,
+            incomeTotalMinor: $income->minor,
             itemCount: $rawRows->count(),
-            categories: $categories,
+            categories: $this->convertedSubtotals($categories, $baseCurrency, $rates),
+            currency: $baseCurrency,
+            unconvertedCurrencies: $unconverted,
         );
+    }
+
+    /**
+     * @param  list<array{id: int|null, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>, byCurrency: array<string, int>}>  $categories
+     * @param  array<string, string>  $rates
+     * @return list<array<string, mixed>>
+     */
+    private function convertedSubtotals(array $categories, string $baseCurrency, array $rates): array
+    {
+        $converted = [];
+        foreach ($categories as $category) {
+            $category['subtotalMinor'] = $this->fx->withRates($category['byCurrency'], $baseCurrency, $rates)->minor;
+            unset($category['byCurrency']);
+            $converted[] = $category;
+        }
+
+        return $converted;
     }
 
     /**
@@ -184,11 +227,11 @@ final class TaxYearQuery
     }
 
     /**
-     * @param  array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>}|null  $noCategory
+     * @param  array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>, byCurrency: array<string, int>}|null  $noCategory
      * @param  array<string, mixed>  $rowData
-     * @return array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>}
+     * @return array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>, byCurrency: array<string, int>}
      */
-    private function accumulateNoCategory(?array $noCategory, array $rowData, int $magnitudeMinor): array
+    private function accumulateNoCategory(?array $noCategory, array $rowData, int $magnitudeMinor, string $currency): array
     {
         $noCategory ??= [
             'id' => null,
@@ -196,20 +239,21 @@ final class TaxYearQuery
             'shortName' => null,
             'subtotalMinor' => 0,
             'rows' => [],
+            'byCurrency' => [],
         ];
 
-        $noCategory['subtotalMinor'] += $magnitudeMinor;
+        $noCategory['byCurrency'][$currency] = ($noCategory['byCurrency'][$currency] ?? 0) + $magnitudeMinor;
         $noCategory['rows'][] = $rowData;
 
         return $noCategory;
     }
 
     /**
-     * @param  array<int|string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>}>  $groups
+     * @param  array<int|string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>, byCurrency: array<string, int>}>  $groups
      * @param  array<string, mixed>  $rowData
-     * @return array<int|string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>}>
+     * @return array<int|string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>, byCurrency: array<string, int>}>
      */
-    private function accumulateCategory(array $groups, \stdClass $row, array $rowData, int $magnitudeMinor): array
+    private function accumulateCategory(array $groups, \stdClass $row, array $rowData, int $magnitudeMinor, string $currency): array
     {
         $catKey = (string) self::toInt($row->category_id);
         if (! array_key_exists($catKey, $groups)) {
@@ -219,10 +263,11 @@ final class TaxYearQuery
                 'shortName' => self::toStringOrNull($row->category_short_name),
                 'subtotalMinor' => 0,
                 'rows' => [],
+                'byCurrency' => [],
             ];
         }
 
-        $groups[$catKey]['subtotalMinor'] += $magnitudeMinor;
+        $groups[$catKey]['byCurrency'][$currency] = ($groups[$catKey]['byCurrency'][$currency] ?? 0) + $magnitudeMinor;
         $groups[$catKey]['rows'][] = $rowData;
 
         return $groups;

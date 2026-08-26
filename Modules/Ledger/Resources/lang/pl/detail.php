@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Kontrahent',
     'description' => 'Opis',
     'amount_native' => 'Kwota (waluta pierwotna)',
-    'amount_settled' => 'Kwota (rozliczona w EUR)',
+    'amount_settled' => 'Kwota (rozliczona)',
     'effective_rate' => 'Kurs efektywny',
     'ics_markup' => 'Zawiera ewentualną marżę ICS.',
 

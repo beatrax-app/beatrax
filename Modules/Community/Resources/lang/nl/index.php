@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'De meeste vertalingen zijn voorlopig door AI gemaakt — Beatrax is open source en tijd is schaars, dus machinevertaling was beter dan lege talen. Klinkt iets verkeerd, dan is het dat waarschijnlijk ook, en één regel aanpassen helpt iedereen die het gebruikt.',
     'translations_how' => 'Elke taal is een map met gewone PHP-bestanden onder Modules/*/Resources/lang. Kopieer de Engelse map, vertaal de teksten en open een pull request — geen buildstap, geen tooling nodig.',
     'translations_cta' => 'Lees de bijdrage-handleiding',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Gedeelde merchantlijst',
 ];

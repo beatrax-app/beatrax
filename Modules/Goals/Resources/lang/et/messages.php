@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Siht saavutatud',
+        'closed_short' => 'Suletud enne eesmärgi saavutamist',
         'add_contributions' => 'Lisa sissemakseid, et näha prognoosi',
         'not_enough_history' => 'Ajalugu ei ole veel piisav kuupäeva prognoosimiseks',
         'no_recent_contributions' => 'Pole hiljutisi sissemakseid, mille põhjal prognoosida',

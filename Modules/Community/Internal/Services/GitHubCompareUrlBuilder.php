@@ -6,6 +6,7 @@ namespace Modules\Community\Internal\Services;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\Community\Public\Dto\SuggestMappingDto;
+use Modules\Core\Public\Support\ProjectLinks;
 
 final class GitHubCompareUrlBuilder
 {
@@ -15,11 +16,11 @@ final class GitHubCompareUrlBuilder
     {
         $configured = $this->config->get(
             'community.github_compare_base',
-            'https://github.com/beatrax-app/beatrax/compare/main',
+            ProjectLinks::COMPARE_BASE_URL,
         );
         $base = is_string($configured)
             ? $configured
-            : 'https://github.com/beatrax-app/beatrax/compare/main';
+            : ProjectLinks::COMPARE_BASE_URL;
 
         $branch = 'suggest-'.substr(hash('sha256', $dto->pattern), 0, 16);
 

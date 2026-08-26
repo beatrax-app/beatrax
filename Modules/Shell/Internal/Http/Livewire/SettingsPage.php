@@ -22,9 +22,11 @@ use Modules\Core\Public\Services\LocaleNegotiator;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\ProjectLinks;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 final class SettingsPage extends Component
 {
@@ -93,7 +95,7 @@ final class SettingsPage extends Component
         $this->locale = $user->locale ?? LocaleNegotiator::SYSTEM;
         $this->country = $countries->current($user->id);
         $this->isDeveloper = $user->is_developer === true;
-        $this->baseCurrency = $user->base_currency ?? $baseCurrency->code();
+        $this->baseCurrency = $baseCurrency->forUser($user);
         $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
 
         $this->loadFxLastUpdated($db);
@@ -180,7 +182,7 @@ final class SettingsPage extends Component
 
     public function openReleasesPage(OpenExternalUrlAction $opener): void
     {
-        $opener('https://github.com/beatrax-app/beatrax/releases/latest');
+        $opener(ProjectLinks::LATEST_RELEASE_URL);
     }
 
     public function toggleFxOnline(CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
@@ -297,10 +299,22 @@ final class SettingsPage extends Component
             // The help text needs the per-user directory the user must create,
             // not the shared root inbox-drop folder.
             'userId' => $currentUser->user()->id,
-            'forecastingAccounts' => $this->mapAccounts($accounts, $baseCurrency->code()),
+            'accounts' => $this->mapAccounts($accounts, $baseCurrency->code()),
             'currencyOptions' => $this->mapCurrencyOptions($currencyRows),
             'countryOptions' => $countries->options(),
+            'exampleCurrency' => $this->exampleCurrency(),
         ]);
+    }
+
+    // baseCurrency is a form field on this page, so between an edit and a save
+    // it holds whatever was typed — including a code brick/money refuses. Both
+    // the worked example in the view and the bound in the validation copy were
+    // formatted in it, and threw over the very input they were describing.
+    private function exampleCurrency(): string
+    {
+        return Money::tryOfMinor(0, $this->baseCurrency) instanceof Money
+            ? $this->baseCurrency
+            : Currency::Eur->value;
     }
 
     /**
@@ -379,7 +393,7 @@ final class SettingsPage extends Component
         // is reflected in the validation copy.
         $periodDay = Lang::get('core::settings.errors.period_day');
         $windowMonths = Lang::get('core::settings.errors.window_months');
-        $amount = Lang::get('core::settings.errors.amount');
+        $amount = Lang::get('core::settings.errors.amount', ['zero' => Money::ofMinor(0, $this->exampleCurrency())->formatWholeUnits()]);
         $threshold = Lang::get('core::settings.errors.threshold');
         $currencyRequired = Lang::get('core::settings.errors.currency_required');
         $currencyView = Lang::get('core::settings.errors.currency_view');

@@ -156,10 +156,14 @@ Modules/Recurring/
     detail and review pages batch through:
     `driftThresholdForSeries`, `statesForSeriesIds`,
     `displayNamesForSeriesIds`, `forSeriesIds`,
-    `seriesMembershipForTransactionIds`,
     `counterpartyIdForSeries`, `counterpartyIdsForSeriesIds`,
     `approvedSeriesForCounterparty`, `amountTrendForSeries`,
     `accountIdsForSeriesIds`.
+  - `TransactionSeriesMembershipQuery` answers the other
+    direction — given transaction ids, which series do they
+    belong to: `seriesMembershipForTransactionIds` (is it a
+    member at all) and `seriesIdsForTransactionIds` (which
+    projectable series), for Anomaly, Calendar and Forecasting.
   - `FixedPaymentsViewQuery::viewForUser(User $user): array` —
     dashboard card data; `topByMonthlyEquivalent()` and
     `monthlyEquivalentTotals()` alongside it.

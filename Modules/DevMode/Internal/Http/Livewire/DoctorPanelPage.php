@@ -16,6 +16,11 @@ use Modules\DevMode\Internal\Doctor\ProbeOutputParser;
 #[Layout('dev::layouts.dev-shell')]
 final class DoctorPanelPage extends Component
 {
+    // The name the audit rows are keyed by AND the name the Re-run button
+    // hands the spawner, which whitelists case-sensitively. Written twice, the
+    // two drifted and the button spawned nothing.
+    private const string COMMAND = 'beatrax:doctor';
+
     public function render(
         ViewFactory $views,
         DatabaseManager $db,
@@ -23,7 +28,7 @@ final class DoctorPanelPage extends Component
     ): View {
         $latest = $db->connection()->table('dev_mode_audit')
             ->where('log_name', SpatieAuditWriter::LOG_NAME)
-            ->where('properties->command', 'beatrax:doctor')
+            ->where('properties->command', self::COMMAND)
             ->orderByDesc('created_at')
             ->limit(1)
             ->first();
@@ -32,7 +37,7 @@ final class DoctorPanelPage extends Component
             ? ['probeRows' => [], 'rawStdout' => null, 'finishedAt' => null, 'exitCode' => null]
             : $this->snapshotFromRow($latest, $parser);
 
-        return $views->make('dev::livewire.doctor-panel-page', $snapshot);
+        return $views->make('dev::livewire.doctor-panel-page', [...$snapshot, 'commandName' => self::COMMAND]);
     }
 
     /**

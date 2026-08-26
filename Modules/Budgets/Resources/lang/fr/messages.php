@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budgets',
-        'subtitle' => 'Affecte chaque euro — :period.',
+        'subtitle' => 'Affecte tout — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Reporte le négatif',
-        'non_eur_aria' => 'Les dépenses hors EUR dans cette catégorie ne sont pas affichées ici — voir le tableau de bord',
-        'non_eur_title' => 'Dépenses hors EUR non affichées ici — voir le tableau de bord',
+        'unconverted_aria' => 'Les dépenses dans une devise sans taux disponible ne sont pas comptées ici — voir le tableau de bord',
+        'unconverted_title' => 'Les dépenses sans taux disponible ne sont pas comptées ici — voir le tableau de bord',
         'over_budget' => ':count au-dessus du budget',
     ],
 

@@ -21,7 +21,6 @@ return [
     'footer' => 'Jaettu lista on Beatraxin mukana toimitettava YAML-tiedosto. Ehdotuksen lähettäminen avaa GitHubin selaimeesi; mitään muuta ei lähde tältä laitteelta.',
 
     'card' => [
-        'likely' => 'Todennäköisesti nimeämätön kauppias.',
         'seen_times' => 'Nähty :count kerran|Nähty :count kertaa',
         'last_seen' => 'Viimeksi nähty :date',
         'suggest' => 'Ehdota nimeä →',

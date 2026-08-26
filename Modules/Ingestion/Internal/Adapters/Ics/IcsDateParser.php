@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 
 final class IcsDateParser
@@ -30,7 +31,7 @@ final class IcsDateParser
         }
 
         if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $trimmed, $m) === 1) {
-            $parsed = CarbonImmutable::createFromFormat(
+            $parsed = SafeDate::fromFormatOrNull(
                 '!d-m-Y',
                 sprintf('%02d-%02d-%s', (int) $m[1], (int) $m[2], $m[3]),
             );

@@ -1870,6 +1870,10 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
     // where one module changes another module's state, which is the coupling.
     $pinned = [
         'Modules/Anomaly/Internal/Jobs/BackfillAnomaliesJob.php users 1',
+        // Framework tables, both keyed by user id rather than by a user_id
+        // column, so the schema sweep beside this cannot reach either. Deleting
+        // an account left 2,385 jobs and its own cached badge counts behind.
+        'Modules/Auth/Internal/Account/UserScopedDataPurge.php cache 1',
         'Modules/Auth/Internal/Account/UserScopedDataPurge.php relay_mailbox 1',
         'Modules/Auth/Internal/Account/UserScopedDataPurge.php users 1',
         'Modules/Auth/Internal/Console/ResetPasswordCommand.php users 1',
@@ -2066,11 +2070,13 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/EmailScan/tests/Feature/InvalidGrantToastTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\Dashboard',
         'Modules/FX/tests/Feature/BaseCurrencySettingTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/FX/tests/Feature/FxOnlineToggleTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Forecasting/tests/Feature/TodayAgreesAcrossSurfacesTest.php -> Modules\\Calendar\\Internal\\Services\\DailyBalanceAggregator',
         'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
         'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'Modules/Import/tests/Feature/LockedImportSaysSoWithoutNamingAClassTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Import/tests/Feature/PreviewWizardTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
         'Modules/Import/tests/Feature/PreviewWizardTest.php -> Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
+        'Modules/Import/tests/Feature/TheRevolutBalanceAgreesWithTheBankTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Csv\\GenericCsvAmountParser',
         'Modules/Ingestion/tests/Feature/PaypalFundingLegTypingTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\ClassifyTransactionType',
         'Modules/Ledger/tests/Feature/AmountsRemainAggregatableTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Ledger/tests/Feature/CounterpartyBlindIndexTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\FingerprintStage',
@@ -2170,6 +2176,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Notifications/tests/Feature/QuietHoursDeferTest.php -> Modules\\Desktop\\Internal\\Native\\WindowFocusState',
         'Modules/Notifications/tests/Feature/ReminderSelfInvalidationTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
         'Modules/Notifications/tests/Feature/SavingsPromptTriggerTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\EmitSavingsPromptsJob',
+        'Modules/Notifications/tests/Feature/TheDigestScheduleActuallyDispatchesTest.php -> Modules\\Position\\Internal\\Jobs\\EmitPositionDigestJob',
         'Modules/Onboarding/tests/Feature/ConnectPaypalStepCacheContentsTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConnectPaypalStepReuseExistingAccountTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConsolidatedPreviewLoadTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
@@ -2192,6 +2199,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Sync/tests/Feature/DuplicateReminderConvergenceTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/Sync/tests/Feature/ManualEntryReachesOtherDevicesTest.php -> Modules\\CashBook\\Internal\\Actions\\RecordManualTransaction',
         'Modules/Sync/tests/Feature/PairingStateLapsesWithItsTtlTest.php -> Modules\\Mobile\\Internal\\Http\\Livewire\\MobilePairingScan',
+        'Modules/Sync/tests/Feature/RenderedCiphertextGuardTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\PinVerificationService',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Recovery\\RecoveryCodeAuthenticator',
@@ -2203,6 +2211,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Tax/tests/Feature/TaxCountryPromptPointsAtTheControlTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Tax/tests/Feature/TaxWordingComesFromTheFilingCountryTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Tax/tests/Feature/ThePhoneSheetsNoteFieldCarriesItsOwnLabelTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Transfers/tests/Feature/PairTransferCandidatesAliasBridgeTest.php -> Modules\\Import\\Internal\\Services\\KnownCounterpartyIbanResolver',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\DriftEvaluator',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\RevivedExpiredDriftSnoozesJob',
@@ -2366,6 +2375,7 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Auth (auth.delete-account-section)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Auth (auth.recovery-codes-section)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Forecasting (forecasting.opening-balance-editor)',
+        'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Ledger (ledger.account-currency-editor)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Notifications (notifications.settings-section)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Tax (tax.settings-section)',
     ];

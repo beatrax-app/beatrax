@@ -9,6 +9,10 @@ return [
     'confirm' => 'Import megerősítése',
     'subtitle' => 'Nézd át a beolvasott sorokat. A megerősítésig semmi nem kerül a főkönyvedbe.',
 
+    'already_imported' => 'Ezt a fájlt már importálta.',
+
+    'already_imported_link' => 'Importálás eredményének megtekintése',
+
     'expired_html' => 'Az előnézet lejárt. <a href="/imports/new" class="underline">Töltsd fel újra a fájlt</a>, és próbáld meg ismét.',
 
     'save_name' => 'Név mentése',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Ennek a partnernek az átnevezése',
 
     'unknown_iban_prefix' => 'Ismeretlen IBAN-t találtunk:',
+
+    'unknown_account_prefix' => 'Ismeretlen számlát találtunk:',
     'unknown_iban_suffix' => 'Nevezd el ezt a számlát.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'az újrapróbáláshoz vagy a megtekintéshez.',
     ],
 
+    'rows_shown' => 'Megjelenített sorok: :shown / :total',
+
+    'show_more' => 'Több sor megjelenítése',
+
     'errors' => [
         'app_locked' => 'Oldja fel az alkalmazást az importáláshoz: a titkosítási kulcsok zárolt állapotban nem használhatók.',
+        'file_stopped_short' => 'A fejléc egyezett, tehát a formátum jó. Az olvasás a fájl vége előtt megállt. Ezt egyetlen olvashatatlan sor is okozza, és az is, ha a fájl túl nagy ehhez az eszközhöz. Próbálj rövidebb időszakot.',
         'file_unreadable' => 'Ezt a fájlt nem sikerült beolvasni.',
         'iban_not_in_preview' => 'Ez az IBAN nem része az aktuális előnézetnek.',
+        'pdf_reader_unavailable' => 'A PDF kivonatokhoz a pdftotext program kell, ami itt nincs telepítve. Importáld ezt a fájlt olyan számítógépen, amelyen megvan, vagy használj CSV-exportot a bankodtól.',
         'row_unreadable' => 'Ezt a sort nem sikerült beolvasni.',
         'unknown_account' => 'Ez a sor olyan számlához tartozik, amelynek még nem adtál nevet.',
     ],

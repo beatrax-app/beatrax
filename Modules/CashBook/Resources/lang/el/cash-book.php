@@ -11,7 +11,7 @@ return [
     'expense' => 'Έξοδο',
     'income' => 'Έσοδο',
 
-    'amount' => 'Ποσό (€)',
+    'amount' => 'Ποσό (:symbol)',
     'date' => 'Ημερομηνία',
     'counterparty' => 'Αντισυμβαλλόμενος',
     'counterparty_placeholder' => 'π.χ. Φούρνος',

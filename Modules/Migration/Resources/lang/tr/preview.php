@@ -16,13 +16,10 @@ return [
         'budget' => 'Bütçe ayları',
     ],
 
-    'fully_mapped' => '✓ tamamen eşlendi',
     'all_clean' => 'Her şey sorunsuz eşlendi — onaylamadan önce ilgini bekleyen bir şey yok.',
 
     'groups' => [
         'conflict' => 'Kararını bekliyor',
-        'category' => 'Çözülmemiş kategoriler',
-        'payee' => 'Çözülmemiş karşı taraflar',
         'extra' => 'İçe aktarılmadı',
     ],
 

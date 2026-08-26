@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Trin :number af :total',
 
+    'back' => 'Tilbage',
+    'back_aria' => 'Tilbage — vender tilbage til det forrige opsætningstrin',
+
     'resume_later' => 'Fortsæt senere',
     'resume_later_aria' => 'Fortsæt senere — gemmer din fremdrift og lukker opsætningsguiden',
     'resume_banner' => 'Velkommen tilbage — vi fortsætter, hvor du slap.',

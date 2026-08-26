@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 return [
     'menu' => [
+        'file' => 'Fail',
         'file_import' => 'Impordi fail…',
         'file_scan_email' => 'Skanni e-posti kohe',
+        'help' => 'Abi',
         'help_github_repo' => 'GitHubi repositoorium',
         'help_report_issue' => 'Teata probleemist',
         'help_about' => 'Beatraxist',

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Sync\Internal\Pairing\PairingFrame;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Internal\Pairing\PeerConfirmResult;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -156,7 +157,7 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
     $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId'], $phone['kxPub'], $desktop['kxPub']));
     $deferredState = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
-    expect($deferredState)->toBe('deferred');
+    expect($deferredState)->toEqual(PeerConfirmResult::deferred());
 
     // DESKTOP's human now confirms too. The deferred frame is held on this
     // row, so the tap is the last input the gate was waiting for and nothing
@@ -171,13 +172,13 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
     // already done and says so, rather than reopening anything.
     $desktopFinal = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
-    expect($desktopFinal)->toBe(PairingState::Confirmed->value);
+    expect($desktopFinal)->toEqual(PeerConfirmResult::applied(PairingState::Confirmed));
 
     // DESKTOP sends its own signed PAIR_CONFIRM to the PHONE.
     $sigFromDesktop = cdpSign($desktop, PairingFrame::confirmSigningMessage($tokenHash, $desktop['deviceId'], $phone['deviceId'], $desktop['kxPub'], $phone['kxPub']));
     $phoneFinal = $this->asDevice('phone', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $desktop['deviceId'], $phone['deviceId'], $sigFromDesktop));
-    expect($phoneFinal)->toBe(PairingState::Confirmed->value);
+    expect($phoneFinal)->toEqual(PeerConfirmResult::applied(PairingState::Confirmed));
 
     // Each device admits the PEER it does not own, on its OWN database.
     $this->asDevice('desktop', function () use ($phone): void {
@@ -238,7 +239,7 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
     $sigFromAttacker = cdpSign($attacker, PairingFrame::confirmSigningMessage($tokenHash, $attacker['deviceId'], $desktop['deviceId'], $attacker['kxPub'], $desktop['kxPub']));
     $desktopState = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $attacker['deviceId'], $desktop['deviceId'], $sigFromAttacker));
-    expect($desktopState)->toBe(PairingState::Confirmed->value);
+    expect($desktopState)->toEqual(PeerConfirmResult::applied(PairingState::Confirmed));
 
     // The REAL phone's human also confirms (a real user tapping confirm).
     $this->asDevice('phone', function () use ($tokenHash, $phone): void {
@@ -330,7 +331,7 @@ it('defers a valid, correctly-signed PAIR_CONFIRM delivered before the local sid
 
     $deferred = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
-    expect($deferred)->toBe('deferred');
+    expect($deferred)->toEqual(PeerConfirmResult::deferred());
 
     $this->asDevice('desktop', function () use ($tokenHash): void {
         $row = cdpTokenRow($tokenHash);
@@ -347,7 +348,7 @@ it('defers a valid, correctly-signed PAIR_CONFIRM delivered before the local sid
 
     $applied = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
-    expect($applied)->toBe(PairingState::Confirmed->value);
+    expect($applied)->toEqual(PeerConfirmResult::applied(PairingState::Confirmed));
 });
 
 it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applied PAIR_CONFIRM is idempotent — no duplicate rows, no exception', function (): void {
@@ -393,11 +394,11 @@ it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applie
     $this->asDevice('desktop', function () use ($tokenHash, $phone, $desktop, $sigFromPhone): void {
         $service = app(PairingTokenService::class);
         expect($service->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone))
-            ->toBe(PairingState::Confirmed->value);
+            ->toEqual(PeerConfirmResult::applied(PairingState::Confirmed));
         expect($service->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone))
-            ->toBe(PairingState::Confirmed->value);
+            ->toEqual(PeerConfirmResult::applied(PairingState::Confirmed));
         expect($service->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone))
-            ->toBe(PairingState::Confirmed->value);
+            ->toEqual(PeerConfirmResult::applied(PairingState::Confirmed));
     });
 
     $this->asDevice('desktop', function () use ($phone): void {

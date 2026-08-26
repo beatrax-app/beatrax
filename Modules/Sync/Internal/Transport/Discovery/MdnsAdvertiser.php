@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport\Discovery;
 
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Process\Process;
 
 /**
@@ -16,6 +18,13 @@ final class MdnsAdvertiser
     public const string SERVICE_TYPE = '_beatrax-sync._tcp';
 
     private ?Process $process = null;
+
+    private LoggerInterface $logger;
+
+    public function __construct(?LoggerInterface $logger = null)
+    {
+        $this->logger = $logger ?? new NullLogger;
+    }
 
     // If a previous process is still running, it is stopped first. When
     // neither dns-sd nor avahi-publish-service is available the method
@@ -30,13 +39,31 @@ final class MdnsAdvertiser
         // produce a malformed mDNS instance name. deviceId is always a
         // UUIDv4, so reject anything that is not.
         if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $deviceId) !== 1) {
+            // A daemon spawned before the app was unlocked carries no identity
+            // and lands here with an empty id, which returned silently: nothing
+            // advertised, nothing logged, and four rounds of a desktop that was
+            // simply invisible on the LAN.
+            $this->logger->warning('mDNS advertise: refusing a device id that is not a UUID; this device will not be discoverable.', [
+                'device_id_length' => strlen($deviceId),
+                'port' => $port,
+            ]);
+
             return;
         }
 
         $cmd = $this->buildCommand($deviceId, $port);
         if ($cmd === null) {
+            $this->logger->warning('mDNS advertise: no dns-sd or avahi-publish-service on this host; falling back to manual host:port or relay.', [
+                'port' => $port,
+            ]);
+
             return;
         }
+
+        $this->logger->info('mDNS advertise: publishing this device on the LAN.', [
+            'device_id' => $deviceId,
+            'port' => $port,
+        ]);
 
         $this->process = new Process($cmd);
         $this->process->setTimeout(null);

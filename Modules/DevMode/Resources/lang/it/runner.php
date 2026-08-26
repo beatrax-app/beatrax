@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Apre un modulo per gli argomenti',
 
+    'spawning_unavailable' => 'I comandi Artisan girano in un processo separato, e questa piattaforma non permette all\'app di avviarne uno. Eseguili dall\'app per computer.',
+
     'status' => [
         'running' => 'In esecuzione',
         'done' => 'Completata',

@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Se actualizează proiecția…',
-        'risk' => 'Soldul scade sub 0 € pe :date.|Soldul scade sub 0 € în :count zile — prima: :date.|Soldul scade sub 0 € în :count de zile — prima: :date.',
+        'risk' => 'Soldul scade sub :zero pe :date.|Soldul scade sub :zero în :count zile — prima: :date.|Soldul scade sub :zero în :count de zile — prima: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'intrare|intrări|de intrări',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', sold estimat minus :amount €',
-        'aria_balance_positive' => ', sold estimat :amount €',
+        'aria_balance_negative' => ', sold estimat minus :amount',
+        'aria_balance_positive' => ', sold estimat :amount',
         'overflow' => '+:count în plus',
         'paid' => 'Plătit',
         'missed' => 'Așteptat — negăsit',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Plată înregistrată',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ dată aproximativă',
         'series' => '↗ serie',
         'counterparty' => '↗ contraparte',
+        'transaction' => '↗ tranzacție',
         'end_of_day' => 'Sfârșitul zilei',
     ],
 ];

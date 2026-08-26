@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Objetivo alcanzado',
+        'closed_short' => 'Cerrado antes del objetivo',
         'add_contributions' => 'Añade aportaciones para ver una previsión',
         'not_enough_history' => 'Aún no hay suficiente historial para prever una fecha',
         'no_recent_contributions' => 'No hay aportaciones recientes con las que prever una fecha',

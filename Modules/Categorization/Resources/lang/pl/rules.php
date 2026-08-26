@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Trafienia',
     'col_created' => 'Utworzono',
     'col_row_actions' => 'Akcje',
+    'inactive_badge' => 'Wyłączona',
+    'inactive_title' => 'Ta reguła nie działa. Reguła wyłącza się, gdy kategoria lub kontrahent, na które wskazuje, zostaną usunięte.',
 
     'more_conditions' => '+:count więcej',
 

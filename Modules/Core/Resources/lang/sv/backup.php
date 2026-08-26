@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => 'Den här telefonen kan inte spara en fil som appen lämnar över, så den krypterade säkerhetskopian görs i skrivbordsappen. Para den här enheten för att hålla dem synkade.',
         'unavailable' => 'Krypterade säkerhetskopior är tillgängliga i skrivbordsversionen (SQLite). På en serverdatabas använder du databasens egna verktyg för säkerhetskopiering.',
         'intro' => 'Ladda ner en kopia av hela din databas krypterad med en lösenfras — trygg att förvara på en extern disk eller i molnlagring, eftersom den är oläsbar utan lösenfrasen (kvantsäker XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Lösenfras',
@@ -16,8 +17,8 @@ return [
     'restore' => [
         'heading' => 'Återställ från en säkerhetskopia',
 
-        'intro_html' => 'Ersätt din nuvarande databas med en krypterad säkerhetskopia. Filen dekrypteras och kontrolleras innan något ändras, och en ögonblicksbild av dina nuvarande data sparas först — men detta <strong class="text-slate-700 dark:text-slate-200">skriver över allt</strong>, så det är spärrat.',
-        'restored' => 'Återställt. Ladda om appen för att se dina återställda data.',
+        'intro_html' => 'Ersätt din nuvarande databas med en krypterad säkerhetskopia. Filen dekrypteras och kontrolleras innan något ändras, och en ögonblicksbild av dina nuvarande data sparas först — men detta <strong class="text-slate-700 dark:text-slate-200">skriver över allt</strong>, så det är spärrat. Du loggas ut, eftersom din inloggning också ligger i databasen.',
+        'restored' => 'Din säkerhetskopia har återställts. Logga in med det användarnamn och lösenord som gällde när den skapades.',
         'snapshot_saved_prefix' => 'En ögonblicksbild av dina tidigare data sparades i',
         'file_label' => 'Krypterad säkerhetskopia (.enc)',
         'uploading' => 'Laddar upp…',
@@ -35,6 +36,7 @@ return [
         'create_failed' => 'Kunde inte skapa säkerhetskopian: :message',
         'confirm_phrase' => 'Skriv :phrase för att bekräfta — detta ersätter dina nuvarande data.',
         'choose_file' => 'Välj en krypterad säkerhetskopia (.enc) att återställa.',
+        'upload_failed' => 'Filen laddades inte upp färdigt. Den kan vara för stor för den här enheten — återställning i skrivbordsappen tar emot en större säkerhetskopia.',
         'enter_passphrase' => 'Ange lösenfrasen som säkerhetskopian krypterades med.',
         'unreadable' => 'Den uppladdade filen kunde inte läsas. Försök igen.',
     ],

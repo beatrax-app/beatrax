@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Mobile\Internal\Http\PairingEntryUrl;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Mobile\Internal\Sync\SyncPhase;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,6 +29,9 @@ final readonly class MobileEnsureImportCompleted
         'mobile.setup',
         'mobile.lock',
         'mobile.import',
+        // A reader who abandoned setup half-way and reaches for a backup is
+        // still restoring onto a device with no ledger of its own.
+        'mobile.restore',
         'mobile.welcome',
         'auth.lock',
         'logout',
@@ -48,6 +52,12 @@ final readonly class MobileEnsureImportCompleted
     /** @var array<int, string> */
     private const EXEMPT_ROUTE_SUFFIXES = [
         'livewire.update',
+        // The restore form's file input posts here. Redirected, it answers
+        // with the welcome page at 200 -- iOS turns a redirect into the
+        // target's HTML -- and Livewire's JS parses a document as JSON, throws,
+        // and never settles the upload. The screen said "Uploading..." forever.
+        'livewire.upload-file',
+        'livewire.preview-file',
     ];
 
     public function __construct(
@@ -86,7 +96,7 @@ final readonly class MobileEnsureImportCompleted
         // still pulling goes to the blocking setup gate, because a
         // half-populated balance is worse than a progress bar.
         $url = match (true) {
-            ! $this->hasEpoch($userId) => $this->urls->route('mobile.pair', ['mode' => 'import']),
+            ! $this->hasEpoch($userId) => PairingEntryUrl::importingFrom($this->urls),
             ! $this->hasCompletedInitialSync($userId) => $this->urls->route('mobile.setup'),
             default => null,
         };

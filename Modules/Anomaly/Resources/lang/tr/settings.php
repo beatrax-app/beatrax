@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Uyarı duyarlılığı',
-    'sensitivity_help' => 'O işyeri veya kategori için tipik harcamanın %:percent üzerine çıkan harcamaları işaretler.',
+    'sensitivity_help' => "Beatrax'ın bir harcamayı o işyeri veya kategori için ne kadar kolay olağan dışı saydığı, 1 ile 100 arasında. Yüksek değer daha fazlasını işaretler.",
 
     'min_amount_label' => 'Asgari harcama tutarı',
-    'min_amount_help' => 'Bu tutarın altındaki harcamalarda anormallikleri yok sayar. Sent (€) cinsinden saklanır — 1000, €10.00 anlamına gelir.',
+    'min_amount_help' => 'Bu tutarın altındaki harcamalarda anormallikleri yok sayar. Sent (:symbol) cinsinden saklanır — 1000, :example anlamına gelir.',
 
     'save' => 'Anormallik ayarlarını kaydet',
     'saved' => 'Kaydedildi.',

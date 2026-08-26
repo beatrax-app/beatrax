@@ -21,7 +21,6 @@ return [
     'footer' => 'Lista comună este un fișier YAML livrat împreună cu Beatrax. Trimiterea unei sugestii deschide GitHub în browser; nimic altceva nu părăsește acest dispozitiv.',
 
     'card' => [
-        'likely' => 'Probabil: un comerciant fără nume.',
         'seen_times' => 'Văzut o dată|Văzut de :count ori|Văzut de :count de ori',
         'last_seen' => 'Văzut ultima dată pe :date',
         'suggest' => 'Sugerează un nume →',

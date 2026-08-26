@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Rekening niet ingesteld. Herlaad de wizard.',
         'invalid_amount' => 'Voer een geldig bedrag in.',
-        'amount_range' => 'Voer een bedrag in tussen -€10M en €10M.',
+        'amount_range' => 'Voer een bedrag in tussen :min en :max.',
         'pick_date' => 'Kies een datum.',
         'pick_valid_date' => 'Kies een geldige datum.',
         'future_date' => 'De datum van het beginsaldo kan niet in de toekomst liggen.',

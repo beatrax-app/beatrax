@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Contraparte',
     'description' => 'Descriere',
     'amount_native' => 'Sumă (valuta originală)',
-    'amount_settled' => 'Sumă (decontată în EUR)',
+    'amount_settled' => 'Sumă (decontată)',
     'effective_rate' => 'Curs efectiv',
     'ics_markup' => 'Include eventualul adaos ICS.',
 

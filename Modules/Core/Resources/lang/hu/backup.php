@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => 'Ez a telefon nem tud elmenteni egy fájlt, amit az alkalmazás átad neki, ezért a titkosított biztonsági mentés az asztali alkalmazásban készül. Párosítsd ezt az eszközt, hogy szinkronban maradjanak.',
         'unavailable' => 'A titkosított biztonsági mentések az asztali (SQLite) változatban érhetők el. Kiszolgálón futó adatbázis esetén használd az adatbázis saját mentési eszközeit.',
         'intro' => 'Tölts le a teljes adatbázisodról egy jelmondattal titkosított másolatot — nyugodtan tarthatod külső meghajtón vagy felhőtárhelyen, mert jelmondat nélkül olvashatatlan (kvantumbiztos XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Jelmondat',
@@ -16,8 +17,8 @@ return [
     'restore' => [
         'heading' => 'Visszaállítás biztonsági mentésből',
 
-        'intro_html' => 'Cseréld le a jelenlegi adatbázisodat egy titkosított biztonsági mentésre. A fájl visszafejtése és ellenőrzése megtörténik, mielőtt bármi megváltozna, és előbb pillanatkép készül a jelenlegi adataidról — ez azonban akkor is <strong class="text-slate-700 dark:text-slate-200">mindent felülír</strong>, ezért védett művelet.',
-        'restored' => 'Visszaállítva. Töltsd újra az alkalmazást a visszaállított adatok megtekintéséhez.',
+        'intro_html' => 'Cseréld le a jelenlegi adatbázisodat egy titkosított biztonsági mentésre. A fájl visszafejtése és ellenőrzése megtörténik, mielőtt bármi megváltozna, és előbb pillanatkép készül a jelenlegi adataidról — ez azonban akkor is <strong class="text-slate-700 dark:text-slate-200">mindent felülír</strong>, ezért védett művelet. Ki fogsz jelentkezni, mert a bejelentkezésed is az adatbázisban van.',
+        'restored' => 'A biztonsági mentés visszaállt. Jelentkezzen be azzal a felhasználónévvel és jelszóval, amely a készítésekor érvényes volt.',
         'snapshot_saved_prefix' => 'A korábbi adataidról készült pillanatkép ide mentve',
         'file_label' => 'Titkosított biztonsági mentés (.enc)',
         'uploading' => 'Feltöltés…',
@@ -35,6 +36,7 @@ return [
         'create_failed' => 'A biztonsági mentés nem készült el: :message',
         'confirm_phrase' => 'A megerősítéshez írd be: :phrase — ez lecseréli a jelenlegi adataidat.',
         'choose_file' => 'Válassz egy titkosított mentésfájlt (.enc) a visszaállításhoz.',
+        'upload_failed' => 'A fájl feltöltése nem fejeződött be. Lehet, hogy túl nagy ehhez az eszközhöz — az asztali alkalmazásban nagyobb biztonsági mentés is visszaállítható.',
         'enter_passphrase' => 'Add meg a jelmondatot, amellyel a mentés titkosítva lett.',
         'unreadable' => 'A feltöltött fájlt nem sikerült beolvasni. Próbáld újra.',
     ],

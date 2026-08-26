@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Verwijderd apparaat',
     'dismiss_peer' => 'Dit apparaat verwijderen',
     'dismiss_stale' => 'Verwijder apparaten die niet meer gekoppeld zijn',
-    'no_devices' => 'Nog geen apparaten gesynchroniseerd',
+    'not_synced_yet' => 'Nog niet gesynchroniseerd',
     'error' => 'Synchronisatiefout op een of meer apparaten',
     'syncing' => 'Synchroniseren…',
     'offline' => 'Apparaten offline',

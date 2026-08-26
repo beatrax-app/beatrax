@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Dispozitiv eliminat',
     'dismiss_peer' => 'Ignoră acest dispozitiv',
     'dismiss_stale' => 'Șterge dispozitivele care nu mai sunt împerecheate',
-    'no_devices' => 'Niciun dispozitiv sincronizat încă',
+    'not_synced_yet' => 'Încă nesincronizat',
     'error' => 'Eroare de sincronizare pe unul sau mai multe dispozitive',
     'syncing' => 'Se sincronizează…',
     'offline' => 'Dispozitive offline',

@@ -21,7 +21,7 @@ final class PaletteSearchEndpoint extends Component
     public string $query = '';
 
     /**
-     * @var list<array{id: int, counterpartyName: ?string, amount: string, snippet: ?string, url: string}>
+     * @var list<array{id: int, counterpartyName: ?string, date: string, amount: string, snippet: ?string, url: string}>
      */
     public array $transactionHits = [];
 
@@ -63,7 +63,7 @@ final class PaletteSearchEndpoint extends Component
 
     /**
      * @param  list<array<string, mixed>>  $rows
-     * @return list<array{id: int, counterpartyName: ?string, amount: string, snippet: ?string, url: string}>
+     * @return list<array{id: int, counterpartyName: ?string, date: string, amount: string, snippet: ?string, url: string}>
      */
     private function normalizeTransactionHits(array $rows): array
     {
@@ -72,6 +72,7 @@ final class PaletteSearchEndpoint extends Component
             $hits[] = [
                 'id' => $this->intField($row, 'id'),
                 'counterpartyName' => $this->nullableString($row, 'counterpartyName'),
+                'date' => $this->stringOrEmpty($row, 'date'),
                 'amount' => $this->stringOrEmpty($row, 'amount'),
                 'snippet' => $this->nullableString($row, 'snippet'),
                 'url' => $this->stringOrEmpty($row, 'url'),

@@ -10,7 +10,7 @@ return [
     'account' => 'Konto',
     'choose_account' => 'Velg en konto…',
     'statement_date' => 'Kontoutskriftens dato',
-    'statement_balance' => 'Saldo ifølge kontoutskrift (€)',
+    'statement_balance' => 'Saldo ifølge kontoutskrift (:symbol)',
     'balance_help' => 'Fylles ut på forhånd fra den sist importerte kontoutskriften din når det er mulig — negativ ved gjeld, og redigerbar uansett.',
 
     'cleared_balance' => 'Bokført saldo',

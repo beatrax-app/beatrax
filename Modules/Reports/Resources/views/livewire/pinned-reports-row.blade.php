@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Reports\Internal\Enums\ReportViz')
 {{--
     Dashboard "pinned reports" mini-card row. Up to 3 chart-only
     mini cards, ADDITIVE among the dashboard's other fixed cards — same
@@ -22,11 +23,17 @@
                      and scrolls whatever will not fit — a 120px window onto every
                      category name, centre-justified and ragged. The donut's key is
                      lifted out of the chart and rendered below as ordinary card
-                     content, so it wraps and takes the room it needs. --}}
+                     content, so it wraps and takes the room it needs.
+
+                     The x axis is given `trim: false` for the same reason. At this
+                     card's width ApexCharts truncates every tick to fit — five
+                     months of history rendered as "Apr 2…", "May 2…", which reads
+                     as a day of the month rather than a year. Hiding the ticks
+                     that would collide keeps the ones it does draw complete. --}}
                 @php
                     $options = json_decode($card['optionsJson'], true);
                     $legend = [];
-                    if (is_array($options) && ($options['chart']['type'] ?? '') === 'donut') {
+                    if (is_array($options) && ($options['chart']['type'] ?? '') === ReportViz::Donut->value) {
                         foreach ($options['labels'] ?? [] as $i => $label) {
                             $legend[] = ['label' => $label, 'colour' => $options['colors'][$i] ?? '#94A3B8'];
                         }
@@ -50,6 +57,9 @@
                             if (! window.ApexCharts) { return; }
                             const opts = window.beatraxApplyChartTheme(JSON.parse($el.dataset.options));
                             @if ($legend !== []) opts.legend = Object.assign({}, opts.legend, { show: false }); @endif
+                            opts.xaxis = Object.assign({}, opts.xaxis, {
+                                labels: Object.assign({}, (opts.xaxis || {}).labels, { trim: false, hideOverlappingLabels: true }),
+                            });
                             chart = new window.ApexCharts($el.querySelector('#{{ $card['chartElementId'] }}'), opts);
                             chart.render();
                         "

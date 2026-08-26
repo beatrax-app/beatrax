@@ -10,10 +10,14 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Services\ForecastQuery;
-use Modules\FX\Public\Services\ExchangeRateService;
-use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
+/**
+ * @link ../../../../.docs/features/calendar/architecture.md#balance-aggregation
+ */
 final readonly class DailyBalanceAggregator
 {
     use CoercesScalars;
@@ -24,7 +28,9 @@ final readonly class DailyBalanceAggregator
         private DatabaseManager $db,
         private Clock $clock,
         private ForecastQuery $forecastQuery,
-        private ExchangeRateService $fxService,
+        private CrossCurrencyTotal $fx,
+        private AccountStartingBalanceQuery $startingBalances,
+        private BaseCurrency $baseCurrencies,
     ) {}
 
     /**
@@ -41,19 +47,51 @@ final readonly class DailyBalanceAggregator
             return ['map' => $this->emptyComputingMap($monthStart, $monthEnd), 'todayAnchorMinor' => null];
         }
 
-        $baseCurrency = $user->base_currency;
-        ['byDateCurrency' => $byDateCurrency, 'isComputingAny' => $isComputingAny, 'todayAnchorMinor' => $todayAnchorMinor]
-            = $this->collectForecastBuckets($effectiveBalance, $user, $baseCurrency);
+        $baseCurrency = $this->baseCurrencies->forUser($user);
+        ['byDateCurrency' => $byDateCurrency, 'isComputingAny' => $isComputingAny, 'anchorByCurrency' => $anchorByCurrency, 'hasAnchor' => $hasAnchor]
+            = $this->collectForecastBuckets($effectiveBalance, $user);
+        $overlay = $this->collectOverlayBuckets($effectiveBalance, $user, $monthStart, $monthEnd);
 
-        $map = $this->bucketsToBalanceMap($byDateCurrency, $baseCurrency, $isComputingAny);
+        // Every bucket the whole month will convert, priced in one pass: the
+        // rate a day needs is the rate every other day needs, and the service
+        // behind it reads the entire exchange_rates table per call.
+        $rates = $this->fx->ratesTo(self::currenciesIn([
+            ...array_values($byDateCurrency),
+            $anchorByCurrency,
+            ...($overlay === null ? [] : [$overlay['cumByCurrency'], ...array_values($overlay['deltaByDateCurrency'])]),
+        ]), $baseCurrency);
+
+        $map = $this->bucketsToBalanceMap($byDateCurrency, $baseCurrency, $rates, $isComputingAny);
 
         if ($isComputingAny) {
             $map = $this->applyComputingSentinel($map, $monthStart, $monthEnd);
         }
 
-        $map = $this->overlayActualBalances($map, $effectiveBalance, $user, $monthStart, $monthEnd, $baseCurrency);
+        if ($overlay !== null) {
+            $map = $this->overlayActualBalances($map, $overlay, $baseCurrency, $rates);
+        }
+
+        $todayAnchorMinor = $hasAnchor
+            ? $this->fx->withRates($anchorByCurrency, $baseCurrency, $rates)->minor
+            : null;
 
         return ['map' => $map, 'todayAnchorMinor' => $isComputingAny ? null : $todayAnchorMinor];
+    }
+
+    /**
+     * @param  list<array<string, int>>  $buckets
+     * @return list<string>
+     */
+    private static function currenciesIn(array $buckets): array
+    {
+        $seen = [];
+        foreach ($buckets as $byCurrency) {
+            foreach (array_keys($byCurrency) as $currency) {
+                $seen[$currency] = true;
+            }
+        }
+
+        return array_keys($seen);
     }
 
     /**
@@ -73,14 +111,16 @@ final readonly class DailyBalanceAggregator
 
     /**
      * @param  list<int>  $effectiveBalance
-     * @return array{byDateCurrency: array<string, array<string, int>>, isComputingAny: bool, todayAnchorMinor: int|null}
+     * @return array{byDateCurrency: array<string, array<string, int>>, isComputingAny: bool, anchorByCurrency: array<string, int>, hasAnchor: bool}
      */
-    private function collectForecastBuckets(array $effectiveBalance, User $user, string $baseCurrency): array
+    private function collectForecastBuckets(array $effectiveBalance, User $user): array
     {
         /** @var array<string, array<string, int>> $byDateCurrency */
         $byDateCurrency = [];
+        /** @var array<string, int> $anchorByCurrency */
+        $anchorByCurrency = [];
         $isComputingAny = false;
-        $todayAnchorMinor = null;
+        $hasAnchor = false;
 
         foreach ($effectiveBalance as $accountId) {
             $dto = $this->forecastQuery->forUser($accountId, self::FORECAST_HORIZON_DAYS, null, $user);
@@ -91,11 +131,9 @@ final readonly class DailyBalanceAggregator
                 continue;
             }
 
-            $anchorConverted = $this->fxService->convertToBase(
-                Money::ofMinor($dto->todayBalanceMinor, $dto->defaultCurrency),
-                $baseCurrency,
-            );
-            $todayAnchorMinor = ($todayAnchorMinor ?? 0) + $anchorConverted->converted->toMinor();
+            $hasAnchor = true;
+            $anchorByCurrency[$dto->defaultCurrency]
+                = ($anchorByCurrency[$dto->defaultCurrency] ?? 0) + $dto->todayBalanceMinor;
 
             // Buckets keep currencies separate so a USD account's points are
             // never added raw to EUR points.
@@ -108,19 +146,21 @@ final readonly class DailyBalanceAggregator
         return [
             'byDateCurrency' => $byDateCurrency,
             'isComputingAny' => $isComputingAny,
-            'todayAnchorMinor' => $todayAnchorMinor,
+            'anchorByCurrency' => $anchorByCurrency,
+            'hasAnchor' => $hasAnchor,
         ];
     }
 
     /**
      * @param  array<string, array<string, int>>  $byDateCurrency
+     * @param  array<string, string>  $rates
      * @return array<string, array{0: int, 1: bool}>
      */
-    private function bucketsToBalanceMap(array $byDateCurrency, string $baseCurrency, bool $isComputingAny): array
+    private function bucketsToBalanceMap(array $byDateCurrency, string $baseCurrency, array $rates, bool $isComputingAny): array
     {
         $map = [];
         foreach ($byDateCurrency as $dateStr => $byCurrency) {
-            $map[$dateStr] = [$this->sumBucketToBase($byCurrency, $baseCurrency), $isComputingAny];
+            $map[$dateStr] = [$this->fx->withRates($byCurrency, $baseCurrency, $rates)->minor, $isComputingAny];
         }
 
         return $map;
@@ -143,20 +183,15 @@ final readonly class DailyBalanceAggregator
     }
 
     /**
-     * @param  array<string, array{0: int, 1: bool}>  $map
      * @param  list<int>  $effectiveBalance
-     * @return array<string, array{0: int, 1: bool}>
+     * @return array{cumByCurrency: array<string, int>, deltaByDateCurrency: array<string, array<string, int>>, gridStart: CarbonImmutable, pastEnd: CarbonImmutable}|null
      */
-    private function overlayActualBalances(
-        array $map,
+    private function collectOverlayBuckets(
         array $effectiveBalance,
         User $user,
         CarbonImmutable $monthStart,
         CarbonImmutable $monthEnd,
-        string $baseCurrency,
-    ): array {
-        // Runs last on purpose: actuals come from transactions, so they must
-        // also overwrite the computing sentinel the previous step laid down.
+    ): ?array {
         $today = $this->clock->now()->startOfDay();
         $gridStart = $monthStart->startOfWeek(CarbonImmutable::MONDAY);
         $gridEnd = $monthEnd->startOfDay()->endOfWeek(CarbonImmutable::SUNDAY)->startOfDay();
@@ -164,21 +199,35 @@ final readonly class DailyBalanceAggregator
         $pastEnd = $gridEnd->lt($yesterday) ? $gridEnd : $yesterday;
 
         if ($pastEnd->lt($gridStart)) {
-            return $map;
+            return null;
         }
 
-        $cumByCurrency = $this->cumulativeBalanceBefore($effectiveBalance, $user, $gridStart);
-        $deltaByDateCurrency = $this->dailyDeltasBetween($effectiveBalance, $user, $gridStart, $pastEnd);
+        return [
+            'cumByCurrency' => $this->cumulativeBalanceBefore($effectiveBalance, $user, $gridStart),
+            'deltaByDateCurrency' => $this->dailyDeltasBetween($effectiveBalance, $user, $gridStart, $pastEnd),
+            'gridStart' => $gridStart,
+            'pastEnd' => $pastEnd,
+        ];
+    }
 
-        // convertToBase is a zero-query passthrough for base-currency buckets;
-        // non-base ones hit the cached exchange_rates lookup per day/currency.
-        $cursor = $gridStart;
-        while ($cursor->lte($pastEnd)) {
+    /**
+     * @param  array<string, array{0: int, 1: bool}>  $map
+     * @param  array{cumByCurrency: array<string, int>, deltaByDateCurrency: array<string, array<string, int>>, gridStart: CarbonImmutable, pastEnd: CarbonImmutable}  $overlay
+     * @param  array<string, string>  $rates
+     * @return array<string, array{0: int, 1: bool}>
+     */
+    private function overlayActualBalances(array $map, array $overlay, string $baseCurrency, array $rates): array
+    {
+        // Runs last on purpose: actuals come from transactions, so they must
+        // also overwrite the computing sentinel the previous step laid down.
+        $cumByCurrency = $overlay['cumByCurrency'];
+        $cursor = $overlay['gridStart'];
+        while ($cursor->lte($overlay['pastEnd'])) {
             $dateStr = $cursor->toDateString();
-            foreach ($deltaByDateCurrency[$dateStr] ?? [] as $currency => $deltaMinor) {
+            foreach ($overlay['deltaByDateCurrency'][$dateStr] ?? [] as $currency => $deltaMinor) {
                 $cumByCurrency[$currency] = ($cumByCurrency[$currency] ?? 0) + $deltaMinor;
             }
-            $map[$dateStr] = [$this->sumBucketToBase($cumByCurrency, $baseCurrency), false];
+            $map[$dateStr] = [$this->fx->withRates($cumByCurrency, $baseCurrency, $rates)->minor, false];
             $cursor = $cursor->addDay();
         }
 
@@ -192,17 +241,23 @@ final readonly class DailyBalanceAggregator
     private function cumulativeBalanceBefore(array $effectiveBalance, User $user, CarbonImmutable $gridStart): array
     {
         $rows = $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereIn('account_id', $effectiveBalance)
-            ->where('posted_at', '<', $gridStart->toDateString())
-            ->groupBy('currency')
-            ->selectRaw('currency, SUM(amount_minor) as sum_minor')
+            ->leftJoin('accounts', 'accounts.id', '=', 'transactions.account_id')
+            ->where('transactions.user_id', $user->id)
+            ->whereIn('transactions.account_id', $effectiveBalance)
+            ->where('transactions.posted_at', '<', $gridStart->toDateString())
+            ->whereRaw(AccountStartingBalanceQuery::AT_OR_AFTER_BASELINE_SQL)
+            ->groupBy('transactions.settled_currency')
+            ->selectRaw('transactions.settled_currency as currency, SUM(transactions.settled_amount_minor) as sum_minor')
             ->get();
 
-        $cumByCurrency = [];
+        // The baseline opens the bucket of the ACCOUNT's default currency and
+        // each row the bucket of the currency it settled in, so an account
+        // holding two currencies keeps them apart all the way to the rate.
+        $cumByCurrency = $this->startingBalances->bucketedByDefaultCurrency($effectiveBalance, $user);
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $cumByCurrency[self::toString($row->currency)] = self::toInt($row->sum_minor);
+            $currency = self::toString($row->currency);
+            $cumByCurrency[$currency] = ($cumByCurrency[$currency] ?? 0) + self::toInt($row->sum_minor);
         }
 
         return $cumByCurrency;
@@ -219,11 +274,13 @@ final readonly class DailyBalanceAggregator
         CarbonImmutable $pastEnd,
     ): array {
         $rows = $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereIn('account_id', $effectiveBalance)
-            ->whereBetween('posted_at', [$gridStart->toDateString(), $pastEnd->toDateString()])
-            ->groupBy('posted_at', 'currency')
-            ->selectRaw('posted_at, currency, SUM(amount_minor) as sum_minor')
+            ->leftJoin('accounts', 'accounts.id', '=', 'transactions.account_id')
+            ->where('transactions.user_id', $user->id)
+            ->whereIn('transactions.account_id', $effectiveBalance)
+            ->whereBetween('transactions.posted_at', [$gridStart->toDateString(), $pastEnd->toDateString()])
+            ->whereRaw(AccountStartingBalanceQuery::AT_OR_AFTER_BASELINE_SQL)
+            ->groupBy('transactions.posted_at', 'transactions.settled_currency')
+            ->selectRaw('transactions.posted_at as posted_at, transactions.settled_currency as currency, SUM(transactions.settled_amount_minor) as sum_minor')
             ->get();
 
         $deltaByDateCurrency = [];
@@ -234,19 +291,5 @@ final readonly class DailyBalanceAggregator
         }
 
         return $deltaByDateCurrency;
-    }
-
-    /**
-     * @param  array<string, int>  $byCurrency
-     */
-    private function sumBucketToBase(array $byCurrency, string $baseCurrency): int
-    {
-        $totalMinor = 0;
-        foreach ($byCurrency as $currency => $sumMinor) {
-            $converted = $this->fxService->convertToBase(Money::ofMinor($sumMinor, $currency), $baseCurrency);
-            $totalMinor += $converted->converted->toMinor();
-        }
-
-        return $totalMinor;
     }
 }

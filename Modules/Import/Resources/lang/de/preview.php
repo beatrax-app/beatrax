@@ -9,6 +9,10 @@ return [
     'confirm' => 'Import bestätigen',
     'subtitle' => 'Prüfe die eingelesenen Zeilen. Bis du bestätigst, wird nichts in deinem Hauptbuch gespeichert.',
 
+    'already_imported' => 'Diese Datei wurde bereits importiert.',
+
+    'already_imported_link' => 'Importergebnis ansehen',
+
     'expired_html' => 'Die Vorschau ist abgelaufen. <a href="/imports/new" class="underline">Lade die Datei erneut hoch</a>, um es noch einmal zu versuchen.',
 
     'save_name' => 'Namen speichern',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Diesen Zahlungspartner umbenennen',
 
     'unknown_iban_prefix' => 'Wir haben eine unbekannte IBAN gefunden:',
+
+    'unknown_account_prefix' => 'Wir haben ein unbekanntes Konto gefunden:',
     'unknown_iban_suffix' => 'Gib diesem Konto einen Namen.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'zum erneuten Versuch oder zur Prüfung.',
     ],
 
+    'rows_shown' => 'Angezeigte Zeilen: :shown von :total',
+
+    'show_more' => 'Mehr Zeilen anzeigen',
+
     'errors' => [
         'app_locked' => 'Entsperren Sie die App zum Importieren: Die Verschlüsselungsschlüssel können im gesperrten Zustand nicht verwendet werden.',
+        'file_stopped_short' => 'Die Kopfzeile passte, das Format ist also richtig. Das Lesen hörte vor dem Ende der Datei auf. Eine einzige unlesbare Zeile führt dazu, eine für dieses Gerät zu große Datei ebenfalls. Versuch es mit einem kürzeren Zeitraum.',
         'file_unreadable' => 'Diese Datei konnte nicht gelesen werden.',
         'iban_not_in_preview' => 'Diese IBAN gehört nicht zur aktuellen Vorschau.',
+        'pdf_reader_unavailable' => 'PDF-Kontoauszüge brauchen das Programm pdftotext, das hier nicht installiert ist. Importiere diese Datei auf einem Desktop, der es hat, oder nutze stattdessen einen CSV-Export deiner Bank.',
         'row_unreadable' => 'Diese Zeile konnte nicht gelesen werden.',
         'unknown_account' => 'Diese Zeile gehört zu einem Konto, das du noch nicht benannt hast.',
     ],

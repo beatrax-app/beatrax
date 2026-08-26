@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => 'Ovaj telefon ne može da sačuva datoteku koju mu aplikacija preda, pa se šifrovana rezervna kopija pravi u aplikaciji za računar. Upari ovaj uređaj da bi ostali usklađeni.',
         'unavailable' => 'Šifrovane rezervne kopije dostupne su u desktop verziji (SQLite). Na serverskoj bazi podataka koristi sopstvene alate te baze za rezervne kopije.',
         'intro' => 'Preuzmi kopiju cele baze podataka šifrovanu pristupnom frazom — bezbedno je držati je na spoljnom disku ili u oblaku jer je bez pristupne fraze nečitljiva (kvantno otporni XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Pristupna fraza',
@@ -16,8 +17,8 @@ return [
     'restore' => [
         'heading' => 'Vraćanje iz rezervne kopije',
 
-        'intro_html' => 'Zameni trenutnu bazu podataka šifrovanom rezervnom kopijom. Datoteka se dešifruje i proverava pre bilo kakve promene, a snimak trenutnih podataka se prvo sačuva — ali ovo i dalje <strong class="text-slate-700 dark:text-slate-200">prebrisuje sve</strong>, pa je dodatno zaštićeno.',
-        'restored' => 'Vraćeno. Ponovo učitaj aplikaciju da vidiš vraćene podatke.',
+        'intro_html' => 'Zameni trenutnu bazu podataka šifrovanom rezervnom kopijom. Datoteka se dešifruje i proverava pre bilo kakve promene, a snimak trenutnih podataka se prvo sačuva — ali ovo i dalje <strong class="text-slate-700 dark:text-slate-200">prebrisuje sve</strong>, pa je dodatno zaštićeno. Бићеш одјављен, јер је и твоја пријава у бази података.',
+        'restored' => 'Rezervna kopija je vraćena. Prijavite se korisničkim imenom i lozinkom koji su važili kada je napravljena.',
         'snapshot_saved_prefix' => 'Snimak tvojih prethodnih podataka sačuvan je u',
         'file_label' => 'Šifrovana rezervna kopija (.enc)',
         'uploading' => 'Otpremanje…',
@@ -35,6 +36,7 @@ return [
         'create_failed' => 'Rezervna kopija nije mogla da se napravi: :message',
         'confirm_phrase' => 'Upiši :phrase za potvrdu — ovo zamenjuje tvoje trenutne podatke.',
         'choose_file' => 'Izaberi šifrovanu datoteku rezervne kopije (.enc) za vraćanje.',
+        'upload_failed' => 'Otpremanje datoteke nije završeno. Možda je prevelika za ovaj uređaj — vraćanje u računarskoj aplikaciji prihvata veću rezervnu kopiju.',
         'enter_passphrase' => 'Unesi pristupnu frazu kojom je rezervna kopija šifrovana.',
         'unreadable' => 'Otpremljena datoteka nije mogla da se pročita. Pokušaj ponovo.',
     ],

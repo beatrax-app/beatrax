@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Uklonjeni uređaj',
     'dismiss_peer' => 'Odbaci ovaj uređaj',
     'dismiss_stale' => 'Očisti uređaje koji više nisu upareni',
-    'no_devices' => 'Nijedan uređaj još nije sinhronizovan',
+    'not_synced_yet' => 'Још није синхронизовано',
     'error' => 'Greška sinhronizacije na jednom ili više uređaja',
     'syncing' => 'Sinhronizacija…',
     'offline' => 'Uređaji van mreže',

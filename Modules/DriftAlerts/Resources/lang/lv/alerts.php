@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Brīdinājumi',
+    'page_title' => 'Izmaiņu brīdinājumi',
     'heading' => 'Brīdinājumi',
     'intro_anomaly' => 'Atsevišķi maksājumi, kas jums izskatās neierasti.',
     'intro_drift' => 'Apstiprinātās regulāro maksājumu sērijas, kuru jaunākais maksājums pārsniedza jūsu slieksni.',

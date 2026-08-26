@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
 
 uses(RefreshDatabase::class);
@@ -28,7 +29,7 @@ $rbcUser = static function (string $username): User {
     ]);
 };
 
-$rbcLedger = static function (ConnectionInterface $conn, User $user, int $counterparties, int $perCounterparty): void {
+$rbcLedger = static function (ConnectionInterface $conn, User $user, int $counterparties, int $perCounterparty, string $currency = 'EUR'): void {
     /** @var Account $account */
     $account = Account::query()->create([
         'user_id' => $user->id,
@@ -83,9 +84,9 @@ $rbcLedger = static function (ConnectionInterface $conn, User $user, int $counte
                 'booked_at' => now()->startOfMonth()->addDays($day)->toDateTimeString(),
                 'value_date' => now()->startOfMonth()->toDateString(),
                 'amount_minor' => -100 * ($n + 1),
-                'currency' => 'EUR',
+                'currency' => $currency,
                 'settled_amount_minor' => -100 * ($n + 1),
-                'settled_currency' => 'EUR',
+                'settled_currency' => $currency,
                 'counterparty_normalized' => 'rbc-m'.$i,
                 'counterparty_name' => 'Merchant '.$i,
                 'normalization_version' => 1,
@@ -136,6 +137,27 @@ it('costs the same statements on a ledger ten times the size', function () use (
 
     expect($smallCost)->toBe(9)
         ->and($largeCost)->toBe($smallCost);
+});
+
+// A row already in the reader's own currency converts for free — the service
+// short-circuits before it reads anything — so an all-EUR ledger could not see
+// a conversion at all, and the rate read per row hid behind the fixture.
+it('costs the same statements on a foreign-currency ledger ten times the size', function () use ($rbcUser, $rbcLedger, $rbcStatementsForOneRender): void {
+    /** @var DatabaseManager $manager */
+    $manager = app(DatabaseManager::class);
+    $conn = $manager->connection();
+
+    $small = $rbcUser('rbc-fx-small');
+    $rbcLedger($conn, $small, 6, 2, Currency::Usd->value);
+    $this->actingAs($small);
+    $smallCost = $rbcStatementsForOneRender($small);
+
+    $large = $rbcUser('rbc-fx-large');
+    $rbcLedger($conn, $large, 60, 20, Currency::Usd->value);
+    $this->actingAs($large);
+    $largeCost = $rbcStatementsForOneRender($large);
+
+    expect($largeCost)->toBe($smallCost);
 });
 
 it('offers every counterparty, category and account the reader owns as a filter', function () use ($rbcUser, $rbcLedger): void {

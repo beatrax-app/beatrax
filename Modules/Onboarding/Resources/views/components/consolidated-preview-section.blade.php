@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Iban')
 @use('Modules\Import\Public\Enums\PreviewSectionStatus')
 {{--
     Per-source consolidated preview section — one section per
@@ -26,6 +27,7 @@
       :section — the ConsolidatedPreviewSection DTO instance.
 --}}
 @use('Modules\Ingestion\Public\Enums\SourceFormat')
+@use('Modules\Ingestion\Public\Services\CsvPresetRegistry')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Core\Public\Support\Lang')
@@ -34,9 +36,9 @@
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewSection $section */
 
     $eyebrowLabel = match ($section->sourceFormat) {
-        SourceFormat::Camt053->value, SourceFormat::Mt940->value, SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => Lang::get('onboarding::first_import.section.from_bank'),
-        'ics-pdf' => Lang::get('onboarding::first_import.section.from_ics'),
-        'paypal-csv' => Lang::get('onboarding::first_import.section.from_paypal'),
+        SourceFormat::Camt053->value, SourceFormat::Mt940->value, SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL => Lang::get('onboarding::first_import.section.from_bank'),
+        SourceFormat::IcsPdf->value => Lang::get('onboarding::first_import.section.from_ics'),
+        SourceFormat::PaypalCsv->value => Lang::get('onboarding::first_import.section.from_paypal'),
         default => Lang::get('onboarding::first_import.section.from_prefix').strtoupper(str_replace('-', ' ', $section->sourceFormat)),
     };
 
@@ -102,7 +104,9 @@
                         $chipClass = $paymentType !== null ? $paymentType->chipClass() : 'unknown';
                         $counterpartyDisplay = $row->aliasFriendlyName ?? $row->counterpartyName;
                         if ($counterpartyDisplay === null || $counterpartyDisplay === '') {
-                            $counterpartyDisplay = $row->counterpartyIban ?? $row->description ?? '—';
+                            $counterpartyDisplay = $row->counterpartyIban !== null
+                                ? Iban::grouped($row->counterpartyIban)
+                                : ($row->description ?? '—');
                         }
                         // Through Money like every other amount in the app. The
                         // hand-rolled number_format here wrote US separators, so
@@ -124,7 +128,7 @@
                                 <span>{{ $counterpartyDisplay }}</span>
                             @endif
                             @if ($row->counterpartyIban !== null && $row->counterpartyIban !== '')
-                                <span class="funding-tag">{{ $row->counterpartyIban }}</span>
+                                <span class="funding-tag">{{ Iban::grouped($row->counterpartyIban) }}</span>
                             @endif
                         </td>
                         <td>{{ $amountFormatted }}</td>

@@ -11,7 +11,7 @@ return [
     'expense' => 'Spesa',
     'income' => 'Entrata',
 
-    'amount' => 'Importo (€)',
+    'amount' => 'Importo (:symbol)',
     'date' => 'Data',
     'counterparty' => 'Controparte',
     'counterparty_placeholder' => 'es. Panetteria',

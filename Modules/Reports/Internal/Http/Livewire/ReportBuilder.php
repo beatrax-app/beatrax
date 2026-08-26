@@ -196,6 +196,7 @@ final class ReportBuilder extends Component
                 echo $exporter->export($user, $definition);
             },
             "beatrax-report-{$definition->slug()}.csv",
+            ['Content-Type' => 'text/csv; charset=UTF-8'],
         );
     }
 
@@ -226,7 +227,7 @@ final class ReportBuilder extends Component
             && ($definition->customFrom === null || $definition->customFrom === '' || $definition->customTo === null || $definition->customTo === '');
 
         if ($customIncomplete) {
-            $result = new ReportResultDto(rows: [], totalMinor: 0, currency: $user->base_currency);
+            $result = new ReportResultDto(rows: [], totalMinor: 0, currency: $baseCurrency->forUser($user));
             $displayRows = [];
             $drilldownUrls = [];
         } else {

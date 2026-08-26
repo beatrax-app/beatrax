@@ -9,6 +9,10 @@ return [
         'title' => 'Bu sayfa yok',
         'body' => 'Bağlantı eski olabilir ya da sayfanın adı değişmiş olabilir. Verilerinde bir sorun yok.',
     ],
+    '4xx' => [
+        'title' => 'Bu istek işlenemiyor',
+        'body' => 'Sayfa, beklemediği bir şekilde açıldı. Verilerin değişmedi.',
+    ],
 
     '419' => [
         'title' => 'Oturumun sona erdi',

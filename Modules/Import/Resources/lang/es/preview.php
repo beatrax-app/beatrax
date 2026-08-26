@@ -9,6 +9,10 @@ return [
     'confirm' => 'Confirmar la importación',
     'subtitle' => 'Revisa las filas analizadas. No se guarda nada en tu libro mayor hasta que confirmes.',
 
+    'already_imported' => 'Este archivo ya se ha importado.',
+
+    'already_imported_link' => 'Ver el resultado de la importación',
+
     'expired_html' => 'La vista previa ha caducado. <a href="/imports/new" class="underline">Vuelve a subir el archivo</a> para intentarlo de nuevo.',
 
     'save_name' => 'Guardar el nombre',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Cambiar el nombre de esta contraparte',
 
     'unknown_iban_prefix' => 'Hemos encontrado un IBAN desconocido:',
+
+    'unknown_account_prefix' => 'Hemos encontrado una cuenta desconocida:',
     'unknown_iban_suffix' => 'Ponle nombre a esta cuenta.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'para reintentarlo o revisarlo.',
     ],
 
+    'rows_shown' => 'Filas mostradas: :shown de :total',
+
+    'show_more' => 'Mostrar más filas',
+
     'errors' => [
         'app_locked' => 'Desbloquea la aplicación para importar: las claves de cifrado no se pueden usar mientras está bloqueada.',
+        'file_stopped_short' => 'La fila de encabezado coincidía, así que el formato es correcto. La lectura se detuvo antes del final del archivo. Lo provoca una sola fila ilegible, y también un archivo demasiado grande para este dispositivo. Prueba con un periodo más corto.',
         'file_unreadable' => 'No se ha podido leer este archivo.',
         'iban_not_in_preview' => 'Este IBAN no forma parte de la vista previa actual.',
+        'pdf_reader_unavailable' => 'Los extractos en PDF necesitan el programa pdftotext, que no está instalado aquí. Importa este archivo en un escritorio que lo tenga, o usa una exportación CSV de tu banco.',
         'row_unreadable' => 'No se ha podido leer esta fila.',
         'unknown_account' => 'Esta fila pertenece a una cuenta a la que aún no has puesto nombre.',
     ],

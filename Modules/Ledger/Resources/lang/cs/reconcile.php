@@ -10,7 +10,7 @@ return [
     'account' => 'Účet',
     'choose_account' => 'Vyber účet…',
     'statement_date' => 'Datum výpisu',
-    'statement_balance' => 'Zůstatek podle výpisu (€)',
+    'statement_balance' => 'Zůstatek podle výpisu (:symbol)',
     'balance_help' => 'Předvyplní se z posledního naimportovaného výpisu, pokud je k dispozici — záporný u dluhu, v obou případech se dá upravit.',
 
     'cleared_balance' => 'Zúčtovaný zůstatek',

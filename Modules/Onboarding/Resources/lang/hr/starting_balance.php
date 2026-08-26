@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Račun nije postavljen. Ponovno učitaj čarobnjak.',
         'invalid_amount' => 'Unesi ispravan iznos.',
-        'amount_range' => 'Unesi iznos između -10 milijuna € i 10 milijuna €.',
+        'amount_range' => 'Unesi iznos između :min i :max.',
         'pick_date' => 'Odaberi datum.',
         'pick_valid_date' => 'Odaberi ispravan datum.',
         'future_date' => 'Datum početnog stanja ne može biti u budućnosti.',

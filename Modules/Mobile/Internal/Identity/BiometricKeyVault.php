@@ -8,6 +8,7 @@ use Beatrax\BiometricVault\Facades\BiometricVault;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
+use Psr\Log\LoggerInterface;
 
 /**
  * @link ../../../../.docs/design/cold-start-biometric-unlock.md
@@ -21,11 +22,12 @@ class BiometricKeyVault
     public function __construct(
         private readonly BiometricKeyBlobCodec $codec,
         private readonly CurrentUser $currentUser,
+        private readonly LoggerInterface $log,
     ) {}
 
     public function isAvailable(): bool
     {
-        return $this->runtimeAvailable();
+        return $this->runtimeAvailable() && $this->platformCanStore();
     }
 
     // Wraps the (currently-held) data key into a biometric blob and
@@ -33,13 +35,22 @@ class BiometricKeyVault
     // Returns false off-device or on a native failure.
     public function enroll(string $dataKey): bool
     {
-        if (! $this->runtimeAvailable()) {
+        if (! $this->isAvailable()) {
             return false;
         }
 
         $blob = $this->codec->wrap($dataKey);
 
-        return $this->vaultSet($this->slot(), base64_encode($blob));
+        if ($this->vaultSet($this->slot(), base64_encode($blob))) {
+            return true;
+        }
+
+        // The reader is told the device declined and nothing else. Found on an
+        // iPhone 12 mini where enrolment failed every time and left no trace at
+        // all: the only way to learn why was to patch this file onto the phone.
+        $this->logRefusal($this->lastNativeError());
+
+        return false;
     }
 
     // Presents the biometric prompt (iOS) or dispatches it (Android).
@@ -118,6 +129,26 @@ class BiometricKeyVault
     // Native seam (overridable in tests; facade confined here)
     // -------------------------------------------------------------------------
 
+    // Android's half is a skeleton by design: a Keystore key with
+    // setUserAuthenticationRequired(true) gates every Cipher call behind an
+    // async BiometricPrompt, so Set answers `async_required` and writes nothing.
+    // Offering enrolment there said the device declined to store the key.
+    /**
+     * @link ../../../../../mobile-app/nativephp-plugins/biometric-vault/resources/android/BiometricVaultFunctions.kt
+     */
+    protected function platformCanStore(): bool
+    {
+        return $this->platformFamily() !== 'Linux';
+    }
+
+    // Android reports Linux here and iOS reports Darwin, which is the same
+    // distinction NativeDeviceName leans on. A native probe would say no more
+    // until the prompt wiring lands and this becomes a real capability call.
+    protected function platformFamily(): string
+    {
+        return PHP_OS_FAMILY;
+    }
+
     protected function runtimeAvailable(): bool
     {
         if (! class_exists(BiometricVault::class)) {
@@ -157,6 +188,24 @@ class BiometricKeyVault
         }
 
         BiometricVault::delete($key);
+    }
+
+    protected function lastNativeError(): ?string
+    {
+        if (! class_exists(BiometricVault::class)) {
+            return null;
+        }
+
+        $value = BiometricVault::lastError();
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    protected function logRefusal(?string $reason): void
+    {
+        $this->log->warning('BiometricKeyVault: the enclave refused to store the cold-start key.', [
+            'reason' => $reason ?? 'the native side gave none',
+        ]);
     }
 
     // Reads the base64 blob the async (Android) BiometricPrompt callback

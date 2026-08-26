@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Cilj je dosegnut',
+        'closed_short' => 'Zatvoreno prije cilja',
         'add_contributions' => 'Dodaj uplate da vidiš projekciju',
         'not_enough_history' => 'Još nema dovoljno povijesti za projekciju datuma',
         'no_recent_contributions' => 'Nema nedavnih uplata na temelju kojih bi se radila projekcija',

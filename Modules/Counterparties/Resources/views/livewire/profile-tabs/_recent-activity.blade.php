@@ -5,7 +5,7 @@
     a uniform list of the counterparty's most-recent transactions.
 
     Variables:
-      $rows      iterable<\stdClass>  — { id, posted_at, description, amount_minor, currency }
+      $rows      iterable<\stdClass>  — { id, posted_at, description, settled_amount_minor, settled_currency }
       $taxState  array<int, array{taxTagged: bool, taxCategoryShortName: ?string}>  (optional)
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
@@ -23,8 +23,8 @@
                     ? Fmt::shortDate($tx->posted_at)
                     : '';
                 $desc = $tx->description ?? '';
-                $amount = (int) ($tx->amount_minor ?? 0);
-                $currency = $tx->currency ?? BaseCurrency::value();
+                $amount = (int) ($tx->settled_amount_minor ?? 0);
+                $currency = $tx->settled_currency ?? BaseCurrency::value();
             @endphp
             @php
                 $txId = (int) ($tx->id ?? 0);

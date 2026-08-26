@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Ledger\Models\Account;
 use Modules\Onboarding\Internal\Http\Livewire\StartingBalanceCard;
 
@@ -38,7 +39,7 @@ it('renders a starting-balance card in the detected state with the detector valu
     ])
         ->assertSee('NL18 ASNB · 4321')
         ->assertSee('ASN account')
-        ->assertSee('2026-01-01');
+        ->assertSee(Fmt::shortDate('2026-01-01'));
 });
 
 it('renders a starting-balance card in the manual-entry state when no detector fired', function (): void {

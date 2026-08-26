@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Internal\Enums\CurrencyView')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -71,8 +72,8 @@
         @if (! $isSearchMode)
             <div class="flex flex-wrap items-center gap-2">
                 <flux:radio.group wire:model.live="currency" variant="segmented" aria-label="{{ Lang::get('ledger::list.currency_aria') }}">
-                    <flux:radio value="eur" label="{{ Lang::get('ledger::list.currency_eur') }}" />
-                    <flux:radio value="original" label="{{ Lang::get('ledger::list.currency_original') }}" />
+                    <flux:radio value="{{ CurrencyView::BaseOnly->value }}" label="{{ Lang::get('ledger::list.currency_eur', ['code' => $baseCurrency]) }}" />
+                    <flux:radio value="{{ CurrencyView::Original->value }}" label="{{ Lang::get('ledger::list.currency_original') }}" />
                 </flux:radio.group>
                 <x-core::secondary-button
                     size="sm"
@@ -160,7 +161,7 @@
                                  padding + line-height), so side by side they stepped up and
                                  down and the row read as lumpy; h-5 on the group's children
                                  lands them all on the split badge's existing 20px. --}}
-                            <div class="flex shrink-0 items-center gap-3 [&>*]:h-5">
+                            <div class="flex flex-wrap items-center gap-3 [&>*]:h-5">
                                 {{-- Split badge: OUTSIDE the <a> (flex sibling) so toggling the
                                      legs never triggers navigation (UI-SPEC §5.1). No Livewire
                                      round trip — legs are already server-rendered below. --}}
@@ -398,7 +399,7 @@
                                 {{-- Always the parent total — never a client-recomputed
                                      leg sum (UI-SPEC §5.1). --}}
                                 <span class="block text-sm text-slate-900 dark:text-slate-100">{{ $fmt($row->amount) }}</span>
-                                @if ($currency === 'original' && $row->secondaryAmount !== null)
+                                @if ($currency === CurrencyView::Original->value && $row->secondaryAmount !== null)
                                     <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">{{ $fmt($row->secondaryAmount) }}</span>
                                 @endif
                             @endif

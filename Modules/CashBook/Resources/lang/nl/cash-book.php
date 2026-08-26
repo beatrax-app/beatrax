@@ -11,7 +11,7 @@ return [
     'expense' => 'Uitgave',
     'income' => 'Inkomsten',
 
-    'amount' => 'Bedrag (€)',
+    'amount' => 'Bedrag (:symbol)',
     'date' => 'Datum',
     'counterparty' => 'Tegenpartij',
     'counterparty_placeholder' => 'bijv. Bakkerij',

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Pipeline;
 
+use Generator;
 use Illuminate\Contracts\Cache\Repository;
 use JsonException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Internal\Dto\PreviewHead;
 use Modules\Import\Internal\Dto\PreviewSectionSummary;
 use Modules\Import\Internal\Exceptions\PreviewCacheCorruptedException;
 use Modules\Import\Public\Dto\ImportPreviewResult;
@@ -16,19 +18,41 @@ use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
+// A preview is a bounded head plus chunks of rows. Nothing here reads more of
+// a run than it was asked for, which is what lets a statement be larger than
+// the memory the device will give the interpreter.
+/**
+ * @link ../../../../.docs/architecture/ingestion-pipeline.md#preview-vs-confirm
+ */
 final class PreviewCache
 {
     private const int TTL_MINUTES = 30;
 
     // What a consolidated section shows without being asked for more, so the
-    // screen that lists several runs answers from these entries and leaves the
-    // row sets of every one of them unread.
+    // screen that lists several runs answers from the head and leaves the row
+    // chunks of every one of them unread.
     private const int SUMMARY_SAMPLE_ROWS = BuildConsolidatedPreviewQuery::SAMPLE_ROW_LIMIT;
+
+    // How many rows ride back on an ImportPreviewResult. The callers that hold
+    // one -- the upload wizard, and every test that imports a fixture -- want
+    // the rows they just produced, not a page of them, and no fixture in this
+    // repository is a tenth of this. Past it, rowsAreComplete() says so.
+    public const int RESULT_ROW_WINDOW = 500;
 
     public function __construct(
         private readonly Repository $cache,
         private readonly Clock $clock,
     ) {}
+
+    public function writer(int $importRunId): PreviewWriter
+    {
+        return new PreviewWriter(
+            $this->cache,
+            $importRunId,
+            $this->clock->now()->addMinutes(self::TTL_MINUTES),
+            self::SUMMARY_SAMPLE_ROWS,
+        );
+    }
 
     /**
      * @param  list<CanonicalTransaction>  $canonical
@@ -36,109 +60,204 @@ final class PreviewCache
      */
     public function put(int $importRunId, ImportPreviewResult $result, array $canonical, array $enrichments = []): void
     {
-        $ttl = $this->clock->now()->addMinutes(self::TTL_MINUTES);
+        $writer = $this->writer($importRunId);
 
-        $this->cache->put(
-            $this->previewKey($importRunId),
-            $result->toArray(),
-            $ttl,
-        );
+        foreach ($result->rows as $row) {
+            $writer->addRow($row);
+        }
+        foreach ($canonical as $transaction) {
+            $writer->addCanonical($transaction);
+        }
+        foreach ($enrichments as $enrichment) {
+            $writer->addEnrichment($enrichment);
+        }
 
-        $this->cache->put(
-            $this->summaryKey($importRunId),
-            self::summarise($result, self::SUMMARY_SAMPLE_ROWS)->toArray(),
-            $ttl,
-        );
-
-        $canonicalPayload = json_encode(
-            array_map(static fn (CanonicalTransaction $c): array => $c->toArray(), $canonical),
-            JSON_THROW_ON_ERROR,
-        );
-
-        $this->cache->put(
-            $this->canonicalKey($importRunId),
-            $canonicalPayload,
-            $ttl,
-        );
-
-        $enrichmentsPayload = json_encode(
-            array_map(static fn (PendingEnrichment $p): array => $p->toArray(), $enrichments),
-            JSON_THROW_ON_ERROR,
-        );
-
-        $this->cache->put(
-            $this->enrichmentsKey($importRunId),
-            $enrichmentsPayload,
-            $ttl,
+        $writer->finish(
+            array_values($result->accountsToName),
+            $result->fileFailureReason,
+            $result->fileFailureDetail,
+            $result->fileFailureRowIndex,
         );
     }
 
     // A malformed-but-present payload throws rather than reading as a miss,
     // so an expired preview stays distinguishable from a cache regression.
-    public function getPreview(int $importRunId): ?ImportPreviewResult
+    public function head(int $importRunId): ?PreviewHead
     {
-        $key = $this->previewKey($importRunId);
+        $key = PreviewKeys::head($importRunId);
         $raw = $this->cache->get($key);
+
         if ($raw === null) {
             return null;
         }
+
         if (! is_array($raw)) {
             throw new PreviewCacheCorruptedException($importRunId, $key);
         }
 
-        return ImportPreviewResult::from($raw);
+        return PreviewHead::from($raw);
     }
 
-    // What a section of the consolidated screen needs, without the row set it
-    // was summarised from: that screen rebuilds on every render, and a run's
-    // rows are unbounded. A sample bigger than the stored one reads them back.
-    public function sectionSummary(int $importRunId, int $sampleLimit): ?PreviewSectionSummary
+    /**
+     * @return list<PreviewRowDto>
+     */
+    public function rows(int $importRunId, int $offset, int $limit): array
     {
-        $key = $this->summaryKey($importRunId);
-        $raw = $this->cache->get($key);
-        if ($raw !== null) {
-            if (! is_array($raw)) {
-                throw new PreviewCacheCorruptedException($importRunId, $key);
-            }
-
-            $summary = PreviewSectionSummary::from($raw);
-            if ($summary->sampleComplete || count($summary->sampleRows) >= $sampleLimit) {
-                return $summary;
-            }
+        if ($limit <= 0) {
+            return [];
         }
 
-        $preview = $this->getPreview($importRunId);
+        $head = $this->head($importRunId);
 
-        return $preview === null ? null : self::summarise($preview, $sampleLimit);
+        if ($head === null) {
+            return [];
+        }
+
+        $rows = [];
+        $position = max(0, $offset);
+        $chunk = intdiv($position, PreviewKeys::CHUNK_ROWS);
+
+        while (count($rows) < $limit && $chunk < $head->rowChunkCount) {
+            $entries = $this->rowChunk($importRunId, $chunk);
+            $within = $chunk === intdiv($position, PreviewKeys::CHUNK_ROWS)
+                ? $position % PreviewKeys::CHUNK_ROWS
+                : 0;
+
+            for ($i = $within; $i < count($entries) && count($rows) < $limit; $i++) {
+                $rows[] = $entries[$i];
+            }
+
+            $chunk++;
+        }
+
+        return $rows;
+    }
+
+    // The window rather than the whole run: what a caller holding one of these
+    // wants is the rows it just produced, and rowsAreComplete() is how anything
+    // that needs all of them finds out that it does not have them.
+    public function getPreview(int $importRunId): ?ImportPreviewResult
+    {
+        $head = $this->head($importRunId);
+
+        if ($head === null) {
+            return null;
+        }
+
+        return self::resultFrom($head, $this->rows($importRunId, 0, self::RESULT_ROW_WINDOW));
+    }
+
+    /**
+     * @param  list<PreviewRowDto>  $rows
+     */
+    public static function resultFrom(PreviewHead $head, array $rows): ImportPreviewResult
+    {
+        return new ImportPreviewResult(
+            importRunId: $head->importRunId,
+            rows: $rows,
+            accountsToName: $head->accountsToName,
+            enrichedCount: $head->enrichedCount,
+            fileFailureReason: $head->fileFailureReason,
+            fileFailureDetail: $head->fileFailureDetail,
+            fileFailureRowIndex: $head->fileFailureRowIndex,
+            totalRowCount: $head->rowCount,
+            errorRowCount: $head->errorCount,
+            duplicateRowCount: $head->duplicateCount,
+        );
+    }
+
+    // What a section of the consolidated screen needs, without the row chunks
+    // it was summarised from. A sample bigger than the stored one reads only as
+    // many chunks as it takes to fill, never the run.
+    public function sectionSummary(int $importRunId, int $sampleLimit): ?PreviewSectionSummary
+    {
+        $head = $this->head($importRunId);
+
+        if ($head === null) {
+            return null;
+        }
+
+        $summary = $head->toSectionSummary();
+
+        if ($summary->sampleComplete || count($summary->sampleRows) >= $sampleLimit) {
+            return $summary;
+        }
+
+        $sample = [];
+        $offset = 0;
+
+        while (count($sample) < $sampleLimit) {
+            $page = $this->rows($importRunId, $offset, PreviewKeys::CHUNK_ROWS);
+
+            if ($page === []) {
+                break;
+            }
+
+            foreach ($page as $row) {
+                if ($row->status !== PreviewRowStatus::Error && count($sample) < $sampleLimit) {
+                    $sample[] = $row;
+                }
+            }
+
+            $offset += count($page);
+        }
+
+        return new PreviewSectionSummary(
+            rowCount: $summary->rowCount,
+            committableCount: $summary->committableCount,
+            duplicateCount: $summary->duplicateCount,
+            errorCount: $summary->errorCount,
+            sampleRows: $sample,
+            sampleComplete: count($sample) === $summary->rowCount - $summary->errorCount,
+            firstRowErrorReason: $summary->firstRowErrorReason,
+            fileFailureReason: $summary->fileFailureReason,
+            fileFailureDetail: $summary->fileFailureDetail,
+        );
     }
 
     // null means confirm has nothing to replay and the user needs a
     // re-upload prompt; an empty list is a legitimate all-duplicates import.
     /**
+     * @return Generator<int, list<CanonicalTransaction>>|null
+     */
+    public function canonicalChunks(int $importRunId): ?Generator
+    {
+        $head = $this->head($importRunId);
+
+        if ($head === null || $head->canonicalChunkCount === 0) {
+            return null;
+        }
+
+        return (function () use ($importRunId, $head): Generator {
+            for ($chunk = 0; $chunk < $head->canonicalChunkCount; $chunk++) {
+                yield array_values(array_map(
+                    static fn (array $row): CanonicalTransaction => CanonicalTransaction::from($row),
+                    $this->jsonChunk($importRunId, PreviewKeys::canonicalChunk($importRunId, $chunk)),
+                ));
+            }
+        })();
+    }
+
+    /**
      * @return list<CanonicalTransaction>|null
      */
     public function getCanonical(int $importRunId): ?array
     {
-        $key = $this->canonicalKey($importRunId);
-        $raw = $this->cache->get($key);
-        if ($raw === null) {
+        $chunks = $this->canonicalChunks($importRunId);
+
+        if ($chunks === null) {
             return null;
         }
-        if (! is_string($raw)) {
-            throw new PreviewCacheCorruptedException($importRunId, $key);
+
+        $all = [];
+
+        foreach ($chunks as $chunk) {
+            foreach ($chunk as $transaction) {
+                $all[] = $transaction;
+            }
         }
 
-        try {
-            /** @var array<int, array<string, mixed>> $list */
-            $list = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            throw new PreviewCacheCorruptedException($importRunId, $key, $e);
-        }
-
-        return array_values(array_map(
-            static fn (array $row): CanonicalTransaction => CanonicalTransaction::from($row),
-            $list,
-        ));
+        return $all;
     }
 
     /**
@@ -146,50 +265,95 @@ final class PreviewCache
      */
     public function getEnrichments(int $importRunId): ?array
     {
-        $key = $this->enrichmentsKey($importRunId);
-        $raw = $this->cache->get($key);
-        if ($raw === null) {
+        $head = $this->head($importRunId);
+
+        if ($head === null || $head->enrichmentChunkCount === 0) {
             return null;
         }
-        if (! is_string($raw)) {
-            throw new PreviewCacheCorruptedException($importRunId, $key);
+
+        $all = [];
+
+        for ($chunk = 0; $chunk < $head->enrichmentChunkCount; $chunk++) {
+            foreach ($this->jsonChunk($importRunId, PreviewKeys::enrichmentChunk($importRunId, $chunk)) as $row) {
+                $all[] = PendingEnrichment::from($row);
+            }
         }
 
-        try {
-            /** @var array<int, array<string, mixed>> $list */
-            $list = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            throw new PreviewCacheCorruptedException($importRunId, $key, $e);
-        }
-
-        return array_values(array_map(
-            static fn (array $row): PendingEnrichment => PendingEnrichment::from($row),
-            $list,
-        ));
+        return $all;
     }
 
     public function forget(int $importRunId): void
     {
-        $this->cache->forget($this->previewKey($importRunId));
-        $this->cache->forget($this->summaryKey($importRunId));
-        $this->cache->forget($this->canonicalKey($importRunId));
-        $this->cache->forget($this->enrichmentsKey($importRunId));
+        $head = $this->head($importRunId);
+
+        if ($head !== null) {
+            for ($chunk = 0; $chunk < $head->rowChunkCount; $chunk++) {
+                $this->cache->forget(PreviewKeys::rowChunk($importRunId, $chunk));
+            }
+            for ($chunk = 0; $chunk < $head->canonicalChunkCount; $chunk++) {
+                $this->cache->forget(PreviewKeys::canonicalChunk($importRunId, $chunk));
+            }
+            for ($chunk = 0; $chunk < $head->enrichmentChunkCount; $chunk++) {
+                $this->cache->forget(PreviewKeys::enrichmentChunk($importRunId, $chunk));
+            }
+        }
+
+        $this->cache->forget(PreviewKeys::head($importRunId));
     }
 
-    // False rather than a throw on a missing run or an out-of-range index,
-    // so a stale dispatch is silent. A rewrite resets the TTL to 30 minutes.
+    // False rather than a throw on a missing run or an out-of-range index, so
+    // a stale dispatch is silent. Only the chunk holding the row is rewritten,
+    // and the head only when the renamed row is one of the sampled ones.
     public function applyAliasInPlace(int $importRunId, int $rowIndex, string $friendlyName): bool
     {
-        $preview = $this->getPreview($importRunId);
-        if ($preview === null) {
-            return false;
-        }
-        if (! array_key_exists($rowIndex, $preview->rows)) {
+        $head = $this->head($importRunId);
+
+        if ($head === null || $rowIndex < 0 || $rowIndex >= $head->rowCount) {
             return false;
         }
 
-        $existing = $preview->rows[$rowIndex];
-        $updated = new PreviewRowDto(
+        $chunkIndex = intdiv($rowIndex, PreviewKeys::CHUNK_ROWS);
+        $within = $rowIndex % PreviewKeys::CHUNK_ROWS;
+        $entries = $this->rowChunk($importRunId, $chunkIndex);
+
+        if (! array_key_exists($within, $entries)) {
+            return false;
+        }
+
+        $updated = self::renamed($entries[$within], $friendlyName);
+        $entries[$within] = $updated;
+        $expiresAt = $this->clock->now()->addMinutes(self::TTL_MINUTES);
+
+        $this->cache->put(
+            PreviewKeys::rowChunk($importRunId, $chunkIndex),
+            array_map(static fn (PreviewRowDto $row): array => $row->toArray(), $entries),
+            $expiresAt,
+        );
+
+        $sample = $head->sampleRows;
+        $sampleChanged = false;
+
+        foreach ($sample as $position => $sampled) {
+            if ($sampled->rowIndex === $updated->rowIndex) {
+                $sample[$position] = $updated;
+                $sampleChanged = true;
+            }
+        }
+
+        if ($sampleChanged) {
+            $this->cache->put(
+                PreviewKeys::head($importRunId),
+                self::withSample($head, $sample)->toArray(),
+                $expiresAt,
+            );
+        }
+
+        return true;
+    }
+
+    private static function renamed(PreviewRowDto $existing, string $friendlyName): PreviewRowDto
+    {
+        return new PreviewRowDto(
             rowIndex: $existing->rowIndex,
             status: $existing->status,
             accountId: $existing->accountId,
@@ -207,94 +371,74 @@ final class PreviewCache
             errorReason: $existing->errorReason,
             errorDetail: $existing->errorDetail,
         );
-
-        $newRows = $preview->rows;
-        $newRows[$rowIndex] = $updated;
-
-        $rewritten = new ImportPreviewResult(
-            importRunId: $preview->importRunId,
-            rows: $newRows,
-            accountsToName: $preview->accountsToName,
-            enrichedCount: $preview->enrichedCount,
-            fileFailureReason: $preview->fileFailureReason,
-            fileFailureDetail: $preview->fileFailureDetail,
-            fileFailureRowIndex: $preview->fileFailureRowIndex,
-        );
-
-        $ttl = $this->clock->now()->addMinutes(self::TTL_MINUTES);
-        $this->cache->put($this->previewKey($importRunId), $rewritten->toArray(), $ttl);
-        // The renamed row can be one of the sampled ones, and the consolidated
-        // screen reads the sample from here rather than from the rows.
-        $this->cache->put(
-            $this->summaryKey($importRunId),
-            self::summarise($rewritten, self::SUMMARY_SAMPLE_ROWS)->toArray(),
-            $ttl,
-        );
-
-        return true;
     }
 
-    // Counted in one pass over the rows, never held as a list of them: four
-    // counts, the first failed row's reason and the head of the sample are the
-    // whole of what a consolidated section renders from a run of any size.
-    private static function summarise(ImportPreviewResult $preview, int $sampleLimit): PreviewSectionSummary
+    /**
+     * @param  list<PreviewRowDto>  $sample
+     */
+    private static function withSample(PreviewHead $head, array $sample): PreviewHead
     {
-        $rowCount = 0;
-        $committableCount = 0;
-        $duplicateCount = 0;
-        $errorCount = 0;
-        $firstRowErrorReason = null;
-        $sampleRows = [];
+        return new PreviewHead(
+            importRunId: $head->importRunId,
+            accountsToName: $head->accountsToName,
+            rowCount: $head->rowCount,
+            committableCount: $head->committableCount,
+            duplicateCount: $head->duplicateCount,
+            errorCount: $head->errorCount,
+            enrichedCount: $head->enrichedCount,
+            sampleRows: $sample,
+            sampleComplete: $head->sampleComplete,
+            rowIssues: $head->rowIssues,
+            rowChunkCount: $head->rowChunkCount,
+            canonicalChunkCount: $head->canonicalChunkCount,
+            enrichmentChunkCount: $head->enrichmentChunkCount,
+            firstRowErrorReason: $head->firstRowErrorReason,
+            fileFailureReason: $head->fileFailureReason,
+            fileFailureDetail: $head->fileFailureDetail,
+            fileFailureRowIndex: $head->fileFailureRowIndex,
+        );
+    }
 
-        foreach ($preview->rows as $row) {
-            $rowCount++;
-            if ($row->status === PreviewRowStatus::NewRow || $row->status === PreviewRowStatus::Enriched) {
-                $committableCount++;
-            } elseif ($row->status === PreviewRowStatus::Duplicate) {
-                $duplicateCount++;
-            } elseif ($row->status === PreviewRowStatus::Error) {
-                $errorCount++;
-                $firstRowErrorReason ??= $row->errorReason;
-            }
+    /**
+     * @return list<PreviewRowDto>
+     */
+    private function rowChunk(int $importRunId, int $chunk): array
+    {
+        $key = PreviewKeys::rowChunk($importRunId, $chunk);
+        $raw = $this->cache->get($key);
 
-            // The sample stands for what committing writes, and a failed row
-            // writes nothing. Shown among the others in a table with no status
-            // column, it reads as one more transaction.
-            if ($row->status !== PreviewRowStatus::Error && count($sampleRows) < $sampleLimit) {
-                $sampleRows[] = $row;
-            }
+        if ($raw === null) {
+            return [];
         }
 
-        return new PreviewSectionSummary(
-            rowCount: $rowCount,
-            committableCount: $committableCount,
-            duplicateCount: $duplicateCount,
-            errorCount: $errorCount,
-            sampleRows: $sampleRows,
-            sampleComplete: count($sampleRows) === $rowCount - $errorCount,
-            firstRowErrorReason: $firstRowErrorReason,
-            fileFailureReason: $preview->fileFailureReason,
-            fileFailureDetail: $preview->fileFailureDetail,
-        );
+        if (! is_array($raw)) {
+            throw new PreviewCacheCorruptedException($importRunId, $key);
+        }
+
+        return array_values(array_map(
+            static fn (mixed $row): PreviewRowDto => PreviewRowDto::from($row),
+            $raw,
+        ));
     }
 
-    private function previewKey(int $importRunId): string
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function jsonChunk(int $importRunId, string $key): array
     {
-        return sprintf('import.%d.preview', $importRunId);
-    }
+        $raw = $this->cache->get($key);
 
-    private function summaryKey(int $importRunId): string
-    {
-        return sprintf('import.%d.preview-summary', $importRunId);
-    }
+        if (! is_string($raw)) {
+            throw new PreviewCacheCorruptedException($importRunId, $key);
+        }
 
-    private function canonicalKey(int $importRunId): string
-    {
-        return sprintf('import.%d.canonical', $importRunId);
-    }
+        try {
+            /** @var array<int, array<string, mixed>> $list */
+            $list = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new PreviewCacheCorruptedException($importRunId, $key, $e);
+        }
 
-    private function enrichmentsKey(int $importRunId): string
-    {
-        return sprintf('import.%d.enrichments', $importRunId);
+        return $list;
     }
 }

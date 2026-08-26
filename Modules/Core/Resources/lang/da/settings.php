@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Valutavisning',
         'label' => 'Standardvisning på transaktionslisten',
-        'eur_only' => 'Kun EUR',
+        'eur_only' => 'Kun :code',
         'original' => 'Oprindelig valuta',
         'help' => 'Du kan stadig skifte pr. side fra transaktionslisten.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Registreringsvindue (måneder)',
         'window_help' => 'Hvor mange måneders historik der gennemsøges, når transaktioner grupperes i tilbagevendende mønstre.',
         'income_label' => 'Mindste indtægt (cent)',
-        'income_help' => 'Indtægter under denne tærskel grupperes ikke automatisk. Gemmes i cent — 200000 betyder 2.000,00 €. Sæt den til 0 for at slå tærsklen fra.',
+        'income_help' => 'Indtægter under denne tærskel grupperes ikke automatisk. Gemmes i cent — 200000 betyder :example. Sæt den til 0 for at slå tærsklen fra.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Vælg en valuta.',
         'window_months' => 'Vælg mellem 2 og 60 måneder.',
         'threshold' => 'Vælg en tærskel på 1%, 2%, 5%, 10%, 25% eller 50%.',
-        'amount' => 'Indtast et beløb fra €0 og opefter.',
+        'amount' => 'Indtast et beløb fra :zero og opefter.',
         'period_day' => 'Vælg en dag fra 1 til 28.',
         'currency_view' => 'Vælg en af de tilgængelige muligheder.',
     ],

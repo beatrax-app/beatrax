@@ -27,19 +27,20 @@ return [
     ],
 
     'next' => 'Sledeće',
+    'overdue' => 'Kasni',
     'cadence_changed_note' => 'učestalost promenjena',
-
-    'select_aria' => 'Izaberi ponavljajuću seriju :id',
     'un_reject' => 'Opozovi odbijanje',
     'approve' => 'Odobri',
     'approve_aria' => 'Odobri ponavljajuću seriju :id',
     'reject' => 'Odbij',
     'reject_aria' => 'Odbij ponavljajuću seriju :id',
     'snooze' => 'Odloži',
+    'snooze_aria' => 'Odloži ponavljajuću seriju :id',
     'snooze_1w' => '1 nedelja',
     'snooze_1m' => '1 mesec',
     'snooze_3m' => '3 meseca',
     'edit_name' => 'Izmeni naziv',
+    'edit_name_aria' => 'Preimenuj ponavljajuću seriju :id',
     'new_name_label' => 'Novi naziv za ovu seriju',
     'save' => 'Sačuvaj',
 

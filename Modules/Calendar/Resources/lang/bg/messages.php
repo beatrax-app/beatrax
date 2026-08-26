@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Прогнозата се обновява…',
-        'risk' => 'Салдото пада под 0 € на :date.|Салдото пада под 0 € в :count дни — първо на :date.',
+        'risk' => 'Салдото пада под :zero на :date.|Салдото пада под :zero в :count дни — първо на :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'запис|записа',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', прогнозно салдо минус :amount €',
-        'aria_balance_positive' => ', прогнозно салдо :amount €',
+        'aria_balance_negative' => ', прогнозно салдо минус :amount',
+        'aria_balance_positive' => ', прогнозно салдо :amount',
         'overflow' => '+:count още',
         'paid' => 'Платено',
         'missed' => 'Очаквано — не е намерено',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Осчетоводено плащане',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ приблизителна дата',
         'series' => '↗ поредица',
         'counterparty' => '↗ контрагент',
+        'transaction' => '↗ транзакция',
         'end_of_day' => 'Край на деня',
     ],
 ];

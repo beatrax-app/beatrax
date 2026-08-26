@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Brīdinājumu jutīgums',
-    'sensitivity_help' => 'Atzīmēt maksājumus, kas par vairāk nekā :percent% pārsniedz jūsu ierastos tēriņus pie šī tirgotāja vai šajā kategorijā.',
+    'sensitivity_help' => 'Cik viegli Beatrax uzskata maksājumu par neparastu šim tirgotājam vai kategorijai, no 1 līdz 100. Augstāks atzīmē vairāk.',
 
     'min_amount_label' => 'Minimālā maksājuma summa',
-    'min_amount_help' => 'Ignorēt novirzes maksājumiem, kas mazāki par šo summu. Glabā centos (€) — 1000 nozīmē 10,00 €.',
+    'min_amount_help' => 'Ignorēt novirzes maksājumiem, kas mazāki par šo summu. Glabā centos (:symbol) — 1000 nozīmē :example.',
 
     'save' => 'Saglabāt noviržu iestatījumus',
     'saved' => 'Saglabāts.',

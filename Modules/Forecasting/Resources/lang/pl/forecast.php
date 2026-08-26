@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Żadna seria nie wpływa jeszcze na prognozę tego konta.',
 
     'net_diff' => 'Różnica netto',
+
+    'net_diff_unknown' => 'Jeszcze nieobliczone dla tego horyzontu.',
     'net_diff_section_aria' => 'Różnica netto między punktem odniesienia a scenariuszem w dniach horyzontu 30 / 60 / 90',
     'net_diff_delta_aria' => 'Różnica netto w dniu :day: :value, scenariusz jest :state',
     'better_than_baseline' => 'lepszy niż punkt odniesienia',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Najważniejsze z prognozy',
     'highlights_shortfall_aria' => ':count aktywne okno niedoboru w ciągu najbliższych :days dni|:count aktywne okna niedoboru w ciągu najbliższych :days dni|:count aktywnych okien niedoboru w ciągu najbliższych :days dni',
-    'dips_to' => ':name spada do :amount',
     'on_date_suffix' => ' dnia :date',
     'shortfall_window' => ':count aktywne okno niedoboru|:count aktywne okna niedoboru|:count aktywnych okien niedoboru',
-    'lowest_in_30' => 'Najniższe saldo w ciągu 30 dni: :amount',
+    'lowest_in_30_label' => 'Najniższe saldo w ciągu 30 dni',
     'next_ics' => 'Następne rozliczenie ICS: :amount dnia :date',
+    'ics_overdue' => 'Rozliczenie ICS po terminie: :amount, termin minął :date',
 ];

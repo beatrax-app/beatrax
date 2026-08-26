@@ -9,6 +9,10 @@ return [
         'title' => 'Ova stranica ne postoji',
         'body' => 'Poveznica je možda stara ili je stranica preimenovana. S tvojim podacima je sve u redu.',
     ],
+    '4xx' => [
+        'title' => 'Ovaj zahtjev nije moguće obraditi',
+        'body' => 'Stranica je otvorena na način koji ne očekuje. Tvoji podaci su nepromijenjeni.',
+    ],
 
     '419' => [
         'title' => 'Tvoja sesija je istekla',

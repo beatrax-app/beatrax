@@ -7,6 +7,7 @@ return [
     'body' => 'Att radera ditt konto tar bort det från den här enheten tillsammans med allt som hör till det. Det går inte att ångra.',
     'removes' => 'Dina transaktioner, konton, budgetar, mål och rapporter försvinner, liksom regler, inställningar, återställningskoder, synkidentitet och krypteringsnycklar.',
     'devices_heading' => 'Dina andra enheter behåller sin egen kopia',
+    'devices_heading_none' => 'Detta är den enda kopian av dina data',
     'devices_body' => 'Beatrax har ingen server, så ingenting kan raderas på distans. Den här enheten har fortfarande en fullständig kopia och måste ordnas på enheten själv — :devices|Beatrax har ingen server, så ingenting kan raderas på distans. De här enheterna har fortfarande en fullständig kopia och måste ordnas på enheten själv — :devices',
     'devices_none' => 'Ingen annan enhet är parkopplad med den här, så det här är den enda kopian av dina uppgifter.',
     'successor' => 'Du administrerar den här enheten, så :username tar över när ditt konto är borta.',

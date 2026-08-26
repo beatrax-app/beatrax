@@ -106,10 +106,6 @@ final class TransactionListQuery
 
         TransactionCursor::orderNewestFirst($query);
 
-        if ($currency !== null) {
-            $query->where('transactions.settled_currency', $currency);
-        }
-
         return $query;
     }
 

@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Passaggio :number di :total',
 
+    'back' => 'Indietro',
+    'back_aria' => 'Indietro — torna al passaggio di configurazione precedente',
+
     'resume_later' => 'Riprendi più tardi',
     'resume_later_aria' => 'Riprendi più tardi — salva i tuoi progressi e chiude la procedura guidata',
     'resume_banner' => 'Bentornato — riprendiamo da dove hai lasciato.',

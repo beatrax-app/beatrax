@@ -17,7 +17,6 @@
     Accessibility: aria-expanded, aria-busy, aria-label on all icon-only buttons (Section 16).
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
-@use('Modules\Ledger\Public\Services\BaseCurrency')
 
 <div class="py-12">
     <div class="mx-auto max-w-4xl px-4 sm:px-6">
@@ -134,7 +133,7 @@
                 <div class="flex flex-col">
                     <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">{{ Lang::get('tax::page.total_deductions') }}</span>
                     <span class="kpi-number" style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text);">
-                        {{ Money::ofMinor($data->deductionsTotalMinor, BaseCurrency::value())->format() }}
+                        {{ Money::ofMinor($data->deductionsTotalMinor, $data->currency)->format() }}
                     </span>
                 </div>
 
@@ -142,7 +141,7 @@
                     <div class="flex flex-col">
                         <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">{{ Lang::get('tax::page.income') }}</span>
                         <span class="kpi-number" style="font-size: var(--text-xl); font-weight: 600; color: var(--color-emerald);">
-                            {{ Money::ofMinor($data->incomeTotalMinor, BaseCurrency::value())->format() }}
+                            {{ Money::ofMinor($data->incomeTotalMinor, $data->currency)->format() }}
                         </span>
                     </div>
                 @endif
@@ -153,6 +152,12 @@
                         {{ $data->itemCount }}
                     </span>
                 </div>
+
+                @if ($data->isPartial())
+                    <div class="flex flex-col" data-not-converted="true">
+                        <span style="font-size: var(--text-xs); color: var(--color-text-faint);">{{ Lang::get('core::money.not_converted', ['list' => $data->unconvertedList()]) }}</span>
+                    </div>
+                @endif
             </div>
 
             {{-- ──────────────────────────────────────────────────────────────── --}}
@@ -183,7 +188,7 @@
                     @endif
                     <a
                         href="{{ Destination::Transactions->url() }}"
-                        class="font-medium underline-offset-2 hover:underline"
+                        class="tap-link font-medium underline-offset-2 hover:underline"
                         style="display: inline-block; margin-top: var(--space-4); font-size: var(--text-base); color: var(--color-text);"
                     >{{ Lang::get('tax::page.go_to_transactions') }}</a>
                 </div>
@@ -215,7 +220,7 @@
                                 class="tax-section-header cursor-pointer list-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                                 aria-controls="tax-section-body-{{ $sectionKey }}"
                             >
-                                <div class="flex min-w-0 flex-1 items-center gap-3">
+                                <div class="flex min-w-0 grow basis-auto items-center gap-3">
                                     <span style="font-size: var(--text-base); font-weight: 600; color: {{ $isNoCategory ? 'var(--color-text-faint)' : 'var(--color-text)' }};">
                                         {{ $isNoCategory ? Lang::get('tax::page.no_category') : $catName }}
                                     </span>
@@ -226,7 +231,7 @@
                                     >{{ $count }}</span>
                                 </div>
                                 <span class="kpi-number" style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin-right: var(--space-3);">
-                                    {{ Money::ofMinor($subtotal, BaseCurrency::value())->format() }}
+                                    {{ Money::ofMinor($subtotal, $data->currency)->format() }}
                                 </span>
                                 {{-- Chevron (CSS rotates when open) --}}
                                 <span aria-hidden="true" style="color: var(--color-text-faint); font-size: var(--text-xs);">▾</span>
@@ -248,7 +253,7 @@
                                             <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 6rem;">{{ Lang::get('tax::page.col_account') }}</th>
                                             <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em;">{{ Lang::get('tax::page.col_counterparty') }}</th>
                                             <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em;">{{ Lang::get('tax::page.col_note') }}</th>
-                                            <th class="money px-3 py-2 text-right" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 7rem;">{{ Lang::get('tax::page.col_settled_eur') }}</th>
+                                            <th class="money px-3 py-2 text-right" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 7rem;">{{ Lang::get('tax::page.col_settled') }}</th>
                                             <th class="px-3 py-2 text-right" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 5rem;">{{ Lang::get('tax::page.col_original') }}</th>
                                             <th class="px-3 py-2 text-center" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 3rem;">{{ Lang::get('tax::page.col_year') }}</th>
                                         </tr>
@@ -260,8 +265,9 @@
                                                 $hasOverride = isset($row['taxYearOverride']) && $row['taxYearOverride'] !== null;
                                                 $settledMinor = is_int($row['settledAmountMinor']) ? $row['settledAmountMinor'] : 0;
                                                 $origMinor    = is_int($row['amountMinor']) ? $row['amountMinor'] : 0;
-                                                $origCurrency = is_string($row['currency']) ? $row['currency'] : BaseCurrency::value();
-                                                $showOrig     = $origCurrency !== BaseCurrency::value();
+                                                $settledCurrency = is_string($row['settledCurrency']) ? $row['settledCurrency'] : $data->currency;
+                                                $origCurrency = is_string($row['currency']) ? $row['currency'] : $settledCurrency;
+                                                $showOrig     = $origCurrency !== $settledCurrency;
                                             @endphp
                                             <tr
                                                 class="triage-row border-b"
@@ -291,9 +297,9 @@
                                                         <span style="color: var(--color-text-faint); font-style: normal;">—</span>
                                                     @endif
                                                 </td>
-                                                {{-- Settled EUR --}}
+                                                {{-- Settled amount, in the row's own settled currency --}}
                                                 <td class="money px-3 py-2 text-right" style="color: var(--color-text);">
-                                                    {{ Money::ofMinor(abs($settledMinor), BaseCurrency::value())->format() }}
+                                                    {{ Money::ofMinor(abs($settledMinor), $settledCurrency)->format() }}
                                                 </td>
                                                 {{-- Original (if non-EUR) --}}
                                                 <td class="px-3 py-2 text-right" style="font-size: var(--text-xs); color: var(--color-text-faint);">
@@ -325,6 +331,7 @@
                                             $bookedAt  = isset($row['bookedAt']) ? \Carbon\CarbonImmutable::parse($row['bookedAt']) : null;
                                             $hasOverride = isset($row['taxYearOverride']) && $row['taxYearOverride'] !== null;
                                             $settledMinor = is_int($row['settledAmountMinor']) ? $row['settledAmountMinor'] : 0;
+                                            $settledCurrency = is_string($row['settledCurrency']) ? $row['settledCurrency'] : $data->currency;
                                         @endphp
                                         <li class="px-4 py-3">
                                             <div class="flex items-start justify-between gap-2">
@@ -348,7 +355,7 @@
                                                 </div>
                                                 <div class="flex shrink-0 flex-col items-end gap-1">
                                                     <span class="kpi-number" style="font-size: var(--text-base); font-weight: 600; color: var(--color-text);">
-                                                        {{ Money::ofMinor(abs($settledMinor), BaseCurrency::value())->format() }}
+                                                        {{ Money::ofMinor(abs($settledMinor), $settledCurrency)->format() }}
                                                     </span>
                                                     @if ($hasOverride)
                                                         <span class="tax-badge--amber">→ {{ $row['taxYearOverride'] }}</span>

@@ -21,7 +21,6 @@ return [
     'footer' => 'La liste partagée est un fichier YAML fourni avec Beatrax. Envoyer une suggestion ouvre GitHub dans ton navigateur ; rien d\'autre ne quitte cet appareil.',
 
     'card' => [
-        'likely' => 'Probablement : un commerçant sans nom.',
         'seen_times' => 'Vu :count fois|Vu :count fois',
         'last_seen' => 'Dernière apparition le :date',
         'suggest' => 'Suggérer un nom →',

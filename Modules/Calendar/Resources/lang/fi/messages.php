@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Ennustetta päivitetään…',
-        'risk' => 'Saldo painuu alle nollan :date.|Saldo painuu alle nollan :count päivänä — ensimmäinen: :date.',
+        'risk' => 'Saldo painuu alle :zero :date.|Saldo painuu alle :zero :count päivänä — ensimmäinen: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'merkintä|merkintää',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', ennustettu saldo miinus :amount €',
-        'aria_balance_positive' => ', ennustettu saldo :amount €',
+        'aria_balance_negative' => ', ennustettu saldo miinus :amount',
+        'aria_balance_positive' => ', ennustettu saldo :amount',
         'overflow' => '+:count muuta',
         'paid' => 'Maksettu',
         'missed' => 'Odotettu — ei löytynyt',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Kirjattu maksu',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ päivä on arvio',
         'series' => '↗ sarja',
         'counterparty' => '↗ vastapuoli',
+        'transaction' => '↗ tapahtuma',
         'end_of_day' => 'Päivän loppu',
     ],
 ];

@@ -9,6 +9,10 @@ return [
     'confirm' => 'Confirm import',
     'subtitle' => 'Review the parsed rows. Nothing is saved to your ledger until you confirm.',
 
+    'already_imported' => 'This file has already been imported.',
+
+    'already_imported_link' => 'View the import result',
+
     'expired_html' => 'The preview has expired. <a href="/imports/new" class="underline">Re-upload the file</a> to try again.',
 
     'save_name' => 'Save name',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Rename this counterparty',
 
     'unknown_iban_prefix' => 'We found an unfamiliar IBAN:',
+
+    'unknown_account_prefix' => 'We found an unfamiliar account:',
     'unknown_iban_suffix' => 'Name this account.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'to retry or inspect.',
     ],
 
+    'rows_shown' => 'Rows shown: :shown of :total',
+
+    'show_more' => 'Show more rows',
+
     'errors' => [
         'app_locked' => 'Unlock the app to import: the encryption keys cannot be used while it is locked.',
+        'file_stopped_short' => 'The header matched, so the format is right. Reading stopped before the end of the file. One unreadable row does this, and so does a file too large for this device. Try a shorter date range.',
         'file_unreadable' => 'This file could not be read.',
         'iban_not_in_preview' => 'This IBAN is not part of the current preview.',
+        'pdf_reader_unavailable' => 'PDF statements need the pdftotext program, which is not installed here. Import this file on a desktop that has it, or use a CSV export from your bank instead.',
         'row_unreadable' => 'This row could not be read.',
         'unknown_account' => 'This row belongs to an account you have not named yet.',
     ],

@@ -19,7 +19,11 @@ beforeEach(function (): void {
     }
 });
 
-function awaitProcessExit(int $pid, float $timeoutSeconds = 6.0): bool
+// A real `php artisan` boot, waited on by wall clock: it measures 2.5-4s with
+// nothing else running, and the suite runs four workers at once. The number
+// only bounds how long a child that never exits is tolerated, so it is set to
+// survive that load rather than to be tight.
+function awaitProcessExit(int $pid, float $timeoutSeconds = 30.0): bool
 {
     $deadline = microtime(true) + $timeoutSeconds;
     while (microtime(true) < $deadline) {

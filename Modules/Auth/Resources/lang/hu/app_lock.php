@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'error_enroll_unsupported' => 'A biometrikus feloldás nem érhető el ezen az eszközön.',
+    'error_enroll_unsupported' => 'A Beatrax e verziójának nincs hová eltárolnia a feloldókulcsot, ezért a biometrikus feloldás nem érhető el. Nem az eszközöd a korlát.',
     'error_enroll_unprotected' => 'A biometrikus feloldáshoz az operációs rendszer kulcstárolója kell, ennek a telepítésnek pedig nincs ilyen. A regisztráció olvashatóan hagyná a feloldókulcsot az adataid mellett, ezért itt nem érhető el.',
     'error_enroll_locked' => 'Oldd fel az alkalmazást a regisztrálás előtt.',
     'error_enroll_failed' => 'Az eszközöd elutasította a kulcs tárolását. A biometrikus feloldás nem érhető el.',
@@ -32,7 +32,7 @@ return [
     'biometric_enroll_description' => 'Regisztráld ezt az eszközt a biometrikus feloldáshoz.',
     'remove' => 'Eltávolítás',
     'enroll' => 'Regisztrálás',
-    'biometric_unavailable' => 'A biometrikus feloldás nem érhető el ezen az eszközön.',
+    'biometric_unavailable' => 'A Beatrax e verziója nem tud biometrikus feloldást nyújtani. Itt a PIN-kódod az egyetlen feloldás.',
 
     'deenroll_modal_heading' => 'Biometrikus feloldás eltávolítása — erősítsd meg PIN-kóddal',
     'current_pin_label' => 'Jelenlegi PIN-kód',

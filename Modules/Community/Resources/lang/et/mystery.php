@@ -21,7 +21,6 @@ return [
     'footer' => 'Jagatud nimekiri on Beatraxiga kaasas olev YAML-fail. Ettepaneku saatmine avab brauseris GitHubi; muud sellest seadmest ei välju.',
 
     'card' => [
-        'likely' => 'Tõenäoliselt: nimetu kaupmees.',
         'seen_times' => 'Nähtud :count kord|Nähtud :count korda',
         'last_seen' => 'Viimati nähtud :date',
         'suggest' => 'Paku nimi →',

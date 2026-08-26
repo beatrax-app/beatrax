@@ -37,7 +37,7 @@ return [
     'col_account' => 'Račun',
     'col_counterparty' => 'Nasprotna stranka',
     'col_note' => 'Opomba',
-    'col_settled_eur' => 'Poravnano v EUR',
+    'col_settled' => 'Poravnano',
     'col_original' => 'Izvirno',
     'col_year' => 'Leto',
 

@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Düzenli gelirler',
 
     'next' => 'Sonraki',
+    'overdue' => 'Gecikmiş',
     'chain' => 'zincir',
     'chain_aria' => 'Zincir üzerinden finanse ediliyor',
     'per_month_suffix' => '/ay',

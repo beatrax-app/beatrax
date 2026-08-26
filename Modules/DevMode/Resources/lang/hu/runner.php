@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Argumentum-űrlapot nyit meg',
 
+    'spawning_unavailable' => 'Az Artisan-parancsok külön folyamatban futnak, és ez a platform nem engedi az alkalmazásnak, hogy elindítson egyet. Futtasd őket az asztali alkalmazásból.',
+
     'status' => [
         'running' => 'Fut',
         'done' => 'Kész',

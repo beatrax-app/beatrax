@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognose wird aktualisiert…',
-        'risk' => 'Saldo fällt am :date unter €0.|Saldo fällt an :count Tagen unter €0 — erster: :date.',
+        'risk' => 'Saldo fällt am :date unter :zero.|Saldo fällt an :count Tagen unter :zero — erster: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'Zahlung|Zahlungen',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', voraussichtlicher Saldo minus €:amount',
-        'aria_balance_positive' => ', voraussichtlicher Saldo €:amount',
+        'aria_balance_negative' => ', voraussichtlicher Saldo minus :amount',
+        'aria_balance_positive' => ', voraussichtlicher Saldo :amount',
         'overflow' => '+:count weitere',
         'paid' => 'Bezahlt',
         'missed' => 'Erwartet — nicht gefunden',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Gebuchte Zahlung',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ Datum ungefähr',
         'series' => '↗ Reihe',
         'counterparty' => '↗ Zahlungspartner',
+        'transaction' => '↗ Transaktion',
         'end_of_day' => 'Tagesende',
     ],
 ];

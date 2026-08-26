@@ -33,6 +33,14 @@
             <p class="text-xs text-slate-500 dark:text-slate-400">
                 {{ Lang::get('mobile::welcome.create_account_note') }}
             </p>
+
+            {{-- Last, and quieter: it is the rarest of the three, but it was
+                 missing altogether, so a reader holding a backup had no way
+                 back that did not start by creating an account they did not
+                 want. --}}
+            <x-core::secondary-button :href="route('mobile.restore')" block="full">
+                {{ Lang::get('mobile::welcome.restore') }}
+            </x-core::secondary-button>
         </div>
 
         <x-core::locale-switcher />

@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Stále neimportované — kategórie',
-        'payee' => 'Stále neimportované — príjemcovia',
         'extra' => 'Neimportované',
         'conflict' => 'Vyžaduje tvoje rozhodnutie',
     ],

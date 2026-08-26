@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Margem mínima para :name',
     'save' => 'Guardar a margem',
     'cancel' => 'Cancelar',
-    'clear' => 'Limpar a margem (usar o limite de €0)',
+    'clear' => 'Limpar a margem (usar o limite de :zero)',
 
     'toast' => [
         'updated' => 'Margem atualizada.',

@@ -6,6 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Carbon\CarbonImmutable;
 use Generator;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940BalanceTuple;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940Narrative;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
@@ -225,7 +226,7 @@ final class Mt940Adapter implements SourceAdapter
             return null;
         }
 
-        $date = CarbonImmutable::createFromFormat('!ymd', $m[2]);
+        $date = SafeDate::fromFormatOrNull('!ymd', $m[2]);
         $magnitude = $this->tryParseBalanceAmount($m[4]);
         if (! $date instanceof CarbonImmutable || $magnitude === null) {
             return null;

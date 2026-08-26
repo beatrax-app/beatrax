@@ -37,7 +37,7 @@ return [
     'col_account' => 'Konts',
     'col_counterparty' => 'Darījuma partneris',
     'col_note' => 'Piezīme',
-    'col_settled_eur' => 'Norēķinu EUR',
+    'col_settled' => 'Norēķins',
     'col_original' => 'Sākotnējā',
     'col_year' => 'Gads',
 

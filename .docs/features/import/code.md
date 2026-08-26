@@ -163,14 +163,15 @@ Modules/Import/
   it was introduced by #195 to replace bare strings at the
   adapter registry, the header profiles, the payment-type
   hinters and the starting-balance detectors. Its cases are
-  `AsnCsv`, `IngCsv`, `Camt053`, `Mt940`, `IcsPdf`,
-  `PaypalCsv`, `Eml`, `Mbox`, carrying no issuer prefix:
-  `ing-csv` rides the ASN CSV adapter as a layout, so a bank
-  name on the case would say which bank happened to be first
-  rather than what the file is. The `source_format` column
-  stays open — a CSV preset registers its own format at
-  runtime, so a value absent from the enum is a preset, not an
-  error.
+  `AsnCsv`, `Camt053`, `Mt940`, `IcsPdf`, `PaypalCsv`, `Eml`,
+  `Mbox` — every one of which keys either the adapter registry
+  or `ParseStage`'s receipt arm, an invariant
+  `tests/Contracts/OfferedFormatsResolveToAParserArchTest.php`
+  holds. The `source_format` column stays open — a CSV preset
+  registers its own format at runtime, so a value absent from
+  the enum is a preset, not an error. A bank whose CSV a preset
+  reads is named only by that preset's format id, which is why
+  ING is `ing-nl-csv` and not an enum case.
 - **Events/**
   - `TransactionImported` — carries `(Transaction $transaction,
     User $user)`, and is dispatched by `Ledger`'s

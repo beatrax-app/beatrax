@@ -2,8 +2,8 @@
     All-accounts aggregate `line` chart partial.
 
     Renders ONE line series summing every account's per-day point
-    estimate (converted to EUR via the per-account default-currency
-    stored fx-rate on each contribution). The chart variant is
+    estimate, each converted from the account's own currency into the
+    reader's base currency before it is added. The chart variant is
     `line` (NOT `rangeArea`) — the aggregate of all accounts is
     informational; the per-account chart still shows the honest
     range band on its own tab.
@@ -11,8 +11,8 @@
     Variables in scope:
       - $chartElementId : string                   (DOM id the JS hook attaches to)
       - $aggregatePoints : list<array{date: string, point_minor: int}>
-      - $aggregateBufferFloor : int                (sum of per-account effective buffers, in minor)
-      - $aggregateCurrency : string                ('EUR' for the rollup)
+      - $aggregateBufferFloor : int                (per-account effective buffers in base currency, in minor)
+      - $aggregateCurrency : string                (the reader's base currency)
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
@@ -27,6 +27,10 @@
     $bufferValue = $aggregateBufferFloor / Money::MINOR_UNITS_PER_MAJOR;
 
     $options = [
+        // The axis formatter in app.js has no other way to know what these
+        // points are denominated in; without it the page-level reporting
+        // currency wins and the numbers keep the wrong symbol.
+        'beatraxCurrency' => $aggregateCurrency,
         'chart' => [
             'type' => 'line',
             'height' => 320,
@@ -110,6 +114,11 @@
      viewport widths including phone. The responsive[] breakpoints above
      handle tick/label tuning at <768px. --}}
 <div
+    {{-- Keyed on the chart id: a horizon or account flip renames the
+         target, and without this Livewire morphs the wrapper in place,
+         x-init never re-runs, and the Alpine instance goes on holding a
+         node that is no longer the one being drawn into. --}}
+    wire:key="chart-{{ $chartElementId }}"
     style="width:100%"
     x-data="{ chart: null }"
     x-init="
@@ -126,7 +135,10 @@
     "
     data-options="{{ $optionsJson }}"
 >
+    {{-- wire:ignore, and it is not decoration: Livewire's morph wiped the
+         rendered SVG out of this node, leaving a bordered empty box. --}}
     <div
+        wire:ignore
         id="{{ $chartElementId }}"
         data-testid="all-accounts-aggregate-chart"
         data-chart-variant="line"

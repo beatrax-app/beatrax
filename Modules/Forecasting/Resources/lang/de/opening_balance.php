@@ -13,15 +13,18 @@ return [
     'as_of_label' => 'Anfangssaldo per',
     'as_of_help' => 'Das Datum, für das der Betrag oben gilt.',
 
-    'divergence' => 'Das weicht um mehr als €500 von dem Saldo ab, den Beatrax aus deinen importierten Transaktionen berechnet. Bist du sicher?',
+    'divergence' => 'Das weicht um mehr als :threshold von dem Saldo ab, den Beatrax aus deinen importierten Transaktionen berechnet. Bist du sicher?',
     'use_beatrax' => 'Zahl von Beatrax verwenden',
     'use_mine' => 'Meine Zahl verwenden',
 
     'save' => 'Anfangssaldo speichern',
+    'remove' => 'Anfangssaldo entfernen',
     'saved' => 'Gespeichert.',
+    'removed' => 'Entfernt.',
 
     'toast' => [
         'updated' => 'Anfangssaldo aktualisiert.',
+        'removed' => 'Anfangssaldo entfernt.',
     ],
 
     'errors' => [

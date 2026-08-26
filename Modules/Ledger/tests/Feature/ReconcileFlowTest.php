@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Internal\Http\Livewire\ReconcilePage;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\Currency;
 
 beforeEach(function (): void {
     $this->user = User::create(['username' => 'reconcile-flow-fixture', 'password' => 'fixture-password', 'period_start_day' => 1]);
@@ -106,4 +107,69 @@ it('refuses to reconcile on a balance or date it cannot read', function (): void
         ->assertSet('error', 'Enter a valid statement balance and date.');
 
     expect(DB::table('transactions')->where('status', 'reconciled')->count())->toBe(0);
+});
+
+// A printed statement is denominated in one currency, the account's own. On an
+// account also holding euro rows, the difference was computed against both
+// added together and the figure on screen was labelled with the reader's base
+// currency rather than the statement's.
+it('answers in the currency the statement is printed in, not in every currency the account holds', function (): void {
+    $usdAccount = Account::create([
+        'user_id' => $this->user->id,
+        'name' => 'Revolut USD',
+        'slug' => 'revolut-usd-reconcile-flow-fixture',
+        'kind' => 'bank',
+        'iban' => 'GB00REVOUSD0000001',
+        'default_currency' => Currency::Usd->value,
+    ]);
+
+    $dollars = $this->makeTransaction($this->user, $usdAccount, $this->run, [
+        'status' => 'cleared',
+        'amount_minor' => -5000,
+        'currency' => Currency::Usd->value,
+        'settled_amount_minor' => -5000,
+        'settled_currency' => Currency::Usd->value,
+        'posted_at' => '2026-06-10',
+    ]);
+    $euros = $this->makeTransaction($this->user, $usdAccount, $this->run, [
+        'status' => 'cleared',
+        'amount_minor' => -3000,
+        'settled_amount_minor' => -3000,
+        'posted_at' => '2026-06-10',
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test(ReconcilePage::class, ['accountId' => $usdAccount->id])
+        ->set('statementDate', '2026-06-15')
+        ->set('statementBalance', '-50,00')
+        ->assertViewHas('statementCurrency', Currency::Usd->value)
+        ->assertViewHas('clearedBalanceMinor', -5000)
+        ->assertViewHas('differenceMinor', 0)
+        ->assertViewHas('isMatched', true)
+        ->call('confirmReconcile')
+        ->assertDispatched('toast');
+
+    expect(DB::table('transactions')->where('id', $dollars->id)->value('status'))->toBe('reconciled');
+    expect(DB::table('transactions')->where('id', $euros->id)->value('status'))->toBe('reconciled');
+});
+
+// The account select's "choose an account" option carries the empty string, and
+// Livewire writes the CLIENT-side model value into the query string the moment
+// it changes — before the server has cast it. `except: null` does not match '',
+// so clearing the select put ?accountId= in the address bar. Only modifiers
+// written BEFORE `.live` reach the value parser; everything after it configures
+// the network trip, which is why `.live.number` reads as a fix and is not one.
+it('parses the account select client-side, so clearing it cannot write an empty accountId into the URL', function (): void {
+    $html = (string) Livewire::actingAs($this->user)
+        ->test(ReconcilePage::class)
+        ->html();
+
+    expect($html)->toContain('<option value="">');
+
+    preg_match('/wire:model((?:\.[a-z0-9]+)*)="accountId"/', $html, $binding);
+    $modifiers = array_values(array_filter(explode('.', $binding[1] ?? '')));
+
+    expect(array_search('number', $modifiers, true))
+        ->toBeInt()
+        ->toBeLessThan(array_search('live', $modifiers, true));
 });

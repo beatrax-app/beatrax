@@ -351,7 +351,7 @@ it('hintCount returns the count of NULL-endpoint candidates only', function (): 
     $tx1 = clqTx($this->user, $bank, $this->run, -100, 'expense', 'A', 'a', '2026-04-24', 'hc1', 1);
     $tx2 = clqTx($this->user, $bank, $this->run, -200, 'expense', 'B', 'b', '2026-04-24', 'hc2', 2);
     clqSeedLink($this->db, $this->user, (int) $tx1->id, null, 'ics_bulk_settle', 'candidate', '0.900', 'auto', ['tolerance_used' => 'exceeded']);
-    clqSeedLink($this->db, $this->user, (int) $tx2->id, null, 'funded_by_card_hint', 'candidate', '0.800', 'auto', ['card_last_four' => '1234']);
+    clqSeedLink($this->db, $this->user, (int) $tx2->id, null, 'funded_by_card_hint', 'candidate', '0.800', 'auto', ['card_last4' => '1234']);
 
     // A concrete candidate — must NOT be counted as a hint.
     $tx3 = clqTx($this->user, $this->paypal, $this->run, -300, 'expense', 'C', 'c', '2026-05-10', 'hc3', 3);

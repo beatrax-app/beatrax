@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Warnempfindlichkeit',
-    'sensitivity_help' => 'Markiere Abbuchungen, die mehr als :percent% über deinen üblichen Ausgaben für diesen Händler oder diese Kategorie liegen.',
+    'sensitivity_help' => 'Wie schnell Beatrax eine Abbuchung für diesen Händler oder diese Kategorie als ungewöhnlich einstuft, von 1 bis 100. Höher markiert mehr.',
 
     'min_amount_label' => 'Mindestbetrag der Abbuchung',
-    'min_amount_help' => 'Ignoriere Auffälligkeiten bei Abbuchungen unter diesem Betrag. Gespeichert in Cent (€) — 1000 bedeutet €10.00.',
+    'min_amount_help' => 'Ignoriere Auffälligkeiten bei Abbuchungen unter diesem Betrag. Gespeichert in Cent (:symbol) — 1000 bedeutet :example.',
 
     'save' => 'Anomalie-Einstellungen speichern',
     'saved' => 'Gespeichert.',

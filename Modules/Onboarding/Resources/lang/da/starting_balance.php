@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Konto er ikke angivet. Genindlæs guiden.',
         'invalid_amount' => 'Indtast et gyldigt beløb.',
-        'amount_range' => 'Indtast et beløb mellem -€10M og €10M.',
+        'amount_range' => 'Indtast et beløb mellem :min og :max.',
         'pick_date' => 'Vælg en dato.',
         'pick_valid_date' => 'Vælg en gyldig dato.',
         'future_date' => 'Datoen for startsaldoen kan ikke ligge i fremtiden.',

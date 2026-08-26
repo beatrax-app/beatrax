@@ -83,7 +83,14 @@
     <label class="block text-sm text-slate-900 dark:text-slate-100" for="locale-switcher-select">{{ Lang::get('core::settings.language.label') }}</label>
 @endif
 @if ($model !== null)
-    <div class="{{ $formClass }}">
+    {{-- The listener is on the switcher and not on the row it draws: Livewire
+         morphs the row on every round trip, and a listener bound to a replaced
+         node stops firing after the first switch. --}}
+    <div
+        class="{{ $formClass }}"
+        x-data
+        x-on:locale-applied.window="document.documentElement.lang = $event.detail.tag"
+    >
         <x-core::locale-select
             :labelled="$labelled"
             :selectClass="$selectClass"
@@ -98,6 +105,7 @@
     action="{{ route('locale.switch') }}"
     class="{{ $formClass }}"
     x-data
+    data-beatrax-post
     x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)"
 >
     @csrf

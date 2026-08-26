@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Minsta buffert för :name',
     'save' => 'Spara buffert',
     'cancel' => 'Avbryt',
-    'clear' => 'Rensa bufferten (använd €0 som golv)',
+    'clear' => 'Rensa bufferten (använd :zero som golv)',
 
     'toast' => [
         'updated' => 'Bufferten har uppdaterats.',

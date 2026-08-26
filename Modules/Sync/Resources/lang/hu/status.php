@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Eltávolított eszköz',
     'dismiss_peer' => 'Eszköz elvetése',
     'dismiss_stale' => 'A már nem párosított eszközök törlése',
-    'no_devices' => 'Még nincs szinkronizált eszköz',
+    'not_synced_yet' => 'Még nincs szinkronizálva',
     'error' => 'Szinkronizálási hiba egy vagy több eszközön',
     'syncing' => 'Szinkronizálás…',
     'offline' => 'Az eszközök offline',

@@ -22,7 +22,7 @@ return [
         'transaction' => 'Tapahtuma',
     ],
 
-    'eur_equivalent' => 'Vastaava EUR-summa',
+    'settled_equivalent' => 'Tilitetty valuutassa :code',
     'chart_requires_js' => 'Kaavio vaatii JavaScriptin.',
 
     'tolerance_toast' => 'Toleranssi: :percent %',

@@ -24,7 +24,6 @@ final class CsvPreset
     public function __construct(
         public readonly string $format,
         public readonly string $label,
-        public readonly string $issuer,
         public readonly array $headerSignature,
         public readonly string $dateHeader,
         public readonly string $dateFormat,
@@ -50,6 +49,15 @@ final class CsvPreset
         public readonly ?string $stateHeader = null,
         public readonly array $acceptedStates = [],
     ) {}
+
+    // What the account this file belongs to is called when the export carries
+    // no own-IBAN column, as single-account fintech exports (N26, Revolut,
+    // Wise) do not. It is not an IBAN and must not be validated as one:
+    // AccountNamer asks the registry whether a value is one of these.
+    public function ownAccountIdentifier(): string
+    {
+        return strtoupper(str_replace('-csv', '', $this->format));
+    }
 
     public static function normaliseHeader(string $header): string
     {

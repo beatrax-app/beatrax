@@ -160,9 +160,34 @@ the 14th" that does not exist. Snapping on the provisional median lets
 that cluster fail honestly as `irregular`.
 
 The reverse case is the reason the refined median exists at all: a real
-monthly subscription that skipped two months should still project its
-next charge one month out, not three, so the projection uses the median
-with the skip discounted.
+monthly subscription that skipped two months should still be read as
+monthly rather than three-monthly, so the skipped gaps are discounted
+before the median is reported.
+
+### Projecting the next occurrence
+
+`next_expected_at` is one step of the **snapped cadence** past the last
+posting — one month for `SeriesCadence::Monthly`, seven days for
+`SeriesCadence::Weekly`, three months for `SeriesCadence::Quarterly`, a
+year for `SeriesCadence::Yearly`. It is not the median number of days
+added to that posting: a bill seen on 15 January and 15 February has a
+31-day median, and adding 31 days projects 18 March, then 14 April, then
+a little further off every period. Stepping the band is also what
+delivers "one month out, not three" for the subscription that skipped —
+the step is taken from the last posting the series actually has, so a
+skipped period is behind it, not inside it. An `irregular` cluster is
+projected nowhere at all — it is the one band with no calendar step, and
+it is excluded before the step is taken rather than falling through to a
+day-median guess.
+
+The day of the month is read off the series' **first** posting, not off
+the stepped date. February clamps a bill charged on the 31st to the
+28th, and no later step recovers the 31st from a clamped date — every
+month after it would sit on the 28th. Taking the billing day from the
+first posting each time lands February on the 28th (or the 29th) and
+March back on the 31st. `SeriesEntryPlacer` then steps whole periods
+from `next_expected_at` rather than chaining single steps, for the same
+reason.
 
 `confidence_low` is set when the interval standard deviation exceeds 5
 days. It does not change the cadence; it marks `next_expected_at` as a

@@ -40,13 +40,13 @@ abstract class DescriptionKeywordHinter implements PaymentTypeHinter
 
     public function hint(CanonicalTransaction $tx, string $sourceFormat): ?PaymentTypeHint
     {
-        $haystack = $this->searchableDescription($tx, $sourceFormat);
+        $haystack = $this->searchableText($tx, $sourceFormat);
         if ($haystack === null) {
             return null;
         }
 
         foreach ($this->keywords() as $entry) {
-            if (mb_strpos($haystack, $entry['keyword']) !== false) {
+            if ($this->carries($haystack, $entry['keyword'])) {
                 return new PaymentTypeHint(
                     type: $entry['type'],
                     confidence: $entry['confidence'],
@@ -58,16 +58,27 @@ abstract class DescriptionKeywordHinter implements PaymentTypeHinter
         return null;
     }
 
-    private function searchableDescription(CanonicalTransaction $tx, string $sourceFormat): ?string
+    // Letters, not `\b`: a bank glues a time or a terminal number straight
+    // onto its lexeme (`Betaalautomaat12:34`), which `\b` would refuse, while
+    // an ordinary word that merely ends in one — `coffee`, `Feenstra`,
+    // `Idealo` — is not the lexeme and must not match.
+    private function carries(string $haystack, string $keyword): bool
+    {
+        return preg_match('/(?<!\p{L})'.preg_quote($keyword, '/').'(?!\p{L})/u', $haystack) === 1;
+    }
+
+    // An adapter whose file has one text column puts it in `counterpartyName`
+    // and leaves `description` null, so reading the description alone made the
+    // classification depend on that choice: the same Revolut refund row was
+    // Refund with a description and Unknown without one.
+    private function searchableText(CanonicalTransaction $tx, string $sourceFormat): ?string
     {
         if (! $this->handles($sourceFormat)) {
             return null;
         }
 
-        if ($tx->description === null || $tx->description === '') {
-            return null;
-        }
+        $text = trim(($tx->description ?? '').' '.($tx->counterpartyName ?? ''));
 
-        return mb_strtolower($tx->description);
+        return $text === '' ? null : mb_strtolower($text);
     }
 }

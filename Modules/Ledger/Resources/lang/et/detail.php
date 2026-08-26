@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Vastaspool',
     'description' => 'Kirjeldus',
     'amount_native' => 'Summa (algne)',
-    'amount_settled' => 'Summa (arveldatud EUR)',
+    'amount_settled' => 'Summa (arveldatud)',
     'effective_rate' => 'Tegelik kurss',
     'ics_markup' => 'Sisaldab võimalikku ICS juurdehindlust.',
 

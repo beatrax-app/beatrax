@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Nijedna serija još ne utječe na prognozu ovog računa.',
 
     'net_diff' => 'Neto razlika',
+
+    'net_diff_unknown' => 'Još nije izračunato za ovaj horizont.',
     'net_diff_section_aria' => 'Neto razlika između polaznog scenarija i scenarija na horizontu od 30 / 60 / 90 dana',
     'net_diff_delta_aria' => 'Neto razlika na dan :day: :value, scenarij je :state',
     'better_than_baseline' => 'bolji od polaznog scenarija',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Istaknuto iz prognoze',
     'highlights_shortfall_aria' => ':count aktivno razdoblje manjka u sljedećih :days dana|:count aktivna razdoblja manjka u sljedećih :days dana|:count aktivnih razdoblja manjka u sljedećih :days dana',
-    'dips_to' => ':name pada na :amount',
     'on_date_suffix' => ' na dan :date',
     'shortfall_window' => ':count aktivno razdoblje manjka|:count aktivna razdoblja manjka|:count aktivnih razdoblja manjka',
-    'lowest_in_30' => 'Najniže u 30 dana: :amount',
+    'lowest_in_30_label' => 'Najniže u 30 dana',
     'next_ics' => 'Sljedeće ICS namirenje: :amount na dan :date',
+    'ics_overdue' => 'ICS namirenje je dospjelo: :amount, rok je bio :date',
 ];

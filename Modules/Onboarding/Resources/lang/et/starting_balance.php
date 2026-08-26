@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Kontot pole määratud. Laadi viisard uuesti.',
         'invalid_amount' => 'Sisesta kehtiv summa.',
-        'amount_range' => 'Sisesta summa vahemikus -10 mln € kuni 10 mln €.',
+        'amount_range' => 'Sisesta summa vahemikus :min kuni :max.',
         'pick_date' => 'Vali kuupäev.',
         'pick_valid_date' => 'Vali kehtiv kuupäev.',
         'future_date' => 'Algsaldo kuupäev ei saa olla tulevikus.',

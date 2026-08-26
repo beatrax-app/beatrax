@@ -12,11 +12,14 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
+use Modules\DriftAlerts\Internal\Dto\InsightCandidate;
 use Modules\DriftAlerts\Public\Dto\SavingsInsight;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 final class SavingsInsightsQuery
@@ -33,6 +36,7 @@ final class SavingsInsightsQuery
         private readonly Clock $clock,
         private readonly CacheRepository $cache,
         private readonly BaseCurrency $baseCurrency,
+        private readonly CrossCurrencyTotal $fx,
     ) {}
 
     /**
@@ -56,8 +60,15 @@ final class SavingsInsightsQuery
         $openAlerts = $this->openAlertSeriesIds($user);
         $dismissed = $this->dismissedKeys($user);
 
+        $approved = $this->recurring->allApprovedForUser($user);
+        $baseCurrency = $this->baseCurrency->forUser($user);
+        $rates = $this->fx->ratesTo(array_map(
+            static fn (RecurringSeriesDto $series): string => $series->monthlyEquivalent->currency(),
+            $approved,
+        ), $baseCurrency);
+
         $insights = [];
-        foreach ($this->recurring->allApprovedForUser($user) as $series) {
+        foreach ($approved as $series) {
             if ($series->direction !== Direction::Expense->value) {
                 continue;
             }
@@ -77,11 +88,14 @@ final class SavingsInsightsQuery
 
             $monthlyMinor = abs($series->monthlyEquivalent->toMinor());
             $insight = $this->pick(
-                $series->seriesId,
-                $series->displayName(),
-                $monthlyMinor,
-                $series->monthlyEquivalent->currency(),
-                $identity['slug'],
+                new InsightCandidate(
+                    seriesId: $series->seriesId,
+                    name: $series->displayName(),
+                    monthlyMinor: $monthlyMinor,
+                    currency: $series->monthlyEquivalent->currency(),
+                    monthlyInBaseMinor: $this->inBase($monthlyMinor, $series->monthlyEquivalent->currency(), $baseCurrency, $rates),
+                    counterpartySlug: $identity['slug'],
+                ),
                 $resource,
                 isset($openAlerts[$series->seriesId]),
             );
@@ -91,9 +105,49 @@ final class SavingsInsightsQuery
             }
         }
 
-        usort($insights, static fn (SavingsInsight $a, SavingsInsight $b): int => $b->monthlyMinor <=> $a->monthlyMinor);
+        return $this->costliestFirst($insights, $baseCurrency, $rates);
+    }
 
-        return $insights;
+    // Null for a currency the rate table cannot reach, which withholds the
+    // review prompt rather than comparing foreign minor units with a floor
+    // denominated in the reader's own.
+    /**
+     * @param  array<string, string>  $rates
+     */
+    private function inBase(int $minor, string $currency, string $baseCurrency, array $rates): ?int
+    {
+        $money = Money::tryOfMinor($minor, $currency);
+
+        return $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates)?->toMinor();
+    }
+
+    // "Ways to save", ordered by what each costs the reader — a race between
+    // currencies, so it is run in the reader's own. On raw minor units a
+    // USD150.00 subscription outranked a EUR100.00 one while being cheaper. An
+    // insight the rate table cannot reach sorts after every one it can.
+    /**
+     * @param  list<SavingsInsight>  $insights
+     * @param  array<string, string>  $rates
+     * @return list<SavingsInsight>
+     */
+    private function costliestFirst(array $insights, string $baseCurrency, array $rates): array
+    {
+        $inBase = [];
+        foreach ($insights as $index => $insight) {
+            $inBase[$index] = $this->inBase($insight->monthlyMinor, $insight->currency, $baseCurrency, $rates);
+        }
+
+        $order = array_keys($insights);
+        usort($order, static function (int $a, int $b) use ($inBase, $insights): int {
+            $rankable = ($inBase[$b] !== null) <=> ($inBase[$a] !== null);
+            if ($rankable !== 0) {
+                return $rankable;
+            }
+
+            return ($inBase[$b] ?? $insights[$b]->monthlyMinor) <=> ($inBase[$a] ?? $insights[$a]->monthlyMinor);
+        });
+
+        return array_map(static fn (int $index): SavingsInsight => $insights[$index], $order);
     }
 
     public function dismiss(User $user, string $key): void
@@ -115,19 +169,22 @@ final class SavingsInsightsQuery
     }
 
     private function pick(
-        int $seriesId,
-        string $name,
-        int $monthlyMinor,
-        string $currency,
-        string $slug,
+        InsightCandidate $candidate,
         SupportResource $resource,
         bool $hasOpenAlert,
     ): ?SavingsInsight {
+        $seriesId = $candidate->seriesId;
+        $name = $candidate->name;
+        $monthlyMinor = $candidate->monthlyMinor;
+        $currency = $candidate->currency;
+        $monthlyInBaseMinor = $candidate->monthlyInBaseMinor;
+        $slug = $candidate->counterpartySlug;
+
         $monthly = Money::ofMinor($monthlyMinor, $currency)->format();
 
-        // The review floor is a base-currency threshold; the arm applies it only
-        // to base-currency series so a foreign minor amount is never compared
-        // with it.
+        // The review floor is a threshold in the reader's reporting currency,
+        // so the series is converted into it before the comparison rather than
+        // refused for not already being denominated in it.
         return match (true) {
             $resource->cheaperUrl !== null => new SavingsInsight(
                 key: 'cheaper:'.$seriesId,
@@ -153,7 +210,7 @@ final class SavingsInsightsQuery
                 actionUrl: $resource->cancelUrl,
                 counterpartySlug: $slug,
             ),
-            $currency === $this->baseCurrency->code() && $monthlyMinor >= self::REVIEW_FLOOR && $resource->cancelUrl !== null => new SavingsInsight(
+            $monthlyInBaseMinor !== null && $monthlyInBaseMinor >= self::REVIEW_FLOOR && $resource->cancelUrl !== null => new SavingsInsight(
                 key: 'review:'.$seriesId,
                 type: 'review',
                 seriesId: $seriesId,

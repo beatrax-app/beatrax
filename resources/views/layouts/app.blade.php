@@ -12,13 +12,12 @@
     // Chart chrome the ApexCharts helpers in app.js read off <html>: the
     // money axis needs the base currency, and ApexCharts names its own
     // <svg> in English ("donut chart with 14 data series") unless told.
-    // The reader's OWN reporting currency, not the app-wide fallback: a user
-    // who picks GBP in Settings had every chart axis drawn in euros beside
-    // pounds everywhere else. Guests have no preference, so they get the
-    // fallback.
+    // A guest has no reporting currency to draw an axis in, and asking for
+    // one is refused, so the login shell takes what the install ships with.
+    $baseCurrency = $container->make(BaseCurrency::class);
     $chartCurrency = $currentUser->isAuthenticated()
-        ? ($currentUser->user()->base_currency ?? BaseCurrency::value())
-        : BaseCurrency::value();
+        ? $baseCurrency->code()
+        : $baseCurrency->installDefault();
 
     $chartLabels = json_encode([
         'donut' => Lang::get('core::components.chart.donut'),
@@ -124,8 +123,34 @@
                     CSS-hidden at >=1024px — desktop layout is unchanged.
                     Inserts before <main> so it stacks above the main content column on mobile.
                 --}}
-                <x-core::mobile-top-bar class="top-bar-global" />
-                <main class="flex-1 min-w-0 overflow-auto">
+                {{-- The palette covers the top bar and carries its own close
+                     control, so it may go inert too. The DRAWER must never
+                     inert it: the scrim is aria-hidden, so the hamburger is a
+                     screen reader's only way back out. --}}
+                <x-core::mobile-top-bar class="top-bar-global" x-bind:inert="$store.overlay.has('palette') || null" />
+                {{--
+                    inert while any overlay covers the page. Both the drawer
+                    and the command palette are role=dialog aria-modal=true, and
+                    nothing made the page behind them unreachable: read off an
+                    iPhone 12 mini with VoiceOver's own tree, the open drawer
+                    still exposed "August 2026", "This period totals" and the
+                    €3,202.14 behind it. Controls left focusable outside the
+                    dialog — drawer 15, palette 97 (the whole ledger).
+
+                    One attribute on one element, which is what x-shell::drawer
+                    asks for — x-trap.inert walked the document marking siblings
+                    inert and killed the Android renderer.
+
+                    `|| null` is load-bearing: inert is a BOOLEAN attribute, so
+                    inert="false" is still inert. Measured in WebKit — "", "true"
+                    and "false" all give 0 focusable descendants. null is the
+                    only value that removes it.
+
+                    The top bar stays reachable on purpose: the scrim is
+                    aria-hidden, so the hamburger is a screen reader's only way
+                    back out of the drawer.
+                --}}
+                <main class="flex-1 min-w-0 overflow-auto" x-bind:inert="$store.overlay.blocking || null">
                     @livewire('core.system-alerts-banner')
                     @livewire('categorization.rule-form-modal')
                     @livewire('categorization.correction-divergence-toast')

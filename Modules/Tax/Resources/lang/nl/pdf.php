@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Tegenpartij',
     'col_description' => 'Omschrijving',
     'col_note' => 'Notitie',
-    'col_amount' => 'Bedrag (EUR)',
+    'col_amount' => 'Bedrag',
 
     'subtotal' => 'Subtotaal',
 

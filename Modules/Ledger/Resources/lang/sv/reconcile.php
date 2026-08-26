@@ -10,7 +10,7 @@ return [
     'account' => 'Konto',
     'choose_account' => 'Välj ett konto…',
     'statement_date' => 'Kontoutdragets datum',
-    'statement_balance' => 'Saldo enligt kontoutdrag (€)',
+    'statement_balance' => 'Saldo enligt kontoutdrag (:symbol)',
     'balance_help' => 'Förifylls från ditt senast importerade kontoutdrag när det går — negativt för skuld, redigerbart i båda fallen.',
 
     'cleared_balance' => 'Bokfört saldo',

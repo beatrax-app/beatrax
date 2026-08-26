@@ -138,7 +138,7 @@ final class RestoreDatabaseCommand extends Command
         $escaped = str_replace("'", "''", $preRestorePath);
         // VACUUM INTO must not run inside a transaction; this call stands alone
         // on the named `sqlite` connection, which opens none.
-        $this->db->connection('sqlite')->statement(sprintf("VACUUM INTO '%s'", $escaped));
+        $this->db->connection(SqliteDatabase::connectionName($this->config))->statement(sprintf("VACUUM INTO '%s'", $escaped));
         if ($this->files->chmod($preRestorePath, 0o600) === false) {
             $this->error('Failed to chmod pre-restore snapshot to 0600; aborting.');
 
@@ -149,7 +149,7 @@ final class RestoreDatabaseCommand extends Command
         // Release the live PDO handle so the file copy can land cleanly. The
         // next call to connection() will fire ConnectionEstablished, which
         // re-applies the WAL + synchronous PRAGMAs on the swapped-in file.
-        $this->db->purge('sqlite');
+        $this->db->purge(SqliteDatabase::connectionName($this->config));
 
         if ($this->files->copy($sourcePath, $livePath) === false) {
             $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
@@ -164,7 +164,7 @@ final class RestoreDatabaseCommand extends Command
         // Framework connection, NOT a fresh PDO, so SqliteOptimizationsProvider's
         // ConnectionEstablished listener re-applies WAL + synchronous on the
         // swapped-in file.
-        $rawIntegrity = $this->db->connection('sqlite')->scalar('PRAGMA integrity_check');
+        $rawIntegrity = $this->db->connection(SqliteDatabase::connectionName($this->config))->scalar('PRAGMA integrity_check');
         if ((is_string($rawIntegrity) ? $rawIntegrity : '') !== 'ok') {
             // Maintenance mode stays ON so the operator notices and restores
             // from the pre-restore snapshot.
@@ -184,14 +184,13 @@ final class RestoreDatabaseCommand extends Command
      */
     private function resolveLivePath(): string
     {
-        $driver = $this->config->get(SqliteDatabase::DRIVER_CONFIG_KEY);
-        if ($driver !== SqliteDatabase::DRIVER) {
+        if (! SqliteDatabase::isSqliteBuild($this->config)) {
             throw new BackupNotSupportedException('db:restore is only supported on the sqlite driver.');
         }
 
-        $path = $this->config->get(SqliteDatabase::LIVE_PATH_CONFIG_KEY);
-        if (! is_string($path) || $path === '') {
-            throw new BackupNotSupportedException(SqliteDatabase::LIVE_PATH_CONFIG_KEY.' is not configured.');
+        $path = SqliteDatabase::livePath($this->config);
+        if ($path === null) {
+            throw new BackupNotSupportedException(SqliteDatabase::livePathKey($this->config).' is not configured.');
         }
 
         return $path;

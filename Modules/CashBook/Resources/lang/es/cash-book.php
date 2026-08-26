@@ -11,7 +11,7 @@ return [
     'expense' => 'Gasto',
     'income' => 'Ingreso',
 
-    'amount' => 'Importe (€)',
+    'amount' => 'Importe (:symbol)',
     'date' => 'Fecha',
     'counterparty' => 'Contraparte',
     'counterparty_placeholder' => 'p. ej. Panadería',

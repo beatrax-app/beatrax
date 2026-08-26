@@ -37,7 +37,7 @@ return [
     'col_account' => 'Рахунок',
     'col_counterparty' => 'Контрагент',
     'col_note' => 'Нотатка',
-    'col_settled_eur' => 'Розраховано в EUR',
+    'col_settled' => 'Розраховано',
     'col_original' => 'Оригінал',
     'col_year' => 'Рік',
 

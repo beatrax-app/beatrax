@@ -11,17 +11,17 @@
         >
             <a
                 href="{{ route('migrations.new') }}"
-                class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                class="pill-btn-primary inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
             >
                 {{ Lang::get('migration::index.start_new') }}
             </a>
         </x-core::empty-state>
     @else
-        <header class="flex items-baseline justify-between gap-4">
+        <header class="flex flex-wrap items-baseline justify-between gap-4">
             <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('migration::index.heading') }}</h1>
             <a
                 href="{{ route('migrations.new') }}"
-                class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                class="pill-btn-primary inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
             >
                 {{ Lang::get('migration::index.start_new') }}
             </a>
@@ -46,7 +46,7 @@
 
                     @if ($run->status === \Modules\Migration\Internal\Enums\MigrationRunStatus::Confirmed->value)
                         <x-core::secondary-button
-                            href="{{ route('migrations.new') }}?reconcile_of={{ $run->id }}"
+                            href="{{ route('migrations.new', ['reconcile_of' => $run->id]) }}"
                             size="sm"
                         >
                             {{ Lang::get('migration::index.check_updates') }}

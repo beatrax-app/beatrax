@@ -163,3 +163,25 @@ it('dompdf Options has isRemoteEnabled set to false in the renderer source', fun
 
     expect((string) $source)->toContain("'isRemoteEnabled', false");
 });
+
+// Helvetica is a PDF core font: nothing is embedded, and the reader supplies
+// the glyphs. Where its Helvetica has no euro sign — macOS Preview is one —
+// the substitute is drawn at the width the core metrics declare, and every
+// euro amount in the export overlaps its first digit. An embedded subset
+// carries the glyph and its own advance, so the figure reads the same
+// everywhere.
+it('embeds the font the money is drawn with rather than naming a core font', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = tpdfUser($db, 'tpdf-euro-user');
+
+    $catId = tpdfCategory($db, $user->id, 'Zorgkosten');
+    $txId = tpdfTransaction($db, $user->id, ['booked_at' => '2025-06-28 00:00:00', 'settled_amount_minor' => -14250]);
+    tpdfTag($db, $user->id, $txId, $catId);
+
+    $pdf = app(TaxPdfRenderer::class)->render($user, 2025);
+
+    expect($pdf)->toStartWith('%PDF-')
+        ->and($pdf)->toContain('/FontFile2')
+        ->and($pdf)->not->toContain('/BaseFont /Helvetica');
+});

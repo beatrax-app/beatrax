@@ -2,27 +2,29 @@
 
 declare(strict_types=1);
 
-use Illuminate\Contracts\Config\Repository;
-use Illuminate\Database\DatabaseManager;
+use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
+use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
 beforeEach(function (): void {
-    $this->sourcePath = RealSqliteFixture::create('phase11-acceptance');
+    // The command derives its destination from the clock at seconds
+    // resolution, and the second run below has to land on the path the first
+    // one already wrote. Unfrozen, the two drift into different seconds.
+    CarbonImmutable::setTestNow('2026-07-29 12:00:00');
 
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.connections.sqlite.database', $this->sourcePath);
-
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $db->purge('sqlite');
+    // No seeded schema: this file is the live database for the whole test, so
+    // the banner, the acting user and the alert row all have to fit in it.
+    $this->sourcePath = RealSqliteFixture::create('phase11-acceptance', []);
 
     $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-phase11-acceptance-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
+
+    LiveSqliteConnection::pointAt($this->app, $this->sourcePath);
+    $this->artisan('migrate', ['--database' => LiveSqliteConnection::NAME, '--force' => true])->assertSuccessful();
 
     $this->user = User::query()->create([
         'username' => 'p11-acceptance',
@@ -33,6 +35,8 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    LiveSqliteConnection::restore($this->app);
+    CarbonImmutable::setTestNow(null);
     putenv('NATIVEPHP_STORAGE_PATH');
 
     /** @var string $sourcePath */
@@ -56,17 +60,6 @@ afterEach(function (): void {
 it('backup banner round-trip — happy → corrupt → banner → acknowledge', function (): void {
     /** @var string $backupsDir */
     $backupsDir = $this->backupsDir;
-    /** @var string $sourcePath */
-    $sourcePath = $this->sourcePath;
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-
-    // Raw PDO write so the source DB is non-empty for VACUUM INTO to copy.
-    $pdo = new PDO('sqlite:'.$sourcePath, options: [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-    ]);
-    $pdo->exec("INSERT INTO transactions (id, user_id, amount_minor, currency, booked_at) VALUES (1, 1, 12345, 'EUR', '2026-05-19')");
-    unset($pdo);
 
     $this->artisan('db:backup', ['--force' => true])
         ->expectsOutputToContain('Backup written:')
@@ -94,12 +87,10 @@ it('backup banner round-trip — happy → corrupt → banner → acknowledge', 
         ->assertDontSee('Mark as resolved')
         ->assertSeeHtml('aria-label="System alerts"');
 
-    // The SQLite file header is exactly 100 bytes, so truncating there strips
-    // the sqlite_master page VACUUM INTO needs to enumerate tables. Purge the
-    // framework's connection handle first so the write lands on an idle file.
-    $db->purge('sqlite');
-    file_put_contents($sourcePath, substr((string) file_get_contents($sourcePath), 0, 100));
-
+    // Corrupting the live file instead would take the alert row down with it:
+    // the row is written into the database the command just found unreadable.
+    // VACUUM INTO refusing an occupied destination fails the same phase and
+    // leaves the ledger readable, which is what the banner half needs.
     $this->artisan('db:backup', ['--force' => true])->assertFailed();
 
     // Corrupt-path alerts are system-wide (`user_id IS NULL`), which the
@@ -114,28 +105,21 @@ it('backup banner round-trip — happy → corrupt → banner → acknowledge', 
         scandir($backupsDir),
         static fn (string $name): bool => str_ends_with($name, '.sqlite.suspect'),
     ));
-    if ($suspectFiles !== []) {
-        // Post-VACUUM integrity_check tripped: the output was renamed .suspect.
-        /** @var SystemAlert $alert */
-        $alert = $corruptAlerts->first();
-        /** @var array<string, mixed>|null $metadata */
-        $metadata = $alert->metadata;
-        expect($metadata)->toBeArray();
-        expect((string) ($metadata['suspect_path'] ?? ''))
-            ->toContain('.suspect', 'Alert metadata must reference the suspect file.');
-    } else {
-        // The exception bridge fired before any output existed (PDOException at
-        // PRAGMA data_version), so there is no .suspect file — only the alert.
-        /** @var SystemAlert $alert */
-        $alert = $corruptAlerts->first();
-        expect($alert->severity)->toBe('critical');
-    }
+    expect($suspectFiles)->toHaveCount(1, 'The file in the way must be preserved as .suspect.');
+
+    /** @var SystemAlert $alert */
+    $alert = $corruptAlerts->first();
+    /** @var array<string, mixed>|null $metadata */
+    $metadata = $alert->metadata;
+    expect($metadata)->toBeArray();
+    expect((string) ($metadata['suspect_path'] ?? ''))->toBe(
+        $backupsDir.DIRECTORY_SEPARATOR.$suspectFiles[0],
+        'Alert metadata must reference the suspect file.',
+    );
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
         ->assertSee('failed integrity check');
 
-    /** @var SystemAlert $alert */
-    $alert = $corruptAlerts->first();
     $alertId = (int) $alert->id;
 
     $component = Livewire::actingAs($this->user)->test(SystemAlertsBanner::class);

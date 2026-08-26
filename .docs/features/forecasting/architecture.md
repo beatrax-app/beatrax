@@ -92,8 +92,8 @@ What the module explicitly does NOT do:
 `Internal/` houses the projection pipeline:
 
 - **Internal/Pipeline/BalanceAnchorResolver** — picks the anchor
-  balance for the account (statement-derived; user-overridden
-  opening balance when present).
+  balance for the account (Ledger's balance as of today; the card
+  statement or the user-entered opening balance for an ICS card).
 - **Internal/Pipeline/RangeProjector** — produces
   `ForecastContribution` instances per recurring series across the
   horizon, with `CadenceJitter` modelling cadence drift.
@@ -142,6 +142,8 @@ What the module explicitly does NOT do:
   6. `ShortfallDetector::detect` — find windows below buffer;
      write rows + dispatch `ForecastShortfallDetected`.
   7. Persist `forecast_runs.result_json` for the read-side query.
+  8. Prune the runs this one supersedes — every row with a lower id
+     sharing its `(user_id, scenario_id, horizon_days)`.
 - `ForecastRunStateMachine::transition($run, $next)` — the
   `pending → running → complete | failed` lifecycle; the sole
   writer of `forecast_runs.state`.
@@ -174,6 +176,7 @@ ProjectForecastJob::handle()
   → ProjectionPipeline::run
        → BalanceAnchorResolver
        → RangeProjector (with CadenceJitter)
+       → BookedRowProjector
        → ChainAwareForecastRouter
        → ScenarioApplier (only when scenarioId != null)
        → DailyFold (P10/P50/P90)
@@ -208,26 +211,150 @@ sidebar badge
   → composer reads ForecastHighlightsQuery::activeShortfallCountForUser
 ```
 
+## Booked future-dated rows
+
+A projection used to be built from **recurring series alone**. A ledger row
+whose `posted_at` is still ahead — a rent the bank has already booked for the
+first of next month — is not a series, so nothing emitted it: `/transactions`
+listed it, every balance query correctly left it out of today's figure, and no
+forward-looking surface knew it existed. Three device rounds filed the same
+€1,450.00 as missing from the curve and from the calendar.
+
+`BookedRowProjector` reads those rows through `BookedFutureRowQuery` and turns
+each into a `ForecastContribution` with **`low = point = high`**. This widens
+what a contribution represents: it is no longer purely probabilistic. That is
+deliberate — the amount is not an estimate of a charge, it is the charge, and
+an envelope around it would invent uncertainty the row does not carry.
+
+Three things bound which rows reach the curve:
+
+- **Strictly after `asOf`.** A row dated today or behind is money the account
+  is already holding, and the anchor has counted it. Today's figure must not
+  move, and the five surfaces that agree on it are pinned by
+  `TodayAgreesAcrossSurfacesTest`.
+- **At or after the account's baseline** (`AT_OR_AFTER_BASELINE_SQL`), the same
+  bound every balance sum uses — a row before it is already inside the opening
+  figure.
+- **In the account's own projection currency.** A projection runs on one line,
+  and `BalanceAnchorResolver` opens it on the line the account is denominated
+  in, deliberately leaving the account's other currency lines out. A row
+  settled in one of those has no anchor here to move, so it is not folded in.
+  `transactions.fx_rate_used` is the native→settled rate and says nothing about
+  settled→account-default, so it cannot rescue the case.
+
+Booked contributions carry `seriesId = 0`, the sentinel
+`ChainAwareForecastRouter` already reads as "no series behind this". That is
+what stops a chain link re-routing them: the row sits on the account the ledger
+says it does, and moving it onto a funder would take a real card charge off the
+card.
+
+### Which wins where a booked row and a projected occurrence are the same payment
+
+A monthly rent is exactly the shape that can be both. Emitting both drew
+−€2,900.00 for one €1,450.00 rent.
+
+The **booked row wins**: one is what the account will be charged, the other is
+what a cadence suggests it might be. Sameness is decided on a window rather
+than an equality — `MatchWindow::DAYS` either side of the booked date — because
+a bank that moves a direct debit off a weekend still charges the rent once.
+
+#### One booked row retires one occurrence
+
+The window on its own made the rule many-to-one: every estimate inside it was
+dropped, while exactly one contribution was added back per booked row. A
+monthly series never noticed, its next occurrence being about thirty days out.
+A **weekly** one is exactly `MatchWindow::DAYS` out, so a single row on day
+seven retired the day-seven estimate *and* the day-fourteen one, and a week's
+amount left the curve: four €100.00 weekly charges projected as −€300.00.
+
+`OccurrenceSupersession::supersededDates()` pairs the two sides one-to-one
+instead. Booked dates and expected dates are ranked by how far apart they are
+and claimed nearest-first; a booked row claims at most one expected date, an
+expected date is claimed at most once, and one left unpaired survives as an
+estimate. Ranking on the distance and then on the two dates' positions settles
+a tie the same way on every run, so the result does not depend on the order the
+rows came back in.
+
+What is claimed is an **occurrence**, not a contribution. `CadenceJitter`
+smears a percentile-tier series across consecutive days, each carrying a
+fraction of one charge, so retiring a single one of those would leave six
+sevenths of the estimate standing beside the booked row it belongs to
+(−€2,692.84 drawn for one €1,450.00 rent). The claimed date therefore takes the
+run of consecutive days around it with it. A gap of more than a day says the
+next day is a separate occurrence and ends the run, and `MatchWindow::DAYS`
+bounds it, so a run that never breaks — a weekly series that is also smeared,
+whose neighbouring occurrences overlap — cannot swallow the horizon.
+
+`BookedEntryPlacer` reads the same helper for the calendar, where entries sit on
+the occurrence dates themselves and the run is therefore always a single day.
+
+Membership is answered by `TransactionSeriesMembershipQuery::seriesIdsForTransactionIds()`,
+which resolves in two steps, and the second is the one that matters:
+
+1. **`recurring_series_occurrences.transaction_id`** — the authoritative link,
+   written by the detection sweep. It is *not sufficient on its own*. The same
+   sweep that writes the link also advances `next_expected_at` past the row it
+   just read (`CadenceInferrer` sets it to the last occurrence plus the refined
+   median), so for a row the sweep has already seen the projector stops short
+   of it anyway and there is nothing left to suppress.
+2. **The cluster identity the detector groups on** —
+   `transactions.counterparty_normalized` = `recurring_series.cluster_counterparty_key`,
+   same currency, same direction. Both columns are keyed blind indexes under
+   `DOMAIN_COUNTERPARTY_NORMALIZED`, so they are directly comparable. This is
+   the arm that carries the fix: the double count exists precisely in the
+   window between a future-dated row landing in the ledger and the next sweep
+   reading it, which is when no occurrence link exists yet and
+   `next_expected_at` still points at the very day the row is dated.
+
+`UNIQUE(user_id, direction, cluster_counterparty_key, latest_currency)` makes
+the joined triple plus a direction at most one series, so the second arm needs
+no tie-break. Both arms are scoped to `approved` / `cadence_changed` — the two
+states `allApprovedForUser()` walks — because a series in neither is not on the
+curve to be superseded.
+
 ## Balance anchor resolution
 
-`BalanceAnchorResolver` routes by `accounts.kind` to the most authoritative
-starting point available:
+The projection opens where the account stands **today**, and today has exactly
+one figure in this application: Ledger's
+[`AccountBalanceQuery::currentBalanceAsOf`](../ledger/architecture.md#accountbalancequery--caveats-shared-by-all-four-methods),
+the same call behind the dashboard's net worth, the pots reconciliation header
+and `/reconcile`. `BalanceAnchorResolver` delegates to it rather than
+re-deriving a balance of its own, so the four surfaces cannot drift apart.
+That reader opens on the account's Ledger-owned baseline
+([the baseline every balance starts from](../ledger/architecture.md#accountstartingbalancequery--the-baseline-every-balance-starts-from)),
+which already prefers a reader-typed `opening_balance_minor` over an
+import-detected `starting_balance_minor`, and sums `settled_amount_minor`
+bounded below by the baseline's date and above by today on `posted_at` — the
+same column the calendar's past-day line sums, so the anchor and the line
+agree on which rows have landed and the line no longer steps on today.
 
-- `asn` → most recent `statement_summaries.closing_balance_minor`.
-- `ics_card` → most recent `card_statements` "open balance" (the absolute
-  amount still owed, negated to a signed running-balance position since the
-  user owes that amount to the card vendor).
-- `paypal` or any other kind → `accounts.opening_balance_minor` when the
-  user entered one; otherwise the fallback below.
+`accounts.kind` changes that for one kind only. An **ICS card** takes, in
+order, its most recent `card_statements` "open balance" (the absolute amount
+still owed, negated to a signed running-balance position since the user owes
+it to the card vendor), then the ledger balance when the account carries a
+baseline the reader confirmed — either column
+`AccountStartingBalanceQuery` reads, the Settings override
+`accounts.opening_balance_minor` or the `accounts.starting_balance_minor`
+the wizard asks every new user to confirm — then zero. A card with **no**
+baseline to open on must not take the ledger balance: summing its rows would
+double-count the historical billing events the projection is about to re-emit
+forward. Reading only the Settings override left a card whose balance the
+wizard had confirmed anchored at zero, and the all-accounts curve then stood
+that card's whole balance above the net worth on the dashboard one page away.
 
-Fallback: an ICS card account with no statement and no user-input opening
-balance defaults to zero (summing transactions would double-count the
-historical billing events the projection is about to re-emit forward). Every
-other account with no anchor sums every existing transaction from scratch
-(`asOf=1970-01-01`); the UI surfaces this case with an "Opening balance not
-set" banner. The returned `BalanceAnchorDto.source` label
-(`asn_statement_summary` / `ics_card_statement` / `user_input_opening_balance`
-/ `sum_of_transactions` / `ics_card_zero_anchor`) is the audit ribbon's input.
+A statement summary is no longer an anchor for any kind. It was, and a closing
+balance that had not moved since 11 April opened the round-6 desktop's forecast
+at €2,011.11 against €2,941.09 actually on the account — four months of
+imported rows simply absent, because nothing read the `asOfDate` that said how
+old the figure was. The summaries are still Ingestion's record of what a
+statement said; they are not a position.
+
+The returned `BalanceAnchorDto.source` label (`sum_of_transactions` /
+`ics_card_statement` / `ics_card_zero_anchor`) is a diagnostic ribbon carried
+into `result_json` as `anchor_source`; no reader branches on it. There is no
+`asOfDate` on the DTO. There was, and nothing read it, which is how a statement
+four months stale came to be drawn as today's position — every path resolves to
+today now, so there is no date left to carry.
 A missing or cross-user account raises `ModelNotFoundException`, converted to
 a 404 by the HTTP kernel.
 
@@ -294,12 +421,55 @@ Algorithm:
    date) tuple. Any OTHER contribution sharing that tuple (an unrelated
    recurring series whose occurrence happens to land on the settlement
    date) survives, so the daily fold sums it alongside the settlement.
-4. When `$viewByFunder=true`, per-series contributions collapse onto a
+4. Drop the synthesised settlement itself where a booked row on the funder
+   already is it — see below.
+5. When `$viewByFunder=true`, per-series contributions collapse onto a
    single per-day-per-account aggregate (one line per funder account
    instead of N series-tagged lines) — the collapse assumes contributions
    sharing a tuple are already in the funder's default currency, since FX
    conversion never happens in this router (it stays at the daily-fold
    boundary per RESEARCH Pitfall 6).
+
+### Which wins where a booked row and the synthesised settlement are the same payment
+
+Step 2 infers the settlement from an open statement. If the reader's bank
+statement already carries that settlement as a future-dated direct debit, the
+ledger holds the very charge being inferred, `BookedRowProjector` emits it, and
+the fold drew −€2,900.00 for one €1,450.00 settlement.
+
+The dedup in step 3 cannot see it. It is scoped to the chain-routed series ids,
+and a booked contribution carries `seriesId = 0` — so the `seriesId != 0` arm is
+false for it and it always survived.
+
+The **booked row wins**, the same precedence `BookedRowProjector` applies to a
+series estimate: one is a real, already-committed transaction, the other is an
+inference about the same event. The synthesised contribution is what gets
+dropped, and the booked row reaches the fold untouched.
+
+Sameness is decided on three things, because there is no relation between a
+`transactions` row and a `card_statements` row to read instead:
+
+- **The funder account.** Both sit on the account that pays the card.
+- **`MatchWindow::DAYS` around the due date**, not the due date itself — the
+  same window the series case uses, for the same reason: a bank that moves a
+  direct debit off a weekend still settles the card once.
+- **The amount, within `SettlementTolerance::minorFor()`** — €5 or 2% of the
+  statement, whichever is larger, which is already this repo's answer to "is
+  this payment that statement's settlement" where `IcsSettlementResolver` links
+  a settled transfer. A charge that posted after the period closed leaves the
+  debit a little above the balance the statement was written for; it is still
+  the one payment.
+
+The amount arm is what makes the rule safe rather than merely narrow. A bank
+account has a booked row in a fifteen-day window almost always, and matching on
+(account, date) alone would delete the settlement whenever any of them existed.
+
+**Outside the tolerance both survive.** Two figures that far apart are not
+evidence of one payment, and the asymmetry decides it: showing a settlement
+twice makes the curve too pessimistic and raises a shortfall that is not there,
+while dropping a real one hides a shortfall the reader never sees coming. A
+part payment is therefore kept alongside the settlement rather than netted off
+it — netting would invent a figure neither the ledger nor the statement states.
 
 ## Daily fold
 
@@ -404,6 +574,15 @@ complete`, or `→ failed` on any thrown exception, re-thrown so the queue
 worker logs the stack trace). The result is serialized to
 `forecast_runs.result_json`:
 
+`forecast_runs` is a cache with exactly one live row per
+`(user_id, scenario_id, horizon_days)`. Both readers — `ForecastQuery` and
+`ForecastHighlightsQuery` — take the newest row for that key and nothing holds
+a foreign key into the table, so a completed run deletes the rows it
+supersedes. Without that the table is append-only: a round-6 desktop reached
+1,305 rows and 54.6 MB of `result_json` in thirteen hours of ordinary use,
+taking the database from 9 MB to 62 MB — a weight every encrypted backup, and
+every restore, then carries.
+
 ```json
 {
   "as_of": "YYYY-MM-DD",
@@ -414,7 +593,7 @@ worker logs the stack trace). The result is serialized to
       "account_name": "ASN Betaalrekening",
       "default_currency": "EUR",
       "today_balance_minor": 150000,
-      "anchor_source": "user_input_opening_balance",
+      "anchor_source": "sum_of_transactions",
       "points": [{"date": "...", "low_minor": 0, "point_minor": 0, "high_minor": 0, "currency": "EUR"}]
     }
   }
@@ -474,13 +653,20 @@ payload subclass is hydrated correctly.
 
 `computeAllAccountsAggregate` (in `ForecastPage`) sums every account's
 per-day point estimate into a single date-indexed series for the
-All-accounts aggregate chart. The rollup intentionally simplifies:
-per-account `default_currency` is treated as already-converted (a
-PayPal-USD point carries the per-occurrence settled-EUR amount from
-upstream FX conversion); multi-currency edge cases are captured at the
-per-account chart's confidence-row legend rather than smudged into the
-aggregate. The buffer floor is the sum of every account's
-`forecast_min_buffer_minor` (NULL treated as 0).
+All-accounts aggregate chart. A projection is denominated in the
+account's own `default_currency`, which the `/settings` account-currency
+picker lets the reader set independently of their base currency, so each
+day's points are bucketed by currency and every non-base bucket is
+converted through `ExchangeRateService` before the day's buckets are
+added. The rate for a pair is looked up ONCE per render rather than once
+per day: the service reads the whole `exchange_rates` table on every
+call, and a 365-day horizon would otherwise ask for the same pair 366
+times. A currency the rate table cannot reach is left out of the total
+rather than added at 1:1 — the same rule `NetWorthQuery` applies to a
+line it has no rate for. The buffer floor is the sum of every account's
+`forecast_min_buffer_minor` (NULL treated as 0), bucketed and converted
+the same way, because a buffer is denominated in its account's currency
+too.
 
 ## Net worth roll-up
 
@@ -511,6 +697,17 @@ popover-style `AccountBufferEditor`) mounted per account row in the
 4. The user clicks "Use my number" to commit with `allowDivergence=true`,
    or "Use Beatrax's number" to replace the input with the computed
    sum-of-transactions and manually re-save.
+
+An override is removable, and visibly so. The editor draws a "Remove
+opening balance" button whenever one is stored; `OpeningBalanceEditor::remove`
+blanks both boxes and runs the same save path, which reads an empty amount
+box as the absence of an override rather than as an invalid number. Absence
+and zero stay separate: a typed `0` parses to a value and outranks the
+detected baseline exactly as any other figure does, while removal restores
+`accounts.starting_balance_minor` as the answer `AccountStartingBalanceQuery`
+gives. This matters because the override governs net worth, pots, reconcile,
+the calendar and the forecast alike — a mistyped figure that could not be
+taken back was permanent.
 
 `SetAccountForecastBuffer` and `SetAccountOpeningBalance` both: raise a
 cross-user 404 via an `(id, user_id)` guard; validate server-side (buffer

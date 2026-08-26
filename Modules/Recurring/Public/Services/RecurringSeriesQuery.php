@@ -8,12 +8,12 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Internal\Queries\RecurringSeriesProjector;
 use Modules\Recurring\Internal\Queries\SeriesAccountResolver;
 use Modules\Recurring\Internal\Support\SeriesIds;
+use Modules\Recurring\Internal\Support\SeriesTables;
 use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
@@ -23,10 +23,6 @@ use stdClass;
 final readonly class RecurringSeriesQuery
 {
     use CoercesScalars;
-
-    private const string OCCURRENCES = 'recurring_series_occurrences as o';
-
-    private const string TRANSACTIONS = 'transactions as t';
 
     public function __construct(
         private DatabaseManager $db,
@@ -42,6 +38,17 @@ final readonly class RecurringSeriesQuery
     public function pendingForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
         return $this->projector->scoped($user, [RecurringSeriesState::Pending->value], $cursorId, $limit, 'id');
+    }
+
+    // The same two states allApprovedForUser walks, asked as a bare existence
+    // question: a surface that only needs to know whether the reader has
+    // anything to project must not pay to hydrate every series to find out.
+    public function hasApprovedForUser(User $user): bool
+    {
+        return $this->db->connection()->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->whereIn('state', RecurringSeriesState::projectableValues())
+            ->exists();
     }
 
     public function pendingCountForUser(User $user): int
@@ -183,9 +190,8 @@ final readonly class RecurringSeriesQuery
             ->get();
 
         $map = [];
-        foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $map[self::toInt($row->id)] = $this->projector->toDto($row);
+        foreach ($this->projector->toDtos($rows) as $dto) {
+            $map[$dto->seriesId] = $dto;
         }
 
         return $map;
@@ -232,54 +238,13 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * @param  array<int|string, mixed>  $transactionIds
-     * @return array<int, bool> transaction_id => is a member of some recurring series.
-     *                          Anomaly's duplicate-charge detector uses it to spare a fortnightly/weekly
-     *                          subscription that legitimately lands twice inside the duplicate window.
-     *                          user_id is filtered explicitly: the global scope does not fire on the
-     *                          queue/console where the evaluator runs
-     */
-    public function seriesMembershipForTransactionIds(array $transactionIds, User $user): array
-    {
-        $clean = [];
-        foreach ($transactionIds as $id) {
-            $i = is_numeric($id) ? (int) $id : 0;
-            if ($i > 0) {
-                $clean[] = $i;
-            }
-        }
-        $unique = array_values(array_unique($clean));
-        if ($unique === []) {
-            return [];
-        }
-
-        $members = $this->db->connection()->table('recurring_series_occurrences')
-            ->where('user_id', $user->id)
-            ->whereIn('transaction_id', $unique)
-            ->distinct()
-            ->pluck('transaction_id');
-
-        $memberSet = [];
-        foreach ($members as $value) {
-            $memberSet[self::toInt($value)] = true;
-        }
-
-        $map = [];
-        foreach ($unique as $id) {
-            $map[$id] = isset($memberSet[$id]);
-        }
-
-        return $map;
-    }
-
-    /**
      * @return int|null the most frequent transactions.counterparty_id across the series'
      *                  occurrences, or null when none resolved to a counterparty
      */
     public function counterpartyIdForSeries(int $seriesId, User $user): ?int
     {
-        $row = $this->db->connection()->table(self::OCCURRENCES)
-            ->join(self::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
+        $row = $this->db->connection()->table(SeriesTables::OCCURRENCES)
+            ->join(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('o.recurring_series_id', $seriesId)
             ->where('o.user_id', $user->id)
             ->whereNotNull('t.counterparty_id')
@@ -309,8 +274,8 @@ final readonly class RecurringSeriesQuery
             return [];
         }
 
-        $rows = $this->db->connection()->table(self::OCCURRENCES)
-            ->join(self::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
+        $rows = $this->db->connection()->table(SeriesTables::OCCURRENCES)
+            ->join(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->whereIn('o.recurring_series_id', $unique)
             ->where('o.user_id', $user->id)
             ->whereNotNull('t.counterparty_id')
@@ -343,12 +308,12 @@ final readonly class RecurringSeriesQuery
      */
     public function approvedSeriesForCounterparty(int $counterpartyId, User $user): array
     {
-        $ids = $this->db->connection()->table('recurring_series as s')
-            ->join(self::OCCURRENCES, 'o.recurring_series_id', '=', 's.id')
-            ->join(self::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
+        $ids = $this->db->connection()->table(SeriesTables::SERIES)
+            ->join(SeriesTables::OCCURRENCES, 'o.recurring_series_id', '=', 's.id')
+            ->join(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('s.user_id', $user->id)
             ->where('t.counterparty_id', $counterpartyId)
-            ->whereIn('s.state', [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value])
+            ->whereIn('s.state', RecurringSeriesState::projectableValues())
             ->distinct()
             ->pluck('s.id')
             ->map(static fn (mixed $v): int => self::toInt($v))
@@ -363,8 +328,8 @@ final readonly class RecurringSeriesQuery
 
     /**
      * @return RecurringSeriesAmountTrendDto up to $maxPoints points, oldest first. Each
-     *                                       carries the native amount plus the settled-EUR shadow; eur_amount_minor
-     *                                       is null when the observation is already in EUR
+     *                                       carries the native amount plus the settled shadow; settled_amount_minor
+     *                                       is null when the account was debited in the currency quoted
      */
     public function amountTrendForSeries(int $seriesId, User $user, int $maxPoints = 24): RecurringSeriesAmountTrendDto
     {
@@ -397,7 +362,7 @@ final readonly class RecurringSeriesQuery
 
         $effectiveLimit = max(1, $maxPoints);
         $rows = $this->db->connection()->table('recurring_series_occurrences as rso')
-            ->leftJoin(self::TRANSACTIONS, 't.id', '=', 'rso.transaction_id')
+            ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'rso.transaction_id')
             ->where('rso.recurring_series_id', $seriesId)
             ->where('rso.user_id', $user->id)
             ->orderByDesc('rso.observed_at')
@@ -421,17 +386,19 @@ final readonly class RecurringSeriesQuery
             $observedAt = CarbonImmutable::parse(self::toString($row->observed_at))->toDateString();
             $amountMinor = self::toInt($row->observed_amount_minor);
             $observedCurrency = self::toString($row->observed_currency);
-            $eurAmountMinor = null;
-            if ($observedCurrency !== Currency::Eur->value) {
-                $settledCurrency = self::toString($row->settled_currency ?? null);
-                if ($settledCurrency === Currency::Eur->value) {
-                    $eurAmountMinor = self::toInt($row->settled_amount_minor ?? null);
-                }
+            // Whatever the account was actually debited, whenever that is not
+            // what the charge was quoted in. Pinned to the euro, the shadow
+            // line never appeared for an account denominated in anything else.
+            $settledCurrency = self::toString($row->settled_currency ?? null);
+            $settledMinor = null;
+            if ($settledCurrency !== '' && $settledCurrency !== $observedCurrency) {
+                $settledMinor = self::toInt($row->settled_amount_minor ?? null);
             }
             $points[] = [
                 'date' => $observedAt,
                 'amount_minor' => $amountMinor,
-                'eur_amount_minor' => $eurAmountMinor,
+                'settled_amount_minor' => $settledMinor,
+                'settled_currency' => $settledMinor === null ? null : $settledCurrency,
             ];
         }
 
@@ -453,18 +420,12 @@ final readonly class RecurringSeriesQuery
     {
         $rows = $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
-            ->whereIn('state', [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value])
+            ->whereIn('state', RecurringSeriesState::projectableValues())
             ->orderByDesc('monthly_equivalent_minor')
             ->orderByDesc('id')
             ->get();
 
-        $result = [];
-        foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $result[] = $this->projector->toDto($row);
-        }
-
-        return $result;
+        return $this->projector->toDtos($rows);
     }
 
     /**

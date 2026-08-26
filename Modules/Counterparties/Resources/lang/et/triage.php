@@ -25,6 +25,7 @@ return [
     'no_not' => 'Ei, mitte :name',
 
     'recent_on_iban' => 'Selle IBAN-i hiljutised tehingud',
+    'recent_on_counterparty' => 'Hiljutised tehingud selle vastaspoolega',
     'no_transactions_yet' => 'Ühtegi tehingut pole veel kirjas.',
 
     'label_manually' => 'Või sildista käsitsi',

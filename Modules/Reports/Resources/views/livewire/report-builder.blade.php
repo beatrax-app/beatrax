@@ -302,7 +302,7 @@
 
                 {{-- Total + FX exclusion note + headline delta --}}
                 <div class="space-y-1">
-                    <div class="flex items-baseline justify-between gap-4">
+                    <div class="flex flex-wrap items-baseline justify-between gap-4">
                         <span class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('reports::builder.total_prefix') }} {{ strtolower($metricLabel) }}</span>
                         <span class="{{ $amountClass($result->totalMinor) }}" style="font-size: var(--text-3xl); font-weight: 600; font-variant-numeric: tabular-nums;">
                             {{ $fmt($result->totalMinor, $result->currency) }}
@@ -322,7 +322,7 @@
                          rather than folded into it, so a total that omits money
                          does not read as everything that left the account. --}}
                     @if ($result->otherMovementMinor !== 0)
-                        <div class="flex items-baseline justify-between gap-4">
+                        <div class="flex flex-wrap items-baseline justify-between gap-4">
                             <span class="text-xs" style="color: var(--color-text-muted);">{{ Lang::get('reports::builder.other_movement') }}</span>
                             <span class="text-xs" style="color: var(--color-text-muted); font-variant-numeric: tabular-nums;">
                                 {{ $fmt($result->otherMovementMinor, $result->currency) }}

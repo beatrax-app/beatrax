@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 /** @link ../../../../.docs/features/forecasting/forecast-corpus.md#shape */
 
+use Carbon\CarbonImmutable;
+use Modules\Forecasting\Tests\Support\ForecastCorpus;
+
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertContains;
 use function PHPUnit\Framework\assertGreaterThan;
@@ -16,22 +19,14 @@ use function PHPUnit\Framework\assertLessThanOrEqual;
  */
 function forecastCorpusFixtures(): iterable
 {
-    $dir = __DIR__.'/../fixtures/forecast-corpus';
-    /** @var list<string> $paths */
-    $paths = glob($dir.'/*.php') ?: [];
-    sort($paths);
-    foreach ($paths as $path) {
+    foreach (ForecastCorpus::paths() as $path) {
         $name = basename($path, '.php');
         yield [$name, $path];
     }
 }
 
-it('produces exactly 10 fixture files', function (): void {
-    $dir = __DIR__.'/../fixtures/forecast-corpus';
-    /** @var list<string> $paths */
-    $paths = glob($dir.'/*.php') ?: [];
-
-    expect(count($paths))->toBe(10);
+it('produces exactly 11 fixture files', function (): void {
+    expect(count(ForecastCorpus::paths()))->toBe(11);
 });
 
 it('every forecast-corpus fixture returns the documented shape', function (string $name, string $path): void {
@@ -155,9 +150,42 @@ it('every forecast-corpus fixture returns the documented shape', function (strin
     }
 })->with(forecastCorpusFixtures());
 
+it('dates every occurrence before the clock and every booked row after it', function (string $name, string $path): void {
+    /** @var array{series: list<array<string, mixed>>, booked_rows?: list<array<string, mixed>>} $fixture */
+    $fixture = require $path;
+
+    $clock = ForecastCorpus::clock();
+    $misdated = [];
+
+    foreach ($fixture['series'] as $index => $row) {
+        $occurrences = is_array($row['occurrences'] ?? null) ? $row['occurrences'] : [];
+        foreach ($occurrences as $occurrence) {
+            $date = (string) $occurrence['date'];
+            if (! CarbonImmutable::parse($date)->lessThan($clock)) {
+                $misdated[] = "series #{$index} occurrence {$date}";
+            }
+        }
+    }
+
+    $bookedRows = is_array($fixture['booked_rows'] ?? null) ? $fixture['booked_rows'] : [];
+    foreach ($bookedRows as $index => $bookedRow) {
+        $date = (string) (is_array($bookedRow) ? ($bookedRow['date'] ?? '') : '');
+        if (! CarbonImmutable::parse($date)->greaterThan($clock)) {
+            $misdated[] = "booked row #{$index} dated {$date}";
+        }
+    }
+
+    expect($misdated)->toBe(
+        [],
+        "Fixture {$name} is dated against the wrong side of ".ForecastCorpus::TODAY.': '
+        .implode(', ', $misdated)
+        .'. An occurrence is observed history and belongs before the clock; a row dated ahead of it is a booked row, which the projection reads as a certainty.',
+    );
+})->with(forecastCorpusFixtures());
+
 it('buffer-crossing returns a non-empty shortfalls list with lowest_balance below buffer', function (): void {
     /** @var array{expected: array{shortfalls: list<array<string, int|string>>}} $fixture */
-    $fixture = require __DIR__.'/../fixtures/forecast-corpus/buffer-crossing.php';
+    $fixture = require ForecastCorpus::path('buffer-crossing');
 
     expect($fixture['expected']['shortfalls'])->not->toBe([]);
     /** @var array{lowest_balance_minor: int, buffer_used_minor: int} $first */
@@ -167,7 +195,7 @@ it('buffer-crossing returns a non-empty shortfalls list with lowest_balance belo
 
 it('scenario-with-each-mutation-kind declares exactly five mutations covering all five kinds', function (): void {
     /** @var array{expected: array{scenarios: list<array{mutations: list<array{kind: string}>}>}} $fixture */
-    $fixture = require __DIR__.'/../fixtures/forecast-corpus/scenario-with-each-mutation-kind.php';
+    $fixture = require ForecastCorpus::path('scenario-with-each-mutation-kind');
 
     expect($fixture['expected']['scenarios'])->toHaveCount(1);
 
@@ -187,7 +215,7 @@ it('scenario-with-each-mutation-kind declares exactly five mutations covering al
 
 it('ics-settlement-chain declares the chain_state payload', function (): void {
     /** @var array{chain_state: array{next_settlement_date: string, next_settlement_amount_minor: int}} $fixture */
-    $fixture = require __DIR__.'/../fixtures/forecast-corpus/ics-settlement-chain.php';
+    $fixture = require ForecastCorpus::path('ics-settlement-chain');
 
     expect($fixture['chain_state'])->toHaveKey('next_settlement_date');
     expect($fixture['chain_state'])->toHaveKey('next_settlement_amount_minor');
@@ -195,7 +223,7 @@ it('ics-settlement-chain declares the chain_state payload', function (): void {
 
 it('fx-only-usd-subscription preserves the non-EUR primary currency on its series', function (): void {
     /** @var array{series: list<array{latest_currency: string, latest_fx_rate_used: ?float}>} $fixture */
-    $fixture = require __DIR__.'/../fixtures/forecast-corpus/fx-only-usd-subscription.php';
+    $fixture = require ForecastCorpus::path('fx-only-usd-subscription');
 
     $usdSeries = array_filter($fixture['series'], static fn (array $s): bool => $s['latest_currency'] === 'USD');
     expect($usdSeries)->not->toBe([]);

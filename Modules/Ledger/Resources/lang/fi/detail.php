@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Vastapuoli',
     'description' => 'Kuvaus',
     'amount_native' => 'Summa (alkuperäinen)',
-    'amount_settled' => 'Summa (tilitetty EUR)',
+    'amount_settled' => 'Summa (tilitetty)',
     'effective_rate' => 'Toteutunut kurssi',
     'ics_markup' => 'Sisältää mahdollisen ICS-lisän.',
 

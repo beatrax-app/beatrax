@@ -27,19 +27,20 @@ return [
     ],
 
     'next' => 'Nästa',
+    'overdue' => 'Försenat',
     'cadence_changed_note' => 'intervallet ändrat',
-
-    'select_aria' => 'Välj återkommande serie :id',
     'un_reject' => 'Ångra avvisning',
     'approve' => 'Godkänn',
     'approve_aria' => 'Godkänn återkommande serie :id',
     'reject' => 'Avvisa',
     'reject_aria' => 'Avvisa återkommande serie :id',
     'snooze' => 'Skjut upp',
+    'snooze_aria' => 'Skjut upp återkommande serie :id',
     'snooze_1w' => '1 vecka',
     'snooze_1m' => '1 månad',
     'snooze_3m' => '3 månader',
     'edit_name' => 'Redigera namnet',
+    'edit_name_aria' => 'Byt namn på återkommande serie :id',
     'new_name_label' => 'Nytt namn för den här serien',
     'save' => 'Spara',
 

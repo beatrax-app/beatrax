@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Bu hesabın tahminine katkıda bulunan henüz bir seri yok.',
 
     'net_diff' => 'Net fark',
+
+    'net_diff_unknown' => 'Bu ufuk için henüz hesaplanmadı.',
     'net_diff_section_aria' => '30 / 60 / 90 günlük ufuklarda referans ile senaryo arasındaki net fark',
     'net_diff_delta_aria' => ':day. gündeki net fark: :value, senaryo :state',
     'better_than_baseline' => 'referanstan daha iyi',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Tahmin öne çıkanları',
     'highlights_shortfall_aria' => 'Önümüzdeki :days günde :count etkin açık dönemi',
-    'dips_to' => ':name :amount seviyesine düşüyor',
     'on_date_suffix' => ' :date tarihinde',
     'shortfall_window' => ':count etkin açık dönemi',
-    'lowest_in_30' => '30 gündeki en düşük: :amount',
+    'lowest_in_30_label' => '30 gündeki en düşük',
     'next_ics' => 'Sonraki ICS tahsilatı: :date tarihinde :amount',
+    'ics_overdue' => 'ICS tahsilatı gecikti: :amount, son tarih :date',
 ];

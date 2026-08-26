@@ -27,19 +27,20 @@ return [
     ],
 
     'next' => 'Următoarea',
+    'overdue' => 'Restant',
     'cadence_changed_note' => 'frecvență schimbată',
-
-    'select_aria' => 'Selectează seria recurentă :id',
     'un_reject' => 'Anulează respingerea',
     'approve' => 'Aprobă',
     'approve_aria' => 'Aprobă seria recurentă :id',
     'reject' => 'Respinge',
     'reject_aria' => 'Respinge seria recurentă :id',
     'snooze' => 'Amână',
+    'snooze_aria' => 'Amână seria recurentă :id',
     'snooze_1w' => '1 săptămână',
     'snooze_1m' => '1 lună',
     'snooze_3m' => '3 luni',
     'edit_name' => 'Editează numele',
+    'edit_name_aria' => 'Redenumește seria recurentă :id',
     'new_name_label' => 'Nume nou pentru această serie',
     'save' => 'Salvează',
 

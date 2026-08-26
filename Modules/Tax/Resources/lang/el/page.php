@@ -37,7 +37,7 @@ return [
     'col_account' => 'Λογαριασμός',
     'col_counterparty' => 'Αντισυμβαλλόμενος',
     'col_note' => 'Σημείωση',
-    'col_settled_eur' => 'Εκκαθαρισμένα EUR',
+    'col_settled' => 'Εκκαθαρισμένα',
     'col_original' => 'Αρχικό',
     'col_year' => 'Έτος',
 

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'error_enroll_unsupported' => 'Biometrinen avaus ei ole käytettävissä tällä laitteella.',
+    'error_enroll_unsupported' => 'Tässä Beatraxin versiossa ei ole paikkaa avausavaimelle, joten biometristä avausta ei tarjota. Rajoitus ei ole laitteesi.',
     'error_enroll_unprotected' => 'Biometrinen avaus tarvitsee käyttöjärjestelmän avainsäilön, eikä tässä asennuksessa ole sellaista. Rekisteröinti jättäisi avausavaimen luettavaksi tietojesi viereen, joten sitä ei tarjota täällä.',
     'error_enroll_locked' => 'Avaa sovelluksen lukitus ennen käyttöönottoa.',
     'error_enroll_failed' => 'Laitteesi ei suostunut tallentamaan avainta. Biometrinen avaus ei ole käytettävissä.',
@@ -32,7 +32,7 @@ return [
     'biometric_enroll_description' => 'Ota tämä laite käyttöön, niin voit avata sen biometrisesti.',
     'remove' => 'Poista',
     'enroll' => 'Ota käyttöön',
-    'biometric_unavailable' => 'Biometrinen avaus ei ole käytettävissä tällä laitteella.',
+    'biometric_unavailable' => 'Tämä Beatraxin versio ei voi tarjota biometristä avausta. PIN-koodisi on täällä ainoa avaustapa.',
 
     'deenroll_modal_heading' => 'Poista biometrinen avaus — vahvista PIN-koodilla',
     'current_pin_label' => 'Nykyinen PIN-koodi',

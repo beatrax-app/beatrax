@@ -34,6 +34,7 @@ final readonly class ScenarioApplier
     public function __construct(
         private ScenarioQuery $scenarioQuery,
         private RecurringSeriesQuery $seriesQuery,
+        private CadenceWalk $walk,
         private DatabaseManager $db,
         private LoggerInterface $logger,
     ) {}
@@ -241,24 +242,17 @@ final readonly class ScenarioApplier
         $highMag = (int) round($magnitude * self::ONE_OFF_ENVELOPE_HIGH_MULTIPLIER);
         [$lowMinor, $highMinor] = $sign < 0 ? [-$highMag, -$lowMag] : [$lowMag, $highMag];
 
-        $cursor = $start;
-        while ($cursor->lessThanOrEqualTo($horizonEnd)) {
-            if ($cursor->greaterThanOrEqualTo($asOf)) {
-                $contributions[] = new ForecastContribution(
-                    date: $cursor,
-                    pointMinor: $point,
-                    lowMinor: $lowMinor,
-                    highMinor: $highMinor,
-                    currency: $payload->currency,
-                    fxRateUsed: null,
-                    seriesId: 0,
-                    accountId: $accountId,
-                );
-            }
-            $cursor = $this->advance($cursor, $cadence);
-            if ($cursor === null) {
-                break;
-            }
+        foreach ($this->walk->datesInHorizon($start, $cadence, $asOf, $horizonEnd) as $date) {
+            $contributions[] = new ForecastContribution(
+                date: $date,
+                pointMinor: $point,
+                lowMinor: $lowMinor,
+                highMinor: $highMinor,
+                currency: $payload->currency,
+                fxRateUsed: null,
+                seriesId: 0,
+                accountId: $accountId,
+            );
         }
 
         return $contributions;
@@ -378,17 +372,6 @@ final readonly class ScenarioApplier
         }
 
         return $result;
-    }
-
-    private function advance(CarbonImmutable $cursor, SeriesCadence $cadence): ?CarbonImmutable
-    {
-        return match ($cadence) {
-            SeriesCadence::Weekly => $cursor->addDays(7),
-            SeriesCadence::Monthly => $cursor->addMonthNoOverflow(),
-            SeriesCadence::Quarterly => $cursor->addMonthsNoOverflow(3),
-            SeriesCadence::Yearly => $cursor->addYearNoOverflow(),
-            SeriesCadence::Irregular => null,
-        };
     }
 
     private function logCrossUserMismatchIfAny(string $mutationKind, int $seriesId, User $user): void

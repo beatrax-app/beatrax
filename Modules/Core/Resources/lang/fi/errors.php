@@ -9,6 +9,10 @@ return [
         'title' => 'Tätä sivua ei ole',
         'body' => 'Linkki voi olla vanha tai sivu on nimetty uudelleen. Tiedoissasi ei ole mitään vikaa.',
     ],
+    '4xx' => [
+        'title' => 'Tätä pyyntöä ei voi käsitellä',
+        'body' => 'Sivu avattiin tavalla, jota se ei odota. Tietosi ovat ennallaan.',
+    ],
 
     '419' => [
         'title' => 'Istuntosi vanheni',

@@ -11,6 +11,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Notifications\Internal\Delivery\NoSystemNotificationConsent;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeepLinkResolver;
@@ -20,6 +21,7 @@ use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\Actions\DismissNotification;
 use Modules\Notifications\Public\Actions\MarkNotificationRead;
 use Modules\Notifications\Public\Actions\UndoDismissNotification;
+use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
 use Modules\Notifications\Public\Http\Livewire\NotificationsSettingsSection;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Modules\Notifications\Public\Services\NotificationQuery;
@@ -67,6 +69,9 @@ final class NotificationsServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        // Rebound by Mobile on a real device, where the OS gates delivery
+        // behind a runtime grant the app has to ask for.
+        $this->app->singleton(SystemNotificationConsent::class, NoSystemNotificationConsent::class);
         $this->app->singleton(NotificationStateMachine::class);
         $this->app->singleton(DeterministicKeyDeriver::class);
         $this->app->singleton(NotificationPreferenceQuery::class);

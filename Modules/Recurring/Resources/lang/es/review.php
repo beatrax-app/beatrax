@@ -27,19 +27,20 @@ return [
     ],
 
     'next' => 'Siguiente',
+    'overdue' => 'Vencido',
     'cadence_changed_note' => 'frecuencia cambiada',
-
-    'select_aria' => 'Seleccionar la serie recurrente :id',
     'un_reject' => 'Anular el rechazo',
     'approve' => 'Aprobar',
     'approve_aria' => 'Aprobar la serie recurrente :id',
     'reject' => 'Rechazar',
     'reject_aria' => 'Rechazar la serie recurrente :id',
     'snooze' => 'Posponer',
+    'snooze_aria' => 'Posponer la serie recurrente :id',
     'snooze_1w' => '1 semana',
     'snooze_1m' => '1 mes',
     'snooze_3m' => '3 meses',
     'edit_name' => 'Editar el nombre',
+    'edit_name_aria' => 'Cambiar el nombre de la serie recurrente :id',
     'new_name_label' => 'Nombre nuevo para esta serie',
     'save' => 'Guardar',
 

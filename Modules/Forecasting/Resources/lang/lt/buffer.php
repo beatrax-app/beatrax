@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Mažiausia :name atsarga',
     'save' => 'Išsaugoti atsargą',
     'cancel' => 'Atšaukti',
-    'clear' => 'Išvalyti atsargą (naudoti 0 € ribą)',
+    'clear' => 'Išvalyti atsargą (naudoti :zero ribą)',
 
     'toast' => [
         'updated' => 'Atsarga atnaujinta.',

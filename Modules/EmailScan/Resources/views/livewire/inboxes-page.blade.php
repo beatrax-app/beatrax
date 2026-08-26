@@ -51,7 +51,7 @@
             aria-live="polite"
         >
             @foreach ($activeBackfills as $inbox)
-                <div class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300">
+                <div class="flex flex-wrap items-center justify-between text-xs text-slate-700 dark:text-slate-300">
                     <span>
                         {{ Lang::get('email-scan::inboxes.backfilling') }} {{ $inbox->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365' }} ({{ $inbox->email }}):
                         <span style="font-variant-numeric: tabular-nums;">{{ Fmt::number((int) $inbox->backfillFetchedCount) }} / ~{{ Fmt::number((int) ($inbox->backfillTotalEstimated ?? 0)) }}</span>
@@ -172,7 +172,7 @@
 
                         @if ($inbox->status === InboxScanStatus::NeedsReauth->value)
                             <a
-                                href="{{ route('oauth.connect', ['provider' => $inbox->provider]) }}?inbox_id={{ $inbox->inboxId }}"
+                                href="{{ route('oauth.connect', ['provider' => $inbox->provider, 'inbox_id' => $inbox->inboxId]) }}"
                                 class="tap-chip inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-sm font-medium text-rose-600 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
                             >{{ Lang::get('email-scan::inboxes.reconnect') }}</a>
                         @endif

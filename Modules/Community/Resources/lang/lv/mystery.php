@@ -21,7 +21,6 @@ return [
     'footer' => 'Kopīgotais saraksts ir YAML fails, kas nāk komplektā ar Beatrax. Ieteikuma iesniegšana atver GitHub jūsu pārlūkā; nekas cits šo ierīci nepamet.',
 
     'card' => [
-        'likely' => 'Visticamāk: nenosaukts tirgotājs.',
         'seen_times' => 'Redzēts :count reižu|Redzēts :count reizi|Redzēts :count reizes',
         'last_seen' => 'Pēdējoreiz :date',
         'suggest' => 'Ieteikt nosaukumu →',

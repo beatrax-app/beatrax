@@ -25,6 +25,7 @@ return [
     'no_not' => 'Hayır, :name değil',
 
     'recent_on_iban' => 'Bu IBAN üzerindeki son işlemler',
+    'recent_on_counterparty' => 'Bu karşı tarafla yapılan son işlemler',
     'no_transactions_yet' => 'Henüz kayıtlı işlem yok.',
 
     'label_manually' => 'Veya elle etiketle',

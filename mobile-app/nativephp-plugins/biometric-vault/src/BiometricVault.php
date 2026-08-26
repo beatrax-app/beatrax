@@ -9,6 +9,8 @@ namespace Beatrax\BiometricVault;
  */
 class BiometricVault
 {
+    private ?string $lastError = null;
+
     // A null value deletes the entry rather than storing an empty one, which is
     // the native side's own convention for this call.
     public function set(string $key, ?string $value): bool
@@ -73,24 +75,58 @@ class BiometricVault
         return is_string($value) && $value !== '' ? $value : null;
     }
 
+    // The reason the last bridge call refused, or null when it did not. The
+    // native side answers a refusal with {status: error, message}; every caller
+    // here reduces that to false or [], so without this the only account of a
+    // failed enrolment is the word "false".
+    public function lastError(): ?string
+    {
+        return $this->lastError;
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     private function call(string $function, array $payload): array
     {
-        if (! function_exists('nativephp_call')) {
-            return [];
-        }
+        $this->lastError = null;
 
-        $result = nativephp_call($function, (string) json_encode($payload));
-        if (! is_string($result) || $result === '') {
+        $result = $this->bridge($function, (string) json_encode($payload));
+        if ($result === null || $result === '') {
+            $this->lastError = 'the native bridge did not answer';
+
             return [];
         }
 
         $decoded = json_decode($result, true);
+        if (! is_array($decoded)) {
+            $this->lastError = 'the native bridge answered with something that is not an object';
 
-        return is_array($decoded) ? $decoded : [];
+            return [];
+        }
+
+        if (($decoded['status'] ?? null) === 'error') {
+            $message = $decoded['message'] ?? null;
+            $this->lastError = is_string($message) && $message !== '' ? $message : 'the native bridge reported an error';
+
+            return [];
+        }
+
+        return $decoded;
+    }
+
+    // Native seam, confined to this one method so a test can answer for the
+    // bridge without defining a global function the whole suite would inherit.
+    protected function bridge(string $function, string $payload): ?string
+    {
+        if (! function_exists('nativephp_call')) {
+            return null;
+        }
+
+        $result = nativephp_call($function, $payload);
+
+        return is_string($result) ? $result : null;
     }
 
     /**

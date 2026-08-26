@@ -21,7 +21,6 @@ return [
     'footer' => 'De gedeelde lijst is een meegeleverd YAML-bestand dat met Beatrax wordt geleverd. Een suggestie insturen opent GitHub in je browser; verder verlaat er niets dit apparaat.',
 
     'card' => [
-        'likely' => 'Waarschijnlijk: een naamloze winkelier.',
         'seen_times' => 'Gezien :count keer|Gezien :count keer',
         'last_seen' => 'Laatst gezien :date',
         'suggest' => 'Stel een naam voor →',

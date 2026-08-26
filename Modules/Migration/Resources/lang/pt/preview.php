@@ -16,13 +16,10 @@ return [
         'budget' => 'Meses de orçamento',
     ],
 
-    'fully_mapped' => '✓ totalmente mapeado',
     'all_clean' => 'Está tudo mapeado sem problemas — não há nada a rever antes de confirmares.',
 
     'groups' => [
         'conflict' => 'Precisa da tua decisão',
-        'category' => 'Categorias por resolver',
-        'payee' => 'Contrapartes por resolver',
         'extra' => 'Não importado',
     ],
 

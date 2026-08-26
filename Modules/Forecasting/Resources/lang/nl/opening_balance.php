@@ -13,15 +13,18 @@ return [
     'as_of_label' => 'Beginsaldo per',
     'as_of_help' => 'De datum waarop het bedrag hierboven geldt.',
 
-    'divergence' => 'Dit wijkt meer dan € 500 af van het saldo dat Beatrax berekent op basis van je geïmporteerde transacties. Weet je het zeker?',
+    'divergence' => 'Dit wijkt meer dan :threshold af van het saldo dat Beatrax berekent op basis van je geïmporteerde transacties. Weet je het zeker?',
     'use_beatrax' => 'Gebruik het getal van Beatrax',
     'use_mine' => 'Gebruik mijn getal',
 
     'save' => 'Beginsaldo opslaan',
+    'remove' => 'Beginsaldo verwijderen',
     'saved' => 'Opgeslagen.',
+    'removed' => 'Verwijderd.',
 
     'toast' => [
         'updated' => 'Beginsaldo bijgewerkt.',
+        'removed' => 'Beginsaldo verwijderd.',
     ],
 
     'errors' => [

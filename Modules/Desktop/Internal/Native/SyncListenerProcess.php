@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Native;
 
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Modules\Sync\Public\Services\SyncPorts;
 use Native\Desktop\Facades\ChildProcess;
 use Psr\Log\LoggerInterface;
@@ -19,10 +21,16 @@ final readonly class SyncListenerProcess
 
     private const PROBE_TIMEOUT_SECONDS = 1;
 
+    // Which device id the listener now running was spawned with. Survives the
+    // request that spawned it because the app and the daemon are separate
+    // processes, so nothing in memory can answer this on the next unlock.
+    private const CREDENTIALLED_DEVICE_KEY = 'sync-listener:credentialled-device';
+
     public function __construct(
         private DeviceRegistryService $devices,
         private SyncPorts $ports,
         private LoggerInterface $logger,
+        private ?CacheRepository $cache = null,
     ) {}
 
     // Without a sync identity no peer can dial in, so starting regardless bound a
@@ -60,6 +68,8 @@ final readonly class SyncListenerProcess
                 $environment === [] ? null : $environment,
                 true,
             );
+
+            $this->rememberCredentials($environment);
         } catch (Throwable $e) {
             $this->logger->warning('sync listener: failed to start sync:serve child process.', [
                 'exception' => $e,
@@ -81,7 +91,40 @@ final readonly class SyncListenerProcess
             return;
         }
 
+        // Unlock hands credentials over on EVERY unlock, so without this the
+        // daemon was torn down and rebuilt each time — fatal to a ceremony
+        // spanning the lock that HoldPairingCeremonyOpenOnUnlock exists to keep
+        // alive. Restart only when the identity would actually change.
+        if ($this->rememberedDevice() === ($environment[SyncDaemonIdentity::ENV_DEVICE] ?? null)) {
+            $this->logger->info('sync listener: already listening with these credentials; leaving it in place.');
+
+            return;
+        }
+
         $this->restartWith($environment);
+    }
+
+    /**
+     * @param  array<string, string>  $environment
+     */
+    private function rememberCredentials(array $environment): void
+    {
+        $deviceId = $environment[SyncDaemonIdentity::ENV_DEVICE] ?? null;
+
+        if ($deviceId === null || $deviceId === '') {
+            $this->cache?->forget(self::CREDENTIALLED_DEVICE_KEY);
+
+            return;
+        }
+
+        $this->cache?->forever(self::CREDENTIALLED_DEVICE_KEY, $deviceId);
+    }
+
+    private function rememberedDevice(): ?string
+    {
+        $remembered = $this->cache?->get(self::CREDENTIALLED_DEVICE_KEY);
+
+        return is_string($remembered) && $remembered !== '' ? $remembered : null;
     }
 
     // A restart is the only way a new environment takes effect: the handler reads
@@ -100,6 +143,8 @@ final readonly class SyncListenerProcess
                 $environment,
                 true,
             );
+
+            $this->rememberCredentials($environment);
 
             $this->logger->info('sync listener: restarted with device credentials.');
         } catch (Throwable $e) {

@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognoosi uuendatakse…',
-        'risk' => 'Jääk langeb alla 0 € kuupäeval :date.|Jääk langeb alla 0 € :count päeval — esimene: :date.',
+        'risk' => 'Jääk langeb alla :zero kuupäeval :date.|Jääk langeb alla :zero :count päeval — esimene: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'kirje|kirjet',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', prognoositav jääk miinus :amount €',
-        'aria_balance_positive' => ', prognoositav jääk :amount €',
+        'aria_balance_negative' => ', prognoositav jääk miinus :amount',
+        'aria_balance_positive' => ', prognoositav jääk :amount',
         'overflow' => '+:count veel',
         'paid' => 'Makstud',
         'missed' => 'Oodatud — ei leitud',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Kirjendatud makse',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ kuupäev on ligikaudne',
         'series' => '↗ seeria',
         'counterparty' => '↗ vastaspool',
+        'transaction' => '↗ tehing',
         'end_of_day' => 'Päeva lõpp',
     ],
 ];

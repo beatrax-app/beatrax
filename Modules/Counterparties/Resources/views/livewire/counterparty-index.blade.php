@@ -164,9 +164,14 @@
                             <x-counterparties::type-chip :type="$row->type" />
                         </header>
                         <div class="cp-stats">
-                            <span class="value">{{ $row->total12mFormatted }}</span>
-                            <span class="label">{{ Lang::get('counterparties::index.stat_12mo') }}</span>
+                            <div class="cp-stat">
+                                <span class="value">{{ $row->total12mFormatted }}</span>
+                                <span class="label">{{ Lang::get('counterparties::index.stat_12mo') }}</span>
+                            </div>
                         </div>
+                        @if ($row->isPartial())
+                            <div style="font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</div>
+                        @endif
                         @if ($row->recentLine !== null)
                             <div class="cp-recent"><span>{{ $row->recentLine }}</span></div>
                         @endif
@@ -183,14 +188,26 @@
                             <span class="cp-head-name">{{ $row->displayName }}</span>
                             <x-counterparties::type-chip :type="$row->type" />
                         </header>
+                        {{-- Each amount and its label are one item, so a card too
+                             narrow for both pairs breaks BETWEEN them. Flat, the
+                             row wrapped wherever it ran out: two amounts and one
+                             label on the first line, the other label under them,
+                             with nothing saying which amount it belonged to. --}}
                         <div class="cp-stats">
-                            <span class="value">{{ $row->total12mFormatted }}</span>
-                            <span class="label">
-                                @if ($row->type === CounterpartyType::Personal->value){{ Lang::get('counterparties::index.stat_net_received') }}@else{{ Lang::get('counterparties::index.stat_12mo') }}@endif
-                            </span>
-                            <span class="value" style="font-size: var(--text-sm);">{{ $row->avgPerMonthFormatted }}</span>
-                            <span class="label">{{ Lang::get('counterparties::index.stat_avg_mo') }}</span>
+                            <div class="cp-stat">
+                                <span class="value">{{ $row->total12mFormatted }}</span>
+                                <span class="label">
+                                    @if ($row->type === CounterpartyType::Personal->value){{ Lang::get('counterparties::index.stat_net_received') }}@else{{ Lang::get('counterparties::index.stat_12mo') }}@endif
+                                </span>
+                            </div>
+                            <div class="cp-stat">
+                                <span class="value" style="font-size: var(--text-sm);">{{ $row->avgPerMonthFormatted }}</span>
+                                <span class="label">{{ Lang::get('counterparties::index.stat_avg_mo') }}</span>
+                            </div>
                         </div>
+                        @if ($row->isPartial())
+                            <div style="font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</div>
+                        @endif
                         <div role="img" class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
                             @php
                                 $sparkMax = max(1, max(array_map('abs', $row->sparkline)));
@@ -231,6 +248,9 @@
                 </div>
                 <div style="flex: 0 0 auto; text-align: right;">
                     <span class="amount" style="{{ $row->total12mMinor > 0 ? 'color: var(--color-emerald)' : '' }}">{{ $row->total12mFormatted }}</span>
+                    @if ($row->isPartial())
+                        <span class="secondary" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</span>
+                    @endif
                 </div>
             </a>
         @endforeach
@@ -262,6 +282,9 @@
                             </td>
                             <td style="padding: var(--space-2) var(--space-3); text-align: right; font-variant-numeric: tabular-nums;">
                                 {{ $row->avgPerMonthFormatted }}
+                                @if ($row->isPartial())
+                                    <span style="display: block; font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</span>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

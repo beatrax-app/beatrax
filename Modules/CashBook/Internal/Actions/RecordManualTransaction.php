@@ -56,6 +56,7 @@ final class RecordManualTransaction
         $type = $isIncome ? TransactionType::Income->value : TransactionType::Expense->value;
 
         $accountId = $this->cashAccountId($user);
+        $currency = $this->currencyOfAccount($accountId, $user);
         $importRunId = $this->manualRunId($user);
         $counterpartyName = trim($counterparty) !== '' ? trim($counterparty) : 'Cash';
 
@@ -73,9 +74,9 @@ final class RecordManualTransaction
                 bookedAt: $now->addSeconds($attempt),
                 valueDate: $date,
                 amountMinor: $signed,
-                currency: $this->baseCurrency->code(),
+                currency: $currency,
                 settledAmountMinor: $signed,
-                settledCurrency: $this->baseCurrency->code(),
+                settledCurrency: $currency,
                 fxRateUsed: null,
                 counterpartyName: $counterpartyName,
                 counterpartyIban: null,
@@ -116,6 +117,20 @@ final class RecordManualTransaction
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+    }
+
+    // The reader can relabel the cash account in /settings like any other, and
+    // an entry booked in a currency the account does not name never joins the
+    // line pots, /reconcile and the forecast anchor read.
+    private function currencyOfAccount(int $accountId, User $user): string
+    {
+        $currency = $this->db->connection()
+            ->table('accounts')
+            ->where('id', $accountId)
+            ->where('user_id', $user->id)
+            ->value('default_currency');
+
+        return is_string($currency) && $currency !== '' ? $currency : $this->baseCurrency->code();
     }
 
     private function manualRunId(User $user): int

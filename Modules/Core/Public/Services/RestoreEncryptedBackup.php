@@ -13,6 +13,8 @@ use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Support\SqliteDatabase;
+use SQLite3;
+use Throwable;
 
 final class RestoreEncryptedBackup
 {
@@ -35,9 +37,9 @@ final class RestoreEncryptedBackup
      */
     public function __invoke(string $encryptedPath, string $passphrase): string
     {
-        $default = $this->config->get('database.default');
-        $livePath = $this->config->get(SqliteDatabase::LIVE_PATH_CONFIG_KEY);
-        if ($default !== 'sqlite' || ! is_string($livePath) || $livePath === '') {
+        $connection = SqliteDatabase::connectionName($this->config);
+        $livePath = SqliteDatabase::livePath($this->config);
+        if ($livePath === null) {
             throw new BackupNotSupportedException('Restore is only available on the SQLite build.');
         }
 
@@ -54,16 +56,15 @@ final class RestoreEncryptedBackup
 
             // 3. Pre-restore snapshot of the CURRENT database, so the prior
             //    state is always recoverable if the swap goes wrong.
-            $snapshotPath = $this->snapshotCurrent();
+            $snapshotPath = $this->snapshotCurrent($connection);
 
-            // 4. Swap: drop the live connection, copy the verified file over the
-            //    live path, and clear the stale WAL/SHM sidecars.
-            $this->db->purge('sqlite');
-            if ($this->files->copy($decryptedPath, $livePath) === false) {
-                throw new BackupIoException('Restore copy failed; the pre-restore snapshot is at '.$snapshotPath.'.');
-            }
-            $this->files->delete([$livePath.'-wal', $livePath.'-shm']);
-            $this->db->purge('sqlite');
+            // 4. Write the verified pages INTO the live database, not over
+            //    it. Replacing the file left a new connection running
+            //    `PRAGMA journal_mode = WAL` reporting code 11, on a file
+            //    whose own integrity_check passed when pulled off the device.
+            $this->purgeEveryConnectionTo($livePath);
+            $this->transplant($decryptedPath, $livePath, $snapshotPath);
+            $this->purgeEveryConnectionTo($livePath);
 
             return $snapshotPath;
         } finally {
@@ -71,7 +72,63 @@ final class RestoreEncryptedBackup
         }
     }
 
-    private function snapshotCurrent(): string
+    // The backup API copies pages through SQLite, so the WAL and -shm
+    // bookkeeping stays coherent and nothing is unlinked under a process
+    // holding it mapped. The file copy remains only for a runtime without the
+    // sqlite3 extension: it is the path that poisoned the phone.
+    private function transplant(string $decryptedPath, string $livePath, string $snapshotPath): void
+    {
+        if (class_exists(SQLite3::class)) {
+            $source = new SQLite3($decryptedPath, SQLITE3_OPEN_READONLY);
+
+            try {
+                $destination = new SQLite3($livePath, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
+
+                try {
+                    if ($source->backup($destination) !== true) {
+                        throw new BackupIoException('Restore could not write the backup into the live database; the pre-restore snapshot is at '.$snapshotPath.'.');
+                    }
+                } finally {
+                    $destination->close();
+                }
+            } finally {
+                $source->close();
+            }
+
+            return;
+        }
+
+        if ($this->files->copy($decryptedPath, $livePath) === false) {
+            throw new BackupIoException('Restore copy failed; the pre-restore snapshot is at '.$snapshotPath.'.');
+        }
+
+        $this->files->delete([$livePath.'-wal', $livePath.'-shm']);
+    }
+
+    // Laravel resolves a connection per NAME, and more than one name can point
+    // at the same file -- this app has had `sqlite` and the platform default
+    // both open at once. Purging by config name alone left the others holding
+    // the file.
+    private function purgeEveryConnectionTo(string $livePath): void
+    {
+        $target = realpath($livePath);
+
+        foreach ($this->db->getConnections() as $name => $open) {
+            $configured = $open->getConfig('database');
+
+            if (! is_string($configured)) {
+                continue;
+            }
+
+            $resolved = realpath($configured);
+
+            if ($configured === $livePath || ($target !== false && $resolved === $target)) {
+                $this->db->purge($name);
+            }
+        }
+    }
+
+    private function snapshotCurrent(string $connection): string
     {
         // The backups directory may not exist yet (a user who has never run a
         // backup), so create it before VACUUM INTO writes the snapshot there.
@@ -84,7 +141,7 @@ final class RestoreEncryptedBackup
 
         // VACUUM INTO must not run inside a transaction — SQLite refuses it,
         // so this statement runs standalone, outside any DB transaction.
-        $this->db->connection('sqlite')->statement("VACUUM INTO '{$escaped}'");
+        $this->db->connection($connection)->statement("VACUUM INTO '{$escaped}'");
         @chmod($snapshotPath, 0600);
 
         return $snapshotPath;
@@ -102,7 +159,7 @@ final class RestoreEncryptedBackup
         try {
             $this->db->purge($connectionName);
             $result = $this->db->connection($connectionName)->scalar('PRAGMA integrity_check');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             throw new BackupFormatException('The backup is not a readable database.', 0, $e);
         } finally {
             $this->db->purge($connectionName);

@@ -7,6 +7,7 @@ use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 
 it('boots the Receipts module skeleton and resolves the MatcherRegistry', function (): void {
     $registry = $this->app->make(MatcherRegistry::class);
@@ -46,7 +47,7 @@ it('builds a parsed MatchOutcomeDto from a ParsedReceiptDto', function (): void 
 
     $outcome = MatchOutcomeDto::parsed($parsed);
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed)->toBe($parsed);
     expect($outcome->skipReason)->toBeNull();
 });

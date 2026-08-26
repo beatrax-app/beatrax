@@ -5,16 +5,18 @@
     exported their CSV before the drop zone unlocks.
 
     Props:
-      :selected   — the currently-picked bank format key ("asn-csv" or
-                     "ing-csv"), or null if the user has not yet picked.
+      :selected   — the currently-picked bank's source format key
+                     ("asn-csv" or "ing-nl-csv"), or null if the user
+                     has not yet picked.
 
     The row uses the existing `.format-chip-button` styling shipped on
     the format-chip row so the user reuses one interaction model:
-    pick-a-chip. Each button dispatches a server-side property set on
-    the parent component (`selectedBankFormatHint`); arrow-key
-    navigation comes from the surrounding `role="radiogroup"`.
+    pick-a-chip. Each button calls `setCsvBank` on the parent component,
+    which is what makes the picked bank the format the import runs as;
+    arrow-key navigation comes from the surrounding `role="radiogroup"`.
 --}}
 @use('Modules\Ingestion\Public\Enums\SourceFormat')
+@use('Modules\Ingestion\Public\Services\CsvPresetRegistry')
 @use('Modules\Core\Public\Support\Lang')
 @props([
     'selected' => null,
@@ -30,7 +32,7 @@
         class="format-chip-button"
         role="radio"
         aria-checked="{{ $selected === SourceFormat::AsnCsv->value ? 'true' : 'false' }}"
-        wire:click="$set('selectedBankFormatHint', '{{ SourceFormat::AsnCsv->value }}')"
+        wire:click="setCsvBank('{{ SourceFormat::AsnCsv->value }}')"
     >
         <x-onboarding::format-chip label="ASN" :recommended="$selected === SourceFormat::AsnCsv->value" />
     </button>
@@ -38,9 +40,9 @@
         type="button"
         class="format-chip-button"
         role="radio"
-        aria-checked="{{ $selected === SourceFormat::IngCsv->value ? 'true' : 'false' }}"
-        wire:click="$set('selectedBankFormatHint', '{{ SourceFormat::IngCsv->value }}')"
+        aria-checked="{{ $selected === CsvPresetRegistry::ING_NL ? 'true' : 'false' }}"
+        wire:click="setCsvBank('{{ CsvPresetRegistry::ING_NL }}')"
     >
-        <x-onboarding::format-chip label="ING" :recommended="$selected === SourceFormat::IngCsv->value" />
+        <x-onboarding::format-chip label="ING" :recommended="$selected === CsvPresetRegistry::ING_NL" />
     </button>
 </div>

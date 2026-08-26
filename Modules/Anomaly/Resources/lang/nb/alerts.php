@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'normalt :baseline → faktisk: :actual',
     'detected' => 'oppdaget :date',
-    'sensitivity' => 'følsomhet ±:percent%',
+    'sensitivity' => 'følsomhet :percent av 100',
 
     'actions_summary' => 'Handlinger',
 

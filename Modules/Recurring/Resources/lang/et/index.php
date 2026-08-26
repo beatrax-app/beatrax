@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Korduvad tulud',
 
     'next' => 'Järgmine',
+    'overdue' => 'Tähtaeg möödas',
     'chain' => 'ahel',
     'chain_aria' => 'Rahastatud ahela kaudu',
     'per_month_suffix' => '/kuus',

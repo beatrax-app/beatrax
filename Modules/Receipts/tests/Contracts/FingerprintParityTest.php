@@ -14,6 +14,7 @@ use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 
@@ -106,7 +107,7 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
         $matcher = new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class));
         $rawEml = (string) file_get_contents($emlPath);
         $matchOutcome = $matcher->match($rawEml);
-        expect($matchOutcome->kind)->toBe('parsed');
+        expect($matchOutcome->kind)->toBe(MatchOutcomeKind::Parsed);
         expect($matchOutcome->parsed)->not->toBeNull();
 
         $receiptSource = (new ReceiptSourceAdapter)->toSourceDto($matchOutcome->parsed, sourceRowIndex: 0);
@@ -145,7 +146,7 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
     $matcher = new IcsReceiptMatcher(new EmlMimeReader);
     $rawEml = (string) file_get_contents($emlPath);
     $matchOutcome = $matcher->match($rawEml);
-    expect($matchOutcome->kind)->toBe('parsed');
+    expect($matchOutcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($matchOutcome->parsed)->not->toBeNull();
 
     $receiptSource = (new ReceiptSourceAdapter)->toSourceDto($matchOutcome->parsed, sourceRowIndex: 0);

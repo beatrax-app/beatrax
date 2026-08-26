@@ -22,7 +22,7 @@ return [
         'transaction' => 'Транзакция',
     ],
 
-    'eur_equivalent' => 'Равностойност в EUR',
+    'settled_equivalent' => 'Уредено в :code',
     'chart_requires_js' => 'Графиката изисква JavaScript.',
 
     'tolerance_toast' => 'Допустимо отклонение: :percent%',

@@ -287,3 +287,81 @@ it('skips occurrences strictly before asOf even when nextExpectedAt is in the pa
     expect($contribs)->toHaveCount(1);
     expect($contribs[0]->date->toDateString())->toBe('2026-06-15');
 });
+
+it('returns a monthly series to the 31st after February has clamped it', function (): void {
+    $series = rpDtoSeries([
+        'cadence' => 'monthly',
+        'nextExpectedAt' => CarbonImmutable::parse('2026-01-31'),
+    ]);
+    $asOf = CarbonImmutable::parse('2026-01-01');
+
+    $contribs = $this->projector->envelope($series, accountId: 1, asOf: $asOf, horizonDays: 220, user: $this->user);
+
+    $dates = array_map(static fn (ForecastContribution $c): string => $c->date->toDateString(), $contribs);
+    expect($dates)->toBe([
+        '2026-01-31',
+        '2026-02-28',
+        '2026-03-31',
+        '2026-04-30',
+        '2026-05-31',
+        '2026-06-30',
+        '2026-07-31',
+    ]);
+});
+
+it('returns a quarterly series to the 31st a year past a 30-day quarter', function (): void {
+    $series = rpDtoSeries([
+        'cadence' => 'quarterly',
+        'nextExpectedAt' => CarbonImmutable::parse('2025-12-31'),
+    ]);
+    $asOf = CarbonImmutable::parse('2025-12-01');
+
+    $contribs = $this->projector->envelope($series, accountId: 1, asOf: $asOf, horizonDays: 420, user: $this->user);
+
+    $dates = array_map(static fn (ForecastContribution $c): string => $c->date->toDateString(), $contribs);
+    expect($dates)->toBe([
+        '2025-12-31',
+        '2026-03-31',
+        '2026-06-30',
+        '2026-09-30',
+        '2026-12-31',
+    ]);
+});
+
+it('returns a yearly series to 29 February on the next leap year', function (): void {
+    $series = rpDtoSeries([
+        'cadence' => 'yearly',
+        'nextExpectedAt' => CarbonImmutable::parse('2024-02-29'),
+    ]);
+    $asOf = CarbonImmutable::parse('2024-02-01');
+
+    $contribs = $this->projector->envelope($series, accountId: 1, asOf: $asOf, horizonDays: 1560, user: $this->user);
+
+    $dates = array_map(static fn (ForecastContribution $c): string => $c->date->toDateString(), $contribs);
+    expect($dates)->toBe([
+        '2024-02-29',
+        '2025-02-28',
+        '2026-02-28',
+        '2027-02-28',
+        '2028-02-29',
+    ]);
+});
+
+it('keeps the 31st through the percentile tier too', function (): void {
+    $seriesId = rpSeedPercentileSeries($this->db, $this->user->id, [-1000, -1100, -1200, -1300, -1400, -1500]);
+
+    $series = rpDtoSeries([
+        'seriesId' => $seriesId,
+        'cadence' => 'monthly',
+        'varianceTolerancePercent' => 50,
+        'nextExpectedAt' => CarbonImmutable::parse('2026-01-31'),
+    ]);
+    $asOf = CarbonImmutable::parse('2026-01-01');
+
+    $contribs = $this->projector->project($series, accountId: 7, asOf: $asOf, horizonDays: 220, user: $this->user);
+
+    // The last occurrence in the horizon is 2026-07-31 and the jitter window
+    // reaches three days past it.
+    $dates = array_map(static fn (ForecastContribution $c): string => $c->date->toDateString(), $contribs);
+    expect(max($dates))->toBe('2026-08-03');
+});

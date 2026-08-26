@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Enums\CommandTier;
+use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Exceptions\SpawnedRunVanishedException;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRegistry;
@@ -48,15 +49,15 @@ final readonly class ArtisanSpawnController
             ->validate();
 
         $commandRaw = $validated['command'] ?? null;
-        if (! is_string($commandRaw)) {
-            return new JsonResponse(['error' => 'invalid_command'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-        $command = $commandRaw;
 
-        $rejection = $this->commandRejection($command, $safeNames, $destructiveNames);
+        $rejection = $this->commandRejection($commandRaw, $safeNames, $destructiveNames);
         if ($rejection !== null) {
             return $rejection;
         }
+
+        // Unreachable as anything but a string: the guard above refuses every
+        // other shape before this line.
+        $command = is_string($commandRaw) ? $commandRaw : '';
 
         $spec = $this->registry->find($command);
 
@@ -74,7 +75,15 @@ final readonly class ArtisanSpawnController
         /** @var array<string, mixed> $args */
         $args = is_array($argsRaw) ? $argsRaw : [];
 
-        $runId = $this->spawner->start($command, $args, $user->id(), CommandTier::Safe);
+        try {
+            $runId = $this->spawner->start($command, $args, $user->id(), CommandTier::Safe);
+        } catch (ProcessSpawningUnavailableException $e) {
+            return new JsonResponse(
+                ['error' => ProcessSpawningUnavailableException::WIRE_ERROR, 'message' => $e->readerMessage()],
+                Response::HTTP_NOT_IMPLEMENTED,
+            );
+        }
+
         $record = $this->runs->find($runId);
         if ($record === null) {
             throw SpawnedRunVanishedException::immediatelyAfterSpawn('ArtisanSpawnController', $runId);
@@ -90,9 +99,13 @@ final readonly class ArtisanSpawnController
      * @param  list<string>  $safeNames
      * @param  list<string>  $destructiveNames
      */
-    private function commandRejection(string $command, array $safeNames, array $destructiveNames): ?JsonResponse
+    private function commandRejection(mixed $command, array $safeNames, array $destructiveNames): ?JsonResponse
     {
         return match (true) {
+            ! is_string($command) => new JsonResponse(
+                ['error' => 'invalid_command'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            ),
             in_array($command, $destructiveNames, true) => new JsonResponse(
                 ['error' => 'destructive_requires_triple_gate'],
                 403,

@@ -9,6 +9,10 @@ return [
     'confirm' => 'Vahvista tuonti',
     'subtitle' => 'Tarkista jäsennetyt rivit. Mitään ei tallenneta tilikirjaasi ennen kuin vahvistat.',
 
+    'already_imported' => 'Tämä tiedosto on jo tuotu.',
+
+    'already_imported_link' => 'Näytä tuonnin tulos',
+
     'expired_html' => 'Esikatselu on vanhentunut. <a href="/imports/new" class="underline">Lähetä tiedosto uudelleen</a> ja yritä uudestaan.',
 
     'save_name' => 'Tallenna nimi',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Nimeä tämä vastapuoli uudelleen',
 
     'unknown_iban_prefix' => 'Löysimme tuntemattoman IBANin:',
+
+    'unknown_account_prefix' => 'Löysimme tuntemattoman tilin:',
     'unknown_iban_suffix' => 'Nimeä tämä tili.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'ja yritä uudelleen tai tarkastele tilannetta.',
     ],
 
+    'rows_shown' => 'Näytetyt rivit: :shown / :total',
+
+    'show_more' => 'Näytä lisää rivejä',
+
     'errors' => [
         'app_locked' => 'Avaa sovelluksen lukitus tuodaksesi: salausavaimia ei voi käyttää lukittuna.',
+        'file_stopped_short' => 'Otsikkorivi täsmäsi, joten muoto on oikea. Lukeminen pysähtyi ennen tiedoston loppua. Sen aiheuttaa yksi lukukelvoton rivi, samoin tälle laitteelle liian suuri tiedosto. Kokeile lyhyempää ajanjaksoa.',
         'file_unreadable' => 'Tätä tiedostoa ei voitu lukea.',
         'iban_not_in_preview' => 'Tämä IBAN ei kuulu nykyiseen esikatseluun.',
+        'pdf_reader_unavailable' => 'PDF-tiliotteet tarvitsevat pdftotext-ohjelman, jota ei ole täällä asennettu. Tuo tämä tiedosto tietokoneella, jossa se on, tai käytä pankkisi CSV-vientiä.',
         'row_unreadable' => 'Tätä riviä ei voitu lukea.',
         'unknown_account' => 'Tämä rivi kuuluu tilille, jolle et ole vielä antanut nimeä.',
     ],

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budgets',
-        'subtitle' => 'Weise jeden Euro zu — :period.',
+        'subtitle' => 'Weise alles zu — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Überträgt Minus',
-        'non_eur_aria' => 'Ausgaben in anderen Währungen als EUR werden in dieser Kategorie hier nicht angezeigt — siehe Dashboard',
-        'non_eur_title' => 'Ausgaben in anderen Währungen als EUR werden hier nicht angezeigt — siehe Dashboard',
+        'unconverted_aria' => 'Ausgaben in einer Währung ohne verfügbaren Kurs zählen hier nicht mit — siehe Übersicht',
+        'unconverted_title' => 'Ausgaben ohne verfügbaren Kurs zählen hier nicht mit — siehe Übersicht',
         'over_budget' => ':count über Budget',
     ],
 

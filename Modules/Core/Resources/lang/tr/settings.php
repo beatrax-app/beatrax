@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Para birimi gösterimi',
         'label' => 'İşlem listesindeki varsayılan görünüm',
-        'eur_only' => 'Yalnızca EUR',
+        'eur_only' => 'Yalnızca :code',
         'original' => 'Orijinal para birimi',
         'help' => 'İşlem listesinden sayfa bazında yine de değiştirebilirsin.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Algılama penceresi (ay)',
         'window_help' => 'İşlemler düzenli kalıplar halinde kümelenirken kaç aylık geçmişin taranacağı.',
         'income_label' => 'Asgari gelir (sent)',
-        'income_help' => 'Bu eşiğin altındaki gelirler otomatik olarak kümelenmez. Sent cinsinden saklanır — 200000, €2,000.00 anlamına gelir. Eşiği devre dışı bırakmak için 0 yap.',
+        'income_help' => 'Bu eşiğin altındaki gelirler otomatik olarak kümelenmez. Sent cinsinden saklanır — 200000, :example anlamına gelir. Eşiği devre dışı bırakmak için 0 yap.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Lütfen bir para birimi seç.',
         'window_months' => '2 ile 60 ay arasında bir değer seç.',
         'threshold' => '%1, %2, %5, %10, %25 veya %50 arasından bir eşik seç.',
-        'amount' => '€0 ve üzeri bir tutar gir.',
+        'amount' => ':zero ve üzeri bir tutar gir.',
         'period_day' => '1 ile 28 arasında bir gün seç.',
         'currency_view' => 'Mevcut seçeneklerden birini seç.',
     ],

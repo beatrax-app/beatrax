@@ -13,15 +13,18 @@ return [
     'as_of_label' => 'Algjääk seisuga',
     'as_of_help' => 'Kuupäev, mille seisuga ülalolev arv kehtib.',
 
-    'divergence' => 'See erineb rohkem kui 500 € võrra jäägist, mille Beatrax sinu imporditud tehingutest arvutab. Kas oled kindel?',
+    'divergence' => 'See erineb rohkem kui :threshold võrra jäägist, mille Beatrax sinu imporditud tehingutest arvutab. Kas oled kindel?',
     'use_beatrax' => 'Kasuta Beatraxi arvu',
     'use_mine' => 'Kasuta minu arvu',
 
     'save' => 'Salvesta algjääk',
+    'remove' => 'Eemalda algjääk',
     'saved' => 'Salvestatud.',
+    'removed' => 'Eemaldatud.',
 
     'toast' => [
         'updated' => 'Algjääk on uuendatud.',
+        'removed' => 'Algjääk on eemaldatud.',
     ],
 
     'errors' => [

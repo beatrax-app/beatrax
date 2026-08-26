@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Support\BundledRates;
 use Modules\Shell\Internal\Http\Livewire\NetWorthCard;
 
 // Guarded against a redeclaration fatal when several test files load together.
@@ -38,6 +39,13 @@ if (! function_exists('nwCardFxRate')) {
 }
 
 beforeEach(function (): void {
+    // This suite builds its own rate world, so the bundled baseline the install
+    // seeds is cleared first: several cases turn on a pair having no rate at
+    // all, and one on a hand-dated rate being the newest there is.
+    app(DatabaseManager::class)->connection()
+        ->table('exchange_rates')
+        ->where('source', BundledRates::SOURCE)
+        ->delete();
     $this->db = app(DatabaseManager::class);
     $this->user = User::create([
         'username' => 'nwcard-fx-fixture',
@@ -79,7 +87,7 @@ it('adds fx-icon--stale modifier when rates are stale or bundled', function (): 
     nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     // Old rate (> 3 days from 2026-06-07 → stale)
-    nwCardFxRate($this->db, 'USD', '1.08', '2026-05-01', 'bundled');
+    nwCardFxRate($this->db, 'USD', '1.08', '2026-05-01', BundledRates::SOURCE);
 
     Livewire::test(NetWorthCard::class)
         ->assertSee('fx-icon--stale', escape: false);
@@ -95,7 +103,7 @@ it('does NOT add fx-icon--stale when rates are fresh', function (): void {
         ->assertDontSee('fx-icon--stale', escape: false);
 })->group('phase-1');
 
-it('renders the no-rate fallback copy when accountsWithoutRate > 0', function (): void {
+it('renders the no-rate fallback copy when a balance could not be converted', function (): void {
     nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwCardAccount($this->db, $this->user->id, 'JPY wallet', 'paypal', 5_000_000, 'JPY'); // no JPY rate seeded
 
@@ -154,4 +162,25 @@ it('anchors each popover to its trigger via inline CSS anchor positioning', func
         ->assertSee('anchor-name:', escape: false)
         ->assertSee('position-anchor:', escape: false)
         ->assertSee('position-area: bottom span-right', escape: false);
+})->group('phase-1');
+
+it('names the bundled snapshot as the source and tells the reader to enable online refresh', function (): void {
+    nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
+    nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
+    nwCardFxRate($this->db, 'USD', '1.08', '2026-05-01', BundledRates::SOURCE);
+
+    Livewire::test(NetWorthCard::class)
+        ->assertSee('Bundled snapshot')
+        ->assertSee('Using a bundled snapshot rate. Enable online refresh in Settings for current rates.')
+        ->assertDontSee('This rate is more than 3 days old. The next online refresh will update it.');
+})->group('phase-1');
+
+it('keeps the age-based stale note for an old rate that did NOT come from the bundled snapshot', function (): void {
+    nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
+    nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
+    nwCardFxRate($this->db, 'USD', '1.08', '2026-05-01', 'ecb');
+
+    Livewire::test(NetWorthCard::class)
+        ->assertSee('This rate is more than 3 days old. The next online refresh will update it.')
+        ->assertDontSee('Using a bundled snapshot rate. Enable online refresh in Settings for current rates.');
 })->group('phase-1');

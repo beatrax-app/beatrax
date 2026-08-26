@@ -9,11 +9,10 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeDate;
-use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Goals\Internal\Enums\GoalProgressState;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Dto\GoalProgressRow;
-use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 use stdClass;
 
@@ -23,7 +22,7 @@ final class GoalProgressQuery
 
     public function __construct(
         private readonly DatabaseManager $db,
-        private readonly ExchangeRateService $fx,
+        private readonly CrossCurrencyTotal $fx,
         private readonly GoalProjectionService $projection,
         private readonly PotBalanceQuery $potBalance,
     ) {}
@@ -73,28 +72,64 @@ final class GoalProgressQuery
             array_values(array_map(static fn (stdClass $row): int => self::toInt($row->id), $goalRows->all())),
         );
 
+        $ratesByTarget = $this->ratesByTargetCurrency(array_values($goalRows->all()), $linkedPots, $attributed);
+
         $rows = [];
         foreach ($goalRows as $row) {
-            $rows[] = $this->buildRow($row, $linkedPots, $attributed, $user);
+            $rows[] = $this->buildRow($row, $linkedPots, $attributed, $user, $ratesByTarget);
         }
 
         return $rows;
     }
 
+    // One lookup per (source currency, goal currency) pair for the whole list:
+    // the level and the projection each read every attribution, and the service
+    // behind a conversion reads the whole exchange_rates table per call.
+    /**
+     * @param  list<stdClass>  $goalRows
+     * @param  array<int, array{balance: int, currency: string, potId: int}>  $linkedPots
+     * @param  array<int, list<array{amountMinor: int, currency: string, postedAt: string}>>  $attributed
+     * @return array<string, array<string, string>>
+     */
+    private function ratesByTargetCurrency(array $goalRows, array $linkedPots, array $attributed): array
+    {
+        $sources = [];
+        foreach ($linkedPots as $pot) {
+            $sources[$pot['currency']] = true;
+        }
+        foreach ($attributed as $contributions) {
+            foreach ($contributions as $contribution) {
+                $sources[$contribution['currency']] = true;
+            }
+        }
+
+        $ratesByTarget = [];
+        foreach ($goalRows as $row) {
+            $target = self::toString($row->target_currency);
+            if (! isset($ratesByTarget[$target])) {
+                $ratesByTarget[$target] = $this->fx->ratesTo(array_keys($sources), $target);
+            }
+        }
+
+        return $ratesByTarget;
+    }
+
     /**
      * @param  array<int, array{balance: int, currency: string, potId: int}>  $linkedPots
      * @param  array<int, list<array{amountMinor: int, currency: string, postedAt: string}>>  $attributed
+     * @param  array<string, array<string, string>>  $ratesByTarget
      */
-    private function buildRow(stdClass $row, array $linkedPots, array $attributed, User $user): GoalProgressRow
+    private function buildRow(stdClass $row, array $linkedPots, array $attributed, User $user, array $ratesByTarget): GoalProgressRow
     {
         $goal = $this->hydrateGoal($row);
         $goalId = self::toInt($row->id);
         $targetCurrency = self::toString($row->target_currency);
         $linkedPot = $linkedPots[$goalId] ?? null;
+        $rates = $ratesByTarget[$targetCurrency] ?? [];
 
         $contributedMinor = $linkedPot !== null
-            ? $this->potContribution($linkedPot, $targetCurrency)
-            : $this->attributedContribution($attributed[$goalId] ?? [], $targetCurrency);
+            ? $this->potContribution($linkedPot, $targetCurrency, $rates)
+            : $this->attributedContribution($attributed[$goalId] ?? [], $targetCurrency, $rates);
 
         $targetMinor = self::toInt($row->target_minor);
         $fractionComplete = $targetMinor > 0 ? $contributedMinor / $targetMinor : 0.0;
@@ -106,7 +141,7 @@ final class GoalProgressQuery
         };
 
         ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon, 'stalled' => $stalled] =
-            $this->projection->project($goal, $contributedMinor, $user, $linkedPot, $attributed[$goalId] ?? []);
+            $this->projection->project($goal, $contributedMinor, $user, $linkedPot, $attributed[$goalId] ?? [], $rates);
 
         return new GoalProgressRow(
             id: $goalId,
@@ -126,30 +161,30 @@ final class GoalProgressQuery
 
     /**
      * @param  array{balance: int, currency: string, potId: int}  $linkedPot
+     * @param  array<string, string>  $rates
      */
-    private function potContribution(array $linkedPot, string $targetCurrency): int
+    private function potContribution(array $linkedPot, string $targetCurrency, array $rates): int
     {
-        if ($linkedPot['currency'] === '' || $linkedPot['currency'] === $targetCurrency) {
+        if ($linkedPot['currency'] === '') {
             return $linkedPot['balance'];
         }
 
-        $money = Money::ofMinor($linkedPot['balance'], $linkedPot['currency']);
-
-        return $this->fx->convertToBase($money, $targetCurrency)->converted->toMinor();
+        return $this->fx->withRates([$linkedPot['currency'] => $linkedPot['balance']], $targetCurrency, $rates)->minor;
     }
 
     /**
      * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $contributions
+     * @param  array<string, string>  $rates
      */
-    private function attributedContribution(array $contributions, string $targetCurrency): int
+    private function attributedContribution(array $contributions, string $targetCurrency, array $rates): int
     {
-        $total = 0;
+        $byCurrency = [];
         foreach ($contributions as $contribution) {
-            $money = Money::ofMinor($contribution['amountMinor'], $contribution['currency']);
-            $total += $this->fx->convertToBase($money, $targetCurrency)->converted->toMinor();
+            $byCurrency[$contribution['currency']]
+                = ($byCurrency[$contribution['currency']] ?? 0) + $contribution['amountMinor'];
         }
 
-        return $total;
+        return $this->fx->withRates($byCurrency, $targetCurrency, $rates)->minor;
     }
 
     // An attribution is the user's own statement that this transaction funds this

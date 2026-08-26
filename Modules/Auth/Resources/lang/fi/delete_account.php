@@ -7,6 +7,7 @@ return [
     'body' => 'Tilin poistaminen poistaa sen tästä laitteesta ja kaiken, mitä se omistaa. Sitä ei voi perua.',
     'removes' => 'Tapahtumasi, tilisi, budjettisi, tavoitteesi ja raporttisi katoavat, samoin säännöt, asetukset, palautuskoodit, synkronointi-identiteetti ja salausavaimet.',
     'devices_heading' => 'Muut laitteesi pitävät oman kopionsa',
+    'devices_heading_none' => 'Tämä on ainoa kopio tiedoistasi',
     'devices_body' => 'Beatraxilla ei ole palvelinta, joten mitään ei voi poistaa etänä. Tällä laitteella on yhä täysi kopio, ja se on hoidettava laitteella itsellään — :devices|Beatraxilla ei ole palvelinta, joten mitään ei voi poistaa etänä. Näillä laitteilla on yhä täysi kopio, ja ne on hoidettava laitteella itsellään — :devices',
     'devices_none' => 'Mikään toinen laite ei ole pariliitetty tähän, joten tämä on ainoa kopio tiedoistasi.',
     'successor' => 'Sinä hallinnoit tätä laitetta, joten :username ottaa sen hoitaakseen, kun tilisi on poissa.',

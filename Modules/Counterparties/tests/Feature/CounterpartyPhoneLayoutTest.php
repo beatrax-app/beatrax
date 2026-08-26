@@ -29,3 +29,25 @@ it('gives a profile tab one column on a phone', function (): void {
     expect($css)->toContain(".cp-tab-duo {\n        display: grid;\n        grid-template-columns: 1fr;")
         ->and($css)->toContain("@media (min-width: 640px) {\n        .cp-tab-duo {\n            grid-template-columns: 1fr 1fr;\n        }\n    }");
 });
+
+// Measured on the Samsung at the phone's own maximum font size: the triage
+// queue scrolled sideways, 377px of content in a 347px shell. A fieldset
+// carries min-width: min-content from the browser, so it will not shrink below
+// the intrinsic width of the name box inside it, and the box — flex: 1 1 240px
+// with the default min-width: auto — will not shrink either. The fieldset alone
+// left the box 61px past it; both together put everything back inside the card.
+it('lets the manual-label fieldset and its name box shrink to the phone', function (): void {
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
+    $triage = (string) file_get_contents(
+        base_path('Modules/Counterparties/Resources/views/livewire/counterparty-triage.blade.php'),
+    );
+
+    expect($css)->toContain("    .triage-section {\n        display: flex;\n        flex-direction: column;\n        gap: var(--space-4);\n        min-width: 0;\n    }");
+
+    $start = strpos($triage, 'id="triage-manual-name"');
+    expect($start)->not->toBeFalse();
+
+    $input = substr($triage, (int) $start, 400);
+    expect($input)->toContain('flex: 1 1 240px')
+        ->and($input)->toContain('min-width: 0');
+});

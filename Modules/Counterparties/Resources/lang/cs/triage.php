@@ -25,6 +25,7 @@ return [
     'no_not' => 'Ne, není to :name',
 
     'recent_on_iban' => 'Nedávné transakce na tomto IBAN',
+    'recent_on_counterparty' => 'Nedávné transakce s touto protistranou',
     'no_transactions_yet' => 'Zatím žádné transakce.',
 
     'label_manually' => 'Nebo označ ručně',

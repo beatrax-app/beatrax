@@ -27,6 +27,17 @@ Route::middleware(['web'])->group(static function (): void {
         return app($component)();
     })->name('mobile.import');
 
+    // The route back from a wipe, and the reason it is safe outside the auth
+    // group: the component refuses unless `users` is empty, on the action as
+    // well as on mount. A device with an account never reaches it, so the
+    // most it can replace is a database with nobody in it.
+    Route::get('/mobile/restore', static function () {
+        $component = 'Modules\\Mobile\\Internal\\Http\\Livewire\\MobileRestoreFromBackup';
+        abort_unless(class_exists($component), 404);
+
+        return app($component)();
+    })->name('mobile.restore');
+
     // Sits beside /mobile/import rather than inside the auth group: the step
     // that shows the codes runs during signup, and the session holding them is
     // the only thing that can reach them.

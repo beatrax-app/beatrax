@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Trinn :number av :total',
 
+    'back' => 'Tilbake',
+    'back_aria' => 'Tilbake — går tilbake til forrige oppsettstrinn',
+
     'resume_later' => 'Fortsett senere',
     'resume_later_aria' => 'Fortsett senere — lagrer fremdriften din og lukker oppsettsveiviseren',
     'resume_banner' => 'Velkommen tilbake — vi fortsetter der du slapp.',

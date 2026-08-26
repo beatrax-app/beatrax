@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Iban')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     IBAN reveal row — the personal-profile IBAN line with a
@@ -35,7 +36,7 @@
         x-show="revealed"
         x-cloak
         aria-live="polite"
-    >{{ $iban }}</span>
+    >{{ Iban::grouped($iban) }}</span>
     <button
         type="button"
         class="focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"

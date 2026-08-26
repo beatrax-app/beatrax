@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Toistuvat tulot',
 
     'next' => 'Seuraava',
+    'overdue' => 'Myöhässä',
     'chain' => 'ketju',
     'chain_aria' => 'Rahoitettu ketjun kautta',
     'per_month_suffix' => '/kk',

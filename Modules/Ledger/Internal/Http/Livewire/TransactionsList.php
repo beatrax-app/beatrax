@@ -10,6 +10,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Internal\Enums\CurrencyView;
 use Modules\Ledger\Internal\Services\TransactionFilterOptions;
 use Modules\Ledger\Internal\Services\TransactionRowDecorator;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
@@ -31,11 +32,6 @@ final class TransactionsList extends Component
     // ~200-400 bytes JSON-encoded per row, so 500 rows stays well below
     // Livewire 4's 4MB snapshot limit. Oldest rows are trimmed past it.
     private const MAX_ACCUMULATED_ROWS = 500;
-
-    // The stored preference token, not a currency code. It spells the euro for
-    // history: the toggle it drives means "base currency only", and the value is
-    // persisted per user, so renaming it would silently reset everyone's choice.
-    private const string BASE_CURRENCY_ONLY = 'eur';
 
     public bool $fullHistory = false;
 
@@ -99,7 +95,7 @@ final class TransactionsList extends Component
     {
         if ($this->currency === '') {
             $pref = $currentUser->user()->default_currency_view;
-            $this->currency = $pref === 'eur_only' ? self::BASE_CURRENCY_ONLY : 'original';
+            $this->currency = $pref === 'eur_only' ? CurrencyView::BaseOnly->value : CurrencyView::Original->value;
         }
     }
 
@@ -179,15 +175,6 @@ final class TransactionsList extends Component
             : $this->renderList($currentUser, $listQuery, $views, $rows, $filterOptions, $baseCurrency);
     }
 
-    // The reader's own setting, not config('currency.base'): the /settings
-    // picker writes users.base_currency, and nothing wires the config value to
-    // an env — so reading it would be inert and would print € over a total
-    // counted in pounds.
-    private static function readerCurrency(User $user, BaseCurrency $baseCurrency): string
-    {
-        return $user->base_currency ?? $baseCurrency->code();
-    }
-
     // Livewire hands a #[Url] array to the view as well as to the query, so
     // cleaning it on the way to the query alone left the chip partial
     // subscripting [0] on a shape the address bar chose. Coerced on the
@@ -210,7 +197,7 @@ final class TransactionsList extends Component
         BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
-        $readerCurrency = self::readerCurrency($user, $baseCurrency);
+        $readerCurrency = $baseCurrency->forUser($user);
 
         if ($this->preSearchFullHistory === null) {
             $this->preSearchFullHistory = $this->fullHistory;
@@ -266,10 +253,10 @@ final class TransactionsList extends Component
         BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
-        $readerCurrency = self::readerCurrency($user, $baseCurrency);
-        // 'eur' is the stored preference token, not a currency: the toggle means
-        // "base currency only", so it resolves to the reader's, not to the euro.
-        $queryCurrency = $this->currency === self::BASE_CURRENCY_ONLY ? $readerCurrency : null;
+        $readerCurrency = $baseCurrency->forUser($user);
+        // BaseOnly resolves to the READER's base currency, never to the euro
+        // its token spells.
+        $queryCurrency = $this->currency === CurrencyView::BaseOnly->value ? $readerCurrency : null;
 
         $page = $this->fullHistory
             ? $listQuery->fullHistory($user, cursorId: $this->cursorId, cursorPostedAt: $this->cursorPostedAt, currency: $queryCurrency)

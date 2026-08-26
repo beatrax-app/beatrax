@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Conta não definida. Recarrega o assistente.',
         'invalid_amount' => 'Introduz um montante válido.',
-        'amount_range' => 'Introduz um montante entre -€10M e €10M.',
+        'amount_range' => 'Introduz um montante entre :min e :max.',
         'pick_date' => 'Escolhe uma data.',
         'pick_valid_date' => 'Escolhe uma data válida.',
         'future_date' => 'A data do saldo inicial não pode estar no futuro.',

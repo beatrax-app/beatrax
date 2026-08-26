@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Motpart',
     'col_description' => 'Beskrivning',
     'col_note' => 'Anteckning',
-    'col_amount' => 'Belopp (EUR)',
+    'col_amount' => 'Belopp',
 
     'subtotal' => 'Delsumma',
 

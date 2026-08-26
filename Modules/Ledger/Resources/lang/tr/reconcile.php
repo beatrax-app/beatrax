@@ -10,7 +10,7 @@ return [
     'account' => 'Hesap',
     'choose_account' => 'Bir hesap seç…',
     'statement_date' => 'Ekstre tarihi',
-    'statement_balance' => 'Ekstre bakiyesi (€)',
+    'statement_balance' => 'Ekstre bakiyesi (:symbol)',
     'balance_help' => 'Mümkün olduğunda en son içe aktardığın hesap ekstresinden önceden doldurulur — borç için negatif, her iki yönde de düzenlenebilir.',
 
     'cleared_balance' => 'Onaylanan bakiye',

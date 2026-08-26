@@ -11,6 +11,7 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
+use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Services\EloquentAccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
@@ -76,13 +77,16 @@ it('tells the user to unlock rather than printing the crypto exception', functio
         );
     })();
 
-    $rows = app(ImportPipeline::class)->previewFromGenerator(
+    $cache = app(PreviewCache::class);
+    app(ImportPipeline::class)->previewFromGenerator(
         $source,
         'asn-csv',
         new EloquentAccountResolver($user),
         $user,
         (int) $run->id,
-    )['rows'];
+        $cache->writer((int) $run->id),
+    );
+    $rows = $cache->rows((int) $run->id, 0, PreviewCache::RESULT_ROW_WINDOW);
 
     expect($rows)->toHaveCount(1);
     expect($rows[0]->status)->toBe(PreviewRowStatus::Error);
@@ -149,13 +153,16 @@ it('tells the user to unlock when the AEAD column is the one that cannot be seal
         );
     })();
 
-    $rows = app(ImportPipeline::class)->previewFromGenerator(
+    $cache = app(PreviewCache::class);
+    app(ImportPipeline::class)->previewFromGenerator(
         $source,
         'asn-csv',
         new EloquentAccountResolver($user),
         $user,
         (int) $run->id,
-    )['rows'];
+        $cache->writer((int) $run->id),
+    );
+    $rows = $cache->rows((int) $run->id, 0, PreviewCache::RESULT_ROW_WINDOW);
 
     expect($rows)->toHaveCount(1);
     expect($rows[0]->status)->toBe(PreviewRowStatus::Error);

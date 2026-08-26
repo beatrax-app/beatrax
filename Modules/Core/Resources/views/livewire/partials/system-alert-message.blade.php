@@ -15,6 +15,7 @@
 --}}
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Internal\Enums\BackupAlertKind')
+@use('Modules\Core\Public\Enums\OAuthAlertKind')
 @use('Modules\Core\Public\Enums\UpdateAlertKind')
 @switch ($alert->kind)
     @case (UpdateAlertKind::Available->value)
@@ -113,7 +114,7 @@
         {{-- App-static copy with an inline <code> span; :level is an integer. --}}
         {!! Lang::get('core::alerts.messages.synchronous_misconfigured', ['level' => $currentLevel]) !!}
         @break
-    @case ('oauth_reconsent_required')
+    @case (OAuthAlertKind::ReconsentRequired->value)
         {{--
             Re-consent prompt surfaced when the background inbox scanner
             catches an invalid_grant / consent_required failure on token

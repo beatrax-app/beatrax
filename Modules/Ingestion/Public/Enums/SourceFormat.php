@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Public\Enums;
 
-// Every format the upload wizard accepts by name. `asn-csv` / `camt053` /
-// `mt940` also key the adapter registry; `ing-csv` rides the ASN CSV adapter
-// as a layout. CSV presets add further formats at runtime, so a value absent
-// from this enum is a preset rather than an error.
+// Every built-in format, each of which keys either the adapter registry or the
+// parse stage's receipt arm. CSV presets add further formats at runtime, so a
+// value absent from this enum is a preset rather than an error.
 enum SourceFormat: string
 {
     case AsnCsv = 'asn-csv';
-
-    case IngCsv = 'ing-csv';
 
     case Camt053 = 'camt053';
 
@@ -37,7 +34,7 @@ enum SourceFormat: string
             self::IcsPdf => '.pdf',
             self::Eml => '.eml',
             self::Mbox => '.mbox',
-            self::AsnCsv, self::IngCsv, self::PaypalCsv => '.csv',
+            self::AsnCsv, self::PaypalCsv => '.csv',
         };
     }
 }

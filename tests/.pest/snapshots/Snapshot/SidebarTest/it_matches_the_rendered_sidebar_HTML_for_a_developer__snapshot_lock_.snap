@@ -13,7 +13,16 @@
         x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
         style="cursor: pointer;"
     >
-        <span class="ic" aria-hidden="true">⌕</span>
+        <svg
+    class="h-5 w-5 ic"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    stroke-width="2"
+    aria-hidden="true"
+>
+    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+</svg>
         <input
             type="text"
             placeholder="Search…"
@@ -199,7 +208,7 @@
             <span class="ic right" aria-hidden="true">⋯</span>
         </div>
 
-        <form method="POST" action="https://beatrax.test/logout" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
+        <form method="POST" action="https://beatrax.test/logout" data-beatrax-post x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
                         <button type="submit" class="side-item" style="width: 100%;">
                 
                 <span class="ic" aria-hidden="true">

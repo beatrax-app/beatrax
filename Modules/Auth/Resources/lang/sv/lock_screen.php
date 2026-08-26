@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Logga ut',
     'forgot_pin' => 'Glömt din PIN-kod? Logga ut — du kan logga in igen med ditt kontolösenord och välja en ny PIN-kod. Inga data går förlorade.',
 
-    'digits_suffix' => 'siffror angivna',
+    'digits_entered' => ':count siffra angiven|:count siffror angivna',
     'pad_label' => 'Knappsats för PIN-kod',
     'digit_aria' => 'Siffra :digit',
     'backspace_aria' => 'Backsteg',

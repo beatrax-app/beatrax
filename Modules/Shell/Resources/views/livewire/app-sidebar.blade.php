@@ -49,7 +49,7 @@
         x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
         style="cursor: pointer;"
     >
-        <span class="ic" aria-hidden="true">⌕</span>
+        <x-core::search-mark class="ic" />
         <input
             type="text"
             placeholder="{{ Lang::get('core::sidebar.search_placeholder') }}"
@@ -411,7 +411,7 @@
             <span class="ic right" aria-hidden="true">⋯</span>
         </div>
 
-        <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
+        <form method="POST" action="{{ route('logout') }}" data-beatrax-post x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
             @csrf
             <button type="submit" class="side-item" style="width: 100%;">
                 {{-- U+23FB POWER SYMBOL has no glyph in the Android system font

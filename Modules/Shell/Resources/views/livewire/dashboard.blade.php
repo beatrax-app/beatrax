@@ -48,14 +48,23 @@
          items-baseline, not items-start: the period title and the ‹ Today ›
          stepper are one control line, and aligning their boxes left the
          30px title and the 40px buttons reading off two different lines.
-         The stepper never shrinks, so its glyphs keep their tap targets
-         when a long month name takes the width it needs. --}}
-    <header class="flex items-baseline justify-between gap-6 dashboard-phone-order-1">
+         The row STACKS below sm rather than squeezing, so a long month name
+         takes the width it needs. Measured on an iPhone 12 mini: "Αύγουστος
+         2026" put the stepper's right edge at 397px on a 375pt screen, taking
+         the next-period glyph off the display.
+
+         The stepper keeps shrink-0 and takes flex-wrap beside it. At the
+         reader's accessibility text sizes ‹ Today › is 464px of glyphs and
+         padding on a 375pt screen; unshrinkable and unwrappable together, the
+         only give left was inside the label, which broke into "Tod / ay" in a
+         button two lines too short to hold it. Wrapping gives the three
+         buttons a second row and their own widths back. --}}
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6 dashboard-phone-order-1">
         <div class="space-y-1">
             <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $summary->period->label }}</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.subtitle') }}</p>
         </div>
-        <div class="flex shrink-0 items-center gap-1">
+        <div class="flex shrink-0 flex-wrap items-center gap-1">
             <button
                 type="button"
                 wire:click="previousPeriod"
@@ -82,14 +91,14 @@
          the user has zero open drift alerts; the dashboard collapses
          gracefully on a quiet day. Cross-user scoping happens inside
          DriftAlertQuery. --}}
-    <div class="dashboard-phone-order-2">
+    <div class="dashboard-phone-order-2 dashboard-tile">
         @livewire('drift-alerts.dashboard-drift-badge')
     </div>
 
     {{-- Unusual charges tile: a distinct anomaly indicator,
          separate from the drift tile, hidden when there are zero open
          anomalies. Cross-user scoping happens inside AnomalyAlertQuery. --}}
-    <div class="dashboard-phone-order-2">
+    <div class="dashboard-phone-order-2 dashboard-tile">
         @livewire('anomaly.dashboard-anomaly-badge')
     </div>
 
@@ -128,6 +137,11 @@
                 >
                     {{ $fmt($summary->net) }}
                 </p>
+                @if ($summary->unconvertedCurrencies !== [])
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">
+                        {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $summary->unconvertedCurrencies)]) }}
+                    </p>
+                @endif
             </x-core::card>
         </section>
     @else
@@ -166,14 +180,14 @@
 
     {{-- Goals summary card (order 4 on phone) — up to 3 nearest-finishing active goals.
          Renders a calm empty-state when the user has no goals. --}}
-    <div class="dashboard-phone-order-4">
+    <div class="dashboard-phone-order-4 dashboard-tile">
         @livewire('goals.summary-card')
     </div>
 
     {{-- Tax summary card — tagged total + item count for the seasonal
          tax year (Jan-Apr → previous year; May-Dec → current year). Links to /tax.
          Seasonal, so it joins the order-6 tail on phones. --}}
-    <div class="dashboard-phone-order-6">
+    <div class="dashboard-phone-order-6 dashboard-tile">
         @livewire('tax.summary-card')
     </div>
 
@@ -181,7 +195,7 @@
          from the envelope model, plus an amber over-budget pill. Renders
          nothing when the user has zero expense categories. Sits with the
          goals card (order 4): both answer "am I on plan this period?". --}}
-    <div class="dashboard-phone-order-4">
+    <div class="dashboard-phone-order-4 dashboard-tile">
         @livewire('budgets.envelope-glance-card')
     </div>
 
@@ -189,7 +203,7 @@
          reports the user pinned via TogglePin (/reports/library). Renders
          nothing when zero pins, same convention as goals.summary-card /
          tax.summary-card / budgets.envelope-glance-card above. --}}
-    <div class="dashboard-phone-order-6">
+    <div class="dashboard-phone-order-6 dashboard-tile">
         @livewire('reports.pinned-reports-row')
     </div>
 
@@ -255,7 +269,7 @@
                             {{-- The name truncates and the amount holds its width:
                                  without this a long category pushed the figure
                                  straight off the right edge of a phone. --}}
-                            <div class="flex items-baseline justify-between gap-2 text-sm">
+                            <div class="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                                 <span class="min-w-0 truncate text-slate-900 dark:text-slate-100">{{ $cat->name }}</span>
                                 <span class="shrink-0 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                     {{ $fmt($cat->spend) }}
@@ -277,7 +291,7 @@
 
         {{-- Recent transactions --}}
         <section class="space-y-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between">
                 <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.recent_transactions') }}</h2>
                 <a
                     href="{{ Destination::Transactions->url() }}"
@@ -321,9 +335,10 @@
     {{-- "Also want to see your data on your phone?" standing promo card.
          The install-hint component owns the copy and the
          beforeinstallprompt / iOS fallback logic. --}}
-    <div class="dashboard-phone-order-8">
-        <x-core::install-hint />
-    </div>
+    {{-- The order class is the component's own, not a wrapper's: Alpine hides
+         the root with display:none, and a wrapper around it would stay a flex
+         item and keep its gap. --}}
+    <x-core::install-hint class="dashboard-phone-order-8" />
 
     </div>{{-- end .dashboard-main --}}
 

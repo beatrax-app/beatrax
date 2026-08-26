@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Konto nicht gesetzt. Lade den Assistenten neu.',
         'invalid_amount' => 'Gib einen gültigen Betrag ein.',
-        'amount_range' => 'Gib einen Betrag zwischen -€10M und €10M ein.',
+        'amount_range' => 'Gib einen Betrag zwischen :min und :max ein.',
         'pick_date' => 'Wähle ein Datum.',
         'pick_valid_date' => 'Wähle ein gültiges Datum.',
         'future_date' => 'Das Datum des Anfangssaldos darf nicht in der Zukunft liegen.',

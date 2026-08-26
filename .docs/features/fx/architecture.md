@@ -96,7 +96,60 @@ brick/money — rate values are never represented as float anywhere in
 this module, since floating-point representation silently corrupts FX
 conversion precision.
 
-## Wiring
+## Roll-ups that span currencies
+
+`CrossCurrencyTotal` is the one collaborator every roll-up that adds
+figures from more than one currency goes through. A Revolut import
+carries a currency per row, so a single account — and therefore a single
+counterparty, tax year, recurring series or drift watchlist — can hold
+euro and dollar side by side. Adding those minor units is the arithmetic
+`AccountBalance` deliberately has no `total()` to prevent, and every
+surface that did it printed the sum under one symbol.
+
+The collaborator takes buckets keyed by currency, converts each at its
+own rate, and returns a `ConvertedTotal` carrying the figure, the
+currency it is denominated in, and the codes it could not reach. A
+currency with no rate is **left out and named**, never added at one to
+one — the rule `NetWorthQuery` already applies to a balance line it has
+no rate for. `ConvertedTotal::isPartial()` is what a renderer gates the
+"not converted" line on, so a reader can tell a partial total from a
+whole one.
+
+`ratesTo()` fetches one rate per currency for the whole render rather
+than one per bucket: `convertToBase()` reads the entire `exchange_rates`
+table on every call, and a twelve-month sparkline across a few hundred
+counterparties would otherwise ask for the same pair thousands of times.
+The rate is probed with a zero amount, because the rate a zero converts
+at is the rate any amount converts at. Callers holding many buckets call
+`ratesTo()` once and then `withRates()` per bucket group; callers with a
+single group call `of()`, which does both.
+
+`convert()` is the same rule for one amount rather than a bucket map:
+a `Money` in, the amount in the target currency or `null` out. It is
+what a surface that *ranks* across currencies uses — the costliest
+subscription, the biggest drift, the lowest projected balance — where
+the figure is a comparison key rather than a total. `null` drops the
+candidate out of the race, which is the ranking equivalent of leaving a
+bucket out of a sum: a JPY minor unit is not a euro cent, and on raw
+minor units the cheaper subscription won.
+
+### What deliberately does not go through it
+
+`NetWorthQuery` converts per balance line and stays on
+`ExchangeRateService` on purpose. It needs the whole `ConversionResult`
+per line — the rate, its source, its as-of date and its staleness are
+rendered beside the line and rolled into the DTO's `ratesSource`,
+`ratesAsOf` and `hasStaleRates` — and `ConvertedTotal` carries none of
+them. It also has to keep a rate-less line **visible** in the breakdown,
+listed at its native amount with a null base equivalent, which is the
+opposite of leaving a bucket out; and its `balancesWithoutRate` counts
+*lines*, where `ConvertedTotal::unconverted` counts distinct currency
+codes. Routing it through the seam would quietly change all three. Its
+cost is one rate read per non-base line, bounded by the account count.
+
+`CurrencyModeApplier`'s `'original'` mode converts nothing at all — it
+is the mode that exists to leave every figure in the currency it was
+settled in — so only its `'base'` branch meets the seam.
 
 `FXServiceProvider::register()` tags and registers the three rate
 providers as singletons, binds `RateProviderRegistry` sorted by

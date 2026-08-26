@@ -118,10 +118,7 @@ final class SensitiveColumnCodec
     {
         $keyring = $this->tryLoadKeyring($userId, $session);
         if ($keyring === null) {
-            // No keyring is the ordinary state for a user without encryption
-            // (values are plaintext) but ALSO for a phone holding synced rows
-            // it has no key for. Shape separates the two.
-            return self::safeUndecrypted($value);
+            return $this->undecryptable($value, $userId, $session);
         }
 
         return $this->decryptWithKeyring($table, $field, $value, $keyring);
@@ -149,11 +146,16 @@ final class SensitiveColumnCodec
             // sensitive column holding ciphertext is unreadable here too, and
             // returning the row untouched put base64 straight on the screen.
             $opened = $keyring === null
-                ? self::safeUndecrypted($value)
+                ? $this->undecryptable($value, $userId, $session)
                 : $this->decryptWithKeyring($table, $field, $value, $keyring);
 
             $row[$field] = $opened['value'];
-            if (! $opened['decrypted'] && self::looksLikeCiphertext($value)) {
+
+            // Keyed off the blanking itself rather than re-running the shape
+            // test: the two disagree for a value that looks like ciphertext
+            // and was handed back anyway, which is the whole point below. The
+            // decrypted flag stays in it, or a sealed empty note reads as lost.
+            if (! $opened['decrypted'] && $value !== '' && $opened['value'] === '') {
                 $unreadable[] = $field;
             }
         }
@@ -212,8 +214,44 @@ final class SensitiveColumnCodec
         return self::safeUndecrypted($value);
     }
 
-    // One place decides what an unreadable value looks like to a caller, so
-    // the no-keyring and no-matching-epoch paths can never drift apart.
+    // Without a keyring the shape test is not evidence, it is a coin toss:
+    // any 54+ characters of letters and digits whose length divides by four
+    // decode as base64, and "AbonnementSpotifyPremiumFamilyPlanMaandelijks"
+    // is a description a bank really exports.
+    /**
+     * @return array{value: string, decrypted: bool}
+     */
+    private function undecryptable(string $value, int $userId, Session $session): array
+    {
+        // Shape first because it costs nothing and never misses real
+        // ciphertext; enrolment is the authority, and is only worth a query
+        // once something is about to be blanked on its say-so.
+        if (! self::looksLikeCiphertext($value) || ! $this->everEnrolled($userId, $session)) {
+            return ['value' => $value, 'decrypted' => false];
+        }
+
+        return ['value' => '', 'decrypted' => false];
+    }
+
+    // encryptValue() writes plaintext for exactly one user — the one who never
+    // enabled encryption — so for that user a stored value IS the plaintext,
+    // whatever it looks like. Mirrors sealingEpoch()'s reading of the same
+    // three states, minus the refusal.
+    private function everEnrolled(int $userId, Session $session): bool
+    {
+        try {
+            $this->keyringService->currentEpoch($userId, $session);
+        } catch (KeyringStateException $e) {
+            return $e->state !== KeyringState::NoCurrentEpoch;
+        } catch (LogicException|RuntimeException) {
+            return true;
+        }
+
+        return true;
+    }
+
+    // The no-matching-epoch path only: a keyring was held, so this user is
+    // enrolled and the shape test is the whole question.
     /**
      * @return array{value: string, decrypted: bool}
      */

@@ -21,7 +21,6 @@ return [
     'footer' => 'Zajednička lista je YAML datoteka koja dolazi uz Beatrax. Slanje predloga otvara GitHub u tvom pregledaču; ništa drugo ne napušta ovaj uređaj.',
 
     'card' => [
-        'likely' => 'Verovatno: neimenovani trgovac.',
         'seen_times' => 'Viđeno :count put|Viđeno :count puta|Viđeno :count puta',
         'last_seen' => 'Poslednji put viđeno :date',
         'suggest' => 'Predloži naziv →',

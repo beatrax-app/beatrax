@@ -7,6 +7,7 @@ namespace Modules\Reports\Internal\Aggregation;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
 use Modules\Reports\Internal\Dto\ReportDefinition;
@@ -27,6 +28,7 @@ final class ReportAggregator
         private readonly CurrencyModeApplier $currencyModeApplier,
         private readonly OtherMovementQuery $otherMovementQuery,
         private readonly PeriodComparison $periodComparison,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function run(User $user, ReportDefinition $definition): ReportResultDto
@@ -125,7 +127,7 @@ final class ReportAggregator
         $rows = self::pointsToRows($points);
 
         $totalMinor = 0;
-        $currency = $user->base_currency;
+        $currency = $this->baseCurrency->forUser($user);
         $hasExcluded = false;
         $excludedTotal = 0;
         foreach ($points as $point) {

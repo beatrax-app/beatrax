@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Ενημέρωση πρόβλεψης…',
-        'risk' => 'Το υπόλοιπο πέφτει κάτω από 0 € στις :date.|Το υπόλοιπο πέφτει κάτω από 0 € σε :count ημέρες — πρώτη: :date.',
+        'risk' => 'Το υπόλοιπο πέφτει κάτω από :zero στις :date.|Το υπόλοιπο πέφτει κάτω από :zero σε :count ημέρες — πρώτη: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'εγγραφή|εγγραφές',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', προβλεπόμενο υπόλοιπο μείον :amount €',
-        'aria_balance_positive' => ', προβλεπόμενο υπόλοιπο :amount €',
+        'aria_balance_negative' => ', προβλεπόμενο υπόλοιπο μείον :amount',
+        'aria_balance_positive' => ', προβλεπόμενο υπόλοιπο :amount',
         'overflow' => '+:count ακόμη',
         'paid' => 'Πληρώθηκε',
         'missed' => 'Αναμενόταν — δεν βρέθηκε',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Καταχωρημένη πληρωμή',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ κατά προσέγγιση ημερομηνία',
         'series' => '↗ σειρά',
         'counterparty' => '↗ αντισυμβαλλόμενος',
+        'transaction' => '↗ συναλλαγή',
         'end_of_day' => 'Τέλος ημέρας',
     ],
 ];

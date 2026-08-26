@@ -10,6 +10,9 @@ return [
     'step_progress' => 'Stap :current van :total',
     'step_dot_aria' => 'Stap :number van :total',
 
+    'back' => 'Terug',
+    'back_aria' => 'Terug — gaat terug naar de vorige installatiestap',
+
     'resume_later' => 'Later verdergaan',
     'resume_later_aria' => 'Later verdergaan — slaat je voortgang op en sluit de instelwizard',
     'resume_banner' => 'Welkom terug — we gaan verder waar je gebleven was.',

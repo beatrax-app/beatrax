@@ -37,7 +37,7 @@ return [
     'col_account' => 'Račun',
     'col_counterparty' => 'Druga strana',
     'col_note' => 'Beleška',
-    'col_settled_eur' => 'Poravnato u EUR',
+    'col_settled' => 'Poravnato',
     'col_original' => 'Izvorno',
     'col_year' => 'Godina',
 

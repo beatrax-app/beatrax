@@ -31,14 +31,26 @@ it('renders the ten codes after signup', function (): void {
     }
 });
 
-it('returns 404 when visited without a fresh signup', function (): void {
+// Was a 404, and the codes are still never re-shown — but signup leaves this
+// page one history entry behind the setup wizard, whose nine steps share a URL,
+// so on the Samsung the system back button on step one of first-run setup
+// showed "404 · This page does not exist". A reader who has finished the
+// ceremony is behind, not lost, and is sent on; a guest still meets the refusal.
+it('sends a reader past the spent ceremony rather than showing an error', function (): void {
     $user = User::query()->create([
         'username' => 'alice',
         'password' => 'whatever-password',
         'period_start_day' => 1,
     ]);
 
-    $this->actingAs($user)->get('/recovery-codes')->assertNotFound();
+    $this->actingAs($user)->get('/recovery-codes')->assertRedirect(route('setup'));
+});
+
+it('never lets a guest reach the page at all', function (): void {
+    $response = $this->get('/recovery-codes');
+
+    expect($response->getStatusCode())->not->toBe(200)
+        ->and($response->headers->get('location'))->not->toBe(route('setup'));
 });
 
 it('hands the browser everything it needs to save the .txt itself', function (): void {
@@ -78,7 +90,7 @@ it('completes the ceremony and clears the session key', function (): void {
 
     expect(session('auth.signup.recovery_codes_plain'))->toBeNull();
 
-    $this->actingAs($result['user'])->get('/recovery-codes')->assertNotFound();
+    $this->actingAs($result['user'])->get('/recovery-codes')->assertRedirect(route('setup'));
 });
 
 it('does not redirect from Continue while the checkbox is unticked', function (): void {

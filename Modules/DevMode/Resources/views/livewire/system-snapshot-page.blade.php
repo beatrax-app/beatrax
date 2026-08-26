@@ -35,6 +35,12 @@
                 <tr><th class="{{ $keyTh }}">{{ Lang::get('dev::system.php_version') }}</th><td class="font-mono">{{ $php['version'] }}</td></tr>
                 <tr><th class="{{ $keyTh }}">{{ Lang::get('dev::system.php_sapi') }}</th><td class="font-mono">{{ $php['sapi'] }}</td></tr>
                 <tr><th class="{{ $keyTh }}">{{ Lang::get('dev::system.php_ini_path') }}</th><td class="font-mono text-xs">{{ $php['ini_path'] }}</td></tr>
+                @foreach ($php['limits'] as $k => $v)
+                    <tr>
+                        <th class="{{ $keyTh }}">{{ $k }}</th>
+                        <td class="font-mono">{{ $v }}</td>
+                    </tr>
+                @endforeach
                 <tr>
                     <th class="{{ $keyTh }}">{{ Lang::get('dev::system.php_extensions') }}</th>
                     <td class="text-xs">{{ implode(', ', $php['extensions']) }}</td>

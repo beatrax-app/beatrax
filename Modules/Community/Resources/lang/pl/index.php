@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'Większość tłumaczeń jest na razie generowana przez AI — Beatrax to oprogramowanie open source, a czasu jest mało, więc tłumaczenie maszynowe okazało się lepsze niż puste języki. Jeśli coś brzmi źle, prawdopodobnie takie jest, a poprawka w jednej linijce pomoże wszystkim, którzy z niej korzystają.',
     'translations_how' => 'Każdy język to katalog zwykłych plików PHP w Modules/*/Resources/lang. Skopiuj katalog angielski, przetłumacz teksty i otwórz pull request — bez kroku budowania, bez instalowania narzędzi.',
     'translations_cta' => 'Przeczytaj przewodnik dla współtwórców',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Wspólna lista sprzedawców',
 ];

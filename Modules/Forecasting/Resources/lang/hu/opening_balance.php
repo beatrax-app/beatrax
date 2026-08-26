@@ -13,15 +13,18 @@ return [
     'as_of_label' => 'A nyitó egyenleg dátuma',
     'as_of_help' => 'Az a dátum, amelyre a fenti összeg igaz.',
 
-    'divergence' => 'Ez több mint 500 €-val eltér attól az egyenlegtől, amelyet a Beatrax az importált tranzakcióidból számol. Biztos vagy benne?',
+    'divergence' => 'Ez több mint :threshold-val eltér attól az egyenlegtől, amelyet a Beatrax az importált tranzakcióidból számol. Biztos vagy benne?',
     'use_beatrax' => 'A Beatrax számát használom',
     'use_mine' => 'A saját számomat használom',
 
     'save' => 'Nyitó egyenleg mentése',
+    'remove' => 'Nyitó egyenleg eltávolítása',
     'saved' => 'Mentve.',
+    'removed' => 'Eltávolítva.',
 
     'toast' => [
         'updated' => 'A nyitó egyenleg frissítve.',
+        'removed' => 'A nyitó egyenleg eltávolítva.',
     ],
 
     'errors' => [

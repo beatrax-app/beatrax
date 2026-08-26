@@ -15,7 +15,7 @@
 --}}
 <div class="filter-trigger-row" {{ $attributes->except(['wire:click', 'searchModel', 'activeCount']) }}>
     <div class="filter-search">
-        <span class="ic" aria-hidden="true">⌕</span>
+        <x-core::search-mark class="ic" />
         <input
             type="search"
             placeholder="{{ Lang::get('core::components.search_placeholder') }}"

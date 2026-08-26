@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\RowChunk;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Dto\MigrationAccountDto;
 use Modules\Migration\Internal\Dto\MigrationBatch;
@@ -22,9 +23,11 @@ final class StagingWriter
 {
     private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
-    // No parser populates MigrationAccountDto::$kind, so this placeholder exists
-    // only to satisfy the NOT NULL column; it carries no promote-time meaning.
-    private const DEFAULT_ACCOUNT_KIND = 'checking';
+    // No parser populates MigrationAccountDto::$kind, and PromoteStagingToDomain
+    // copies this column into accounts.kind verbatim, so it must already be a
+    // word that column's readers know. `bank` is the honest default: a YNAB CSV
+    // states no kind at all, and every consumer branches on this value.
+    private const string DEFAULT_ACCOUNT_KIND = AccountKind::Bank->value;
 
     public function __construct(
         private readonly DatabaseManager $db,

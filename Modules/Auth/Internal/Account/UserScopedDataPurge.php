@@ -34,6 +34,8 @@ final readonly class UserScopedDataPurge
 
         $this->sweep($connection, $tables, $userId);
         $this->sweepRelayMailbox($connection, $deviceIds);
+        $this->sweepQueuedWork($connection, $userId);
+        $this->sweepDerivedCache($connection, $userId);
         $this->sweepOrphanedChildren($connection);
 
         $connection->table('users')->where('id', $userId)->delete();
@@ -91,6 +93,49 @@ final readonly class UserScopedDataPurge
 
             $pending = $blocked;
         }
+    }
+
+    // `jobs` carries no user_id -- the owner is serialised inside the payload
+    // -- so the schema sweep is blind to it. Deleting an account left 2,385
+    // jobs naming it, and the account that signed up next queued its own work
+    // behind all of them. The screen lists what it removes; the queue was not.
+    private function sweepQueuedWork(Connection $connection, int $userId): void
+    {
+        // Two patterns: the column is JSON and the serialised command sits
+        // inside a JSON string, where every quote is escaped. Matching only the
+        // bare form read correctly, passed lint, and deleted nothing. The name
+        // is matched by its tail, which is common to both visibilities.
+        $bare = '%"userId";i:'.$userId.';%';
+        $escaped = '%userId\\";i:'.$userId.';%';
+
+        foreach (['jobs', 'failed_jobs'] as $table) {
+            if (! $connection->getSchemaBuilder()->hasTable($table)) {
+                continue;
+            }
+
+            $connection->table($table)
+                ->where('payload', 'like', $bare)
+                ->orWhere('payload', 'like', $escaped)
+                ->delete();
+        }
+    }
+
+    // Cache rows are derived, regenerable and keyed by user id rather than
+    // by a user_id column, so the schema sweep does not see them either. They
+    // survived a delete that promises everything is removed from this device:
+    // `nav-counts:<id>` holds the account's own badge counts for ~40 minutes.
+    private function sweepDerivedCache(Connection $connection, int $userId): void
+    {
+        if (! $connection->getSchemaBuilder()->hasTable('cache')) {
+            return;
+        }
+
+        // Anchored at the end, so `:1` cannot match `:11`. The `:timer` sibling
+        // is how a rate limiter stores the other half of the same key.
+        $connection->table('cache')
+            ->where('key', 'like', '%:'.$userId)
+            ->orWhere('key', 'like', '%:'.$userId.':timer')
+            ->delete();
     }
 
     // Addressed by device id, not account, so the schema sweep cannot see it

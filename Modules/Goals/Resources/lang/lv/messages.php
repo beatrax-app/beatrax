@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Mērķis sasniegts',
+        'closed_short' => 'Slēgts pirms mērķa sasniegšanas',
         'add_contributions' => 'Pievienojiet iemaksas, lai redzētu prognozi',
         'not_enough_history' => 'Vēl nepietiek vēstures, lai prognozētu datumu',
         'no_recent_contributions' => 'Nav nesenu iemaksu, uz kurām balstīt prognozi',

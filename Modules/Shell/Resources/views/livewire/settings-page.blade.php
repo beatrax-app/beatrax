@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Core\Public\Support\LegalLinks')
 @use('Modules\Core\Public\Enums\Theme')
 @php
@@ -146,7 +147,7 @@
                 wire:model="defaultCurrencyView"
                 class="max-w-xs"
             >
-                <option value="eur_only">{{ Lang::get('core::settings.currency_display.eur_only') }}</option>
+                <option value="eur_only">{{ Lang::get('core::settings.currency_display.eur_only', ['code' => $baseCurrency]) }}</option>
                 <option value="original">{{ Lang::get('core::settings.currency_display.original') }}</option>
             </x-core::form-field>
         </section>
@@ -256,7 +257,7 @@
                 min="0"
                 max="100000000"
                 :label="Lang::get('core::settings.recurring.income_label')"
-                :hint="Lang::get('core::settings.recurring.income_help')"
+                :hint="Lang::get('core::settings.recurring.income_help', ['example' => Money::ofMinor(200000, $exampleCurrency)->format()])"
                 wire:model="recurringIncomeMinAmountMinor"
                 class="max-w-xs"
             />
@@ -298,6 +299,30 @@
         </div>
     </form>
 
+    {{-- ===== Account currency — the denomination each account reports in ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-3" id="account-currency">
+            <h2 class="{{ $cardHead }}">{{ Lang::get('ledger::account_currency.heading') }}</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                {{ Lang::get('ledger::account_currency.intro') }}
+            </p>
+
+            @if (count($accounts ?? []) === 0)
+                <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::account_currency.no_accounts') }}</p>
+            @else
+                <div class="space-y-3">
+                    @foreach ($accounts as $account)
+                        @livewire('ledger.account-currency-editor', [
+                            'accountId' => $account['id'],
+                            'accountName' => $account['name'],
+                            'currency' => $account['default_currency'],
+                        ], key('account-currency-editor-' . $account['id']))
+                    @endforeach
+                </div>
+            @endif
+        </section>
+    </div>
+
     <h2 class="{{ $groupHead }}">{{ Lang::get('core::settings.groups.insights') }}</h2>
 
     {{-- ===== Anomaly detection (sensitivity, floor, suppression rules) ===== --}}
@@ -324,11 +349,11 @@
                 {{ Lang::get('core::settings.forecasting.intro') }}
             </p>
 
-            @if (count($forecastingAccounts ?? []) === 0)
+            @if (count($accounts ?? []) === 0)
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.forecasting.no_accounts') }}</p>
             @else
                 <div class="space-y-3">
-                    @foreach ($forecastingAccounts as $account)
+                    @foreach ($accounts as $account)
                         @livewire('forecasting.opening-balance-editor', [
                             'accountId' => $account['id'],
                             'accountName' => $account['name'],

@@ -13,15 +13,18 @@ return [
     'as_of_label' => 'Opening balance as of',
     'as_of_help' => 'The date the figure above is true for.',
 
-    'divergence' => 'This is more than €500 off the balance Beatrax computes from your imported transactions. Are you sure?',
+    'divergence' => 'This is more than :threshold off the balance Beatrax computes from your imported transactions. Are you sure?',
     'use_beatrax' => "Use Beatrax's number",
     'use_mine' => 'Use my number',
 
     'save' => 'Save opening balance',
+    'remove' => 'Remove opening balance',
     'saved' => 'Saved.',
+    'removed' => 'Removed.',
 
     'toast' => [
         'updated' => 'Opening balance updated.',
+        'removed' => 'Opening balance removed.',
     ],
 
     'errors' => [

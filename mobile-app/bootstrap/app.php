@@ -13,6 +13,7 @@ use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Core\Public\Support\SqliteDatabase;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Http\Middleware\ForgetGuardsBetweenRequests;
@@ -45,6 +46,13 @@ return Application::configure(basePath: dirname(__DIR__))
         SpikeStoragePathCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        // The client writes this one from matchMedia, so it arrives in
+        // plaintext; decrypting it fails and the request reaches the resolver
+        // with no scheme at all, rendering light on a dark device. It carries
+        // the two words `dark` and `light` and nothing else.
+        $middleware->encryptCookies(except: [
+            AppChromeResolver::SCHEME_COOKIE,
+        ]);
         // Prepended ahead of the guard drop so it RUNS after it: that one reads
         // the session the previous request left in memory to decide, and this is
         // what empties it, so the other order leaves the stale User in place.
@@ -126,11 +134,12 @@ return Application::configure(basePath: dirname(__DIR__))
         if (! is_dir(dirname($canonicalDb))) {
             @mkdir(dirname($canonicalDb), 0775, true);
         }
-        $app->make('config')->set(
-            SqliteDatabase::LIVE_PATH_CONFIG_KEY,
+        $config = $app->make('config');
+        $config->set(
+            SqliteDatabase::livePathKey($config),
             $canonicalDb,
         );
-        $app->make('db')->purge('sqlite');
+        $app->make('db')->purge(SqliteDatabase::connectionName($config));
 
         // The native app-copy strips storage/framework, so at config-load
         // realpath(storage_path('framework/views')) is false, view.compiled

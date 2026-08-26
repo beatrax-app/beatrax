@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Posodabljanje napovedi…',
-        'risk' => 'Stanje pade pod €0 v :count dnevu — prvi: :date.|Stanje pade pod €0 v :count dneh — prvi: :date.|Stanje pade pod €0 v :count dneh — prvi: :date.|Stanje pade pod €0 v :count dneh — prvi: :date.',
+        'risk' => 'Stanje pade pod :zero v :count dnevu — prvi: :date.|Stanje pade pod :zero v :count dneh — prvi: :date.|Stanje pade pod :zero v :count dneh — prvi: :date.|Stanje pade pod :zero v :count dneh — prvi: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'postavka|postavki|postavke|postavk',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', predvideno stanje minus €:amount',
-        'aria_balance_positive' => ', predvideno stanje €:amount',
+        'aria_balance_negative' => ', predvideno stanje minus :amount',
+        'aria_balance_positive' => ', predvideno stanje :amount',
         'overflow' => '+:count več',
         'paid' => 'Plačano',
         'missed' => 'Pričakovano — ni najdeno',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Knjiženo plačilo',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ datum približen',
         'series' => '↗ serija',
         'counterparty' => '↗ nasprotna stranka',
+        'transaction' => '↗ transakcija',
         'end_of_day' => 'Konec dneva',
     ],
 ];

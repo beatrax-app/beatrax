@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Sąskaita nenustatyta. Įkelk vediklį iš naujo.',
         'invalid_amount' => 'Įvesk tinkamą sumą.',
-        'amount_range' => 'Įvesk sumą nuo -10 mln. € iki 10 mln. €.',
+        'amount_range' => 'Įvesk sumą nuo :min iki :max.',
         'pick_date' => 'Pasirink datą.',
         'pick_valid_date' => 'Pasirink tinkamą datą.',
         'future_date' => 'Pradinio likučio data negali būti ateityje.',

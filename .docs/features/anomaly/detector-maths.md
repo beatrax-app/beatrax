@@ -95,7 +95,7 @@ applies.
 
 ### The sensitivity knob
 
-The user has one control, a sensitivity percentage, and
+The user has one control, a sensitivity level from 1 to 100, and
 `kForSensitivity()` maps it onto the trip multiplier:
 
 ```
@@ -112,6 +112,27 @@ a firehose.
 
 The k actually used is recorded on the alert as `sensitivity_percent_used`,
 so an alert stays explainable after the user moves the slider.
+
+### What the copy may call it
+
+The column is named `sensitivity_percent_used` and the slider was once
+described as a percentage, and between them they have talked three locales
+into promising the reader something the detector has never computed: a band
+a certain percentage above typical spend. There is no such band. The level
+picks `k`, `k` scales a MAD, and the width of the resulting band depends
+entirely on how spread out that merchant's history is — a steady merchant
+trips a few percent above its median, a volatile one may need double.
+
+So the settings help and the alert line say *level*, not *percentage*, in
+every language: `sensitivity 50 of 100`, never `±50%`. The guard is a
+character class rather than a list of phrasings, because the three locales
+that got through the previous guard each wrote the same wrong promise in a
+different order — `:percent %`, `%:percent`, `±%:percent`. Neither `%` nor
+`±` appears in either key, in any locale, in any position.
+
+The scale is words, too. `of 100` reads as punctuation rather than English
+and so survived translation everywhere it was carried, until a Ukrainian
+reader's alert said `чутливість 50 of 100`. Every locale translates it.
 
 ## Large vs typical, per category (the fallback)
 
@@ -199,7 +220,7 @@ Two properties make the window safe to leave that wide:
 - **Both-on-a-series is excluded.** A weekly or fortnightly subscription
   falls inside seven days, so the detector resolves series membership for
   the candidate and the sibling through Recurring's
-  `RecurringSeriesQuery::seriesMembershipForTransactionIds()` and does not
+  `TransactionSeriesMembershipQuery::seriesMembershipForTransactionIds()` and does not
   fire when *both* are approved members. The condition is deliberately AND,
   not OR: a one-off duplicate of a subscription charge — the subscription
   billed twice — has only one member on the series, and still fires.

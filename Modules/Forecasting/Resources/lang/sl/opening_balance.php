@@ -13,15 +13,18 @@ return [
     'as_of_label' => 'Začetno stanje na dan',
     'as_of_help' => 'Datum, za katerega velja zgornji znesek.',
 
-    'divergence' => 'To za več kot €500 odstopa od stanja, ki ga Beatrax izračuna iz tvojih uvoženih transakcij. Si prepričan?',
+    'divergence' => 'To za več kot :threshold odstopa od stanja, ki ga Beatrax izračuna iz tvojih uvoženih transakcij. Si prepričan?',
     'use_beatrax' => 'Uporabi Beatraxov znesek',
     'use_mine' => 'Uporabi moj znesek',
 
     'save' => 'Shrani začetno stanje',
+    'remove' => 'Odstrani začetno stanje',
     'saved' => 'Shranjeno.',
+    'removed' => 'Odstranjeno.',
 
     'toast' => [
         'updated' => 'Začetno stanje je posodobljeno.',
+        'removed' => 'Začetno stanje je odstranjeno.',
     ],
 
     'errors' => [

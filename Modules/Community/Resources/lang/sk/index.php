@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'Väčšina prekladov je zatiaľ vytvorená umelou inteligenciou — Beatrax je open source a času je málo, takže strojový preklad bol lepší než prázdne jazyky. Ak ti niečo znie zle, pravdepodobne to zle aj je, a oprava na jeden riadok pomôže všetkým, ktorí daný jazyk používajú.',
     'translations_how' => 'Každý jazyk je priečinok obyčajných PHP súborov v Modules/*/Resources/lang. Skopíruj anglický priečinok, prelož reťazce a otvor pull request — žiadny build, žiadne nástroje na inštaláciu.',
     'translations_cta' => 'Prečítaj si príručku pre prispievateľov',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Zdieľaný zoznam obchodníkov',
 ];

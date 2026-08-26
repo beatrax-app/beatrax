@@ -9,6 +9,10 @@ return [
     'confirm' => 'Potvrdi uvoz',
     'subtitle' => 'Pregledaj obrađene redove. Ništa se ne čuva u tvojoj glavnoj knjizi dok ne potvrdiš.',
 
+    'already_imported' => 'Ova datoteka je već uvezena.',
+
+    'already_imported_link' => 'Pogledaj rezultat uvoza',
+
     'expired_html' => 'Pregled je istekao. <a href="/imports/new" class="underline">Ponovo otpremi datoteku</a> za novi pokušaj.',
 
     'save_name' => 'Sačuvaj naziv',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Preimenuj ovu drugu stranu',
 
     'unknown_iban_prefix' => 'Pronašli smo nepoznat IBAN:',
+
+    'unknown_account_prefix' => 'Pronašli smo nepoznat račun:',
     'unknown_iban_suffix' => 'Imenuj ovaj račun.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'za ponovni pokušaj ili pregled.',
     ],
 
+    'rows_shown' => 'Prikazani redovi: :shown od :total',
+
+    'show_more' => 'Prikaži više redova',
+
     'errors' => [
         'app_locked' => 'Otključajte aplikaciju za uvoz: ključevi za šifrovanje ne mogu da se upotrebe dok je zaključana.',
+        'file_stopped_short' => 'Zaglavlje je odgovaralo, pa je format ispravan. Čitanje je stalo pre kraja fajla. To izaziva jedan nečitljiv red, kao i fajl prevelik za ovaj uređaj. Pokušaj sa kraćim periodom.',
         'file_unreadable' => 'Ovaj fajl nije bilo moguće pročitati.',
         'iban_not_in_preview' => 'Ovaj IBAN nije deo trenutnog pregleda.',
+        'pdf_reader_unavailable' => 'PDF izvodi zahtevaju program pdftotext, koji ovde nije instaliran. Uvezi ovu datoteku na računaru koji ga ima ili radije koristi CSV izvoz iz banke.',
         'row_unreadable' => 'Ovaj red nije bilo moguće pročitati.',
         'unknown_account' => 'Ovaj red pripada računu kojem još nisi dao naziv.',
     ],

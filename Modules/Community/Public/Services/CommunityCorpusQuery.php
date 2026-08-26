@@ -261,6 +261,16 @@ final class CommunityCorpusQuery
             ->count();
     }
 
+    // The reader's own rows, which nothing else in the corpus reads. Their
+    // count is what "Your contributions" means; the shared list's contributor
+    // count above answers a different question.
+    public function contributionsCount(int $userId): int
+    {
+        return $this->db->connection()->table('community_merchant_mappings')
+            ->where('user_id', $userId)
+            ->count();
+    }
+
     public function contributorsCount(): int
     {
         return $this->db->connection()->table('community_merchant_mappings')

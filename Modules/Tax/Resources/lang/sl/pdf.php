@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Nasprotna stranka',
     'col_description' => 'Opis',
     'col_note' => 'Opomba',
-    'col_amount' => 'Znesek (EUR)',
+    'col_amount' => 'Znesek',
 
     'subtotal' => 'Delni seštevek',
 

@@ -20,15 +20,20 @@
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
-    {{-- Header row: title + subtitle, month nav on the right --}}
-    <header class="mb-6 flex items-start justify-between gap-4">
+    {{-- Header row: title + subtitle, month nav on the right.
+         flex-col until sm, because the stepper is shrink-0 (its glyphs must
+         keep their tap targets) in a nowrap row — so a month name longer than
+         English's pushes the next-month button off the screen entirely.
+         Measured on an iPhone 12 mini: "Αύγουστος 2026" put its right edge at
+         475px on a 375pt screen, "augusztus 2026" at 449. --}}
+    <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('budgets::messages.page.title') }}</h1>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('budgets::messages.page.subtitle', ['period' => $period->label]) }}
             </p>
         </div>
-        <div class="flex shrink-0 items-center gap-1">
+        <div class="flex shrink-0 flex-wrap items-center gap-1">
             <button
                 type="button"
                 wire:click="prevPeriod"
@@ -115,12 +120,12 @@
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
                                 <x-core::status-pill tone="warning" class="ml-2">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
-                            @if ($row->nonEurSpentMinor != 0)
+                            @if ($row->unconvertedSpentMinor != 0)
                                 <span
                                     class="ml-2 inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 align-middle dark:bg-amber-500"
                                     role="img"
-                                    aria-label="{{ Lang::get('budgets::messages.badge.non_eur_aria') }}"
-                                    title="{{ Lang::get('budgets::messages.badge.non_eur_title') }}"
+                                    aria-label="{{ Lang::get('budgets::messages.badge.unconverted_aria') }}"
+                                    title="{{ Lang::get('budgets::messages.badge.unconverted_title') }}"
                                 ></span>
                             @endif
                         </td>
@@ -240,12 +245,12 @@
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
                                 <x-core::status-pill tone="warning" class="ml-1">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
-                            @if ($row->nonEurSpentMinor != 0)
+                            @if ($row->unconvertedSpentMinor != 0)
                                 <span
                                     class="ml-1 inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 align-middle dark:bg-amber-500"
                                     role="img"
-                                    aria-label="{{ Lang::get('budgets::messages.badge.non_eur_aria') }}"
-                                    title="{{ Lang::get('budgets::messages.badge.non_eur_title') }}"
+                                    aria-label="{{ Lang::get('budgets::messages.badge.unconverted_aria') }}"
+                                    title="{{ Lang::get('budgets::messages.badge.unconverted_title') }}"
                                 ></span>
                             @endif
                         </p>
@@ -258,7 +263,7 @@
                          baseline, and the % rides inside the notify field so the
                          two right edges line up instead of staggering. --}}
                     <div class="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-                        <label class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <label class="flex flex-wrap items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                             <span>{{ Lang::get('budgets::messages.phone.notify_at') }}</span>
                             <span class="relative inline-flex items-center">
                                 <input

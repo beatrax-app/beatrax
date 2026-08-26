@@ -11,7 +11,7 @@ return [
     'expense' => 'Meno',
     'income' => 'Tulo',
 
-    'amount' => 'Summa (€)',
+    'amount' => 'Summa (:symbol)',
     'date' => 'Päivämäärä',
     'counterparty' => 'Vastapuoli',
     'counterparty_placeholder' => 'esim. Leipomo',

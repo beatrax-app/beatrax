@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Advarselsfølsomhed',
-    'sensitivity_help' => 'Markér posteringer, der ligger mere end :percent% over dit typiske forbrug hos den forhandler eller i den kategori.',
+    'sensitivity_help' => 'Hvor let Beatrax kalder en hævning usædvanlig for den forhandler eller kategori, fra 1 til 100. Højere markerer flere.',
 
     'min_amount_label' => 'Mindste posteringsbeløb',
-    'min_amount_help' => 'Ignorér anomalier på posteringer under dette beløb. Gemmes i cent (€) — 1000 betyder €10.00.',
+    'min_amount_help' => 'Ignorér anomalier på posteringer under dette beløb. Gemmes i cent (:symbol) — 1000 betyder :example.',
 
     'save' => 'Gem anomaliindstillinger',
     'saved' => 'Gemt.',

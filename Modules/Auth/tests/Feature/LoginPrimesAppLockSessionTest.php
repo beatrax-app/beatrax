@@ -93,3 +93,29 @@ it('login without the lock enabled does not touch lock state', function (): void
     expect($lockState->isLocked($session))->toBeFalse();
     expect($session->get(LockStateManager::DATA_KEY_SESSION))->toBeNull();
 });
+
+it('the login route primes the session too, not only the action behind it', function (): void {
+    $user = loginPrimeUser('prime-dave', 'prime-pass');
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+    $provisioner->enable($user->id, '123456', 'prime-pass');
+
+    $this->post('/login', [
+        'username' => 'prime-dave',
+        'password' => 'prime-pass',
+    ])->assertRedirect();
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var LockStateManager $lockState */
+    $lockState = $this->app->make(LockStateManager::class);
+    /** @var AppLockKeyService $keyService */
+    $keyService = $this->app->make(AppLockKeyService::class);
+
+    // Unlocked with no key is the one state that must not exist: every
+    // encrypted read then fails while the app reports itself open, and an
+    // import refuses every row with a lock message the reader cannot act on.
+    expect($lockState->isLocked($session))->toBeFalse();
+    expect($keyService->release($session))->toBeString();
+});

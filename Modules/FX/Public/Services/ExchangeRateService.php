@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\FX\Public\Dto\ConversionResult;
+use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\RateTable;
@@ -76,6 +77,7 @@ final class ExchangeRateService
                 WHERE inner_er.base_currency = er.base_currency
                   AND inner_er.quote_currency = er.quote_currency
             )')
+            ->orderByRaw('case when er.source = ? then 0 else 1 end', [BundledRates::SOURCE])
             ->get();
     }
 
@@ -87,6 +89,7 @@ final class ExchangeRateService
         return $this->db->connection()
             ->table('exchange_rates')
             ->where('rate_date', $date)
+            ->orderByRaw('case when source = ? then 0 else 1 end', [BundledRates::SOURCE])
             ->get(['base_currency', 'quote_currency', 'rate', 'rate_date', 'source']);
     }
 
@@ -122,6 +125,9 @@ final class ExchangeRateService
     /**
      * @param  Collection<int, \stdClass>  $rows
      */
+    // Rows arrive with the bundled snapshot first, so a live provider's row for
+    // the same pair and day overwrites it in both the table and the metadata:
+    // the snapshot is a floor, never an answer that outranks a real feed.
     private function convertWithRows(Money $money, string $targetCurrency, Collection $rows): ConversionResult
     {
         if ($rows->isEmpty()) {
@@ -152,7 +158,7 @@ final class ExchangeRateService
 
             $rowDate = self::toString($row->rate_date ?? null);
 
-            if ($rowDate !== null && (! isset($rateMeta[$quoteC]) || $rowDate > $rateMeta[$quoteC]['date'])) {
+            if ($rowDate !== null && (! isset($rateMeta[$quoteC]) || $rowDate >= $rateMeta[$quoteC]['date'])) {
                 $rateMeta[$quoteC] = ['date' => $rowDate, 'source' => self::toString($row->source ?? null)];
             }
         }

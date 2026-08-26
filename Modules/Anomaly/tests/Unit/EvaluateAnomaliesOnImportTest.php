@@ -4,45 +4,38 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Bus;
 use Modules\Anomaly\Internal\Jobs\DetectAnomaliesJob;
-use Modules\Anomaly\Internal\Listeners\EvaluateAnomaliesOnTransactionImport;
-use Modules\Core\Models\User;
-use Modules\Import\Public\Events\TransactionImported;
-use Modules\Ledger\Models\Transaction;
+use Modules\Anomaly\Public\Contracts\DispatchesAnomalyDetection;
 
-// The listener must queue rather than evaluate inline: detection may not
-// slow the synchronous import transaction.
-it('queues exactly one DetectAnomaliesJob per inbound TransactionImported event', function (): void {
+// Anomaly evaluation used to be dispatched from TransactionImported, one job
+// per row, with a unique key that was also per-row — so it deduplicated
+// nothing. A 3,300-row import left 3,300 queued jobs on the device, measured at
+// 3.05s each: about two and a half hours of background work for one file.
+it('queues one job for the whole import run, not one per row', function (): void {
     Bus::fake();
 
-    /** @var EvaluateAnomaliesOnTransactionImport $listener */
-    $listener = $this->app->make(EvaluateAnomaliesOnTransactionImport::class);
-
-    $transaction = new Transaction;
-    $transaction->id = 77;
-    $user = new User;
-    $user->id = 42;
-
-    $listener->handle(new TransactionImported($transaction, $user));
+    app(DispatchesAnomalyDetection::class)->dispatchForImportRun(userId: 1, importRunId: 9);
 
     Bus::assertDispatchedTimes(DetectAnomaliesJob::class, 1);
     Bus::assertDispatched(
         DetectAnomaliesJob::class,
-        fn (DetectAnomaliesJob $job): bool => $job->userId === 42 && $job->transactionId === 77,
+        static fn (DetectAnomaliesJob $job): bool => $job->userId === 1 && $job->importRunId === 9,
     );
 });
 
-it('does NOT invoke the evaluator synchronously in the listener (queues only)', function (): void {
-    // Source-level guard: any AnomalyEvaluator reference in the listener
-    // would mean detection can run inline.
-    $source = file_get_contents(
-        base_path('Modules/Anomaly/Internal/Listeners/EvaluateAnomaliesOnTransactionImport.php'),
-    );
+// The key is what makes a repeat dispatch collapse. Per transaction it could
+// never collide across an import; per run it does.
+it('keys the job on the run, so a second dispatch for it collapses', function (): void {
+    $first = new DetectAnomaliesJob(userId: 3, importRunId: 11);
+    $second = new DetectAnomaliesJob(userId: 3, importRunId: 11);
+    $otherRun = new DetectAnomaliesJob(userId: 3, importRunId: 12);
 
-    expect($source)->not->toContain('AnomalyEvaluator');
-    // It must read the event's model property, not a flat ->transactionId.
-    expect($source)->toContain('$event->transaction->id');
-    // Comments are stripped first so a comment warning against
-    // `$event->transactionId` cannot itself fail the guard.
-    $codeOnly = preg_replace('/^\s*(\*|\/\/).*$/m', '', $source) ?? $source;
-    expect($codeOnly)->not->toContain('$event->transactionId');
+    expect($first->uniqueId())->toBe($second->uniqueId())
+        ->and($first->uniqueId())->not->toBe($otherRun->uniqueId());
+});
+
+// The event that used to drive this carried one transaction, so nothing could
+// batch. Nothing may listen to it for anomalies again.
+it('has no listener left on the per-transaction import event', function (): void {
+    expect(class_exists('Modules\Anomaly\Internal\Listeners\EvaluateAnomaliesOnTransactionImport'))
+        ->toBeFalse('a per-row listener is what produced one job per transaction.');
 });

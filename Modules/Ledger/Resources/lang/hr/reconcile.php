@@ -10,7 +10,7 @@ return [
     'account' => 'Račun',
     'choose_account' => 'Odaberi račun…',
     'statement_date' => 'Datum izvoda',
-    'statement_balance' => 'Stanje s izvoda (€)',
+    'statement_balance' => 'Stanje s izvoda (:symbol)',
     'balance_help' => 'Unaprijed popunjeno iz tvog zadnjeg uvezenog izvoda kada je dostupno — negativno za dugovanja, u oba slučaja izmjenjivo.',
 
     'cleared_balance' => 'Proknjiženo stanje',

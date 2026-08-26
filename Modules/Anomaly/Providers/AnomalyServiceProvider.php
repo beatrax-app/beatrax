@@ -13,20 +13,20 @@ use Modules\Anomaly\Internal\AnomalyEvaluator;
 use Modules\Anomaly\Internal\Detectors\DuplicateChargeDetector;
 use Modules\Anomaly\Internal\Detectors\FirstTimeMerchantDetector;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
-use Modules\Anomaly\Internal\Listeners\EvaluateAnomaliesOnTransactionImport;
+use Modules\Anomaly\Internal\Services\BusAnomalyDetectionDispatcher;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Public\Actions\AcknowledgeAnomalyAlert;
 use Modules\Anomaly\Public\Actions\DismissAnomalyAlert;
 use Modules\Anomaly\Public\Actions\DismissAnomalyAlertAsExpected;
 use Modules\Anomaly\Public\Actions\RemoveAnomalySuppressionRule;
 use Modules\Anomaly\Public\Actions\SnoozeAnomalyAlert;
+use Modules\Anomaly\Public\Contracts\DispatchesAnomalyDetection;
 use Modules\Anomaly\Public\Http\Livewire\AnomalySettingsSection;
 use Modules\Anomaly\Public\Http\Livewire\DashboardAnomalyBadge;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\LoadsModuleResources;
-use Modules\Import\Public\Events\TransactionImported;
 
 final class AnomalyServiceProvider extends ServiceProvider
 {
@@ -34,6 +34,8 @@ final class AnomalyServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        $this->app->singleton(DispatchesAnomalyDetection::class, BusAnomalyDetectionDispatcher::class);
+
         $this->app->singleton(AnomalyAlertStateMachine::class);
 
         $this->app->singleton(LargeVsTypicalDetector::class);
@@ -61,10 +63,6 @@ final class AnomalyServiceProvider extends ServiceProvider
 
         $this->registerNavBadgeComposer();
 
-        $events->listen(
-            TransactionImported::class,
-            [EvaluateAnomaliesOnTransactionImport::class, 'handle'],
-        );
     }
 
     // The per-boot `$cache` collapses repeated sidebar renders in one boot

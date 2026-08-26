@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Konto er ikke angitt. Last inn veiviseren på nytt.',
         'invalid_amount' => 'Skriv inn et gyldig beløp.',
-        'amount_range' => 'Skriv inn et beløp mellom -€10M og €10M.',
+        'amount_range' => 'Skriv inn et beløp mellom :min og :max.',
         'pick_date' => 'Velg en dato.',
         'pick_valid_date' => 'Velg en gyldig dato.',
         'future_date' => 'Datoen for inngående saldo kan ikke ligge frem i tid.',

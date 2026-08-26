@@ -22,7 +22,7 @@ return [
         'transaction' => 'Transakce',
     ],
 
-    'eur_equivalent' => 'Ekvivalent v EUR',
+    'settled_equivalent' => 'Vypořádáno v :code',
     'chart_requires_js' => 'Graf vyžaduje JavaScript.',
 
     'tolerance_toast' => 'Tolerance: :percent %',

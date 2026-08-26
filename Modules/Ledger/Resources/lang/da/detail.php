@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Modpart',
     'description' => 'Beskrivelse',
     'amount_native' => 'Beløb (oprindeligt)',
-    'amount_settled' => 'Beløb (afregnet i EUR)',
+    'amount_settled' => 'Beløb (afregnet)',
     'effective_rate' => 'Effektiv kurs',
     'ics_markup' => 'Inklusive et eventuelt ICS-tillæg.',
 

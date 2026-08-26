@@ -9,6 +9,10 @@ return [
         'title' => 'Cette page n\'existe pas',
         'body' => 'Le lien est peut-être ancien, ou la page a été renommée. Tes données n\'ont rien.',
     ],
+    '4xx' => [
+        'title' => 'Cette requête ne peut pas être traitée',
+        'body' => 'La page a été ouverte d’une manière qu’elle n’attend pas. Tes données sont inchangées.',
+    ],
 
     '419' => [
         'title' => 'Ta session a expiré',

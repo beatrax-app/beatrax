@@ -9,6 +9,7 @@ use Generator;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
 use League\Csv\SyntaxError;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
@@ -77,11 +78,13 @@ final class GenericCsvAdapter implements SourceAdapter
                     ? $this->parseDateOrFallback($record, $normMap, $this->preset->valueDateHeader, $postedAt)
                     : $postedAt;
                 $amountMinor = $this->amountMinor($record, $normMap);
+                $feeMinor = $this->feeMinor($record, $normMap);
             } catch (Throwable $e) {
                 throw new InvalidAmountException(sprintf('Row %d: %s', $index, $e->getMessage()), 0, $e);
             }
 
             $ownIban = $this->ownIban($record, $normMap);
+            $currency = $this->currency($record, $normMap);
 
             yield new SourceTransactionDto(
                 bookedAt: $postedAt->startOfDay(),
@@ -90,12 +93,14 @@ final class GenericCsvAdapter implements SourceAdapter
                 ownIban: $ownIban,
                 counterpartyIban: $this->optionalCell($record, $normMap, $this->preset->counterpartyIbanHeader),
                 counterpartyName: $this->optionalCell($record, $normMap, $this->preset->counterpartyNameHeader),
-                currency: $this->currency($record, $normMap),
+                currency: $currency,
                 amountMinor: $amountMinor,
                 sourceRef: $this->optionalCell($record, $normMap, $this->preset->sourceRefHeader),
                 description: $this->description($record, $normMap),
                 rawPayload: $this->stringRecord($record),
                 sourceRowIndex: $index,
+                settledAmountMinor: $feeMinor === 0 ? null : $amountMinor - $feeMinor,
+                settledCurrency: $feeMinor === 0 ? null : $currency,
             );
 
             $index++;
@@ -149,6 +154,25 @@ final class GenericCsvAdapter implements SourceAdapter
             CsvPreset::INDICATOR => $this->indicatorAmount($record, $normMap, $sep),
             default => $this->amounts->parseMinor($this->cell($record, $normMap, (string) $this->preset->amountHeader), $sep),
         };
+    }
+
+    // What the bank took on top of the merchant's charge, so the account moved
+    // by amount MINUS fee whichever way the amount points: a -100.00 payment
+    // settles at -101.25, a +12.00 refund at +11.50. Read as a magnitude the
+    // refund credits 12.50 and the export's own Balance column disagrees.
+    /**
+     * @param  array<string, string|null>  $record
+     * @param  array<string, string>  $normMap
+     */
+    private function feeMinor(array $record, array $normMap): int
+    {
+        if ($this->preset->feeHeader === null) {
+            return 0;
+        }
+
+        $cell = $this->optionalCell($record, $normMap, $this->preset->feeHeader);
+
+        return $cell === null ? 0 : $this->amounts->parseMinor($cell, $this->preset->decimalSeparator);
     }
 
     /**
@@ -223,9 +247,7 @@ final class GenericCsvAdapter implements SourceAdapter
             }
         }
 
-        // Single-account fintech exports (N26, Revolut, Wise) carry no own
-        // IBAN; use a stable synthetic so the wizard maps it to one account.
-        return strtoupper(str_replace('-csv', '', $this->preset->format));
+        return $this->preset->ownAccountIdentifier();
     }
 
     /**
@@ -297,7 +319,7 @@ final class GenericCsvAdapter implements SourceAdapter
 
     private function parseDate(string $cell): CarbonImmutable
     {
-        $parsed = CarbonImmutable::createFromFormat('!'.$this->preset->dateFormat, trim($cell));
+        $parsed = SafeDate::fromFormatOrNull('!'.$this->preset->dateFormat, trim($cell));
         if (! $parsed instanceof CarbonImmutable) {
             throw new InvalidAmountException(sprintf(
                 "Cannot parse date '%s' (expected format %s).",

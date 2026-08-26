@@ -270,7 +270,7 @@ it('keeps the encrypted list and the knowingly-plaintext list disjoint', functio
 
 it('goes RED when a knowingly-plaintext column joins the registry while its exemptions stand (negative probe, in-memory)', function (): void {
     // The exact regression: `accounts.iban` promoted to the encrypted list
-    // without the six allowlist entries that rest on it being deleted.
+    // without the allowlist entries that rest on it being deleted.
     $encrypted = [...SensitiveFieldRegistry::columns(), 'accounts.iban'];
 
     $offenders = [];
@@ -282,5 +282,14 @@ it('goes RED when a knowingly-plaintext column joins the registry while its exem
         }
     }
 
-    expect($offenders)->toHaveCount(6);
+    // Named rather than counted: every entry resting on the promoted column has
+    // to be the one reported, and a count says nothing about which. It also
+    // stops a seventh exemption failing this probe for having been added.
+    $restingOnPromoted = array_keys(array_filter(
+        sensitiveColumnGuardAllowlist(),
+        static fn (string $reason): bool => in_array('accounts.iban', sensitiveColumnGuardReasonColumns($reason), true),
+    ));
+
+    expect($restingOnPromoted)->not->toBe([])
+        ->and($offenders)->toBe($restingOnPromoted);
 });

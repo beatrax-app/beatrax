@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Mikään sarja ei vielä vaikuta tämän tilin ennusteeseen.',
 
     'net_diff' => 'Nettoero',
+
+    'net_diff_unknown' => 'Ei vielä laskettu tälle aikavälille.',
     'net_diff_section_aria' => 'Nettoero perustason ja skenaarion välillä aikajänteen päivinä 30 / 60 / 90',
     'net_diff_delta_aria' => 'Nettoero päivänä :day: :value, skenaario on :state',
     'better_than_baseline' => 'parempi kuin perustaso',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Ennusteen kohokohdat',
     'highlights_shortfall_aria' => ':count aktiivinen vajejakso seuraavien :days päivän aikana|:count aktiivista vajejaksoa seuraavien :days päivän aikana',
-    'dips_to' => ':name laskee arvoon :amount',
     'on_date_suffix' => ' päivänä :date',
     'shortfall_window' => ':count aktiivinen vajejakso|:count aktiivista vajejaksoa',
-    'lowest_in_30' => 'Alin 30 päivän aikana: :amount',
+    'lowest_in_30_label' => 'Alin 30 päivän aikana',
     'next_ics' => 'Seuraava ICS-tilitys: :amount päivänä :date',
+    'ics_overdue' => 'ICS-tilitys myöhässä: :amount, eräpäivä oli :date',
 ];

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Avvisi',
+    'page_title' => 'Avvisi di scostamento',
     'heading' => 'Avvisi',
     'intro_anomaly' => 'Addebiti singoli che per te sembrano fuori dal comune.',
     'intro_drift' => 'Serie ricorrenti approvate il cui ultimo addebito è uscito dalla tua soglia.',

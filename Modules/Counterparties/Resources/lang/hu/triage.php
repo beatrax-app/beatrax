@@ -25,6 +25,7 @@ return [
     'no_not' => 'Nem, ez nem :name',
 
     'recent_on_iban' => 'Legutóbbi tranzakciók ezen az IBAN-on',
+    'recent_on_counterparty' => 'A partnerrel folytatott legutóbbi tranzakciók',
     'no_transactions_yet' => 'Még nincs rögzített tranzakció.',
 
     'label_manually' => 'Vagy címkézd fel kézzel',

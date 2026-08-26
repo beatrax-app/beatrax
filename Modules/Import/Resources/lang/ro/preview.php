@@ -9,6 +9,10 @@ return [
     'confirm' => 'Confirmă importul',
     'subtitle' => 'Verifică rândurile analizate. Nimic nu se salvează în registrul tău până nu confirmi.',
 
+    'already_imported' => 'Acest fișier a fost deja importat.',
+
+    'already_imported_link' => 'Vezi rezultatul importului',
+
     'expired_html' => 'Previzualizarea a expirat. <a href="/imports/new" class="underline">Încarcă fișierul din nou</a> pentru a reîncerca.',
 
     'save_name' => 'Salvează numele',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Redenumește această contraparte',
 
     'unknown_iban_prefix' => 'Am găsit un IBAN necunoscut:',
+
+    'unknown_account_prefix' => 'Am găsit un cont necunoscut:',
     'unknown_iban_suffix' => 'Denumește acest cont.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'pentru a reîncerca sau a inspecta.',
     ],
 
+    'rows_shown' => 'Rânduri afișate: :shown din :total',
+
+    'show_more' => 'Afișează mai multe rânduri',
+
     'errors' => [
         'app_locked' => 'Deblocați aplicația pentru a importa: cheile de criptare nu pot fi folosite cât timp este blocată.',
+        'file_stopped_short' => 'Rândul de antet se potrivea, deci formatul este corect. Citirea s-a oprit înainte de sfârșitul fișierului. O singură linie ilizibilă face asta, la fel și un fișier prea mare pentru acest dispozitiv. Încearcă o perioadă mai scurtă.',
         'file_unreadable' => 'Acest fișier nu a putut fi citit.',
         'iban_not_in_preview' => 'Acest IBAN nu face parte din previzualizarea curentă.',
+        'pdf_reader_unavailable' => 'Extrasele PDF au nevoie de programul pdftotext, care nu este instalat aici. Importă acest fișier pe un computer care îl are sau folosește un export CSV de la bancă.',
         'row_unreadable' => 'Acest rând nu a putut fi citit.',
         'unknown_account' => 'Acest rând aparține unui cont căruia nu i-ai dat încă un nume.',
     ],

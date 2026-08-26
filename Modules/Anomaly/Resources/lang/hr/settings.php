@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Osjetljivost upozorenja',
-    'sensitivity_help' => 'Označi terećenja veća od :percent% iznad tvoje uobičajene potrošnje kod tog trgovca ili u toj kategoriji.',
+    'sensitivity_help' => 'Koliko lako Beatrax proglasi terećenje neuobičajenim za tog trgovca ili kategoriju, od 1 do 100. Više označava više.',
 
     'min_amount_label' => 'Najmanji iznos terećenja',
-    'min_amount_help' => 'Zanemari anomalije na terećenjima manjima od ovog iznosa. Pohranjuje se u centima (€) — 1000 znači 10,00 €.',
+    'min_amount_help' => 'Zanemari anomalije na terećenjima manjima od ovog iznosa. Pohranjuje se u centima (:symbol) — 1000 znači :example.',
 
     'save' => 'Spremi postavke anomalija',
     'saved' => 'Spremljeno.',

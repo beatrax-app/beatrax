@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Zahlungspartner',
     'col_description' => 'Beschreibung',
     'col_note' => 'Notiz',
-    'col_amount' => 'Betrag (EUR)',
+    'col_amount' => 'Betrag',
 
     'subtotal' => 'Zwischensumme',
 

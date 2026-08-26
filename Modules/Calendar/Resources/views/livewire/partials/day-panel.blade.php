@@ -13,10 +13,16 @@
     approximate note, paid/missed state, EOD balance.
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
+{{-- $showDate: the desktop right rail has no heading above this partial, so
+     the date belongs here. The phone wraps it in x-core::bottom-sheet, which
+     draws its own title — and printed the date TWICE, stacked, in two formats
+     ("24 Aug" over "24 Aug 2026"). Read on an iPhone 12 mini. --}}
 <div class="cal-panel-header">
-    <span class="font-semibold" style="font-size: var(--text-md, 1rem); color: var(--color-text);">
-        {{ $dayDto->date->translatedFormat('j M Y') }}
-    </span>
+    @if ($showDate ?? true)
+        <span class="font-semibold" style="font-size: var(--text-md, 1rem); color: var(--color-text);">
+            {{ $dayDto->date->translatedFormat('j M Y') }}
+        </span>
+    @endif
     <x-core::emoji-action
         :label="Lang::get('calendar::messages.panel.close')"
         class="ml-auto"
@@ -78,16 +84,25 @@
                              built by hand: it encodes the slug, which arrived
                              here as stored data. --}}
                         <div class="mt-1 flex flex-wrap gap-2 text-xs" style="color: var(--color-text-muted);">
-                            <a
-                                href="{{ route('recurring.series.show', ['seriesId' => $entry->seriesId]) }}"
-                                class="font-medium underline-offset-2 hover:underline"
-                                style="color: var(--color-text-muted);"
-                                wire:navigate
-                            >{{ Lang::get('calendar::messages.panel.series') }}</a>
+                            @if ($entry->seriesId !== null)
+                                <a
+                                    href="{{ route('recurring.series.show', ['seriesId' => $entry->seriesId]) }}"
+                                    class="tap-link font-medium underline-offset-2 hover:underline"
+                                    style="color: var(--color-text-muted);"
+                                    wire:navigate
+                                >{{ Lang::get('calendar::messages.panel.series') }}</a>
+                            @elseif ($entry->transactionId !== null)
+                                <a
+                                    href="{{ route('transactions.show', ['transactionId' => $entry->transactionId]) }}"
+                                    class="tap-link font-medium underline-offset-2 hover:underline"
+                                    style="color: var(--color-text-muted);"
+                                    wire:navigate
+                                >{{ Lang::get('calendar::messages.panel.transaction') }}</a>
+                            @endif
                             @if ($entry->counterpartySlug !== null)
                                 <a
                                     href="{{ route('counterparties.profile', ['slug' => $entry->counterpartySlug]) }}"
-                                    class="font-medium underline-offset-2 hover:underline"
+                                    class="tap-link font-medium underline-offset-2 hover:underline"
                                     style="color: var(--color-text-muted);"
                                     wire:navigate
                                 >{{ Lang::get('calendar::messages.panel.counterparty') }}</a>

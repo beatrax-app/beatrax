@@ -285,15 +285,16 @@ that the gates passed; nothing downstream re-derives a side or re-checks a signa
 
 5. **Has the local human confirmed yet?** This is the load-bearing one. A validly signed peer
    confirm cannot by itself drive the row toward `confirmed`. Until the local user has
-   visually matched the six words and tapped confirm, the result is `'deferred'` and the
-   relay row is **left in the mailbox** for redelivery. Without this gate, a peer that
+   visually matched the six words and tapped confirm, the answer is
+   `PeerConfirmResult::deferred()` — carrying no `PairingState`, because nothing moved — and
+   the relay row is **left in the mailbox** for redelivery. Without this gate, a peer that
    completed its own confirmation would drag the local device into a confirmed pairing the
    local human never approved — which would make the safety-number comparison decorative.
 
 ### A deferred confirm is held, not dropped
 
 Deferral used to rely entirely on somebody sending the frame again, and only one of the two
-roads does. The relay keeps its copy: a `'deferred'` outcome leaves the mailbox row pending.
+roads does. The relay keeps its copy: a deferred outcome leaves the mailbox row pending.
 A **LAN push** does not — `POST /pair/frame` answers `202`, which the sender reads as
 received, and the receiver kept nothing. What redelivered it was the peer's own three-second
 re-emit, which is gated on the peer's row not yet being `confirmed`.
@@ -365,7 +366,7 @@ is **terminally** handled:
 | --- | --- |
 | Undecodable blob or unparseable JSON | yes — it will never become decodable |
 | `PAIR_RESPONDER_ACCEPT` | yes — it either binds, no-ops idempotently, or fails closed |
-| `PAIR_CONFIRM` returning `'deferred'` | **no** — left for redelivery once the local side confirms |
+| `PAIR_CONFIRM` answered `PeerConfirmResult::deferred()` | **no** — left for redelivery once the local side confirms |
 | `PAIR_CONFIRM`, any other result | yes |
 | `GDK_EPOCH_WRAP` | **no** — not this transport's frame |
 
@@ -663,7 +664,7 @@ Two things, and deliberately not a third:
 It **mints nothing**. There is no path through the courier that produces a confirmation, only
 paths that carry one the local human already gave. That is what makes a courier safe to run
 from a process with no human attached to it: no tap, no stamp, nothing to re-emit, and a
-validly signed peer confirm still lands on `'deferred'` exactly as it does inbound.
+validly signed peer confirm is still deferred exactly as it is inbound.
 
 ### Outward before inward
 

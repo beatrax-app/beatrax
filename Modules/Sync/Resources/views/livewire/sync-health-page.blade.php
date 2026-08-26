@@ -5,7 +5,7 @@
     data-testid="sync-health-page"
 >
     {{-- Page heading --}}
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-wrap items-center justify-between">
         <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::health.title') }}</h1>
     </div>
 

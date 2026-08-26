@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Controparte',
     'description' => 'Descrizione',
     'amount_native' => 'Importo (valuta originale)',
-    'amount_settled' => 'Importo (regolato in EUR)',
+    'amount_settled' => 'Importo (regolato)',
     'effective_rate' => 'Tasso effettivo',
     'ics_markup' => "Include l'eventuale maggiorazione ICS.",
 

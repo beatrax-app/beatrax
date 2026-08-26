@@ -19,12 +19,11 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Lang;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
 final class CalendarPage extends Component
 {
-    private const int HORIZON_MONTHS = 12;
-
     use CoercesScalars;
 
     #[Url(as: 'month', except: null)]
@@ -169,6 +168,7 @@ final class CalendarPage extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         Clock $clock,
+        BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
         $display = $this->resolveDisplay($clock);
@@ -205,19 +205,20 @@ final class CalendarPage extends Component
             $user,
         );
 
-        $ceiling = $clock->now()->addMonths(self::HORIZON_MONTHS);
+        $ceiling = $clock->now()->addMonths(CalendarQuery::HORIZON_MONTHS);
         $atCeiling = ($year > $ceiling->year)
             || ($year === $ceiling->year && $month >= $ceiling->month);
 
         $view = $views->make('calendar::livewire.calendar-page', [
             'days' => $days,
-            'hasEntries' => self::daysHaveEntries($days),
+            'hasProjectableEntries' => $calendarQuery->hasProjectableEntries($user),
             'selectedDayDto' => $this->findSelectedDay($days),
             'displayYear' => $year,
             'displayMonth' => $month,
             'isComputingAny' => $balanceSources !== [] && self::daysAreComputing($days),
             'accountRoster' => $accountRoster,
             'atCeiling' => $atCeiling,
+            'baseCurrency' => $baseCurrency->forUser($user),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -242,20 +243,6 @@ final class CalendarPage extends Component
         }
 
         return $roster;
-    }
-
-    /**
-     * @param  list<CalendarDayDto>  $days
-     */
-    private static function daysHaveEntries(array $days): bool
-    {
-        foreach ($days as $day) {
-            if ($day->entries !== []) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -305,7 +292,7 @@ final class CalendarPage extends Component
 
         // Clamps to the same ceiling nextMonth() enforces, so a tampered
         // ?year=&month= cannot render past the forecast horizon.
-        $ceiling = $now->addMonths(self::HORIZON_MONTHS);
+        $ceiling = $now->addMonths(CalendarQuery::HORIZON_MONTHS);
         if ($year > $ceiling->year || ($year === $ceiling->year && $month > $ceiling->month)) {
             $year = $ceiling->year;
             $month = $ceiling->month;
@@ -316,7 +303,7 @@ final class CalendarPage extends Component
 
     private function exceedsCeiling(int $year, int $month, Clock $clock): bool
     {
-        $ceiling = $clock->now()->addMonths(self::HORIZON_MONTHS);
+        $ceiling = $clock->now()->addMonths(CalendarQuery::HORIZON_MONTHS);
 
         return ($year > $ceiling->year)
             || ($year === $ceiling->year && $month > $ceiling->month);

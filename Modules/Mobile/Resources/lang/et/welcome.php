@@ -8,5 +8,6 @@ return [
     'subtitle' => 'Seadista see seade, et näha oma rahaasju ühes kohas.',
     'create_account' => 'Loo konto',
     'import' => 'Impordi teisest seadmest',
+    'restore' => 'Taasta varukoopiast',
     'create_account_note' => 'See toimib ka iseseisvalt, kuid arvutis seadistamine ja siia sünkroonimine on lihtsam.',
 ];

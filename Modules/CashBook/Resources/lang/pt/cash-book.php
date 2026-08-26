@@ -11,7 +11,7 @@ return [
     'expense' => 'Despesa',
     'income' => 'Receita',
 
-    'amount' => 'Montante (€)',
+    'amount' => 'Montante (:symbol)',
     'date' => 'Data',
     'counterparty' => 'Contraparte',
     'counterparty_placeholder' => 'ex.: Padaria',

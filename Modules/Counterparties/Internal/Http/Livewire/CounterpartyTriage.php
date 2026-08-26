@@ -241,13 +241,17 @@ final class CounterpartyTriage extends Component
             return [];
         }
 
+        // settled_amount_minor, not amount_minor: this list is the evidence for
+        // a total the index and profile already print from the settled figure,
+        // and a card charged in dollars showed the reader $14.20 against a
+        // €12.67 the same row reads everywhere else in the app.
         $rows = $db->connection()->table('transactions')
             ->where('user_id', $userId)
             ->where('counterparty_id', $cp->id)
             ->orderByDesc('posted_at')
             ->orderByDesc('id')
             ->limit(5)
-            ->get(['id', 'posted_at', 'description', 'amount_minor', 'currency']);
+            ->get(['id', 'posted_at', 'description', 'settled_amount_minor', 'settled_currency']);
 
         // transactions.description is a SensitiveFieldRegistry column stored
         // as AEAD ciphertext; the raw query builder applies no cast, so

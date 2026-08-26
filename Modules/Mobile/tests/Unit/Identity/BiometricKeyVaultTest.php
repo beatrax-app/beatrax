@@ -7,6 +7,7 @@ use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricRecoverResult;
+use Psr\Log\NullLogger;
 
 // The native BiometricVault facade is unreachable in the repo toolchain, so this
 // subclass supplies an in-memory enclave. The blob crypto is real, so the
@@ -27,6 +28,14 @@ class FakeBiometricKeyVault extends BiometricKeyVault
     protected function runtimeAvailable(): bool
     {
         return $this->available;
+    }
+
+    // The enclave path is iOS, which reports Darwin. Unpinned, the fake inherits
+    // the HOST's PHP_OS_FAMILY, so platformCanStore() answers false on a Linux
+    // runner and every availability assertion passes on a Mac and fails in CI.
+    protected function platformFamily(): string
+    {
+        return 'Darwin';
     }
 
     protected function pollRecovered(): ?string
@@ -63,7 +72,7 @@ function fakeVault(int $userId = 7): FakeBiometricKeyVault
     $cu = Mockery::mock(CurrentUser::class);
     $cu->shouldReceive('id')->andReturn($userId);
 
-    return new FakeBiometricKeyVault(new BiometricKeyBlobCodec(new AppLockKeyWrap), $cu);
+    return new FakeBiometricKeyVault(new BiometricKeyBlobCodec(new AppLockKeyWrap), $cu, new NullLogger);
 }
 
 it('round-trips the data key through enroll() then recover()', function (): void {

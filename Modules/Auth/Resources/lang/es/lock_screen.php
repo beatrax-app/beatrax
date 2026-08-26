@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Cerrar sesión',
     'forgot_pin' => '¿Has olvidado el PIN? Cierra sesión: puedes volver a entrar con la contraseña de tu cuenta y establecer un PIN nuevo. No se pierde ningún dato.',
 
-    'digits_suffix' => 'dígitos introducidos',
+    'digits_entered' => ':count dígito introducido|:count dígitos introducidos',
     'pad_label' => 'Teclado del PIN',
     'digit_aria' => 'Dígito :digit',
     'backspace_aria' => 'Retroceso',

@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Generator;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Enums\Currency;
@@ -279,7 +280,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
     private function parseBudgetMonth(string $value): CarbonImmutable
     {
         foreach (self::BUDGET_MONTH_FORMATS as $format) {
-            $parsed = CarbonImmutable::createFromFormat($format, $value);
+            $parsed = SafeDate::fromFormatOrNull($format, $value);
             if ($parsed instanceof CarbonImmutable) {
                 return $parsed->startOfMonth();
             }
@@ -444,7 +445,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
     private function parseRegisterDate(string $value): CarbonImmutable
     {
-        $parsed = CarbonImmutable::createFromFormat('!m/d/Y', $value);
+        $parsed = SafeDate::fromFormatOrNull('!m/d/Y', $value);
         if (! $parsed instanceof CarbonImmutable) {
             throw new UnrecognizedMigrationFileException("could not parse Register.csv Date value '{$value}' (expected m/d/Y)");
         }

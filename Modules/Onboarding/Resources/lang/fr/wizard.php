@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Étape :number sur :total',
 
+    'back' => 'Retour',
+    'back_aria' => 'Retour — revient à l\'étape de configuration précédente',
+
     'resume_later' => 'Reprendre plus tard',
     'resume_later_aria' => 'Reprendre plus tard — enregistre ta progression et ferme l\'assistant de configuration',
     'resume_banner' => 'Content de te revoir — reprenons là où tu t\'es arrêté.',

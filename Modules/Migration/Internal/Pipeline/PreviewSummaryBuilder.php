@@ -97,8 +97,6 @@ final class PreviewSummaryBuilder
     {
         /** @var array<string, list<array{id: int, label: string, reason: string, resolution: string}>> $groups */
         $groups = [
-            UnmappedItemType::Category->value => [],
-            UnmappedItemType::Payee->value => [],
             UnmappedItemType::Extra->value => [],
             UnmappedItemType::Conflict->value => [],
         ];

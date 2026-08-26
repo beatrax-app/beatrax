@@ -22,6 +22,8 @@ return [
     'args_badge' => 'argumendid',
     'args_badge_title' => 'Avab argumentide vormi',
 
+    'spawning_unavailable' => 'Artisani käsud töötavad eraldi protsessis ja see platvorm ei lase rakendusel ühtegi käivitada. Käivita need arvutirakendusest.',
+
     'status' => [
         'running' => 'Töötab',
         'done' => 'Valmis',

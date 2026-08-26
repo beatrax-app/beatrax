@@ -11,7 +11,7 @@ return [
     'expense' => 'Kulu',
     'income' => 'Tulu',
 
-    'amount' => 'Summa (€)',
+    'amount' => 'Summa (:symbol)',
     'date' => 'Kuupäev',
     'counterparty' => 'Vastaspool',
     'counterparty_placeholder' => 'nt Pagariäri',

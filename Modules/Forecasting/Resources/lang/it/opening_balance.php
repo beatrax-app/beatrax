@@ -13,15 +13,18 @@ return [
     'as_of_label' => 'Saldo iniziale alla data',
     'as_of_help' => 'La data a cui si riferisce la cifra qui sopra.',
 
-    'divergence' => 'Questo si discosta di oltre €500 dal saldo che Beatrax calcola dalle transazioni importate. Sei sicuro?',
+    'divergence' => 'Questo si discosta di oltre :threshold dal saldo che Beatrax calcola dalle transazioni importate. Sei sicuro?',
     'use_beatrax' => 'Usa il numero di Beatrax',
     'use_mine' => 'Usa il mio numero',
 
     'save' => 'Salva il saldo iniziale',
+    'remove' => 'Rimuovi il saldo iniziale',
     'saved' => 'Salvato.',
+    'removed' => 'Rimosso.',
 
     'toast' => [
         'updated' => 'Saldo iniziale aggiornato.',
+        'removed' => 'Saldo iniziale rimosso.',
     ],
 
     'errors' => [

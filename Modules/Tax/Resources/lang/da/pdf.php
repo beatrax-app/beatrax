@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Modpart',
     'col_description' => 'Beskrivelse',
     'col_note' => 'Note',
-    'col_amount' => 'Beløb (EUR)',
+    'col_amount' => 'Beløb',
 
     'subtotal' => 'Subtotal',
 

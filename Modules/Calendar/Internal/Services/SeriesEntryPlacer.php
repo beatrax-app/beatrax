@@ -8,14 +8,15 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Calendar\Internal\Dto\CalendarEntryDto;
-use Modules\Calendar\Internal\Support\MatchWindow;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Recurring\Public\Support\MatchWindow;
 use stdClass;
 
 final readonly class SeriesEntryPlacer
@@ -34,6 +35,7 @@ final readonly class SeriesEntryPlacer
 
     public function __construct(
         private DatabaseManager $db,
+        private Clock $clock,
         private RecurringSeriesQuery $seriesQuery,
         private CounterpartyProfileQuery $counterpartyQuery,
         private AccountResolver $accountResolver,
@@ -259,11 +261,16 @@ final readonly class SeriesEntryPlacer
         CarbonImmutable $monthEnd,
         ?CarbonImmutable $seriesStart,
     ): array {
-        // Every occurrence is anchor + k steps, never a chain of no-overflow
-        // steps: chaining permanently loses an end-of-month anchor after the
-        // first short month, and is not invertible for negative k.
+        // k runs negative below, for the history fill-in; SeriesCadence::occurrenceAt
+        // is what makes both directions read off the same anchor.
         $anchor = $next->startOfDay();
         $k = $this->firstOccurrenceIndex($anchor, $cadence, $monthStart);
+
+        // Backward steps are history fill-in. The anchor is the app's own
+        // answer to when the next charge falls, and the forecast walks
+        // forward from it, so a step behind the anchor that lands on a day
+        // still to come is an entry no balance line will ever account for.
+        $today = $this->clock->now()->startOfDay();
 
         // Dates increase strictly in k, so the first one past monthEnd ends the
         // walk; there is nothing behind it that could still land in the month.
@@ -272,7 +279,7 @@ final readonly class SeriesEntryPlacer
 
         while ($iterations < self::MAX_PLACEMENT_ITERATIONS) {
             $iterations++;
-            $occurrence = $this->occurrenceAt($anchor, $cadence, $k);
+            $occurrence = $cadence->occurrenceAt($anchor, $k);
             $k++;
             if ($occurrence === null || $occurrence->gt($monthEnd)) {
                 break;
@@ -281,6 +288,9 @@ final readonly class SeriesEntryPlacer
                 continue;
             }
             if ($seriesStart !== null && $occurrence->lt($seriesStart)) {
+                continue;
+            }
+            if ($occurrence->lt($anchor) && $occurrence->gte($today)) {
                 continue;
             }
             $results[] = $occurrence;
@@ -342,17 +352,6 @@ final readonly class SeriesEntryPlacer
         }
 
         return $map;
-    }
-
-    private function occurrenceAt(CarbonImmutable $anchor, SeriesCadence $cadence, int $k): ?CarbonImmutable
-    {
-        return match ($cadence) {
-            SeriesCadence::Weekly => $anchor->addDays(self::DAYS_PER_WEEK * $k),
-            SeriesCadence::Monthly => $anchor->addMonthsNoOverflow($k),
-            SeriesCadence::Quarterly => $anchor->addMonthsNoOverflow(self::MONTHS_PER_QUARTER * $k),
-            SeriesCadence::Yearly => $anchor->addYearsNoOverflow($k),
-            SeriesCadence::Irregular => null,
-        };
     }
 
     /**

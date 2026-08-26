@@ -27,19 +27,20 @@ return [
     ],
 
     'next' => 'Næste',
+    'overdue' => 'Overskredet',
     'cadence_changed_note' => 'interval ændret',
-
-    'select_aria' => 'Vælg tilbagevendende serie :id',
     'un_reject' => 'Fortryd afvisning',
     'approve' => 'Godkend',
     'approve_aria' => 'Godkend tilbagevendende serie :id',
     'reject' => 'Afvis',
     'reject_aria' => 'Afvis tilbagevendende serie :id',
     'snooze' => 'Udsæt',
+    'snooze_aria' => 'Udsæt tilbagevendende serie :id',
     'snooze_1w' => '1 uge',
     'snooze_1m' => '1 måned',
     'snooze_3m' => '3 måneder',
     'edit_name' => 'Redigér navnet',
+    'edit_name_aria' => 'Omdøb tilbagevendende serie :id',
     'new_name_label' => 'Nyt navn til denne serie',
     'save' => 'Gem',
 

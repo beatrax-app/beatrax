@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Usunięte urządzenie',
     'dismiss_peer' => 'Odrzuć to urządzenie',
     'dismiss_stale' => 'Wyczyść urządzenia, które nie są już sparowane',
-    'no_devices' => 'Nie zsynchronizowano jeszcze żadnych urządzeń',
+    'not_synced_yet' => 'Jeszcze nie zsynchronizowano',
     'error' => 'Błąd synchronizacji na co najmniej jednym urządzeniu',
     'syncing' => 'Synchronizowanie…',
     'offline' => 'Urządzenia offline',

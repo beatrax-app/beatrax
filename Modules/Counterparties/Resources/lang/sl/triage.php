@@ -25,6 +25,7 @@ return [
     'no_not' => 'Ne, ni :name',
 
     'recent_on_iban' => 'Nedavne transakcije na tem IBAN-u',
+    'recent_on_counterparty' => 'Nedavne transakcije s to nasprotno stranko',
     'no_transactions_yet' => 'Zabeleženih transakcij še ni.',
 
     'label_manually' => 'Ali označi ročno',

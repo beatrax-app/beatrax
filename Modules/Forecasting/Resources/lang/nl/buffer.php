@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Minimale buffer voor :name',
     'save' => 'Buffer opslaan',
     'cancel' => 'Annuleren',
-    'clear' => 'Buffer wissen (gebruik € 0-ondergrens)',
+    'clear' => 'Buffer wissen (gebruik :zero-ondergrens)',
 
     'toast' => [
         'updated' => 'Buffer bijgewerkt.',

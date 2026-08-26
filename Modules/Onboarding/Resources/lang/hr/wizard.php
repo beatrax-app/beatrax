@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Korak :number od :total',
 
+    'back' => 'Natrag',
+    'back_aria' => 'Natrag — vraća na prethodni korak postavljanja',
+
     'resume_later' => 'Nastavi kasnije',
     'resume_later_aria' => 'Nastavi kasnije — sprema tvoj napredak i zatvara čarobnjak za postavljanje',
     'resume_banner' => 'Dobro došao natrag — nastavljamo gdje si stao.',

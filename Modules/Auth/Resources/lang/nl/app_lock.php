@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'error_enroll_unsupported' => 'Biometrisch ontgrendelen is niet beschikbaar op dit apparaat.',
+    'error_enroll_unsupported' => 'Deze versie van Beatrax kan nergens een ontgrendelsleutel opslaan, dus biometrisch ontgrendelen wordt niet aangeboden. Je apparaat is niet de beperking.',
     'error_enroll_unprotected' => 'Biometrisch ontgrendelen heeft een sleutelopslag van het besturingssysteem nodig, en deze installatie heeft die niet. Registreren zou de ontgrendelsleutel leesbaar naast je gegevens laten staan, dus dat wordt hier niet aangeboden.',
     'error_enroll_locked' => 'Ontgrendel de app voordat je dit instelt.',
     'error_enroll_failed' => 'Je apparaat wilde de sleutel niet opslaan. Biometrisch ontgrendelen is niet beschikbaar.',
@@ -32,7 +32,7 @@ return [
     'biometric_enroll_description' => 'Registreer dit apparaat om te ontgrendelen met biometrie.',
     'remove' => 'Verwijderen',
     'enroll' => 'Registreren',
-    'biometric_unavailable' => 'Biometrisch ontgrendelen is niet beschikbaar op dit apparaat.',
+    'biometric_unavailable' => 'Deze versie van Beatrax kan geen biometrisch ontgrendelen aanbieden. Je pincode is hier de enige ontgrendeling.',
 
     'deenroll_modal_heading' => 'Biometrisch ontgrendelen verwijderen — bevestig met pincode',
     'current_pin_label' => 'Huidige pincode',

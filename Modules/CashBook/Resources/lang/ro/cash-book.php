@@ -11,7 +11,7 @@ return [
     'expense' => 'Cheltuială',
     'income' => 'Venit',
 
-    'amount' => 'Sumă (€)',
+    'amount' => 'Sumă (:symbol)',
     'date' => 'Dată',
     'counterparty' => 'Contraparte',
     'counterparty_placeholder' => 'ex. Brutărie',

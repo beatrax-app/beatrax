@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Venituri recurente',
 
     'next' => 'Următoarea',
+    'overdue' => 'Restant',
     'chain' => 'lanț',
     'chain_aria' => 'Finanțat prin lanț',
     'per_month_suffix' => '/lună',

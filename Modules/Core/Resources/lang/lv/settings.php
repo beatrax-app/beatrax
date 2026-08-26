@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Valūtas attēlojums',
         'label' => 'Noklusējuma skats darījumu sarakstā',
-        'eur_only' => 'Tikai EUR',
+        'eur_only' => 'Tikai :code',
         'original' => 'Sākotnējā valūta',
         'help' => 'Katrā lapā to joprojām varat pārslēgt darījumu sarakstā.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Atpazīšanas logs (mēneši)',
         'window_help' => 'Cik mēnešu vēstures skenēt, grupējot darījumus regulāros modeļos.',
         'income_label' => 'Ieņēmumu minimums (centos)',
-        'income_help' => 'Ieņēmumi zem šī sliekšņa netiek automātiski grupēti. Glabā centos — 200000 nozīmē 2000,00 €. Iestatiet 0, lai slieksni izslēgtu.',
+        'income_help' => 'Ieņēmumi zem šī sliekšņa netiek automātiski grupēti. Glabā centos — 200000 nozīmē :example. Iestatiet 0, lai slieksni izslēgtu.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Izvēlieties valūtu.',
         'window_months' => 'Izvēlieties no 2 līdz 60 mēnešiem.',
         'threshold' => 'Izvēlieties slieksni no 1%, 2%, 5%, 10%, 25% vai 50%.',
-        'amount' => 'Ievadiet summu no 0 € un vairāk.',
+        'amount' => 'Ievadiet summu no :zero un vairāk.',
         'period_day' => 'Izvēlieties dienu no 1 līdz 28.',
         'currency_view' => 'Izvēlieties vienu no pieejamajām iespējām.',
     ],

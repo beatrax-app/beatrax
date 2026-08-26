@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Mise à jour de la prévision…',
-        'risk' => 'Le solde passe sous 0 € le :date.|Le solde passe sous 0 € sur :count jours — premier : :date.',
+        'risk' => 'Le solde passe sous :zero le :date.|Le solde passe sous :zero sur :count jours — premier : :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'paiement|paiements',
         'aria' => ':date : :count :entries',
-        'aria_balance_negative' => ', solde prévu moins :amount €',
-        'aria_balance_positive' => ', solde prévu :amount €',
+        'aria_balance_negative' => ', solde prévu moins :amount',
+        'aria_balance_positive' => ', solde prévu :amount',
         'overflow' => '+:count de plus',
         'paid' => 'Payé',
         'missed' => 'Attendu — introuvable',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Paiement enregistré',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ date approximative',
         'series' => '↗ série',
         'counterparty' => '↗ tiers',
+        'transaction' => '↗ transaction',
         'end_of_day' => 'Fin de journée',
     ],
 ];
