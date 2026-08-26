@@ -308,7 +308,7 @@
                             <section class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
                                 <header class="mb-3 flex flex-wrap items-baseline justify-between gap-4">
                                     <div>
-                                        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $selectedAccountName }} · {{ Lang::get('forecasting::forecast.scenario_word') }}</h2>
+                                        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $selectedAccountName }} · {{ $activeScenarioName ?? Lang::get('forecasting::forecast.scenario_word') }}</h2>
                                         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
                                             {{ Lang::get('forecasting::forecast.compared_against_baseline') }}
                                         </p>

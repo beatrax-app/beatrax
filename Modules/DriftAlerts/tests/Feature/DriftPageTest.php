@@ -309,10 +309,14 @@ it('names whichever of its two screens the reader actually opened', function ():
     expect($driftHtml)->toBeString()->and($anomalyHtml)->toBeString();
 
     expect($nameOf($anomalyHtml))->toBe('Unusual charges')
-        ->and($nameOf($driftHtml))->toBe('Alerts')
+        ->and($nameOf($driftHtml))->toBe('Drift Alerts')
         ->and($nameOf($driftHtml))->not->toBe($nameOf($anomalyHtml))
         ->and($titleOf($driftHtml))->not->toBe($titleOf($anomalyHtml));
 
-    // The name the reader tapped to get here, so the two agree.
-    expect($nameOf($anomalyHtml))->toBe(trans('core::sidebar.nav.unusual_charges'));
+    // The name the reader tapped to get here, asked of BOTH screens. Checking
+    // only the anomaly side is what let /drift keep a heading -- "Alerts" --
+    // that neither the nav item nor its own title used, through a round that
+    // was looking for exactly this.
+    expect($nameOf($anomalyHtml))->toBe(trans('core::sidebar.nav.unusual_charges'))
+        ->and($nameOf($driftHtml))->toBe(trans('core::sidebar.nav.drift_alerts'));
 });

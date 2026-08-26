@@ -24,15 +24,10 @@ enum DriftPageType: string
     }
 
     // Two nav items land here — "Drift Alerts" and "Unusual charges" — and the
-    // page carried one name for both, so tapping the second arrived at a screen
-    // headed with the first one's name. The toggle already labels them apart in
-    // every locale, so each type names its own screen.
-    public function headingKey(): string
-    {
-        return $this === self::Anomaly ? $this->labelKey() : 'drift-alerts::alerts.heading';
-    }
-
-    public function pageTitleKey(): string
+    // page carried one name for both. Each type names its own screen now, in
+    // the nav item's own words, and one key answers both the document title and
+    // the heading under it: a screen with two names is what this prevents.
+    public function screenNameKey(): string
     {
         return $this === self::Anomaly ? $this->labelKey() : 'drift-alerts::alerts.page_title';
     }
