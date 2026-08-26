@@ -39,21 +39,9 @@ function headingRowIsSqueezable(string $classes): bool
 }
 
 it('lets a heading row wrap rather than squeeze what is on it', function (): void {
-    /** @var list<string> $files */
-    $files = [];
-    /** @var Iterator<SplFileInfo> $found */
-    $found = new RegexIterator(
-        new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('Modules'))),
-        '/\.blade\.php$/',
-    );
-    foreach ($found as $file) {
-        $files[] = $file->getPathname();
-    }
-    expect($files)->not->toBe([]);
-
     $offenders = [];
 
-    foreach ($files as $path) {
+    foreach (headingRowBlades() as $path) {
         $source = (string) file_get_contents($path);
         $offset = 0;
 
