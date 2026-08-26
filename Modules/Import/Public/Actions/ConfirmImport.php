@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Actions;
 
+use Generator;
 use Illuminate\Database\DatabaseManager;
 use Modules\Anomaly\Public\Contracts\DispatchesAnomalyDetection;
 use Modules\Chains\Models\ChainResolutionRun;
@@ -20,6 +21,7 @@ use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 
@@ -59,7 +61,7 @@ final class ConfirmImport implements ConfirmsImports
             );
         }
 
-        $canonical = $this->cache->getCanonical($importRunId);
+        $canonical = $this->cache->canonicalChunks($importRunId);
         $enrichments = $this->cache->getEnrichments($importRunId) ?? [];
         $head = $this->cache->head($importRunId);
 
@@ -81,10 +83,15 @@ final class ConfirmImport implements ConfirmsImports
 
         $rowIssues = $head === null ? [] : $head->rowIssues;
 
+        // Chunk by chunk, never as one list: the recorder already buffers what
+        // it is given into transactions, but reading the whole run out of the
+        // cache first put 27,777 rows in memory to hand them over, and the
+        // phone died mid-confirm with nothing written and nothing logged.
+        //
         // captureForSync: false — this action captures run, accounts and
         // transactions itself below, parents first. Capturing in the recorder
         // as well wrote every imported row to the op log twice.
-        $recorderResult = ($this->recorder)($canonical, $user, false);
+        $recorderResult = ($this->recorder)(self::rowsOf($canonical), $user, false);
 
         // The pipeline already filtered fingerprint-duplicates out of
         // $canonical, so the recorder's own count holds only the collisions
@@ -155,5 +162,16 @@ final class ConfirmImport implements ConfirmsImports
         }
 
         return $result;
+    }
+
+    /**
+     * @param  iterable<int, list<CanonicalTransaction>>  $chunks
+     * @return Generator<int, CanonicalTransaction>
+     */
+    private static function rowsOf(iterable $chunks): Generator
+    {
+        foreach ($chunks as $chunk) {
+            yield from $chunk;
+        }
     }
 }
