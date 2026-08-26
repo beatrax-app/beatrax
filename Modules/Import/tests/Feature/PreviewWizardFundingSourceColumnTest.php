@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
+use Modules\Core\Public\Support\Iban;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
@@ -51,8 +52,11 @@ it('renders the counterparty IBAN in the Funding source cell', function (): void
 
     expect($rowWithIban)->not->toBeNull();
 
+    // Grouped in fours, which is the only form the cell draws: unbroken, a
+    // 126px column split it at whatever character ran out of room.
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
-        ->assertSee($rowWithIban->counterpartyIban);
+        ->assertSee(Iban::grouped($rowWithIban->counterpartyIban))
+        ->assertDontSee($rowWithIban->counterpartyIban);
 });
 
 it('renders an em-dash when the source row carries no counterparty IBAN', function (): void {

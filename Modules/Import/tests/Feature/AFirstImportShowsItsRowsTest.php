@@ -54,3 +54,32 @@ it('still shows the rows once the account is named', function (): void {
 
     expect(substr_count($html, '<tr data-row-index='))->toBe(100);
 });
+
+// The funding column measured 126px on an iPhone 12 mini, and a td at phone
+// width takes overflow-wrap: anywhere, so every one of the hundred rows split
+// its IBAN at whatever character ran out of room -- "NL10BANK00005000" over
+// "01". Grouped in fours the browser breaks between groups instead.
+it('draws every IBAN in groups a reader can compare, never split mid-identifier', function (): void {
+    Account::query()->where('iban', 'NL57ASNB0123456789')->delete();
+
+    $preview = app(RunsImports::class)->runFromUpload(
+        base_path('tests/fixtures/asn-sample-1.csv'),
+        'asn-csv',
+        $this->fixtureUser,
+        'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
+    );
+
+    $html = Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])->html();
+
+    expect($html)->toContain('<strong class="font-medium">NL57 ASNB 0123 4567 89</strong>')
+        ->and($html)->toContain('<span class="font-mono text-xs">NL68 BANK 0000 0000 01</span>')
+        ->and($html)->toContain('<span class="font-mono text-xs">NL41 BANK 0000 0000 02</span>');
+
+    // Nothing the reader reads carries the unbroken form. The compact IBAN is
+    // still in the page -- nameAccount() takes it as an argument -- so this
+    // looks at rendered text only.
+    $text = strip_tags($html);
+    expect($text)->not->toContain('NL57ASNB0123456789')
+        ->and($text)->not->toContain('NL68BANK0000000001');
+});

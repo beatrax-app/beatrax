@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Enums\JobRunStatus')
+@use('Modules\Core\Public\Support\Iban')
 @use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Core\Public\Support\Fmt;
@@ -137,7 +138,7 @@
                         <p class="text-sm text-slate-900 dark:text-slate-100">
                             {{ in_array($unknown->iban, $presetIssuedIdentifiers, true)
                                 ? Lang::get('import::preview.unknown_account_prefix')
-                                : Lang::get('import::preview.unknown_iban_prefix') }} <strong class="font-medium">{{ $unknown->iban }}</strong>. {{ Lang::get('import::preview.unknown_iban_suffix') }}
+                                : Lang::get('import::preview.unknown_iban_prefix') }} <strong class="font-medium">{{ Iban::grouped($unknown->iban) }}</strong>. {{ Lang::get('import::preview.unknown_iban_suffix') }}
                         </p>
                         <div class="flex items-end gap-2">
                             <div class="flex-1">
@@ -234,7 +235,7 @@
                                  interest credits, ATM withdrawals). --}}
                             <td class="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">
                                 @if ($row->counterpartyIban !== null)
-                                    <span class="font-mono text-xs">{{ $row->counterpartyIban }}</span>
+                                    <span class="font-mono text-xs">{{ Iban::grouped($row->counterpartyIban) }}</span>
                                 @else
                                     —
                                 @endif
@@ -250,7 +251,7 @@
                                 @elseif ($row->counterpartyName !== null)
                                     {{ $row->counterpartyName }}
                                 @elseif ($row->counterpartyIban !== null)
-                                    <span class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ $row->counterpartyIban }}</span>
+                                    <span class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ Iban::grouped($row->counterpartyIban) }}</span>
                                 @elseif ($row->description !== null)
                                     <button
                                         type="button"

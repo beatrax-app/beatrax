@@ -2795,11 +2795,11 @@ td.date,
     }
 
     /* Same size as the placeholder it replaces, so the row does not resize
-       when the reader clicks Show. An IBAN is one unbroken token in a flex
-       row, hence the wrap release. */
+       when the reader clicks Show. It is drawn in groups of four, like the
+       placeholder, so a narrow row breaks it between groups and never
+       mid-identifier -- no wrap release is needed to get it to break. */
     .iban-revealed {
         min-width: 0;
-        overflow-wrap: anywhere;
         font-family: var(--font-mono);
         font-variant-numeric: tabular-nums;
         font-size: var(--text-sm);
@@ -5922,6 +5922,7 @@ mark {
     [role='tab'] {
         overflow-wrap: break-word;
     }
+
 
     /*
      * The row the two of them sit in: a name opposite its amount, a category
