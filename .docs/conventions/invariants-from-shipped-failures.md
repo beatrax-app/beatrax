@@ -377,6 +377,18 @@ having lost:
   switch shipped as a small circle inside a bigger one. Anything the floor would
   deform opts out and takes its touch reach from a pseudo-element instead, which
   costs no layout.
+
+  **Measuring it.** `getBoundingClientRect()` answers about the paint, and the
+  paint is deliberately smaller than the reach. A device walk that measures
+  boxes will report the welcome screen's links at 327x36, the report chips at
+  29px and the search toggles at 20px, and every one of those is the design
+  working: `.tap-chip`, `.chip`, `.srch-chip-toggle` and the rest carry a
+  `::after` sized `max(100%, 44px)` under `@media (pointer: coarse)`. Three
+  device rounds have now filed them as defects. The measurement that answers
+  the actual question is `document.elementFromPoint()` at the corners of the
+  44px band — and the failure it *can* find is a real one, because an ancestor
+  with `overflow: hidden` (a `truncate` utility, most often) clips the halo
+  away while leaving the box exactly where it was.
 - **A duplicated dialog name.** The same sheet is both "create" and "edit". A
   duplicated string went stale on the Livewire round-trip that updated the
   heading, so the dialog announced "create" while the form was editing.
@@ -1493,6 +1505,103 @@ Reproduced at a desk by sending the header on an ordinary GET, which is what
 the test does. The fix strips it from every request that is not Livewire's own
 update endpoint, alongside the three other middlewares that exist to undo what
 this runtime carries between requests.
+
+## A picker offering a format nothing can parse
+
+`tests/Contracts/OfferedFormatsResolveToAParserArchTest.php`
+
+`SourceAdapterRegistry` is keyed by format id. A picker offers a list of format
+ids. Nothing held the two together, so a format could sit on a chip with no
+adapter bound to it, and the only report was an import that produced nothing.
+
+ING existed twice under two ids. The upload wizard offered `ing-nl-csv`, a CSV
+preset that binds a real `GenericCsvAdapter`. First-run onboarding offered
+`ing-csv`, a `SourceFormat` case nothing ever bound. Worse, the ING chip only
+ever set the *hint*; the format stayed on the CSV row's landing default,
+`asn-csv`. So the file that reached the pipeline was an ING statement declared
+as ASN. Measured on the ING fixture, both spellings previewed **zero rows and
+zero errors** — the wizard reported the step complete and imported nothing.
+Every new user who banked with ING and used the wizard as designed hit that.
+
+Nothing caught it because each half was individually well-formed: the enum case
+was valid, the chip rendered, the validator's `in:` rule admitted the value, and
+the pipeline's own hint guard was satisfied. The two lists simply never met.
+
+The rule reads each picker's format list out of its source — a Livewire
+component's `SUPPORTED_FORMATS` and its `$selectedFormat`/`$sourceFormat`
+default — resolves constants through the file's own imports, and checks every
+value against the live `SourceAdapterRegistry` plus `ParseStage`'s receipt arm.
+It covers binding drift as well as picker drift: the provider's adapter map now
+keys off `SourceFormat` cases rather than bare strings, so renaming a case moves
+both sides together, and a map that stops tracking the enum fails here.
+
+A second assertion runs over `SourceFormat::cases()` directly. That is the one
+that would have caught `IngCsv` on the day it was added, before any picker
+offered it.
+
+## `wire:model.blur` never reaches the server
+
+Two shipped fixes were inert in the browser while their tests passed. Both had
+the same shape: a refusal shown after a rejected submit, and an `updated()` hook
+whose job was to re-test that refusal as the reader corrected the box under it.
+Pots printed "Amount exceeds unallocated balance." and kept printing it after the
+amount was corrected; signup left "Passwords do not match." standing over a
+ticked "Both passwords match".
+
+Livewire 4 changed what `wire:model`'s modifiers mean. A modifier is EPHEMERAL
+unless `.live` appears before it: `wire:model.blur` syncs the client-side `$wire`
+proxy when the field loses focus and sends no request at all. The value is not
+lost — it rides along with the next commit — but no `updated()` hook runs at the
+moment of the blur, which is the moment the whole feature is about.
+
+Measured on the device: with a network probe installed over `fetch` and
+`XMLHttpRequest`, a real focus, a real edit and a real blur on a
+`wire:model.blur` field produced zero requests, both bound inputs showed the new
+value, and the server's snapshot still held the old one.
+
+`Livewire::test()` does not catch it. It calls `set()` on the server, which
+triggers the hook directly, so the hook is exercised and the binding that can
+never invoke it is not.
+
+The invariant pairs the two sides: a component that declares an `updated`
+lifecycle hook may not have a view binding a field with `.blur` unless `.live`
+comes first. A component with no such hook is left alone — there the modifier
+only delays a client-side sync, which is a real if rare intent.
+
+## Asking whether text wrapped, and being told about its box
+
+Three rounds of device sweeps have now filed the same false positive under
+three different measurements, and each one measured something adjacent to the
+question.
+
+The question is "did this string break across lines". The wrong instruments,
+in the order they were tried:
+
+- **Element height ÷ line-height.** A 44px tap row holding one 19.7px line
+  reports 2.2, so every amount on `/uncategorized` came back as wrapped. This is
+  the touch-floor mistake again in another costume: the box is not the glyphs.
+- **Subtracting padding first.** Better, and still wrong — the 44px came from
+  the row's own layout, not from padding, so there was nothing to subtract.
+- **`Range.getClientRects().length` on the text node.** Exact about fragments,
+  not about lines. A text node with leading whitespace yields a 4px rect
+  *beside* the glyphs on the same line, which read as two lines for every
+  amount on `/drift/watch`.
+
+What answers the question is the number of **distinct tops** among the rects
+wider than a hairline:
+
+```js
+const r = document.createRange();
+r.selectNodeContents(textNode);
+const lines = new Set([...r.getClientRects()]
+    .filter((x) => x.width > 1 && x.height > 0)
+    .map((x) => Math.round(x.top))).size;
+```
+
+The same shape settles the touch floor: `elementFromPoint` across the 44px band
+rather than `getBoundingClientRect()`, because the halo is a pseudo-element
+larger than the control it extends. Both are the one rule — ask the browser
+about the thing you are asking about, not about the box that contains it.
 
 ## Related
 

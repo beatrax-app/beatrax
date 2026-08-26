@@ -11,7 +11,7 @@ return [
     'expense' => 'Izdevumi',
     'income' => 'Ieņēmumi',
 
-    'amount' => 'Summa (€)',
+    'amount' => 'Summa (:symbol)',
     'date' => 'Datums',
     'counterparty' => 'Darījuma partneris',
     'counterparty_placeholder' => 'piem. Maiznīca',

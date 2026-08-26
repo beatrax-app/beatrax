@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Otwiera formularz argumentów',
 
+    'spawning_unavailable' => 'Polecenia Artisan działają w osobnym procesie, a ta platforma nie pozwala aplikacji go uruchomić. Uruchom je w aplikacji na komputer.',
+
     'status' => [
         'running' => 'W trakcie',
         'done' => 'Gotowe',

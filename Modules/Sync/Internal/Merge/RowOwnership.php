@@ -37,15 +37,17 @@ final class RowOwnership
         'migration_source_map' => ['beatrax_id' => 'beatrax_entity_type'],
     ];
 
-    // The closed vocabulary MigrationEntityType writes, mapped to the tables
-    // it resolves against. A value outside this set is refused rather than
-    // waved through — an unknown type is precisely the shape an op would take
-    // to slip a reference past a check that only understands four words.
+    // Every word the migration promoter writes into beatrax_entity_type,
+    // mapped to the table it resolves against. A value outside this set is
+    // refused rather than waved through — an unknown type is precisely the
+    // shape an op would take to slip a reference past a partial vocabulary.
     private const POLYMORPHIC_TABLES = [
         'transaction' => 'transactions',
         'account' => 'accounts',
         'category' => 'categories',
         'envelope_assignment' => 'envelope_assignments',
+        'counterparty' => 'counterparties',
+        'goal' => 'goals',
     ];
 
     /** @var array<string, bool> */

@@ -7,6 +7,7 @@ return [
     'body' => 'Dzēšot kontu, tas tiek noņemts no šīs ierīces kopā ar visu, kas tam pieder. To nevar atsaukt.',
     'removes' => 'Pazūd tavi darījumi, konti, budžeti, mērķi un pārskati, kā arī noteikumi, iestatījumi, atkopšanas kodi, sinhronizācijas identitāte un šifrēšanas atslēgas.',
     'devices_heading' => 'Tavas pārējās ierīces patur savu kopiju',
+    'devices_heading_none' => 'Šī ir vienīgā jūsu datu kopija',
     'devices_body' => 'Beatrax nav servera, tāpēc attālināti neko nevar izdzēst. Šīs ierīces joprojām glabā pilnu kopiju, un tās jāsakārto pašā ierīcē — :devices|Beatrax nav servera, tāpēc attālināti neko nevar izdzēst. Šī ierīce joprojām glabā pilnu kopiju, un tā jāsakārto pašā ierīcē — :devices|Beatrax nav servera, tāpēc attālināti neko nevar izdzēst. Šīs ierīces joprojām glabā pilnu kopiju, un tās jāsakārto pašā ierīcē — :devices',
     'devices_none' => 'Ar šo ierīci nav savienota neviena cita, tāpēc šī ir vienīgā tavu datu kopija.',
     'successor' => 'Tu pārvaldi šo ierīci, tāpēc :username to pārņem, tiklīdz tava konta vairs nav.',

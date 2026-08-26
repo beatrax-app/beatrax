@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Tilbagevendende indtægter',
 
     'next' => 'Næste',
+    'overdue' => 'Overskredet',
     'chain' => 'kæde',
     'chain_aria' => 'Finansieres via kæde',
     'per_month_suffix' => '/md',

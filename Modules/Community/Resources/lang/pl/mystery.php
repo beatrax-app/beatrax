@@ -21,7 +21,6 @@ return [
     'footer' => 'Wspólna lista to plik YAML dołączony do Beatrax. Wysłanie propozycji otwiera GitHub w przeglądarce; poza tym nic nie opuszcza tego urządzenia.',
 
     'card' => [
-        'likely' => 'Prawdopodobnie: nienazwany sprzedawca.',
         'seen_times' => 'Widziano :count raz|Widziano :count razy|Widziano :count razy',
         'last_seen' => 'Ostatnio widziano :date',
         'suggest' => 'Zaproponuj nazwę →',

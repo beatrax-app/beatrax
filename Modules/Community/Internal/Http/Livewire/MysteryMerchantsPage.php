@@ -68,7 +68,7 @@ final class MysteryMerchantsPage extends Component
             'mysteryCount' => count($grouped),
             'mappingsCount' => $corpus->mappingsCount(),
             'autoNamedPercent' => $autoNamedPercent,
-            'contributorCount' => 0,
+            'contributorCount' => $corpus->contributionsCount($user->id),
         ];
 
         return $views->make('community::livewire.mystery-merchants-page', [

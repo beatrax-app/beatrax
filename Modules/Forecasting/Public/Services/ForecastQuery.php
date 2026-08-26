@@ -14,6 +14,7 @@ use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\SeriesConfidenceDto;
+use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
@@ -39,6 +40,7 @@ final readonly class ForecastQuery
         private ForecastDtoMapper $mapper,
         private RecurringSeriesQuery $seriesQuery,
         private BaseCurrency $baseCurrency,
+        private AccountBalanceQuery $balances,
     ) {}
 
     public function forUser(int $accountId, int $horizonDays, ?int $scenarioId, User $user): ForecastDto
@@ -203,6 +205,31 @@ final readonly class ForecastQuery
         );
     }
 
+    /**
+     * @return list<string>
+     */
+    private function bookedDatesAhead(int $accountId, User $user, CarbonImmutable $asOf, int $horizonDays): array
+    {
+        $rows = $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('account_id', $accountId)
+            ->whereNotNull('booked_at')
+            ->where('posted_at', '>', $asOf->toDateString())
+            ->where('posted_at', '<=', $asOf->addDays($horizonDays)->toDateString().' 23:59:59')
+            ->distinct()
+            ->orderBy('posted_at')
+            ->pluck('posted_at');
+
+        $dates = [];
+        foreach ($rows as $value) {
+            if (is_string($value) && $value !== '') {
+                $dates[CarbonImmutable::parse($value)->toDateString()] = true;
+            }
+        }
+
+        return array_keys($dates);
+    }
+
     private function flatLineFallback(
         int $accountId,
         string $accountName,
@@ -212,15 +239,33 @@ final readonly class ForecastQuery
         CarbonImmutable $asOf,
         User $user,
     ): ForecastDto {
-        $anchorMinor = $this->resolveAnchorFromTransactionsSum($accountId, $user->id);
+        $anchorMinor = $this->balances->currentBalanceAsOf($accountId, $user, $asOf)->in($defaultCurrency);
+
+        // A booked row dated ahead of today is a certainty already in the
+        // ledger, and a line ignoring it states the wrong balance for every day
+        // after. Only the days one falls are queried, through the summation the
+        // dashboard and reconcile use so the baseline cannot drift from theirs.
+        $balanceOn = [];
+        foreach ($this->bookedDatesAhead($accountId, $user, $asOf, $horizonDays) as $date) {
+            $balanceOn[$date] = $this->balances
+                ->currentBalanceAsOf($accountId, $user, CarbonImmutable::parse($date)->endOfDay())
+                ->in($defaultCurrency);
+        }
 
         $points = [];
+        $runningMinor = $anchorMinor;
         for ($day = 0; $day <= $horizonDays; $day++) {
+            $date = $asOf->addDays($day)->toDateString();
+            $runningMinor = $balanceOn[$date] ?? $runningMinor;
+
+            // low == point == high: what is already booked carries no
+            // uncertainty, which is the whole reason it may be drawn at all
+            // without a projection behind it.
             $points[] = new ForecastPointDto(
-                date: $asOf->addDays($day)->toDateString(),
-                lowMinor: $anchorMinor,
-                pointMinor: $anchorMinor,
-                highMinor: $anchorMinor,
+                date: $date,
+                lowMinor: $runningMinor,
+                pointMinor: $runningMinor,
+                highMinor: $runningMinor,
                 currency: $defaultCurrency,
             );
         }
@@ -237,13 +282,5 @@ final readonly class ForecastQuery
             seriesConfidence: [],
             isComputing: false,
         );
-    }
-
-    private function resolveAnchorFromTransactionsSum(int $accountId, int $userId): int
-    {
-        return (int) $this->db->connection()->table('transactions')
-            ->where('user_id', $userId)
-            ->where('account_id', $accountId)
-            ->sum('amount_minor');
     }
 }

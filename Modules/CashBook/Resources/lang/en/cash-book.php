@@ -11,7 +11,7 @@ return [
     'expense' => 'Expense',
     'income' => 'Income',
 
-    'amount' => 'Amount (€)',
+    'amount' => 'Amount (:symbol)',
     'date' => 'Date',
     'counterparty' => 'Counterparty',
     'counterparty_placeholder' => 'e.g. Bakery',

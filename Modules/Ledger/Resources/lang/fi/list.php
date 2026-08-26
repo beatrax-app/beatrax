@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Viimeaikaiset tapahtumat (viimeiset 90 päivää).',
 
     'currency_aria' => 'Valuuttanäkymä',
-    'currency_eur' => 'Vain EUR',
+    'currency_eur' => 'Vain :code',
     'currency_original' => 'Alkuperäinen valuutta',
 
     'show_recent' => 'Näytä vain viimeaikaiset',

@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Do předpovědi tohoto účtu zatím žádná řada nepřispívá.',
 
     'net_diff' => 'Rozdíl netto',
+
+    'net_diff_unknown' => 'Pro tento horizont zatím nespočítáno.',
     'net_diff_section_aria' => 'Rozdíl netto mezi základem a scénářem v horizontu 30 / 60 / 90 dní',
     'net_diff_delta_aria' => 'Rozdíl netto v den :day: :value, scénář je :state',
     'better_than_baseline' => 'lepší než základ',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Hlavní body předpovědi',
     'highlights_shortfall_aria' => ':count aktivní okno se schodkem v příštích :days dnech|:count aktivní okna se schodkem v příštích :days dnech|:count aktivních oken se schodkem v příštích :days dnech',
-    'dips_to' => ':name klesá na :amount',
     'on_date_suffix' => ' dne :date',
     'shortfall_window' => ':count aktivní okno se schodkem|:count aktivní okna se schodkem|:count aktivních oken se schodkem',
-    'lowest_in_30' => 'Nejnižší za 30 dní: :amount',
+    'lowest_in_30_label' => 'Nejnižší za 30 dní',
     'next_ics' => 'Příští vypořádání ICS: :amount dne :date',
+    'ics_overdue' => 'Vypořádání ICS po splatnosti: :amount, splatné :date',
 ];

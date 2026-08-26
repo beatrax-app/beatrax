@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     Settings "Anomaly detection" section. Three sub-sections:
     Sensitivity, Minimum charge amount, and the user-visible + removable
@@ -41,7 +42,7 @@
             min="0"
             step="1"
             :label="Lang::get('anomaly::settings.min_amount_label')"
-            :hint="Lang::get('anomaly::settings.min_amount_help')"
+            :hint="Lang::get('anomaly::settings.min_amount_help', ['symbol' => Money::symbolFor(BaseCurrency::value()), 'example' => Money::ofMinor(1000, BaseCurrency::value())->format()])"
             wire:model="anomalyMinAmountMinor"
             style="font-variant-numeric: tabular-nums;"
         />

@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Opakované príjmy',
 
     'next' => 'Najbližšia',
+    'overdue' => 'Po termíne',
     'chain' => 'reťazec',
     'chain_aria' => 'Financované cez reťazec',
     'per_month_suffix' => '/mes.',

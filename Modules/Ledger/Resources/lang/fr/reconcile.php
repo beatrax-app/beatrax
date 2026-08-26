@@ -10,7 +10,7 @@ return [
     'account' => 'Compte',
     'choose_account' => 'Choisis un compte…',
     'statement_date' => 'Date du relevé',
-    'statement_balance' => 'Solde du relevé (€)',
+    'statement_balance' => 'Solde du relevé (:symbol)',
     'balance_help' => 'Prérempli à partir de ton dernier relevé importé quand c\'est possible — négatif pour un montant dû, modifiable dans les deux cas.',
 
     'cleared_balance' => 'Solde compensé',

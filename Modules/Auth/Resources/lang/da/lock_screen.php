@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Log ud',
     'forgot_pin' => 'Har du glemt din PIN-kode? Log ud — du kan logge ind igen med din kontoadgangskode og vælge en ny PIN-kode. Ingen data går tabt.',
 
-    'digits_suffix' => 'cifre indtastet',
+    'digits_entered' => ':count ciffer indtastet|:count cifre indtastet',
     'pad_label' => 'PIN-tastatur',
     'digit_aria' => 'Ciffer :digit',
     'backspace_aria' => 'Tilbagetast',

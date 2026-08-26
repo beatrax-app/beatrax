@@ -9,6 +9,10 @@ return [
         'title' => 'Ez az oldal nem létezik',
         'body' => 'A hivatkozás lehet régi, vagy az oldal nevet kapott. Az adataiddal semmi baj.',
     ],
+    '4xx' => [
+        'title' => 'Ezt a kérést nem lehet feldolgozni',
+        'body' => 'Az oldal olyan módon nyílt meg, amelyre nem számít. Az adataid változatlanok.',
+    ],
 
     '419' => [
         'title' => 'A munkameneted lejárt',

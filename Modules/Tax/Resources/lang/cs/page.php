@@ -37,7 +37,7 @@ return [
     'col_account' => 'Účet',
     'col_counterparty' => 'Protistrana',
     'col_note' => 'Poznámka',
-    'col_settled_eur' => 'Vypořádáno v EUR',
+    'col_settled' => 'Vypořádáno',
     'col_original' => 'Původní',
     'col_year' => 'Rok',
 

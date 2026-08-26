@@ -35,7 +35,7 @@
         :backUrl="Destination::Recurring->url()"
         :title="$series->displayName()"
     />
-    <header class="mb-8 flex items-start justify-between gap-4">
+    <header class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="min-w-0 flex-1">
             <h1 class="truncate text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $series->displayName() }}</h1>
             <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
@@ -54,8 +54,11 @@
                 </p>
             @endif
         </div>
-        {{-- Desktop controls: shrink-0 row; wraps naturally at phone width --}}
-        <div class="flex shrink-0 flex-wrap items-center gap-4">
+        {{-- 400px of controls beside the title. `shrink-0` gave them their
+             full width on a 375pt screen, which left the title column a
+             sliver and put the last control off the edge, so they keep it
+             only once there is room for both. --}}
+        <div class="flex flex-wrap items-center gap-4 sm:shrink-0">
             @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $series->seriesId], key('threshold-detail-'.$series->seriesId))
             @livewire('forecasting.model-what-if-dropdown', ['seriesId' => $series->seriesId], key('what-if-'.$series->seriesId))
             <div x-data="{ open: false }" class="relative">
@@ -100,7 +103,7 @@
     </header>
 
     <section class="mb-8 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-        <div class="mb-4 flex items-baseline justify-between">
+        <div class="mb-4 flex flex-wrap items-baseline justify-between">
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::detail.amount_over_time') }}</h2>
             <button
                 type="button"

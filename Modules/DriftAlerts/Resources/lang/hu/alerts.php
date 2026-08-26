@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Riasztások',
+    'page_title' => 'Eltérésriasztások',
     'heading' => 'Riasztások',
     'intro_anomaly' => 'Egyedi terhelések, amelyek szokatlannak tűnnek nálad.',
     'intro_drift' => 'Jóváhagyott ismétlődő sorozatok, amelyek legutóbbi terhelése kilépett a küszöbértékedből.',

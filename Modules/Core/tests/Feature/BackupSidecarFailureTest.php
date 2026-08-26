@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Config\Repository;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Public\Contracts\Clock;
+use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
 // A backup on disk with no sidecar is worse than no backup: the next run's
@@ -22,13 +21,7 @@ beforeEach(function (): void {
 
     $this->sourcePath = RealSqliteFixture::create('backup-sidecar-source');
 
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.connections.sqlite.database', $this->sourcePath);
-
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $db->purge('sqlite');
+    LiveSqliteConnection::pointAt($this->app, $this->sourcePath);
 
     $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage';
     $this->backupsDir = $this->storageRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
@@ -36,6 +29,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    LiveSqliteConnection::restore($this->app);
     CarbonImmutable::setTestNow(null);
     putenv('NATIVEPHP_STORAGE_PATH');
 

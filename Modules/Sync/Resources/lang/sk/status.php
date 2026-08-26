@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Odstránené zariadenie',
     'dismiss_peer' => 'Zamietnuť toto zariadenie',
     'dismiss_stale' => 'Vymazať zariadenia, ktoré už nie sú spárované',
-    'no_devices' => 'Zatiaľ nie sú zosynchronizované žiadne zariadenia',
+    'not_synced_yet' => 'Zatiaľ nesynchronizované',
     'error' => 'Chyba synchronizácie na jednom alebo viacerých zariadeniach',
     'syncing' => 'Synchronizuje sa…',
     'offline' => 'Zariadenia offline',

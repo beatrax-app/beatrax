@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 return [
     'menu' => [
+        'file' => 'Dosya',
         'file_import' => 'Dosya içe aktar…',
         'file_scan_email' => 'E-postaları şimdi tara',
+        'help' => 'Yardım',
         'help_github_repo' => 'GitHub deposu',
         'help_report_issue' => 'Sorun bildir',
         'help_about' => 'Beatrax hakkında',

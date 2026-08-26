@@ -7,6 +7,7 @@ return [
     'body' => 'Eliminando il tuo account lo togli da questo dispositivo insieme a tutto ciò che gli appartiene. Non si può annullare.',
     'removes' => 'Spariscono i tuoi movimenti, conti, budget, obiettivi e report, insieme a regole, preferenze, codici di recupero, identità di sincronizzazione e chiavi di cifratura.',
     'devices_heading' => 'Gli altri tuoi dispositivi mantengono la propria copia',
+    'devices_heading_none' => 'Questa è l’unica copia dei tuoi dati',
     'devices_body' => 'Beatrax non ha un server, quindi niente si può eliminare da remoto. Questo dispositivo conserva ancora una copia completa e va sistemato sul dispositivo stesso — :devices|Beatrax non ha un server, quindi niente si può eliminare da remoto. Questi dispositivi conservano ancora una copia completa e vanno sistemati sul dispositivo stesso — :devices',
     'devices_none' => 'Nessun altro dispositivo è associato a questo, quindi questa è l’unica copia dei tuoi dati.',
     'successor' => 'Sei tu ad amministrare questo dispositivo, quindi :username prende il tuo posto quando il tuo account sparisce.',

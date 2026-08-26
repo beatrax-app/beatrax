@@ -14,6 +14,7 @@ use Modules\Chains\Public\Enums\CardStatementCreditReason;
 use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
+use Modules\Chains\Public\Support\SettlementTolerance;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -35,10 +36,6 @@ use stdClass;
 final class IcsSettlementResolver
 {
     use CoercesScalars;
-
-    public const AMOUNT_TOLERANCE_MINOR = 500;
-
-    public const AMOUNT_TOLERANCE_PERCENT = 2;
 
     public const PERIOD_WINDOW_DAYS = 10;
 
@@ -238,14 +235,12 @@ final class IcsSettlementResolver
         // $settled is a magnitude; positive delta = overpaid, negative = under.
         $delta = -$expenseSum - $priorCredits - $settled;
 
-        $absStatementTotal = abs($statementTotal);
-        $percentTolerance = (int) floor($absStatementTotal * (self::AMOUNT_TOLERANCE_PERCENT / 100));
-        $tolerance = max(self::AMOUNT_TOLERANCE_MINOR, $percentTolerance);
+        $tolerance = SettlementTolerance::minorFor($statementTotal);
 
         $signatureHash = self::signatureHash($ibans, $accountId, $periodEnd, $user);
 
         if (abs($delta) <= $tolerance) {
-            $toleranceUsed = abs($delta) <= self::AMOUNT_TOLERANCE_MINOR
+            $toleranceUsed = abs($delta) <= SettlementTolerance::FLOOR_MINOR
                 ? 'amount_5eur'
                 : 'percent_2';
 
@@ -333,7 +328,7 @@ final class IcsSettlementResolver
                 /** @var JoinClause $join */
                 $join->on('card_statements.account_id', '=', 'transactions.account_id')
                     ->on('card_statements.user_id', '=', 'transactions.user_id')
-                    ->whereRaw('transactions.posted_at BETWEEN card_statements.period_start AND card_statements.period_end')
+                    ->whereRaw('transactions.posted_at BETWEEN date(card_statements.period_start) AND date(card_statements.period_end)')
                     ->whereIn('card_statements.state', [CardStatementState::Settled->value, CardStatementState::Overpaid->value]);
             })
             ->leftJoin('chain_links', function ($join): void {
@@ -398,7 +393,7 @@ final class IcsSettlementResolver
             ->where('type', TransactionType::Expense->value)
             ->where('counterparty_normalized', $merchant)
             ->where('settled_amount_minor', -$refundAmount)
-            ->whereBetween('posted_at', [$periodStart, $periodEnd])
+            ->whereBetween('posted_at', [self::periodDay($periodStart), self::periodDay($periodEnd)])
             ->orderByDesc('posted_at')
             ->first(['id']);
 
@@ -519,7 +514,7 @@ final class IcsSettlementResolver
             ->where('transactions.user_id', $user->id)
             ->where('transactions.account_id', $accountId)
             ->where('transactions.type', TransactionType::Expense->value)
-            ->whereBetween('transactions.posted_at', [$periodStart, $periodEnd])
+            ->whereBetween('transactions.posted_at', [self::periodDay($periodStart), self::periodDay($periodEnd)])
             ->whereNull('chain_links.id')
             ->orderBy('transactions.posted_at')
             ->get([
@@ -573,5 +568,14 @@ final class IcsSettlementResolver
     private function formatConfidence(float $value): string
     {
         return number_format($value, 3, '.', '');
+    }
+
+    // Comparison only: signatureHash() keeps the stored spelling, which every
+    // install's chain_links already carry. The bounds are DATETIME and
+    // posted_at is a DATE, so raw they drop the period's FIRST day --
+    // '2026-04-17' >= '2026-04-17 00:00:00' is false as a string.
+    private static function periodDay(string $value): string
+    {
+        return substr($value, 0, 10);
     }
 }

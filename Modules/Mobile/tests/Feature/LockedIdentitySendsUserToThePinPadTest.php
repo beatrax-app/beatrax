@@ -82,7 +82,7 @@ it('returns an importing device to the import arm after it unlocks', function ()
     // longer knew it was importing, and therefore offered the typed code arm the
     // import path hides because it cannot succeed there.
     expect($component)->toContain('MobileLockGateway::SESSION_INTENDED_URL')
-        ->and($component)->toContain("'?mode=import'");
+        ->and($component)->toContain('PairingEntryUrl::importingFrom($urls)');
 
     $sendToUnlock = substr($component, (int) strpos($component, 'private function sendToUnlock('));
     $sendToUnlock = substr($sendToUnlock, 0, (int) strpos($sendToUnlock, "\n    }"));

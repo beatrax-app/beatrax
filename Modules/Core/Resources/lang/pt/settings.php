@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Apresentação da moeda',
         'label' => 'Vista predefinida na lista de transações',
-        'eur_only' => 'Apenas EUR',
+        'eur_only' => 'Apenas :code',
         'original' => 'Moeda original',
         'help' => 'Podes na mesma alternar página a página a partir da lista de transações.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Janela de deteção (meses)',
         'window_help' => 'Quantos meses de histórico analisar ao agrupar transações em padrões recorrentes.',
         'income_label' => 'Rendimento mínimo (cêntimos)',
-        'income_help' => 'Os rendimentos abaixo deste limite não são agrupados automaticamente. Guardado em cêntimos — 200000 significa €2.000,00. Define 0 para desativar o limite.',
+        'income_help' => 'Os rendimentos abaixo deste limite não são agrupados automaticamente. Guardado em cêntimos — 200000 significa :example. Define 0 para desativar o limite.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Escolhe uma moeda.',
         'window_months' => 'Escolhe entre 2 e 60 meses.',
         'threshold' => 'Escolhe um limite de 1%, 2%, 5%, 10%, 25% ou 50%.',
-        'amount' => 'Introduz um montante a partir de €0.',
+        'amount' => 'Introduz um montante a partir de :zero.',
         'period_day' => 'Escolhe um dia de 1 a 28.',
         'currency_view' => 'Escolhe uma das opções disponíveis.',
     ],

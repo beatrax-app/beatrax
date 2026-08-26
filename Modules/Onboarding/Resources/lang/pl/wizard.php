@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Krok :number z :total',
 
+    'back' => 'Wstecz',
+    'back_aria' => 'Wstecz — wraca do poprzedniego kroku konfiguracji',
+
     'resume_later' => 'Wróć później',
     'resume_later_aria' => 'Wróć później — zapisuje postęp i zamyka kreatora konfiguracji',
     'resume_banner' => 'Witamy ponownie — wróćmy do miejsca, w którym skończyliśmy.',

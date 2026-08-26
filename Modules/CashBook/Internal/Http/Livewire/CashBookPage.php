@@ -20,7 +20,9 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\LocaleCollator;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -144,6 +146,7 @@ final class CashBookPage extends Component
         TaxTagQuery $taxTagQuery,
         SensitiveColumnCodec $codec,
         Session $session,
+        BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
         $connection = $db->connection();
@@ -155,7 +158,7 @@ final class CashBookPage extends Component
             ->orderByDesc('t.posted_at')
             ->orderByDesc('t.id')
             ->limit(100)
-            ->get(['t.id', 't.posted_at', 't.counterparty_name', 't.settled_amount_minor', 't.type', ...CategoryDisplayName::columns('c')]);
+            ->get(['t.id', 't.posted_at', 't.counterparty_name', 't.settled_amount_minor', 't.settled_currency', 't.type', ...CategoryDisplayName::columns('c')]);
 
         // The raw query builder applies no cast to ciphertext columns.
         // decryptValue is a pass-through for non-encryption users.
@@ -195,10 +198,21 @@ final class CashBookPage extends Component
         $entryIds = array_map(static fn (stdClass $row): int => self::toInt($row->id), $entries->all());
         $taxState = $this->taxTagStateFor($entryIds, $taxTagQuery, $currentUser);
 
+        // The amount field is typed in the cash account's own denomination, and
+        // the reader can relabel that account like any other, so the label names
+        // what the entry will actually be booked in.
+        $cashCurrency = $connection->table('accounts')
+            ->where('user_id', $user->id)
+            ->where('kind', AccountKind::Cash->value)
+            ->value('default_currency');
+
         $view = $views->make('cashbook::livewire.cash-book-page', [
             'entries' => $entries,
             'categories' => $categories,
             'taxState' => $taxState,
+            'entryCurrency' => is_string($cashCurrency) && $cashCurrency !== ''
+                ? $cashCurrency
+                : $baseCurrency->forUser($user),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

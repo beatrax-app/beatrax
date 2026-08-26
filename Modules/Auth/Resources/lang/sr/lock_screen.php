@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Odjavi se',
     'forgot_pin' => 'Zaboravio si PIN? Odjavi se — možeš ponovo da se prijaviš lozinkom svog naloga i postaviš novi PIN. Podaci se ne gube.',
 
-    'digits_suffix' => 'unetih cifara',
+    'digits_entered' => '{1} unesena :count cifra|[2,4] unesene :count cifre|[5,*] uneseno :count cifara',
     'pad_label' => 'PIN tastatura',
     'digit_aria' => 'Cifra :digit',
     'backspace_aria' => 'Backspace',

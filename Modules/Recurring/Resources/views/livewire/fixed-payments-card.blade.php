@@ -1,6 +1,5 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     Inline dashboard card — top six approved recurring series by
     monthly equivalent, with a filter toggle (`All series` /
@@ -14,23 +13,19 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
-
-    $expenseEur = (int) ($totals['expense_eur_minor'] ?? 0);
-    $incomeEur = (int) ($totals['income_eur_minor'] ?? 0);
-    $netEur = (int) ($totals['net_eur_minor'] ?? 0);
+    $fmt = static fn (Money $money): string => $money->format();
 @endphp
 
 <x-core::card tag="section" aria-label="{{ Lang::get('recurring::fixed_payments.heading') }}">
-    <header class="mb-4 flex items-baseline justify-between gap-4">
+    <header class="mb-4 flex flex-wrap items-baseline justify-between gap-4">
         <div>
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::fixed_payments.heading') }}</h2>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                {{ $eurFmt($expenseEur) }} {{ Lang::get('recurring::fixed_payments.summary.expenses') }} · {{ $eurFmt($incomeEur) }} {{ Lang::get('recurring::fixed_payments.summary.income') }} · <span class="font-medium text-slate-900 dark:text-slate-100">{{ $eurFmt($netEur) }} {{ Lang::get('recurring::fixed_payments.summary.net') }}</span>
+                {{ $fmt($totals->expense) }} {{ Lang::get('recurring::fixed_payments.summary.expenses') }} · {{ $fmt($totals->income) }} {{ Lang::get('recurring::fixed_payments.summary.income') }} · <span class="font-medium text-slate-900 dark:text-slate-100">{{ $fmt($totals->net) }} {{ Lang::get('recurring::fixed_payments.summary.net') }}</span>@if ($totals->isPartial())<span class="text-slate-400 dark:text-slate-500" data-not-converted="true"> {{ Lang::get('core::money.not_converted', ['list' => $totals->unconvertedList()]) }}</span>@endif
             </p>
         </div>
         <div
-            class="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs dark:bg-slate-900 dark:border-slate-700"
+            class="inline-flex flex-wrap items-center rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs dark:bg-slate-900 dark:border-slate-700"
             role="group"
             aria-label="{{ Lang::get('recurring::fixed_payments.filter_aria') }}"
         >
@@ -83,7 +78,7 @@
                             @endif
                         </p>
                     </div>
-                    <span class="amount" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::fixed_payments.per_month_suffix') }}</span>
+                    <span class="amount" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->monthlyEquivalent) }}{{ Lang::get('recurring::fixed_payments.per_month_suffix') }}</span>
                 </a>
             @endforeach
         </div>
@@ -113,7 +108,7 @@
                             @endif
                         </p>
                     </div>
-                    <span class="shrink-0 text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::fixed_payments.per_month_suffix') }}</span>
+                    <span class="shrink-0 text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->monthlyEquivalent) }}{{ Lang::get('recurring::fixed_payments.per_month_suffix') }}</span>
                 </li>
             @endforeach
         </ul>

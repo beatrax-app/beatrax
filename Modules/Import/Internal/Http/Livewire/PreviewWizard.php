@@ -18,6 +18,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
 use Modules\Import\Internal\Exceptions\PreviewExpiredException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
+use Modules\Import\Internal\Services\OwnAccountPrompt;
 use Modules\Import\Public\Actions\DiscardImport;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
 use Modules\Import\Public\Contracts\ConfirmsImports;
@@ -25,12 +26,13 @@ use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
-use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
 use Modules\Ledger\Public\Services\BaseCurrency;
 
@@ -39,15 +41,20 @@ use Modules\Ledger\Public\Services\BaseCurrency;
  */
 final class PreviewWizard extends Component
 {
-    // The literal IcsPdfAdapter emits. AccountResolver scopes lookups by
-    // (iban, user_id), so one instance-wide literal stays unambiguous.
-    private const ICS_OWN_IBAN = 'ICS-CARD';
+    private const int ROW_PAGE = 100;
 
     // Locked because a Livewire property is client-mutable between requests:
     // unlocked, a mount()-only ownership check is bypassed by setting this to
     // another user's sequential, guessable run id and re-rendering.
     #[Locked]
     public int $importRunId = 0;
+
+    // How many rows the table draws. A 7 MB statement is 27,777 of them, and
+    // drawn whole they were a 46.8 MB document -- more than the phone's webview
+    // will accept as one page, on the screen the phone is most used for.
+    // Locked, so the window only ever grows through showMoreRows().
+    #[Locked]
+    public int $visibleRows = self::ROW_PAGE;
 
     public string $accountName = '';
 
@@ -184,10 +191,18 @@ final class PreviewWizard extends Component
     public function saveIcsAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
+        OwnAccountPrompt $prompt,
         AccountSlugResolver $slugs,
         BaseCurrency $baseCurrency,
     ): void {
         $this->resetErrorBag('icsAccountName');
+
+        // The same guard the prompt is drawn behind, on the write side: the
+        // form is gone by the next render, and a submit already in flight
+        // would otherwise still land the account.
+        if ($prompt->previewReadNothing($this->importRunId)) {
+            return;
+        }
 
         try {
             $trimmed = AccountNamer::validateName($this->icsAccountName);
@@ -206,7 +221,7 @@ final class PreviewWizard extends Component
             'name' => $trimmed,
             'slug' => $slugs->resolveUnique($user->id, $trimmed),
             'kind' => AccountKind::IcsCard->value,
-            'iban' => self::ICS_OWN_IBAN,
+            'iban' => OwnAccountPrompt::ICS_OWN_IBAN,
             'default_currency' => $baseCurrency->code(),
         ]);
 
@@ -230,9 +245,14 @@ final class PreviewWizard extends Component
     public function savePaypalAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
+        OwnAccountPrompt $prompt,
         EnsurePaypalAccountAction $ensurePaypal,
     ): void {
         $this->resetErrorBag('paypalAccountName');
+
+        if ($prompt->previewReadNothing($this->importRunId)) {
+            return;
+        }
 
         try {
             $trimmed = AccountNamer::validateName($this->paypalAccountName);
@@ -271,7 +291,6 @@ final class PreviewWizard extends Component
     {
         return match ($sourceFormat) {
             SourceFormat::AsnCsv->value => BankCsvFormatHint::Asn,
-            SourceFormat::IngCsv->value => BankCsvFormatHint::Ing,
             default => null,
         };
     }
@@ -281,9 +300,9 @@ final class PreviewWizard extends Component
         CurrentUser $currentUser,
         UrlGenerator $urls,
         PreviewCache $cache,
-        DatabaseManager $db,
+        OwnAccountPrompt $prompt,
     ): void {
-        if ($this->confirmationIsBlocked($currentUser, $cache, $db)) {
+        if ($this->confirmationIsBlocked($currentUser, $cache, $prompt)) {
             return;
         }
 
@@ -305,10 +324,10 @@ final class PreviewWizard extends Component
     // this is the one that counts. Nothing importable is blocked too, because
     // confirming it wrote a confirmed run whose own summary reported zero of
     // everything. A missing preview is a different case and stays expired.
-    private function confirmationIsBlocked(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
+    private function confirmationIsBlocked(CurrentUser $currentUser, PreviewCache $cache, OwnAccountPrompt $prompt): bool
     {
-        if ($this->needsIcsAccountName($currentUser, $db)
-            || $this->needsPaypalAccountName($currentUser, $db)) {
+        if ($prompt->needsIcsAccountName($this->importRunId, $currentUser)
+            || $prompt->needsPaypalAccountName($this->importRunId, $currentUser)) {
             return true;
         }
 
@@ -335,103 +354,78 @@ final class PreviewWizard extends Component
         PreviewCache $cache,
         CurrentUser $currentUser,
         DatabaseManager $db,
+        CsvPresetRegistry $presets,
+        OwnAccountPrompt $prompt,
     ): View {
         $this->assertOwnedRun($currentUser);
 
-        $preview = $cache->getPreview($this->importRunId);
-        $needsIcsAccountName = $this->needsIcsAccountName($currentUser, $db);
-        $needsPaypalAccountName = $this->needsPaypalAccountName($currentUser, $db);
+        $head = $cache->head($this->importRunId);
+        $preview = $head === null
+            ? null
+            : PreviewCache::resultFrom($head, $cache->rows($this->importRunId, 0, $this->visibleRows));
+        $needsIcsAccountName = $prompt->needsIcsAccountName($this->importRunId, $currentUser);
+        $needsPaypalAccountName = $prompt->needsPaypalAccountName($this->importRunId, $currentUser);
 
         return $views->make('import::livewire.preview-wizard', [
             'preview' => $preview,
             'previewExpired' => $this->previewExpired,
+            'alreadyImported' => $this->alreadyImported($db),
             'needsIcsAccountName' => $needsIcsAccountName,
             'needsPaypalAccountName' => $needsPaypalAccountName,
             'importableRowCount' => self::importableRowCount($preview),
             'failedRowCount' => self::failedRowCount($preview),
+            'presetIssuedIdentifiers' => self::presetIssuedIdentifiers($preview, $presets),
         ]);
     }
 
-    // Anchored on source_format rather than the unknown-IBAN list, so drift in
-    // the synthetic IBAN literal still raises the prompt.
-    private function needsIcsAccountName(CurrentUser $currentUser, DatabaseManager $db): bool
+    // The window grows rather than paging: a reader scanning a statement for
+    // one row loses their place if the rows above it are taken away.
+    public function showMoreRows(): void
     {
-        $user = $currentUser->user();
-
-        /** @var ImportRun|null $importRun */
-        $importRun = ImportRun::query()
-            ->where('id', $this->importRunId)
-            ->where('user_id', $user->id)
-            ->first();
-
-        if ($importRun === null) {
-            return false;
-        }
-
-        if ($importRun->source_format !== 'ics-pdf') {
-            return false;
-        }
-
-        $icsAccountCount = $db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('kind', AccountKind::IcsCard->value)
-            ->count();
-
-        return $icsAccountCount === 0;
+        $this->visibleRows += self::ROW_PAGE;
     }
 
-    private function needsPaypalAccountName(CurrentUser $currentUser, DatabaseManager $db): bool
+    /**
+     * @return list<string>
+     */
+    private static function presetIssuedIdentifiers(?ImportPreviewResult $preview, CsvPresetRegistry $presets): array
     {
-        $user = $currentUser->user();
+        if ($preview === null) {
+            return [];
+        }
 
-        /** @var ImportRun|null $importRun */
-        $importRun = ImportRun::query()
+        $issued = [];
+        foreach ($preview->accountsToName as $unknown) {
+            if ($presets->issuesOwnAccountIdentifier($unknown->iban)) {
+                $issued[] = $unknown->iban;
+            }
+        }
+
+        return $issued;
+    }
+
+    // A confirmed run has no preview left, indistinguishable from an expired one
+    // until the status is read: RunImport short-circuits a SHA it has already
+    // landed, so "expired, re-upload" sends that reader round again. Raw builder
+    // rather than ImportRun::query()->exists(), which trips staticMethod.dynamicCall.
+    private function alreadyImported(DatabaseManager $db): bool
+    {
+        return $db->connection()
+            ->table('import_runs')
             ->where('id', $this->importRunId)
-            ->where('user_id', $user->id)
-            ->first();
-
-        if ($importRun === null) {
-            return false;
-        }
-
-        if ($importRun->source_format !== 'paypal-csv') {
-            return false;
-        }
-
-        $paypalAccountCount = $db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('kind', AccountKind::Paypal->value)
-            ->count();
-
-        return $paypalAccountCount === 0;
+            ->where('status', ImportRunStatus::Confirmed->value)
+            ->exists();
     }
 
     // What confirming would actually write. A row that failed is not one of
     // them, and neither is the file-level failure, which is not a row at all.
     private static function importableRowCount(?ImportPreviewResult $preview): int
     {
-        if ($preview === null) {
-            return 0;
-        }
-
-        return count($preview->rows) - self::failedRowCount($preview);
+        return $preview?->importableRows() ?? 0;
     }
 
     private static function failedRowCount(?ImportPreviewResult $preview): int
     {
-        if ($preview === null) {
-            return 0;
-        }
-
-        $failed = 0;
-        foreach ($preview->rows as $row) {
-            if ($row->status === PreviewRowStatus::Error) {
-                $failed++;
-            }
-        }
-
-        return $failed;
+        return $preview?->errorRows() ?? 0;
     }
 }

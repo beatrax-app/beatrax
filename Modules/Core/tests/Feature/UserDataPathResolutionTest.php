@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Services\UserDataPathService;
+use Tests\Helpers\LiveSqliteConnection;
 
 beforeEach(function (): void {
     // Cached config freezes resolved paths into a flat array, masking the
@@ -31,6 +31,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    LiveSqliteConnection::restore($this->app);
     putenv('NATIVEPHP_STORAGE_PATH');
 
     /** @var string $tmpRoot */
@@ -66,15 +67,9 @@ it('creates the SQLite file under the simulated storage root when migrate:fresh 
         $tmpRoot.DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'database.sqlite',
     );
 
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.connections.sqlite.database', $databaseFile);
+    LiveSqliteConnection::pointAt($this->app, $databaseFile);
 
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $db->purge('sqlite');
-
-    $this->artisan('migrate:fresh', ['--database' => 'sqlite'])->assertSuccessful();
+    $this->artisan('migrate:fresh', ['--database' => LiveSqliteConnection::NAME])->assertSuccessful();
 
     expect(file_exists($databaseFile))->toBeTrue(
         'migrate:fresh must create the SQLite file under the simulated storage root.',
@@ -90,16 +85,13 @@ it('writes a db:backup artifact under the simulated storage root backups directo
     // VACUUM INTO needs a real on-disk source under the simulated root.
     $databaseFile = UserDataPathService::databaseFile();
 
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.connections.sqlite.database', $databaseFile);
+    LiveSqliteConnection::pointAt($this->app, $databaseFile);
+
+    $this->artisan('migrate:fresh', ['--database' => LiveSqliteConnection::NAME])->assertSuccessful();
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
-    $db->purge('sqlite');
-
-    $this->artisan('migrate:fresh', ['--database' => 'sqlite'])->assertSuccessful();
-    $db->purge('sqlite');
+    $db->purge(LiveSqliteConnection::NAME);
 
     $backupsDir = UserDataPathService::backupsPath();
     expect($backupsDir)->toBe(

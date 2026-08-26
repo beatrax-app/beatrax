@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => 'Tento telefón nedokáže uložiť súbor, ktorý mu aplikácia odovzdá, preto sa šifrovaná záloha vytvára v desktopovej aplikácii. Spárujte toto zariadenie, aby zostali synchronizované.',
         'unavailable' => 'Šifrované zálohy sú dostupné v desktopovej verzii (SQLite). Pri serverovej databáze použi vlastné zálohovacie nástroje danej databázy.',
         'intro' => 'Stiahni si kópiu celej databázy zašifrovanú prístupovou frázou — pokojne ju drž na externom disku alebo v cloude, bez frázy je nečitateľná (kvantovo odolné XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Prístupová fráza',
@@ -16,8 +17,8 @@ return [
     'restore' => [
         'heading' => 'Obnovenie zo zálohy',
 
-        'intro_html' => 'Nahradí tvoju súčasnú databázu šifrovanou zálohou. Súbor sa pred akoukoľvek zmenou dešifruje a skontroluje a najprv sa uloží snímka tvojich súčasných údajov — aj tak to však <strong class="text-slate-700 dark:text-slate-200">prepíše všetko</strong>, preto je tento krok zabezpečený.',
-        'restored' => 'Obnovené. Znovu načítaj aplikáciu a uvidíš obnovené údaje.',
+        'intro_html' => 'Nahradí tvoju súčasnú databázu šifrovanou zálohou. Súbor sa pred akoukoľvek zmenou dešifruje a skontroluje a najprv sa uloží snímka tvojich súčasných údajov — aj tak to však <strong class="text-slate-700 dark:text-slate-200">prepíše všetko</strong>, preto je tento krok zabezpečený. Budeš odhlásený, pretože aj tvoje prihlásenie je v databáze.',
+        'restored' => 'Vaša záloha bola obnovená. Prihláste sa používateľským menom a heslom, ktoré platili v čase jej vytvorenia.',
         'snapshot_saved_prefix' => 'Snímka tvojich predchádzajúcich údajov bola uložená do',
         'file_label' => 'Šifrovaná záloha (.enc)',
         'uploading' => 'Nahráva sa…',
@@ -35,6 +36,7 @@ return [
         'create_failed' => 'Zálohu sa nepodarilo vytvoriť: :message',
         'confirm_phrase' => 'Na potvrdenie napíš :phrase — nahradí to tvoje súčasné údaje.',
         'choose_file' => 'Vyber súbor šifrovanej zálohy (.enc), ktorý sa má obnoviť.',
+        'upload_failed' => 'Súbor sa nepodarilo úplne nahrať. Môže byť pre toto zariadenie príliš veľký — obnovenie v počítačovej aplikácii prijme väčšiu zálohu.',
         'enter_passphrase' => 'Zadaj prístupovú frázu, ktorou bola záloha zašifrovaná.',
         'unreadable' => 'Nahraný súbor sa nepodarilo prečítať. Skús to znova.',
     ],

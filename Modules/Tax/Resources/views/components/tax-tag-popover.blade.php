@@ -66,7 +66,7 @@
             width: 100%;
         "
     >
-        @include('tax::components.tax-tag-popover-body')
+        @include('tax::components.tax-tag-popover-body', ['taxPickerSurface' => 'popover'])
     </div>
 
     {{-- ===== PHONE BOTTOM SHEET ===== --}}
@@ -108,7 +108,7 @@
                 <div style="width: 32px; height: 4px; background: var(--color-border-strong, #94a3b8); border-radius: 9999px;"></div>
             </div>
 
-            @include('tax::components.tax-tag-popover-body')
+            @include('tax::components.tax-tag-popover-body', ['taxPickerSurface' => 'sheet'])
         </div>
     </div>
 

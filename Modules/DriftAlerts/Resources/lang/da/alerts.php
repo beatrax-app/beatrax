@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Advarsler',
+    'page_title' => 'Afvigelsesadvarsler',
     'heading' => 'Advarsler',
     'intro_anomaly' => 'Enkelte posteringer, der ser usædvanlige ud for dig.',
     'intro_drift' => 'Godkendte tilbagevendende serier, hvis seneste postering endte uden for din tærskel.',

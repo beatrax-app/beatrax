@@ -60,10 +60,11 @@ it('counts the rows in the base currency the reader actually chose', function ()
 
     $page = app(SearchQuery::class)->search($this->reader->fresh(), 'Probe', SearchFilters::empty());
 
-    // All three rows are listed — only the totals are currency-scoped, which is
-    // what made the old figure wrong rather than obviously broken.
+    // All three rows are listed and all three counted: the euro row converts at
+    // the bundled EUR/GBP rate of 0.83895, so EUR 7.00 joins the total as
+    // GBP 5.87 rather than being dropped from a figure the rows contradict.
     expect($page->totalCount)->toBe(3)
-        ->and($page->totalOutMinor)->toBe(-1000)
+        ->and($page->totalOutMinor)->toBe(-1587)
         ->and($page->totalInMinor)->toBe(2500);
 });
 
@@ -85,7 +86,8 @@ it('falls back to the configured base only when the reader has chosen none', fun
 
     $page = app(SearchQuery::class)->search($this->reader->fresh(), 'Probe', SearchFilters::empty());
 
-    expect($page->totalOutMinor)->toBe(-333);
+    // GBP 3.33 plus the euro row converted at 0.83895 — EUR 9.99 is GBP 8.38.
+    expect($page->totalOutMinor)->toBe(-1171);
 });
 
 // Nothing in the tree may resolve the base currency by reading the config

@@ -35,6 +35,19 @@ it('defaults the currency property to the user default_currency_view preference 
         ->assertSet('currency', 'eur');
 })->group('phase-3');
 
+// The toggle means "only rows already settled in my reporting currency", which
+// the component's own comment says and the label did not: it read "EUR only"
+// whatever the reader had chosen. A reader on USD was told EUR and shown USD —
+// which, on a euro-settled ledger, is nothing at all.
+it('names the readers own reporting currency on the base-currency toggle', function (): void {
+    $this->fixtureUser->update(['base_currency' => 'USD']);
+
+    $html = Livewire::test(TransactionsList::class)->html();
+
+    expect($html)->toContain('USD only')
+        ->and($html)->not->toContain('EUR only');
+})->group('phase-3');
+
 it('overrides the user preference when ?currency=eur is present in the URL', function (): void {
     $this->fixtureUser->update(['default_currency_view' => 'original']);
 
@@ -130,4 +143,13 @@ it('keeps the URL clean when the toggle is on the default value', function (): v
     $urlEffects = $effects['url'];
     expect($urlEffects)->toHaveKey('currency');
     expect($urlEffects['currency']['except'] ?? null)->toBe('');
+})->group('phase-3');
+
+// The segmented control submits into the same property the row branch reads,
+// so both tokens are spelled out here rather than read back off the enum.
+it('offers both currency-view tokens on the segmented toggle', function (): void {
+    $html = Livewire::test(TransactionsList::class)->html();
+
+    expect($html)->toContain('value="eur"')
+        ->and($html)->toContain('value="original"');
 })->group('phase-3');

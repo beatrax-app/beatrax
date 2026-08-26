@@ -10,7 +10,7 @@ return [
     'account' => 'Rekening',
     'choose_account' => 'Kies een rekening…',
     'statement_date' => 'Afschriftdatum',
-    'statement_balance' => 'Afschriftsaldo (€)',
+    'statement_balance' => 'Afschriftsaldo (:symbol)',
     'balance_help' => 'Waar mogelijk vooraf ingevuld vanuit je laatst geïmporteerde afschrift — negatief voor verschuldigd geld, in beide gevallen bewerkbaar.',
 
     'cleared_balance' => 'Verrekend saldo',

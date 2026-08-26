@@ -106,10 +106,11 @@ it('counts a category spent against with nothing assigned as overspent', functio
     expect($fold['overspentCount'])->toBe(1);
 });
 
-// The started branch is asserted not to fold non-EUR spend into a EUR figure;
-// this branch reads the same `"{id}|EUR"` key and had no case proving it. A CHF
-// row landing in availableMinor would put two currencies in one number.
-it('leaves non-EUR spend out of the EUR figures it reports', function (): void {
+// The started branch converts each currency's spend before adding it; this
+// branch reads the same buckets and had no case proving it does the same. A CHF
+// row landing in availableMinor unconverted would put two currencies in one
+// number — CHF 99.00 is EUR 105.93 at the bundled rate of 0.93455.
+it('converts spend in another currency before it reaches the figures it reports', function (): void {
     Transaction::create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -134,6 +135,7 @@ it('leaves non-EUR spend out of the EUR figures it reports', function (): void {
 
     $row = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $this->period)['rows'][$this->groceries->id];
 
-    expect($row->spentMinor)->toBe(25441)
-        ->and($row->availableMinor)->toBe(-25441);
+    expect($row->spentMinor)->toBe(25441 + 10593)
+        ->and($row->availableMinor)->toBe(-(25441 + 10593))
+        ->and($row->unconvertedSpentMinor)->toBe(0);
 });

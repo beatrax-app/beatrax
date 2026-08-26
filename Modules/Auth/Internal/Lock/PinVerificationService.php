@@ -20,6 +20,12 @@ final class PinVerificationService
     // attempts-remaining copy reads it rather than duplicating the number.
     public const HARD_CAP = 10;
 
+    // The unlock reads the row and then writes it, and the desktop runs four
+    // processes against one SQLite file. A commit landing in between refuses
+    // this write outright rather than making it wait, which busy_timeout
+    // cannot cover; the read has to be taken again.
+    private const int CONTENDED_WRITE_ATTEMPTS = 3;
+
     // Seconds, indexed by 0-based threshold breach: 30s at BACKOFF_THRESHOLD,
     // doubling to a 300s ceiling.
     /**
@@ -51,11 +57,16 @@ final class PinVerificationService
 
     public function verify(int $userId, string $pin, Session $session): ?string
     {
-        $this->pendingAlerts = [];
-
         /** @var string|null $result */
         $result = $this->db->connection()->transaction(
-            fn (): ?string => $this->verifyWithinTransaction($userId, $pin, $session)
+            function () use ($userId, $pin, $session): ?string {
+                // Cleared per attempt, not per call: a rolled-back attempt's
+                // alerts describe a lockout that was undone with it.
+                $this->pendingAlerts = [];
+
+                return $this->verifyWithinTransaction($userId, $pin, $session);
+            },
+            self::CONTENDED_WRITE_ATTEMPTS,
         );
 
         $this->flushPendingAlerts();

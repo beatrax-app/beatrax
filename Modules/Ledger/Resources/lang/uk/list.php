@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Останні транзакції (за 90 днів).',
 
     'currency_aria' => 'Вигляд валюти',
-    'currency_eur' => 'Лише EUR',
+    'currency_eur' => 'Лише :code',
     'currency_original' => 'Оригінальна валюта',
 
     'show_recent' => 'Показати лише останні',

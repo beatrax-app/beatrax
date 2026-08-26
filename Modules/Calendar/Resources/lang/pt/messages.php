@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'A atualizar a projeção…',
-        'risk' => 'O saldo desce abaixo de €0 em :date.|O saldo desce abaixo de €0 em :count dias — o primeiro: :date.',
+        'risk' => 'O saldo desce abaixo de :zero em :date.|O saldo desce abaixo de :zero em :count dias — o primeiro: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'entrada|entradas',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', saldo projetado menos €:amount',
-        'aria_balance_positive' => ', saldo projetado €:amount',
+        'aria_balance_negative' => ', saldo projetado menos :amount',
+        'aria_balance_positive' => ', saldo projetado :amount',
         'overflow' => '+:count mais',
         'paid' => 'Pago',
         'missed' => 'Esperado — não encontrado',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Pagamento registado',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ data aproximada',
         'series' => '↗ série',
         'counterparty' => '↗ contraparte',
+        'transaction' => '↗ transação',
         'end_of_day' => 'Fim do dia',
     ],
 ];

@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Konto nie zostało ustawione. Odśwież kreator.',
         'invalid_amount' => 'Wpisz prawidłową kwotę.',
-        'amount_range' => 'Wpisz kwotę z zakresu od -10 mln € do 10 mln €.',
+        'amount_range' => 'Wpisz kwotę z zakresu od :min do :max.',
         'pick_date' => 'Wybierz datę.',
         'pick_valid_date' => 'Wybierz prawidłową datę.',
         'future_date' => 'Data salda początkowego nie może być w przyszłości.',

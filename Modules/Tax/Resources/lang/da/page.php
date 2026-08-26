@@ -37,7 +37,7 @@ return [
     'col_account' => 'Konto',
     'col_counterparty' => 'Modpart',
     'col_note' => 'Note',
-    'col_settled_eur' => 'Afregnet EUR',
+    'col_settled' => 'Afregnet',
     'col_original' => 'Oprindelig',
     'col_year' => 'År',
 

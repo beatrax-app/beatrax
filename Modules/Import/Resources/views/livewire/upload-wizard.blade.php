@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ingestion\Public\Services\CsvPresetRegistry')
 {{-- UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
      scrolls horizontally at phone width rather than forcing page overflow. --}}
 <div class="space-y-6 overflow-x-auto">
@@ -35,7 +36,7 @@
             <option value="asn">ASN</option>
             <option value="ics">ICS</option>
             <option value="paypal">PayPal</option>
-            <option value="other-bank">{{ Lang::get('import::upload.issuer_other_bank') }}</option>
+            <option value="{{ CsvPresetRegistry::ISSUER }}">{{ Lang::get('import::upload.issuer_other_bank') }}</option>
             <option value="email-file">{{ Lang::get('import::upload.issuer_email_file') }}</option>
         </x-core::form-field>
 

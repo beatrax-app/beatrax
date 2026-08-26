@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Account not set. Reload the wizard.',
         'invalid_amount' => 'Enter a valid amount.',
-        'amount_range' => 'Enter an amount between -€10M and €10M.',
+        'amount_range' => 'Enter an amount between :min and :max.',
         'pick_date' => 'Pick a date.',
         'pick_valid_date' => 'Pick a valid date.',
         'future_date' => 'Starting balance date cannot be in the future.',

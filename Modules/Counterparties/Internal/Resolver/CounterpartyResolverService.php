@@ -179,10 +179,16 @@ final class CounterpartyResolverService implements CounterpartyResolver
             return null;
         }
 
+        // The corpus reads the description, so the name it returns stands in
+        // for a counterparty the file did not name and never overrules one it
+        // did — the precedence the preview column already shows. merchant_name
+        // keeps the resolved name, and the slug still follows the display name.
+        $namedInFile = is_string($tx->counterpartyName) ? trim($tx->counterpartyName) : '';
+
         return $this->upsert(
             userId: $userId,
             type: CounterpartyType::Merchant->value,
-            displayName: $merchantName,
+            displayName: $namedInFile === '' ? $merchantName : $namedInFile,
             iban: $this->normaliseIban($tx->counterpartyIban),
             merchantName: $merchantName,
             metadata: [],

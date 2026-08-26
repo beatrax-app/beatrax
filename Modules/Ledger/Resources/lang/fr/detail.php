@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Tiers',
     'description' => 'Description',
     'amount_native' => 'Montant (devise d\'origine)',
-    'amount_settled' => 'Montant (réglé en EUR)',
+    'amount_settled' => 'Montant (réglé)',
     'effective_rate' => 'Taux effectif',
     'ics_markup' => 'Inclut la majoration ICS éventuelle.',
 

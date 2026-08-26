@@ -30,6 +30,7 @@ parameters:
         - tools/phpstan-stubs/native-mobile-scanner.php
         - tools/phpstan-stubs/native-mobile-edge.php
         - tools/phpstan-stubs/native-mobile-bridge.php
+        - tools/phpstan-stubs/native-mobile-local-notifications.php
     paths:
         - Modules
         - app

@@ -12,7 +12,7 @@ return [
     // "Tietoja ei katoa" or "Tiedot säilyvät" is the open question.
     'forgot_pin' => 'Unohditko PIN-koodin? Kirjaudu ulos — voit kirjautua takaisin sisään tilisi salasanalla ja asettaa uuden PIN-koodin. Tietoja ei häviä.',
 
-    'digits_suffix' => 'numeroa syötetty',
+    'digits_entered' => ':count numero syötetty|:count numeroa syötetty',
     'pad_label' => 'PIN-näppäimistö',
     'digit_aria' => 'Numero :digit',
     'backspace_aria' => 'Askelpalautin',

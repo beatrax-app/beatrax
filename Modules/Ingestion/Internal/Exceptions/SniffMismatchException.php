@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Exceptions;
 
 use Modules\Core\Public\Support\MessageNamesNoUserData;
+use Modules\Ingestion\Public\Contracts\NamesAFormatMismatch;
 use RuntimeException;
 use Throwable;
 
-final class SniffMismatchException extends RuntimeException implements MessageNamesNoUserData
+final class SniffMismatchException extends RuntimeException implements MessageNamesNoUserData, NamesAFormatMismatch
 {
     public function __construct(public readonly string $reason, ?Throwable $previous = null)
     {

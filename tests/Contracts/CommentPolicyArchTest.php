@@ -1020,3 +1020,71 @@ it('has every relative link in a .docs page resolving to a real file (M6)', func
         'fine; only a path resolving to nothing at all fails here.',
     ]));
 });
+
+/**
+ * @return list<string>
+ */
+function commentPolicyHeadingSlugs(string $page): array
+{
+    $slugs = [];
+    foreach (file($page) ?: [] as $line) {
+        if (preg_match('/^#{1,6} (.+)$/', rtrim($line), $m) !== 1) {
+            continue;
+        }
+        // GitHub's rule, and the two halves that trip people up: a character
+        // it drops leaves its surrounding spaces behind, so an em dash yields
+        // a DOUBLE hyphen, and runs of spaces are never collapsed.
+        $text = strtolower(str_replace('`', '', $m[1]));
+        $slugs[] = str_replace(' ', '-', (string) preg_replace('/[^a-z0-9 _\-]/', '', $text));
+    }
+
+    return $slugs;
+}
+
+// M6's third face. The two rules above prove a link reaches a *file*; both
+// strip the fragment before looking. A link to a section that no longer exists
+// lands the reader at the top of a page with no sign anything was missed,
+// which is the failure a renamed heading causes and nothing else catches.
+it('has every #fragment in a doc link naming a heading that exists (M6)', function (): void {
+    $hits = [];
+
+    foreach (commentPolicyBackendFiles() as $path) {
+        foreach (token_get_all((string) file_get_contents($path)) as $token) {
+            if (! is_array($token) || $token[0] !== T_DOC_COMMENT) {
+                continue;
+            }
+            if (preg_match_all('/@link\s+(\S+\.md#\S+)/', $token[1], $m) === 0) {
+                continue;
+            }
+            foreach ($m[1] as $target) {
+                [$file, $anchor] = explode('#', $target, 2);
+                $resolved = realpath(dirname($path).'/'.$file);
+                if ($resolved !== false && ! in_array($anchor, commentPolicyHeadingSlugs($resolved), true)) {
+                    $hits[] = str_replace(base_path().'/', '', $path).':'.$token[2].' → '.$target;
+                }
+            }
+        }
+    }
+
+    foreach (commentPolicyDocsPages() as $path) {
+        foreach (commentPolicyDocsLinkTargets($path) as $target) {
+            if (! str_contains($target, '#')) {
+                continue;
+            }
+            [$file, $anchor] = explode('#', $target, 2);
+            $resolved = $file === '' ? $path : realpath(dirname($path).'/'.rawurldecode($file));
+            if ($resolved !== false && is_file($resolved) && ! in_array($anchor, commentPolicyHeadingSlugs($resolved), true)) {
+                $hits[] = str_replace(base_path().'/', '', $path).' -> '.$target;
+            }
+        }
+    }
+
+    expect($hits)->toBe([], implode("\n", [
+        'These links name a heading that does not exist:',
+        ...$hits,
+        '',
+        'The file resolves, so the two rules above pass and the reader still',
+        'lands nowhere. Rename the fragment to match the heading, or restore',
+        'the heading the link was written against.',
+    ]));
+});

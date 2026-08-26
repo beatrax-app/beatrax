@@ -182,7 +182,7 @@ final class PinnedReportsRow extends Component
 
         return [
             'chart' => [
-                'type' => 'donut',
+                'type' => ReportViz::Donut->value,
                 // Taller than the bar/line cards: the legend below the ring is
                 // what makes the slices mean anything, and it needs the room.
                 'height' => self::DONUT_HEIGHT,

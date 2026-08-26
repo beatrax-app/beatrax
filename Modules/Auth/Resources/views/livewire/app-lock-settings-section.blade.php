@@ -16,7 +16,7 @@
       - Toggle label: "Lock app with PIN"
       - Toggle description: "Replaces daily sign-in with a PIN. Sessions stay active for 30 days."
       - Idle label: "Auto-lock after"
-      - Biometric empty-state: "Biometric unlock is not available on this device."
+      - Biometric empty-state: "This version of Beatrax cannot offer biometric unlock. Your PIN is the only unlock here."
       - Disable modal CTA: "Disable lock" / "Keep app lock"
       - Change PIN modal CTA: "Change PIN" / "Keep PIN"
 --}}
@@ -303,7 +303,7 @@
     @endif
 
     {{-- ===== 3d: Idle timeout — shown always ===== --}}
-    <div class="flex items-center justify-between gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
         <label for="idle-timeout-select" class="text-sm text-slate-900 dark:text-slate-100">
             {{ Lang::get('auth::app_lock.auto_lock') }}
         </label>

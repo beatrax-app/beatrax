@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Mobile\Internal\Http\PairingEntryUrl')
 @use('Modules\Mobile\Internal\Identity\ImportBootstrapStep')
 {{-- Anchored to the top rather than centred: ten recovery codes are taller
      than a phone viewport, and centring pushed the heading up off the top of
@@ -162,7 +163,7 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.already_body') }}</p>
 
             <a
-                href="{{ route('mobile.pair', ['mode' => 'import']) }}"
+                href="{{ PairingEntryUrl::importing() }}"
                 class="flex w-full min-h-[44px] items-center justify-center rounded-md bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >{{ Lang::get('mobile::import.continue_to_pairing') }}</a>
         </div>

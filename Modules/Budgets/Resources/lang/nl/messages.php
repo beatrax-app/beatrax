@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budgetten',
-        'subtitle' => 'Wijs elke euro toe — :period.',
+        'subtitle' => 'Wijs alles toe — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Neemt negatief mee',
-        'non_eur_aria' => 'Uitgaven in niet-EUR in deze categorie worden hier niet getoond — zie het dashboard',
-        'non_eur_title' => 'Uitgaven in niet-EUR worden hier niet getoond — zie het dashboard',
+        'unconverted_aria' => 'Uitgaven in een valuta zonder beschikbare koers tellen hier niet mee — zie het dashboard',
+        'unconverted_title' => 'Uitgaven zonder beschikbare koers tellen hier niet mee — zie het dashboard',
         'over_budget' => ':count over budget',
     ],
 

@@ -154,6 +154,7 @@ export const palette = (registry, recent) => ({
         this.serverLoading = false;
         this.tokenSuggestVisible = false;
         this.visible = true;
+        window.Alpine?.store('overlay')?.add('palette');
         this.$nextTick(() => {
             try {
                 this.$refs.input?.focus();
@@ -172,6 +173,7 @@ export const palette = (registry, recent) => ({
     close() {
         this.tokenSuggestVisible = false;
         this.visible = false;
+        window.Alpine?.store('overlay')?.remove('palette');
 
         const origin = this._returnFocusTo;
         this._returnFocusTo = null;

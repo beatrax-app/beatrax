@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Továbbra sem importálva — kategóriák',
-        'payee' => 'Továbbra sem importálva — partnerek',
         'extra' => 'Nem importálva',
         'conflict' => 'Döntést igényel',
     ],

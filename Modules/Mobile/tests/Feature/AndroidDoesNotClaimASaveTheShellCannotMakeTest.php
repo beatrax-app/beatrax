@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
+
+// On the SM-S928B, "Download as .txt" on /recovery-codes answered *"Beatrax
+// asked your device to save the file"* and no sheet ever opened. logcat says
+// why, twice over:
+//
+//   I BridgeJNI: NativePHPCan('Share.File') = 0
+//   E BridgeRouter: Function 'Share.File' not found
+//
+// Share::file() is a void call over nativephp_call(), and an unregistered name
+// is swallowed there rather than thrown, so the bridge read its own silence as
+// success and the endpoint answered {"saved":true}. The file it left behind is
+// 0600 inside the container, unreachable in Files and destroyed by the
+// reinstall these codes exist to survive. Recovery codes are shown once; a
+// screen that says they are saved when they are not is how an account is lost.
+
+final class ShellWithoutAShareSheet extends RecoveryCodesExportBridge
+{
+    public bool $shareWasCalled = false;
+
+    public function isAvailable(): bool
+    {
+        return true;
+    }
+
+    protected function canShareFiles(): bool
+    {
+        return false;
+    }
+
+    // Stands in for Share::file(), which returns void on a real device whether
+    // or not the shell registered the function behind it.
+    protected function share(string $shareTitle, string $shareMessage, string $path): bool
+    {
+        $this->shareWasCalled = true;
+
+        return true;
+    }
+}
+
+it('reports a failed export on a shell that does not register Share.File', function (): void {
+    $bridge = new ShellWithoutAShareSheet;
+
+    $saved = $bridge->export(
+        'beatrax-recovery-codes-and11-walk.txt',
+        "VWS6-RXQN-QKKS-S6JF-WCS3\n",
+        'Beatrax recovery codes',
+        'Keep these somewhere safe.',
+    );
+
+    expect($saved)->toBeFalse()
+        ->and($bridge->shareWasCalled)->toBeFalse();
+});

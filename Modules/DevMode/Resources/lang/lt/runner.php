@@ -22,6 +22,8 @@ return [
     'args_badge' => 'arg.',
     'args_badge_title' => 'Atveria argumentų formą',
 
+    'spawning_unavailable' => 'Artisan komandos veikia atskirame procese, o ši platforma neleidžia programai jo paleisti. Paleisk jas kompiuterio programoje.',
+
     'status' => [
         'running' => 'Vykdoma',
         'done' => 'Atlikta',

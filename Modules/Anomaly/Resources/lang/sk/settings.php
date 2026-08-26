@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Citlivosť upozornení',
-    'sensitivity_help' => 'Označí platby, ktoré sú o viac ako :percent % vyššie než tvoje bežné výdavky u daného obchodníka alebo v danej kategórii.',
+    'sensitivity_help' => 'Ako ľahko Beatrax označí platbu za neobvyklú u daného obchodníka alebo v danej kategórii, od 1 do 100. Vyššia hodnota označí viac.',
 
     'min_amount_label' => 'Minimálna suma platby',
-    'min_amount_help' => 'Ignorovať anomálie pri platbách pod touto sumou. Ukladá sa v centoch (€) — 1000 znamená 10,00 €.',
+    'min_amount_help' => 'Ignorovať anomálie pri platbách pod touto sumou. Ukladá sa v centoch (:symbol) — 1000 znamená :example.',
 
     'save' => 'Uložiť nastavenia anomálií',
     'saved' => 'Uložené.',

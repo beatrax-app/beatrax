@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Recurring\Public\Services\TransactionSeriesMembershipQuery;
 
 function linkChain(DatabaseManager $db, int $userId, int $counterpartyId, string $state = 'approved'): int
 {
@@ -112,7 +113,7 @@ it('maps transaction ids to recurring-series membership (true/false per id)', fu
         'fingerprint_version' => 3, 'created_at' => '2026-05-02 00:00:00', 'updated_at' => '2026-05-02 00:00:00',
     ]);
 
-    $map = app(RecurringSeriesQuery::class)->seriesMembershipForTransactionIds(
+    $map = app(TransactionSeriesMembershipQuery::class)->seriesMembershipForTransactionIds(
         [$memberTxnId, $loneTxnId],
         $this->user,
     );
@@ -132,13 +133,13 @@ it('does not leak another user\'s occurrence membership', function (): void {
 
     // The member txn belongs to $this->user; querying as $other must not
     // report it as a member.
-    $map = app(RecurringSeriesQuery::class)->seriesMembershipForTransactionIds([$memberTxnId], $other);
+    $map = app(TransactionSeriesMembershipQuery::class)->seriesMembershipForTransactionIds([$memberTxnId], $other);
 
     expect($map[$memberTxnId])->toBeFalse();
 });
 
 it('returns an empty map for an empty id list', function (): void {
-    expect(app(RecurringSeriesQuery::class)->seriesMembershipForTransactionIds([], $this->user))->toBe([]);
+    expect(app(TransactionSeriesMembershipQuery::class)->seriesMembershipForTransactionIds([], $this->user))->toBe([]);
 });
 
 it('returns no counterparty for a series with no resolved occurrences', function (): void {

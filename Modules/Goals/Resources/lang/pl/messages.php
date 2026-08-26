@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Cel osiągnięty',
+        'closed_short' => 'Zamknięte przed osiągnięciem celu',
         'add_contributions' => 'Dodaj wpłaty, aby zobaczyć prognozę',
         'not_enough_history' => 'Za mało historii, aby przewidzieć datę',
         'no_recent_contributions' => 'Brak niedawnych wpłat, na których można oprzeć prognozę',

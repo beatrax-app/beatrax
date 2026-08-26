@@ -8,7 +8,7 @@ return [
     'input_aria' => ':name için minimum tampon',
     'save' => 'Tamponu kaydet',
     'cancel' => 'İptal',
-    'clear' => 'Tamponu temizle (€0 tabanını kullan)',
+    'clear' => 'Tamponu temizle (:zero tabanını kullan)',
 
     'toast' => [
         'updated' => 'Tampon güncellendi.',

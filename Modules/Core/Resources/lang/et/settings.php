@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Valuuta kuvamine',
         'label' => 'Vaikevaade tehingute loendis',
-        'eur_only' => 'Ainult EUR',
+        'eur_only' => 'Ainult :code',
         'original' => 'Algne valuuta',
         'help' => 'Tehingute loendis saad seda igal lehel endiselt vahetada.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Tuvastamise aken (kuudes)',
         'window_help' => 'Kui mitme kuu ajalugu skannitakse, kui tehinguid korduvateks mustriteks rühmitatakse.',
         'income_label' => 'Tulu miinimum (sentides)',
-        'income_help' => 'Sellest lävest väiksemaid tulusid automaatselt ei rühmitata. Salvestatakse sentides — 200000 tähendab 2000,00 €. Läve väljalülitamiseks pane 0.',
+        'income_help' => 'Sellest lävest väiksemaid tulusid automaatselt ei rühmitata. Salvestatakse sentides — 200000 tähendab :example. Läve väljalülitamiseks pane 0.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Vali valuuta.',
         'window_months' => 'Vali vahemikus 2 kuni 60 kuud.',
         'threshold' => 'Vali lävi: 1%, 2%, 5%, 10%, 25% või 50%.',
-        'amount' => 'Sisesta summa alates 0 €.',
+        'amount' => 'Sisesta summa alates :zero.',
         'period_day' => 'Vali päev 1 kuni 28.',
         'currency_view' => 'Vali üks saadaolevatest valikutest.',
     ],

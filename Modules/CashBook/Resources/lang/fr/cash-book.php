@@ -11,7 +11,7 @@ return [
     'expense' => 'Dépense',
     'income' => 'Revenu',
 
-    'amount' => 'Montant (€)',
+    'amount' => 'Montant (:symbol)',
     'date' => 'Date',
     'counterparty' => 'Tiers',
     'counterparty_placeholder' => 'ex. Boulangerie',

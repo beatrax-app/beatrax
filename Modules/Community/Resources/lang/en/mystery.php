@@ -21,7 +21,6 @@ return [
     'footer' => 'The shared list is a bundled YAML file that ships with Beatrax. Submitting a suggestion opens GitHub in your browser; nothing else leaves this device.',
 
     'card' => [
-        'likely' => 'Likely: an unnamed merchant.',
         'seen_times' => 'Seen :count time|Seen :count times',
         'last_seen' => 'Last seen :date',
         'suggest' => 'Suggest a name →',

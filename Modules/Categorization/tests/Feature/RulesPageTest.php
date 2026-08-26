@@ -300,3 +300,23 @@ it('grep guard: the blade carries a keep-alive wire:poll progress strip', functi
 
     expect($contents)->toContain('wire:poll.2s.keep-alive="refreshReapplyProgress"');
 });
+
+it('names the two bare numbers in a rule row for the phone layout', function (): void {
+    seedRulePageRule($this->user, 10, [
+        ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
+    ], [
+        ['type' => 'category', 'payload' => ['category_id' => $this->streaming->id]],
+    ]);
+
+    $html = Livewire::test(RulesPage::class)->html();
+
+    // Under 768px the restack drops <thead>, so a cell that is not
+    // self-describing loses its only label — on the device the metadata line
+    // read "10" and "2" with nothing saying which was priority and which
+    // was hits, to the eye and to a screen reader alike.
+    preg_match('/<tbody[^>]*>(.*?)<\/tbody>/s', $html, $body);
+    preg_match_all('/<td\b.*?<\/td>/s', $body[1] ?? '', $cells);
+
+    expect($cells[0][0])->toContain('md:hidden')->toContain('Priority');
+    expect($cells[0][3])->toContain('md:hidden')->toContain('Hits');
+});

@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Visualizzazione della valuta',
         'label' => 'Vista predefinita nella lista delle transazioni',
-        'eur_only' => 'Solo EUR',
+        'eur_only' => 'Solo :code',
         'original' => 'Valuta originale',
         'help' => 'Puoi comunque cambiarla pagina per pagina dalla lista delle transazioni.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Finestra di rilevamento (mesi)',
         'window_help' => 'Quanti mesi di cronologia analizzare quando le transazioni vengono raggruppate in schemi ricorrenti.',
         'income_label' => 'Entrate minime (centesimi)',
-        'income_help' => 'Le entrate sotto questa soglia non vengono raggruppate in automatico. Memorizzate in centesimi — 200000 corrisponde a €2.000,00. Imposta 0 per disattivare la soglia.',
+        'income_help' => 'Le entrate sotto questa soglia non vengono raggruppate in automatico. Memorizzate in centesimi — 200000 corrisponde a :example. Imposta 0 per disattivare la soglia.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Scegli una valuta.',
         'window_months' => 'Scegli un valore tra 2 e 60 mesi.',
         'threshold' => 'Scegli una soglia tra 1%, 2%, 5%, 10%, 25% o 50%.',
-        'amount' => 'Inserisci un importo da €0 in su.',
+        'amount' => 'Inserisci un importo da :zero in su.',
         'period_day' => 'Scegli un giorno da 1 a 28.',
         'currency_view' => 'Scegli una delle opzioni disponibili.',
     ],

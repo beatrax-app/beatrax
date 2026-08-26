@@ -22,7 +22,7 @@ return [
         'transaction' => 'Transacción',
     ],
 
-    'eur_equivalent' => 'Equivalente en EUR',
+    'settled_equivalent' => 'Liquidado en :code',
     'chart_requires_js' => 'El gráfico necesita JavaScript.',
 
     'tolerance_toast' => 'Tolerancia: :percent%',

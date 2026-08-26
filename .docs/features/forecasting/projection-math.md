@@ -72,11 +72,51 @@ Two consequences follow directly, and both matter:
 
 `RangeProjector::project()` walks a series' `nextExpectedAt` forward by
 its cadence until the horizon end, emitting one `ForecastContribution`
-per occurrence that lands on or after `asOf`. Cadence steps are
-overflow-safe (`addMonthNoOverflow`, `addYearNoOverflow`), so a series
-anchored on the 31st does not skip February. An `Irregular` cadence
+per occurrence that lands on or after `asOf`. An `Irregular` cadence
 emits nothing at all, and neither does a series with no
 `nextExpectedAt`.
+
+### Every occurrence is anchor + k, never a chain of steps
+
+Cadence steps are overflow-safe: a monthly step off 31 January lands on
+28 February rather than spilling forward into March. That much is not
+enough on its own. Take the *next* step from the date February just
+clamped and you get 28 March, and every month after it inherits the
+28th — a bill charged on the 31st quietly migrates to the 28th for the
+rest of the projection, and the calendar, which never chained, goes on
+showing the 31st. The clamp is not the fault. Forgetting the anchor is.
+
+So the k-th occurrence is computed as `anchor + k periods` in one shot,
+from an anchor that never moves:
+
+```
+anchor 2026-01-31, monthly, chained:  01-31 → 02-28 → 03-28 → 04-28 → …
+anchor 2026-01-31, monthly, anchor+k: 01-31,  02-28,  03-31,  04-30, …
+```
+
+The two agree until the first short month and never agree again. The
+same holds a quarter and a year out: a quarterly series anchored on 31
+December reaches 31 December next year, and a yearly one anchored on 29
+February 2024 returns to 29 February in 2028.
+
+Multiplying is also the only form that reads backwards. `SeriesEntryPlacer`
+walks negative `k` to fill in the part of a calendar month that already
+happened, and a chain of no-overflow steps cannot be run in reverse.
+
+`SeriesCadence::occurrenceAt()` holds that arithmetic for the whole app
+— the enum owns the cadence, so it owns the step. It matches without a
+`default` arm, so a cadence added later fails loudly instead of
+silently taking a step nobody gave it. `CadenceWalk` is the forecasting
+side: it yields the occurrence dates falling between `asOf` and the
+horizon end, and both projection tiers plus `ScenarioApplier`'s
+`add_recurring` mutation take their dates from it rather than each
+walking their own.
+
+The recurring module sets that anchor under the same rule from the
+other end — see [Projecting the next
+occurrence](../recurring/series-detection.md#projecting-the-next-occurrence)
+for how `next_expected_at` is chosen, and why the billing day is read
+off the series' first posting rather than off the stepped date.
 
 Which formula produces the triple depends on a two-part gate:
 

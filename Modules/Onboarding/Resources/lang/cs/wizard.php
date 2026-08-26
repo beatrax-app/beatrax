@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Krok :number z :total',
 
+    'back' => 'Zpět',
+    'back_aria' => 'Zpět — vrátí se na předchozí krok nastavení',
+
     'resume_later' => 'Pokračovat později',
     'resume_later_aria' => 'Pokračovat později — uloží tvůj postup a zavře průvodce nastavením',
     'resume_banner' => 'Vítej zpátky — navážeme tam, kde jsme skončili.',

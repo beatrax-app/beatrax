@@ -302,8 +302,12 @@ it('android-19: renders a non-euro row in its own currency rather than as euros'
     $run = cpTriageImportRun($user);
     $unknown = cpTriageUnknown((int) $user->id, 'sign-usd', 'NL10BANK0000000505');
 
+    // Both halves of the pair: settling in dollars is what a dollar account
+    // does, and flipping only `currency` built a row no importer writes —
+    // which is how the row this screen prints stayed the charged one.
     cpTriageTx($user, $account, $unknown, $run, 'Overseas charge', -2345, '2026-08-20');
-    DB::table('transactions')->where('counterparty_id', $unknown)->update(['currency' => 'USD']);
+    DB::table('transactions')->where('counterparty_id', $unknown)
+        ->update(['currency' => 'USD', 'settled_currency' => 'USD']);
 
     $rendered = cpTriageAmountsFor((int) $user->id);
 

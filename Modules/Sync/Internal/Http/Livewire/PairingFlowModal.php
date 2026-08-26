@@ -139,12 +139,11 @@ final class PairingFlowModal extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
-        // A daemon started while the app was locked holds no transport keypair,
-        // and it can only be handed one by being replaced — free before a
-        // ceremony starts, fatal to one already running (see @link).
-        if (! $gateway->hasLiveHandshake($userId)) {
-            $events->dispatch(new SyncTransportCredentialsAvailable($userId));
-        }
+        // Unconditional: skipping this whenever a handshake looked live let one
+        // stale row suppress the only thing that re-credentialled the daemon.
+        // The listener now restarts only when the identity would change, so
+        // re-sending mid-ceremony costs nothing.
+        $events->dispatch(new SyncTransportCredentialsAvailable($userId));
 
         $this->step = PairingWizardStep::ChooseDirection->value;
         $this->pairingTokenId = '';
@@ -636,7 +635,16 @@ final class PairingFlowModal extends Component
             ], true)) {
                 $tokenService->expire($tokenId, $userId);
             }
+
+            $this->resetAndClose();
+
+            return;
         }
+
+        // Nothing was resumed, so a `pending` row is blocking this user with no
+        // id for the branch above to name — inFlight() never reports that state.
+        // Cancel is the reader's only way out of it.
+        $tokenService->expireUnfinished($currentUser->user()->id);
 
         $this->resetAndClose();
     }

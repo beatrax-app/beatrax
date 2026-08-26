@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'referans :baseline → gerçekleşen: :actual',
     'detected' => ':date tarihinde algılandı',
-    'sensitivity' => 'duyarlılık ±%:percent',
+    'sensitivity' => 'duyarlılık 100 üzerinden :percent',
 
     'actions_summary' => 'Eylemler',
 

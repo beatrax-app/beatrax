@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Argüman formu açar',
 
+    'spawning_unavailable' => 'Artisan komutları ayrı bir süreçte çalışır ve bu platform uygulamanın süreç başlatmasına izin vermiyor. Bunları bilgisayar uygulamasından çalıştır.',
+
     'status' => [
         'running' => 'Çalışıyor',
         'done' => 'Bitti',

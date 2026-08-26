@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Alerts',
+    'page_title' => 'Drift Alerts',
     'heading' => 'Alerts',
     'intro_anomaly' => 'Individual charges that look out of the ordinary for you.',
     'intro_drift' => 'Approved recurring series whose latest charge moved outside your threshold.',

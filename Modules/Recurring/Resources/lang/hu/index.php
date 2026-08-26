@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Ismétlődő bevételek',
 
     'next' => 'Következő',
+    'overdue' => 'Lejárt',
     'chain' => 'lánc',
     'chain_aria' => 'Láncon keresztül fedezve',
     'per_month_suffix' => '/hó',

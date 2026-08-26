@@ -19,7 +19,7 @@ return [
 
     'baseline_to_actual' => 'perustaso :baseline → toteuma: :actual',
     'detected' => 'havaittu :date',
-    'sensitivity' => 'herkkyys ±:percent%',
+    'sensitivity' => 'herkkyys :percent 100:sta',
 
     'actions_summary' => 'Toiminnot',
 

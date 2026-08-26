@@ -11,6 +11,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Logging\LogFileStats;
+use Modules\DevMode\Internal\Support\ByteSize;
 
 #[Layout('dev::layouts.dev-shell')]
 final class LogTailerPage extends Component
@@ -20,8 +21,6 @@ final class LogTailerPage extends Component
     // `logs-truncated` while this dispatched `logs:truncated`, so the local
     // cursor never reset and the operator saw the old buffer sit there.
     public const string TRUNCATED_EVENT = 'logs:truncated';
-
-    private const int BYTES_PER_UNIT = 1024;
 
     #[Url(as: 'severities')]
     public string $severities = 'DEBUG,INFO,NOTICE,WARNING,ERROR,CRITICAL,ALERT,EMERGENCY';
@@ -41,7 +40,7 @@ final class LogTailerPage extends Component
         $this->dispatch(
             'toast',
             message: $freed > 0
-                ? Lang::get('dev::logs.toast.truncated', ['size' => self::humanBytes($freed)])
+                ? Lang::get('dev::logs.toast.truncated', ['size' => ByteSize::human($freed)])
                 : Lang::get('dev::logs.toast.nothing'),
         );
         $this->dispatch(self::TRUNCATED_EVENT);
@@ -68,18 +67,5 @@ final class LogTailerPage extends Component
                 'allFiles' => $allFiles,
             ],
         ]);
-    }
-
-    private static function humanBytes(int $bytes): string
-    {
-        $kb = $bytes / self::BYTES_PER_UNIT;
-        $mb = $kb / self::BYTES_PER_UNIT;
-
-        return match (true) {
-            $bytes < self::BYTES_PER_UNIT => $bytes.' B',
-            $kb < self::BYTES_PER_UNIT => number_format($kb, 1).' KB',
-            $mb < self::BYTES_PER_UNIT => number_format($mb, 1).' MB',
-            default => number_format($mb / self::BYTES_PER_UNIT, 2).' GB',
-        };
     }
 }

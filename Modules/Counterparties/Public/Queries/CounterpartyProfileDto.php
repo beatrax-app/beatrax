@@ -8,6 +8,11 @@ namespace Modules\Counterparties\Public\Queries;
 // so every rendering path must gate on the user's Show-IBAN opt-in.
 final readonly class CounterpartyProfileDto
 {
+    /**
+     * @param  string  $currency  the reader's reporting currency, which every figure
+     *                            on this profile and its tabs is denominated in
+     * @param  list<string>  $unconvertedCurrencies  codes left out for want of a rate
+     */
     public function __construct(
         public int $id,
         public string $slug,
@@ -19,5 +24,17 @@ final readonly class CounterpartyProfileDto
         public int $transactionCount,
         public ?string $firstSeenDate,
         public ?string $lastSeenDate,
+        public string $currency = '',
+        public array $unconvertedCurrencies = [],
     ) {}
+
+    public function isPartial(): bool
+    {
+        return $this->unconvertedCurrencies !== [];
+    }
+
+    public function unconvertedList(): string
+    {
+        return implode(', ', $this->unconvertedCurrencies);
+    }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Services\NetWorthQuery;
+use Modules\FX\Public\Support\BundledRates;
 
 if (! function_exists('nwAccount')) {
     function nwAccount(DatabaseManager $db, int $userId, string $name, string $kind, int $openingMinor, string $currency = 'EUR'): int
@@ -20,6 +21,15 @@ if (! function_exists('nwAccount')) {
 
 beforeEach(function (): void {
     $this->db = app(DatabaseManager::class);
+
+    // The install seeds a bundled rate for thirty currencies, and the
+    // exclusion case below turns on a pair having no rate at all. Cleared
+    // here rather than reached around, so the case still tests the path it
+    // was written for instead of a currency chosen for being unlisted.
+    $this->db->connection()
+        ->table('exchange_rates')
+        ->where('source', BundledRates::SOURCE)
+        ->delete();
     $this->user = User::create(['username' => 'networth-fixture', 'password' => 'fixture-password-12chars', 'period_start_day' => 1]);
 });
 

@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Wiederkehrende Einnahmen',
 
     'next' => 'Nächste',
+    'overdue' => 'Überfällig',
     'chain' => 'Kette',
     'chain_aria' => 'Über eine Kette finanziert',
     'per_month_suffix' => '/Mon.',

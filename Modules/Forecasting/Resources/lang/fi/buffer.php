@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Vähimmäispuskuri tilille :name',
     'save' => 'Tallenna puskuri',
     'cancel' => 'Peruuta',
-    'clear' => 'Tyhjennä puskuri (käytä 0 € rajaa)',
+    'clear' => 'Tyhjennä puskuri (käytä :zero rajaa)',
 
     'toast' => [
         'updated' => 'Puskuri päivitetty.',

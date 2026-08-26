@@ -93,7 +93,7 @@
         x-bind:aria-expanded="open ? 'true' : 'false'"
         aria-haspopup="dialog"
         {{ $passthrough }}
-        class="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+        class="flex w-full flex-wrap items-center justify-between gap-x-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
     >
         <span @if ($fieldId !== null) id="{{ $fieldId }}-name" @endif class="sr-only">{{ $fieldLabel }}</span>
         <span @if ($fieldId !== null) id="{{ $fieldId }}-value" @endif class="sr-only" x-text="display || @js($emptyLabel)">{{ $emptyLabel }}</span>

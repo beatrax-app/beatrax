@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Tavoite saavutettu',
+        'closed_short' => 'Suljettu ennen tavoitetta',
         'add_contributions' => 'Lisää talletuksia, niin näet ennusteen',
         'not_enough_history' => 'Historiaa ei ole vielä tarpeeksi päivän ennustamiseen',
         'no_recent_contributions' => 'Ei viimeaikaisia lisäyksiä, joiden pohjalta ennustaa',

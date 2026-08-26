@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Counterparty',
     'description' => 'Description',
     'amount_native' => 'Amount (native)',
-    'amount_settled' => 'Amount (settled EUR)',
+    'amount_settled' => 'Amount (settled)',
     'effective_rate' => 'Effective rate',
     'ics_markup' => 'Includes any ICS markup.',
 

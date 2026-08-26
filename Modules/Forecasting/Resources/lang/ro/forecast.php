@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Nicio serie nu contribuie încă la previziunea acestui cont.',
 
     'net_diff' => 'Diferență netă',
+
+    'net_diff_unknown' => 'Încă necalculat pentru acest orizont.',
     'net_diff_section_aria' => 'Diferența netă între scenariul de bază și scenariu la orizontul de 30 / 60 / 90 de zile',
     'net_diff_delta_aria' => 'Diferență netă în ziua :day: :value, scenariul este :state',
     'better_than_baseline' => 'mai bun decât scenariul de bază',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Repere ale previziunii',
     'highlights_shortfall_aria' => ':count fereastră de deficit activă în următoarele :days de zile|:count ferestre de deficit active în următoarele :days de zile|:count de ferestre de deficit active în următoarele :days de zile',
-    'dips_to' => ':name scade la :amount',
     'on_date_suffix' => ' pe :date',
     'shortfall_window' => 'o fereastră de deficit activă|:count ferestre de deficit active|:count de ferestre de deficit active',
-    'lowest_in_30' => 'Minimul în 30 de zile: :amount',
+    'lowest_in_30_label' => 'Minimul în 30 de zile',
     'next_ics' => 'Următoarea decontare ICS: :amount pe :date',
+    'ics_overdue' => 'Decontare ICS restantă: :amount, scadentă pe :date',
 ];

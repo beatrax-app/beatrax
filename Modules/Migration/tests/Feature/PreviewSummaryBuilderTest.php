@@ -44,12 +44,11 @@ it('PreviewSummaryBuilder: returns the 5 mapped counts for a staged ynab4 v1 run
     // 2 distinct budget months (2026-01, 2026-02), not the 4 raw assignment rows.
     expect($summary->budgetMonthsCount)->toBe(2);
 
-    expect($summary->unmapped)->toHaveKeys(['category', 'payee', 'extra', 'conflict']);
-    expect($summary->unmapped['category']['count'])->toBe(0);
+    expect($summary->unmapped)->toHaveKeys(['extra', 'conflict']);
     expect($summary->unmapped['conflict']['count'])->toBe(0);
 });
 
-it('PreviewSummaryBuilder: the unmapped summary lists >=1 unresolvable payee/extra grouped by type with counts', function (): void {
+it('PreviewSummaryBuilder: the unmapped summary lists >=1 row Actual carries that Beatrax has no home for, grouped under extra with a count', function (): void {
     $zipPath = sys_get_temp_dir().'/preview-summary-actual-'.uniqid('', true).'.zip';
     ActualFixtureBuilder::build($zipPath);
     $extracted = MigrationFixturePaths::extractZip($zipPath);

@@ -74,19 +74,30 @@ identically to data imported any other way.
 3. **`PreviewSummaryBuilder`** is a pure read model over `migration_staging_*`
    (never a domain table) computing the five mapped counts (categories,
    accounts, counterparties, transactions, budget months) plus a grouped
-   unmapped-items summary (`category`/`payee`/`extra`/`conflict`). Every read
-   is `user_id`-scoped; a foreign-owned run resolves to a 404 via
-   `ModelNotFoundException`, never a 403. `transactionsCount` counts distinct
-   staged transactions — a split parent counts once (its legs are additional
-   rows excluded from this count). `budgetMonthsCount` counts DISTINCT
-   `period_start` values ("how many months of budget history will import"),
-   not the total assignment-row count. The `unmapped` result always carries
-   all four group keys, even when empty, so the wizard can render
-   "everything mapped cleanly" only when every count is genuinely zero
-   rather than a missing key; `'conflict'` is always empty for a first-time
-   parse (only a reconciliation re-run populates it). Every unmapped item
-   carries the underlying row's id so `PreviewMigration::resolveConflict()`
+   unmapped-items summary (`extra`/`conflict`). Every read is `user_id`-scoped;
+   a foreign-owned run resolves to a 404 via `ModelNotFoundException`, never a
+   403. `transactionsCount` counts distinct staged transactions — a split
+   parent counts once (its legs are additional rows excluded from this count).
+   `budgetMonthsCount` counts DISTINCT `period_start` values ("how many months
+   of budget history will import"), not the total assignment-row count. The
+   `unmapped` result always carries both group keys, even when empty, so the
+   wizard can render "everything mapped cleanly" only when every count is
+   genuinely zero rather than a missing key; `'conflict'` is always empty for a
+   first-time parse (only a reconciliation re-run populates it). Every unmapped
+   item carries the underlying row's id so `PreviewMigration::resolveConflict()`
    can act on one specific conflict.
+
+   There are two groups here and not four. `category` and `payee` were the
+   other two, and nothing could ever fill them: the preview renders *before*
+   promotion, so a promote-time failure could not reach it, and at parse time
+   there is no such thing as an unresolvable category or payee — every one in
+   the export becomes a staged row, and anything the parser genuinely cannot
+   place goes to `extra`. Both counts were therefore structurally zero, which
+   made the two sections permanently invisible and made a "fully mapped" badge
+   keyed on them print on every import whether or not anything mapped. The
+   groups, the badge and their translations are gone; the summary of unmapped
+   items the preview owes the reader (`A8-R5`) is what `extra` and `conflict`
+   deliver.
 4. **`ConfirmMigration`** promotes via `PromoteStagingToDomain::promote()`
    (run OUTSIDE any wrapping transaction — its own per-entity writes are
    already bounded/chunked), then wraps only the status-flip + persisted

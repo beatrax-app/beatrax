@@ -9,6 +9,10 @@ return [
     'confirm' => "Conferma l'importazione",
     'subtitle' => 'Rivedi le righe analizzate. Non viene salvato nulla nel tuo registro finché non confermi.',
 
+    'already_imported' => 'Questo file è già stato importato.',
+
+    'already_imported_link' => 'Vedi il risultato dell\'importazione',
+
     'expired_html' => 'Anteprima scaduta. <a href="/imports/new" class="underline">Ricarica il file</a> per riprovare.',
 
     'save_name' => 'Salva il nome',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Rinomina questa controparte',
 
     'unknown_iban_prefix' => 'Abbiamo trovato un IBAN sconosciuto:',
+
+    'unknown_account_prefix' => 'Abbiamo trovato un conto sconosciuto:',
     'unknown_iban_suffix' => 'Dai un nome a questo conto.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'per riprovare o ispezionare.',
     ],
 
+    'rows_shown' => 'Righe mostrate: :shown su :total',
+
+    'show_more' => 'Mostra altre righe',
+
     'errors' => [
         'app_locked' => 'Sblocca l\'app per importare: le chiavi di crittografia non possono essere usate mentre è bloccata.',
+        'file_stopped_short' => 'La riga di intestazione corrispondeva, quindi il formato è giusto. La lettura si è fermata prima della fine del file. Basta una riga illeggibile, oppure un file troppo grande per questo dispositivo. Prova un periodo più breve.',
         'file_unreadable' => 'Non è stato possibile leggere questo file.',
         'iban_not_in_preview' => "Questo IBAN non fa parte dell'anteprima attuale.",
+        'pdf_reader_unavailable' => 'Gli estratti conto in PDF richiedono il programma pdftotext, che qui non è installato. Importa questo file su un desktop che lo ha, oppure usa un export CSV della tua banca.',
         'row_unreadable' => 'Non è stato possibile leggere questa riga.',
         'unknown_account' => 'Questa riga appartiene a un conto a cui non hai ancora dato un nome.',
     ],

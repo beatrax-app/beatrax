@@ -38,6 +38,7 @@ final readonly class NativeBuildPatches
         'nativephp_ios_app_icon.php',
         'nativephp_extend_bundle_copy_timeout.php',
         'nativephp_ios_request_body_stream.php',
+        'nativephp_ios_upload_limits.php',
         'nativephp_ios_download_delegate.php',
         'nativephp_ios_local_network_discovery.php',
         'nativephp_ios_privacy_manifest.php',

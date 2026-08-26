@@ -22,6 +22,11 @@ use Modules\Ledger\Models\Transaction;
  */
 const ISOLATION_ROUTE_ALLOW_LIST = [
     'logout',
+    // A GET to /logout answers with the sign-in screen and reads nothing: it
+    // exists because the mobile shell re-requests the URL a sign-out was posted
+    // to, and met a 405 -- a stack trace with no navigation off it, on a phone.
+    // It logs nobody out either, or an <img> could.
+    'logout.landing',
     'auth.change-password',
     'auth.recovery-codes-display',
     'auth.users.create',
@@ -567,7 +572,7 @@ it('does not bleed the owner hint candidates into the partner chain hints queue'
         'state' => 'candidate',
         'confidence' => 0.7,
         'resolver' => 'auto',
-        'evidence' => '{"card_last_four":"4242"}',
+        'evidence' => '{"card_last4":"4242"}',
         'created_at' => '2026-05-19 00:00:00',
         'updated_at' => '2026-05-19 00:00:00',
     ]);

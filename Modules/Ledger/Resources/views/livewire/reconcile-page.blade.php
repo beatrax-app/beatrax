@@ -1,6 +1,5 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Ledger\Public\Services\BaseCurrency')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -11,8 +10,9 @@
      * @var int|null $statementTargetMinor
      * @var int|null $differenceMinor
      * @var bool $isMatched
+     * @var string $statementCurrency
      */
-    $fmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
+    $fmt = static fn (int $minor): string => Money::ofMinor($minor, $statementCurrency)->format();
 
     $hasTarget = $statementTargetMinor !== null;
     $pillVariant = ! $hasAccount || ! $hasTarget ? 'muted' : ($isMatched ? 'ok' : 'fail');
@@ -33,7 +33,7 @@
                 field-id="rc-account"
                 type="select"
                 :label="Lang::get('ledger::reconcile.account')"
-                wire:model.live="accountId"
+                wire:model.number.live="accountId"
             >
                 <option value="">{{ Lang::get('ledger::reconcile.choose_account') }}</option>
                 @foreach ($accounts as $account)
@@ -49,7 +49,7 @@
         <x-core::form-field
             name="statementBalance"
             field-id="rc-balance"
-            :label="Lang::get('ledger::reconcile.statement_balance')"
+            :label="Lang::get('ledger::reconcile.statement_balance', ['symbol' => Money::symbolFor($statementCurrency)])"
             :hint="Lang::get('ledger::reconcile.balance_help')"
             inputmode="decimal"
             wire:model.live="statementBalance"

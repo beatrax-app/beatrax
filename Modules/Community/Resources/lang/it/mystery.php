@@ -21,7 +21,6 @@ return [
     'footer' => "La lista condivisa è un file YAML incluso in Beatrax. Inviare una proposta apre GitHub nel tuo browser; nient'altro lascia questo dispositivo.",
 
     'card' => [
-        'likely' => 'Probabile: un esercente senza nome.',
         'seen_times' => 'Visto :count volta|Visto :count volte',
         'last_seen' => "Visto l'ultima volta il :date",
         'suggest' => 'Proponi un nome →',

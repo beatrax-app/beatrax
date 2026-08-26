@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Nog geen reeksen dragen bij aan de prognose van deze rekening.',
 
     'net_diff' => 'Nettoverschil',
+
+    'net_diff_unknown' => 'Nog niet berekend voor deze horizon.',
     'net_diff_section_aria' => 'Nettoverschil tussen basislijn en scenario op horizondagen 30 / 60 / 90',
     'net_diff_delta_aria' => 'Nettoverschil op dag :day: :value, scenario is :state',
     'better_than_baseline' => 'beter dan de basislijn',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Prognose-highlights',
     'highlights_shortfall_aria' => ':count actief tekortvenster in de komende :days dagen|:count actieve tekortvensters in de komende :days dagen',
-    'dips_to' => ':name zakt naar :amount',
     'on_date_suffix' => ' op :date',
     'shortfall_window' => ':count actief tekortvenster|:count actieve tekortvensters',
-    'lowest_in_30' => 'Laagste in 30 dagen: :amount',
+    'lowest_in_30_label' => 'Laagste in 30 dagen',
     'next_ics' => 'Volgende ICS-afwikkeling: :amount op :date',
+    'ics_overdue' => 'ICS-afwikkeling is verlopen: :amount, verviel op :date',
 ];

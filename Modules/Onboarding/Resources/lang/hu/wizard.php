@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => ':number. lépés :total közül',
 
+    'back' => 'Vissza',
+    'back_aria' => 'Vissza — visszatér az előző beállítási lépéshez',
+
     'resume_later' => 'Folytatás később',
     'resume_later_aria' => 'Folytatás később — elmenti a haladásod és bezárja a beállítási varázslót',
     'resume_banner' => 'Üdv újra — folytassuk ott, ahol abbahagytad.',

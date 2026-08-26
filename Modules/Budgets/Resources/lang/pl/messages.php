@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budżety',
-        'subtitle' => 'Przypisz każde euro — :period.',
+        'subtitle' => 'Przypisz wszystko co do grosza — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Przenosi minus',
-        'non_eur_aria' => 'Wydatki w walucie innej niż EUR w tej kategorii nie są tu pokazywane — sprawdź Pulpit',
-        'non_eur_title' => 'Wydatki w walucie innej niż EUR nie są tu pokazywane — sprawdź Pulpit',
+        'unconverted_aria' => 'Wydatki w walucie bez dostępnego kursu nie są tu liczone — zobacz pulpit',
+        'unconverted_title' => 'Wydatki bez dostępnego kursu nie są tu liczone — zobacz pulpit',
         'over_budget' => 'Ponad budżet: :count',
     ],
 

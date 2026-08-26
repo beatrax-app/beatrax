@@ -12,6 +12,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Counterparties\Internal\Enums\CounterpartyTypeFilter;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -22,6 +24,8 @@ final readonly class CounterpartyIndexQuery
         private Clock $clock,
         private SensitiveColumnCodec $codec,
         private Session $session,
+        private CrossCurrencyTotal $fx,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -44,15 +48,24 @@ final readonly class CounterpartyIndexQuery
 
         $cutoffDate = $this->clock->now()->subYear()->toDateString();
 
-        $totals = $this->totalsByCounterparty($user, $cutoffDate);
+        $buckets = $this->bucketsByCounterparty($user, $cutoffDate);
         $recentRows = $this->recentRowByCounterparty($user);
-        $monthlyTotals = $this->monthlyTotalsByCounterparty($user, $cutoffDate);
+        $monthlyBuckets = $this->monthlyBucketsByCounterparty($user, $cutoffDate);
         $sparklineMonths = $this->sparklineMonths();
+
+        // One rate lookup per currency for the whole page, not one per
+        // counterparty or per sparkline month: convertToBase() reads the entire
+        // exchange_rates table on every call.
+        $baseCurrency = $this->baseCurrency->forUser($user);
+        $rates = $this->fx->ratesTo($this->currenciesIn($buckets, $monthlyBuckets), $baseCurrency);
+
+        $totals = $this->convertedTotals($buckets, $baseCurrency, $rates);
+        $monthlyTotals = $this->convertedMonthlyTotals($monthlyBuckets, $baseCurrency, $rates);
 
         /** @var list<CounterpartyIndexRow> $result */
         $result = [];
         foreach ($cpRows as $cpRow) {
-            $row = $this->buildRow($cpRow, $user, $totals, $recentRows, $monthlyTotals, $sparklineMonths);
+            $row = $this->buildRow($cpRow, $user, $totals, $recentRows, $monthlyTotals, $sparklineMonths, $baseCurrency);
             if ($row !== null) {
                 $result[] = $row;
             }
@@ -68,7 +81,7 @@ final readonly class CounterpartyIndexQuery
     }
 
     /**
-     * @param  array<int, array{total: int, count: int}>  $totals
+     * @param  array<int, array{total: int, count: int, unconverted: list<string>}>  $totals
      * @param  array<int, stdClass>  $recentRows
      * @param  array<int, array<string, int>>  $monthlyTotals
      * @param  list<string>  $sparklineMonths
@@ -80,6 +93,7 @@ final readonly class CounterpartyIndexQuery
         array $recentRows,
         array $monthlyTotals,
         array $sparklineMonths,
+        string $baseCurrency,
     ): ?CounterpartyIndexRow {
         $cpId = is_numeric($cpRow->id ?? null) ? (int) $cpRow->id : 0;
         if ($cpId === 0) {
@@ -113,37 +127,103 @@ final readonly class CounterpartyIndexQuery
             avgPerMonthMinor: $avg,
             recentLine: $this->recentLineFrom($recentRows[$cpId] ?? null, $userId),
             sparkline: $sparkline,
+            currency: $baseCurrency,
+            unconverted: $totals[$cpId]['unconverted'] ?? [],
         );
     }
 
     /**
-     * @return array<int, array{total: int, count: int}>
+     * @param  array<int, array{minor: array<string, int>, count: int}>  $buckets
+     * @param  array<int, array<string, array<string, int>>>  $monthlyBuckets
+     * @return list<string>
      */
-    private function totalsByCounterparty(User $user, string $cutoffDate): array
+    private function currenciesIn(array $buckets, array $monthlyBuckets): array
+    {
+        $seen = [];
+        foreach ($buckets as $bucket) {
+            foreach (array_keys($bucket['minor']) as $currency) {
+                $seen[$currency] = true;
+            }
+        }
+        foreach ($monthlyBuckets as $byMonth) {
+            foreach ($byMonth as $byCurrency) {
+                foreach (array_keys($byCurrency) as $currency) {
+                    $seen[$currency] = true;
+                }
+            }
+        }
+
+        return array_keys($seen);
+    }
+
+    /**
+     * @param  array<int, array{minor: array<string, int>, count: int}>  $buckets
+     * @param  array<string, string>  $rates
+     * @return array<int, array{total: int, count: int, unconverted: list<string>}>
+     */
+    private function convertedTotals(array $buckets, string $baseCurrency, array $rates): array
+    {
+        $totals = [];
+        foreach ($buckets as $cpId => $bucket) {
+            $converted = $this->fx->withRates($bucket['minor'], $baseCurrency, $rates);
+            $totals[$cpId] = [
+                'total' => $converted->minor,
+                'count' => $bucket['count'],
+                'unconverted' => $converted->unconverted,
+            ];
+        }
+
+        return $totals;
+    }
+
+    /**
+     * @param  array<int, array<string, array<string, int>>>  $monthlyBuckets
+     * @param  array<string, string>  $rates
+     * @return array<int, array<string, int>>
+     */
+    private function convertedMonthlyTotals(array $monthlyBuckets, string $baseCurrency, array $rates): array
+    {
+        $monthly = [];
+        foreach ($monthlyBuckets as $cpId => $byMonth) {
+            foreach ($byMonth as $ym => $byCurrency) {
+                $monthly[$cpId][$ym] = $this->fx->withRates($byCurrency, $baseCurrency, $rates)->minor;
+            }
+        }
+
+        return $monthly;
+    }
+
+    // settled_amount_minor, not amount_minor: a roll-up is what the account was
+    // actually debited, and it is grouped by the currency it was debited in
+    // rather than added straight across it.
+    /**
+     * @return array<int, array{minor: array<string, int>, count: int}>
+     */
+    private function bucketsByCounterparty(User $user, string $cutoffDate): array
     {
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->whereNotNull('counterparty_id')
             ->where('posted_at', '>=', $cutoffDate)
-            ->groupBy('counterparty_id')
-            ->selectRaw('counterparty_id, COALESCE(SUM(amount_minor), 0) as total, COUNT(*) as cnt')
+            ->groupBy('counterparty_id', 'settled_currency')
+            ->selectRaw('counterparty_id, settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total, COUNT(*) as cnt')
             ->get();
 
-        $totals = [];
+        $buckets = [];
         foreach ($rows as $row) {
             $cpId = is_numeric($row->counterparty_id ?? null) ? (int) $row->counterparty_id : 0;
-            if ($cpId === 0) {
+            $currency = is_string($row->settled_currency ?? null) ? $row->settled_currency : '';
+            if ($cpId === 0 || $currency === '') {
                 continue;
             }
 
-            $totals[$cpId] = [
-                'total' => is_numeric($row->total ?? null) ? (int) $row->total : 0,
-                'count' => is_numeric($row->cnt ?? null) ? (int) $row->cnt : 0,
-            ];
+            $buckets[$cpId]['minor'][$currency] = is_numeric($row->total ?? null) ? (int) $row->total : 0;
+            $buckets[$cpId]['count'] = ($buckets[$cpId]['count'] ?? 0)
+                + (is_numeric($row->cnt ?? null) ? (int) $row->cnt : 0);
         }
 
-        return $totals;
+        return $buckets;
     }
 
     // Ranked in SQL rather than one ->first() per counterparty. The window's
@@ -179,28 +259,29 @@ final readonly class CounterpartyIndexQuery
     }
 
     /**
-     * @return array<int, array<string, int>>
+     * @return array<int, array<string, array<string, int>>>
      */
-    private function monthlyTotalsByCounterparty(User $user, string $cutoffDate): array
+    private function monthlyBucketsByCounterparty(User $user, string $cutoffDate): array
     {
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->whereNotNull('counterparty_id')
             ->where('posted_at', '>=', $cutoffDate)
-            ->groupBy('counterparty_id', 'ym')
-            ->selectRaw("counterparty_id, strftime('%Y-%m', posted_at) as ym, COALESCE(SUM(amount_minor), 0) as total")
+            ->groupBy('counterparty_id', 'ym', 'settled_currency')
+            ->selectRaw("counterparty_id, strftime('%Y-%m', posted_at) as ym, settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total")
             ->get();
 
         $monthly = [];
         foreach ($rows as $row) {
             $cpId = is_numeric($row->counterparty_id ?? null) ? (int) $row->counterparty_id : 0;
             $ym = is_string($row->ym ?? null) ? $row->ym : '';
-            if ($cpId === 0 || $ym === '') {
+            $currency = is_string($row->settled_currency ?? null) ? $row->settled_currency : '';
+            if ($cpId === 0 || $ym === '' || $currency === '') {
                 continue;
             }
 
-            $monthly[$cpId][$ym] = is_numeric($row->total ?? null) ? (int) $row->total : 0;
+            $monthly[$cpId][$ym][$currency] = is_numeric($row->total ?? null) ? (int) $row->total : 0;
         }
 
         return $monthly;

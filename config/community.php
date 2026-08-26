@@ -2,18 +2,20 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\ProjectLinks;
+
 return [
 
     // The literal `.../compare/{baseRef}` prefix only —
     // GitHubCompareUrlBuilder appends `...{branch}?expand=1&body=...`.
     'github_compare_base' => env(
         'BEATRAX_GITHUB_COMPARE_BASE',
-        'https://github.com/beatrax-app/beatrax/compare/main',
+        ProjectLinks::COMPARE_BASE_URL,
     ),
 
     'github_issues_url' => env(
         'BEATRAX_GITHUB_ISSUES_URL',
-        'https://github.com/beatrax-app/beatrax/issues',
+        ProjectLinks::ISSUES_URL,
     ),
 
     // Laid out as <type>/<country>.yaml — merchants, government, bank-fees —

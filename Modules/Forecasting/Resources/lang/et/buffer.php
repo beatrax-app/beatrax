@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Konto :name miinimumpuhver',
     'save' => 'Salvesta puhver',
     'cancel' => 'Tühista',
-    'clear' => 'Tühjenda puhver (kasuta 0 € piiri)',
+    'clear' => 'Tühjenda puhver (kasuta :zero piiri)',
 
     'toast' => [
         'updated' => 'Puhver on uuendatud.',

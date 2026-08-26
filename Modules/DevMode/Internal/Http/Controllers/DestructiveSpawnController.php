@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Enums\CommandTier;
+use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Exceptions\SpawnedRunVanishedException;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRegistry;
@@ -60,10 +61,6 @@ final readonly class DestructiveSpawnController
             ->validate();
 
         $commandRaw = $validated['command'] ?? null;
-        if (! is_string($commandRaw)) {
-            return new JsonResponse(['error' => 'invalid_command'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-        $command = $commandRaw;
 
         // SAFE-tier names are refused rather than run, so neither controller
         // doubles as a second route to the other tier.
@@ -71,12 +68,26 @@ final readonly class DestructiveSpawnController
             static fn (CommandSpec $spec): string => $spec->name,
             $this->registry->destructive(),
         );
-        if (! in_array($command, $destructiveNames, true)) {
-            return new JsonResponse(
-                ['error' => 'not_destructive', 'command' => $command],
+
+        $rejection = match (true) {
+            ! is_string($commandRaw) => new JsonResponse(
+                ['error' => 'invalid_command'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            ),
+            ! in_array($commandRaw, $destructiveNames, true) => new JsonResponse(
+                ['error' => 'not_destructive', 'command' => $commandRaw],
                 422,
-            );
+            ),
+            default => null,
+        };
+
+        if ($rejection !== null) {
+            return $rejection;
         }
+
+        // Surviving the match is proof of a string: the first arm refuses every
+        // other shape.
+        $command = $commandRaw;
 
         $spec = $this->registry->find($command);
 
@@ -94,7 +105,15 @@ final readonly class DestructiveSpawnController
         /** @var array<string, mixed> $args */
         $args = is_array($argsRaw) ? $argsRaw : [];
 
-        $runId = $this->spawner->start($command, $args, $user->id(), CommandTier::Destructive);
+        try {
+            $runId = $this->spawner->start($command, $args, $user->id(), CommandTier::Destructive);
+        } catch (ProcessSpawningUnavailableException $e) {
+            return new JsonResponse(
+                ['error' => ProcessSpawningUnavailableException::WIRE_ERROR, 'message' => $e->readerMessage()],
+                Response::HTTP_NOT_IMPLEMENTED,
+            );
+        }
+
         $record = $this->runs->find($runId);
         if ($record === null) {
             throw SpawnedRunVanishedException::immediatelyAfterSpawn('DestructiveSpawnController', $runId);

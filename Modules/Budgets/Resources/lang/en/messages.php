@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budgets',
-        'subtitle' => 'Assign every euro — :period.',
+        'subtitle' => 'Assign it all — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Carries negative',
-        'non_eur_aria' => 'Non-EUR spend in this category is not shown here — see the dashboard',
-        'non_eur_title' => 'Non-EUR spend not shown here — see the dashboard',
+        'unconverted_aria' => 'Spend in a currency with no available rate is not counted here — see the dashboard',
+        'unconverted_title' => 'Spend with no available rate is not counted here — see the dashboard',
         'over_budget' => ':count over budget',
     ],
 

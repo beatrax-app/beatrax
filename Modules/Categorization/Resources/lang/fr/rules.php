@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Correspondances',
     'col_created' => 'Créée le',
     'col_row_actions' => 'Actions',
+    'inactive_badge' => 'Inactive',
+    'inactive_title' => 'Cette règle ne s\'applique pas. Une règle se désactive lorsque la catégorie ou la contrepartie qu\'elle vise est supprimée.',
 
     'more_conditions' => '+:count de plus',
 

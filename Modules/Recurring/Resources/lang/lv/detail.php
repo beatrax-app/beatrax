@@ -22,7 +22,7 @@ return [
         'transaction' => 'Darījums',
     ],
 
-    'eur_equivalent' => 'Ekvivalents EUR',
+    'settled_equivalent' => 'Norēķins :code',
     'chart_requires_js' => 'Diagrammai nepieciešams JavaScript.',
 
     'tolerance_toast' => 'Pielaide: :percent%',

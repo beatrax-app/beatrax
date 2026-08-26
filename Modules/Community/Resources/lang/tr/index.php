@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'Çevirilerin çoğu şimdilik yapay zekâ tarafından üretildi — Beatrax açık kaynak ve zaman kısıtlı, bu yüzden makine çevirisi dilleri boş bırakmaktan iyiydi. Bir yer sana yanlış geliyorsa muhtemelen öyledir ve tek satırlık bir düzeltme onu kullanan herkese yardımcı olur.',
     'translations_how' => 'Her dil, Modules/*/Resources/lang altında düz PHP dosyalarından oluşan bir klasördür. İngilizce klasörü kopyala, metinleri çevir ve bir pull request aç — derleme adımı yok, kurulacak araç yok.',
     'translations_cta' => 'Katkı rehberini oku',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Paylaşılan işyeri listesi',
 ];

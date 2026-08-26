@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Cilj je dosežen',
+        'closed_short' => 'Zaprto pred ciljem',
         'add_contributions' => 'Dodaj vplačila, da vidiš napoved',
         'not_enough_history' => 'Zaenkrat premalo zgodovine za napoved datuma',
         'no_recent_contributions' => 'Ni nedavnih vplačil, na katerih bi temeljila napoved',

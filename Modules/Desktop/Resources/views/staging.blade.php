@@ -23,7 +23,11 @@
      * @var string $emptyBody
      */
 @endphp
-<div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
+{{-- Padded, not min-h-screen: this page renders inside layouts.app, whose own
+     shell already fills the viewport, so a second viewport-height block centres
+     the card a screen below the fold — with the alert banners above it, the one
+     button this page exists for started off-screen. --}}
+<div class="flex items-center justify-center bg-white py-24 dark:bg-slate-950">
     <div class="w-full max-w-md mx-auto px-6 space-y-6 text-center">
         <div class="flex justify-center">
             {{-- Brand mark — same surface the welcome / login screens use. --}}

@@ -349,6 +349,31 @@ whitespace inside the amount is rejected (never trimmed away) since
 those shapes never appear in a real export and accepting them would
 silently merge accidentally-concatenated cells.
 
+Native vs settled, and the fee that pays for the distinction: Revolut's
+export ships a `Fee` column, and the two amounts it implies are different
+numbers. `Amount` is what the merchant charged; what the account was
+actually debited is `Amount` minus `Fee`. The adapter writes the first to
+the native pair and the second to the settled pair, so `amount_minor`
+stays the merchant's charge and `settled_amount_minor` — the column
+`AccountBalanceQuery` sums — tracks the export's own running `Balance`.
+The subtraction carries no sign branch, because `Balance` in the
+empirical export advances by `Amount - Fee` whichever way `Amount`
+points: a `-100.00` exchange with a `1.25` fee settles at `-101.25`, and
+a `+12.00` refund with a `0.50` fee settles at `+11.50`. Read as a
+magnitude to enlarge instead, that refund would credit `12.50` and the
+bank's own balance would disagree — the sign error hides on the credit
+side, where a fee makes the settled figure smaller, not larger. A row
+whose fee is zero (every row of an ordinary card statement) leaves the
+settled pair `null` and inherits the native one, the same convention the
+ICS adapter uses for its EUR-native rows. None of this reaches the
+dedup key: `FingerprintComposer`'s tuple reads `amount_minor` and
+`currency` and never the settled pair, so a ledger imported before the
+fee was applied keys identically afterwards and re-imports as
+duplicates rather than as new rows — no `fingerprint_version` bump, no
+backfill. `Fee` is the only preset column of its kind; N26 and ING NL
+export none. `raw_payload` keeps the source row, fee cell included,
+untouched.
+
 ### HeaderSniffer
 
 Validates a local file matches its declared source format *before* any

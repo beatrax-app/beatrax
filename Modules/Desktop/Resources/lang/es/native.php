@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 return [
     'menu' => [
+        'file' => 'Archivo',
         'file_import' => 'Importar archivo…',
         'file_scan_email' => 'Analizar el correo ahora',
+        'help' => 'Ayuda',
         'help_github_repo' => 'Repositorio de GitHub',
         'help_report_issue' => 'Informar de un problema',
         'help_about' => 'Acerca de Beatrax',

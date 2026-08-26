@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Odhlásit se',
     'forgot_pin' => 'Nepamatuješ si PIN? Odhlas se — znovu se přihlásíš heslem k účtu a nastavíš si nový PIN. O žádná data nepřijdeš.',
 
-    'digits_suffix' => 'zadaných číslic',
+    'digits_entered' => '{1} zadána :count číslice|[2,4] zadány :count číslice|[5,*] zadáno :count číslic',
     'pad_label' => 'Klávesnice PIN',
     'digit_aria' => 'Číslice :digit',
     'backspace_aria' => 'Smazat znak',

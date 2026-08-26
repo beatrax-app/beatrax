@@ -95,6 +95,33 @@ function refTransaction(DatabaseManager $db, int $userId, int $accountId, string
     ]);
 }
 
+function refCounterparty(DatabaseManager $db, int $userId, string $suffix): int
+{
+    return $db->connection()->table('counterparties')->insertGetId([
+        'user_id' => $userId,
+        'type' => 'merchant',
+        'slug' => 'ref-cp-'.$suffix,
+        'display_name' => 'RefCounterparty '.$suffix,
+        'created_at' => '2026-06-01 00:00:00',
+        'updated_at' => '2026-06-01 00:00:00',
+    ]);
+}
+
+function refGoal(DatabaseManager $db, int $userId, string $suffix): int
+{
+    return $db->connection()->table('goals')->insertGetId([
+        'user_id' => $userId,
+        'name' => 'RefGoal '.$suffix,
+        'target_minor' => 250000,
+        'target_currency' => 'EUR',
+        'start_date' => '2026-06-01',
+        'target_date' => '2027-06-01',
+        'status' => 'active',
+        'created_at' => '2026-06-01 00:00:00',
+        'updated_at' => '2026-06-01 00:00:00',
+    ]);
+}
+
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-06-14 10:00:00');
 
@@ -110,6 +137,10 @@ beforeEach(function (): void {
     $this->cat2 = refCategory($db, (int) $this->u2->id, 'u2');
     $this->txn1 = refTransaction($db, (int) $this->u1->id, $this->acct1, 'u1');
     $this->txn2 = refTransaction($db, (int) $this->u2->id, $this->acct2, 'u2');
+    $this->cp1 = refCounterparty($db, (int) $this->u1->id, 'u1');
+    $this->cp2 = refCounterparty($db, (int) $this->u2->id, 'u2');
+    $this->goal1 = refGoal($db, (int) $this->u1->id, 'u1');
+    $this->goal2 = refGoal($db, (int) $this->u2->id, 'u2');
 
     $this->mapRow = $db->connection()->table('migration_source_map')->insertGetId([
         'user_id' => $this->u1->id,
@@ -313,4 +344,84 @@ it('applies the same Set when the migration map row names the user\'s own transa
     (new OpLogReplayer($db, $this->deviceKeys))->replay([$entry], (int) $this->u1->id);
 
     expect((int) $db->connection()->table('migration_source_map')->where('id', $this->mapRow)->value('beatrax_id'))->toBe($other);
+});
+
+// A promoted payee mapping and a promoted goal mapping are ordinary rows of a
+// replicated table, and the paired device only ever meets them as a CreateRow.
+// Both target tables carry user_id, so the ownership question is answerable —
+// it was the type-to-table map that had no word for either.
+it('replicates a payee-to-counterparty mapping rather than quarantining it as cross-user', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $pk = 90310;
+    $entries = [
+        refSignedCreate('migration_source_map', $pk, 'source_product', '"ynab4"', (int) $this->u1->id, 4000),
+        refSignedCreate('migration_source_map', $pk, 'source_entity_type', '"payee"', (int) $this->u1->id, 4001),
+        refSignedCreate('migration_source_map', $pk, 'beatrax_entity_type', '"counterparty"', (int) $this->u1->id, 4002),
+        refSignedCreate('migration_source_map', $pk, 'beatrax_id', (string) $this->cp1, (int) $this->u1->id, 4003),
+    ];
+
+    (new OpLogReplayer($db, $this->deviceKeys))->replay($entries, (int) $this->u1->id);
+
+    expect((int) $db->connection()->table('migration_source_map')->where('id', $pk)->value('beatrax_id'))
+        ->toBe($this->cp1)
+        ->and(refQuarantineReason($db, 'migration_source_map'))->toBeNull();
+});
+
+it('replicates a goal mapping rather than quarantining it as cross-user', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $pk = 90311;
+    $entries = [
+        refSignedCreate('migration_source_map', $pk, 'source_product', '"ynab4"', (int) $this->u1->id, 4100),
+        refSignedCreate('migration_source_map', $pk, 'source_entity_type', '"goal"', (int) $this->u1->id, 4101),
+        refSignedCreate('migration_source_map', $pk, 'beatrax_entity_type', '"goal"', (int) $this->u1->id, 4102),
+        refSignedCreate('migration_source_map', $pk, 'beatrax_id', (string) $this->goal1, (int) $this->u1->id, 4103),
+    ];
+
+    (new OpLogReplayer($db, $this->deviceKeys))->replay($entries, (int) $this->u1->id);
+
+    expect((int) $db->connection()->table('migration_source_map')->where('id', $pk)->value('beatrax_id'))
+        ->toBe($this->goal1)
+        ->and(refQuarantineReason($db, 'migration_source_map'))->toBeNull();
+});
+
+// Teaching the map two more words must not turn either into a hole: the same
+// row naming the OTHER member's counterparty is still theft.
+it('still refuses a counterparty mapping naming another household member\'s counterparty', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $pk = 90312;
+    $entries = [
+        refSignedCreate('migration_source_map', $pk, 'source_product', '"ynab4"', (int) $this->u1->id, 4200),
+        refSignedCreate('migration_source_map', $pk, 'source_entity_type', '"payee"', (int) $this->u1->id, 4201),
+        refSignedCreate('migration_source_map', $pk, 'beatrax_entity_type', '"counterparty"', (int) $this->u1->id, 4202),
+        refSignedCreate('migration_source_map', $pk, 'beatrax_id', (string) $this->cp2, (int) $this->u1->id, 4203),
+    ];
+
+    (new OpLogReplayer($db, $this->deviceKeys))->replay($entries, (int) $this->u1->id);
+
+    expect($db->connection()->table('migration_source_map')->where('id', $pk)->exists())->toBeFalse()
+        ->and(refQuarantineReason($db, 'migration_source_map'))->toBe('cross_user');
+});
+
+it('still refuses a goal mapping naming another household member\'s goal', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $pk = 90313;
+    $entries = [
+        refSignedCreate('migration_source_map', $pk, 'source_product', '"ynab4"', (int) $this->u1->id, 4300),
+        refSignedCreate('migration_source_map', $pk, 'source_entity_type', '"goal"', (int) $this->u1->id, 4301),
+        refSignedCreate('migration_source_map', $pk, 'beatrax_entity_type', '"goal"', (int) $this->u1->id, 4302),
+        refSignedCreate('migration_source_map', $pk, 'beatrax_id', (string) $this->goal2, (int) $this->u1->id, 4303),
+    ];
+
+    (new OpLogReplayer($db, $this->deviceKeys))->replay($entries, (int) $this->u1->id);
+
+    expect($db->connection()->table('migration_source_map')->where('id', $pk)->exists())->toBeFalse()
+        ->and(refQuarantineReason($db, 'migration_source_map'))->toBe('cross_user');
 });

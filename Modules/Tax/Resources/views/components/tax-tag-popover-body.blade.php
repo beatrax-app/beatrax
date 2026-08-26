@@ -4,17 +4,22 @@
     Referenced by both the desktop popover and the phone bottom-sheet inside
     tax-tag-popover.blade.php. All Livewire wire: bindings refer to the host
     component that uses HandlesTaxTagging.
+
+    Both copies are in the document at once, one hidden by its breakpoint
+    class, so $taxPickerSurface keeps their element ids apart. Without it the
+    phone sheet's <label for> resolved to the hidden desktop textarea and the
+    visible one had no label at all.
 --}}
 <div style="display: flex; flex-direction: column; gap: var(--space-3, 12px);">
 
     {{-- Note textarea --}}
     <div>
         <label
-            for="tax-picker-note-{{ $taxPickerTxId ?? 'none' }}"
+            for="tax-picker-note-{{ $taxPickerSurface }}-{{ $taxPickerTxId ?? 'none' }}"
             style="display: block; font-size: var(--text-xs, 12px); color: var(--color-text-muted, #64748b); margin-bottom: 4px;"
         >{{ Lang::get('tax::picker.note_label') }} <span style="color: var(--color-text-faint, #94a3b8);">{{ Lang::get('tax::picker.note_optional') }}</span></label>
         <textarea
-            id="tax-picker-note-{{ $taxPickerTxId ?? 'none' }}"
+            id="tax-picker-note-{{ $taxPickerSurface }}-{{ $taxPickerTxId ?? 'none' }}"
             wire:model="pickerNote"
             rows="1"
             placeholder="{{ Lang::get('tax::picker.note_placeholder') }}"

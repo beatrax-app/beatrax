@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Recente transacties (laatste 90 dagen).',
 
     'currency_aria' => 'Valutaweergave',
-    'currency_eur' => 'Alleen EUR',
+    'currency_eur' => 'Alleen :code',
     'currency_original' => 'Oorspronkelijke valuta',
 
     'show_recent' => 'Alleen recente tonen',

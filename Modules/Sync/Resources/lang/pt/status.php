@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Dispositivo removido',
     'dismiss_peer' => 'Dispensar este dispositivo',
     'dismiss_stale' => 'Limpar os dispositivos que já não estão emparelhados',
-    'no_devices' => 'Ainda não há dispositivos sincronizados',
+    'not_synced_yet' => 'Ainda não sincronizado',
     'error' => 'Erro de sincronização num ou mais dispositivos',
     'syncing' => 'A sincronizar…',
     'offline' => 'Dispositivos offline',

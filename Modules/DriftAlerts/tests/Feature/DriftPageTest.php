@@ -148,7 +148,7 @@ it('renders the page with the empty-state hero on the Open tab when no alerts ex
     $this->actingAs($this->user)
         ->get('/drift')
         ->assertOk()
-        ->assertSeeText('Alerts')
+        ->assertSeeText('Drift Alerts')
         ->assertSeeText('No open drift alerts')
         ->assertDontSeeText('Acknowledge');
 });
@@ -281,4 +281,42 @@ it('draws a snooze button for every window, wired the way the hand-written three
     expect(substr_count($content, 'class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"'))
         ->toBe(count(SnoozeWindow::cases()));
     expect($content)->not->toContain('snooze_1w');
+});
+
+// Two nav items land on this one page — "Drift Alerts" and "Unusual charges" —
+// and it carried a single name for both, so a reader who tapped the second
+// arrived at a screen headed with the first one's name. Measured on an iPhone:
+// /drift and /drift?type=anomaly were both titled "Afwijkingswaarschuwingen"
+// and both headed "Driftmeldingen", with only the intro paragraph telling them
+// apart.
+it('names whichever of its two screens the reader actually opened', function (): void {
+    $drift = $this->actingAs($this->user)->get('/drift');
+    $anomaly = $this->actingAs($this->user)->get('/drift?type=anomaly');
+
+    $nameOf = static function (string $html): string {
+        expect(preg_match('/<h1[^>]*>(.*?)<\/h1>/s', $html, $m))->toBe(1);
+
+        return trim(strip_tags($m[1]));
+    };
+    $titleOf = static function (string $html): string {
+        expect(preg_match('/<title[^>]*>(.*?)<\/title>/s', $html, $m))->toBe(1);
+
+        return trim(html_entity_decode($m[1]));
+    };
+
+    $driftHtml = $drift->getContent();
+    $anomalyHtml = $anomaly->getContent();
+    expect($driftHtml)->toBeString()->and($anomalyHtml)->toBeString();
+
+    expect($nameOf($anomalyHtml))->toBe('Unusual charges')
+        ->and($nameOf($driftHtml))->toBe('Drift Alerts')
+        ->and($nameOf($driftHtml))->not->toBe($nameOf($anomalyHtml))
+        ->and($titleOf($driftHtml))->not->toBe($titleOf($anomalyHtml));
+
+    // The name the reader tapped to get here, asked of BOTH screens. Checking
+    // only the anomaly side is what let /drift keep a heading -- "Alerts" --
+    // that neither the nav item nor its own title used, through a round that
+    // was looking for exactly this.
+    expect($nameOf($anomalyHtml))->toBe(trans('core::sidebar.nav.unusual_charges'))
+        ->and($nameOf($driftHtml))->toBe(trans('core::sidebar.nav.drift_alerts'));
 });

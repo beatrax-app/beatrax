@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'A számla nincs beállítva. Töltsd újra a varázslót.',
         'invalid_amount' => 'Adj meg érvényes összeget.',
-        'amount_range' => 'Adj meg -€10M és €10M közötti összeget.',
+        'amount_range' => 'Adj meg :min és :max közötti összeget.',
         'pick_date' => 'Válassz dátumot.',
         'pick_valid_date' => 'Válassz érvényes dátumot.',
         'future_date' => 'A nyitó egyenleg dátuma nem lehet a jövőben.',

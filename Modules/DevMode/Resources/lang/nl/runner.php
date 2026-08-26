@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Opent een argumentformulier',
 
+    'spawning_unavailable' => 'Artisan-commando\'s draaien in een apart proces, en dit platform laat de app er geen starten. Voer ze uit vanaf de desktop-app.',
+
     'status' => [
         'running' => 'Bezig',
         'done' => 'Klaar',

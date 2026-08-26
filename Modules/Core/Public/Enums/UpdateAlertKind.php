@@ -15,4 +15,22 @@ enum UpdateAlertKind: string
     case Stale = 'update.stale';
 
     case Critical = 'update.critical';
+
+    // Severity is a property of the kind, not a separate decision a writer
+    // makes: an unsupported-age release is a warning, a security-fix release
+    // is critical, and a routine one is informational.
+    public function severity(): SystemAlertSeverity
+    {
+        return match ($this) {
+            self::Available => SystemAlertSeverity::Info,
+            self::Stale => SystemAlertSeverity::Warning,
+            self::Critical => SystemAlertSeverity::Critical,
+        };
+    }
+
+    /** @return list<string> */
+    public static function values(): array
+    {
+        return array_map(static fn (self $kind): string => $kind->value, self::cases());
+    }
 }

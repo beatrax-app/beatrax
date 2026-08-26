@@ -9,6 +9,10 @@ return [
         'title' => 'Den här sidan finns inte',
         'body' => 'Länken kan vara gammal, eller så har sidan bytt namn. Det är inget fel på dina uppgifter.',
     ],
+    '4xx' => [
+        'title' => 'Den här begäran kan inte hanteras',
+        'body' => 'Sidan öppnades på ett sätt den inte förväntar sig. Dina data är oförändrade.',
+    ],
 
     '419' => [
         'title' => 'Din session har gått ut',

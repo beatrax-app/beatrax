@@ -8,5 +8,6 @@ return [
     'subtitle' => 'Set up this device to see your finances in one place.',
     'create_account' => 'Create account',
     'import' => 'Import from another device',
+    'restore' => 'Restore from a backup',
     'create_account_note' => 'This works on its own, but setting up on a computer and syncing here is easier.',
 ];

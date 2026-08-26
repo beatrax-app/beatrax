@@ -18,6 +18,11 @@
     is a single short word, and the copies that lacked them wrapped into a
     two-line blob inside a flex row.
 
+    max-w-full is what keeps that true without taking the page sideways at the
+    reader's accessibility text sizes, where "4 over budget" measured 295px of
+    a 216px card. A cap is not a shrink: the pill still refuses to be squeezed,
+    and only wraps once there is no line left to wrap onto.
+
     The light/dark pairs follow the amber one this replaced in the budgets
     glance card. Neutral keeps dark:bg-slate-800 instead of the parallel
     dark:bg-slate-900/40 — that is the spelling nine of the ten slate pills
@@ -35,5 +40,5 @@
     };
 @endphp
 <span {{ $attributes->merge([
-    'class' => "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium {$toneClasses}",
+    'class' => "inline-flex max-w-full shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium {$toneClasses}",
 ]) }}>{{ $slot }}</span>

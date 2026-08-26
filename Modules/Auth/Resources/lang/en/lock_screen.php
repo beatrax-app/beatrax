@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Sign out',
     'forgot_pin' => 'Forgot your PIN? Sign out — you can sign back in with your account password and set a new PIN. No data is lost.',
 
-    'digits_suffix' => 'digits entered',
+    'digits_entered' => ':count digit entered|:count digits entered',
     'pad_label' => 'PIN pad',
     'digit_aria' => 'Digit :digit',
     'backspace_aria' => 'Backspace',

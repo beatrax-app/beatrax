@@ -16,13 +16,10 @@ return [
         'budget' => 'Budgetmonate',
     ],
 
-    'fully_mapped' => '✓ vollständig zugeordnet',
     'all_clean' => 'Alles sauber zugeordnet — vor dem Bestätigen braucht nichts deine Aufmerksamkeit.',
 
     'groups' => [
         'conflict' => 'Braucht deine Entscheidung',
-        'category' => 'Offene Kategorien',
-        'payee' => 'Offene Zahlungspartner',
         'extra' => 'Nicht importiert',
     ],
 

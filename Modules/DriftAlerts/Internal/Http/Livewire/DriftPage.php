@@ -218,6 +218,7 @@ final class DriftPage extends Component
 
             $view = $views->make('drift-alerts::livewire.drift-page', [
                 'pageType' => DriftPageType::Anomaly,
+                'pageName' => Lang::get($this->activeType()->screenNameKey()),
                 'lifecycleTab' => $this->activeTab(),
                 'anomalyRows' => $anomalyRows,
                 'snoozeTargets' => $snoozeTargets,
@@ -229,7 +230,7 @@ final class DriftPage extends Component
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => Lang::get('drift-alerts::alerts.page_title').' · Beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get($this->activeType()->screenNameKey()).' · Beatrax']);
 
             return $view;
         }
@@ -269,6 +270,7 @@ final class DriftPage extends Component
 
         $view = $views->make('drift-alerts::livewire.drift-page', [
             'pageType' => DriftPageType::Drift,
+            'pageName' => Lang::get($this->activeType()->screenNameKey()),
             'rows' => $rows,
             'lifecycleTab' => $this->activeTab(),
             'grouped' => $grouped,
@@ -280,7 +282,7 @@ final class DriftPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('drift-alerts::alerts.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get($this->activeType()->screenNameKey()).' · Beatrax']);
 
         return $view;
     }

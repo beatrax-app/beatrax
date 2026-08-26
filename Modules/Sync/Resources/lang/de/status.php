@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Entferntes Gerät',
     'dismiss_peer' => 'Dieses Gerät ausblenden',
     'dismiss_stale' => 'Geräte löschen, die nicht mehr gekoppelt sind',
-    'no_devices' => 'Noch keine Geräte synchronisiert',
+    'not_synced_yet' => 'Noch nicht synchronisiert',
     'error' => 'Sync-Fehler auf einem oder mehreren Geräten',
     'syncing' => 'Wird synchronisiert…',
     'offline' => 'Geräte offline',

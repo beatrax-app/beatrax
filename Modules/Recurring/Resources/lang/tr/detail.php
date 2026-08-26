@@ -22,7 +22,7 @@ return [
         'transaction' => 'İşlem',
     ],
 
-    'eur_equivalent' => 'EUR karşılığı',
+    'settled_equivalent' => ':code cinsinden tahsil edilen',
     'chart_requires_js' => 'Grafik için JavaScript gerekir.',
 
     'tolerance_toast' => 'Tolerans: %:percent',

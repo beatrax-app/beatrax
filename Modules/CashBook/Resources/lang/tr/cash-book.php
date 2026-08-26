@@ -11,7 +11,7 @@ return [
     'expense' => 'Gider',
     'income' => 'Gelir',
 
-    'amount' => 'Tutar (€)',
+    'amount' => 'Tutar (:symbol)',
     'date' => 'Tarih',
     'counterparty' => 'Karşı taraf',
     'counterparty_placeholder' => 'ör. Fırın',

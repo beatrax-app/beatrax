@@ -48,6 +48,7 @@ final class FortifyServiceProvider extends ServiceProvider
         Fortify::authenticateThrough(static fn (Request $request): array => [
             AttemptToAuthenticate::class,
             PrepareAuthenticatedSession::class,
+            PrimeAppLockSession::class,
         ]);
     }
 }

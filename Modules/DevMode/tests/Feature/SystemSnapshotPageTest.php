@@ -51,3 +51,22 @@ it('does not render the test-env APP_KEY value on /dev/system (denylist redactio
     expect($html)->not->toContain((string) $appKey);
     expect($html)->toContain('[REDACTED]');
 });
+
+// The mobile shell writes its own php.ini and sets only the two upload
+// directives, so memory_limit on the phone is whatever the embedded
+// interpreter was compiled with. That number decided whether a 7 MB import
+// survived, and it could not be read from anywhere inside the app.
+it('reports the ceilings an import has to fit inside', function (): void {
+    $user = systemSnapshotUser('sysnap-limits');
+
+    $response = $this->actingAs($user)->get('/dev/system');
+
+    $response->assertOk();
+    $response->assertSee('memory_limit', escape: false);
+    $response->assertSee('post_max_size', escape: false);
+    $response->assertSee('upload_max_filesize', escape: false);
+    $response->assertSee('max_execution_time', escape: false);
+    $response->assertSee('memory_get_peak_usage()', escape: false);
+    $response->assertSee('disk_free_space()', escape: false);
+    $response->assertSee((string) ini_get('memory_limit'), escape: false);
+});

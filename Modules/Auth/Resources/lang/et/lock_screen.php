@@ -12,7 +12,7 @@ return [
     // said of objects; whether a native would write "ei lähe kaduma" is open.
     'forgot_pin' => 'Unustasid PIN-koodi? Logi välja — saad konto parooliga uuesti sisse logida ja uue PIN-koodi määrata. Andmeid ei lähe kaotsi.',
 
-    'digits_suffix' => 'numbrit sisestatud',
+    'digits_entered' => ':count number sisestatud|:count numbrit sisestatud',
     'pad_label' => 'PIN-klaviatuur',
     'digit_aria' => 'Number :digit',
     'backspace_aria' => 'Tagasilüke',

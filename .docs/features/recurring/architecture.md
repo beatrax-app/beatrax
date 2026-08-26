@@ -184,7 +184,11 @@ What the module explicitly does NOT do:
 
 ## `RecurringSeriesQuery` read contract
 
-`RecurringSeriesQuery` is the sole Public read API over `recurring_series`.
+`RecurringSeriesQuery` is the Public read API over `recurring_series` for
+callers that start from a series. Callers that start from a transaction —
+Anomaly's duplicate detector, the calendar placer, the booked-row projector —
+read `TransactionSeriesMembershipQuery` instead; it is the only other Public
+reader of the table, and it returns ids rather than DTOs.
 Every method scopes by `user_id` and returns Spatie-Data DTOs so the review
 page, the fixed-payments view, the dashboard tile, and downstream module
 listeners all read a single canonical shape. Cross-user reads return an

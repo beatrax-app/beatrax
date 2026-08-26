@@ -9,6 +9,10 @@ return [
         'title' => 'Denne side findes ikke',
         'body' => 'Linket er måske gammelt, eller siden har fået et nyt navn. Der er ikke noget galt med dine data.',
     ],
+    '4xx' => [
+        'title' => 'Denne forespørgsel kan ikke behandles',
+        'body' => 'Siden blev åbnet på en måde, den ikke forventer. Dine data er uændrede.',
+    ],
 
     '419' => [
         'title' => 'Din session er udløbet',

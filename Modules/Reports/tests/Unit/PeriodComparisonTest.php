@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Dto\Period;
@@ -16,6 +17,15 @@ use Modules\Reports\Internal\Dto\ReportResultRow;
 use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
+
+// This suite builds its own rate world, so the bundled baseline the install
+// seeds is cleared first: its cases turn on a pair having no rate at all.
+beforeEach(function (): void {
+    app(DatabaseManager::class)->connection()
+        ->table('exchange_rates')
+        ->where('source', BundledRates::SOURCE)
+        ->delete();
+});
 
 function pctUser(string $prefix = 'pct'): User
 {

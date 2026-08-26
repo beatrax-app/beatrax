@@ -575,14 +575,43 @@ for the 1..80-character bound + slug-body guard, but can't use
 `NamesAccounts` end-to-end because a synthetic IBAN doesn't satisfy the
 structural guard `AccountNamer` enforces for real IBANs.
 
-`needsIcsAccountName()` / `needsPaypalAccountName()` anchor the naming
-prompt on the run's `source_format` rather than the unknown-IBAN list,
-so a future synthetic-IBAN drift (e.g. `'ICS-CARD-PRIMARY'`) still
-triggers the prompt. Both use the raw query builder (via injected
-`DatabaseManager`) rather than the Eloquent Builder to keep
-phpstan-strict-rules' `staticMethod.dynamicCall` rule quiet — the same
-convention the dashboard queries under `Modules/Ledger/Public/Services/`
-follow.
+Both synthetic-IBAN prompts are suppressed when the preview already
+carries a `fileFailureReason` and nothing importable came out of it.
+Anchoring them on `source_format` alone meant they fired for a file the
+parser had already given up on, and they sit ABOVE the file-failure card
+in the wizard's one `@if`/`@elseif` chain — so an ICS PDF this install
+could not read asked "Name your ICS card account" instead of saying why,
+and the reader ended up with a permanent, empty card account for an
+import that never had a chance. The account is a durable object once
+made: nothing in the app deletes a ledger Account, the prompt closes for
+good the moment the synthetic IBAN is claimed, and the copy tells the
+reader the name is "so it shows up consistently across the app". So the
+fix is not to roll it back afterwards — it is not to ask for it. The
+same guard runs on the two `save…AccountName()` write paths, because a
+submit already in flight when the failure arrived would otherwise still
+land the account.
+
+The row count is what makes the guard safe. A file that stopped partway
+still hands back the rows it read, and those rows need the account, so
+only "failed AND nothing importable" suppresses the prompt. The generic
+unknown-IBAN branch needs no guard at all: its allow-list is
+`$preview->accountsToName`, which is populated by rows, so a file that
+read nothing offers no IBAN to name in the first place — and when it IS
+populated, naming is exactly what unblocks those rows.
+
+`OwnAccountPrompt` owns both questions —
+`needsIcsAccountName()` / `needsPaypalAccountName()` — and anchors the
+naming prompt on the run's `source_format` rather than the unknown-IBAN
+list, so a future synthetic-IBAN drift (e.g. `'ICS-CARD-PRIMARY'`) still
+triggers the prompt. It holds `ICS_OWN_IBAN`, the literal
+`IcsPdfAdapter` emits, and `previewReadNothing()`, the same guard the
+two save actions re-ask on the write side. `CurrentUser` arrives per
+call rather than through its constructor, so the container may hand the
+prompt out as a singleton without freezing a user into it. Both checks
+use the raw query builder (via injected `DatabaseManager`) rather than
+the Eloquent Builder to keep phpstan-strict-rules'
+`staticMethod.dynamicCall` rule quiet — the same convention the
+dashboard queries under `Modules/Ledger/Public/Services/` follow.
 
 The locked Blade copy for the two naming prompts (source of truth lives
 in `preview-wizard.blade.php`):

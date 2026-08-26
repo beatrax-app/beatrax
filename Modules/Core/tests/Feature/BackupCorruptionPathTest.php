@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-use Illuminate\Contracts\Config\Repository;
-use Illuminate\Database\DatabaseManager;
-use Modules\Core\Models\SystemAlert;
+use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
 beforeEach(function (): void {
@@ -15,19 +13,14 @@ beforeEach(function (): void {
     // needs to enumerate user tables.
     file_put_contents($this->sourcePath, substr((string) file_get_contents($this->sourcePath), 0, 100));
 
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.connections.sqlite.database', $this->sourcePath);
-
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $db->purge('sqlite');
+    LiveSqliteConnection::pointAt($this->app, $this->sourcePath);
 
     $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
 });
 
 afterEach(function (): void {
+    LiveSqliteConnection::restore($this->app);
     putenv('NATIVEPHP_STORAGE_PATH');
 
     /** @var string $sourcePath */
@@ -48,52 +41,26 @@ afterEach(function (): void {
     }
 });
 
-it('writes a critical system_alerts(backup_corrupt) row and exits non-zero on a corrupt source', function (): void {
-    $this->artisan('db:backup', ['--force' => true])->assertFailed();
-
-    $alerts = SystemAlert::query()
-        ->where('kind', 'backup_corrupt')
-        ->where('severity', 'critical')
-        ->get();
-
-    expect($alerts)->toHaveCount(1, 'Expected exactly one system_alerts row for the corrupt path.');
-
-    /** @var SystemAlert $alert */
-    $alert = $alerts->first();
-    expect($alert->message)->toContain('integrity check');
+// The live database IS the one the command was asked to back up, so on this
+// path the alert row cannot be written: it would go into the file just found
+// unreadable. The console line and the exit code are the report that survives,
+// and BackupPostVacuumGuardsTest keeps the alert covered on the paths where the
+// source is sound and only the output is not.
+it('exits non-zero and names the corruption when the live database is unreadable', function (): void {
+    $this->artisan('db:backup', ['--force' => true])
+        ->expectsOutputToContain('integrity check')
+        ->assertFailed();
 });
 
-it('preserves a produced VACUUM INTO output under a .suspect suffix when integrity_check fails', function (): void {
+it('leaves no clean backup file behind when the source is unreadable', function (): void {
     $this->artisan('db:backup', ['--force' => true])->assertFailed();
 
     /** @var string $backupsDir */
     $backupsDir = $this->backupsDir;
     if (! is_dir($backupsDir)) {
-        // VACUUM INTO refused the malformed source outright via PDOException;
-        // the command's bridge turns that into the same system_alerts surface
-        // without leaving a file behind.
-        $alert = SystemAlert::query()->where('kind', 'backup_corrupt')->firstOrFail();
-        expect($alert->severity)->toBe('critical');
-
         return;
     }
 
-    $suspect = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite.suspect');
-    $clean = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite');
-
-    if ($suspect !== []) {
-        // Happy corrupt path: .suspect file present, no clean .sqlite kept.
-        expect($clean)->toBe([], 'Corrupt path must NOT leave a clean .sqlite file behind.');
-
-        $alert = SystemAlert::query()->where('kind', 'backup_corrupt')->firstOrFail();
-        /** @var array<string, mixed>|null $metadata */
-        $metadata = $alert->metadata;
-        expect($metadata)->toBeArray();
-        expect((string) ($metadata['suspect_path'] ?? ''))->toBe((string) $suspect[0]);
-    } else {
-        // No .suspect file: VACUUM INTO threw before any output was written.
-        // The system_alerts row must still be there.
-        $alert = SystemAlert::query()->where('kind', 'backup_corrupt')->firstOrFail();
-        expect($alert->severity)->toBe('critical');
-    }
+    expect((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))
+        ->toBe([], 'A corrupt source must never leave a clean .sqlite behind.');
 });

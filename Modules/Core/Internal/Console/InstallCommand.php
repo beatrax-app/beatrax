@@ -74,8 +74,7 @@ class InstallCommand extends Command
 
     private function runInstall(): int
     {
-        $dbPathValue = $this->config->get(SqliteDatabase::LIVE_PATH_CONFIG_KEY);
-        $dbPath = is_string($dbPathValue) ? $dbPathValue : '';
+        $dbPath = SqliteDatabase::livePath($this->config) ?? '';
         $resolvedPath = self::resolveRealPath($dbPath);
 
         $token = $this->cloudSyncToken($resolvedPath);

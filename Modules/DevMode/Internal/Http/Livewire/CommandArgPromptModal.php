@@ -17,6 +17,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Enums\ArgType;
 use Modules\DevMode\Internal\Enums\CommandTier;
+use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
@@ -98,7 +99,18 @@ final class CommandArgPromptModal extends Component
         // ArtisanRunnerPage is not mounted on /dev/logs or /dev/queue, and an
         // event with no listener drops the spawn silently.
         $command = $this->command;
-        $runId = $spawner->start($command, $args, $user->id(), CommandTier::Safe);
+
+        try {
+            $runId = $spawner->start($command, $args, $user->id(), CommandTier::Safe);
+        } catch (ProcessSpawningUnavailableException $e) {
+            // The modal is the only spawn path that reaches the shell without
+            // going through ArtisanRunnerPage, so it needs its own answer --
+            // uncaught, this was a 500 on every iOS run, where the embedded
+            // interpreter has no binary on disk to hand a child process.
+            $this->submitError = $e->readerMessage();
+
+            return;
+        }
 
         $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
         $this->dispatch('modal-close', name: 'command-args');

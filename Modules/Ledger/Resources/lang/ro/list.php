@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Tranzacții recente (ultimele 90 de zile).',
 
     'currency_aria' => 'Vizualizare valută',
-    'currency_eur' => 'Doar EUR',
+    'currency_eur' => 'Doar :code',
     'currency_original' => 'Valuta originală',
 
     'show_recent' => 'Arată doar recentele',

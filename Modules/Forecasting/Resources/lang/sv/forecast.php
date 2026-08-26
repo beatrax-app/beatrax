@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Inga serier bidrar till prognosen för det här kontot än.',
 
     'net_diff' => 'Nettoskillnad',
+
+    'net_diff_unknown' => 'Ännu inte beräknat för denna horisont.',
     'net_diff_section_aria' => 'Nettoskillnad mellan baslinje och scenario vid horisontdagarna 30 / 60 / 90',
     'net_diff_delta_aria' => 'Nettoskillnad dag :day: :value, scenariot är :state',
     'better_than_baseline' => 'bättre än baslinjen',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Prognosen i korthet',
     'highlights_shortfall_aria' => ':count aktiv underskottsperiod under de kommande :days dagarna|:count aktiva underskottsperioder under de kommande :days dagarna',
-    'dips_to' => ':name sjunker till :amount',
     'on_date_suffix' => ' den :date',
     'shortfall_window' => ':count aktiv underskottsperiod|:count aktiva underskottsperioder',
-    'lowest_in_30' => 'Lägst på 30 dagar: :amount',
+    'lowest_in_30_label' => 'Lägst på 30 dagar',
     'next_ics' => 'Nästa ICS-avräkning: :amount den :date',
+    'ics_overdue' => 'ICS-avräkningen har förfallit: :amount, förföll :date',
 ];

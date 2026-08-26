@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Support\BundledRates;
 use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 uses(RefreshDatabase::class);
@@ -15,6 +17,13 @@ uses(RefreshDatabase::class);
 // the button reported "Refreshing…" for as long as the page stayed open — four
 // minutes and counting on a real phone, online, with nothing fetched.
 beforeEach(function (): void {
+    // This suite builds its own rate world, so the bundled baseline the install
+    // seeds is cleared first: several cases turn on a pair having no rate at
+    // all, and one on a hand-dated rate being the newest there is.
+    app(DatabaseManager::class)->connection()
+        ->table('exchange_rates')
+        ->where('source', BundledRates::SOURCE)
+        ->delete();
     // The job is not the subject: what matters is that the screen has a way to
     // stop waiting for it. Faking the bus also keeps a real provider call out
     // of the suite.

@@ -10,7 +10,7 @@ return [
     'account' => 'Tili',
     'choose_account' => 'Valitse tili…',
     'statement_date' => 'Tiliotteen päivä',
-    'statement_balance' => 'Tiliotteen saldo (€)',
+    'statement_balance' => 'Tiliotteen saldo (:symbol)',
     'balance_help' => 'Esitäytetään uusimmasta tuodusta tiliotteesta, kun sellainen on saatavilla — negatiivinen velalle, muokattavissa kumpaankin suuntaan.',
 
     'cleared_balance' => 'Kuitattu saldo',

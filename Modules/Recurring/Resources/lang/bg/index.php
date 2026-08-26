@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Повтарящи се приходи',
 
     'next' => 'Следващо',
+    'overdue' => 'Просрочена',
     'chain' => 'верига',
     'chain_aria' => 'Финансирано чрез верига',
     'per_month_suffix' => '/мес.',

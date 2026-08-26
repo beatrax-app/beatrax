@@ -22,7 +22,7 @@ return [
         'transaction' => 'Tranzacție',
     ],
 
-    'eur_equivalent' => 'Echivalent EUR',
+    'settled_equivalent' => 'Decontat în :code',
     'chart_requires_js' => 'Graficul necesită JavaScript.',
 
     'tolerance_toast' => 'Toleranță: :percent%',

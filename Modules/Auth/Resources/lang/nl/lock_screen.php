@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Afmelden',
     'forgot_pin' => 'Pincode vergeten? Meld je af — met je accountwachtwoord log je weer in en stel je een nieuwe pincode in. Er gaan geen gegevens verloren.',
 
-    'digits_suffix' => 'cijfers ingevoerd',
+    'digits_entered' => ':count cijfer ingevoerd|:count cijfers ingevoerd',
     'pad_label' => 'Pincode-toetsenblok',
     'digit_aria' => 'Cijfer :digit',
     'backspace_aria' => 'Backspace',

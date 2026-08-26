@@ -18,7 +18,15 @@
 
     <x-core::alert tone="warning" class="mt-3 text-xs" role="note"
         data-testid="delete-account-devices">
-        <p class="font-semibold">{{ Lang::get('auth::delete_account.devices_heading') }}</p>
+        {{-- The heading takes the same condition as the body under it. Static,
+             it read "Your other devices keep their own copy" above a sentence
+             saying this is the only copy -- on the default install, which has
+             no paired peer, directly above the one irreversible action. --}}
+        <p class="font-semibold">
+            {{ $pairedDeviceNames === []
+                ? Lang::get('auth::delete_account.devices_heading_none')
+                : Lang::get('auth::delete_account.devices_heading') }}
+        </p>
         <p class="mt-1">
             @if ($pairedDeviceNames === [])
                 {{ Lang::get('auth::delete_account.devices_none') }}

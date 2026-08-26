@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => 'Deze telefoon kan een bestand dat de app aanbiedt niet opslaan, dus de versleutelde back-up maak je in de desktop-app. Koppel dit apparaat om beide gelijk te houden.',
         'unavailable' => 'Versleutelde back-ups zijn beschikbaar in de desktopversie (SQLite). Gebruik bij een serverdatabase de eigen back-uptools van je database.',
         'intro' => 'Download een met wachtwoordzin versleutelde kopie van je hele database — veilig om op een externe schijf of in cloudopslag te bewaren, want zonder de wachtwoordzin is deze onleesbaar (kwantumveilig XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Wachtwoordzin',
@@ -15,8 +16,8 @@ return [
 
     'restore' => [
         'heading' => 'Herstellen vanaf een back-up',
-        'intro_html' => 'Vervang je huidige database door een versleutelde back-up. Het bestand wordt ontsleuteld en gecontroleerd voordat er iets verandert, en er wordt eerst een momentopname van je huidige gegevens opgeslagen — maar dit <strong class="text-slate-700 dark:text-slate-200">overschrijft alles</strong>, dus het is beveiligd.',
-        'restored' => 'Hersteld. Herlaad de app om je herstelde gegevens te zien.',
+        'intro_html' => 'Vervang je huidige database door een versleutelde back-up. Het bestand wordt ontsleuteld en gecontroleerd voordat er iets verandert, en er wordt eerst een momentopname van je huidige gegevens opgeslagen — maar dit <strong class="text-slate-700 dark:text-slate-200">overschrijft alles</strong>, dus het is beveiligd. Je wordt afgemeld, want je aanmelding staat ook in de database.',
+        'restored' => 'Je back-up is hersteld. Meld je aan met de gebruikersnaam en het wachtwoord die golden toen die werd gemaakt.',
         'snapshot_saved_prefix' => 'Er is een momentopname van je vorige gegevens opgeslagen in',
         'file_label' => 'Versleutelde back-up (.enc)',
         'uploading' => 'Bezig met uploaden…',
@@ -34,6 +35,7 @@ return [
         'create_failed' => 'Kon de back-up niet maken: :message',
         'confirm_phrase' => 'Typ :phrase om te bevestigen — dit vervangt je huidige gegevens.',
         'choose_file' => 'Kies een versleuteld back-upbestand (.enc) om te herstellen.',
+        'upload_failed' => 'Het bestand is niet volledig geüpload. Het is mogelijk te groot voor dit apparaat — herstellen in de desktop-app accepteert een grotere back-up.',
         'enter_passphrase' => 'Voer de wachtwoordzin in waarmee de back-up is versleuteld.',
         'unreadable' => 'Het geüploade bestand kon niet worden gelezen. Probeer het opnieuw.',
     ],

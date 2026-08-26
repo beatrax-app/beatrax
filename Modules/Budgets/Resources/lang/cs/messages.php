@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Rozpočty',
-        'subtitle' => 'Přiděl každé euro — :period.',
+        'subtitle' => 'Přiděl všechno do posledního — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Přenáší minus',
-        'non_eur_aria' => 'Výdaje v jiné měně než EUR se u této kategorie nezobrazují — najdeš je v Přehledu',
-        'non_eur_title' => 'Výdaje mimo EUR se tu nezobrazují — najdeš je v Přehledu',
+        'unconverted_aria' => 'Výdaje v měně bez dostupného kurzu se sem nezapočítávají — najdeš je v Přehledu',
+        'unconverted_title' => 'Výdaje bez dostupného kurzu se sem nezapočítávají — najdeš je v Přehledu',
         'over_budget' => ':count nad rozpočet',
     ],
 

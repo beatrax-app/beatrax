@@ -32,10 +32,10 @@ return [
             'latest_fx_rate_used' => 0.9050,
             'next_expected_date' => '2026-05-18',
             'occurrences' => [
-                ['date' => '2026-02-18', 'observed_amount_minor' => -1199, 'observed_currency' => 'USD', 'fx_rate_used' => 0.9120],
-                ['date' => '2026-03-18', 'observed_amount_minor' => -1199, 'observed_currency' => 'USD', 'fx_rate_used' => 0.9080],
+                ['date' => '2026-01-18', 'observed_amount_minor' => -1199, 'observed_currency' => 'USD', 'fx_rate_used' => 0.9120],
+                ['date' => '2026-02-18', 'observed_amount_minor' => -1199, 'observed_currency' => 'USD', 'fx_rate_used' => 0.9080],
+                ['date' => '2026-03-18', 'observed_amount_minor' => -1199, 'observed_currency' => 'USD', 'fx_rate_used' => 0.9050],
                 ['date' => '2026-04-18', 'observed_amount_minor' => -1199, 'observed_currency' => 'USD', 'fx_rate_used' => 0.9050],
-                ['date' => '2026-05-18', 'observed_amount_minor' => -1199, 'observed_currency' => 'USD', 'fx_rate_used' => 0.9050],
             ],
         ],
     ],

@@ -10,7 +10,7 @@ return [
     'account' => 'Conto',
     'choose_account' => 'Scegli un conto…',
     'statement_date' => 'Data estratto conto',
-    'statement_balance' => 'Saldo estratto conto (€)',
+    'statement_balance' => 'Saldo estratto conto (:symbol)',
     'balance_help' => 'Precompilato dal tuo ultimo estratto conto importato quando disponibile — negativo per il denaro dovuto, comunque modificabile.',
 
     'cleared_balance' => 'Saldo compensato',

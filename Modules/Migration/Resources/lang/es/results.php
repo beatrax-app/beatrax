@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Sin importar todavía — categorías',
-        'payee' => 'Sin importar todavía — contrapartes',
         'extra' => 'No importado',
         'conflict' => 'Necesita tu decisión',
     ],

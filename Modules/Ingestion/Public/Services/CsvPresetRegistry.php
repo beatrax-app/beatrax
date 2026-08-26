@@ -9,7 +9,16 @@ use Modules\Ledger\Public\Enums\Currency;
 
 final class CsvPresetRegistry
 {
-    public const ISSUER = 'other-bank';
+    public const string ISSUER = 'other-bank';
+
+    // A preset id is the adapter key the registry binds and the value every
+    // picker submits, so it is named here rather than spelled out at each of
+    // those call sites.
+    public const string N26 = 'n26-csv';
+
+    public const string REVOLUT = 'revolut-csv';
+
+    public const string ING_NL = 'ing-nl-csv';
 
     /** @var array<string, CsvPreset>|null */
     private ?array $presets = null;
@@ -32,6 +41,19 @@ final class CsvPresetRegistry
         return isset($this->all()[$format]);
     }
 
+    // True when this is a placeholder a preset issued because its export
+    // carries no own-IBAN column, and so must not be held to an IBAN's shape.
+    public function issuesOwnAccountIdentifier(string $value): bool
+    {
+        foreach ($this->all() as $preset) {
+            if ($preset->ownAccountIdentifier() === $value) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @return array<string, CsvPreset>
      */
@@ -39,9 +61,8 @@ final class CsvPresetRegistry
     {
         $presets = [
             new CsvPreset(
-                format: 'n26-csv',
+                format: self::N26,
                 label: 'N26',
-                issuer: self::ISSUER,
                 headerSignature: ['Booking Date', 'Partner Name', 'Amount (EUR)'],
                 dateHeader: 'Booking Date',
                 dateFormat: 'Y-m-d',
@@ -56,30 +77,31 @@ final class CsvPresetRegistry
                 fixedCurrency: Currency::Eur->value,
             ),
 
-            // A pending Revolut row ships an empty Completed Date; the adapter's
-            // no-booking-date branch skips it before acceptedStates is consulted.
             new CsvPreset(
-                format: 'revolut-csv',
+                format: self::REVOLUT,
                 label: 'Revolut',
-                issuer: self::ISSUER,
                 headerSignature: ['Type', 'Started Date', 'Completed Date', 'Amount', 'Currency', 'State'],
                 dateHeader: 'Completed Date',
                 dateFormat: 'Y-m-d H:i:s',
                 amountStrategy: CsvPreset::SIGNED,
                 decimalSeparator: '.',
                 delimiter: ',',
-                descriptionHeaders: ['Description'],
                 amountHeader: 'Amount',
+                // Description is the counterparty, not a payment reference: it
+                // is the export's only text column and it holds the merchant or
+                // the person. Read as a description it left every row nameless.
+                counterpartyNameHeader: 'Description',
                 currencyHeader: 'Currency',
                 feeHeader: 'Fee',
                 stateHeader: 'State',
+                // A pending row ships an empty Completed Date, and the adapter's
+                // no-booking-date branch skips it before this is consulted.
                 acceptedStates: ['COMPLETED'],
             ),
 
             new CsvPreset(
-                format: 'ing-nl-csv',
+                format: self::ING_NL,
                 label: 'ING (Netherlands)',
-                issuer: self::ISSUER,
                 headerSignature: ['Datum', 'Naam/Omschrijving', 'Af Bij', 'Bedrag (EUR)'],
                 dateHeader: 'Datum',
                 dateFormat: 'Ymd',

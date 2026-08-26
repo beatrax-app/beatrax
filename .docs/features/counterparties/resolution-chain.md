@@ -90,10 +90,22 @@ name, then to the IBAN.
 Runs the description through
 `Modules\Import\Public\Services\MerchantNameResolver`, which owns the
 alias and corpus matching. A hit becomes `type = 'merchant'` with
-`display_name` and `merchant_name` both set to the resolved name.
-`merchant_name` is the column the garbage collector's alias anchor
-joins against — see the retention rules in
-[garbage collection](garbage-collection.md).
+`merchant_name` set to the resolved name. `merchant_name` is the column
+the garbage collector's alias anchor joins against — see the retention
+rules in [garbage collection](garbage-collection.md).
+
+`display_name` is the name the row's own file gave it, and only falls
+back to the resolved name when the file named no counterparty. The
+resolver reads the *description*, so what it returns is a stand-in for
+a counterparty the file did not name — the same rule the import
+preview's counterparty column applies, and the reason the two agree. An
+N26 export puts `REWE` in Partner Name and `Groceries` in Payment
+Reference; a reader who confirms a preview row reading REWE must not
+find the alias's name on it afterwards. The corpus keeps its value
+where it was earned — on the terminal noise a description carries, and
+on `merchant_name`, which every alias-anchored surface joins against.
+Because the slug follows the display name, the entity a row lands on is
+keyed by the name the reader was shown.
 
 Five tiers, in order: the reader's own exact alias, the reader's own
 generalized alias, then the corpus exact, generalized and regex

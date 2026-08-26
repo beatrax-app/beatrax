@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Atitikimai',
     'col_created' => 'Sukurta',
     'col_row_actions' => 'Veiksmai',
+    'inactive_badge' => 'Išjungta',
+    'inactive_title' => 'Ši taisyklė neveikia. Taisyklė išjungiama, kai ištrinama kategorija arba sandorio šalis, į kurią ji nurodo.',
 
     'more_conditions' => 'dar :count',
 

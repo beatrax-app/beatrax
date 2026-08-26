@@ -38,7 +38,7 @@
                 <p class="mt-1 text-xs text-rose-700 dark:text-rose-500" role="alert">{{ $renameError }}</p>
             @endif
         @else
-            <div class="flex items-baseline justify-between gap-2">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ $scenarioName }}</h2>
                 <div class="flex items-center gap-2 text-xs">
                     <button
@@ -100,7 +100,7 @@
                                 @endif
                             </div>
                         @else
-                            <div class="flex items-center justify-between gap-2">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
                                 <p class="text-sm text-slate-900 dark:text-slate-100">{{ $m['summary'] }}</p>
                                 <div class="flex items-center gap-2 text-xs">
                                     <button

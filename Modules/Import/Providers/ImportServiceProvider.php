@@ -36,6 +36,7 @@ use Modules\Import\Internal\Services\AliasYamlExporter;
 use Modules\Import\Internal\Services\AliasYamlImporter;
 use Modules\Import\Internal\Services\KnownCounterpartyIbanResolver;
 use Modules\Import\Internal\Services\LongestCommonPrefix;
+use Modules\Import\Internal\Services\OwnAccountPrompt;
 use Modules\Import\Internal\Sync\NullImportSyncCapture;
 use Modules\Import\Public\Actions\ApplyEnrichments;
 use Modules\Import\Public\Actions\ConfirmImport;
@@ -97,6 +98,7 @@ final class ImportServiceProvider extends ServiceProvider
 
         $this->app->singleton(ImportPipeline::class);
         $this->app->singleton(PreviewCache::class);
+        $this->app->singleton(OwnAccountPrompt::class);
         $this->app->singleton(HandleFileOpenedFromOs::class);
         $this->app->singleton(KnownCounterpartyIbanResolver::class);
         $this->app->singleton(DefaultKnownCounterpartyIbansSeeder::class);

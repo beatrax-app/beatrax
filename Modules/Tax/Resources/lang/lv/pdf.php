@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Darījuma partneris',
     'col_description' => 'Apraksts',
     'col_note' => 'Piezīme',
-    'col_amount' => 'Summa (EUR)',
+    'col_amount' => 'Summa',
 
     'subtotal' => 'Starpsumma',
 

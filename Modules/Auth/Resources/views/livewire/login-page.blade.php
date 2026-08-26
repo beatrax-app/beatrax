@@ -8,6 +8,15 @@
             :subtitle="Lang::get('auth::login.subtitle')"
         />
 
+        @if ($restored !== '')
+            <x-core::alert tone="positive">
+                <p>{{ $restored }}</p>
+                @if ($snapshotPath !== '')
+                    <p class="mt-1 text-xs opacity-80">{{ Lang::get('core::backup.restore.snapshot_saved_prefix') }} <code class="font-mono">{{ $snapshotPath }}</code>.</p>
+                @endif
+            </x-core::alert>
+        @endif
+
         <form wire:submit="submit" class="space-y-4">
             <x-core::form-field
                 name="username"

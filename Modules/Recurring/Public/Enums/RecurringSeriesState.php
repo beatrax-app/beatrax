@@ -18,6 +18,14 @@ enum RecurringSeriesState: string
 
     case Rejected = 'rejected';
 
+    // A projection walks these two and no others, so they are also the only two
+    // a booked row can be reconciled against.
+    /** @return list<string> */
+    public static function projectableValues(): array
+    {
+        return [self::Approved->value, self::CadenceChanged->value];
+    }
+
     // No "any -> any" escape hatch and no same-state re-entry (idempotent
     // no-ops live in the Public actions, never here).
     /** @return list<self> */

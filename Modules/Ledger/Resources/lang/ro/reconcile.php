@@ -10,7 +10,7 @@ return [
     'account' => 'Cont',
     'choose_account' => 'Alege un cont…',
     'statement_date' => 'Data extrasului',
-    'statement_balance' => 'Sold din extras (€)',
+    'statement_balance' => 'Sold din extras (:symbol)',
     'balance_help' => 'Precompletat din ultimul extras de cont importat, când există — negativ pentru bani datorați, editabil în ambele cazuri.',
 
     'cleared_balance' => 'Sold decontat',

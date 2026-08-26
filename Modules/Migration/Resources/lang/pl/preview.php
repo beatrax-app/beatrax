@@ -16,13 +16,10 @@ return [
         'budget' => 'Miesiące budżetowe',
     ],
 
-    'fully_mapped' => '✓ w pełni zmapowane',
     'all_clean' => 'Wszystko zmapowane bez zastrzeżeń — nic nie wymaga Twojej uwagi przed potwierdzeniem.',
 
     'groups' => [
         'conflict' => 'Wymaga Twojej decyzji',
-        'category' => 'Nierozstrzygnięte kategorie',
-        'payee' => 'Nierozstrzygnięci kontrahenci',
         'extra' => 'Nieimportowane',
     ],
 

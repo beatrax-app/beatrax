@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Прогноз оновлюється…',
-        'risk' => 'Баланс опускається нижче €0 протягом :count дня — перший: :date.|Баланс опускається нижче €0 протягом :count днів — перший: :date.|Баланс опускається нижче €0 протягом :count днів — перший: :date.',
+        'risk' => 'Баланс опускається нижче :zero протягом :count дня — перший: :date.|Баланс опускається нижче :zero протягом :count днів — перший: :date.|Баланс опускається нижче :zero протягом :count днів — перший: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'запис|записи|записів',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', прогнозований баланс мінус €:amount',
-        'aria_balance_positive' => ', прогнозований баланс €:amount',
+        'aria_balance_negative' => ', прогнозований баланс мінус :amount',
+        'aria_balance_positive' => ', прогнозований баланс :amount',
         'overflow' => 'ще +:count',
         'paid' => 'Оплачено',
         'missed' => 'Очікувано — не знайдено',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Проведений платіж',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ дата приблизна',
         'series' => '↗ серія',
         'counterparty' => '↗ контрагент',
+        'transaction' => '↗ транзакція',
         'end_of_day' => 'Кінець дня',
     ],
 ];

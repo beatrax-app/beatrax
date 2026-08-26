@@ -32,4 +32,26 @@ final class SafeDate
     {
         return self::parseOrNull(trim($raw))?->startOfDay();
     }
+
+    // createFromFormat() rolls an out-of-range component forward rather than
+    // refusing it: "31-02-2026" books itself on 3 March. The roll shows up
+    // only as a parse warning, which is what gets checked — a format
+    // round-trip would also reject "02/05/2026" read through "n/j/Y".
+    public static function fromFormatOrNull(string $format, string $raw): ?CarbonImmutable
+    {
+        try {
+            $parsed = CarbonImmutable::createFromFormat($format, $raw);
+        } catch (Throwable) {
+            $parsed = false;
+        }
+
+        if (! $parsed instanceof CarbonImmutable) {
+            return null;
+        }
+
+        $errors = CarbonImmutable::getLastErrors();
+        $rejected = ($errors['warning_count'] ?? 0) > 0 || ($errors['error_count'] ?? 0) > 0;
+
+        return $rejected ? null : $parsed;
+    }
 }

@@ -246,3 +246,21 @@ it('keeps an entry expected slightly before its first observed payment', functio
 
     expect(cqplEntryDates($days, 'Paid-Late'))->toBe(['2026-06-01']);
 });
+
+it('does not back-project an occurrence onto a day that has not happened yet', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cqplUser('backfill-past-today');
+
+    // next_expected_at is the app's own answer to "when is the next one".
+    // One index behind it lands on 15 June — three days after today, and a
+    // date the forecast's forward walk never reaches.
+    $series = cqplSeries($user, 'Anchor-Ahead', CarbonImmutable::parse('2026-07-15'));
+    cqplOccurrence($db, $user->id, $series->id, '2026-04-15');
+
+    /** @var CalendarQuery $calendarQuery */
+    $calendarQuery = app(CalendarQuery::class);
+
+    expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 6), 'Anchor-Ahead'))->toBe([]);
+    expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 5), 'Anchor-Ahead'))->toBe(['2026-05-15']);
+    expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 7), 'Anchor-Ahead'))->toBe(['2026-07-15']);
+});

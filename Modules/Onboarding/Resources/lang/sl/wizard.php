@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Korak :number od :total',
 
+    'back' => 'Nazaj',
+    'back_aria' => 'Nazaj — vrne se na prejšnji korak nastavitve',
+
     'resume_later' => 'Nadaljuj pozneje',
     'resume_later_aria' => 'Nadaljuj pozneje — shrani tvoj napredek in zapre čarovnika za nastavitev',
     'resume_banner' => 'Dobrodošel nazaj — nadaljujmo, kjer si ostal.',

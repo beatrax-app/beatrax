@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Protistrana',
     'description' => 'Popis',
     'amount_native' => 'Suma (pôvodná mena)',
-    'amount_settled' => 'Suma (zúčtovaná v EUR)',
+    'amount_settled' => 'Suma (zúčtovaná)',
     'effective_rate' => 'Efektívny kurz',
     'ics_markup' => 'Zahŕňa prípadnú prirážku ICS.',
 

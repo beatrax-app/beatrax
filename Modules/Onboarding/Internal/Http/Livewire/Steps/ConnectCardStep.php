@@ -32,8 +32,9 @@ final class ConnectCardStep extends Component
 {
     use WithFileUploads;
 
-    // Mirrors IcsPdfAdapter::ICS_OWN_IBAN; the arch test
-    // ics_pdf_adapter_own_iban_matches_connect_card_step holds the two together.
+    // Mirrors IcsPdfAdapter::ICS_OWN_IBAN. Neither module may import the other's
+    // Internal, so OneSpellingPerSyntheticIbanArchTest holds the four spellings
+    // of this literal together instead.
     private const ICS_OWN_IBAN = 'ICS-CARD';
 
     private const ICS_ACCOUNT_NAME = 'ICS card';

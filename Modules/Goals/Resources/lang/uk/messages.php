@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Ціль досягнуто',
+        'closed_short' => 'Закрито до досягнення цілі',
         'add_contributions' => 'Додай внески, щоб побачити прогноз',
         'not_enough_history' => 'Ще замало історії, щоб спрогнозувати дату',
         'no_recent_contributions' => 'Немає нещодавніх внесків, щоб побудувати прогноз',

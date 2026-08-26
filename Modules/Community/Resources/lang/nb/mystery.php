@@ -21,7 +21,6 @@ return [
     'footer' => 'Den delte listen er en medfølgende YAML-fil som leveres med Beatrax. Når du sender inn et forslag, åpnes GitHub i nettleseren din; ingenting annet forlater denne enheten.',
 
     'card' => [
-        'likely' => 'Sannsynligvis: en navnløs forhandler.',
         'seen_times' => 'Sett :count gang|Sett :count ganger',
         'last_seen' => 'Sist sett :date',
         'suggest' => 'Foreslå et navn →',

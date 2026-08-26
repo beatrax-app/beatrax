@@ -25,6 +25,7 @@ return [
     'no_not' => 'Ei, ei ole :name',
 
     'recent_on_iban' => 'Tämän IBANin viimeisimmät tapahtumat',
+    'recent_on_counterparty' => 'Viimeisimmät tapahtumat tämän vastapuolen kanssa',
     'no_transactions_yet' => 'Tapahtumia ei ole vielä kirjattu.',
 
     'label_manually' => 'Tai merkitse käsin',

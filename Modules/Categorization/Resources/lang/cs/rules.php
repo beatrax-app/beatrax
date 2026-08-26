@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Shody',
     'col_created' => 'Vytvořeno',
     'col_row_actions' => 'Akce',
+    'inactive_badge' => 'Vypnuto',
+    'inactive_title' => 'Toto pravidlo neběží. Pravidlo se vypne, když je smazána kategorie nebo protistrana, na kterou odkazuje.',
 
     'more_conditions' => '+:count dalších',
 

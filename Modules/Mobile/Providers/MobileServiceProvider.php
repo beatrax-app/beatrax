@@ -42,11 +42,13 @@ use Modules\Mobile\Internal\Identity\ColdStartEnrollmentService;
 use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
+use Modules\Mobile\Internal\Notifications\NativeNotificationConsent;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
 use Modules\Mobile\Internal\Sync\LanSyncClient;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
+use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
 
 final class MobileServiceProvider extends ServiceProvider
 {
@@ -119,6 +121,14 @@ final class MobileServiceProvider extends ServiceProvider
         // The pre-paint script reads prefers-color-scheme instead: the same OS
         // night-mode flag the native window background uses, so every layer
         // agrees at all times.
+
+        // Android 13 and later drop every notification until the reader has
+        // granted POST_NOTIFICATIONS, and the grant only comes from a prompt
+        // the app raises. Measured on a Samsung: granted=false with no
+        // USER_SET flag, and the package at importance=NONE.
+        if (class_exists('NativePHP\\LocalNotifications\\Facades\\LocalNotifications') && UserDataPathService::isMobileRuntime()) {
+            $this->app->singleton(SystemNotificationConsent::class, NativeNotificationConsent::class);
+        }
 
         // The enclave-gated key vault, presented through the shared contract
         // so the lock screen asks one question on every platform.

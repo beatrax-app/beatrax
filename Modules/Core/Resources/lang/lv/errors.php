@@ -9,6 +9,10 @@ return [
         'title' => 'Šīs lapas nav',
         'body' => 'Saite, iespējams, ir veca vai lapa ir pārdēvēta. Ar jūsu datiem viss ir kārtībā.',
     ],
+    '4xx' => [
+        'title' => 'Šo pieprasījumu nevar apstrādāt',
+        'body' => 'Lapa tika atvērta veidā, kādu tā negaida. Jūsu dati nav mainīti.',
+    ],
 
     '419' => [
         'title' => 'Jūsu sesija ir beigusies',

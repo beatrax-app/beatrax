@@ -25,6 +25,7 @@ return [
     'no_not' => 'Nei, ikke :name',
 
     'recent_on_iban' => 'Siste transaksjoner på dette IBAN-nummeret',
+    'recent_on_counterparty' => 'Siste transaksjoner med denne motparten',
     'no_transactions_yet' => 'Ingen transaksjoner registrert ennå.',
 
     'label_manually' => 'Eller merk manuelt',

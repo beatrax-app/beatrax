@@ -120,6 +120,28 @@ it('renders the day-end balance from summed forecast points for balance-included
         ->assertSee('750');
 });
 
+// The aria-label is the only place a phone announces the balance at all: the
+// visible corner is desktop-only. All twenty-six locales wrote a currency sign
+// in front of :amount and the blade passes Money, which writes its own, so a
+// screen reader heard the sign twice — and heard EUR on a dollar account.
+it('announces the day balance with one currency symbol', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cpblUser('cpbl-aria');
+    $account = cpblAccount($db, $user->id, 'ASN Checking');
+    cpblForecastRun($db, $user->id, $account, '2026-06-20', 75000);
+
+    $html = Livewire::actingAs($user)
+        ->test(CalendarPage::class, [
+            'month' => 6,
+            'year' => 2026,
+            'balanceAccountIds' => [$account],
+        ])
+        ->html();
+
+    expect($html)->not->toContain('€€')
+        ->and($html)->toContain('projected balance €750');
+});
+
 it('FX-converts a USD account\'s forecast points to the base currency instead of adding raw minor units', function (): void {
     $db = app(DatabaseManager::class);
     $user = cpblUser('cpbl-fx');

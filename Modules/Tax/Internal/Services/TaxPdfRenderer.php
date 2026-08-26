@@ -23,7 +23,10 @@ final class TaxPdfRenderer
         $options = new Options;
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', false);
-        $options->set('defaultFont', 'Helvetica');
+        // Embedded, not a PDF core font: Helvetica ships no glyphs, and a
+        // reader whose substitute has no euro sign drew one at the core
+        // metrics' width, over the first digit of every amount.
+        $options->set('defaultFont', 'DejaVu Sans');
 
         $pdf = new Dompdf($options);
 

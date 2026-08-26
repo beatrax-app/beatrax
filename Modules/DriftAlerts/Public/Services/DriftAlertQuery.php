@@ -67,13 +67,31 @@ final readonly class DriftAlertQuery
      * @return int summed annualized_impact_minor over open expense alerts, in
      *             original-currency minor units. drift-detection.md says why expense-only
      */
-    public function totalOpenAnnualizedImpactForUser(User $user): int
+    // Bucketed by the currency each alert carries rather than summed across
+    // them: drift_alerts.annualized_impact_minor is denominated in the series'
+    // own currency, and one total over both is euro cents added to dollar cents.
+    /**
+     * @return array<string, int>
+     */
+    public function openAnnualizedImpactByCurrencyForUser(User $user): array
     {
-        return (int) $this->db->connection()->table('drift_alerts')
+        $rows = $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
             ->where('direction', Direction::Expense->value)
             ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
-            ->sum('annualized_impact_minor');
+            ->groupBy('currency')
+            ->selectRaw('currency, COALESCE(SUM(annualized_impact_minor), 0) as impact_minor')
+            ->get();
+
+        $byCurrency = [];
+        foreach ($rows as $row) {
+            $currency = is_string($row->currency) ? $row->currency : '';
+            if ($currency !== '') {
+                $byCurrency[$currency] = is_numeric($row->impact_minor) ? (int) $row->impact_minor : 0;
+            }
+        }
+
+        return $byCurrency;
     }
 
     /**

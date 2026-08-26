@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Målet er nået',
+        'closed_short' => 'Lukket før målet',
         'add_contributions' => 'Tilføj indbetalinger for at se en prognose',
         'not_enough_history' => 'Endnu ikke nok historik til at anslå en dato',
         'no_recent_contributions' => 'Ingen nylige indbetalinger at anslå ud fra',

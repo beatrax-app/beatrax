@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Foundation\Vite;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\Currency;
 
 /**
  * @link ../.docs/conventions/test-harness-isolation.md
@@ -119,14 +120,18 @@ abstract class TestCase extends BaseTestCase
     // looked up directly by EloquentAccountResolver — do not change it.
     // `ICS-CARD` and `PAYPAL` are the synthetic own-IBAN literals IcsPdfAdapter
     // and PaypalCsvAdapter emit; AccountResolver already scopes lookups by user.
+    // $currency is a parameter, not a constant, because a fixture that can only
+    // ever be euro cannot see a bug that only shows up when the reader is not:
+    // the base-currency setting was inert for a whole release behind fixtures
+    // where the hardcoded literal and the correct value were the same string.
     /**
      * @return array{user: User, account: Account, icsAccount: Account, paypalAccount: Account}
      */
-    public function seedFixtureUserAndAccount(): array
+    public function seedFixtureUserAndAccount(string $currency = Currency::Eur->value): array
     {
         $this->fixtureUser = User::query()->updateOrCreate(
             ['username' => 'fixture'],
-            ['password' => 'fixture-password', 'period_start_day' => 1],
+            ['password' => 'fixture-password', 'period_start_day' => 1, 'base_currency' => $currency],
         );
 
         $account = Account::query()->updateOrCreate(
@@ -136,7 +141,7 @@ abstract class TestCase extends BaseTestCase
                 'name' => 'ASN Fixture Account',
                 'slug' => 'asn-fixture',
                 'kind' => 'asn',
-                'default_currency' => 'EUR',
+                'default_currency' => $currency,
             ],
         );
 
@@ -149,7 +154,7 @@ abstract class TestCase extends BaseTestCase
                 'name' => 'ICS card (fixture)',
                 'slug' => 'ics-card-fixture',
                 'kind' => 'ics_card',
-                'default_currency' => 'EUR',
+                'default_currency' => $currency,
             ],
         );
 
@@ -162,7 +167,7 @@ abstract class TestCase extends BaseTestCase
                 'name' => 'PayPal (fixture)',
                 'slug' => 'paypal-fixture',
                 'kind' => 'paypal',
-                'default_currency' => 'EUR',
+                'default_currency' => $currency,
             ],
         );
 

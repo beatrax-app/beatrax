@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Transações recentes (últimos 90 dias).',
 
     'currency_aria' => 'Vista por moeda',
-    'currency_eur' => 'Só EUR',
+    'currency_eur' => 'Só :code',
     'currency_original' => 'Moeda original',
 
     'show_recent' => 'Mostrar só as recentes',

@@ -6,6 +6,7 @@ namespace Modules\EmailScan\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\SafeExceptionContext;
@@ -16,8 +17,6 @@ use Throwable;
 
 final class RaiseReconsentAlertOnTokenFailure
 {
-    public const ALERT_KIND = 'oauth_reconsent_required';
-
     private const MESSAGE_GMAIL = 'Reconnect your Gmail';
 
     private const MESSAGE_MICROSOFT = 'Reconnect your Outlook';
@@ -43,7 +42,7 @@ final class RaiseReconsentAlertOnTokenFailure
             // prompting long after the user reconnected.
             $this->alerts->raiseForUser(
                 userId: $userId,
-                kind: self::ALERT_KIND,
+                kind: OAuthAlertKind::ReconsentRequired->value,
                 severity: SystemAlertSeverity::Warning->value,
                 message: $this->messageFor($event->provider),
                 metadata: [
@@ -97,7 +96,7 @@ final class RaiseReconsentAlertOnTokenFailure
         return $this->db->connection()
             ->table('system_alerts')
             ->where('user_id', $userId)
-            ->where('kind', self::ALERT_KIND)
+            ->where('kind', OAuthAlertKind::ReconsentRequired->value)
             ->whereNull('acknowledged_at');
     }
 

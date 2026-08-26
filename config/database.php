@@ -28,6 +28,12 @@ return [
             // job reservation failed with "database is locked" instead of
             // waiting its turn.
             'busy_timeout' => 30000,
+            // And busy_timeout alone does not cover the case that lost a
+            // forecast job: a DEFERRED transaction that reads and then writes
+            // is refused OUTRIGHT if anyone wrote in between, because retrying
+            // it could deadlock. Taking the write lock at BEGIN makes the wait
+            // a wait. See .docs/architecture/sqlite-write-locks.md.
+            'transaction_mode' => 'IMMEDIATE',
             'journal_mode' => 'WAL',
             'synchronous' => 'NORMAL',
         ];
@@ -50,6 +56,10 @@ return [
             // which rejects DDL/DML in SQLite rather than in application code.
             'readonly_select' => array_merge($sqlite, [
                 'name' => 'readonly_select',
+                // Never IMMEDIATE here: this connection is query_only, and
+                // asking for the write lock it can never use would queue it
+                // behind every writer to read a table.
+                'transaction_mode' => 'DEFERRED',
             ]),
 
             /**

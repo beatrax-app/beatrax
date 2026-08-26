@@ -133,14 +133,31 @@ it('keeps a same-origin path from a fully-qualified Location', function (): void
         ->and((string) $response->getContent())->not->toContain('beatrax.test');
 });
 
-it('leaves iOS redirects alone, because its shell already follows them', function (): void {
-    // iOS serves the app from a php:// custom scheme whose handler reads Location,
-    // rewrites a rooted path to php://127.0.0.1<path> and performs a real
-    // navigation. Rewriting there would trade it for a weaker JavaScript one.
+it('moves the address on iOS too, where the scheme handler does not', function (): void {
+    // The handler navigates only where Location carries no scheme. Laravel
+    // emits absolute URLs, so on iOS every Location is php://127.0.0.1<path>
+    // and the target's body was returned as the answer to the original
+    // request -- the document changed and the address did not.
     putenv('NATIVEPHP_PLATFORM='.MobilePlatform::Ios->value);
     $_SERVER['NATIVEPHP_PLATFORM'] = MobilePlatform::Ios->value;
 
     $response = $this->get('/login', ['Accept' => 'text/html']);
+
+    $response->assertOk();
+    expect($response->headers->get('Location'))->toBeNull();
+    expect($response->getContent())->toContain('window.location.replace("/")');
+
+    putenv('NATIVEPHP_PLATFORM='.MobilePlatform::Android->value);
+    $_SERVER['NATIVEPHP_PLATFORM'] = MobilePlatform::Android->value;
+});
+
+it('keeps a Livewire round trip on iOS as a real redirect', function (): void {
+    // The shim is a document. Swapped into the page by wire:navigate it would
+    // be rendered as the destination, so the round trip must still see the 3xx.
+    putenv('NATIVEPHP_PLATFORM='.MobilePlatform::Ios->value);
+    $_SERVER['NATIVEPHP_PLATFORM'] = MobilePlatform::Ios->value;
+
+    $response = $this->get('/login', ['Accept' => 'text/html', 'X-Livewire-Navigate' => 'true']);
 
     $response->assertRedirect();
 

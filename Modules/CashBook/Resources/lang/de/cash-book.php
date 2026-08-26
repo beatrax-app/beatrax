@@ -11,7 +11,7 @@ return [
     'expense' => 'Ausgabe',
     'income' => 'Einnahme',
 
-    'amount' => 'Betrag (€)',
+    'amount' => 'Betrag (:symbol)',
     'date' => 'Datum',
     'counterparty' => 'Zahlungspartner',
     'counterparty_placeholder' => 'z. B. Bäckerei',

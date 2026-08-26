@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Poistettu laite',
     'dismiss_peer' => 'Ohita tämä laite',
     'dismiss_stale' => 'Tyhjennä laitteet, joita ei ole enää paritettu',
-    'no_devices' => 'Ei vielä synkronoituja laitteita',
+    'not_synced_yet' => 'Ei vielä synkronoitu',
     'error' => 'Synkronointivirhe yhdellä tai useammalla laitteella',
     'syncing' => 'Synkronoidaan…',
     'offline' => 'Laitteet offline-tilassa',

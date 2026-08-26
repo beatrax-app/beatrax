@@ -87,9 +87,9 @@ final readonly class PairingFrameApplier
 
         $result = $this->tokenService->applyPeerConfirm($userId, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex);
 
-        return match ($result) {
-            null => PairingFrameOutcome::Refused,
-            PairingTokenService::DEFERRED => PairingFrameOutcome::Deferred,
+        return match (true) {
+            $result === null => PairingFrameOutcome::Refused,
+            $result->isDeferred() => PairingFrameOutcome::Deferred,
             default => PairingFrameOutcome::Applied,
         };
     }

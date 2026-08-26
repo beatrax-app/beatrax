@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Enums\OAuthAlertKind')
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\DevMode\Internal\Enums\CommandTier')
@@ -151,7 +152,7 @@
                         <li data-testid="recent-run-row">
                             <a
                                 href="{{ $run['href'] }}"
-                                class="flex items-baseline justify-between gap-2 hover:underline"
+                                class="flex flex-wrap items-baseline justify-between gap-2 hover:underline"
                             >
                                 <span class="text-sm font-mono truncate">{{ $run['command'] }}</span>
                                 <span
@@ -179,7 +180,7 @@
                     @foreach ($openAlerts as $alert)
                         <li class="text-sm flex items-start justify-between gap-2">
                             <span>{{ $alert->message }}</span>
-                            @if ($alert->kind === 'oauth_reauth_required')
+                            @if (OAuthAlertKind::promptsReauthorisation($alert->kind))
                                 <a href="{{ Destination::Email->url() }}" class="text-blue-600 hover:underline text-xs">
                                     {{ Lang::get('dev::overview.reauth') }}
                                 </a>

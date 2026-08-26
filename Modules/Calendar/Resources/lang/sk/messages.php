@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognóza sa aktualizuje…',
-        'risk' => 'Zostatok klesne pod 0 € dňa :date.|Zostatok klesne pod 0 € v :count dňoch — prvý: :date.|Zostatok klesne pod 0 € v :count dňoch — prvý: :date.',
+        'risk' => 'Zostatok klesne pod :zero dňa :date.|Zostatok klesne pod :zero v :count dňoch — prvý: :date.|Zostatok klesne pod :zero v :count dňoch — prvý: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'položka|položky|položiek',
         'aria' => ':date: :entries — :count',
-        'aria_balance_negative' => ', predpokladaný zostatok mínus :amount €',
-        'aria_balance_positive' => ', predpokladaný zostatok :amount €',
+        'aria_balance_negative' => ', predpokladaný zostatok mínus :amount',
+        'aria_balance_positive' => ', predpokladaný zostatok :amount',
         'overflow' => '+:count ďalších',
         'paid' => 'Zaplatené',
         'missed' => 'Očakávané — nenájdené',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Zaúčtovaná platba',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ približný dátum',
         'series' => '↗ séria',
         'counterparty' => '↗ protistrana',
+        'transaction' => '↗ transakcia',
         'end_of_day' => 'Koniec dňa',
     ],
 ];

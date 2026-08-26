@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Se déconnecter',
     'forgot_pin' => 'PIN oublié ? Déconnecte-toi : tu peux te reconnecter avec le mot de passe de ton compte et définir un nouveau PIN. Aucune donnée n\'est perdue.',
 
-    'digits_suffix' => 'chiffres saisis',
+    'digits_entered' => ':count chiffre saisi|:count chiffres saisis',
     'pad_label' => 'Pavé PIN',
     'digit_aria' => 'Chiffre :digit',
     'backspace_aria' => 'Retour arrière',

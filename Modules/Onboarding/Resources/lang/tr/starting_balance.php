@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Hesap ayarlanmadı. Sihirbazı yeniden yükle.',
         'invalid_amount' => 'Geçerli bir tutar gir.',
-        'amount_range' => '-€10M ile €10M arasında bir tutar gir.',
+        'amount_range' => ':min ile :max arasında bir tutar gir.',
         'pick_date' => 'Bir tarih seç.',
         'pick_valid_date' => 'Geçerli bir tarih seç.',
         'future_date' => 'Açılış bakiyesi tarihi gelecekte olamaz.',

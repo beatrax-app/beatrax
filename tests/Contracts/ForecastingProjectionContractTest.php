@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Bus;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Services\ForecastQuery;
+use Modules\Forecasting\Tests\Support\ForecastCorpus;
+
+// DailyFold's integer FX rounding is the only slack left once every expected
+// triple is derived from the documented arithmetic rather than approximated.
+const FPCT_TOLERANCE_MINOR = 5;
 
 /**
  * @return array<string, array{0: string}>
@@ -28,7 +33,15 @@ function fpctFixtures(): array
         // application itself is covered by ScenarioIsolationContractTest.
         'variable-utility' => ['variable-utility'],
         'scenario-with-each-mutation-kind' => ['scenario-with-each-mutation-kind'],
+        // Holds a booked future-dated row beside the series that predicted it,
+        // so the certainty and the estimate it retires are both in view.
+        'booked-future-row' => ['booked-future-row'],
     ];
+}
+
+function fpctSeededAt(): string
+{
+    return ForecastCorpus::clock()->toDateTimeString();
 }
 
 function fpctUser(): User
@@ -51,11 +64,50 @@ function fpctMapFixtureKindToDbKind(string $fixtureKind): string
 }
 
 /**
+ * @param  array{date: string, amount_minor: int, currency: string, settled_amount_minor: int, settled_currency: string, fx_rate_used: mixed, counterparty: string, type: string}  $row
+ */
+function fpctInsertTransaction(DatabaseManager $db, User $user, int $accountId, int $importRunId, array $row): int
+{
+    return $db->connection()->table('transactions')->insertGetId([
+        'user_id' => $user->id,
+        'account_id' => $accountId,
+        'import_run_id' => $importRunId,
+        'fingerprint' => hash('sha256', $accountId.'-'.$row['date'].'-'.bin2hex(random_bytes(8))),
+        'posted_at' => $row['date'],
+        'booked_at' => $row['date'].' 00:00:00',
+        'value_date' => $row['date'],
+        'amount_minor' => $row['amount_minor'],
+        'currency' => $row['currency'],
+        'settled_amount_minor' => $row['settled_amount_minor'],
+        'settled_currency' => $row['settled_currency'],
+        'fx_rate_used' => $row['fx_rate_used'],
+        'counterparty_normalized' => fpctClusterKey($row['counterparty']),
+        'counterparty_name' => $row['counterparty'],
+        'normalization_version' => 1,
+        'description' => $row['counterparty'].' '.$row['date'],
+        'type' => $row['type'],
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint_version' => 3,
+        'created_at' => fpctSeededAt(),
+        'updated_at' => fpctSeededAt(),
+    ]);
+}
+
+// Both sides of the cluster join RecurringSeriesQuery falls back on for a row
+// no detection sweep has linked yet: recurring_series.cluster_counterparty_key
+// and transactions.counterparty_normalized have to derive the same way.
+function fpctClusterKey(string $counterparty): string
+{
+    return strtolower($counterparty);
+}
+
+/**
  * @return array{accountIdMap: array<int, int>, fixture: array<string, mixed>}
  */
 function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): array
 {
-    $fixturePath = base_path('Modules/Forecasting/tests/fixtures/forecast-corpus/'.$fixtureName.'.php');
+    $fixturePath = ForecastCorpus::path($fixtureName);
     /** @var array{accounts: list<array<string, mixed>>, series: list<array<string, mixed>>, expected: array<string, mixed>} $fixture */
     $fixture = require $fixturePath;
 
@@ -76,8 +128,8 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
             'opening_balance_minor' => $account['opening_balance_minor'] ?? null,
             'opening_balance_as_of_date' => $account['opening_balance_as_of_date'] ?? null,
             'forecast_min_buffer_minor' => $account['forecast_min_buffer_minor'] ?? null,
-            'created_at' => '2026-05-01 00:00:00',
-            'updated_at' => '2026-05-01 00:00:00',
+            'created_at' => fpctSeededAt(),
+            'updated_at' => fpctSeededAt(),
         ]);
         $accountIdMap[$fixtureAccountId] = $dbAccountId;
     }
@@ -88,10 +140,10 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
         'source_format' => 'asn-csv',
         'raw_file_path' => '/tmp/fpct-'.bin2hex(random_bytes(4)).'.csv',
         'sha256' => hash('sha256', 'fpct-'.bin2hex(random_bytes(8))),
-        'uploaded_at' => '2026-05-01 00:00:00',
+        'uploaded_at' => fpctSeededAt(),
         'status' => 'previewed',
-        'created_at' => '2026-05-01 00:00:00',
-        'updated_at' => '2026-05-01 00:00:00',
+        'created_at' => fpctSeededAt(),
+        'updated_at' => fpctSeededAt(),
     ]);
 
     foreach ($fixture['series'] as $series) {
@@ -129,8 +181,9 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
             'next_expected_at' => $nextExpected,
             'next_expected_confidence_low' => false,
             'cluster_key' => $clusterKey,
-            'created_at' => '2026-05-01 00:00:00',
-            'updated_at' => '2026-05-01 00:00:00',
+            'cluster_counterparty_key' => fpctClusterKey($seriesName),
+            'created_at' => fpctSeededAt(),
+            'updated_at' => fpctSeededAt(),
         ]);
 
         // Each occurrence needs a backing transaction row: the series-to-account
@@ -142,29 +195,15 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
             $occCurrency = (string) ($occ['observed_currency'] ?? $latestCurrency);
             $occFxRate = $occ['fx_rate_used'] ?? null;
 
-            $transactionId = $db->connection()->table('transactions')->insertGetId([
-                'user_id' => $user->id,
-                'account_id' => $dbAccountId,
-                'import_run_id' => $importRunId,
-                'fingerprint' => hash('sha256', $fixtureName.'-'.$seriesDbId.'-'.$occDate.'-'.bin2hex(random_bytes(4))),
-                'posted_at' => $occDate,
-                'booked_at' => $occDate.' 00:00:00',
-                'value_date' => $occDate,
+            $transactionId = fpctInsertTransaction($db, $user, $dbAccountId, $importRunId, [
+                'date' => $occDate,
                 'amount_minor' => $occAmount,
                 'currency' => $occCurrency,
                 'settled_amount_minor' => $occCurrency === 'EUR' ? $occAmount : (is_numeric($occFxRate) ? (int) round($occAmount * (float) $occFxRate) : $occAmount),
                 'settled_currency' => 'EUR',
                 'fx_rate_used' => $occFxRate,
-                'counterparty_normalized' => strtolower($seriesName),
-                'counterparty_name' => $seriesName,
-                'normalization_version' => 1,
-                'description' => $seriesName.' '.$occDate,
+                'counterparty' => $seriesName,
                 'type' => $direction,
-                'source_format' => 'asn-csv',
-                'source_row_index' => 1,
-                'fingerprint_version' => 3,
-                'created_at' => '2026-05-01 00:00:00',
-                'updated_at' => '2026-05-01 00:00:00',
             ]);
 
             $db->connection()->table('recurring_series_occurrences')->insert([
@@ -174,10 +213,34 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
                 'observed_at' => $occDate,
                 'observed_amount_minor' => $occAmount,
                 'observed_currency' => $occCurrency,
-                'created_at' => '2026-05-01 00:00:00',
-                'updated_at' => '2026-05-01 00:00:00',
+                'created_at' => fpctSeededAt(),
+                'updated_at' => fpctSeededAt(),
             ]);
         }
+    }
+
+    $bookedRows = is_array($fixture['booked_rows'] ?? null) ? $fixture['booked_rows'] : [];
+    foreach ($bookedRows as $bookedRow) {
+        if (! is_array($bookedRow)) {
+            continue;
+        }
+        $dbAccountId = $accountIdMap[(int) ($bookedRow['account_id'] ?? 0)] ?? null;
+        if ($dbAccountId === null) {
+            continue;
+        }
+
+        $minor = (int) ($bookedRow['settled_amount_minor'] ?? 0);
+        $currency = (string) ($bookedRow['settled_currency'] ?? 'EUR');
+        fpctInsertTransaction($db, $user, $dbAccountId, $importRunId, [
+            'date' => (string) ($bookedRow['date'] ?? ''),
+            'amount_minor' => $minor,
+            'currency' => $currency,
+            'settled_amount_minor' => $minor,
+            'settled_currency' => $currency,
+            'fx_rate_used' => null,
+            'counterparty' => (string) ($bookedRow['counterparty'] ?? ''),
+            'type' => (string) ($bookedRow['direction'] ?? 'expense'),
+        ]);
     }
 
     return ['accountIdMap' => $accountIdMap, 'fixture' => $fixture];
@@ -187,7 +250,7 @@ it('projects the fixture corpus subset end-to-end and matches expected.projectio
     // The fixture's expected.projection values are calibrated off the accounts'
     // opening_balance_as_of_date, so the clock has to be frozen to that same
     // anchor for the pipeline's asOf to line up.
-    CarbonImmutable::setTestNow('2026-05-01 00:00:00');
+    CarbonImmutable::setTestNow(ForecastCorpus::clock());
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -241,27 +304,16 @@ it('projects the fixture corpus subset end-to-end and matches expected.projectio
         if ($matched === null) {
             continue;
         }
-        // The point estimate is exact bar DailyFold's integer FX rounding, so its
-        // tolerance is tight. The band is not: the corpus was synthesised against
-        // an approximate envelope spread, and the implementation's per-occurrence
-        // quadrature differs by thousands of minor units when series overlap.
-        $isPercentileTier = in_array($fixtureName, ['variable-utility'], true);
-        // Percentile-tier fixtures widen both: R-7 interpolation and cadence
-        // jitter spread the band beyond the hand-computed approximation.
-        // DailyFoldTest, PercentileTest and CadenceJitterTest hold the exact math.
-        $pointTolerance = $isPercentileTier ? 12000 : 5;
-        $bandTolerance = $isPercentileTier ? 20000 : 5000;
-
         expect(abs($matched->lowMinor - $expectedLow))->toBeLessThanOrEqual(
-            $bandTolerance,
+            FPCT_TOLERANCE_MINOR,
             "fixture '{$fixtureName}' day {$matchDate}: low {$matched->lowMinor} vs expected {$expectedLow}",
         );
         expect(abs($matched->pointMinor - $expectedPoint))->toBeLessThanOrEqual(
-            $pointTolerance,
+            FPCT_TOLERANCE_MINOR,
             "fixture '{$fixtureName}' day {$matchDate}: point {$matched->pointMinor} vs expected {$expectedPoint}",
         );
         expect(abs($matched->highMinor - $expectedHigh))->toBeLessThanOrEqual(
-            $bandTolerance,
+            FPCT_TOLERANCE_MINOR,
             "fixture '{$fixtureName}' day {$matchDate}: high {$matched->highMinor} vs expected {$expectedHigh}",
         );
     }

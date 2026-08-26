@@ -106,16 +106,15 @@ final class SearchRowMapper
         }
 
         $highlightedBody = self::toString($highlight->highlighted_body);
-        $parts = explode(chr(12), $highlightedBody, 2);
+        $parts = explode(SearchDocumentBody::FIELD_SEPARATOR, $highlightedBody, 2);
         $highlightedCounterparty = $parts[0] !== '' && str_contains($parts[0], HighlightSentinels::START)
             ? self::decorateHighlight($parts[0])
             : null;
 
-        // Strip the sentinels before comparing to the decrypted
-        // counterparty name — otherwise the "don't repeat the
-        // counterparty" dedup guard could never match once encryption is
-        // enabled.
-        $snippetBody = self::toString($highlight->snippet_body);
+        // Sentinels come off before the comparison to the decrypted
+        // counterparty name — otherwise the "don't repeat the counterparty"
+        // dedup guard could never match once encryption is enabled.
+        $snippetBody = SearchDocumentBody::toDisplay(self::toString($highlight->snippet_body));
         $snippetPlain = str_replace([HighlightSentinels::START, HighlightSentinels::END], '', $snippetBody);
         $snippet = $snippetBody !== '' && $snippetPlain !== ($counterpartyName ?? '')
             ? self::decorateHighlight($snippetBody)

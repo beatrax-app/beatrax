@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Hits',
     'col_created' => 'Created',
     'col_row_actions' => 'Actions',
+    'inactive_badge' => 'Off',
+    'inactive_title' => 'This rule does not run. A rule switches off when the category or counterparty it points at is deleted.',
 
     'more_conditions' => '+:count more',
 

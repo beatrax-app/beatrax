@@ -211,7 +211,7 @@ final class GoalsPage extends Component
                 'rows' => [],
                 'archived' => [],
                 'pots' => [],
-                'baseCurrency' => $baseCurrency->code(),
+                'baseCurrency' => $baseCurrency->installDefault(),
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -255,7 +255,7 @@ final class GoalsPage extends Component
             'rows' => $rows,
             'archived' => $archived,
             'pots' => $pots,
-            'baseCurrency' => $user->base_currency,
+            'baseCurrency' => $baseCurrency->forUser($user),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

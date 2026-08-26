@@ -10,7 +10,7 @@ return [
     'account' => 'Konto',
     'choose_account' => 'Wybierz konto…',
     'statement_date' => 'Data wyciągu',
-    'statement_balance' => 'Saldo wyciągu (€)',
+    'statement_balance' => 'Saldo wyciągu (:symbol)',
     'balance_help' => 'Wypełniane wstępnie z ostatniego zaimportowanego wyciągu, o ile jest dostępny — ujemne dla zadłużenia, w obu przypadkach edytowalne.',
 
     'cleared_balance' => 'Saldo rozliczone',

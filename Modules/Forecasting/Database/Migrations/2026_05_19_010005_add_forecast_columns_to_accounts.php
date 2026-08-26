@@ -6,9 +6,10 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-// `accounts` is Ledger's table, but these three columns are Forecasting-owned —
-// only BalanceAnchorResolver and the buffer editors read or write them, which is
-// why the migration lives here rather than under Ledger.
+// `accounts` is Ledger's table, but these three columns are Forecasting-owned:
+// the buffer editors and BalanceAnchorResolver's card path own the writes, and
+// Ledger reads the opening-balance pair only as a baseline. That is why the
+// migration lives here rather than under Ledger.
 return new class extends ModuleMigration
 {
     public function up(): void

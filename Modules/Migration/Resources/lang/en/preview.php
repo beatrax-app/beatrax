@@ -16,13 +16,10 @@ return [
         'budget' => 'Budget months',
     ],
 
-    'fully_mapped' => '✓ fully mapped',
     'all_clean' => 'Everything mapped cleanly — nothing needs your attention before you confirm.',
 
     'groups' => [
         'conflict' => 'Needs your decision',
-        'category' => 'Unresolved categories',
-        'payee' => 'Unresolved payees',
         'extra' => 'Not imported',
     ],
 

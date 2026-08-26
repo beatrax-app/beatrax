@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Előrejelzés frissítése…',
-        'risk' => 'Az egyenleg 0 € alá csökken ekkor: :date.|Az egyenleg :count napon 0 € alá csökken — az első: :date.',
+        'risk' => 'Az egyenleg :zero alá csökken ekkor: :date.|Az egyenleg :count napon :zero alá csökken — az első: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'tétel|tétel',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', előrejelzett egyenleg mínusz :amount €',
-        'aria_balance_positive' => ', előrejelzett egyenleg :amount €',
+        'aria_balance_negative' => ', előrejelzett egyenleg mínusz :amount',
+        'aria_balance_positive' => ', előrejelzett egyenleg :amount',
         'overflow' => '+:count további',
         'paid' => 'Kifizetve',
         'missed' => 'Várt — nem található',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Könyvelt fizetés',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ hozzávetőleges dátum',
         'series' => '↗ sorozat',
         'counterparty' => '↗ partner',
+        'transaction' => '↗ tranzakció',
         'end_of_day' => 'Nap vége',
     ],
 ];

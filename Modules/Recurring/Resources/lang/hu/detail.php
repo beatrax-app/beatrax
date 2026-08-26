@@ -22,7 +22,7 @@ return [
         'transaction' => 'Tranzakció',
     ],
 
-    'eur_equivalent' => 'EUR-egyenérték',
+    'settled_equivalent' => 'Elszámolva: :code',
     'chart_requires_js' => 'A diagramhoz JavaScript szükséges.',
 
     'tolerance_toast' => 'Tűréshatár: :percent%',

@@ -884,5 +884,5 @@ it('brings a re-entered import back from the PIN pad into the import, not into a
         ->assertRedirect(route('mobile.lock'));
 
     expect($session->get(MobileLockGateway::SESSION_INTENDED_URL))
-        ->toBe(route('mobile.pair').'?mode=import');
+        ->toBe(route('mobile.pair', ['mode' => 'import']));
 });

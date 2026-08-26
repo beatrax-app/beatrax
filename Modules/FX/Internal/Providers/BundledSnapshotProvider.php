@@ -7,6 +7,7 @@ namespace Modules\FX\Internal\Providers;
 use JsonException;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
+use Modules\FX\Public\Support\BundledRates;
 
 final class BundledSnapshotProvider implements RateProvider
 {
@@ -20,7 +21,7 @@ final class BundledSnapshotProvider implements RateProvider
 
     public function key(): string
     {
-        return 'bundled';
+        return BundledRates::SOURCE;
     }
 
     public function priority(): int

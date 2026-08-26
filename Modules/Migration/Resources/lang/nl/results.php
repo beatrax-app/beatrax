@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Nog niet geïmporteerd — categorieën',
-        'payee' => 'Nog niet geïmporteerd — begunstigden',
         'extra' => 'Niet geïmporteerd',
         'conflict' => 'Vereist jouw beslissing',
     ],

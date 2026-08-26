@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Ehhez a számlához még egyetlen sorozat sem járul hozzá az előrejelzésben.',
 
     'net_diff' => 'Nettó eltérés',
+
+    'net_diff_unknown' => 'Ehhez az időtávhoz még nincs kiszámítva.',
     'net_diff_section_aria' => 'Nettó eltérés az alapeset és a forgatókönyv között a 30., 60. és 90. napon',
     'net_diff_delta_aria' => 'Nettó eltérés a(z) :day. napon: :value, a forgatókönyv :state',
     'better_than_baseline' => 'jobb az alapesetnél',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Előrejelzés kiemelt pontjai',
     'highlights_shortfall_aria' => ':count aktív hiányidőszak a következő :days napban|:count aktív hiányidőszak a következő :days napban',
-    'dips_to' => 'A(z) :name eddig csökken: :amount',
     'on_date_suffix' => ' ekkor: :date',
     'shortfall_window' => '{0} nincs aktív hiányidőszak|[1,1] :count aktív hiányidőszak|[2,*] :count aktív hiányidőszak',
-    'lowest_in_30' => 'Legalacsonyabb 30 napon belül: :amount',
+    'lowest_in_30_label' => 'Legalacsonyabb 30 napon belül',
     'next_ics' => 'Következő ICS-elszámolás: :amount ekkor: :date',
+    'ics_overdue' => 'Az ICS-elszámolás lejárt: :amount, esedékes volt: :date',
 ];

@@ -225,8 +225,12 @@ The behavioural contract for the `Ledger` module.
   - [`Recurring`](../recurring/how-to-test.md) — reads
     `transactions` for cadence detection.
   - [`Forecasting`](../forecasting/how-to-test.md) — reads
-    `accounts.starting_balance_minor` /
+    `accounts.starting_balance_minor` (through this module's
+    `AccountStartingBalanceQuery`) /
     `opening_balance_minor` / `forecast_buffer_minor`.
+  - [`Calendar`](../calendar/architecture.md) — reads
+    `accounts.starting_balance_minor` through the same reader for
+    the past-day balance line.
   - [`Counterparties`](../counterparties/how-to-test.md) —
     reads + persists FK on `transactions.counterparty_id`.
   - [`Receipts`](../receipts/how-to-test.md) — calls
@@ -238,8 +242,12 @@ The behavioural contract for the `Ledger` module.
 ## Configuration + feature flags
 
 - `users.period_start_day` — per-user period anchor.
-- `accounts.starting_balance_minor` —
-  Forecasting-supplied opening balance.
+- `accounts.starting_balance_minor` /
+  `starting_balance_date` — the Ledger-owned, auto-detected
+  baseline every balance opens on, read only through
+  `AccountStartingBalanceQuery`. Distinct from
+  `accounts.opening_balance_minor`, which is Forecasting's
+  manual override.
 - `accounts.forecast_buffer_minor` — Forecasting-supplied
   buffer.
 - The v3 fingerprint algorithm is fixed in code; bumping

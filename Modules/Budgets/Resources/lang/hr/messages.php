@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Proračuni',
-        'subtitle' => 'Rasporedi svaki euro — :period.',
+        'subtitle' => 'Rasporedi sve do zadnjega — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Prenosi minus',
-        'non_eur_aria' => 'Potrošnja izvan EUR u ovoj kategoriji ovdje nije prikazana — pogledaj nadzornu ploču',
-        'non_eur_title' => 'Potrošnja izvan EUR ovdje nije prikazana — pogledaj nadzornu ploču',
+        'unconverted_aria' => 'Potrošnja u valuti bez dostupnog tečaja ovdje se ne računa — pogledaj nadzornu ploču',
+        'unconverted_title' => 'Potrošnja bez dostupnog tečaja ovdje se ne računa — pogledaj nadzornu ploču',
         'over_budget' => ':count preko proračuna',
     ],
 

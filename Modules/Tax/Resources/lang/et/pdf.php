@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Vastaspool',
     'col_description' => 'Kirjeldus',
     'col_note' => 'Märkus',
-    'col_amount' => 'Summa (EUR)',
+    'col_amount' => 'Summa',
 
     'subtotal' => 'Vahesumma',
 

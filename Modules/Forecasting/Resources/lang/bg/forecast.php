@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Още никоя поредица не участва в прогнозата за тази сметка.',
 
     'net_diff' => 'Нетна разлика',
+
+    'net_diff_unknown' => 'Още не е изчислено за този хоризонт.',
     'net_diff_section_aria' => 'Нетна разлика между базовия сценарий и сценария при хоризонт 30 / 60 / 90 дни',
     'net_diff_delta_aria' => 'Нетна разлика на ден :day: :value, сценарият е :state',
     'better_than_baseline' => 'по-добър от базовия сценарий',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Акценти от прогнозата',
     'highlights_shortfall_aria' => ':count активен период с недостиг през следващите :days дни|:count активни периода с недостиг през следващите :days дни',
-    'dips_to' => ':name спада до :amount',
     'on_date_suffix' => ' на :date',
     'shortfall_window' => '{0} няма активни периоди с недостиг|[1,1] :count активен период с недостиг|[2,*] :count активни периода с недостиг',
-    'lowest_in_30' => 'Най-ниско за 30 дни: :amount',
+    'lowest_in_30_label' => 'Най-ниско за 30 дни',
     'next_ics' => 'Следващо уреждане по ICS: :amount на :date',
+    'ics_overdue' => 'Просрочено уреждане по ICS: :amount, дължимо на :date',
 ];

@@ -22,7 +22,7 @@ return [
         'transaction' => 'Transakcija',
     ],
 
-    'eur_equivalent' => 'Protuvrijednost u EUR',
+    'settled_equivalent' => 'Podmireno u :code',
     'chart_requires_js' => 'Grafikon zahtijeva JavaScript.',
 
     'tolerance_toast' => 'Tolerancija: :percent%',

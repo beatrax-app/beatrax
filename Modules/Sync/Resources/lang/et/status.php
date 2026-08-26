@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Eemaldatud seade',
     'dismiss_peer' => 'Peida see seade',
     'dismiss_stale' => 'Eemalda seadmed, mis pole enam seotud',
-    'no_devices' => 'Ühtegi seadet pole veel sünkroonitud',
+    'not_synced_yet' => 'Pole veel sünkroonitud',
     'error' => 'Sünkroonimise viga ühes või mitmes seadmes',
     'syncing' => 'Sünkroonin…',
     'offline' => 'Seadmed on võrgust väljas',

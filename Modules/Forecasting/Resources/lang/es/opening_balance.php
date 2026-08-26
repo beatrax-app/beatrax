@@ -13,15 +13,18 @@ return [
     'as_of_label' => 'Saldo de apertura a fecha de',
     'as_of_help' => 'La fecha en la que la cifra de arriba es correcta.',
 
-    'divergence' => 'Esto se aleja más de 500 € del saldo que Beatrax calcula a partir de las transacciones importadas. ¿Seguro que es correcto?',
+    'divergence' => 'Esto se aleja más de :threshold del saldo que Beatrax calcula a partir de las transacciones importadas. ¿Seguro que es correcto?',
     'use_beatrax' => 'Usar la cifra de Beatrax',
     'use_mine' => 'Usar mi cifra',
 
     'save' => 'Guardar el saldo de apertura',
+    'remove' => 'Eliminar el saldo de apertura',
     'saved' => 'Guardado.',
+    'removed' => 'Eliminado.',
 
     'toast' => [
         'updated' => 'Saldo de apertura actualizado.',
+        'removed' => 'Saldo de apertura eliminado.',
     ],
 
     'errors' => [

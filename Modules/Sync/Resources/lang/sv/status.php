@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Borttagen enhet',
     'dismiss_peer' => 'Dölj den här enheten',
     'dismiss_stale' => 'Rensa bort enheter som inte längre är parkopplade',
-    'no_devices' => 'Inga enheter har synkroniserats än',
+    'not_synced_yet' => 'Inte synkroniserat än',
     'error' => 'Synkroniseringsfel på en eller flera enheter',
     'syncing' => 'Synkroniserar…',
     'offline' => 'Enheter offline',

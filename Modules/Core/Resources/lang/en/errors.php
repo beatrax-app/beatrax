@@ -9,6 +9,10 @@ return [
         'title' => 'This page does not exist',
         'body' => 'The link may be old, or the page may have been renamed. Nothing is wrong with your data.',
     ],
+    '4xx' => [
+        'title' => 'This request cannot be handled',
+        'body' => 'The page was opened in a way it does not expect. Your data is unchanged.',
+    ],
 
     '419' => [
         'title' => 'Your session expired',

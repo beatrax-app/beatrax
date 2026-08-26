@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Biudžetai',
-        'subtitle' => 'Paskirstyk kiekvieną eurą — :period.',
+        'subtitle' => 'Paskirstyk viską — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Perkelia minusą',
-        'non_eur_aria' => 'Ne EUR išlaidos šioje kategorijoje čia nerodomos — žiūrėk apžvalgą',
-        'non_eur_title' => 'Ne EUR išlaidos čia nerodomos — žiūrėk apžvalgą',
+        'unconverted_aria' => 'Išlaidos valiuta, kuriai nėra kurso, čia neskaičiuojamos — žiūrėk skydelį',
+        'unconverted_title' => 'Išlaidos be kurso čia neskaičiuojamos — žiūrėk skydelį',
         'over_budget' => 'Viršyta vokų: :count',
     ],
 

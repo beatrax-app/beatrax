@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Aktualizowanie prognozy…',
-        'risk' => 'Saldo spada poniżej €0 w dniu :date.|Saldo spada poniżej €0 w :count dniach — pierwszy: :date.|Saldo spada poniżej €0 w :count dniach — pierwszy: :date.',
+        'risk' => 'Saldo spada poniżej :zero w dniu :date.|Saldo spada poniżej :zero w :count dniach — pierwszy: :date.|Saldo spada poniżej :zero w :count dniach — pierwszy: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'pozycja|pozycje|pozycji',
         'aria' => ':date: :entries — :count',
-        'aria_balance_negative' => ', prognozowane saldo minus €:amount',
-        'aria_balance_positive' => ', prognozowane saldo €:amount',
+        'aria_balance_negative' => ', prognozowane saldo minus :amount',
+        'aria_balance_positive' => ', prognozowane saldo :amount',
         'overflow' => '+:count więcej',
         'paid' => 'Opłacone',
         'missed' => 'Oczekiwane — nie znaleziono',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Zaksięgowana płatność',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ data przybliżona',
         'series' => '↗ seria',
         'counterparty' => '↗ kontrahent',
+        'transaction' => '↗ transakcja',
         'end_of_day' => 'Koniec dnia',
     ],
 ];

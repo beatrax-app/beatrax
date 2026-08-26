@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Druga strana',
     'col_description' => 'Opis',
     'col_note' => 'Beleška',
-    'col_amount' => 'Iznos (EUR)',
+    'col_amount' => 'Iznos',
 
     'subtotal' => 'Međuzbir',
 

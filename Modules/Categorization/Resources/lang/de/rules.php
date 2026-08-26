@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Treffer',
     'col_created' => 'Erstellt',
     'col_row_actions' => 'Aktionen',
+    'inactive_badge' => 'Aus',
+    'inactive_title' => 'Diese Regel läuft nicht. Eine Regel schaltet sich ab, wenn die Kategorie oder Gegenpartei, auf die sie verweist, gelöscht wird.',
 
     'more_conditions' => '+:count weitere',
 

@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Жодна серія поки не впливає на прогноз цього рахунку.',
 
     'net_diff' => 'Чиста різниця',
+
+    'net_diff_unknown' => 'Ще не обчислено для цього горизонту.',
     'net_diff_section_aria' => 'Чиста різниця між базовим і сценарієм на горизонтах 30 / 60 / 90 днів',
     'net_diff_delta_aria' => 'Чиста різниця на день :day: :value, сценарій :state',
     'better_than_baseline' => 'кращий за базовий',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Головне з прогнозу',
     'highlights_shortfall_aria' => ':count активне вікно дефіциту в наступні :days днів|:count активні вікна дефіциту в наступні :days днів|:count активних вікон дефіциту в наступні :days днів',
-    'dips_to' => ':name опускається до :amount',
     'on_date_suffix' => ' (:date)',
     'shortfall_window' => ':count активне вікно дефіциту|:count активні вікна дефіциту|:count активних вікон дефіциту',
-    'lowest_in_30' => 'Найнижчий за 30 днів: :amount',
+    'lowest_in_30_label' => 'Найнижчий за 30 днів',
     'next_ics' => 'Наступне врегулювання ICS: :amount — :date',
+    'ics_overdue' => 'Врегулювання ICS прострочене: :amount, термін був :date',
 ];

@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Step :number of :total',
 
+    'back' => 'Back',
+    'back_aria' => 'Back — returns to the previous setup step',
+
     'resume_later' => 'Resume later',
     'resume_later_aria' => 'Resume later — saves your progress and closes the setup wizard',
     'resume_banner' => "Welcome back — let's pick up where you left off.",

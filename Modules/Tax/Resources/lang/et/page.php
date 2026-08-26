@@ -37,7 +37,7 @@ return [
     'col_account' => 'Konto',
     'col_counterparty' => 'Vastaspool',
     'col_note' => 'Märkus',
-    'col_settled_eur' => 'Arveldatud EUR',
+    'col_settled' => 'Arveldatud',
     'col_original' => 'Algne',
     'col_year' => 'Aasta',
 

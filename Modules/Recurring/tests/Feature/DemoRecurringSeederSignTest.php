@@ -45,6 +45,6 @@ it('reports the demo fixed-payment month as a net loss', function (): void {
 
     $totals = app(FixedPaymentsViewQuery::class)->monthlyEquivalentTotals($user);
 
-    expect($totals['expense_eur_minor'])->toBeLessThan(0);
-    expect($totals['net_eur_minor'])->toBeLessThan(0);
+    expect($totals->expense->toMinor())->toBeLessThan(0);
+    expect($totals->net->toMinor())->toBeLessThan(0);
 });

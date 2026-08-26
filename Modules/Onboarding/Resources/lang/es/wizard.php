@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Paso :number de :total',
 
+    'back' => 'Atrás',
+    'back_aria' => 'Atrás: vuelve al paso anterior de la configuración',
+
     'resume_later' => 'Continuar más tarde',
     'resume_later_aria' => 'Continuar más tarde — guarda tu progreso y cierra el asistente de configuración',
     'resume_banner' => 'Te damos la bienvenida de nuevo — seguimos donde lo dejaste.',

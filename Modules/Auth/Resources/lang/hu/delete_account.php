@@ -7,6 +7,7 @@ return [
     'body' => 'A fiók törlésével eltűnik erről az eszközről mindennel együtt, ami hozzá tartozik. Ezt nem lehet visszavonni.',
     'removes' => 'Eltűnnek a tranzakcióid, számláid, kereteid, céljaid és kimutatásaid, valamint a szabályok, beállítások, helyreállítási kódok, a szinkronizálási azonosság és a titkosítási kulcsok.',
     'devices_heading' => 'A többi eszközöd megtartja a saját másolatát',
+    'devices_heading_none' => 'Ez az adatai egyetlen másolata',
     'devices_body' => 'A Beatraxnak nincs szervere, így távolról semmit sem lehet törölni. Ez az eszköz továbbra is teljes másolatot őriz, és magán az eszközön kell rendezni — :devices|A Beatraxnak nincs szervere, így távolról semmit sem lehet törölni. Ezek az eszközök továbbra is teljes másolatot őriznek, és magán az eszközön kell rendezni őket — :devices',
     'devices_none' => 'Ehhez az eszközhöz nincs másik párosítva, tehát ez az adataid egyetlen másolata.',
     'successor' => 'Te kezeled ezt az eszközt, így :username veszi át a szerepet, amint a fiókod eltűnik.',

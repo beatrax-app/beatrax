@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Transakce',
-    'heading' => 'Transakce',
+    'page_title' => 'Detail transakce',
+    'heading' => 'Detail transakce',
 
     'counterparty' => 'Protistrana',
     'description' => 'Popis',
     'amount_native' => 'Částka (původní měna)',
-    'amount_settled' => 'Částka (vypořádáno v EUR)',
+    'amount_settled' => 'Částka (vypořádaná)',
     'effective_rate' => 'Efektivní kurz',
     'ics_markup' => 'Zahrnuje případnou přirážku ICS.',
 

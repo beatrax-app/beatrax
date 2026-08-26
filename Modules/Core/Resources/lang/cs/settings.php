@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Zobrazení měny',
         'label' => 'Výchozí zobrazení v seznamu transakcí',
-        'eur_only' => 'Jen EUR',
+        'eur_only' => 'Jen :code',
         'original' => 'Původní měna',
         'help' => 'Přímo v seznamu transakcí to můžeš kdykoli přepnout pro danou stránku.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Okno detekce (měsíce)',
         'window_help' => 'Kolik měsíců historie prohledávat při shlukování transakcí do opakovaných vzorců.',
         'income_label' => 'Minimální příjem (centy)',
-        'income_help' => 'Příjmy pod touto hranicí se automaticky neshlukují. Ukládá se v centech — 200000 znamená 2000,00 €. Nastav 0, ať se hranice nepoužije.',
+        'income_help' => 'Příjmy pod touto hranicí se automaticky neshlukují. Ukládá se v centech — 200000 znamená :example. Nastav 0, ať se hranice nepoužije.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Zvol prosím měnu.',
         'window_months' => 'Zvol rozmezí 2 až 60 měsíců.',
         'threshold' => 'Zvol práh 1%, 2%, 5%, 10%, 25% nebo 50%.',
-        'amount' => 'Zadej částku od 0 € výš.',
+        'amount' => 'Zadej částku od :zero výš.',
         'period_day' => 'Zvol den od 1 do 28.',
         'currency_view' => 'Vyber jednu z dostupných možností.',
     ],

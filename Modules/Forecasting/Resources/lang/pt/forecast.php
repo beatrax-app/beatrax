@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Ainda não há séries a contribuir para a previsão desta conta.',
 
     'net_diff' => 'Diferença líquida',
+
+    'net_diff_unknown' => 'Ainda não calculado para este horizonte.',
     'net_diff_section_aria' => 'Diferença líquida entre a referência e o cenário nos horizontes de 30 / 60 / 90 dias',
     'net_diff_delta_aria' => 'Diferença líquida no dia :day: :value, o cenário está :state',
     'better_than_baseline' => 'melhor do que a referência',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Destaques da previsão',
     'highlights_shortfall_aria' => ':count janela de défice ativa nos próximos :days dias|:count janelas de défice ativas nos próximos :days dias',
-    'dips_to' => ':name desce para :amount',
     'on_date_suffix' => ' a :date',
     'shortfall_window' => ':count janela de défice ativa|:count janelas de défice ativas',
-    'lowest_in_30' => 'Mínimo em 30 dias: :amount',
+    'lowest_in_30_label' => 'Mínimo em 30 dias',
     'next_ics' => 'Próxima liquidação ICS: :amount a :date',
+    'ics_overdue' => 'Liquidação ICS em atraso: :amount, vencia a :date',
 ];

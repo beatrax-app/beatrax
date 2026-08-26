@@ -543,22 +543,56 @@ value is computed server-side and validated against
 the target string. A `reconciled` current status short-circuits with a
 toast and no write, before any read of the "next" value.
 
-## `AccountBalanceQuery` — caveats shared by all three methods
+## `AccountBalanceQuery` — caveats shared by all four methods
 
-`currentBalance()`, `clearedBalance()`, and `clearedBalanceAsOf()` all
-sum raw `amount_minor` (never `settled_amount_minor`) scoped by
-`(account_id, user_id)`, and share two caveats:
+`currentBalance()`, `currentBalanceAsOf()`, `clearedBalance()`, and
+`clearedBalanceAsOf()` all return an `AccountBalance` — a **line per
+currency**, never one int. Each opens on the account's starting balance
+and adds `settled_amount_minor` (never the native `amount_minor`) scoped
+by `(account_id, user_id)`, grouped by `settled_currency` — see
+[the baseline section below](#accountstartingbalancequery--the-baseline-every-balance-starts-from)
+for what the baseline is and how its date bounds the sum. All four
+share three caveats:
 
 - **Information disclosure guard**: the explicit `where('user_id', ...)`
   ensures a foreign `account_id` returns the caller's own (empty)
-  balance, never another user's transactions.
-- **Single-currency assumption**: the sum has no currency filter — for
-  an account holding more than one transaction currency (e.g. an ICS
-  account with USD Google Play settlements) the result mixes units.
-  This deliberately mirrors the existing `BalanceAnchorResolver`
-  fallback so the pot reconciliation header and the net-worth figure
-  stay consistent; an FX-aware per-currency balance is a future
-  improvement that must change both call paths together.
+  balance, never another user's transactions — and, since the baseline
+  read is scoped the same way, none of the owner's starting balance
+  either. An unreadable account has no lines at all, which is not the
+  same answer as zero in some assumed currency.
+- **The settled pair, not the native one**: `settled_amount_minor` is
+  the row as the ACCOUNT holds it — an ICS account's USD Google Play
+  charge carries its dollar figure in `amount_minor` and the euro one
+  here — so a bank that converts on the reader's behalf lands one
+  currency and one line.
+- **One account, several currencies**: a bank that does *not* convert
+  lands several. The Revolut CSV preset carries a `currencyHeader`, so
+  `settled_currency` varies row to row and one account genuinely holds
+  euro beside dollar. Summing across them produced 328885 for an account
+  holding €3,509.85 and −$221.00, and the dashboard printed it as a euro
+  net worth. The baseline opens the line of the account's own
+  `default_currency`, at zero when there is no baseline, so an account
+  with no rows still names the currency it is denominated in.
+
+Consumers decide what to do with the set, and each states which
+currency it answers in:
+
+| Caller | Rule |
+| --- | --- |
+| `Forecasting`'s `NetWorthQuery` | every line, each converted at its own rate; a line with no rate is listed and left out of the total (`balancesWithoutRate`), never counted at par |
+| `Reports`' `NetWorthSeriesQuery` | the same, at each bucket's `asOf` date |
+| `Pots`' `PotBalanceQuery` | `default_currency` — pots and `pot_movements` are denominated in it, so only that line can be allocated |
+| `/reconcile` | `default_currency` — a printed statement carries one denomination, and it is the account's own |
+| `Forecasting`'s `BalanceAnchorResolver` / `ForecastQuery` | `default_currency` — a projection runs in one currency |
+
+`BalanceAnchorResolver` calls `currentBalanceAsOf()` for every non-card
+account, so the pot reconciliation header, the net-worth line, and the
+forecast's opening balance are one number rather than three that happen
+to agree. The calendar's past-day line adds the same column bucketed by
+the same `settled_currency`
+([balance aggregation](../calendar/architecture.md#balance-aggregation));
+while it re-derived each foreign row from `amount_minor` at today's rate
+its yesterday sat €1.46 above this figure and its line stepped at today.
 
 `clearedBalance()` additionally restricts to `cleared`/`reconciled`
 rows (excluding `uncleared` manual cash-book entries not yet confirmed
@@ -567,6 +601,179 @@ against a statement). `clearedBalanceAsOf()` further bounds by
 window `ReconciliationWriter::completeReconcile()` locks — the
 unbounded `clearedBalance()` would count rows posted after the
 statement date that the write correctly leaves untouched.
+
+The baseline belongs in the cleared figures too, not only in
+`currentBalance()`: `/reconcile` compares against the balance a bank
+printed on a statement, and that number counts the whole life of the
+account, not only the part Beatrax has imported. A cleared balance that
+started at zero could only ever match by coincidence.
+
+## `BaseCurrency` — the reader's reporting currency
+
+`BaseCurrency` (`Ledger\Public\Services`) is the one place the currency
+a roll-up renders in resolves. `/settings` writes the reader's choice to
+`users.base_currency`; about a hundred call sites across twenty-two
+Blade templates format money through this service, and none of them pass
+a user, so the service is what has to know who is reading.
+
+Three entry points, and which one a caller wants is a real decision:
+
+- `forUser(User $user)` — the reader's choice, for code that already
+  holds the user: background jobs, and every query that takes a `User`
+  argument. It reads the model attribute and issues no query.
+- `code()` — the same answer for the reader of the current request. It
+  resolves `CurrentUser` and delegates to `forUser()`.
+- `installDefault()` — `config('currency.base')`, what an install ships
+  with. Not a reader's answer, and named so a caller has to mean it.
+
+`code()` fails closed on the split `Core\Public\Scopes\UserScope`
+already draws. A **web** request with no authenticated reader gets a
+`NotAuthenticatedException` rather than a guessed code, because the
+figure standing next to the sign is somebody's real total and a wrong
+sign over a right number is worse than no page. The **console** — the
+install bootstrap, queue workers, the test suite — has no reader to have
+a preference and takes `installDefault()`. Guest chrome that legitimately
+has no reader, such as the chart-axis currency the login shell stamps on
+`<html data-base-currency>`, asks for `installDefault()` outright.
+
+A background job acting *for* a reader must carry that reader rather than
+land in the console branch: either bind them to the guard for the
+duration (`Position\Internal\Jobs\EmitPositionDigestJob` and
+`Budgets\Internal\Jobs\EmitBudgetNudgesJob` both do, and
+`Core\Internal\Listeners\ClearGuardBetweenJobs` unbinds between jobs),
+or call `forUser()` with the user the job was queued for.
+
+`users.base_currency` is nullable with no backfill and no DB default —
+`User`'s Eloquent `$attributes` owns `EUR` for rows created through the
+model, and two competing defaults would drift — so every user row older
+than the column carries NULL. That is not an error state: it is a reader
+who has never opened the picker, and `installDefault()` is the answer.
+Reading the column raw instead of through `forUser()` handed NULL to
+`Money::ofMinor()` and to `ExchangeRateService::convertToBase()`, which
+is a `TypeError` on exactly the oldest installs.
+
+The service is bound `scoped()`, not `singleton()`: one render reaches it
+once per money figure, so a fresh instance per call site is waste, and
+the queue worker drops scoped instances between jobs so the next job's
+reader is resolved afresh rather than frozen from the first.
+
+**Resolving is not converting.** `BaseCurrency` answers *which* code a
+figure should be labelled in; turning an amount into it is `FX`'s job,
+and an amount with no rate available is excluded from the total and named
+rather than added one-to-one (`NetWorthQuery` is the reference).
+
+## Changing an account's currency
+
+`accounts.default_currency` is the account's own denomination (`B1-R17`).
+Every creation site writes it from `BaseCurrency->code()` — the reader's
+own reporting currency, which `/settings` lets them change — and
+`/settings` also carries a per-account picker beside the opening-balance
+editor so the reader can correct an individual account:
+`Ledger\Public\Http\Livewire\AccountCurrencyEditor`, over
+`Ledger\Internal\Actions\SetAccountCurrency`. The offered set is the
+`currencies` reference table, the same one the base-currency picker
+reads — not `Ledger\Public\Enums\Currency`, which names only the codes
+the code itself writes as literals.
+
+**The change relabels; it never converts.** `settled_amount_minor` and
+`settled_currency` are what the account was actually debited, and no
+write touches them. What moves is which line the account reports:
+
+- The baseline is relabelled where it stands. `AccountStartingBalanceQuery`
+  denominates `opening_balance_minor` / `starting_balance_minor` in
+  `default_currency`, so the same integer opens a different line after
+  the change — 12345 read as EUR before is 12345 read as USD after.
+- Transaction rows keep the `settled_currency` they were booked in, so a
+  row the account no longer names stays present as its own line.
+- Every consumer in the table above that answers
+  `->in($account->default_currency)` — pots, `/reconcile`, the forecast
+  anchor — therefore reads a different line. An account whose rows are
+  all USD starts reporting its real position once it is relabelled to
+  USD; one relabelled to a currency it holds no rows in reports **zero**
+  for it, which is what `AccountBalance::in()` answers for a line that
+  does not exist. It is never a converted guess.
+
+Because that is a meaning change and not a correction, the Action raises
+`AccountCurrencyRelabelWarning` rather than writing, on the same
+warn-do-not-block shape as `Forecasting`'s
+`OpeningBalanceDivergenceWarning`: the banner states what will move,
+lists the lines the account currently holds, and offers "change anyway"
+or "keep the current code". It stays silent for an account with nothing
+to misread — no transactions and no non-zero baseline — which is the
+only case where the two labels describe the same position.
+
+**No migration was needed.** `default_currency` is `char(3) NOT NULL`
+with a database default of `EUR` since `create_accounts_table`, so every
+existing row already carries a value and the column's shape does not
+change. The picker writes the column that was always there.
+
+One thing the change does *not* do: reproject the forecast.
+`ForecastQuery` reads a stored `forecast_runs` row whose anchor came
+from `BalanceAnchorResolver`, so a relabelled account's projection is
+stale until the next run — exactly as it is after an import adds rows,
+which has no reprojection trigger either. The four other balance
+surfaces resolve `default_currency` live and are correct immediately.
+
+## `AccountStartingBalanceQuery` — the baseline every balance starts from
+
+`accounts.starting_balance_minor` / `starting_balance_date` is the
+Ledger-owned, auto-detected position the imported history begins from
+([A9](https://github.com/beatrax-app/spec/blob/main/10-functional/features/a-ingestion/a9-starting-balances.md)).
+It is written by the demo seeder, by the statement-summary backfill, and
+by the wizard's starting-balance card. It is **not**
+`accounts.opening_balance_minor` / `opening_balance_as_of_date`, which is
+Forecasting's manual override on the same row, written by
+`SetAccountOpeningBalance` from the Settings editor. Both pairs exist on
+purpose and both are read by `AccountStartingBalanceQuery`, which prefers
+the override: it is the only figure the reader entered deliberately, so a
+number they typed outranks one an import inferred. A third
+`opening_balance_minor` lives on `statement_summaries` and is the source
+the backfill reads, not a balance anyone displays.
+
+`Public/Services/AccountStartingBalanceQuery` is the single reader. The
+rule it encodes is:
+
+```
+balance = starting_balance_minor + SUM(transactions bounded below by starting_balance_date)
+```
+
+- **A NULL date means the baseline precedes all history**, so no lower
+  bound applies and every row counts on top of it. This is the common
+  shape: the demo seeder writes an amount with no date at all.
+- **A non-NULL date bounds the sum at `posted_at >= starting_balance_date`.**
+  The baseline is the position *before* that day's rows, so a row posted
+  exactly on the date lands on top of it. Using `>` would lose that row;
+  dropping the bound entirely would count everything before the baseline
+  date twice, since the baseline already holds it.
+- **A date with no amount is not a baseline.** The reader returns the
+  absent shape rather than honouring a bound that would drop earlier rows
+  and add nothing back.
+
+`forAccount()` returns `minorUnits` / `currency` / `date` — never a bare
+int, because the amount is denominated in the account's
+`default_currency` and is meaningless without it. An account with no
+baseline amount still reports that currency, at zero: `AccountBalanceQuery`
+opens the account's own line from it, and a blank currency there would
+leave a rowless account with no line to name.
+
+`bucketedByDefaultCurrency()` exists for the one caller that cannot reach
+a per-account date in PHP: `Calendar`'s `DailyBalanceAggregator` groups
+across many accounts in a single query and buckets by *transaction*
+currency, while each baseline belongs in the bucket of its own account's
+`default_currency`. That query joins `accounts` and applies
+`AT_OR_AFTER_BASELINE_SQL`, the one spelling of the lower bound for a
+grouped read; the join is a LEFT JOIN so a transaction whose account row
+is missing keeps counting exactly as it did before, rather than silently
+vanishing from the line.
+
+Consumers, all of which were separately re-implementing "the money on
+this account" and all of which start from the baseline now:
+`AccountBalanceQuery` (and through it `Reports`' `NetWorthSeriesQuery`,
+`Pots`' `PotBalanceQuery`, `/reconcile`, and — via
+`currentBalanceAsOf()` — `Forecasting`'s `BalanceAnchorResolver`), and
+`Calendar`'s `DailyBalanceAggregator`. The ICS-card anchors are
+deliberately excluded: a card takes its statement or zero, because
+summing would double-count the billing events the projection re-emits.
 
 ## `FieldProvenanceWriter` — race-safe manual-vs-rule provenance
 
@@ -662,7 +869,15 @@ so a lost race never fires a spurious event.
 
 ## `SpendByCategoryQuery` — the split-aware spend read model
 
-`Public/Services/SpendByCategoryQuery` is the single place that
+`Public/Services/SpendByCategoryQuery` selects `type = expense`, the
+same definition as `ThisPeriodAtAGlanceQuery`'s outflow and Reports'
+spend metric — never the amount's sign. A `transfer_out` to the reader's
+own card is negative and is not money spent; selecting on the sign put
+one in the dashboard's "Top spending" as EUR325.00 and made "this month
+vs last" read EUR2,818.11 against the EUR2,459.11 the OUT tile on the
+same page gave for the same month.
+
+It is also the single place that
 decides how a split transaction's spend is attributed: a split parent
 contributes zero directly to any category total — only its
 `transaction_splits` legs do — while an unsplit transaction still rolls
@@ -688,7 +903,8 @@ single-currency map for `TopCategoriesByPeriodQuery`/
 `BudgetProgressQuery`'s `(category_id, currency)` grouping (which
 always excludes uncategorized spend, since it cannot match a budget).
 Both compute in the codebase's established "group in SQL, merge in
-PHP" style rather than a raw SQL UNION.
+PHP" style rather than a raw SQL UNION, and both carry the same type
+filter.
 
 ## `ThisPeriodAtAGlanceQuery` — the dashboard composer
 

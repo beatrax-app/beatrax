@@ -51,3 +51,18 @@ it('keeps the locale middleware on the mobile stack', function (): void {
     expect(registeredCoreMiddleware(base_path('mobile-app/bootstrap/app.php')))
         ->toContain('SetLocale');
 });
+
+// The same failure one layer down: not a middleware missing from a root, but a
+// middleware CONFIGURED on one root only. `beatrax_scheme` is written by
+// `document.cookie`, so it arrives in plaintext and EncryptCookies drops it
+// unless excepted. Excepting it on the desktop root alone left the phone
+// rendering `light` on a dark device on every request after the first — proved
+// on the Samsung with the cookie present and the response still saying light.
+it('excepts the client-written scheme cookie from encryption on both roots', function (): void {
+    foreach (['bootstrap/app.php', 'mobile-app/bootstrap/app.php'] as $root) {
+        $contents = (string) file_get_contents(base_path($root));
+
+        expect($contents)->toContain('encryptCookies(')
+            ->and($contents)->toContain('AppChromeResolver::SCHEME_COOKIE');
+    }
+});

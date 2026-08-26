@@ -16,13 +16,10 @@ return [
         'budget' => 'Budsjettmåneder',
     ],
 
-    'fully_mapped' => '✓ fullt tilknyttet',
     'all_clean' => 'Alt ble tilknyttet rent — ingenting krever oppmerksomheten din før du bekrefter.',
 
     'groups' => [
         'conflict' => 'Krever din avgjørelse',
-        'category' => 'Uavklarte kategorier',
-        'payee' => 'Uavklarte betalingsmottakere',
         'extra' => 'Ikke importert',
     ],
 

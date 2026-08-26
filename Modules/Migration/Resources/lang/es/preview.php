@@ -16,13 +16,10 @@ return [
         'budget' => 'Meses de presupuesto',
     ],
 
-    'fully_mapped' => '✓ asignado por completo',
     'all_clean' => 'Todo se ha asignado sin problemas: no hay nada que revisar antes de confirmar.',
 
     'groups' => [
         'conflict' => 'Necesita tu decisión',
-        'category' => 'Categorías sin resolver',
-        'payee' => 'Contrapartes sin resolver',
         'extra' => 'No importado',
     ],
 

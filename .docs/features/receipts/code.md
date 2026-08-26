@@ -21,6 +21,7 @@ Modules/Receipts/
 │   │       └── RefundOfPayload.php
 │   ├── Enums/
 │   │   ├── ChainHintType.php
+│   │   ├── MatchOutcomeKind.php
 │   │   └── ReceiptConflictChoice.php
 │   ├── Events/
 │   │   ├── ChainHintDetected.php

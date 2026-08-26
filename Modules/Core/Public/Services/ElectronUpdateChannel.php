@@ -162,12 +162,33 @@ final readonly class ElectronUpdateChannel
         return $daysSincePublished > self::STALE_THRESHOLD_DAYS;
     }
 
+    // The running bundle's own version, which isStale() measures the offered
+    // release against. Absent outside the desktop bundle, where the whole
+    // update path is already switched off by an unset feed URL.
+    public function installedVersion(): string
+    {
+        $value = $this->config->get('nativephp.version');
+
+        return is_string($value) ? $value : '';
+    }
+
+    // The kind a verified manifest earns. Without this the announcement path
+    // could only ever write `update.available`, leaving the `update.stale`
+    // banner and its actions unreachable.
+    public function alertKindFor(UpdateManifestDto $manifest): UpdateAlertKind
+    {
+        return $this->isStale($this->installedVersion(), $manifest->latestVersion, $manifest->publishedAt)
+            ? UpdateAlertKind::Stale
+            : UpdateAlertKind::Available;
+    }
+
     // Idempotency guard for poll() — without it, every poll cycle would
-    // insert a duplicate system_alerts row for the same release.
+    // insert a duplicate system_alerts row for the same release. Every
+    // update kind counts: a stale row already names this version.
     private function hasUnacknowledgedAvailabilityRow(string $latestVersion): bool
     {
         return $this->db->connection()->table('system_alerts')
-            ->where('kind', UpdateAlertKind::Available->value)
+            ->whereIn('kind', UpdateAlertKind::values())
             ->whereNull('acknowledged_at')
             ->where('metadata', 'like', '%"latestVersion":"'.$latestVersion.'"%')
             ->exists();

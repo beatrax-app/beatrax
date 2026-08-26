@@ -12,6 +12,10 @@ final class TaxYearData extends Data
 {
     /**
      * @param  array<int, array<string, mixed>>  $categories
+     * @param  string  $currency  the reader's reporting currency — every total and
+     *                            subtotal above is denominated in it
+     * @param  list<string>  $unconvertedCurrencies  codes left out of every total for
+     *                                               want of a rate, so a renderer can say the figures are partial
      */
     public function __construct(
         public readonly int $year,
@@ -19,5 +23,17 @@ final class TaxYearData extends Data
         public readonly int $incomeTotalMinor,
         public readonly int $itemCount,
         public readonly array $categories,
+        public readonly string $currency = '',
+        public readonly array $unconvertedCurrencies = [],
     ) {}
+
+    public function isPartial(): bool
+    {
+        return $this->unconvertedCurrencies !== [];
+    }
+
+    public function unconvertedList(): string
+    {
+        return implode(', ', $this->unconvertedCurrencies);
+    }
 }

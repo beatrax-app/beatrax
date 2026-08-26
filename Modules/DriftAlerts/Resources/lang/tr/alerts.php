@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Uyarılar',
+    'page_title' => 'Sapma uyarıları',
     'heading' => 'Uyarılar',
     'intro_anomaly' => 'Senin için olağan dışı görünen tekil harcamalar.',
     'intro_drift' => 'Son harcaması eşiğinin dışına çıkan onaylı düzenli seriler.',

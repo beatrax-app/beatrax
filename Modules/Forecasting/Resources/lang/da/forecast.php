@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Ingen serier bidrager til prognosen for denne konto endnu.',
 
     'net_diff' => 'Nettoforskel',
+
+    'net_diff_unknown' => 'Endnu ikke beregnet for denne horisont.',
     'net_diff_section_aria' => 'Nettoforskel mellem basislinje og scenarie ved horisontdagene 30 / 60 / 90',
     'net_diff_delta_aria' => 'Nettoforskel på dag :day: :value, scenariet er :state',
     'better_than_baseline' => 'bedre end basislinjen',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Prognosen kort fortalt',
     'highlights_shortfall_aria' => ':count aktiv underskudsperiode i de næste :days dage|:count aktive underskudsperioder i de næste :days dage',
-    'dips_to' => ':name falder til :amount',
     'on_date_suffix' => ' den :date',
     'shortfall_window' => ':count aktiv underskudsperiode|:count aktive underskudsperioder',
-    'lowest_in_30' => 'Laveste på 30 dage: :amount',
+    'lowest_in_30_label' => 'Laveste på 30 dage',
     'next_ics' => 'Næste ICS-afregning: :amount den :date',
+    'ics_overdue' => 'ICS-afregning er forfalden: :amount, forfaldt :date',
 ];

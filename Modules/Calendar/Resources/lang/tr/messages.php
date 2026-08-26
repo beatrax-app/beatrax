@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Tahmin güncelleniyor…',
-        'risk' => 'Bakiye :count gün €0 altına iniyor — ilki: :date.',
+        'risk' => 'Bakiye :count gün :zero altına iniyor — ilki: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'kayıt',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', öngörülen bakiye eksi €:amount',
-        'aria_balance_positive' => ', öngörülen bakiye €:amount',
+        'aria_balance_negative' => ', öngörülen bakiye eksi :amount',
+        'aria_balance_positive' => ', öngörülen bakiye :amount',
         'overflow' => '+:count daha',
         'paid' => 'Ödendi',
         'missed' => 'Beklendi — bulunamadı',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Kaydedilmiş ödeme',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ tarih yaklaşık',
         'series' => '↗ seri',
         'counterparty' => '↗ karşı taraf',
+        'transaction' => '↗ işlem',
         'end_of_day' => 'Gün sonu',
     ],
 ];

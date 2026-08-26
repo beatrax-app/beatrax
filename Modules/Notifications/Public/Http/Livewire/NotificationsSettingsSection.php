@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
 use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
@@ -54,7 +55,7 @@ final class NotificationsSettingsSection extends Component
 
     // Rejects first: the query layer re-validates as defence in depth, but
     // this method never relies on that.
-    public function save(CurrentUser $currentUser, NotificationPreferenceQuery $prefs): void
+    public function save(CurrentUser $currentUser, NotificationPreferenceQuery $prefs, SystemNotificationConsent $consent): void
     {
         $this->saveError = '';
         $this->saved = false;
@@ -93,6 +94,13 @@ final class NotificationsSettingsSection extends Component
             quietHoursTo: $this->quietHoursTo,
             hideDetails: $this->hideDetails,
         ));
+
+        // After the write, and only when something will actually be posted:
+        // the platform prompt is the reader's, and asking for it while they
+        // have just turned everything off would be asking for nothing.
+        if ($this->remindersEnabled || $this->budgetNudgesEnabled || $this->savingsPromptsEnabled) {
+            $consent->request();
+        }
 
         $this->saved = true;
     }

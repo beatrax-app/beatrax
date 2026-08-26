@@ -9,6 +9,10 @@ return [
         'title' => 'Ta strona nie istnieje',
         'body' => 'Link może być stary albo strona zmieniła nazwę. Z twoimi danymi wszystko w porządku.',
     ],
+    '4xx' => [
+        'title' => 'Tego żądania nie można obsłużyć',
+        'body' => 'Strona została otwarta w sposób, którego nie oczekuje. Twoje dane są bez zmian.',
+    ],
 
     '419' => [
         'title' => 'Twoja sesja wygasła',

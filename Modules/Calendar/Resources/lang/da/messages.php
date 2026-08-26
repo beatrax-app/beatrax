@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognosen opdateres…',
-        'risk' => 'Saldoen falder under €0 den :date.|Saldoen falder under €0 på :count dage — første: :date.',
+        'risk' => 'Saldoen falder under :zero den :date.|Saldoen falder under :zero på :count dage — første: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'post|poster',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', forventet saldo minus €:amount',
-        'aria_balance_positive' => ', forventet saldo €:amount',
+        'aria_balance_negative' => ', forventet saldo minus :amount',
+        'aria_balance_positive' => ', forventet saldo :amount',
         'overflow' => '+:count mere',
         'paid' => 'Betalt',
         'missed' => 'Forventet — ikke fundet',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Bogført betaling',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ omtrentlig dato',
         'series' => '↗ serie',
         'counterparty' => '↗ modpart',
+        'transaction' => '↗ transaktion',
         'end_of_day' => 'Dagens slutning',
     ],
 ];

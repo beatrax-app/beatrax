@@ -22,6 +22,8 @@ return [
     'args_badge' => 'argumenti',
     'args_badge_title' => 'Odpre obrazec za argumente',
 
+    'spawning_unavailable' => 'Ukazi Artisan tečejo v ločenem procesu, ta platforma pa aplikaciji ne dovoli, da bi ga zagnala. Zaženi jih v namizni aplikaciji.',
+
     'status' => [
         'running' => 'Se izvaja',
         'done' => 'Končano',

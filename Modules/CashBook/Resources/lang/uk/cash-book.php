@@ -11,7 +11,7 @@ return [
     'expense' => 'Витрата',
     'income' => 'Надходження',
 
-    'amount' => 'Сума (€)',
+    'amount' => 'Сума (:symbol)',
     'date' => 'Дата',
     'counterparty' => 'Контрагент',
     'counterparty_placeholder' => 'напр. Пекарня',

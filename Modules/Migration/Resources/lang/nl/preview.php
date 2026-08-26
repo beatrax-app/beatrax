@@ -16,13 +16,10 @@ return [
         'budget' => 'Budgetmaanden',
     ],
 
-    'fully_mapped' => '✓ volledig gekoppeld',
     'all_clean' => 'Alles is netjes gekoppeld — er is niets dat je aandacht vereist voordat je bevestigt.',
 
     'groups' => [
         'conflict' => 'Vereist jouw beslissing',
-        'category' => 'Niet-opgeloste categorieën',
-        'payee' => 'Niet-opgeloste begunstigden',
         'extra' => 'Niet geïmporteerd',
     ],
 

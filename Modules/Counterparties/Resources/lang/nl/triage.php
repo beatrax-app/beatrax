@@ -25,6 +25,7 @@ return [
     'no_not' => 'Nee, niet :name',
 
     'recent_on_iban' => 'Recente transacties op deze IBAN',
+    'recent_on_counterparty' => 'Recente transacties met deze tegenpartij',
     'no_transactions_yet' => 'Nog geen transacties bekend.',
 
     'label_manually' => 'Of handmatig labelen',

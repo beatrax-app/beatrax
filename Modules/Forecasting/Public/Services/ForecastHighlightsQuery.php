@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Collection;
 use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Public\Dto\ForecastHighlightsDto;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
 final readonly class ForecastHighlightsQuery
@@ -20,6 +24,8 @@ final readonly class ForecastHighlightsQuery
         private DatabaseManager $db,
         private Clock $clock,
         private CardStatementQuery $cardStatementQuery,
+        private CrossCurrencyTotal $fx,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function activeShortfallCountForUser(User $user): int
@@ -44,18 +50,26 @@ final readonly class ForecastHighlightsQuery
         return new ForecastHighlightsDto(
             userId: $user->id,
             lowestProjectedBalanceMinor: $lowest['balanceMinor'] ?? null,
+            lowestProjectedBalanceCurrency: $lowest['currency'] ?? null,
             lowestProjectedBalanceDate: $lowest['date'] ?? null,
             lowestProjectedAccountId: $lowest['accountId'] ?? null,
             lowestProjectedAccountName: $lowest['accountName'] ?? null,
             activeShortfallCount: $shortfallCount,
             nextIcsSettlement: $nextIcsSettlement,
+            // An imported statement stays open until it is settled, so a due
+            // date that has passed is the ordinary case rather than the odd
+            // one, and calling it "next" reads as a date still to come.
+            icsSettlementOverdue: $nextIcsSettlement !== null
+                && $nextIcsSettlement->dueDate->lessThan($this->clock->now()->startOfDay()),
         );
     }
 
     // One run holds every account's points in its result_json, so this loads
-    // the run once rather than once per account.
+    // the run once rather than once per account. Each account's own dip is
+    // found in the account's own currency, then the dips race each other in
+    // the reader's — a JPY minor unit is not a euro cent.
     /**
-     * @return array{balanceMinor: int, date: string, accountId: int, accountName: string}|null
+     * @return array{balanceMinor: int, currency: string, date: string, accountId: int, accountName: string}|null
      */
     private function lowestProjectedBalance(User $user): ?array
     {
@@ -68,14 +82,28 @@ final readonly class ForecastHighlightsQuery
             ->where('user_id', $user->id)
             ->orderBy('name')
             ->orderBy('id')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'default_currency']);
+
+        $baseCurrency = $this->baseCurrency->forUser($user);
+        $candidates = $this->candidatesByAccount($accountsBlock, $accounts, $baseCurrency);
+        $rates = $this->fx->ratesTo(
+            array_map(static fn (array $candidate): string => $candidate['currency'], $candidates),
+            $baseCurrency,
+        );
 
         $lowest = null;
-        foreach ($accounts as $accountRow) {
-            /** @var stdClass $accountRow */
-            $accountId = is_numeric($accountRow->id) ? (int) $accountRow->id : 0;
-            $accountName = is_string($accountRow->name) ? $accountRow->name : '';
-            $lowest = $this->lowestForAccount($accountsBlock, $accountId, $accountName, $lowest);
+        $lowestInBase = null;
+
+        foreach ($candidates as $candidate) {
+            $inBase = $this->inBase($candidate['balanceMinor'], $candidate['currency'], $baseCurrency, $rates);
+            if ($inBase === null) {
+                continue;
+            }
+
+            if ($lowestInBase === null || $inBase < $lowestInBase) {
+                $lowest = $candidate;
+                $lowestInBase = $inBase;
+            }
         }
 
         return $lowest;
@@ -83,11 +111,47 @@ final readonly class ForecastHighlightsQuery
 
     /**
      * @param  array<int|string, mixed>  $accountsBlock
-     * @param  array{balanceMinor: int, date: string, accountId: int, accountName: string}|null  $lowest
-     * @return array{balanceMinor: int, date: string, accountId: int, accountName: string}|null
+     * @param  Collection<int, stdClass>  $accounts
+     * @return list<array{balanceMinor: int, currency: string, date: string, accountId: int, accountName: string}>
      */
-    private function lowestForAccount(array $accountsBlock, int $accountId, string $accountName, ?array $lowest): ?array
+    private function candidatesByAccount(array $accountsBlock, Collection $accounts, string $baseCurrency): array
     {
+        $candidates = [];
+        foreach ($accounts as $accountRow) {
+            $accountId = is_numeric($accountRow->id) ? (int) $accountRow->id : 0;
+            $accountName = is_string($accountRow->name) ? $accountRow->name : '';
+            $accountCurrency = is_string($accountRow->default_currency) && $accountRow->default_currency !== ''
+                ? $accountRow->default_currency
+                : $baseCurrency;
+
+            $candidate = $this->lowestForAccount($accountsBlock, $accountId, $accountName, $accountCurrency);
+            if ($candidate !== null) {
+                $candidates[] = $candidate;
+            }
+        }
+
+        return $candidates;
+    }
+
+    // Null for a currency the rate table cannot reach, which drops the account
+    // out of the race rather than letting its raw minor units win it.
+    /**
+     * @param  array<string, string>  $rates
+     */
+    private function inBase(int $minor, string $currency, string $baseCurrency, array $rates): ?int
+    {
+        $money = Money::tryOfMinor($minor, $currency);
+
+        return $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates)?->toMinor();
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $accountsBlock
+     * @return array{balanceMinor: int, currency: string, date: string, accountId: int, accountName: string}|null
+     */
+    private function lowestForAccount(array $accountsBlock, int $accountId, string $accountName, string $accountCurrency): ?array
+    {
+        $lowest = null;
         foreach ($this->pointsForAccount($accountsBlock, $accountId) as $point) {
             $candidate = $this->pointMinorOnDate($point);
             if ($candidate === null) {
@@ -97,6 +161,7 @@ final readonly class ForecastHighlightsQuery
             if ($lowest === null || $pointMinor < $lowest['balanceMinor']) {
                 $lowest = [
                     'balanceMinor' => $pointMinor,
+                    'currency' => $this->pointCurrency($point, $accountCurrency),
                     'date' => $pointDate,
                     'accountId' => $accountId,
                     'accountName' => $accountName,
@@ -105,6 +170,15 @@ final readonly class ForecastHighlightsQuery
         }
 
         return $lowest;
+    }
+
+    private function pointCurrency(mixed $point, string $accountCurrency): string
+    {
+        if (is_array($point) && is_string($point['currency'] ?? null) && $point['currency'] !== '') {
+            return $point['currency'];
+        }
+
+        return $accountCurrency;
     }
 
     /**

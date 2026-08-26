@@ -35,10 +35,12 @@ their format's quirks (PayPal's UTF-8 BOM, ICS's Windows-1252 encoding, ASN
 CSV's per-bank dialect-hint requirement). They know nothing about the
 canonical schema.
 
-The pipeline refuses any CSV import without an explicit `BankCsvFormatHint`
-— the CSV file's own headers are not enough to disambiguate the dialect
-reliably, and that guard lives at the public-contract boundary so even
-programmatic callers can't skip it.
+The pipeline refuses an `asn-csv` import without an explicit
+`BankCsvFormatHint` — the CSV file's own headers are not enough to
+disambiguate the dialect reliably, and that guard lives at the public-contract
+boundary so even programmatic callers can't skip it. A CSV preset needs no
+hint because its format id already names the dialect: `ing-nl-csv` is the ING
+dialect, and there is no second identifier for the same bank.
 
 For the `eml`/`mbox` formats, `ParseStage` instead drives the receipt path:
 it reads the file bytes and hands them to `RecordReceipt`, which persists a
@@ -94,7 +96,12 @@ FK, via four steps:
    currency, the canonical row carries both legs verbatim AND derives
    `fxRateUsed = settled / native` via `Brick\Math\BigDecimal` at scale 8
    with HALF_UP rounding — float arithmetic is forbidden on the money
-   path since the `decimal(18,8)` column requires exact precision.
+   path since the `decimal(18,8)` column requires exact precision. The
+   two legs can also differ at the SAME currency, which carries no rate:
+   a bank fee charged on top of the merchant's amount leaves the native
+   figure as what was charged and the settled figure as what the account
+   paid. See
+   [Generic CSV (bank presets)](../features/ingestion/architecture.md#generic-csv-bank-presets).
 
 ### 4. Transaction-type classification (`ClassifyTransactionType`)
 

@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Kita šalis',
     'col_description' => 'Aprašymas',
     'col_note' => 'Pastaba',
-    'col_amount' => 'Suma (EUR)',
+    'col_amount' => 'Suma',
 
     'subtotal' => 'Tarpinė suma',
 

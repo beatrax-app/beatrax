@@ -25,6 +25,7 @@ return [
     'no_not' => 'No, not :name',
 
     'recent_on_iban' => 'Recent transactions on this IBAN',
+    'recent_on_counterparty' => 'Recent transactions with this counterparty',
     'no_transactions_yet' => 'No transactions on file yet.',
 
     'label_manually' => 'Or label manually',

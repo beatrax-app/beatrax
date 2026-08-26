@@ -21,7 +21,6 @@ return [
     'footer' => 'Die gemeinsame Liste ist eine YAML-Datei, die Beatrax mitliefert. Beim Abschicken eines Vorschlags öffnet sich GitHub in deinem Browser; sonst verlässt nichts dieses Gerät.',
 
     'card' => [
-        'likely' => 'Wahrscheinlich: ein Händler ohne Namen.',
         'seen_times' => 'Gesehen :count Mal|Gesehen :count Mal',
         'last_seen' => 'Zuletzt gesehen :date',
         'suggest' => 'Namen vorschlagen →',

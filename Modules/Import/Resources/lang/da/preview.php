@@ -9,6 +9,10 @@ return [
     'confirm' => 'Bekræft importen',
     'subtitle' => 'Gennemgå de indlæste rækker. Intet gemmes blandt dine transaktioner, før du bekræfter.',
 
+    'already_imported' => 'Denne fil er allerede importeret.',
+
+    'already_imported_link' => 'Se importresultatet',
+
     'expired_html' => 'Forhåndsvisningen er udløbet. <a href="/imports/new" class="underline">Upload filen igen</a> for at prøve igen.',
 
     'save_name' => 'Gem navnet',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Omdøb denne modpart',
 
     'unknown_iban_prefix' => 'Vi fandt et ukendt IBAN:',
+
+    'unknown_account_prefix' => 'Vi fandt en ukendt konto:',
     'unknown_iban_suffix' => 'Giv denne konto et navn.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'for at prøve igen eller undersøge nærmere.',
     ],
 
+    'rows_shown' => 'Viste rækker: :shown af :total',
+
+    'show_more' => 'Vis flere rækker',
+
     'errors' => [
         'app_locked' => 'Lås appen op for at importere: krypteringsnøglerne kan ikke bruges, mens den er låst.',
+        'file_stopped_short' => 'Overskriftsrækken passede, så formatet er rigtigt. Læsningen stoppede før slutningen af filen. Det sker ved én ulæselig række, og også hvis filen er for stor til denne enhed. Prøv en kortere periode.',
         'file_unreadable' => 'Denne fil kunne ikke læses.',
         'iban_not_in_preview' => 'Dette IBAN indgår ikke i den aktuelle forhåndsvisning.',
+        'pdf_reader_unavailable' => 'PDF-kontoudtog kræver programmet pdftotext, som ikke er installeret her. Importér filen på en computer, der har det, eller brug en CSV-eksport fra din bank i stedet.',
         'row_unreadable' => 'Denne række kunne ikke læses.',
         'unknown_account' => 'Denne række hører til en konto, du endnu ikke har navngivet.',
     ],

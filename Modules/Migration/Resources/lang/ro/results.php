@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Încă neimportate — categorii',
-        'payee' => 'Încă neimportate — contrapărți',
         'extra' => 'Neimportate',
         'conflict' => 'Necesită decizia ta',
     ],

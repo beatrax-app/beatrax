@@ -9,7 +9,8 @@
         `Mark as resolved` button that acknowledges the row.
       - update.available shows three buttons — Install on next launch
         (acknowledge), Skip this version (skipVersion), Release notes
-        (OpenExternalUrlAction-driven https://github.com/... URL).
+        (a plain anchor at ProjectLinks::releaseTagUrl(), shown only
+        once the alert metadata carries a version to point it at).
       - update.stale shows Update now (acknowledge) + Remind me later
         (acknowledge — banner-resurfaces is acceptable v1.0 posture;
         the 7-day-snooze refinement is captured in the plan as a
@@ -22,6 +23,7 @@
 --}}
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Enums\UpdateAlertKind')
+@use('Modules\Core\Public\Support\ProjectLinks')
 @php
     $metadata = is_array($alert->metadata) ? $alert->metadata : [];
     $latestVersion = isset($metadata['latestVersion']) && is_string($metadata['latestVersion'])
@@ -55,7 +57,7 @@
             >{{ Lang::get('core::alerts.actions.skip_version') }}</button>
             @if ($releaseTag !== null)
                 <a
-                    href="https://github.com/beatrax-app/beatrax/releases/tag/{{ $releaseTag }}"
+                    href="{{ ProjectLinks::releaseTagUrl($releaseTag) }}"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="rounded text-slate-700 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium underline underline-offset-2 dark:text-slate-300 dark:hover:text-slate-100"

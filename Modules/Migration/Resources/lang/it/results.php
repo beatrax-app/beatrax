@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Ancora non importate — categorie',
-        'payee' => 'Ancora non importati — beneficiari',
         'extra' => 'Non importato',
         'conflict' => 'Richiede una tua decisione',
     ],

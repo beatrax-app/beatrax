@@ -7,6 +7,7 @@ return [
     'body' => 'Når du sletter kontoen din, forsvinner den fra denne enheten sammen med alt den eier. Det kan ikke angres.',
     'removes' => 'Transaksjonene, kontoene, budsjettene, målene og rapportene dine forsvinner, sammen med regler, innstillinger, gjenopprettingskoder, synkroniseringsidentitet og krypteringsnøkler.',
     'devices_heading' => 'De andre enhetene dine beholder sin egen kopi',
+    'devices_heading_none' => 'Dette er den eneste kopien av dataene dine',
     'devices_body' => 'Beatrax har ingen server, så ingenting kan slettes eksternt. Denne enheten har fortsatt en full kopi og må ordnes på selve enheten — :devices|Beatrax har ingen server, så ingenting kan slettes eksternt. Disse enhetene har fortsatt en full kopi og må ordnes på selve enheten — :devices',
     'devices_none' => 'Ingen annen enhet er paret med denne, så dette er den eneste kopien av dataene dine.',
     'successor' => 'Du administrerer denne enheten, så :username tar over når kontoen din er borte.',

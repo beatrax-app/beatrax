@@ -86,11 +86,13 @@ function countedNounOffence(string $line): ?string
             continue;
         }
 
-        // ":min..:max characters" spans a range, which is never one of
-        // anything, so the noun after it is plural for every value the pair
-        // can take. That is a shape, not a per-key exception.
-        $token = preg_quote($match[1], '/');
-        if (preg_match('/[.\x{2013}\x{2014}-]{2}\s*:'.$token.'|:'.$token.'\s*[.\x{2013}\x{2014}-]{2}/u', $line) === 1) {
+        // A range is never one of anything, so the noun after it is plural for
+        // every value the pair can take. That is a shape, not a per-key
+        // exception. Recognised by the PAIR rather than by the punctuation
+        // between them: ":min..:max characters" and "between :min and :max
+        // characters" are the same claim, and every locale words the join
+        // differently -- Dutch "tussen", German "zwischen", French "de ... à".
+        if (str_contains($line, ':min') && str_contains($line, ':max')) {
             continue;
         }
 
@@ -175,7 +177,7 @@ it('declares a plural before it puts a count next to a noun', function (): void 
         'A count that cannot be one is still flagged, and is still worth pluralising: the',
         'constant behind it changes, and 22 needs a different Polish form from 8.',
         'If the flagged word is not a plural noun at all, add it to COUNTED_NOUN_NOT_PLURAL',
-        'in this file — that list, and the ":min..:max" range shape, are the only exceptions.',
+        'in this file — that list, and a line carrying both :min and :max, are the only exceptions.',
     ]));
 });
 

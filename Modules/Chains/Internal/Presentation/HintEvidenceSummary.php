@@ -67,7 +67,7 @@ final class HintEvidenceSummary
      */
     private static function cardLines(array $evidence): array
     {
-        $lastFour = $evidence['card_last_four'] ?? null;
+        $lastFour = $evidence['card_last4'] ?? null;
 
         return is_string($lastFour) && $lastFour !== '' ? ['Card ending in '.$lastFour] : [];
     }

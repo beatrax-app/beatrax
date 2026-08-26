@@ -9,6 +9,10 @@ return [
     'confirm' => 'Bekreft importen',
     'subtitle' => 'Se gjennom de innleste radene. Ingenting lagres blant transaksjonene dine før du bekrefter.',
 
+    'already_imported' => 'Denne filen er allerede importert.',
+
+    'already_imported_link' => 'Se importresultatet',
+
     'expired_html' => 'Forhåndsvisningen er utløpt. <a href="/imports/new" class="underline">Last opp filen på nytt</a> for å prøve igjen.',
 
     'save_name' => 'Lagre navnet',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Gi denne motparten nytt navn',
 
     'unknown_iban_prefix' => 'Vi fant et ukjent IBAN:',
+
+    'unknown_account_prefix' => 'Vi fant en ukjent konto:',
     'unknown_iban_suffix' => 'Gi denne kontoen et navn.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'for å prøve igjen eller undersøke nærmere.',
     ],
 
+    'rows_shown' => 'Viste rader: :shown av :total',
+
+    'show_more' => 'Vis flere rader',
+
     'errors' => [
         'app_locked' => 'Lås opp appen for å importere: krypteringsnøklene kan ikke brukes mens den er låst.',
+        'file_stopped_short' => 'Overskriftsraden stemte, så formatet er riktig. Lesingen stoppet før slutten av filen. Én uleselig rad gjør det, og det samme gjør en fil som er for stor for denne enheten. Prøv en kortere periode.',
         'file_unreadable' => 'Denne filen kunne ikke leses.',
         'iban_not_in_preview' => 'Dette IBAN-nummeret er ikke en del av den gjeldende forhåndsvisningen.',
+        'pdf_reader_unavailable' => 'PDF-kontoutskrifter krever programmet pdftotext, som ikke er installert her. Importer filen på en datamaskin som har det, eller bruk en CSV-eksport fra banken din i stedet.',
         'row_unreadable' => 'Denne raden kunne ikke leses.',
         'unknown_account' => 'Denne raden hører til en konto du ikke har gitt navn ennå.',
     ],

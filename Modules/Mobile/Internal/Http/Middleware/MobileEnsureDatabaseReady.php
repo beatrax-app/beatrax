@@ -22,6 +22,9 @@ final class MobileEnsureDatabaseReady
         'mobile.welcome',
         'signup',
         'mobile.import',
+        // The route back from a wipe. It exists to be reached when there is
+        // no user, which is exactly the state this gate redirects out of.
+        'mobile.restore',
         'mobile.pair',
         'mobile.setup',
         'setup',
@@ -40,6 +43,12 @@ final class MobileEnsureDatabaseReady
     /** @var array<int, string> */
     private const EXEMPT_ROUTE_SUFFIXES = [
         'livewire.update',
+        // The restore form's file input posts here. Redirected, it answers
+        // with the welcome page at 200 -- iOS turns a redirect into the
+        // target's HTML -- and Livewire's JS parses a document as JSON, throws,
+        // and never settles the upload. The screen said "Uploading..." forever.
+        'livewire.upload-file',
+        'livewire.preview-file',
     ];
 
     public function __construct(

@@ -82,7 +82,7 @@ trait ManagesSplitEditor
         $this->editingSplit = true;
         $this->splitError = null;
 
-        $this->recomputeRemaining($currentUser, $db, self::readerCurrency($currentUser, $baseCurrency));
+        $this->recomputeRemaining($currentUser, $db, $baseCurrency->forUser($currentUser->user()));
     }
 
     public function addLeg(): void
@@ -108,7 +108,7 @@ trait ManagesSplitEditor
         $legs = $this->legs;
         array_splice($legs, $index, 1);
         $this->legs = $legs;
-        $this->recomputeRemaining($currentUser, $db, self::readerCurrency($currentUser, $baseCurrency));
+        $this->recomputeRemaining($currentUser, $db, $baseCurrency->forUser($currentUser->user()));
     }
 
     public function cancelRemoveToOne(): void
@@ -212,7 +212,7 @@ trait ManagesSplitEditor
     {
         $this->splitError = null;
         $userId = $currentUser->user()->id;
-        $readerCurrency = self::readerCurrency($currentUser, $baseCurrency);
+        $readerCurrency = $baseCurrency->forUser($currentUser->user());
 
         $this->recomputeRemaining($currentUser, $db, $readerCurrency);
 
@@ -380,14 +380,6 @@ trait ManagesSplitEditor
         $this->editingSplit = true;
 
         $this->recomputeRemaining($currentUser, $db, $readerCurrency);
-    }
-
-    // The reader's own setting, not config('currency.base'): the /settings picker
-    // writes users.base_currency, and nothing wires the config value to an env, so
-    // the service alone would answer € over a ledger counted in pounds.
-    private static function readerCurrency(CurrentUser $currentUser, BaseCurrency $baseCurrency): string
-    {
-        return $currentUser->user()->base_currency ?? $baseCurrency->code();
     }
 
     private function recomputeRemaining(CurrentUser $currentUser, DatabaseManager $db, string $readerCurrency): void

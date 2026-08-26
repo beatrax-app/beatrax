@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Iban')
 {{--
     Reusable counterparty-column row partial. Renders either the plain
     aliasFriendlyName when the resolver populated one OR the italic
@@ -31,7 +32,7 @@
             @elseif ($row->counterpartyName !== null)
                 <span>{{ $row->counterpartyName }}</span>
             @elseif ($row->counterpartyIban !== null)
-                <span class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ $row->counterpartyIban }}</span>
+                <span class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ Iban::grouped($row->counterpartyIban) }}</span>
             @elseif ($row->description !== null)
                 <button
                     type="button"

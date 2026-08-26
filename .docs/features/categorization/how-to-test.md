@@ -238,6 +238,6 @@ The behavioural contract for the `Categorization` module.
 - `users.receipt_conflict_resolution` — per-user preference column
   (added by `2026_05_17_010004_add_receipt_conflict_resolution_to_users`)
   that the receipt-vs-statement enrichment conflict resolver respects.
-  Documented in [categorization architecture](../../architecture/categorization.md#receipt-vs-statement-enrichment).
+  Documented in [categorization architecture](../../architecture/categorization.md#the-receipt-vs-statement-enrichment-conflict-resolver).
 - No environment config keys; the module has no behaviour that varies
   by `BEATRAX_RUNTIME` or any other runtime flag.

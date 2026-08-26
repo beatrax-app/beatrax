@@ -352,15 +352,15 @@ Schedule::call(function (Dispatcher $bus): void {
 // automatically while still spanning the longest realistic backup
 // duration on a multi-gigabyte personal-finance DB.
 //
-// `--force` bypasses the data_version smart-skip so a quiet day
+// `--force` bypasses the smart-skip so a quiet day
 // (operator never opened the dashboard, no commits to the DB) still
 // produces a fresh sidecar. Without --force, two consecutive quiet
 // days would write no .meta.json file and cross the 48h
 // BackupFreshnessProbe::STALE_AFTER_HOURS threshold, producing a
 // false-positive `backup_overdue` banner that no follow-up
-// `db:backup` would clear (still smart-skipping for the same
-// reason). The retention sweep prunes any genuine duplicates so the
-// disk footprint is bounded.
+// `db:backup` would clear, because a quiet day is exactly what the
+// skip is for. The retention sweep prunes any genuine duplicates so
+// the disk footprint is bounded.
 Schedule::command('db:backup --force')
     ->name('db.backup-daily')
     ->dailyAt('03:00')
@@ -436,7 +436,7 @@ Schedule::call(function (Dispatcher $bus, NotificationPreferenceQuery $prefs): v
 // rather than duplicating an off-check here too.
 Schedule::call(function (Dispatcher $bus, NotificationPreferenceQuery $prefs): void {
     User::query()->lazyById(100)->each(function (User $user) use ($bus, $prefs): void {
-        $cadence = $prefs->forCurrentDevice($user)->digestCadence;
+        $cadence = $prefs->forCurrentDevice($user)->digestCadence->value;
         $bus->dispatch(new EmitPositionDigestJob($user->id, $cadence));
     });
 })->name('notifications.digest')->dailyAt($notificationsDailyTime)->withoutOverlapping(30);

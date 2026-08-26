@@ -11,6 +11,7 @@ use Modules\Reports\Internal\Actions\SaveReport;
 use Modules\Reports\Internal\Actions\TogglePin;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Enums\ReportGranularity;
+use Modules\Reports\Internal\Enums\ReportViz;
 use Modules\Reports\Public\Http\Livewire\PinnedReportsRow;
 
 uses(RefreshDatabase::class);
@@ -229,4 +230,86 @@ it('drops the empty buckets before the first real one but keeps the empty ones b
     expect($options['series'][0]['data'])->toBe([50, 0, 30]);
     expect($options['xaxis']['categories'])->toHaveCount(3);
     expect($options['xaxis']['categories'][0])->toBe('Mar 2026');
+});
+
+// The mini card is ~267px wide, and ApexCharts trims every tick that will not
+// fit: five months of history rendered as "Apr 2…", "May 2…", which reads as a
+// day rather than a year. Whether the ticks then FIT is a browser measurement
+// this test cannot make — it pins the option that stops the truncation, so the
+// axis cannot silently go back to eliding.
+it('tells ApexCharts not to truncate the axis ticks it draws', function (): void {
+    $user = prrUser();
+    test()->actingAs($user);
+    $db = app(DatabaseManager::class);
+    $account = prrAccount($user);
+
+    prrExpense($db, $user, $account, '2026-04-10', -1_000);
+    prrExpense($db, $user, $account, '2026-08-10', -2_000);
+
+    $definition = new ReportDefinition(
+        metric: 'spend',
+        dimension: 'time_bucket',
+        periodPreset: 'custom',
+        granularity: ReportGranularity::Monthly,
+        currencyMode: 'base',
+        viz: 'bar',
+        customFrom: '2026-04-01',
+        customTo: '2026-08-31',
+    );
+
+    $saved = app(SaveReport::class)->save($user, $definition, 'Monthly net position');
+    app(TogglePin::class)->toggle($user, $saved->id);
+
+    $html = Livewire::test(PinnedReportsRow::class)->html();
+
+    expect($html)->toContain('trim: false')
+        ->toContain('hideOverlappingLabels: true');
+});
+
+function prrCategoryDefinition(string $viz): ReportDefinition
+{
+    return new ReportDefinition(
+        metric: 'spend',
+        dimension: 'category',
+        periodPreset: 'custom',
+        granularity: ReportGranularity::Monthly,
+        currencyMode: 'base',
+        viz: $viz,
+        customFrom: '2026-03-01',
+        customTo: '2026-03-31',
+    );
+}
+
+// The donut's key is lifted out of the chart and rendered as card content, so
+// the view has to recognise the chart type the component wrote.
+it('renders the lifted-out legend for a pinned donut report', function (): void {
+    $user = prrUser();
+    test()->actingAs($user);
+    $db = app(DatabaseManager::class);
+    $account = prrAccount($user);
+
+    prrExpense($db, $user, $account, '2026-03-10', -5_000);
+
+    $saved = app(SaveReport::class)->save($user, prrCategoryDefinition(ReportViz::Donut->value), 'Spend split');
+    app(TogglePin::class)->toggle($user, $saved->id);
+
+    $html = Livewire::test(PinnedReportsRow::class)->html();
+
+    expect(prrChartOptions($html)['chart']['type'])->toBe(ReportViz::Donut->value);
+    expect($html)->toContain('data-testid="pinned-report-legend"');
+});
+
+it('renders no lifted-out legend for a pinned bar report', function (): void {
+    $user = prrUser();
+    test()->actingAs($user);
+    $db = app(DatabaseManager::class);
+    $account = prrAccount($user);
+
+    prrExpense($db, $user, $account, '2026-03-10', -5_000);
+
+    $saved = app(SaveReport::class)->save($user, prrCategoryDefinition(ReportViz::Bar->value), 'Spend bars');
+    app(TogglePin::class)->toggle($user, $saved->id);
+
+    expect(Livewire::test(PinnedReportsRow::class)->html())
+        ->not->toContain('data-testid="pinned-report-legend"');
 });

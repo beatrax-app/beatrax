@@ -91,3 +91,10 @@ matching `GoalWriter`'s convention.
   movement history), `ReconciliationRow` (one account's reconciliation
   header).
 - **Exceptions** — `PotNotFoundException`, `InsufficientUnallocatedException`.
+
+`PotBalanceQuery` answers what an account holds; assembling a pot as the
+reader sees it — account, goal, category spend for the open period, last
+ten movements — is a separate job, and lives in
+`Internal/Services/PotRowLoader`. It also owns the one read of a pot's
+`pot_movements` sum, which `balanceForPot()` delegates to, so the pot cards
+and the guard `PotWriter` checks against cannot drift apart.

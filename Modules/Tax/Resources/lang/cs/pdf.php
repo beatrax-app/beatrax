@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Protistrana',
     'col_description' => 'Popis',
     'col_note' => 'Poznámka',
-    'col_amount' => 'Částka (EUR)',
+    'col_amount' => 'Částka',
 
     'subtotal' => 'Mezisoučet',
 

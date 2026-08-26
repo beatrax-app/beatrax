@@ -16,13 +16,10 @@ return [
         'budget' => 'Budjettikuukaudet',
     ],
 
-    'fully_mapped' => '✓ kaikki kohdistettu',
     'all_clean' => 'Kaikki kohdistui siististi — mikään ei vaadi huomiotasi ennen vahvistusta.',
 
     'groups' => [
         'conflict' => 'Vaatii päätöksesi',
-        'category' => 'Ratkaisemattomat kategoriat',
-        'payee' => 'Ratkaisemattomat maksunsaajat',
         'extra' => 'Ei tuotu',
     ],
 

@@ -14,6 +14,7 @@ use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 use Modules\Desktop\Internal\Http\Middleware\RecoverSealedLedger;
@@ -32,6 +33,13 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Console/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        // The client writes this one from matchMedia, so it arrives in
+        // plaintext; decrypting it fails and the request reaches the resolver
+        // with no scheme at all, rendering light on a dark device. It carries
+        // the two words `dark` and `light` and nothing else.
+        $middleware->encryptCookies(except: [
+            AppChromeResolver::SCHEME_COOKIE,
+        ]);
         $middleware->prepend(LoopbackOnly::class);
         // The other half of the loopback boundary: LoopbackOnly gates the
         // interface, this gates the Host — the half DNS rebinding defeats.

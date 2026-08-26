@@ -7,7 +7,7 @@ use Modules\Import\Internal\Parsers\DescriptionKeywordFallbackHinter;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-function fallbackRow(string $description, string $sourceFormat): CanonicalTransaction
+function fallbackRow(string $description, string $sourceFormat, ?string $counterpartyName = null): CanonicalTransaction
 {
     return new CanonicalTransaction(
         userId: 1,
@@ -21,7 +21,7 @@ function fallbackRow(string $description, string $sourceFormat): CanonicalTransa
         settledAmountMinor: -1234,
         settledCurrency: 'EUR',
         fxRateUsed: null,
-        counterpartyName: null,
+        counterpartyName: $counterpartyName,
         counterpartyIban: null,
         counterpartyNormalized: 'unknown',
         normalizationVersion: 3,
@@ -107,4 +107,26 @@ it('returns null when the description is missing entirely', function (): void {
 
     $hinter = new DescriptionKeywordFallbackHinter;
     expect($hinter->hint($row, 'asn-csv'))->toBeNull();
+});
+
+it('does not read a lexeme out of the middle of a longer word', function (): void {
+    $hinter = new DescriptionKeywordFallbackHinter;
+
+    expect($hinter->hint(fallbackRow('Coffee Company', 'revolut-csv'), 'revolut-csv'))->toBeNull();
+    expect($hinter->hint(fallbackRow('Feenstra Verwarming', 'revolut-csv'), 'revolut-csv'))->toBeNull();
+    expect($hinter->hint(fallbackRow('Idealo Internet GmbH', 'revolut-csv'), 'revolut-csv'))->toBeNull();
+});
+
+it('still reads a lexeme a bank glued to a number', function (): void {
+    $hinter = new DescriptionKeywordFallbackHinter;
+    $hint = $hinter->hint(fallbackRow('Betaalautomaat12:34 AH 1042', 'asn-csv'), 'asn-csv');
+
+    expect($hint?->type)->toBe(PaymentType::Pin);
+});
+
+it('reads the lexeme wherever the adapter put the row\'s only text', function (): void {
+    $hinter = new DescriptionKeywordFallbackHinter;
+    $hint = $hinter->hint(fallbackRow('', 'revolut-csv', 'Amazon.com refund'), 'revolut-csv');
+
+    expect($hint?->type)->toBe(PaymentType::Refund);
 });

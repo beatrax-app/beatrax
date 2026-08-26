@@ -179,11 +179,12 @@ it('starts the genesis period with zero pool carry and zero carried-in', functio
     expect($row->availableMinor)->toBe(60000 - 50000);
 });
 
-it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availableMinor or overspentCount', function (): void {
+it('surfaces settled spend it has no rate for via unconvertedSpentMinor without altering availableMinor or overspentCount', function (): void {
     $period = app(PeriodQuery::class)->current();
 
-    // SpendByCategoryQuery keys spend by settled_currency, so this USD charge
-    // lands under "{categoryId}|USD" and must never reach the EUR envelope.
+    // A currency the rate table cannot reach: the bundled snapshot ships no
+    // rate for it, so it stays out of the fold instead of being counted at one
+    // to one, and is surfaced beside the row in its own minor units.
     Transaction::create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -192,11 +193,11 @@ it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availab
         'booked_at' => $period->start->toDateString().' 12:00:00',
         'value_date' => $period->start->toDateString(),
         'amount_minor' => -999,
-        'currency' => 'USD',
+        'currency' => 'XPF',
         'settled_amount_minor' => -999,
-        'settled_currency' => 'USD',
-        'counterparty_name' => 'Google Play USD',
-        'counterparty_normalized' => 'google play usd',
+        'settled_currency' => 'XPF',
+        'counterparty_name' => 'Google Play XPF',
+        'counterparty_normalized' => 'google play xpf',
         'normalization_version' => 1,
         'category_id' => $this->groceries->id,
         'source_format' => 'camt053',
@@ -206,7 +207,8 @@ it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availab
         'fingerprint_version' => 1,
     ]);
 
-    // €200 assigned, no EUR spend at all -> envelope looks fully funded in EUR.
+    // EUR 200 assigned and no reachable spend at all, so the envelope is
+    // fully funded and the unreachable charge changes none of that.
     EnvelopeAssignment::create([
         'user_id' => $this->user->id,
         'category_id' => $this->groceries->id,
@@ -224,7 +226,7 @@ it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availab
 
     // The dropped spend stays observable, as a positive magnitude in its own
     // currency's minor units.
-    expect($row->nonEurSpentMinor)->toBe(999);
+    expect($row->unconvertedSpentMinor)->toBe(999);
 });
 
 it('shows income zero for a future period unless real income transactions exist there', function (): void {

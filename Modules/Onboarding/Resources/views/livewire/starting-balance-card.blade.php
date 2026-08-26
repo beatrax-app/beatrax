@@ -21,6 +21,7 @@
     column of round euros and a column of €0.99-shaped amounts still
     line up.
 --}}
+@use('Modules\Core\Public\Support\Fmt')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     /** @var int $accountId */
@@ -67,7 +68,7 @@
                     <p class="value">{{ $formatMinor($detectedMinor, $currency) }}</p>
                 @endif
                 @if ($detectedDate !== null)
-                    <p class="date">{{ Lang::get('onboarding::starting_balance.on_date', ['date' => $detectedDate]) }}</p>
+                    <p class="date">{{ Lang::get('onboarding::starting_balance.on_date', ['date' => Fmt::shortDate($detectedDate)]) }}</p>
                 @endif
                 <div class="balance-card-actions">
                     <button
@@ -100,7 +101,7 @@
                             />
                             <span class="conflict-source">{{ Lang::get('onboarding::starting_balance.conflict_from', ['source' => $candidate['sourceLabel']]) }}</span>
                             <span class="value">{{ $formatMinor($candidate['minor'], $currency) }}</span>
-                            <span class="date">{{ Lang::get('onboarding::starting_balance.on_date', ['date' => $candidate['date']]) }}</span>
+                            <span class="date">{{ Lang::get('onboarding::starting_balance.on_date', ['date' => Fmt::shortDate($candidate['date'])]) }}</span>
                         </label>
                     @endforeach
                 </fieldset>
@@ -174,7 +175,7 @@
                         <span class="value">{{ $formatMinor($editedMinor, $currency) }}</span>
                     @endif
                     @if ($editedDate !== null)
-                        <span class="date">{{ Lang::get('onboarding::starting_balance.on_date', ['date' => $editedDate]) }}</span>
+                        <span class="date">{{ Lang::get('onboarding::starting_balance.on_date', ['date' => Fmt::shortDate($editedDate)]) }}</span>
                     @endif
                 </h3>
                 @if ($dateWarning !== '')

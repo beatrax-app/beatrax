@@ -55,7 +55,7 @@
                     @if ($profile->type === CounterpartyType::Personal->value){{ Lang::get('counterparties::profile.hero_net_received') }}@else{{ Lang::get('counterparties::profile.hero_12mo_total') }}@endif
                 </div>
                 <div style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
-                    {{ Money::ofMinor(abs($profile->total12mMinor), BaseCurrency::value())->format() }}
+                    {{ Money::ofMinor(abs($profile->total12mMinor), $profile->currency)->format() }}
                 </div>
             </div>
             <div class="frame frame-tight">

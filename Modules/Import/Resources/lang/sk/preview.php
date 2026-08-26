@@ -9,6 +9,10 @@ return [
     'confirm' => 'Potvrdiť import',
     'subtitle' => 'Skontroluj načítané riadky. Do knihy sa nič neuloží, kým to nepotvrdíš.',
 
+    'already_imported' => 'Tento súbor už bol importovaný.',
+
+    'already_imported_link' => 'Zobraziť výsledok importu',
+
     'expired_html' => 'Náhľad expiroval. <a href="/imports/new" class="underline">Nahraj súbor znova</a> a skús to ešte raz.',
 
     'save_name' => 'Uložiť názov',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Premenovať túto protistranu',
 
     'unknown_iban_prefix' => 'Našli sme neznámy IBAN:',
+
+    'unknown_account_prefix' => 'Našli sme neznámy účet:',
     'unknown_iban_suffix' => 'Pomenuj tento účet.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'na opakovanie alebo kontrolu.',
     ],
 
+    'rows_shown' => 'Zobrazené riadky: :shown z :total',
+
+    'show_more' => 'Zobraziť viac riadkov',
+
     'errors' => [
         'app_locked' => 'Odomknite aplikáciu na import: šifrovacie kľúče sa nedajú použiť, kým je zamknutá.',
+        'file_stopped_short' => 'Hlavičkový riadok zodpovedal, takže formát je správny. Čítanie sa zastavilo pred koncom súboru. Spôsobí to jeden nečitateľný riadok aj súbor príliš veľký pre toto zariadenie. Skús kratšie obdobie.',
         'file_unreadable' => 'Tento súbor sa nepodarilo načítať.',
         'iban_not_in_preview' => 'Tento IBAN nie je súčasťou aktuálneho náhľadu.',
+        'pdf_reader_unavailable' => 'Výpisy v PDF potrebujú program pdftotext, ktorý tu nie je nainštalovaný. Naimportuj tento súbor na počítači, kde je, alebo použi export CSV z banky.',
         'row_unreadable' => 'Tento riadok sa nepodarilo načítať.',
         'unknown_account' => 'Tento riadok patrí k účtu, ktorému si ešte nedal názov.',
     ],

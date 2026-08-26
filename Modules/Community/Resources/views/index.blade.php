@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\ProjectLinks')
 @extends('layouts.app', ['title' => Lang::get('community::index.page_title').' · Beatrax'])
 
 {{--
@@ -11,7 +12,7 @@
     two read as one activity — and leaves room for what comes next.
 --}}
 @section('content')
-        <div class="mx-auto max-w-3xl space-y-10 px-6 py-10 sm:px-8 sm:py-12">
+        <div class="mx-auto max-w-3xl space-y-10 px-4 py-10 sm:px-8 sm:py-12">
             <header class="space-y-2">
                 <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     {{ Lang::get('community::index.heading') }}
@@ -62,7 +63,7 @@
                         {{ Lang::get('community::index.translations_how') }}
                     </p>
                     <x-core::secondary-button
-                        :href="Lang::get('community::index.translations_url')"
+                        :href="ProjectLinks::CONTRIBUTING_URL"
                         class="mt-4 min-h-[44px]"
                         target="_blank"
                         rel="noopener noreferrer"

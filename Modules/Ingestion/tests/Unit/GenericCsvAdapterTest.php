@@ -65,7 +65,9 @@ it('parses the Revolut export: signed amount, per-row currency, datetime date', 
     expect($dtos)->toHaveCount(2);
     expect($dtos[0]->amountMinor)->toBe(-999);
     expect($dtos[0]->currency)->toBe('EUR');
-    expect($dtos[0]->description)->toBe('Spotify');
+    // Description is the only text column Revolut exports and it holds the
+    // merchant, so it lands as the counterparty.
+    expect($dtos[0]->counterpartyName)->toBe('Spotify');
     expect($dtos[0]->postedAt->toDateString())->toBe('2026-05-02');
     expect($dtos[1]->amountMinor)->toBe(10000);
     expect($dtos[0]->ownIban)->toBe('REVOLUT');

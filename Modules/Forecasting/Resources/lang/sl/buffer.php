@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Najmanjša rezerva za :name',
     'save' => 'Shrani rezervo',
     'cancel' => 'Prekliči',
-    'clear' => 'Počisti rezervo (uporabi prag €0)',
+    'clear' => 'Počisti rezervo (uporabi prag :zero)',
 
     'toast' => [
         'updated' => 'Rezerva je posodobljena.',

@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\FX\Public\Support\BundledRates')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -19,7 +20,7 @@
     $sourceLabel = static fn (?string $source): string => match ($source) {
         'ecb' => 'ECB',
         'frankfurter' => 'Frankfurter',
-        'bundled' => Lang::get('core::net_worth.source_bundled'),
+        BundledRates::SOURCE => Lang::get('core::net_worth.source_bundled'),
         'transaction' => Lang::get('core::net_worth.source_transaction'),
         null, '' => Lang::get('core::net_worth.source_fallback'),
         default => ucfirst($source),
@@ -28,7 +29,7 @@
     // Stale-note copy depends on the rate's provenance (UI-SPEC §7.2): a bundled
     // snapshot tells the user to enable online refresh; a merely-old online rate
     // (staleness is age-based, independent of source) just notes its age.
-    $staleNote = static fn (?string $source): string => $source === 'bundled'
+    $staleNote = static fn (?string $source): string => $source === BundledRates::SOURCE
         ? Lang::get('core::net_worth.stale_bundled')
         : Lang::get('core::net_worth.stale_old');
 
@@ -58,7 +59,12 @@
 <div>
     @if ($netWorth->hasAccounts())
         <x-core::card tag="section" aria-label="{{ Lang::get('core::net_worth.aria') }}">
-            <div class="flex items-start justify-between gap-4">
+            {{-- flex-wrap: the figure is text-3xl and has no break opportunity
+                 inside it, and its column is min-w-0 beside a shrink-0 button,
+                 so it overflowed VISIBLY and painted under the button. Measured
+                 on an iPhone 12 mini: €1,727.38 needed 170px in a 137px column
+                 and the last digit sat under "Breakdown". --}}
+            <div class="flex flex-wrap items-start justify-between gap-4">
                 <div class="min-w-0">
                     <p class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ Lang::get('core::net_worth.heading') }}</p>
 
@@ -92,12 +98,12 @@
                         @endif
                     </p>
 
-                    @php($accountCount = count($netWorth->accounts))
+                    @php($accountCount = $netWorth->accountCount())
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {{ Lang::choice('core::net_worth.across', $accountCount, ['count' => $accountCount]) }}
-                        @if ($netWorth->accountsWithoutRate > 0)
+                        @if ($netWorth->balancesWithoutRate > 0)
                             {{-- No-rate fallback (§7.4 UI-SPEC) — replaces old "excludes non-EUR balances" span --}}
-                            <span style="color: var(--color-amber);">{{ Lang::choice('core::net_worth.not_converted', $netWorth->accountsWithoutRate, ['count' => $netWorth->accountsWithoutRate]) }}</span>
+                            <span style="color: var(--color-amber);">{{ Lang::choice('core::net_worth.not_converted', $netWorth->balancesWithoutRate, ['count' => $netWorth->balancesWithoutRate]) }}</span>
                         @endif
                     </p>
 
@@ -118,6 +124,10 @@
             @if ($expanded)
                 <ul class="mt-4 space-y-1.5 border-t border-slate-100 pt-4 dark:border-slate-800">
                     @foreach ($netWorth->accounts as $account)
+                        {{-- One account can hold several currencies and yields a
+                             line each, so the popover anchor, id and x-ref are
+                             keyed by account AND currency or the two collide. --}}
+                        @php($lineKey = $account->accountId . $account->currency)
                         <li class="flex items-center justify-between gap-3 text-sm">
                             <span class="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-300">
                                 {{ $account->name }}
@@ -135,13 +145,13 @@
                                         ≈ {{ $fmt($account->baseEquivalentMinor) }}
                                         <button type="button"
                                                 class="fx-disclosure-trigger fx-disclosure-trigger--inline"
-                                                style="anchor-name: --fx-a{{ $account->accountId }};"
+                                                style="anchor-name: --fx-a{{ $lineKey }};"
                                                 aria-label="{{ Lang::get('core::net_worth.rate_details_for', ['name' => $account->name]) }}"
                                                 x-data
-                                                x-on:click="$refs.{{ 'fxPop'.$account->accountId }}.showPopover()">
+                                                x-on:click="$refs.{{ 'fxPop'.$lineKey }}.showPopover()">
                                             <span class="fx-icon {{ $account->fxIsStale ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
                                         </button>
-                                        <div popover id="fx-pop-{{ $account->accountId }}" x-ref="{{ 'fxPop'.$account->accountId }}" class="fx-popover" style="position-anchor: --fx-a{{ $account->accountId }}; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
+                                        <div popover id="fx-pop-{{ $lineKey }}" x-ref="{{ 'fxPop'.$lineKey }}" class="fx-popover" style="position-anchor: --fx-a{{ $lineKey }}; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
                                             @php($accountRate = $fmtRate($account->fxRate))
                                             @if ($accountRate !== null)
                                                 <p class="fx-rate">{{ Lang::get('core::net_worth.rate_line', ['from' => $account->currency, 'rate' => $accountRate, 'to' => $baseCurrency]) }}</p>

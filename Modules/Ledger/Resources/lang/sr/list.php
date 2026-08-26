@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Nedavne transakcije (poslednjih 90 dana).',
 
     'currency_aria' => 'Prikaz valute',
-    'currency_eur' => 'Samo EUR',
+    'currency_eur' => 'Samo :code',
     'currency_original' => 'Izvorna valuta',
 
     'show_recent' => 'Prikaži samo nedavne',

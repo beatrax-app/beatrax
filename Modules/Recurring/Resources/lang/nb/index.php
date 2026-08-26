@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Gjentakende inntekter',
 
     'next' => 'Neste',
+    'overdue' => 'Forfalt',
     'chain' => 'kjede',
     'chain_aria' => 'Finansieres via kjede',
     'per_month_suffix' => '/mnd',

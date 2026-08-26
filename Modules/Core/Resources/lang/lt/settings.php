@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Valiutos rodymas',
         'label' => 'Numatytasis rodinys operacijų sąraše',
-        'eur_only' => 'Tik EUR',
+        'eur_only' => 'Tik :code',
         'original' => 'Pradinė valiuta',
         'help' => 'Kiekviename puslapyje vis tiek gali persijungti iš operacijų sąrašo.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Aptikimo langas (mėnesiais)',
         'window_help' => 'Kiek istorijos mėnesių nuskaityti grupuojant operacijas į pasikartojančius modelius.',
         'income_label' => 'Mažiausios pajamos (centais)',
-        'income_help' => 'Už šią ribą mažesnės pajamos automatiškai negrupuojamos. Saugoma centais — 200000 reiškia 2 000,00 €. Nustatyk 0, kad ribos nebūtų.',
+        'income_help' => 'Už šią ribą mažesnės pajamos automatiškai negrupuojamos. Saugoma centais — 200000 reiškia :example. Nustatyk 0, kad ribos nebūtų.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Pasirink valiutą.',
         'window_months' => 'Pasirink nuo 2 iki 60 mėnesių.',
         'threshold' => 'Pasirink ribą iš 1%, 2%, 5%, 10%, 25% arba 50%.',
-        'amount' => 'Įvesk sumą nuo 0 € ir daugiau.',
+        'amount' => 'Įvesk sumą nuo :zero ir daugiau.',
         'period_day' => 'Pasirink dieną nuo 1 iki 28.',
         'currency_view' => 'Pasirink vieną iš galimų parinkčių.',
     ],

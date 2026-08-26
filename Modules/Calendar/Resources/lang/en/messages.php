@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Projection updating…',
-        'risk' => 'Balance dips below €0 on :date.|Balance dips below €0 on :count days — first: :date.',
+        'risk' => 'Balance dips below :zero on :date.|Balance dips below :zero on :count days — first: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'entry|entries',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', projected balance minus €:amount',
-        'aria_balance_positive' => ', projected balance €:amount',
+        'aria_balance_negative' => ', projected balance minus :amount',
+        'aria_balance_positive' => ', projected balance :amount',
         'overflow' => '+:count more',
         'paid' => 'Paid',
         'missed' => 'Expected — not found',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Booked payment',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ date approximate',
         'series' => '↗ series',
         'counterparty' => '↗ counterparty',
+        'transaction' => '↗ transaction',
         'end_of_day' => 'End of day',
     ],
 ];

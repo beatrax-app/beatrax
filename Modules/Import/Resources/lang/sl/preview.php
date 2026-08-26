@@ -9,6 +9,10 @@ return [
     'confirm' => 'Potrdi uvoz',
     'subtitle' => 'Preglej razčlenjene vrstice. Nič se ne shrani v tvojo glavno knjigo, dokler ne potrdiš.',
 
+    'already_imported' => 'Ta datoteka je že uvožena.',
+
+    'already_imported_link' => 'Poglej rezultat uvoza',
+
     'expired_html' => 'Predogled je potekel. <a href="/imports/new" class="underline">Znova naloži datoteko</a> in poskusi še enkrat.',
 
     'save_name' => 'Shrani ime',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Preimenuj to nasprotno stranko',
 
     'unknown_iban_prefix' => 'Našli smo neznan IBAN:',
+
+    'unknown_account_prefix' => 'Našli smo neznan račun:',
     'unknown_iban_suffix' => 'Poimenuj ta račun.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'za ponovni poskus ali pregled.',
     ],
 
+    'rows_shown' => 'Prikazane vrstice: :shown od :total',
+
+    'show_more' => 'Pokaži več vrstic',
+
     'errors' => [
         'app_locked' => 'Odklenite aplikacijo za uvoz: šifrirnih ključev ni mogoče uporabiti, dokler je zaklenjena.',
+        'file_stopped_short' => 'Glava se je ujemala, zato je oblika prava. Branje se je ustavilo pred koncem datoteke. To povzroči ena neberljiva vrstica, prav tako datoteka, ki je prevelika za to napravo. Poskusi s krajšim obdobjem.',
         'file_unreadable' => 'Te datoteke ni bilo mogoče prebrati.',
         'iban_not_in_preview' => 'Ta IBAN ni del trenutnega predogleda.',
+        'pdf_reader_unavailable' => 'Izpiski v PDF potrebujejo program pdftotext, ki tukaj ni nameščen. Uvozi to datoteko na računalniku, kjer je, ali pa raje uporabi izvoz CSV iz banke.',
         'row_unreadable' => 'Te vrstice ni bilo mogoče prebrati.',
         'unknown_account' => 'Ta vrstica pripada računu, ki ga še nisi poimenoval.',
     ],

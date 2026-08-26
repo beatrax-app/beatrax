@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'error_enroll_unsupported' => 'Le déverrouillage biométrique n\'est pas disponible sur cet appareil.',
+    'error_enroll_unsupported' => 'Cette version de Beatrax n\'a nulle part où ranger une clé de déverrouillage, le déverrouillage biométrique n\'est donc pas proposé. La limite n\'est pas ton appareil.',
     'error_enroll_unprotected' => 'Le déverrouillage biométrique a besoin d\'un magasin de clés du système d\'exploitation, et cette installation n\'en a pas. L\'enrôlement laisserait la clé de déverrouillage lisible à côté de tes données, il n\'est donc pas proposé ici.',
     'error_enroll_locked' => 'Déverrouille l\'app avant d\'activer la biométrie.',
     'error_enroll_failed' => 'Ton appareil a refusé de stocker la clé. Le déverrouillage biométrique est indisponible.',
@@ -32,7 +32,7 @@ return [
     'biometric_enroll_description' => 'Active le déverrouillage biométrique sur cet appareil.',
     'remove' => 'Retirer',
     'enroll' => 'Activer',
-    'biometric_unavailable' => 'Le déverrouillage biométrique n\'est pas disponible sur cet appareil.',
+    'biometric_unavailable' => 'Cette version de Beatrax ne peut pas proposer le déverrouillage biométrique. Ton PIN est ici le seul déverrouillage.',
 
     'deenroll_modal_heading' => 'Retirer le déverrouillage biométrique — confirme avec ton PIN',
     'current_pin_label' => 'PIN actuel',

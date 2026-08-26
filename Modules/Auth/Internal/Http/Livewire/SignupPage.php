@@ -6,6 +6,7 @@ namespace Modules\Auth\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Routing\Router;
@@ -101,13 +102,19 @@ final class SignupPage extends Component
     // Remembered for the next full page load, and applied to this one: the
     // screen re-renders over a Livewire round trip rather than navigating, so
     // nothing else would retarget the language before it is drawn again.
-    public function updatedLocale(Session $session, LocaleNegotiator $negotiator): void
+    public function updatedLocale(Session $session, LocaleNegotiator $negotiator, Translator $translator): void
     {
         $negotiator->rememberChoice($session, $this->locale);
 
         if (Locale::isSupported($this->locale)) {
             $negotiator->apply($this->locale);
         }
+
+        // <html lang> is the layout's, which a round trip never redraws, and it
+        // is what a screen reader pronounces from and what the chart helper
+        // reads its month names out of. The tag is the one that was applied,
+        // not the one asked for: "System" resolves to something else.
+        $this->dispatch('locale-applied', tag: $translator->getLocale());
     }
 
     public function render(ViewFactory $views, Router $routes, UrlGenerator $urls, UserCountry $countries): View

@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Currency display',
         'label' => 'Default view on the transactions list',
-        'eur_only' => 'EUR only',
+        'eur_only' => ':code only',
         'original' => 'Original currency',
         'help' => 'You can still switch per page from the transactions list.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Detection window (months)',
         'window_help' => 'How many months of history to scan when clustering transactions into recurring patterns.',
         'income_label' => 'Income minimum (cents)',
-        'income_help' => 'Incomes below this threshold are not auto-clustered. Stored in cents — 200000 means €2,000.00. Set to 0 to disable the threshold.',
+        'income_help' => 'Incomes below this threshold are not auto-clustered. Stored in cents — 200000 means :example. Set to 0 to disable the threshold.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Please choose a currency.',
         'window_months' => 'Choose between 2 and 60 months.',
         'threshold' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',
-        'amount' => 'Enter an amount from €0 upward.',
+        'amount' => 'Enter an amount from :zero upward.',
         'period_day' => 'Choose a day from 1 to 28.',
         'currency_view' => 'Pick one of the available options.',
     ],

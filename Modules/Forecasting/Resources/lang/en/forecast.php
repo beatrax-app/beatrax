@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => "No series contribute to this account's forecast yet.",
 
     'net_diff' => 'Net diff',
+
+    'net_diff_unknown' => 'Not calculated for this horizon yet.',
     'net_diff_section_aria' => 'Net diff between baseline and scenario at horizon days 30 / 60 / 90',
     'net_diff_delta_aria' => 'Net difference at day :day: :value, scenario is :state',
     'better_than_baseline' => 'better than baseline',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Forecast highlights',
     'highlights_shortfall_aria' => ':count active shortfall window in the next :days days|:count active shortfall windows in the next :days days',
-    'dips_to' => ':name dips to :amount',
     'on_date_suffix' => ' on :date',
     'shortfall_window' => ':count active shortfall window|:count active shortfall windows',
-    'lowest_in_30' => 'Lowest in 30 days: :amount',
+    'lowest_in_30_label' => 'Lowest in 30 days',
     'next_ics' => 'Next ICS settlement: :amount on :date',
+    'ics_overdue' => 'ICS settlement overdue: :amount, due :date',
 ];

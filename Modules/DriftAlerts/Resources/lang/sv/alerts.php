@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Varningar',
+    'page_title' => 'Avvikelsevarningar',
     'heading' => 'Varningar',
     'intro_anomaly' => 'Enskilda debiteringar som ser ovanliga ut för dig.',
     'intro_drift' => 'Godkända återkommande serier vars senaste debitering hamnade utanför ditt tröskelvärde.',

@@ -27,20 +27,34 @@
      bar. The component announces the change through AnnouncesStepChanges and
      the one listener in the bundle returns the page to the top — this screen
      carries no handler of its own, so two of them cannot disagree. --}}
-<div class="wiz-page">
+@php
+    $stepKeys = array_keys($progress);
+    $totalSteps = count($stepKeys);
+    $currentIndex = array_search($currentStepKey, $stepKeys, strict: true);
+    $currentStepNumber = $currentIndex === false ? 1 : ($currentIndex + 1);
+    $previousStepKey = ($currentIndex === false || $currentIndex < 1) ? null : $stepKeys[$currentIndex - 1];
+@endphp
+{{-- The previous step is named on the element so the platform's own back
+     gesture can step the wizard back instead of leaving it; the listener that
+     reads it lives beside the other step-changed listener in the bundle. --}}
+<div class="wiz-page" @if ($previousStepKey !== null) data-wizard-previous-step="{{ $previousStepKey }}" @endif>
     <header class="wiz-top" aria-label="{{ Lang::get('onboarding::wizard.header_aria') }}">
         <div class="wiz-brand">
+            @if ($previousStepKey !== null)
+                <button
+                    type="button"
+                    class="wiz-back"
+                    wire:click="goToStep('{{ $previousStepKey }}')"
+                    aria-label="{{ Lang::get('onboarding::wizard.back_aria') }}"
+                >
+                    <span aria-hidden="true">←</span> {{ Lang::get('onboarding::wizard.back') }}
+                </button>
+            @endif
             <x-core::app-mark :size="22" class="wiz-brand-mark logo-svg" :decorative="false" />
             <span class="wiz-brand-name">Beatrax</span>
         </div>
 
         <nav class="wiz-dots" aria-label="{{ Lang::get('onboarding::wizard.progress_aria') }}">
-            @php
-                $stepKeys = array_keys($progress);
-                $totalSteps = count($stepKeys);
-                $currentIndex = array_search($currentStepKey, $stepKeys, strict: true);
-                $currentStepNumber = $currentIndex === false ? 1 : ($currentIndex + 1);
-            @endphp
             @foreach ($stepKeys as $index => $stepKey)
                 @php
                     $status = $progress[$stepKey]['status'] ?? \Modules\Onboarding\Internal\Enums\WizardStepStatus::Pending->value;
@@ -154,7 +168,7 @@
             {{ Lang::get('onboarding::wizard.privacy') }}
         </span>
         <a
-            class="wiz-help-link"
+            class="wiz-help-link tap-link"
             href="{{ config('community.github_issues_url') }}"
             wire:click.prevent="openHelp"
             target="_blank"

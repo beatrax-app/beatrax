@@ -32,10 +32,10 @@ return [
             'latest_fx_rate_used' => null,
             'next_expected_date' => '2026-05-07',
             'occurrences' => [
+                ['date' => '2026-01-07', 'observed_amount_minor' => -12000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-02-07', 'observed_amount_minor' => -12000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-03-07', 'observed_amount_minor' => -12000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-04-07', 'observed_amount_minor' => -12000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
-                ['date' => '2026-05-07', 'observed_amount_minor' => -12000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
             ],
         ],
         [
@@ -52,10 +52,10 @@ return [
             'latest_fx_rate_used' => null,
             'next_expected_date' => '2026-05-12',
             'occurrences' => [
+                ['date' => '2026-01-12', 'observed_amount_minor' => -5000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-02-12', 'observed_amount_minor' => -5000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-03-12', 'observed_amount_minor' => -5000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-04-12', 'observed_amount_minor' => -5000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
-                ['date' => '2026-05-12', 'observed_amount_minor' => -5000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
             ],
         ],
         [
@@ -72,10 +72,10 @@ return [
             'latest_fx_rate_used' => null,
             'next_expected_date' => '2026-05-22',
             'occurrences' => [
+                ['date' => '2026-01-22', 'observed_amount_minor' => -3000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-02-22', 'observed_amount_minor' => -3000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-03-22', 'observed_amount_minor' => -3000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
                 ['date' => '2026-04-22', 'observed_amount_minor' => -3000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
-                ['date' => '2026-05-22', 'observed_amount_minor' => -3000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
             ],
         ],
     ],
@@ -113,7 +113,7 @@ return [
             [
                 'account_id' => 1,
                 'starts_at' => '2026-05-07',
-                'ends_at' => '2026-05-22',
+                'ends_at' => '2026-05-31',
                 'lowest_balance_minor' => 40000,
                 'currency' => 'EUR',
                 'buffer_used_minor' => 50000,

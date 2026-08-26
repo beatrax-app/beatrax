@@ -9,28 +9,47 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Enums\ArgType;
 use Modules\DevMode\Internal\Enums\CommandTier;
+use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Exceptions\SpawnProcessException;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 use Modules\DevMode\Public\Dto\CommandSpec;
+use Symfony\Component\Process\Exception\ProcessStartFailedException;
 use Symfony\Component\Process\Process;
 
 final readonly class CommandSpawner
 {
+    // $phpBinary is the interpreter the detached child is launched with.
+    // Injected rather than read from PHP_BINARY at the call site because the
+    // embed SAPI leaves that constant empty, and a spawner with nothing to
+    // spawn has to be constructible in a test to be provable.
     public function __construct(
         private RunRegistry $registry,
         private Clock $clock,
         private DevCommandRegistry $commands,
         private AuditWriter $audit,
+        private string $phpBinary = PHP_BINARY,
     ) {}
 
     /**
      * @param  array<string, mixed>  $args
+     *
+     * @throws ProcessSpawningUnavailableException
      */
     public function start(string $command, array $args, int $callerUserId, CommandTier $tier): string
     {
+        // Before the run directory, the registry row and the audit row, so a
+        // platform that cannot spawn leaves none of them behind. An empty
+        // interpreter would otherwise build `'' artisan cache:clear`, which a
+        // shell accepts and reports as a started run that did nothing.
+        if ($this->phpBinary === '') {
+            throw new ProcessSpawningUnavailableException(
+                'No PHP interpreter path is available to spawn a child process with.',
+            );
+        }
+
         // Throws on any unregistered name, so a never-exposed command such
         // as `migrate` cannot reach the shell below.
         $spec = $this->commands->find($command);
@@ -99,7 +118,7 @@ final readonly class CommandSpawner
         $argTokens = $this->flattenArgs($spec, $args);
 
         $parts = [
-            escapeshellarg(PHP_BINARY),
+            escapeshellarg($this->phpBinary),
             escapeshellarg($artisanPath),
             escapeshellarg($command),
         ];
@@ -179,7 +198,19 @@ final readonly class CommandSpawner
 
         $process = Process::fromShellCommandline($shellCommand, $cwd);
         $process->setTimeout(5.0);
-        $process->run();
+
+        try {
+            $process->run();
+        } catch (ProcessStartFailedException $e) {
+            // proc_open() is present and the sandbox refuses the fork behind
+            // it, which is a property of the host and not of this command:
+            // "PHP Startup: Fork failed: Operation not permitted".
+            throw new ProcessSpawningUnavailableException(
+                sprintf('The runtime refused to start a child process: %s', $e->getMessage()),
+                0,
+                $e,
+            );
+        }
 
         if (! $process->isSuccessful()) {
             throw SpawnProcessException::bashWrapperFailed(trim($process->getErrorOutput()));

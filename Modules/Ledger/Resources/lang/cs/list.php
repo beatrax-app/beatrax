@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Nedávné transakce (posledních 90 dní).',
 
     'currency_aria' => 'Zobrazení měny',
-    'currency_eur' => 'Pouze EUR',
+    'currency_eur' => 'Pouze :code',
     'currency_original' => 'Původní měna',
 
     'show_recent' => 'Zobrazit jen nedávné',

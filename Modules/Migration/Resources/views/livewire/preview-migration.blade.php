@@ -9,9 +9,7 @@
         ['key' => 'budget', 'label' => Lang::get('migration::preview.stats.budget'), 'value' => $summary->budgetMonthsCount],
     ];
 
-    $everythingClean = $summary->unmapped['category']['count'] === 0
-        && $summary->unmapped['payee']['count'] === 0
-        && $summary->unmapped['extra']['count'] === 0
+    $everythingClean = $summary->unmapped['extra']['count'] === 0
         && $summary->unmapped['conflict']['count'] === 0;
 @endphp
 
@@ -27,9 +25,6 @@
             <div class="rounded-md border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700">
                 <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ $stat['value'] }}</p>
                 <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $stat['label'] }}</p>
-                @if ($this->fullyMapped($summary, $stat['key']))
-                    <p class="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">{{ Lang::get('migration::preview.fully_mapped') }}</p>
-                @endif
             </div>
         @endforeach
     </section>
@@ -69,34 +64,6 @@
                             </div>
                         @endforeach
                     </div>
-                </details>
-            @endif
-
-            @if ($summary->unmapped['category']['count'] > 0)
-                <details class="rounded-md border border-slate-200 dark:border-slate-700">
-                    <summary class="cursor-pointer px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('migration::preview.groups.category') }} ({{ $summary->unmapped['category']['count'] }})
-                        <span class="ml-1 inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950">{{ $summary->unmapped['category']['count'] }}</span>
-                    </summary>
-                    <ul class="space-y-1 border-t border-slate-200 px-4 py-3 text-sm dark:border-slate-700">
-                        @foreach ($summary->unmapped['category']['items'] as $item)
-                            <li class="text-slate-900 dark:text-slate-100">{{ $item['label'] }} <span class="text-slate-500 dark:text-slate-400">— {{ $item['reason'] }}</span></li>
-                        @endforeach
-                    </ul>
-                </details>
-            @endif
-
-            @if ($summary->unmapped['payee']['count'] > 0)
-                <details class="rounded-md border border-slate-200 dark:border-slate-700">
-                    <summary class="cursor-pointer px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('migration::preview.groups.payee') }} ({{ $summary->unmapped['payee']['count'] }})
-                        <span class="ml-1 inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950">{{ $summary->unmapped['payee']['count'] }}</span>
-                    </summary>
-                    <ul class="space-y-1 border-t border-slate-200 px-4 py-3 text-sm dark:border-slate-700">
-                        @foreach ($summary->unmapped['payee']['items'] as $item)
-                            <li class="text-slate-900 dark:text-slate-100">{{ $item['label'] }} <span class="text-slate-500 dark:text-slate-400">— {{ $item['reason'] }}</span></li>
-                        @endforeach
-                    </ul>
                 </details>
             @endif
 

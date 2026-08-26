@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Atsijungti',
     'forgot_pin' => 'Pamiršai PIN kodą? Atsijunk — gali vėl prisijungti su paskyros slaptažodžiu ir nustatyti naują PIN kodą. Duomenys neprarandami.',
 
-    'digits_suffix' => 'įvesta skaitmenų',
+    'digits_entered' => '{1} įvestas :count skaitmuo|[2,9] įvesti :count skaitmenys|[10,*] įvesta :count skaitmenų',
     'pad_label' => 'PIN kodo klaviatūra',
     'digit_aria' => 'Skaitmuo :digit',
     'backspace_aria' => 'Naikinimo klavišas',

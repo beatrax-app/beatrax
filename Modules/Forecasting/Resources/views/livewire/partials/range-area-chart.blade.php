@@ -11,10 +11,15 @@
     account flip refreshes the chart without re-mounting the
     component.
 
-    The container intentionally avoids `wire:ignore`. The pattern is:
-    Livewire owns the data-options attribute (string-in, string-out),
-    Alpine reads it once and re-reads on browser-event re-render
-    cycles. No DOM-survive-refresh contract is required here.
+    Livewire owns the data-options attribute (string-in, string-out)
+    and Alpine reads it once, then again on browser-event re-render
+    cycles. `wire:ignore` sits on the render target INSIDE that, and
+    only there: the wrapper stays Livewire's, the drawn SVG does not.
+
+    This block used to say the container intentionally avoided
+    `wire:ignore` because no DOM-survive contract was required. That
+    was measured false on a phone -- a morph emptied the chart and
+    only a full page load brought it back.
 
     Loading state: when `$forecast->isComputing` is true, the chart
     container is opacity-dimmed and an "Updating…" caption is
@@ -40,6 +45,11 @@
         'relative',
         'opacity-60 pointer-events-none' => $forecast->isComputing,
     ])
+    {{-- Keyed on the chart id: a horizon or account flip renames the
+         target, and without this Livewire morphs the wrapper in place,
+         x-init never re-runs, and the Alpine instance goes on holding a
+         node that is no longer the one being drawn into. --}}
+    wire:key="chart-{{ $chartElementId }}"
     style="width:100%"
     x-data="{ chart: null }"
     x-init="
@@ -67,7 +77,11 @@
             <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('forecasting::forecast.updating') }}&hellip;</p>
         </div>
     @endif
-    <div id="{{ $chartElementId }}"></div>
+    {{-- wire:ignore, and it is not decoration: Livewire's morph wiped the
+         rendered SVG out of this node. Measured on a phone -- creating a
+         scenario emptied the baseline chart, saving a mutation emptied both,
+         and only a full page load brought them back. --}}
+    <div wire:ignore id="{{ $chartElementId }}"></div>
     <noscript>
         <p class="text-xs text-slate-500 dark:text-slate-400">
             {{ Lang::choice('forecasting::forecast.chart_noscript', $forecast->horizonDays, ['days' => $forecast->horizonDays]) }}

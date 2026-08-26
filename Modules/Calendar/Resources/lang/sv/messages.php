@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognosen uppdateras…',
-        'risk' => 'Saldot går under €0 den :date.|Saldot går under €0 :count dagar — först: :date.',
+        'risk' => 'Saldot går under :zero den :date.|Saldot går under :zero :count dagar — först: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'post|poster',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', prognostiserat saldo minus €:amount',
-        'aria_balance_positive' => ', prognostiserat saldo €:amount',
+        'aria_balance_negative' => ', prognostiserat saldo minus :amount',
+        'aria_balance_positive' => ', prognostiserat saldo :amount',
         'overflow' => '+:count till',
         'paid' => 'Betald',
         'missed' => 'Förväntad — hittades inte',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Bokförd betalning',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ ungefärligt datum',
         'series' => '↗ serie',
         'counterparty' => '↗ motpart',
+        'transaction' => '↗ transaktion',
         'end_of_day' => 'Dagens slut',
     ],
 ];

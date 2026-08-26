@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'A fordítások nagy része egyelőre MI-vel készült — a Beatrax nyílt forráskódú, az idő pedig kevés, így a gépi fordítás jobb megoldásnak bizonyult, mint üresen hagyni a nyelveket. Ha valami rosszul hangzik neked, valószínűleg tényleg az, és egy egysoros javítás mindenkinek segít.',
     'translations_how' => 'Minden nyelv egy mappa egyszerű PHP-fájlokkal a Modules/*/Resources/lang alatt. Másold le az angol mappát, fordítsd le a szövegeket, és nyiss egy pull requestet — nincs build lépés, nincs telepítendő eszköz.',
     'translations_cta' => 'Olvasd el a hozzájárulási útmutatót',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Megosztott kereskedőlista',
 ];

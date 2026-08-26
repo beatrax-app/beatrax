@@ -6,11 +6,16 @@ namespace Modules\Desktop\Internal\Listeners;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Session\Session;
+use Modules\Auth\Public\Events\AppLockUnlocked;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Desktop\Internal\Native\RelayListenerProcess;
 use Modules\Desktop\Internal\Native\SyncListenerProcess;
 use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Modules\Sync\Public\Events\SyncTransportCredentialsAvailable;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 // Boot only starts the daemon for a device that already had an identity, so
 // without this the device stays unreachable until the next launch.
@@ -23,7 +28,43 @@ final readonly class StartSyncListenerOnEnable
         private SyncListenerProcess $listener,
         private RelayListenerProcess $relay,
         private Container $container,
+        private CurrentUser $currentUser,
+        private LoggerInterface $log,
     ) {}
+
+    // The unlock is the ONLY moment the sealed identity becomes openable, and the
+    // daemon was already spawned — keyless — at app boot. Credentialling it here
+    // rather than when a pairing modal happens to open is what makes the desktop
+    // discoverable at all (see @link).
+    /**
+     * @link ../../../../.docs/features/sync/pairing-handshake.md#a-pairing-outlives-the-lock-that-interrupts-it
+     */
+    public function handleUnlocked(AppLockUnlocked $event): void
+    {
+        // An enclave recovery and the test harness both unlock a session no guard
+        // has a user bound to; asking for one would throw out of a completed unlock.
+        if (! $this->currentUser->isAuthenticated()) {
+            return;
+        }
+
+        try {
+            $environment = $this->environmentFor($this->currentUser->user()->id, $event->session);
+
+            if ($environment === null) {
+                return;
+            }
+
+            $this->listener->startIfEnabled($environment);
+            $this->relay->startIfEnabled();
+        } catch (Throwable $e) {
+            // Never-throw: the unlock has already happened, and a listener that
+            // could not be credentialled must not become an exception on the
+            // lock screen the reader just cleared.
+            $this->log->warning('StartSyncListenerOnEnable: could not credential the listener on unlock', [
+                ...SafeExceptionContext::describe($e),
+            ]);
+        }
+    }
 
     public function handle(DeviceSyncEnabled $event): void
     {
@@ -54,9 +95,9 @@ final readonly class StartSyncListenerOnEnable
     /**
      * @return array<string, string>|null
      */
-    private function environmentFor(int $userId): ?array
+    private function environmentFor(int $userId, ?Session $session = null): ?array
     {
         return $this->container->make(SyncDaemonIdentity::class)
-            ->env($userId, $this->container->make(Session::class));
+            ->env($userId, $session ?? $this->container->make(Session::class));
     }
 }

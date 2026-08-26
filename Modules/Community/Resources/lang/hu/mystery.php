@@ -21,7 +21,6 @@ return [
     'footer' => 'A megosztott lista egy a Beatraxszal együtt szállított YAML-fájl. A javaslat beküldése megnyitja a GitHubot a böngésződben; ezen kívül semmi nem hagyja el ezt az eszközt.',
 
     'card' => [
-        'likely' => 'Valószínűleg: névtelen kereskedő.',
         'seen_times' => 'Előfordult :count alkalommal|Előfordult :count alkalommal',
         'last_seen' => 'Legutóbb: :date',
         'suggest' => 'Javasolj nevet →',

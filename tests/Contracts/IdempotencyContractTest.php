@@ -60,7 +60,6 @@ it('produces zero new rows when the same file is imported twice', function (
 
     $hint = match ($adapterFormat) {
         'asn-csv' => BankCsvFormatHint::Asn,
-        'ing-csv' => BankCsvFormatHint::Ing,
         default => null,
     };
 
@@ -83,7 +82,6 @@ it('produces zero new rows when an overlapping period is imported', function (
 
     $hint = match ($adapterFormat) {
         'asn-csv' => BankCsvFormatHint::Asn,
-        'ing-csv' => BankCsvFormatHint::Ing,
         default => null,
     };
 

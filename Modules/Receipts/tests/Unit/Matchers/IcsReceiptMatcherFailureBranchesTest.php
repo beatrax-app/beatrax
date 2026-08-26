@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function icsFailMatcher(): IcsReceiptMatcher
@@ -27,7 +28,7 @@ function icsEml(string $contentType, string $body): string
 it('returns unmatched for an empty body (no text and no html to resolve)', function (): void {
     $outcome = icsFailMatcher()->match(icsEml('text/plain', ''));
 
-    expect($outcome->kind)->toBe('unmatched');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
 });
 
 it('returns unmatched when a text-only body carries an amount but no merchant', function (): void {
@@ -35,7 +36,7 @@ it('returns unmatched when a text-only body carries an amount but no merchant', 
     $body = "Beste kaarthouder,\r\nBedrag: \u{20AC} 12,34\r\nReferentienummer: XYZ999\r\n";
     $outcome = icsFailMatcher()->match(icsEml('text/plain', $body));
 
-    expect($outcome->kind)->toBe('unmatched');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
 });
 
 it('falls back to the first non-empty <td> cell when the merchant label is absent', function (): void {
@@ -47,7 +48,7 @@ it('falls back to the first non-empty <td> cell when the merchant label is absen
         .'</table></body></html>';
     $outcome = icsFailMatcher()->match(icsEml('text/html', $body));
 
-    expect($outcome->kind)->toBe('parsed');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed?->merchantName)->toBe('ACME TABLE STORE');
     expect($outcome->parsed?->amountMinor)->toBe(-999);
 });
@@ -56,7 +57,7 @@ it('returns unmatched when a merchant is present but no amount anchor is found',
     $body = "Verkoper: ACME NO AMOUNT\r\nReferentienummer: XYZ111\r\n";
     $outcome = icsFailMatcher()->match(icsEml('text/plain', $body));
 
-    expect($outcome->kind)->toBe('unmatched');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
 });
 
 it('returns unmatched when the amount matches the anchor but is not a parseable number', function (): void {
@@ -65,5 +66,5 @@ it('returns unmatched when the amount matches the anchor but is not a parseable 
     $body = "Verkoper: ACME BAD AMOUNT\r\nBedrag: \u{20AC} 1.2.3\r\n";
     $outcome = icsFailMatcher()->match(icsEml('text/plain', $body));
 
-    expect($outcome->kind)->toBe('unmatched');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
 });

@@ -12,7 +12,7 @@ return [
     // label the same way, but a native should confirm the pairing reads.
     'forgot_pin' => 'Забрави ли ПИН кода? Излез — можеш да влезеш отново с паролата за профила и да зададеш нов ПИН код. Не се губят данни.',
 
-    'digits_suffix' => 'въведени цифри',
+    'digits_entered' => ':count въведена цифра|:count въведени цифри',
     'pad_label' => 'Клавиатура за ПИН',
     'digit_aria' => 'Цифра :digit',
     'backspace_aria' => 'Изтриване назад',

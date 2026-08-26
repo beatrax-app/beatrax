@@ -17,7 +17,7 @@ beforeEach(function (): void {
     $this->actingAs($this->user);
 });
 
-it('maps the user accounts into the forecasting list carrying each account currency', function (): void {
+it('maps the user accounts into the settings account list carrying each account currency', function (): void {
     app(DatabaseManager::class)->connection()->table('accounts')->insert([
         'user_id' => $this->user->id,
         'name' => 'Main',
@@ -30,7 +30,7 @@ it('maps the user accounts into the forecasting list carrying each account curre
     ]);
 
     Livewire::test(SettingsPage::class)
-        ->assertViewHas('forecastingAccounts', fn (array $accts): bool => count($accts) === 1 && $accts[0]['default_currency'] === 'USD');
+        ->assertViewHas('accounts', fn (array $accts): bool => count($accts) === 1 && $accts[0]['default_currency'] === 'USD');
 });
 
 it('renders the Settings page with the user current preferences pre-filled', function (): void {

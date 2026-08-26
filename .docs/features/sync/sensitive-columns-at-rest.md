@@ -512,6 +512,34 @@ precisely so base64 cannot reach a reader. Two ordinary states reach it: a sessi
 app-lock key, and a keyring file that no longer opens under the key the session does hold. Neither
 throws, and neither is visible in `sync_encryption_state`, which records only the epoch pointer.
 
+#### The shape test is not evidence on its own
+
+`looksLikeCiphertext()` asks whether a value is drawn from the base64 alphabet and decodes to at
+least 40 bytes — the floor for a 24-byte nonce plus a 16-byte tag. Read as a *test for ciphertext*
+that is sound, because every ciphertext this codec writes passes it. Read as a *decision to
+destroy a value*, it is a coin toss: any 54 characters or more of letters and digits, with no
+space or punctuation and a length divisible by four, decode as base64 too.
+
+That is not a contrived string. `AbonnementSpotifyPremiumFamilyPlanMaandelijkseIncassoRotterdam`
+is the kind of run-together token banks really export into a description, and a cash entry typed
+on an iPhone with a 300-character counterparty was blanked on the spot — the row intact in the
+device's own SQLite, the span drawn for it empty and 0px tall. Encryption was switched off on that
+install, which is the default, so the value that got destroyed could not have been ciphertext at
+all.
+
+The read path now asks the question the write path already asked. `encryptValue()` stores
+plaintext for exactly one user — the one who never enabled encryption — and refuses rather than
+writing in the clear for anyone else. So for a user with no `current_epoch`, whatever is stored
+**is** the plaintext, and there is nothing for a shape test to decide. `undecryptable()` blanks a
+value only when `everEnrolled()` confirms the ledger is genuinely sealed; the shape test runs
+first purely because it is free and never misses real ciphertext, which keeps the extra
+`sync_encryption_state` read off every ordinary row.
+
+A keyring that loaded is itself proof of enrolment, so the no-matching-epoch path inside
+`decryptWithKeyring()` still decides on shape alone. That is the case the guard was written for
+and the one that must not change: encryption really is on, this device cannot open the value, and
+base64 on the screen is what that used to look like.
+
 So every reader of a registered column has a third case besides "plaintext" and "decrypted": a
 value that is present, empty, and not the user's. `/notifications` found this the hard way.
 `NotificationCopy::typeChip()` indexed a nine-entry map with the decrypted `trigger_type` and
@@ -528,8 +556,10 @@ The third case is now a fact the codec hands over rather than one each reader in
 `decryptRow()` returns a [`DecryptedRow`](../../../Modules/Sync/Public/Dto/DecryptedRow.php): the
 column values, readable by name exactly as the plain array was, plus `isUnreadable(field)` and
 `hasUnreadable()` naming the registered columns this codec had to blank. A column is named there
-when no epoch opened it **and** the stored value was ciphertext-shaped — a legacy plaintext row
-passes straight through and is not "unreadable".
+when no epoch opened it **and** the codec actually replaced its value with the empty string — a
+legacy plaintext row passes straight through and is not "unreadable", and neither is a value the
+enrolment check above handed back. The flag reports the blanking itself rather than re-deriving it
+from the shape test, because since that check the two no longer agree.
 
 That distinction cannot be recovered from the value. `transactions.note` legitimately holds the
 empty string, and so does a `note` no key in this keyring opens; read off the value alone they are

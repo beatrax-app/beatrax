@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Meldingen',
-    'heading' => 'Meldingen',
+    'page_title' => 'Afwijkingswaarschuwingen',
+    'heading' => 'Driftmeldingen',
     'intro_anomaly' => 'Losse afschrijvingen die er voor jou ongewoon uitzien.',
     'intro_drift' => 'Goedgekeurde terugkerende reeksen waarvan de laatste afschrijving buiten je drempel valt.',
     'adjust_threshold' => 'Drempel aanpassen →',
@@ -13,7 +13,7 @@ return [
     'type_aria' => 'Type melding',
     'type' => [
         'drift' => 'Abonnementsdrift',
-        'anomaly' => 'Ongewone afschrijvingen',
+        'anomaly' => 'Ongebruikelijke afschrijvingen',
     ],
 
     'lifecycle_aria' => 'Levensloop van melding',

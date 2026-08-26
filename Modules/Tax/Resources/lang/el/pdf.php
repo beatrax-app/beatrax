@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Αντισυμβαλλόμενος',
     'col_description' => 'Περιγραφή',
     'col_note' => 'Σημείωση',
-    'col_amount' => 'Ποσό (EUR)',
+    'col_amount' => 'Ποσό',
 
     'subtotal' => 'Μερικό σύνολο',
 

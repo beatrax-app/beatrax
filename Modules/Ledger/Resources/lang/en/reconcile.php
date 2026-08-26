@@ -10,7 +10,7 @@ return [
     'account' => 'Account',
     'choose_account' => 'Choose an account…',
     'statement_date' => 'Statement date',
-    'statement_balance' => 'Statement balance (€)',
+    'statement_balance' => 'Statement balance (:symbol)',
     'balance_help' => 'Pre-filled from your latest imported statement when available — negative for money owed, editable either way.',
 
     'cleared_balance' => 'Cleared balance',

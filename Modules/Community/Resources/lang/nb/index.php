@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'De fleste oversettelsene er AI-genererte inntil videre — Beatrax er åpen kildekode og tiden er knapp, så maskinoversettelse var bedre enn å la språk stå tomme. Hvis noe høres feil ut for deg, er det sannsynligvis feil, og en rettelse på én linje hjelper alle som bruker språket.',
     'translations_how' => 'Hvert språk er en mappe med vanlige PHP-filer under Modules/*/Resources/lang. Kopier den engelske mappen, oversett tekstene og åpne en pull request — ingen byggetrinn, ingen verktøy å installere.',
     'translations_cta' => 'Les bidragsguiden',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Delt forhandlerliste',
 ];

@@ -9,6 +9,10 @@ return [
     'confirm' => 'Bekräfta importen',
     'subtitle' => 'Granska de inlästa raderna. Ingenting sparas bland dina transaktioner förrän du bekräftar.',
 
+    'already_imported' => 'Den här filen har redan importerats.',
+
+    'already_imported_link' => 'Visa importresultatet',
+
     'expired_html' => 'Förhandsgranskningen har upphört att gälla. <a href="/imports/new" class="underline">Ladda upp filen igen</a> för att försöka på nytt.',
 
     'save_name' => 'Spara namnet',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Byt namn på den här motparten',
 
     'unknown_iban_prefix' => 'Vi hittade ett okänt IBAN:',
+
+    'unknown_account_prefix' => 'Vi hittade ett okänt konto:',
     'unknown_iban_suffix' => 'Ge det här kontot ett namn.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'för att försöka igen eller undersöka närmare.',
     ],
 
+    'rows_shown' => 'Visade rader: :shown av :total',
+
+    'show_more' => 'Visa fler rader',
+
     'errors' => [
         'app_locked' => 'Lås upp appen för att importera: krypteringsnycklarna kan inte användas medan den är låst.',
+        'file_stopped_short' => 'Rubrikraden stämde, så formatet är rätt. Läsningen stannade före filens slut. En enda oläslig rad gör det, och det gör även en fil som är för stor för den här enheten. Prova en kortare period.',
         'file_unreadable' => 'Filen gick inte att läsa.',
         'iban_not_in_preview' => 'Det här IBAN-numret ingår inte i den aktuella förhandsgranskningen.',
+        'pdf_reader_unavailable' => 'PDF-kontoutdrag kräver programmet pdftotext, som inte är installerat här. Importera filen på en dator som har det, eller använd en CSV-export från din bank i stället.',
         'row_unreadable' => 'Raden gick inte att läsa.',
         'unknown_account' => 'Raden hör till ett konto som du ännu inte har namngett.',
     ],

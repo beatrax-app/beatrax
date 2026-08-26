@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Recent transactions (last 90 days).',
 
     'currency_aria' => 'Currency view',
-    'currency_eur' => 'EUR only',
+    'currency_eur' => ':code only',
     'currency_original' => 'Original currency',
 
     'show_recent' => 'Show recent only',

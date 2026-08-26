@@ -13,7 +13,7 @@ return [
     // el" instead.
     'forgot_pin' => 'Elfelejtetted a PIN-kódot? Jelentkezz ki — a fiókjelszavaddal újra bejelentkezhetsz, és beállíthatsz egy új PIN-kódot. Nem vész el adat.',
 
-    'digits_suffix' => 'számjegy beírva',
+    'digits_entered' => ':count számjegy beírva|:count számjegy beírva',
     'pad_label' => 'PIN-billentyűzet',
     'digit_aria' => ':digit számjegy',
     'backspace_aria' => 'Visszatörlés',

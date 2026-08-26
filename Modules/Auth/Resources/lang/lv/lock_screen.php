@@ -13,7 +13,7 @@ return [
     // sign_out labels want "Izrakstīties" instead.
     'forgot_pin' => 'Aizmirsāt PIN kodu? Atteikties — varat pieteikties atkārtoti ar konta paroli un iestatīt jaunu PIN kodu. Dati netiek zaudēti.',
 
-    'digits_suffix' => 'ievadīti cipari',
+    'digits_entered' => '{0} ievadīti :count ciparu|{1} ievadīts :count cipars|[2,*] ievadīti :count cipari',
     'pad_label' => 'PIN koda tastatūra',
     'digit_aria' => 'Cipars :digit',
     'backspace_aria' => 'Atpakaļatkāpe',

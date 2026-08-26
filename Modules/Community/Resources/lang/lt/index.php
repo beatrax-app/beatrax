@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'Kol kas daugumą vertimų sugeneravo dirbtinis intelektas — Beatrax yra atvirojo kodo, o laiko trūksta, todėl mašininis vertimas geriau nei visai tuščia kalba. Jei kas nors tau skamba negerai, tikriausiai taip ir yra, o vienos eilutės pataisymas padeda visiems, kurie ja naudojasi.',
     'translations_how' => 'Kiekviena kalba — tai paprastų PHP failų aplankas kataloge Modules/*/Resources/lang. Nukopijuok anglišką aplanką, išversk eilutes ir pateik pull request — jokio kompiliavimo, jokių įrankių diegti nereikia.',
     'translations_cta' => 'Perskaityti prisidėjimo vadovą',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Bendras prekybininkų sąrašas',
 ];

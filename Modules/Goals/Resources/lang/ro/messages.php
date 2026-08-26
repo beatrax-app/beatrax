@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Țintă atinsă',
+        'closed_short' => 'Închis înainte de țintă',
         'add_contributions' => 'Adaugă contribuții pentru a vedea o proiecție',
         'not_enough_history' => 'Încă nu există suficient istoric pentru a estima o dată',
         'no_recent_contributions' => 'Nu există contribuții recente pe care să se bazeze o estimare',

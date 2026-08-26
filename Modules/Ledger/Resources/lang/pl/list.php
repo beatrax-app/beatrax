@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Ostatnie transakcje (ostatnie 90 dni).',
 
     'currency_aria' => 'Widok waluty',
-    'currency_eur' => 'Tylko EUR',
+    'currency_eur' => 'Tylko :code',
     'currency_original' => 'Waluta oryginalna',
 
     'show_recent' => 'Pokaż tylko ostatnie',

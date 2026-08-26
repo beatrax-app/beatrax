@@ -9,6 +9,10 @@ return [
     'confirm' => 'Apstiprināt importu',
     'subtitle' => 'Pārskatiet nolasītās rindas. Nekas netiek saglabāts virsgrāmatā, kamēr neapstiprināt.',
 
+    'already_imported' => 'Šis fails jau ir importēts.',
+
+    'already_imported_link' => 'Skatīt importa rezultātu',
+
     'expired_html' => 'Priekšskatījuma termiņš ir beidzies. <a href="/imports/new" class="underline">Augšupielādējiet failu vēlreiz</a>, lai mēģinātu no jauna.',
 
     'save_name' => 'Saglabāt nosaukumu',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Pārdēvēt šo darījuma partneri',
 
     'unknown_iban_prefix' => 'Atradām nepazīstamu IBAN:',
+
+    'unknown_account_prefix' => 'Atradām nepazīstamu kontu:',
     'unknown_iban_suffix' => 'Piešķiriet šim kontam nosaukumu.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'lai mēģinātu vēlreiz vai pārbaudītu.',
     ],
 
+    'rows_shown' => 'Rādītās rindas: :shown no :total',
+
+    'show_more' => 'Rādīt vairāk rindu',
+
     'errors' => [
         'app_locked' => 'Atbloķējiet lietotni, lai importētu: šifrēšanas atslēgas nevar izmantot, kamēr tā ir bloķēta.',
+        'file_stopped_short' => 'Galvenes rinda sakrita, tātad formāts ir pareizs. Lasīšana apstājās pirms faila beigām. To izraisa viena nenolasāma rinda, kā arī šai ierīcei pārāk liels fails. Pamēģini īsāku laikposmu.',
         'file_unreadable' => 'Šo failu neizdevās nolasīt.',
         'iban_not_in_preview' => 'Šis IBAN nav daļa no pašreizējā priekšskatījuma.',
+        'pdf_reader_unavailable' => 'PDF izrakstiem nepieciešama programma pdftotext, kas šeit nav uzstādīta. Importē šo failu datorā, kurā tā ir, vai izmanto bankas CSV eksportu.',
         'row_unreadable' => 'Šo rindu neizdevās nolasīt.',
         'unknown_account' => 'Šī rinda pieder kontam, kuram vēl neesi devis nosaukumu.',
     ],

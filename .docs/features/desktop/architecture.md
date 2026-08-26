@@ -156,6 +156,40 @@ What the module explicitly does NOT do:
   just handed us a file". Subscribed by `Import` (starts an import
   preview) and `Receipts` (starts a receipt match).
 
+### Submenus never hang off a role
+
+`AppMenuBuilder` composes the application menu from two kinds of item, and
+the difference is load-bearing:
+
+- **Role items** — `Menu::app()`, `Menu::edit()`, `Menu::view()`,
+  `Menu::window()`. These hand the whole menu to Electron, which supplies
+  its own stock contents (Undo/Redo, Minimize/Zoom, and so on). They never
+  carry a submenu.
+- **`SubmenuItem`** — Beatrax's own menus: File, Help, and the
+  developer-only submenu. It emits `type: 'submenu'` with its entries
+  inline.
+
+Two NativePHP shapes look like they would work here and neither does.
+
+`Menu::file()->submenu(...)` loses its entries. The shell compiles the menu
+payload in `nativephp/electron/electron-plugin/src/server/api/helper/index.ts`,
+and `compileMenu()` rebuilds any `type: 'role'` item as `{ role, label }`
+alone — the `submenu` key is dropped before `Menu.buildFromTemplate()` sees
+it. File then renders Electron's stock "Close Window / Close All", and
+`Menu::help()->submenu(...)` resolves to a top-level item with no submenu,
+which macOS does not draw at all: the Help menu disappears from the menu bar.
+
+`Menu::label($title)->submenu(...)` survives `compileMenu()` but is typed
+`normal`, and Electron draws a `normal` item as a flat entry rather than a
+menu — so that menu disappears from the bar too. `SubmenuItem` exists
+because no NativePHP item type emits `type: 'submenu'`.
+
+Nothing in the PHP layer reports either failure: the builder serialises the
+submenu correctly, so a test that inspects `toArray()` passes while the
+shipped menu bar is missing whole menus. `AppMenuBuilderTest` therefore
+asserts the *shape* — no item holds both `role` and `submenu`, and every
+item that owns entries is typed `submenu` — rather than only the labels.
+
 ## Data flow
 
 The first-launch boot chain:

@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Nessuna serie contribuisce ancora alla previsione di questo conto.',
 
     'net_diff' => 'Differenza netta',
+
+    'net_diff_unknown' => 'Non ancora calcolato per questo orizzonte.',
     'net_diff_section_aria' => 'Differenza netta tra riferimento e scenario agli orizzonti di 30 / 60 / 90 giorni',
     'net_diff_delta_aria' => 'Differenza netta al giorno :day: :value, lo scenario è :state',
     'better_than_baseline' => 'migliore del riferimento',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Punti salienti della previsione',
     'highlights_shortfall_aria' => ':count finestra di scoperto attiva nei prossimi :days giorni|:count finestre di scoperto attive nei prossimi :days giorni',
-    'dips_to' => ':name scende a :amount',
     'on_date_suffix' => ' il :date',
     'shortfall_window' => ':count finestra di scoperto attiva|:count finestre di scoperto attive',
-    'lowest_in_30' => 'Minimo in 30 giorni: :amount',
+    'lowest_in_30_label' => 'Minimo in 30 giorni',
     'next_ics' => 'Prossimo regolamento ICS: :amount il :date',
+    'ics_overdue' => 'Regolamento ICS scaduto: :amount, scaduto il :date',
 ];

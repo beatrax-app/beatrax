@@ -15,7 +15,7 @@
     See UI-SPEC.md §2–§12 for the full binding visual contract.
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
-<div class="mx-auto max-w-7xl px-4 py-12" x-data="{ panelOpen: false }">
+<div class="mx-auto max-w-7xl px-1 sm:px-4 py-12" x-data="{ panelOpen: false }">
     <header class="mb-6">
         <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">{{ Lang::get('calendar::messages.page.title') }}</h1>
         <p class="mt-1 max-w-prose text-sm" style="color: var(--color-text-muted);">
@@ -27,7 +27,7 @@
     @php
         // Count only days OF the display month — the Mon–Sun grid
         // carries lead-in/lead-out cells from adjacent months, and a June
-        // view must not headline "dips below €0 on Jul 1".
+        // view must not headline a July dip.
         $riskDays = array_filter($days, fn ($d) => $d->isRisk && $d->date->month === $displayMonth);
         $riskDayList = array_values($riskDays);
         $riskCount = count($riskDayList);
@@ -41,7 +41,7 @@
                 </span>
             @else
                 <span style="color: var(--color-rose);">
-                    {{ Lang::choice('calendar::messages.summary.risk', $riskCount, ['count' => $riskCount, 'date' => $riskDayList[0]->date->translatedFormat('j M')]) }}
+                    {{ Lang::choice('calendar::messages.summary.risk', $riskCount, ['count' => $riskCount, 'date' => $riskDayList[0]->date->translatedFormat('j M'), 'zero' => Money::ofMinor(0, $baseCurrency)->formatWholeUnits()]) }}
                 </span>
             @endif
         </div>
@@ -49,7 +49,7 @@
 
     {{-- §6.1 Toolbar: month nav + Accounts popover --}}
     <div class="cal-toolbar">
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <button
                 wire:click="prevMonth"
                 class="flex h-11 w-11 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -130,7 +130,7 @@
     </div>
 
     {{-- §7.1 Empty state --}}
-    @if (!$hasEntries)
+    @if (!$hasProjectableEntries)
         <x-core::empty-state
             class="mb-6"
             :heading="Lang::get('calendar::messages.empty.heading')"
@@ -337,9 +337,11 @@
     </div>
 
     {{-- §6.5 Phone bottom sheet (open-sheet event dispatched from selectDay()) --}}
-    <x-core::bottom-sheet name="day-detail" :title="$selectedDayDto ? $selectedDayDto->date->translatedFormat('j M') : ''">
+    {{-- The sheet's title IS the panel's heading here — j M Y, not j M, so the
+         year is not lost when the panel stops repeating it. --}}
+    <x-core::bottom-sheet name="day-detail" :title="$selectedDayDto ? $selectedDayDto->date->translatedFormat('j M Y') : ''">
         @if ($selectedDayDto !== null)
-            @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto])
+            @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto, 'showDate' => false])
         @endif
     </x-core::bottom-sheet>
 </div>

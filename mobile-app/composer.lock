@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "eb4392ade2b8ba57baa9a21f9a414570",
+    "content-hash": "227a9d99b207f03079de30a0e66cc6c1",
     "packages": [
         {
             "name": "amphp/amp",
@@ -1417,23 +1417,22 @@
         },
         {
             "name": "brick/math",
-            "version": "0.14.8",
+            "version": "0.18.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/brick/math.git",
-                "reference": "63422359a44b7f06cae63c3b429b59e8efcc0629"
+                "reference": "82944324d1c1bdb2c2618e89978d4e2ad78d69ad"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/brick/math/zipball/63422359a44b7f06cae63c3b429b59e8efcc0629",
-                "reference": "63422359a44b7f06cae63c3b429b59e8efcc0629",
+                "url": "https://api.github.com/repos/brick/math/zipball/82944324d1c1bdb2c2618e89978d4e2ad78d69ad",
+                "reference": "82944324d1c1bdb2c2618e89978d4e2ad78d69ad",
                 "shasum": ""
             },
             "require": {
                 "php": "^8.2"
             },
             "require-dev": {
-                "php-coveralls/php-coveralls": "^2.2",
                 "phpstan/phpstan": "2.1.22",
                 "phpunit/phpunit": "^11.5"
             },
@@ -1465,7 +1464,7 @@
             ],
             "support": {
                 "issues": "https://github.com/brick/math/issues",
-                "source": "https://github.com/brick/math/tree/0.14.8"
+                "source": "https://github.com/brick/math/tree/0.18.0"
             },
             "funding": [
                 {
@@ -1473,33 +1472,33 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-02-10T14:33:43+00:00"
+            "time": "2026-06-14T18:21:03+00:00"
         },
         {
             "name": "brick/money",
-            "version": "0.11.2",
+            "version": "0.14.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/brick/money.git",
-                "reference": "57fb799337d9c532da7f7c7def52b926bfcf0917"
+                "reference": "5381a1a6b896d8d57205cbeb8ee01560094a0ca5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/brick/money/zipball/57fb799337d9c532da7f7c7def52b926bfcf0917",
-                "reference": "57fb799337d9c532da7f7c7def52b926bfcf0917",
+                "url": "https://api.github.com/repos/brick/money/zipball/5381a1a6b896d8d57205cbeb8ee01560094a0ca5",
+                "reference": "5381a1a6b896d8d57205cbeb8ee01560094a0ca5",
                 "shasum": ""
             },
             "require": {
-                "brick/math": "~0.14.4",
+                "brick/math": "~0.15.0 || ~0.16.0 || ~0.17.0 || ~0.18.0 || ~0.19.0",
                 "php": "^8.2",
-                "symfony/deprecation-contracts": "^2.2|^3.0"
+                "psr/simple-cache": "^2.0 || ^3.0"
             },
             "require-dev": {
                 "brick/varexporter": "0.7.0",
                 "ext-dom": "*",
                 "ext-pdo": "*",
-                "phpunit/phpunit": "^11.0",
-                "vimeo/psalm": "6.14.3"
+                "phpstan/phpstan": "2.1.40",
+                "phpunit/phpunit": "^11.0"
             },
             "suggest": {
                 "ext-intl": "Required to format Money objects"
@@ -1522,7 +1521,7 @@
             ],
             "support": {
                 "issues": "https://github.com/brick/money/issues",
-                "source": "https://github.com/brick/money/tree/0.11.2"
+                "source": "https://github.com/brick/money/tree/0.14.1"
             },
             "funding": [
                 {
@@ -1530,7 +1529,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-03-02T20:25:37+00:00"
+            "time": "2026-07-30T22:32:40+00:00"
         },
         {
             "name": "carbonphp/carbon-doctrine-types",
@@ -10527,20 +10526,20 @@
         },
         {
             "name": "symfony/process",
-            "version": "v7.4.13",
+            "version": "v8.1.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/process.git",
-                "reference": "f5804be144caceb570f6747519999636b664f24c"
+                "reference": "d863f5e70d7c87abb906ac11b61f83036093000b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/process/zipball/f5804be144caceb570f6747519999636b664f24c",
-                "reference": "f5804be144caceb570f6747519999636b664f24c",
+                "url": "https://api.github.com/repos/symfony/process/zipball/d863f5e70d7c87abb906ac11b61f83036093000b",
+                "reference": "d863f5e70d7c87abb906ac11b61f83036093000b",
                 "shasum": ""
             },
             "require": {
-                "php": ">=8.2"
+                "php": ">=8.4.1"
             },
             "type": "library",
             "autoload": {
@@ -10568,7 +10567,7 @@
             "description": "Executes commands in sub-processes",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/process/tree/v7.4.13"
+                "source": "https://github.com/symfony/process/tree/v8.1.5"
             },
             "funding": [
                 {
@@ -10588,7 +10587,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-23T16:05:06+00:00"
+            "time": "2026-08-21T17:47:34+00:00"
         },
         {
             "name": "symfony/property-access",

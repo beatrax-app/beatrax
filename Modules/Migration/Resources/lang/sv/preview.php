@@ -16,13 +16,10 @@ return [
         'budget' => 'Budgetmånader',
     ],
 
-    'fully_mapped' => '✓ helt kopplat',
     'all_clean' => 'Allt kopplades rent — inget behöver din uppmärksamhet innan du bekräftar.',
 
     'groups' => [
         'conflict' => 'Kräver ditt beslut',
-        'category' => 'Olösta kategorier',
-        'payee' => 'Olösta betalningsmottagare',
         'extra' => 'Inte importerat',
     ],
 

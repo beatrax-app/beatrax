@@ -6,9 +6,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Calendar\Internal\Services\CalendarQuery;
-use Modules\Calendar\Internal\Support\MatchWindow;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Public\Support\MatchWindow;
 
 function cqpdUser(string $suffix): User
 {

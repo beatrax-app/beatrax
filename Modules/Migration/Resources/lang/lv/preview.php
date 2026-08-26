@@ -16,13 +16,10 @@ return [
         'budget' => 'Budžeta mēneši',
     ],
 
-    'fully_mapped' => '✓ pilnībā sasaistīts',
     'all_clean' => 'Viss sasaistīts tīri — pirms apstiprināšanas nekas neprasa jūsu uzmanību.',
 
     'groups' => [
         'conflict' => 'Nepieciešams jūsu lēmums',
-        'category' => 'Neatrisinātās kategorijas',
-        'payee' => 'Neatrisinātie darījuma partneri',
         'extra' => 'Netiek importēts',
     ],
 

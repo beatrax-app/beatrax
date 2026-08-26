@@ -47,9 +47,10 @@ it('syncs the boxes it must not contradict before the next submit', function ():
         base_path('Modules/Auth/Resources/views/livewire/signup-page.blade.php')
     );
 
-    // A deferred binding reaches the server only on submit, so the hook that
-    // clears the message would not run until the message was already gone.
-    expect($blade)->toContain('wire:model.blur="password"')
-        ->and($blade)->toContain('wire:model.blur="passwordConfirmation"')
-        ->and($blade)->toContain('wire:model.blur="username"');
+    // Without .live the modifier is ephemeral: the box syncs to the client-side
+    // proxy on blur and no request is sent, so the hook that clears the message
+    // does not run until the message is already gone.
+    expect($blade)->toContain('wire:model.live.blur="password"')
+        ->and($blade)->toContain('wire:model.live.blur="passwordConfirmation"')
+        ->and($blade)->toContain('wire:model.live.blur="username"');
 });

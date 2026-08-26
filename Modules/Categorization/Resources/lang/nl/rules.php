@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Treffers',
     'col_created' => 'Aangemaakt',
     'col_row_actions' => 'Acties',
+    'inactive_badge' => 'Uit',
+    'inactive_title' => 'Deze regel draait niet. Een regel gaat uit wanneer de categorie of tegenpartij waarnaar hij verwijst wordt verwijderd.',
 
     'more_conditions' => '+:count meer',
 

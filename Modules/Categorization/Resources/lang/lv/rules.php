@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Sakritības',
     'col_created' => 'Izveidots',
     'col_row_actions' => 'Darbības',
+    'inactive_badge' => 'Izslēgts',
+    'inactive_title' => 'Šis noteikums nedarbojas. Noteikums izslēdzas, kad tiek dzēsta kategorija vai darījuma partneris, uz ko tas norāda.',
 
     'more_conditions' => 'vēl +:count',
 

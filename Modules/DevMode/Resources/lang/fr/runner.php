@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Ouvre un formulaire d\'arguments',
 
+    'spawning_unavailable' => 'Les commandes Artisan tournent dans un processus séparé, et cette plateforme ne laisse pas l\'app en démarrer un. Lance-les depuis l\'app pour ordinateur.',
+
     'status' => [
         'running' => 'En cours',
         'done' => 'Terminé',

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Alerte',
+    'page_title' => 'Alerte de abatere',
     'heading' => 'Alerte',
     'intro_anomaly' => 'Plăți individuale care par ieșite din comun pentru tine.',
     'intro_drift' => 'Serii recurente aprobate a căror ultimă plată a ieșit din pragul tău.',

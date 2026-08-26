@@ -10,7 +10,7 @@ return [
     'account' => 'Konto',
     'choose_account' => 'Vælg en konto…',
     'statement_date' => 'Kontoudtogets dato',
-    'statement_balance' => 'Saldo ifølge kontoudtog (€)',
+    'statement_balance' => 'Saldo ifølge kontoudtog (:symbol)',
     'balance_help' => 'Udfyldes på forhånd fra dit senest importerede kontoudtog, når det er muligt — negativ ved gæld, og redigerbar i begge tilfælde.',
 
     'cleared_balance' => 'Bogført saldo',

@@ -27,19 +27,20 @@ return [
     ],
 
     'next' => 'Következő',
+    'overdue' => 'Lejárt',
     'cadence_changed_note' => 'a gyakoriság módosult',
-
-    'select_aria' => 'A(z) :id ismétlődő sorozat kijelölése',
     'un_reject' => 'Elutasítás visszavonása',
     'approve' => 'Jóváhagyás',
     'approve_aria' => 'A(z) :id ismétlődő sorozat jóváhagyása',
     'reject' => 'Elutasítás',
     'reject_aria' => 'A(z) :id ismétlődő sorozat elutasítása',
     'snooze' => 'Halasztás',
+    'snooze_aria' => 'A(z) :id ismétlődő sorozat halasztása',
     'snooze_1w' => '1 hét',
     'snooze_1m' => '1 hónap',
     'snooze_3m' => '3 hónap',
     'edit_name' => 'Név szerkesztése',
+    'edit_name_aria' => 'A(z) :id ismétlődő sorozat átnevezése',
     'new_name_label' => 'A sorozat új neve',
     'save' => 'Mentés',
 

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'error_enroll_unsupported' => 'Biometriskā atbloķēšana šajā ierīcē nav pieejama.',
+    'error_enroll_unsupported' => 'Šai Beatrax versijai nav kur glabāt atbloķēšanas atslēgu, tāpēc biometriskā atbloķēšana netiek piedāvāta. Ierobežojums nav jūsu ierīce.',
     'error_enroll_unprotected' => 'Biometriskajai atbloķēšanai nepieciešama operētājsistēmas atslēgu glabātuve, un šai instalācijai tādas nav. Reģistrēšana atstātu atbloķēšanas atslēgu lasāmu blakus taviem datiem, tāpēc tā šeit netiek piedāvāta.',
     'error_enroll_locked' => 'Pirms reģistrēšanas atbloķējiet lietotni.',
     'error_enroll_failed' => 'Ierīce atteicās saglabāt atslēgu. Biometriskā atbloķēšana nav pieejama.',
@@ -32,7 +32,7 @@ return [
     'biometric_enroll_description' => 'Reģistrējiet šo ierīci, lai atbloķētu ar biometriju.',
     'remove' => 'Noņemt',
     'enroll' => 'Reģistrēt',
-    'biometric_unavailable' => 'Biometriskā atbloķēšana šajā ierīcē nav pieejama.',
+    'biometric_unavailable' => 'Šī Beatrax versija nevar piedāvāt biometrisko atbloķēšanu. Šeit vienīgā atbloķēšana ir jūsu PIN kods.',
 
     'deenroll_modal_heading' => 'Noņemt biometrisko atbloķēšanu — apstipriniet ar PIN kodu',
     'current_pin_label' => 'Pašreizējais PIN kods',

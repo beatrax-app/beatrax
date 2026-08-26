@@ -17,7 +17,7 @@ use Modules\Core\Public\Enums\UpdateAlertKind;
 final class DemoSystemAlertsSeeder
 {
     /**
-     * @var list<array{kind: string, severity: string, message: string, ageHours: int, acknowledgedAgeHours: ?int, seedKey: string}>
+     * @var list<array{kind: string, severity: string, message: string, ageHours: int, acknowledgedAgeHours: ?int, seedKey: string, latestVersion?: string}>
      */
     private const ALERTS = [
         [
@@ -43,6 +43,7 @@ final class DemoSystemAlertsSeeder
             'ageHours' => 12,
             'acknowledgedAgeHours' => null,
             'seedKey' => 'update-available-current',
+            'latestVersion' => '0.1.0',
         ],
         [
             'kind' => 'force_password_change',
@@ -59,6 +60,7 @@ final class DemoSystemAlertsSeeder
             'ageHours' => 240,
             'acknowledgedAgeHours' => 200,
             'seedKey' => 'update-available-prior',
+            'latestVersion' => '0.0.9',
         ],
     ];
 
@@ -84,7 +86,7 @@ final class DemoSystemAlertsSeeder
     }
 
     /**
-     * @param  array{kind: string, severity: string, message: string, ageHours: int, acknowledgedAgeHours: ?int, seedKey: string}  $row
+     * @param  array{kind: string, severity: string, message: string, ageHours: int, acknowledgedAgeHours: ?int, seedKey: string, latestVersion?: string}  $row
      */
     private function upsertAlert(User $user, array $row): void
     {
@@ -110,7 +112,15 @@ final class DemoSystemAlertsSeeder
         $alert->kind = $row['kind'];
         $alert->severity = $row['severity'];
         $alert->message = $row['message'];
-        $alert->metadata = ['seed_key' => $row['seedKey']];
+        // The updater's own writer always records the version, and the banner's
+        // install, skip and release-notes actions all read it back; an alert
+        // without one renders two buttons that only dismiss.
+        $metadata = ['seed_key' => $row['seedKey']];
+        if (isset($row['latestVersion'])) {
+            $metadata['latestVersion'] = $row['latestVersion'];
+        }
+
+        $alert->metadata = $metadata;
         $alert->acknowledged_at = $acknowledgedAt;
         $alert->created_at = $createdAt;
         $alert->save();

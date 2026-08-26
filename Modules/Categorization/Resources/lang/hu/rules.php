@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Találatok',
     'col_created' => 'Létrehozva',
     'col_row_actions' => 'Műveletek',
+    'inactive_badge' => 'Kikapcsolva',
+    'inactive_title' => 'Ez a szabály nem fut. A szabály kikapcsol, ha törlik a kategóriát vagy partnert, amelyre hivatkozik.',
 
     'more_conditions' => '+:count további',
 

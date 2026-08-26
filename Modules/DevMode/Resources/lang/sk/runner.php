@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Otvorí formulár argumentov',
 
+    'spawning_unavailable' => 'Príkazy Artisan bežia v samostatnom procese a táto platforma aplikácii nedovolí žiadny spustiť. Spusti ich z počítačovej aplikácie.',
+
     'status' => [
         'running' => 'Prebieha',
         'done' => 'Hotovo',

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budget',
-        'subtitle' => 'Assegna ogni euro — :period.',
+        'subtitle' => 'Assegna tutto — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Riporta il negativo',
-        'non_eur_aria' => 'Le spese non in EUR di questa categoria non sono mostrate qui — consulta la dashboard',
-        'non_eur_title' => 'Spese non in EUR non mostrate qui — consulta la dashboard',
+        'unconverted_aria' => 'La spesa in una valuta senza tasso disponibile non è conteggiata qui — vedi la dashboard',
+        'unconverted_title' => 'La spesa senza tasso disponibile non è conteggiata qui — vedi la dashboard',
         'over_budget' => ':count oltre il budget',
     ],
 

@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Mindste buffer for :name',
     'save' => 'Gem buffer',
     'cancel' => 'Annullér',
-    'clear' => 'Ryd bufferen (brug €0 som bund)',
+    'clear' => 'Ryd bufferen (brug :zero som bund)',
 
     'toast' => [
         'updated' => 'Bufferen er opdateret.',

@@ -8,7 +8,7 @@ return [
     'input_aria' => 'Reserva mínima de :name',
     'save' => 'Guardar reserva',
     'cancel' => 'Cancelar',
-    'clear' => 'Quitar la reserva (usar 0 € como mínimo)',
+    'clear' => 'Quitar la reserva (usar :zero como mínimo)',
 
     'toast' => [
         'updated' => 'Reserva actualizada.',

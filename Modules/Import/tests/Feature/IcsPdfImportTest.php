@@ -7,6 +7,7 @@ use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\ImportFailureReason;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
 use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
@@ -207,4 +208,32 @@ it('skips the name-your-account step on subsequent ICS uploads', function (): vo
         ->assertDontSee('Name your ICS card account.', false)
         ->assertDontSee("first time you've imported ICS data", false)
         ->assertSee('Confirm import', false);
+})->group('phase-3');
+
+it('names the missing PDF reader instead of blaming the header row', function (): void {
+    // What a phone build is: no pdftotext on the device, and no way to add one.
+    // The reason has to survive to the screen, or the reader is sent to check a
+    // header row that was never read.
+    $this->app->bind(
+        PdfTextExtractor::class,
+        static fn (): PdfTextExtractor => new PdfTextExtractor('/usr/bin/beatrax-no-such-pdftotext'),
+    );
+    $this->app->forgetInstance(SourceAdapterRegistry::class);
+    $this->app->forgetInstance(ImportPipeline::class);
+    /** @var RunsImports $importer */
+    $importer = $this->app->make(RunsImports::class);
+
+    $preview = $importer->runFromUpload(
+        $this->tinyPdf,
+        'ics-pdf',
+        $this->fixtureUser,
+        basename($this->tinyPdf),
+    );
+
+    expect($preview->fileFailureReason)->toBe(ImportFailureReason::PdfReaderUnavailable);
+
+    $html = (string) preg_replace('/\s+/', ' ', Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])->html());
+
+    expect($html)->toContain('pdftotext');
+    expect($html)->not->toContain('header row that does not match the source you chose');
 })->group('phase-3');

@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Deconectare',
     'forgot_pin' => 'Ți-ai uitat codul PIN? Deconectează-te — te poți autentifica din nou cu parola contului și poți seta un cod PIN nou. Nu se pierd date.',
 
-    'digits_suffix' => 'cifre introduse',
+    'digits_entered' => '{1} :count cifră introdusă|[2,19] :count cifre introduse|[20,*] :count de cifre introduse',
     'pad_label' => 'Tastatură PIN',
     'digit_aria' => 'Cifra :digit',
     'backspace_aria' => 'Ștergere înapoi',

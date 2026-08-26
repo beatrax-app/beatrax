@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Conto non impostato. Ricarica la procedura guidata.',
         'invalid_amount' => 'Inserisci un importo valido.',
-        'amount_range' => 'Inserisci un importo compreso tra -€10M e €10M.',
+        'amount_range' => 'Inserisci un importo compreso tra :min e :max.',
         'pick_date' => 'Scegli una data.',
         'pick_valid_date' => 'Scegli una data valida.',
         'future_date' => 'La data del saldo iniziale non può essere nel futuro.',

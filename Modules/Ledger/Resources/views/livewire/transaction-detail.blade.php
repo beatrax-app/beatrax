@@ -27,13 +27,21 @@
         :title="Lang::get('ledger::detail.heading')"
     />
 
-    <main class="min-h-screen bg-white dark:bg-slate-950">
+    {{-- A div, not a <main>: layouts.app already opened one, and a main
+         inside a main is a nesting the HTML spec does not allow. The gutter
+         stays this page's own -- page-shell's px-8 at phone width breaks
+         the "Transaction" heading across two lines mid-word. --}}
+    <div class="min-h-screen bg-white dark:bg-slate-950">
         <div class="mx-auto max-w-3xl px-4 py-12 space-y-6 sm:px-8" data-testid="transaction-detail">
             <header class="space-y-1">
                 <div class="flex items-center gap-3">
                     <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::detail.heading') }}</h1>
                     {{-- Cleared/uncleared/reconciled badge + toggle. --}}
                     <x-ledger::cleared-badge :transaction="['id' => $transaction->id, 'status' => $clearedStatus ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
+                    {{-- The reclassify control below offers to override the
+                         detected type and drops it from its own option list,
+                         so without this the page never says what it is. --}}
+                    <x-core::status-pill data-testid="tx-detail-type">{{ Lang::get('ledger::detail.type_label.'.$transaction->type) }}</x-core::status-pill>
                 </div>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ CarbonImmutable::parse($transaction->posted_at)->translatedFormat('j M Y') }}
@@ -106,13 +114,13 @@
                 >
                     @if (! $editingSplit)
                         {{-- §7.2 Not-yet-split empty state. --}}
-                        <div class="flex items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
                             <div class="space-y-1">
                                 <h2 id="split-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
                                     {{ Lang::get('ledger::detail.split.category') }}
                                 </h2>
                                 <p class="text-sm text-slate-900 dark:text-slate-100" data-testid="split-current-category">
-                                    {{ $transaction->category?->display_name ?? '—' }}
+                                    {{ $currentCategoryName ?? '—' }}
                                 </p>
                             </div>
                             <x-core::secondary-button
@@ -679,5 +687,5 @@
                 @livewire('chains.chain-drawer')
             @endif
         </div>
-    </main>
+    </div>
 </div>

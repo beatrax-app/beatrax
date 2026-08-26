@@ -11,7 +11,7 @@ return [
 
     'across' => 'across :count account|across :count accounts',
 
-    'not_converted' => '· :count account not converted — no rate available|· :count accounts not converted — no rate available',
+    'not_converted' => '· :count balance not converted — no rate available|· :count balances not converted — no rate available',
     'no_rate_available' => '· no rate available',
 
     'toggle_hide' => 'Hide',

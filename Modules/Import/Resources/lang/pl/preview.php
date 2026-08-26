@@ -9,6 +9,10 @@ return [
     'confirm' => 'Potwierdź import',
     'subtitle' => 'Przejrzyj wczytane wiersze. Nic nie trafi do księgi, dopóki nie potwierdzisz.',
 
+    'already_imported' => 'Ten plik został już zaimportowany.',
+
+    'already_imported_link' => 'Zobacz wynik importu',
+
     'expired_html' => 'Podgląd wygasł. <a href="/imports/new" class="underline">Wgraj plik ponownie</a>, aby spróbować jeszcze raz.',
 
     'save_name' => 'Zapisz nazwę',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Zmień nazwę tego kontrahenta',
 
     'unknown_iban_prefix' => 'Znaleźliśmy nieznany IBAN:',
+
+    'unknown_account_prefix' => 'Znaleźliśmy nieznane konto:',
     'unknown_iban_suffix' => 'Nazwij to konto.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'aby ponowić lub sprawdzić.',
     ],
 
+    'rows_shown' => 'Pokazane wiersze: :shown z :total',
+
+    'show_more' => 'Pokaż więcej wierszy',
+
     'errors' => [
         'app_locked' => 'Odblokuj aplikację, aby zaimportować: kluczy szyfrowania nie można użyć, gdy jest zablokowana.',
+        'file_stopped_short' => 'Wiersz nagłówka pasował, więc format jest właściwy. Odczyt zatrzymał się przed końcem pliku. Powoduje to jeden nieczytelny wiersz, a także plik zbyt duży dla tego urządzenia. Spróbuj krótszego zakresu dat.',
         'file_unreadable' => 'Nie udało się odczytać tego pliku.',
         'iban_not_in_preview' => 'Ten IBAN nie należy do bieżącego podglądu.',
+        'pdf_reader_unavailable' => 'Wyciągi PDF wymagają programu pdftotext, którego tu nie zainstalowano. Zaimportuj ten plik na komputerze, który go ma, albo użyj eksportu CSV z banku.',
         'row_unreadable' => 'Nie udało się odczytać tego wiersza.',
         'unknown_account' => 'Ten wiersz należy do konta, któremu nie nadano jeszcze nazwy.',
     ],

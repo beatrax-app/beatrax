@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'Većina prijevoda zasad je strojno generirana — Beatrax je otvorenog koda, a vremena je malo, pa je strojni prijevod bio bolji od praznog jezika. Ako ti nešto zvuči krivo, vjerojatno i jest, a ispravak u jednom retku pomaže svima.',
     'translations_how' => 'Svaki jezik je mapa običnih PHP datoteka u Modules/*/Resources/lang. Kopiraj englesku mapu, prevedi nizove i otvori pull request — bez koraka izgradnje i bez alata koje treba instalirati.',
     'translations_cta' => 'Pročitaj vodič za doprinose',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Zajednički popis trgovaca',
 ];

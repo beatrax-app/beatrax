@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Zahlungspartner',
+    'page_title' => 'Zahlungspartner-Profil',
     'fallback_account' => 'Konto',
     'fallback_counterparty' => 'Zahlungspartner',
 

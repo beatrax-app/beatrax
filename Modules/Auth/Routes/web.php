@@ -37,6 +37,13 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         return new RedirectResponse($urls->route('login'));
     })->name('logout');
 
+    // Something re-requesting the URL a sign-out was posted to -- the mobile
+    // shell does exactly that -- met a 405 and an error page with no way off
+    // it. This logs nobody out, because a GET must not, and takes them where a
+    // GET to /logout can only have been trying to go.
+    Route::get('/logout', static fn (UrlGenerator $urls): RedirectResponse => new RedirectResponse($urls->route('login')))
+        ->name('logout.landing');
+
     Route::get('/lock', LockScreen::class)->name('auth.lock');
 
     Route::post('/lock/engage', LockEngageController::class)->name('auth.lock.engage');

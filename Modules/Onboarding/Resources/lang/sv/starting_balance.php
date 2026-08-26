@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Konto inte angivet. Ladda om guiden.',
         'invalid_amount' => 'Ange ett giltigt belopp.',
-        'amount_range' => 'Ange ett belopp mellan -€10M och €10M.',
+        'amount_range' => 'Ange ett belopp mellan :min och :max.',
         'pick_date' => 'Välj ett datum.',
         'pick_valid_date' => 'Välj ett giltigt datum.',
         'future_date' => 'Datumet för ingående saldo kan inte ligga i framtiden.',

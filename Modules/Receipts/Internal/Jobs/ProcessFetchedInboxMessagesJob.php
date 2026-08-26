@@ -27,6 +27,7 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 
 // Per-user hourly consumer of inbox_messages rows with status='fetched'.
@@ -140,7 +141,7 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
     ): array {
         $update = ['updated_at' => $clock->now()->toDateTimeString()];
 
-        if ($outcome->kind === 'parsed' && $outcome->parsed !== null) {
+        if ($outcome->kind === MatchOutcomeKind::Parsed && $outcome->parsed !== null) {
             $rawKey = $outcome->parsed->rawPayload['matcher_key'] ?? null;
             $update['status'] = InboxMessageStatus::Parsed->value;
             $update['matcher_key'] = is_string($rawKey) && $rawKey !== '' ? $rawKey : null;
@@ -157,7 +158,7 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
             return [$update, $importRunId];
         }
 
-        $update['status'] = $outcome->kind === 'skipped'
+        $update['status'] = $outcome->kind === MatchOutcomeKind::Skipped
             ? InboxMessageStatus::Skipped->value
             : InboxMessageStatus::Unmatched->value;
 

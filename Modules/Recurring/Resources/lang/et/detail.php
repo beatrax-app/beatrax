@@ -22,7 +22,7 @@ return [
         'transaction' => 'Tehing',
     ],
 
-    'eur_equivalent' => 'Vastavus eurodes',
+    'settled_equivalent' => 'Arveldatud valuutas :code',
     'chart_requires_js' => 'Graafik vajab JavaScripti.',
 
     'tolerance_toast' => 'Lubatud hälve: :percent%',

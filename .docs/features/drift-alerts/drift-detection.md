@@ -132,14 +132,16 @@ decision rather than a detection one.
 
 Two read surfaces apply their own scoping on top of the stored rows.
 
-**`DriftAlertQuery::totalOpenAnnualizedImpactForUser()`** SUMs
+**`DriftAlertQuery::openAnnualizedImpactByCurrencyForUser()`** SUMs
 `annualized_impact_minor` across open alerts filtered to
 `direction = 'expense'`. Income alerts are excluded on purpose: the
 dashboard headline is "what your subscriptions are costing you extra
 per year", and folding a salary raise's positive delta into it would net
 a real cost increase away against unrelated good news under a single
-up-arrow tile. The sum is in original-currency minor units and is not
-FX-normalised.
+up-arrow tile. It returns one total per currency rather than one
+number: `annualized_impact_minor` is denominated in the series' own
+currency, so a single sum across them would add euro cents to dollar
+cents.
 
 **`SubscriptionDriftWatchQuery`** answers a different question —
 "how much has this subscription risen since I first paid it" — and so

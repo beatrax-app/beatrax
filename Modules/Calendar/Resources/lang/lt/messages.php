@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognozė atnaujinama…',
-        'risk' => 'Likutis nukrenta žemiau 0 € :count dieną — pirmoji: :date.|Likutis nukrenta žemiau 0 € :count dienas — pirmoji: :date.|Likutis nukrenta žemiau 0 € :count dienų — pirmoji: :date.',
+        'risk' => 'Likutis nukrenta žemiau :zero :count dieną — pirmoji: :date.|Likutis nukrenta žemiau :zero :count dienas — pirmoji: :date.|Likutis nukrenta žemiau :zero :count dienų — pirmoji: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'įrašas|įrašai|įrašų',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', prognozuojamas likutis minus :amount €',
-        'aria_balance_positive' => ', prognozuojamas likutis :amount €',
+        'aria_balance_negative' => ', prognozuojamas likutis minus :amount',
+        'aria_balance_positive' => ', prognozuojamas likutis :amount',
         'overflow' => 'dar :count',
         'paid' => 'Apmokėta',
         'missed' => 'Tikėtasi — nerasta',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Užregistruotas mokėjimas',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ data apytikslė',
         'series' => '↗ serija',
         'counterparty' => '↗ kita šalis',
+        'transaction' => '↗ operacija',
         'end_of_day' => 'Dienos pabaiga',
     ],
 ];

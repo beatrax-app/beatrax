@@ -7,14 +7,13 @@ namespace Modules\EmailScan\Internal\Listeners;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Services\UserDataPathService;
 
 final class EmitOAuthReauthRequiredAlert
 {
-    private const REAUTH_KIND = 'oauth.reauth_required';
-
     private const BACKUP_FILENAME = 'email-oauth.json.pre-phase-12.bak';
 
     private const MESSAGE = 'OAuth secrets moved to per-user storage. Re-authorize Gmail and Microsoft to resume email scanning. The old secrets file was renamed to email-oauth.json.pre-phase-12.bak for rollback.';
@@ -32,7 +31,7 @@ final class EmitOAuthReauthRequiredAlert
         if ($this->shouldEmitAlert()) {
             $this->alerts->raiseForUser(
                 userId: $this->currentUser->id(),
-                kind: self::REAUTH_KIND,
+                kind: OAuthAlertKind::ReauthRequired->value,
                 severity: SystemAlertSeverity::Warning->value,
                 message: self::MESSAGE,
             );
@@ -71,7 +70,7 @@ final class EmitOAuthReauthRequiredAlert
 
         return $connection->table('system_alerts')
             ->where('user_id', $userId)
-            ->where('kind', self::REAUTH_KIND)
+            ->where('kind', OAuthAlertKind::ReauthRequired->value)
             ->whereNull('acknowledged_at')
             ->exists();
     }

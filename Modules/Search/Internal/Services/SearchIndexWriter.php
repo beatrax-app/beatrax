@@ -73,7 +73,7 @@ final class SearchIndexWriter implements SearchIndexWriterContract
             ? $this->codec->decryptValue('tax_transaction_tags', 'note', $tag->note, $userId, $session)['value']
             : '';
 
-        $newBody = $counterparty.chr(12).$description.chr(12).$note;
+        $newBody = SearchDocumentBody::join($counterparty, $description, $note);
 
         // Wraps read-old-body + docs-upsert + FTS delete + FTS insert
         // in one transaction so a partial write never leaves duplicate

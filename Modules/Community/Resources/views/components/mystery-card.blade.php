@@ -15,7 +15,6 @@
         <code class="code inline-block rounded-md bg-slate-100 px-2 py-1 text-xs font-mono text-slate-900 dark:bg-slate-900 dark:text-slate-100">
             {{ $description }}
         </code>
-        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.card.likely') }}</p>
     </div>
     <div class="text-sm text-slate-700 dark:text-slate-300">
         <p style="font-variant-numeric: tabular-nums;">{{ Lang::choice('community::mystery.card.seen_times', $count) }}</p>

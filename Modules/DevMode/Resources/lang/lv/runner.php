@@ -22,6 +22,8 @@ return [
     'args_badge' => 'argumenti',
     'args_badge_title' => 'Atver argumentu formu',
 
+    'spawning_unavailable' => 'Artisan komandas darbojas atsevišķā procesā, un šī platforma neļauj lietotnei tādu palaist. Palaid tās datora lietotnē.',
+
     'status' => [
         'running' => 'Izpildās',
         'done' => 'Pabeigts',

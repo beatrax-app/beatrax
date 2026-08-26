@@ -6,9 +6,8 @@ namespace Modules\Goals\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
-use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Goals\Models\Goal;
-use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 
 final class GoalProjectionService
@@ -29,7 +28,7 @@ final class GoalProjectionService
     private const array STALLED = ['date' => null, 'beyondHorizon' => false, 'stalled' => true];
 
     public function __construct(
-        private readonly ExchangeRateService $fx,
+        private readonly CrossCurrencyTotal $fx,
         private readonly PotBalanceQuery $potBalance,
     ) {}
 
@@ -40,15 +39,16 @@ final class GoalProjectionService
     /**
      * @param  array{balance: int, currency: string, potId: int}|null  $linkedPot
      * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed  every attribution on this goal, whenever it posted
+     * @param  array<string, string>  $rates  into the goal's own currency, as returned by CrossCurrencyTotal::ratesTo()
      * @return array{date: ?string, beyondHorizon: bool, stalled: bool}
      */
-    public function project(Goal $goal, int $contributedMinor, User $user, ?array $linkedPot, array $attributed): array
+    public function project(Goal $goal, int $contributedMinor, User $user, ?array $linkedPot, array $attributed, array $rates): array
     {
         if ($this->hasNoProjection($goal, $contributedMinor)) {
             return self::NO_PROJECTION;
         }
 
-        $dailyRateMinor = $this->dailyContributionRate($goal, $user, $linkedPot, $attributed);
+        $dailyRateMinor = $this->dailyContributionRate($goal, $user, $linkedPot, $attributed, $rates);
         if ($dailyRateMinor <= 0.0) {
             return self::STALLED;
         }
@@ -75,15 +75,16 @@ final class GoalProjectionService
     /**
      * @param  array{balance: int, currency: string, potId: int}|null  $linkedPot
      * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed
+     * @param  array<string, string>  $rates
      */
-    private function dailyContributionRate(Goal $goal, User $user, ?array $linkedPot, array $attributed): float
+    private function dailyContributionRate(Goal $goal, User $user, ?array $linkedPot, array $attributed, array $rates): float
     {
         $effectiveStart = $this->effectiveStart($goal);
         $elapsedDays = $this->observedDays($goal);
 
         $windowSum = $linkedPot !== null
-            ? $this->potWindowSum($linkedPot, $goal->target_currency, $effectiveStart, $user)
-            : $this->attributedWindowSum($goal, $effectiveStart, $attributed);
+            ? $this->potWindowSum($linkedPot, $goal->target_currency, $effectiveStart, $user, $rates)
+            : $this->attributedWindowSum($goal, $effectiveStart, $attributed, $rates);
 
         return $windowSum / max(1, $elapsedDays);
     }
@@ -106,16 +107,17 @@ final class GoalProjectionService
 
     /**
      * @param  array{balance: int, currency: string, potId: int}  $linkedPot
+     * @param  array<string, string>  $rates
      */
-    private function potWindowSum(array $linkedPot, string $targetCurrency, string $since, User $user): int
+    private function potWindowSum(array $linkedPot, string $targetCurrency, string $since, User $user, array $rates): int
     {
         $minor = $this->potBalance->netMovementForPotSince($linkedPot['potId'], $since, $user);
 
-        if ($minor === 0 || $linkedPot['currency'] === '' || $linkedPot['currency'] === $targetCurrency) {
+        if ($minor === 0 || $linkedPot['currency'] === '') {
             return $minor;
         }
 
-        return $this->convert($minor, $linkedPot['currency'], $targetCurrency);
+        return $this->fx->withRates([$linkedPot['currency'] => $minor], $targetCurrency, $rates)->minor;
     }
 
     // The caller has already read every attribution on this goal to total it,
@@ -124,23 +126,20 @@ final class GoalProjectionService
     // compare the same way here as they did in SQL.
     /**
      * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed
+     * @param  array<string, string>  $rates
      */
-    private function attributedWindowSum(Goal $goal, string $since, array $attributed): int
+    private function attributedWindowSum(Goal $goal, string $since, array $attributed, array $rates): int
     {
-        $sum = 0;
+        $byCurrency = [];
         foreach ($attributed as $contribution) {
             if ($contribution['postedAt'] < $since) {
                 continue;
             }
 
-            $sum += $this->convert($contribution['amountMinor'], $contribution['currency'], $goal->target_currency);
+            $byCurrency[$contribution['currency']]
+                = ($byCurrency[$contribution['currency']] ?? 0) + $contribution['amountMinor'];
         }
 
-        return $sum;
-    }
-
-    private function convert(int $minor, string $from, string $to): int
-    {
-        return $this->fx->convertToBase(Money::ofMinor($minor, $from), $to)->converted->toMinor();
+        return $this->fx->withRates($byCurrency, $goal->target_currency, $rates)->minor;
     }
 }

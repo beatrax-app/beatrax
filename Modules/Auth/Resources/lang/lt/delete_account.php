@@ -7,6 +7,7 @@ return [
     'body' => 'Ištrynus paskyrą ji pašalinama iš šio įrenginio kartu su viskuo, kas jai priklauso. To atšaukti nebegalima.',
     'removes' => 'Dingsta tavo operacijos, sąskaitos, biudžetai, tikslai ir ataskaitos, taip pat taisyklės, nuostatos, atkūrimo kodai, sinchronizavimo tapatybė ir šifravimo raktai.',
     'devices_heading' => 'Kiti tavo įrenginiai išsaugo savo kopiją',
+    'devices_heading_none' => 'Tai vienintelė jūsų duomenų kopija',
     'devices_body' => 'Beatrax neturi serverio, tad nuotoliniu būdu nieko ištrinti negalima. Šis įrenginys vis dar saugo pilną kopiją ir jį reikia sutvarkyti pačiame įrenginyje — :devices|Beatrax neturi serverio, tad nuotoliniu būdu nieko ištrinti negalima. Šie įrenginiai vis dar saugo pilną kopiją ir juos reikia sutvarkyti pačiame įrenginyje — :devices|Beatrax neturi serverio, tad nuotoliniu būdu nieko ištrinti negalima. Šie įrenginiai vis dar saugo pilną kopiją ir juos reikia sutvarkyti pačiame įrenginyje — :devices',
     'devices_none' => 'Su šiuo įrenginiu nesusietas joks kitas, tad tai vienintelė tavo duomenų kopija.',
     'successor' => 'Šį įrenginį administruoji tu, tad :username perima tai, kai tavo paskyros nebeliks.',

@@ -7,12 +7,16 @@ namespace Modules\Ledger\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Enums\TransactionType;
 
 /**
  * @link ../../../../.docs/features/ledger/architecture.md#spendbycategoryquery--the-split-aware-spend-read-model
  */
 final class SpendByCategoryQuery
 {
+    // Spend is `type = expense`, never the amount's sign: a transfer to the
+    // reader's own card is negative and is not money spent. Same rule as
+    // ThisPeriodAtAGlanceQuery's outflow and Reports' spend metric.
     private const TRANSACTIONS_ALIAS = 'transactions as t';
 
     use CoercesScalars;
@@ -32,6 +36,7 @@ final class SpendByCategoryQuery
         $unsplitQuery = $connection->table(self::TRANSACTIONS_ALIAS)
             ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
+            ->where('t.type', TransactionType::Expense->value)
             ->where('t.settled_currency', $currency)
             ->where('t.settled_amount_minor', '<', 0)
             ->where('t.posted_at', '>=', $period->start->toDateString())
@@ -56,6 +61,7 @@ final class SpendByCategoryQuery
         $legs = $connection->table('transaction_splits as ts')
             ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'ts.transaction_id')
             ->where('t.user_id', $userId)
+            ->where('t.type', TransactionType::Expense->value)
             ->where('ts.settled_currency', $currency)
             ->where('ts.settled_amount_minor', '<', 0)
             ->where('t.posted_at', '>=', $period->start->toDateString())
@@ -85,6 +91,7 @@ final class SpendByCategoryQuery
         $unsplit = $connection->table(self::TRANSACTIONS_ALIAS)
             ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
+            ->where('t.type', TransactionType::Expense->value)
             ->where('t.settled_amount_minor', '<', 0)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
@@ -100,6 +107,7 @@ final class SpendByCategoryQuery
         $legs = $connection->table('transaction_splits as ts')
             ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'ts.transaction_id')
             ->where('t.user_id', $userId)
+            ->where('t.type', TransactionType::Expense->value)
             ->where('ts.settled_amount_minor', '<', 0)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())

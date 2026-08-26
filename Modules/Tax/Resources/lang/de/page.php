@@ -37,7 +37,7 @@ return [
     'col_account' => 'Konto',
     'col_counterparty' => 'Zahlungspartner',
     'col_note' => 'Notiz',
-    'col_settled_eur' => 'Abgerechnet EUR',
+    'col_settled' => 'Abgerechnet',
     'col_original' => 'Original',
     'col_year' => 'Jahr',
 

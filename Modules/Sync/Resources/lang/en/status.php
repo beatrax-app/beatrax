@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Removed device',
     'dismiss_peer' => 'Dismiss this device',
     'dismiss_stale' => 'Clear devices that are no longer paired',
-    'no_devices' => 'No devices synced yet',
+    'not_synced_yet' => 'Not synced yet',
     'error' => 'Sync error on one or more devices',
     'syncing' => 'Syncing…',
     'offline' => 'Devices offline',

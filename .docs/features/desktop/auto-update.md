@@ -83,8 +83,21 @@ electron-updater cannot make for itself: the version the signed manifest
 names must equal the version electron-updater offered. Without it, a feed
 could serve a genuinely signed manifest for one release while offering
 the binary of another. Only when both agree does
-`RecordUpdateAvailableAlert` write the `update.available` row the banner
-renders from.
+`RecordUpdateAvailableAlert` write the row the banner renders from.
+
+Which row depends on the release's age. `ElectronUpdateChannel::
+alertKindFor()` measures the manifest's publish date against the 30-day
+staleness threshold and the running bundle's own `nativephp.version`; a
+release older than that earns `update.stale` (warning severity, and the
+banner offers acknowledge-only actions rather than an install), anything
+newer earns `update.available` (info). Both carry `currentVersion` and
+`latestVersion` in metadata, which is what the stale copy names. The
+idempotency guard spans every `update.*` kind, so a stale row already
+recorded for a version suppresses a later availability row for it.
+
+`update.critical` has no producer: nothing in the electron-updater
+manifest format declares a release security-critical, so the kind, its
+banner branch and its copy exist ahead of a signal to drive them.
 
 **2. `Modules\Desktop\Internal\Listeners\TriggerUpdateDownload`**
 — on `Modules\Core\Public\Events\UpdateInstallRequested`.

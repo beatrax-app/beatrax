@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Ponavljajoči se prihodki',
 
     'next' => 'Naslednje',
+    'overdue' => 'Zamuja',
     'chain' => 'veriga',
     'chain_aria' => 'Financirano prek verige',
     'per_month_suffix' => '/mes',

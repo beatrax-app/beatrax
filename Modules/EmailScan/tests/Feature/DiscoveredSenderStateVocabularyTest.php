@@ -7,8 +7,8 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
-use Modules\EmailScan\Internal\Listeners\RaiseReconsentAlertOnTokenFailure;
 use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
@@ -131,7 +131,7 @@ it('acknowledges the alert its own raiser wrote, end to end', function (): void 
 
     expect($db->connection()->table('system_alerts')
         ->where('user_id', $this->reader->id)
-        ->where('kind', RaiseReconsentAlertOnTokenFailure::ALERT_KIND)
+        ->where('kind', OAuthAlertKind::ReconsentRequired->value)
         ->whereNull('acknowledged_at')
         ->count())->toBe(1);
 

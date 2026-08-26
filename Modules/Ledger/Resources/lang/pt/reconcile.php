@@ -10,7 +10,7 @@ return [
     'account' => 'Conta',
     'choose_account' => 'Escolhe uma conta…',
     'statement_date' => 'Data do extrato',
-    'statement_balance' => 'Saldo do extrato (€)',
+    'statement_balance' => 'Saldo do extrato (:symbol)',
     'balance_help' => 'Pré-preenchido a partir do teu extrato importado mais recente, quando disponível — negativo para dinheiro em dívida, editável nos dois sentidos.',
 
     'cleared_balance' => 'Saldo compensado',

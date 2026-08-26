@@ -19,7 +19,18 @@
 @endphp
 
 <div>
-    <flux:modal :name="$modalName" class="md:max-w-lg" :dismissible="false">
+    {{--
+        All three exits are closed deliberately: this page holds nothing but
+        the modal, so a dismissal would leave an empty window with the close
+        unanswered and no behaviour recorded. Both answers are one click away.
+    --}}
+    <flux:modal
+        :name="$modalName"
+        class="md:max-w-lg"
+        :dismissible="false"
+        :escapable="false"
+        :closable="false"
+    >
         <div class="space-y-6">
             <flux:heading size="lg">{{ $title }}</flux:heading>
 

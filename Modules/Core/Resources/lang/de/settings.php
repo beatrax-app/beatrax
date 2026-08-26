@@ -82,7 +82,7 @@ return [
     'currency_display' => [
         'heading' => 'Währungsanzeige',
         'label' => 'Standardansicht in der Transaktionsliste',
-        'eur_only' => 'Nur EUR',
+        'eur_only' => 'Nur :code',
         'original' => 'Originalwährung',
         'help' => 'Du kannst weiterhin pro Seite aus der Transaktionsliste heraus umschalten.',
     ],
@@ -117,7 +117,7 @@ return [
         'window_label' => 'Erkennungsfenster (Monate)',
         'window_help' => 'Wie viele Monate Verlauf durchsucht werden, wenn Transaktionen zu wiederkehrenden Mustern gruppiert werden.',
         'income_label' => 'Mindesteinkommen (Cent)',
-        'income_help' => 'Einnahmen unter diesem Schwellenwert werden nicht automatisch gruppiert. Gespeichert in Cent — 200000 bedeutet €2.000,00. Setze den Wert auf 0, um den Schwellenwert abzuschalten.',
+        'income_help' => 'Einnahmen unter diesem Schwellenwert werden nicht automatisch gruppiert. Gespeichert in Cent — 200000 bedeutet :example. Setze den Wert auf 0, um den Schwellenwert abzuschalten.',
     ],
 
     'drift' => [
@@ -195,7 +195,7 @@ return [
         'currency_required' => 'Wähle eine Währung.',
         'window_months' => 'Wähle zwischen 2 und 60 Monaten.',
         'threshold' => 'Wähle einen Schwellenwert von 1%, 2%, 5%, 10%, 25% oder 50%.',
-        'amount' => 'Gib einen Betrag ab €0 ein.',
+        'amount' => 'Gib einen Betrag ab :zero ein.',
         'period_day' => 'Wähle einen Tag von 1 bis 28.',
         'currency_view' => 'Wähle eine der verfügbaren Optionen.',
     ],

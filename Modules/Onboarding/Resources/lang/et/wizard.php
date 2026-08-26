@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => 'Samm :number / :total',
 
+    'back' => 'Tagasi',
+    'back_aria' => 'Tagasi — naaseb eelmise seadistussammu juurde',
+
     'resume_later' => 'Jätka hiljem',
     'resume_later_aria' => 'Jätka hiljem — salvestab sinu edenemise ja sulgeb seadistusviisardi',
     'resume_banner' => 'Tere tulemast tagasi — jätkame sealt, kus pooleli jäi.',

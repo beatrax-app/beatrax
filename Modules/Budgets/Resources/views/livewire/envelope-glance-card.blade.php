@@ -36,7 +36,11 @@
                 >{{ Lang::get('budgets::messages.glance.see_all') }}</a>
             </div>
 
-            <div class="mt-4 flex items-center gap-3">
+            {{-- flex-wrap: the figure is text-3xl mono and the pill beside it is
+                 shrink-0 whitespace-nowrap, so a nowrap row put "8 over budget"
+                 49px past its own card. Measured on an iPhone 12 mini at 375pt:
+                 nl 385, de 387, el 392. It wraps to its own line instead. --}}
+            <div class="mt-4 flex flex-wrap items-center gap-3">
                 <div>
                     <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.ready.label') }}</p>
                     <p

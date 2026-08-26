@@ -9,6 +9,10 @@
     superset: the next-settlement line is preserved as a meta line
     beneath the lowest-projected-balance line.
 
+    Shape: title, then the lowest projected figure alone at display size,
+    then the words that qualify it (label, date, account) as meta lines —
+    rose throughout when a shortfall window is active.
+
     Hidden entirely (renders nothing) when the user has neither a
     lowest-projected balance NOR a next ICS settlement — the
     dashboard grid collapses gracefully on a quiet day.
@@ -31,7 +35,7 @@
         }
         return Money::ofMinor($minor, $currency ?? BaseCurrency::value())->format();
     };
-    $lowestFormatted = $fmtMinor($dto->lowestProjectedBalanceMinor);
+    $lowestFormatted = $fmtMinor($dto->lowestProjectedBalanceMinor, $dto->lowestProjectedBalanceCurrency);
     $nextSettlementFormatted = $dto->nextIcsSettlement !== null
         ? Money::ofMinor((int) $dto->nextIcsSettlement->amount->toMinor(), $dto->nextIcsSettlement->amount->currency())->format()
         : '';
@@ -54,22 +58,30 @@
         >
             <p class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.highlights_title') }}</p>
 
-            @if ($dto->activeShortfallCount > 0 && $dto->lowestProjectedBalanceMinor !== null)
-                <p class="mt-2 text-3xl font-semibold text-rose-700 dark:text-rose-500" style="font-variant-numeric: tabular-nums;">
-                    {{ Lang::get('forecasting::forecast.dips_to', ['name' => $dto->lowestProjectedAccountName, 'amount' => $lowestFormatted]) }}{{ $lowestDate !== null ? Lang::get('forecasting::forecast.on_date_suffix', ['date' => $lowestDate->translatedFormat('d M')]) : '' }}
-                </p>
+            @if ($dto->lowestProjectedBalanceMinor !== null)
+                {{-- Figure alone, the shape the net-worth card beside it uses.
+                     The whole sentence at this size wrapped to five lines and
+                     200px on a 375pt phone, one word of the label per line. --}}
+                <p class="mt-2 text-3xl font-semibold @if ($dto->activeShortfallCount > 0) text-rose-700 dark:text-rose-500 @else text-slate-900 dark:text-slate-100 @endif" style="font-variant-numeric: tabular-nums;">{{ $lowestFormatted }}</p>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                    {{ Lang::choice('forecasting::forecast.shortfall_window', $dto->activeShortfallCount, ['count' => $dto->activeShortfallCount]) }}
+                    {{ Lang::get('forecasting::forecast.lowest_in_30_label') }}{{ $lowestDate !== null ? Lang::get('forecasting::forecast.on_date_suffix', ['date' => $lowestDate->translatedFormat('d M')]) : '' }} &middot; {{ $dto->lowestProjectedAccountName }}
                 </p>
-            @elseif ($dto->lowestProjectedBalanceMinor !== null)
-                <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                    {{ Lang::get('forecasting::forecast.lowest_in_30', ['amount' => $lowestFormatted]) }}{{ $lowestDate !== null ? Lang::get('forecasting::forecast.on_date_suffix', ['date' => $lowestDate->translatedFormat('d M')]) : '' }} &middot; {{ $dto->lowestProjectedAccountName }}
-                </p>
+                @if ($dto->activeShortfallCount > 0)
+                    <p class="mt-1 text-xs text-rose-700 dark:text-rose-500" style="font-variant-numeric: tabular-nums;">
+                        {{ Lang::choice('forecasting::forecast.shortfall_window', $dto->activeShortfallCount, ['count' => $dto->activeShortfallCount]) }}
+                    </p>
+                @endif
             @endif
 
             @if ($dto->nextIcsSettlement !== null)
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                    {{ Lang::get('forecasting::forecast.next_ics', ['amount' => $nextSettlementFormatted, 'date' => $dto->nextIcsSettlement->dueDate->translatedFormat('d M')]) }}
+                {{-- A date already past carries its year: "19 May" alone reads
+                     as this year's, and an unsettled statement can be older. --}}
+                <p class="mt-1 text-xs {{ $dto->icsSettlementOverdue ? 'text-amber-700 dark:text-amber-500' : 'text-slate-500 dark:text-slate-400' }}" style="font-variant-numeric: tabular-nums;">
+                    @if ($dto->icsSettlementOverdue)
+                        {{ Lang::get('forecasting::forecast.ics_overdue', ['amount' => $nextSettlementFormatted, 'date' => $dto->nextIcsSettlement->dueDate->translatedFormat('d M Y')]) }}
+                    @else
+                        {{ Lang::get('forecasting::forecast.next_ics', ['amount' => $nextSettlementFormatted, 'date' => $dto->nextIcsSettlement->dueDate->translatedFormat('d M')]) }}
+                    @endif
                 </p>
             @endif
         </a>

@@ -11,7 +11,7 @@ return [
     'expense' => 'Strošek',
     'income' => 'Prihodek',
 
-    'amount' => 'Znesek (€)',
+    'amount' => 'Znesek (:symbol)',
     'date' => 'Datum',
     'counterparty' => 'Nasprotna stranka',
     'counterparty_placeholder' => 'npr. Pekarna',

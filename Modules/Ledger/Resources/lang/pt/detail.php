@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Contraparte',
     'description' => 'Descrição',
     'amount_native' => 'Montante (moeda original)',
-    'amount_settled' => 'Montante (liquidado em EUR)',
+    'amount_settled' => 'Montante (liquidado)',
     'effective_rate' => 'Taxa efetiva',
     'ics_markup' => 'Inclui qualquer margem da ICS.',
 

@@ -22,6 +22,8 @@ return [
     'args_badge' => 'argumenti',
     'args_badge_title' => 'Otvara formu za argumente',
 
+    'spawning_unavailable' => 'Artisan komande se izvršavaju u zasebnom procesu, a ova platforma ne dozvoljava aplikaciji da ga pokrene. Pokreni ih iz aplikacije za računar.',
+
     'status' => [
         'running' => 'U toku',
         'done' => 'Gotovo',

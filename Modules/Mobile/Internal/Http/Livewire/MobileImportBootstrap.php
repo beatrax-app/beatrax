@@ -22,6 +22,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\ReportsFieldRejections;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
+use Modules\Mobile\Internal\Http\PairingEntryUrl;
 use Modules\Mobile\Internal\Identity\ImportBootstrapStep;
 use Modules\Mobile\Internal\Identity\MobileProvisioningCredentials;
 use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
@@ -266,7 +267,7 @@ final class MobileImportBootstrap extends Component
     {
         $this->forgetRecoveryCodes($session);
 
-        $this->redirect($urls->route('mobile.pair', ['mode' => 'import']), navigate: false);
+        $this->redirect(PairingEntryUrl::importingFrom($urls), navigate: false);
     }
 
     public function render(
@@ -304,7 +305,7 @@ final class MobileImportBootstrap extends Component
             'downloadFilename' => $showingCodes
                 ? $formatter->filenameFor($currentUser->user()->username)
                 : '',
-            'pairingUrl' => $urls->route('mobile.pair', ['mode' => 'import']),
+            'pairingUrl' => PairingEntryUrl::importingFrom($urls),
             // The Android webview drops a blob download without a word, so
             // there the endpoint keeps a copy and the screen says so. A shell
             // that saves the download hands the file to the reader instead, so

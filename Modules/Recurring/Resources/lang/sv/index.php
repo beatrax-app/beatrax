@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Återkommande inkomster',
 
     'next' => 'Nästa',
+    'overdue' => 'Försenat',
     'chain' => 'kedja',
     'chain_aria' => 'Finansieras via kedja',
     'per_month_suffix' => '/mån',

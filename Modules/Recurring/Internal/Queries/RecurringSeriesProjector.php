@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
@@ -20,6 +21,7 @@ final readonly class RecurringSeriesProjector
     public function __construct(
         private DatabaseManager $db,
         private BaseCurrency $baseCurrency,
+        private CrossCurrencyTotal $fx,
     ) {}
 
     /**
@@ -29,6 +31,8 @@ final readonly class RecurringSeriesProjector
     public function scoped(User $user, array $states, ?int $cursorId, int $limit, string $primarySort): array
     {
         $query = $this->db->connection()->table('recurring_series')
+            ->select('recurring_series.*')
+            ->selectSub($this->latestObservedAt(), 'latest_observed_at')
             ->where('user_id', $user->id)
             ->whereIn('state', $states)
             ->limit($limit);
@@ -62,11 +66,45 @@ final readonly class RecurringSeriesProjector
             }
         }
 
-        $rows = $query->get();
-        $result = [];
+        return $this->toDtos($query->get()->all());
+    }
+
+    // The day the series last actually saw money, which is what tells a passed
+    // next-expected date apart from a charge that simply landed after it. The
+    // (recurring_series_id, observed_at) index serves the MAX, so it costs one
+    // indexed lookup per row rather than a second pass over the occurrences.
+    private function latestObservedAt(): Builder
+    {
+        return $this->db->connection()->table('recurring_series_occurrences')
+            ->selectRaw('MAX(observed_at)')
+            ->whereColumn('recurring_series_occurrences.recurring_series_id', 'recurring_series.id');
+    }
+
+    // Batched on purpose: ratesTo() reads the whole exchange_rates table per
+    // currency, so a page of rows asks for each pair once rather than once per
+    // row.
+    /**
+     * @param  iterable<mixed>  $rows
+     * @return list<RecurringSeriesDto>
+     */
+    public function toDtos(iterable $rows): array
+    {
+        $list = [];
+        $currencies = [];
         foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $result[] = $this->toDto($row);
+            if (! $row instanceof stdClass) {
+                continue;
+            }
+            $list[] = $row;
+            $currencies[] = self::toString($row->latest_currency ?? null);
+        }
+
+        $baseCurrency = $this->baseCurrency->code();
+        $rates = $this->fx->ratesTo($currencies, $baseCurrency);
+
+        $result = [];
+        foreach ($list as $row) {
+            $result[] = $this->hydrate($row, $baseCurrency, $rates);
         }
 
         return $result;
@@ -74,12 +112,26 @@ final readonly class RecurringSeriesProjector
 
     public function toDto(stdClass $row): RecurringSeriesDto
     {
+        $baseCurrency = $this->baseCurrency->code();
+
+        return $this->hydrate(
+            $row,
+            $baseCurrency,
+            $this->fx->ratesTo([self::toString($row->latest_currency ?? null)], $baseCurrency),
+        );
+    }
+
+    /**
+     * @param  array<string, string>  $rates
+     */
+    private function hydrate(stdClass $row, string $baseCurrency, array $rates): RecurringSeriesDto
+    {
         // The raw column only. The occurrence-walk fallback lives in
         // FixedPaymentsViewQuery, the one caller it is load-bearing for.
         $chainLinkId = isset($row->latest_funding_chain_link_id)
             ? self::toInt($row->latest_funding_chain_link_id)
             : null;
 
-        return RecurringSeriesDtoMapper::hydrate($row, $chainLinkId, $this->baseCurrency->code());
+        return RecurringSeriesDtoMapper::hydrate($row, $chainLinkId, $baseCurrency, $this->fx, $rates);
     }
 }

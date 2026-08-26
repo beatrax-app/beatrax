@@ -67,11 +67,11 @@
                          of the input, and two glyphs of different advance
                          width would shift the query text sideways every time
                          a search starts. --}}
-                    <span
-                        class="ic w-4 text-center text-slate-400 dark:text-slate-500"
-                        aria-hidden="true"
+                    <x-core::search-mark
+                        size="md"
+                        class="ic text-slate-400 dark:text-slate-500"
                         x-show="!serverLoading"
-                    >⌕</span>
+                    />
                     <x-core::spinner
                         class="text-slate-400 dark:text-slate-500"
                         x-show="serverLoading"
@@ -153,7 +153,8 @@
                         </template>
                     </aside>
 
-                    <main class="flex-1 p-2 overflow-y-auto">
+                    {{-- A pane of the dialog, not the page: layouts.app owns the main landmark. --}}
+                    <div class="flex-1 p-2 overflow-y-auto">
                         {{-- Server-backed sections — only rendered when Search module is wired and query >= 2 chars --}}
                         @if($searchAvailable)
                         <template x-if="query.length >= 2">
@@ -188,13 +189,21 @@
                                                             x-text="hit.amount"
                                                         ></span>
                                                     </span>
-                                                    {{-- Line 2: matched snippet --}}
-                                                    <template x-if="hit.snippet">
+                                                    {{-- Line 2: date, then the matched snippet. A bill charged
+                                                         every month repeats its counterparty, its amount and its
+                                                         reference, so without the day two rows read alike. --}}
+                                                    <span class="flex items-baseline gap-2 min-w-0">
                                                         <span
-                                                            class="block text-xs text-slate-500 dark:text-slate-400 truncate"
-                                                            x-html="hit.snippet"
+                                                            class="text-xs text-slate-500 dark:text-slate-400 shrink-0 tabular-nums"
+                                                            x-text="hit.date"
                                                         ></span>
-                                                    </template>
+                                                        <template x-if="hit.snippet">
+                                                            <span
+                                                                class="block min-w-0 flex-1 text-xs text-slate-500 dark:text-slate-400 truncate"
+                                                                x-html="hit.snippet"
+                                                            ></span>
+                                                        </template>
+                                                    </span>
                                                 </span>
                                                 <span class="palette-source--txn text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 shrink-0">{{ Lang::get('dev::palette.source_txn') }}</span>
                                             </button>
@@ -329,7 +338,7 @@
                         <template x-if="results.length === 0 && serverTransactionHits.length === 0 && serverEntityHits.length === 0">
                             <div class="p-4 text-center text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('dev::palette.no_results') }}</div>
                         </template>
-                    </main>
+                    </div>
                 </div>
 
                 <div class="hidden-touch max-lg:hidden flex items-center gap-3 px-4 py-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">

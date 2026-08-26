@@ -21,11 +21,11 @@
 --}}
 
 @php
-    // Money::SYMBOLS, not a pair of ternaries: this editor knew two of the four
+    // Money::symbolFor, not a pair of ternaries: this editor knew two of the four
     // codes format() writes, so a GBP account showed "GBP 12.34" here and
     // "£12.34" on the row beside it. Placement stays local — the glyph sits
     // before the input by form convention, which assemble() decides per locale.
-    $symbol = Money::SYMBOLS[$currency] ?? $currency;
+    $symbol = Money::symbolFor($currency);
 @endphp
 
 <div role="dialog" aria-labelledby="buffer-editor-heading-{{ $accountId }}" aria-modal="false">
@@ -72,6 +72,6 @@
             type="button"
             wire:click="clear"
             class="text-xs text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
-        >{{ Lang::get('forecasting::buffer.clear') }}</button>
+        >{{ Lang::get('forecasting::buffer.clear', ['zero' => Money::ofMinor(0, $currency)->formatWholeUnits()]) }}</button>
     </div>
 </div>

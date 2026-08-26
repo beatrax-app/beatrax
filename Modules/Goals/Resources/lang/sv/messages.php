@@ -36,6 +36,7 @@ return [
 
     'projection' => [
         'target_reached' => 'Målet är uppnått',
+        'closed_short' => 'Avslutat före målet',
         'add_contributions' => 'Lägg till insättningar för att se en prognos',
         'not_enough_history' => 'Ännu inte tillräckligt med historik för att uppskatta ett datum',
         'no_recent_contributions' => 'Inga nyliga insättningar att uppskatta utifrån',

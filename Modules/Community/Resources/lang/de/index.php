@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'Die meisten Übersetzungen stammen vorerst von einer KI — Beatrax ist Open Source und die Zeit ist knapp, deshalb war maschinelle Übersetzung besser, als Sprachen leer zu lassen. Wenn sich etwas falsch liest, ist es das wahrscheinlich auch, und eine einzeilige Korrektur hilft allen, die es nutzen.',
     'translations_how' => 'Jede Sprache ist ein Ordner mit einfachen PHP-Dateien unter Modules/*/Resources/lang. Kopiere den englischen Ordner, übersetze die Texte und öffne einen Pull Request — kein Build-Schritt, keine Tools zu installieren.',
     'translations_cta' => 'Leitfaden zum Mitmachen lesen',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Gemeinsame Händlerliste',
 ];

@@ -46,7 +46,7 @@
         </div>
         <a
             href="{{ Destination::Settings->url() }}#notifications"
-            class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+            class="tap-link text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
         >{{ Lang::get('notifications::inbox.settings_link') }}</a>
     </header>
 

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Įspėjimai',
+    'page_title' => 'Pokyčio įspėjimai',
     'heading' => 'Įspėjimai',
     'intro_anomaly' => 'Pavieniai mokėjimai, kurie tau atrodo neįprasti.',
     'intro_drift' => 'Patvirtintos pasikartojančių mokėjimų serijos, kurių naujausias mokėjimas peržengė tavo ribą.',

@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Treff',
     'col_created' => 'Opprettet',
     'col_row_actions' => 'Handlinger',
+    'inactive_badge' => 'Av',
+    'inactive_title' => 'Denne regelen kjører ikke. En regel slås av når kategorien eller motparten den peker på slettes.',
 
     'more_conditions' => '+:count til',
 

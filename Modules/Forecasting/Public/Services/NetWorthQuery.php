@@ -8,16 +8,24 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\AccountBalanceLine;
 use Modules\Forecasting\Public\Dto\NetWorth;
 use Modules\FX\Public\Dto\ConversionResult;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Services\AccountBalanceQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\ValueObjects\AccountBalance;
 use Modules\Ledger\Public\ValueObjects\Money;
+use stdClass;
 
+// Net worth is what the reader holds today, so it reads the ledger balance as
+// of today rather than the forecast anchor. One account can hold several
+// currencies, so it yields one breakdown line per currency and converts each
+// at its own rate; a currency with no rate is listed and left out of the total.
 /**
- * @see BalanceAnchorResolver
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class NetWorthQuery
 {
@@ -26,9 +34,11 @@ final class NetWorthQuery
     private const EXCLUDED_KINDS = [AccountKind::PaypalFunding->value];
 
     public function __construct(
-        private readonly BalanceAnchorResolver $anchor,
+        private readonly AccountBalanceQuery $balances,
+        private readonly Clock $clock,
         private readonly DatabaseManager $db,
         private readonly ExchangeRateService $fx,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function forUser(User $user): NetWorth
@@ -37,24 +47,72 @@ final class NetWorthQuery
             ->where('user_id', $user->id)
             ->whereNotIn('kind', self::EXCLUDED_KINDS)
             ->orderBy('id')
-            ->get(['id', 'name', 'kind']);
+            ->get(['id', 'name', 'kind', 'default_currency']);
 
         $lines = [];
         $total = 0;
         $hasExcluded = false;
-        $accountsWithoutRate = 0;
+        $balancesWithoutRate = 0;
         /** @var array{stale: bool, source: ?string, asOf: ?CarbonImmutable} $fxMeta */
         $fxMeta = ['stale' => false, 'source' => null, 'asOf' => null];
 
-        $baseCurrency = $user->base_currency;
+        $baseCurrency = $this->baseCurrency->forUser($user);
+        $today = $this->clock->now()->startOfDay();
 
         foreach ($accounts as $account) {
-            $accountId = self::toInt($account->id);
-            $anchor = $this->anchor->forAccount($accountId, $user);
-            $kind = is_string($account->kind) ? $account->kind : '';
+            ['lines' => $accountLines, 'total' => $accountTotal, 'withoutRate' => $withoutRate]
+                = $this->accountLines($account, $user, $baseCurrency, $today, $fxMeta);
 
-            $money = Money::ofMinor($anchor->openingBalanceMinor, $anchor->currency);
-            $result = $this->fx->convertToBase($money, $baseCurrency);
+            $lines = [...$lines, ...$accountLines];
+            $total += $accountTotal;
+            $balancesWithoutRate += $withoutRate;
+            $hasExcluded = $hasExcluded || $withoutRate > 0;
+        }
+
+        return new NetWorth(
+            totalMinor: $total,
+            currency: $baseCurrency,
+            accounts: $lines,
+            hasExcludedAccounts: $hasExcluded,
+            ratesSource: $fxMeta['source'],
+            ratesAsOf: $fxMeta['asOf'] instanceof CarbonImmutable ? $fxMeta['asOf'] : null,
+            hasStaleRates: $fxMeta['stale'],
+            balancesWithoutRate: $balancesWithoutRate,
+        );
+    }
+
+    // One account can hold several currencies, so it yields one line per
+    // currency held, each converted at its own rate.
+    /**
+     * @param  array{stale: bool, source: ?string, asOf: ?CarbonImmutable}  $fxMeta
+     * @return array{lines: list<AccountBalanceLine>, total: int, withoutRate: int}
+     */
+    private function accountLines(
+        stdClass $account,
+        User $user,
+        string $baseCurrency,
+        CarbonImmutable $today,
+        array &$fxMeta,
+    ): array {
+        $accountId = self::toInt($account->id);
+        $kind = is_string($account->kind) ? $account->kind : '';
+        $name = is_string($account->name) ? $account->name : '';
+        $defaultCurrency = self::toString($account->default_currency);
+        if ($defaultCurrency === '') {
+            $defaultCurrency = $baseCurrency;
+        }
+
+        $held = $this->heldLines(
+            $this->balances->currentBalanceAsOf($accountId, $user, $today),
+            $defaultCurrency,
+        );
+
+        $lines = [];
+        $total = 0;
+        $withoutRate = 0;
+
+        foreach ($held as $currency => $balanceMinor) {
+            $result = $this->fx->convertToBase(Money::ofMinor($balanceMinor, $currency), $baseCurrency);
 
             // With no rate the conversion returns the native currency untouched.
             // Such a line is still listed in the breakdown, but left out of the total.
@@ -62,10 +120,10 @@ final class NetWorthQuery
 
             $lines[] = new AccountBalanceLine(
                 accountId: $accountId,
-                name: is_string($account->name) ? $account->name : '',
+                name: $name,
                 kind: $kind,
-                balanceMinor: $anchor->openingBalanceMinor,
-                currency: $anchor->currency,
+                balanceMinor: $balanceMinor,
+                currency: $currency,
                 isLiability: $kind === AccountKind::IcsCard->value,
                 baseEquivalentMinor: $rateAvailable && ! $result->isPassthrough
                     ? $result->converted->toMinor()
@@ -77,8 +135,7 @@ final class NetWorthQuery
             );
 
             if (! $rateAvailable) {
-                $hasExcluded = true;
-                $accountsWithoutRate++;
+                $withoutRate++;
 
                 continue;
             }
@@ -87,16 +144,20 @@ final class NetWorthQuery
             $this->trackFxMetadata($fxMeta, $result);
         }
 
-        return new NetWorth(
-            totalMinor: $total,
-            currency: $baseCurrency,
-            accounts: $lines,
-            hasExcludedAccounts: $hasExcluded,
-            ratesSource: $fxMeta['source'],
-            ratesAsOf: $fxMeta['asOf'] instanceof CarbonImmutable ? $fxMeta['asOf'] : null,
-            hasStaleRates: $fxMeta['stale'],
-            accountsWithoutRate: $accountsWithoutRate,
-        );
+        return ['lines' => $lines, 'total' => $total, 'withoutRate' => $withoutRate];
+    }
+
+    // An account with nothing on it yet still belongs in the breakdown, at
+    // zero in the currency it is denominated in, so an empty balance becomes
+    // one line rather than none.
+    /**
+     * @return array<string, int>
+     */
+    private function heldLines(AccountBalance $balance, string $defaultCurrency): array
+    {
+        $lines = $balance->lines();
+
+        return $lines === [] ? [$defaultCurrency => 0] : $lines;
     }
 
     /**

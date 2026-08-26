@@ -9,6 +9,10 @@ return [
     'confirm' => 'Potvrdit import',
     'subtitle' => 'Zkontroluj načtené řádky. Do knihy se nic neuloží, dokud to nepotvrdíš.',
 
+    'already_imported' => 'Tento soubor už byl importován.',
+
+    'already_imported_link' => 'Zobrazit výsledek importu',
+
     'expired_html' => 'Náhled vypršel. <a href="/imports/new" class="underline">Nahraj soubor znovu</a> a zkus to ještě jednou.',
 
     'save_name' => 'Uložit název',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Přejmenovat tuto protistranu',
 
     'unknown_iban_prefix' => 'Našli jsme neznámý IBAN:',
+
+    'unknown_account_prefix' => 'Našli jsme neznámý účet:',
     'unknown_iban_suffix' => 'Pojmenuj tento účet.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'a zkus to znovu nebo se podívej, co se stalo.',
     ],
 
+    'rows_shown' => 'Zobrazené řádky: :shown z :total',
+
+    'show_more' => 'Zobrazit více řádků',
+
     'errors' => [
         'app_locked' => 'Odemkněte aplikaci pro import: šifrovací klíče nelze použít, dokud je zamčená.',
+        'file_stopped_short' => 'Hlavičkový řádek odpovídal, takže formát je správný. Čtení se zastavilo před koncem souboru. Způsobí to jeden nečitelný řádek i soubor příliš velký pro toto zařízení. Zkus kratší období.',
         'file_unreadable' => 'Tento soubor se nepodařilo načíst.',
         'iban_not_in_preview' => 'Tento IBAN není součástí aktuálního náhledu.',
+        'pdf_reader_unavailable' => 'Výpisy v PDF potřebují program pdftotext, který zde není nainstalovaný. Naimportuj tento soubor na počítači, kde je, nebo použij export CSV z banky.',
         'row_unreadable' => 'Tento řádek se nepodařilo načíst.',
         'unknown_account' => 'Tento řádek patří k účtu, kterému jsi ještě nedal jméno.',
     ],

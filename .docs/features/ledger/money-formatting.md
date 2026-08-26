@@ -79,7 +79,7 @@ four `Ingestion` amount parsers — `IcsAmountParser` now delegates its
 arithmetic to `MoneyInput` and does none of its own — plus `MoneyInput`,
 `CashBookPage`, and the amount rendering in the `Calendar`, `Tax`,
 `Forecasting`, `Reports` and `Onboarding` views. That includes the
-Livewire chart builders (`BuildsForecastCharts`, `PinnedReportsRow`,
+chart builders (`ForecastChartView`, `PinnedReportsRow`,
 `RecurringSeriesDetailPage`), which used to divide by a literal `100`
 directly beside blades that used the constant.
 

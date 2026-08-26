@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Alertes',
+    'page_title' => 'Alertes de dérive',
     'heading' => 'Alertes',
     'intro_anomaly' => 'Débits isolés qui sortent de l\'ordinaire pour toi.',
     'intro_drift' => 'Séries récurrentes approuvées dont le dernier débit est sorti de ton seuil.',

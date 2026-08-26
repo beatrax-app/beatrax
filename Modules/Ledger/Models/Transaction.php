@@ -84,9 +84,13 @@ final class Transaction extends Model
     protected function casts(): array
     {
         return [
-            'posted_at' => 'immutable_date',
+            // Both columns are DATE and the pipeline writes them bare. Without
+            // the format the cast serialises with the model's Y-m-d H:i:s, so a
+            // row written through the model lands as "2026-08-23 00:00:00" and
+            // every query comparing posted_at <= "2026-08-23" drops that day.
+            'posted_at' => 'immutable_date:Y-m-d',
             'booked_at' => 'immutable_datetime',
-            'value_date' => 'immutable_date',
+            'value_date' => 'immutable_date:Y-m-d',
             'amount_minor' => 'integer',
             'settled_amount_minor' => 'integer',
             'normalization_version' => 'integer',

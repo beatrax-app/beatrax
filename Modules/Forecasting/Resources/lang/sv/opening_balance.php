@@ -13,15 +13,18 @@ return [
     'as_of_label' => 'Ingående saldo per',
     'as_of_help' => 'Det datum som siffran ovan gäller för.',
 
-    'divergence' => 'Det här skiljer sig mer än €500 från det saldo Beatrax räknar fram utifrån dina importerade transaktioner. Är du säker?',
+    'divergence' => 'Det här skiljer sig mer än :threshold från det saldo Beatrax räknar fram utifrån dina importerade transaktioner. Är du säker?',
     'use_beatrax' => 'Använd siffran från Beatrax',
     'use_mine' => 'Använd min siffra',
 
     'save' => 'Spara ingående saldo',
+    'remove' => 'Ta bort ingående saldo',
     'saved' => 'Sparat.',
+    'removed' => 'Borttaget.',
 
     'toast' => [
         'updated' => 'Ingående saldo har uppdaterats.',
+        'removed' => 'Ingående saldo har tagits bort.',
     ],
 
     'errors' => [

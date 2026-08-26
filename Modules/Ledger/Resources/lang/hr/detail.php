@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Protustranka',
     'description' => 'Opis',
     'amount_native' => 'Iznos (izvorna valuta)',
-    'amount_settled' => 'Iznos (obračunato u EUR)',
+    'amount_settled' => 'Iznos (podmireno)',
     'effective_rate' => 'Efektivni tečaj',
     'ics_markup' => 'Uključuje eventualnu ICS maržu.',
 

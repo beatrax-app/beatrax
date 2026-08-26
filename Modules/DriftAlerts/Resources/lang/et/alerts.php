@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Hoiatused',
+    'page_title' => 'Muutuste hoiatused',
     'heading' => 'Hoiatused',
     'intro_anomaly' => 'Üksikud maksed, mis sinu jaoks tavapärasest erinevad.',
     'intro_drift' => 'Kinnitatud korduvmaksete seeriad, mille viimane makse väljus sinu läve piiridest.',

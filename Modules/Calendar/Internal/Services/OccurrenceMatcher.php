@@ -6,10 +6,10 @@ namespace Modules\Calendar\Internal\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
-use Modules\Calendar\Internal\Support\MatchWindow;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Recurring\Public\Enums\SeriesCadence;
+use Modules\Recurring\Public\Support\MatchWindow;
 use stdClass;
 
 final readonly class OccurrenceMatcher

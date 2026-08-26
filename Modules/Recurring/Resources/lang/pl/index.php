@@ -24,6 +24,7 @@ return [
     'income_heading' => 'Przychody cykliczne',
 
     'next' => 'Następna',
+    'overdue' => 'Po terminie',
     'chain' => 'łańcuch',
     'chain_aria' => 'Finansowane przez łańcuch',
     'per_month_suffix' => '/mies.',

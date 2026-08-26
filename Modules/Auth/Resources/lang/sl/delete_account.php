@@ -7,6 +7,7 @@ return [
     'body' => 'Z brisanjem računa ga odstraniš s te naprave skupaj z vsem, kar mu pripada. Tega ni mogoče razveljaviti.',
     'removes' => 'Izginejo tvoje transakcije, računi, proračuni, cilji in poročila, pa tudi pravila, nastavitve, obnovitvene kode, sinhronizacijska identiteta in šifrirni ključi.',
     'devices_heading' => 'Tvoje druge naprave obdržijo svojo kopijo',
+    'devices_heading_none' => 'To je edina kopija vaših podatkov',
     'devices_body' => 'Beatrax nima strežnika, zato na daljavo ni mogoče izbrisati ničesar. Ta naprava še vedno hrani celotno kopijo in jo je treba urediti na napravi sami — :devices|Beatrax nima strežnika, zato na daljavo ni mogoče izbrisati ničesar. Te naprave še vedno hranijo celotno kopijo in jih je treba urediti na napravi sami — :devices|Beatrax nima strežnika, zato na daljavo ni mogoče izbrisati ničesar. Te naprave še vedno hranijo celotno kopijo in jih je treba urediti na napravi sami — :devices|Beatrax nima strežnika, zato na daljavo ni mogoče izbrisati ničesar. Te naprave še vedno hranijo celotno kopijo in jih je treba urediti na napravi sami — :devices',
     'devices_none' => 'S to napravo ni seznanjena nobena druga, zato je to edina kopija tvojih podatkov.',
     'successor' => 'To napravo upravljaš ti, zato jo prevzame :username, ko tvojega računa ne bo več.',

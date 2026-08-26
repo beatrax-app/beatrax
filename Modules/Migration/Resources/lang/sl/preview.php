@@ -16,13 +16,10 @@ return [
         'budget' => 'Proračunski meseci',
     ],
 
-    'fully_mapped' => '✓ v celoti preslikano',
     'all_clean' => 'Vse je preslikano brez težav — pred potrditvijo nič ne potrebuje tvoje pozornosti.',
 
     'groups' => [
         'conflict' => 'Potrebuje tvojo odločitev',
-        'category' => 'Nerazrešene kategorije',
-        'payee' => 'Nerazrešeni prejemniki',
         'extra' => 'Ni uvoženo',
     ],
 

@@ -8,9 +8,12 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Sync\Public\Dto\DecryptedRow;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -18,11 +21,15 @@ use stdClass;
 
 final readonly class CounterpartyProfileQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
         private SensitiveColumnCodec $codec,
         private Session $session,
+        private CrossCurrencyTotal $fx,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function bySlug(User $user, string $slug): ?CounterpartyProfileDto
@@ -40,12 +47,16 @@ final readonly class CounterpartyProfileQuery
         $cutoffDate = $this->clock->now()->subYear()->toDateString();
         $connection = $this->db->connection();
 
-        $totals = $connection->table('transactions')
+        // settled_amount_minor grouped by settled_currency: a roll-up is what
+        // the account was debited, and a merchant charged in two currencies has
+        // two figures, not one integer.
+        $buckets = $connection->table('transactions')
             ->where('user_id', $user->id)
             ->where('counterparty_id', $cpId)
             ->where('posted_at', '>=', $cutoffDate)
-            ->selectRaw('COALESCE(SUM(amount_minor), 0) as total, COUNT(*) as cnt')
-            ->first();
+            ->groupBy('settled_currency')
+            ->selectRaw('settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total')
+            ->get();
 
         $lifetimeTotals = $connection->table('transactions')
             ->where('user_id', $user->id)
@@ -53,7 +64,7 @@ final readonly class CounterpartyProfileQuery
             ->selectRaw('MIN(posted_at) as first_seen, MAX(posted_at) as last_seen, COUNT(*) as cnt')
             ->first();
 
-        $total12m = $totals !== null && is_numeric($totals->total ?? null) ? (int) $totals->total : 0;
+        $total12m = $this->fx->of(self::minorByCurrency($buckets), $this->baseCurrency->forUser($user));
         $txCount = $lifetimeTotals !== null && is_numeric($lifetimeTotals->cnt ?? null) ? (int) $lifetimeTotals->cnt : 0;
         $firstSeen = $lifetimeTotals !== null ? ($lifetimeTotals->first_seen ?? null) : null;
         $lastSeen = $lifetimeTotals !== null ? ($lifetimeTotals->last_seen ?? null) : null;
@@ -71,11 +82,32 @@ final readonly class CounterpartyProfileQuery
             type: $cp->type,
             iban: self::readable($decrypted, 'iban'),
             merchantName: self::readable($decrypted, 'merchant_name'),
-            total12mMinor: $total12m,
+            total12mMinor: $total12m->minor,
             transactionCount: $txCount,
             firstSeenDate: is_string($firstSeen) ? substr($firstSeen, 0, 10) : null,
             lastSeenDate: is_string($lastSeen) ? substr($lastSeen, 0, 10) : null,
+            currency: $total12m->currency,
+            unconvertedCurrencies: $total12m->unconverted,
         );
+    }
+
+    /**
+     * @param  Collection<int, stdClass>  $rows
+     * @return array<string, int>
+     */
+    private static function minorByCurrency(Collection $rows): array
+    {
+        $buckets = [];
+        foreach ($rows as $row) {
+            $currency = is_string($row->settled_currency ?? null) ? $row->settled_currency : '';
+            if ($currency === '') {
+                continue;
+            }
+
+            $buckets[$currency] = is_numeric($row->total ?? null) ? (int) $row->total : 0;
+        }
+
+        return $buckets;
     }
 
     /**
@@ -175,6 +207,9 @@ final readonly class CounterpartyProfileQuery
         return $map;
     }
 
+    // Settled, like every total on this page: these rows are what those totals
+    // are made of, and reading the charged figure here put a dollar amount
+    // under a euro sum.
     /**
      * @return Collection<int, stdClass>
      */
@@ -188,7 +223,7 @@ final readonly class CounterpartyProfileQuery
             ->orderByDesc('posted_at')
             ->orderByDesc('id')
             ->limit($limit)
-            ->get(['id', 'posted_at', 'description', 'amount_minor', 'currency']);
+            ->get(['id', 'posted_at', 'description', 'settled_amount_minor', 'settled_currency']);
 
         $decrypted = $rows->map(function (stdClass $row) use ($userId): stdClass {
             if (is_string($row->description)) {
@@ -213,10 +248,9 @@ final readonly class CounterpartyProfileQuery
             ->where('t.user_id', $cp->user_id)
             ->where('t.counterparty_id', $cp->id)
             ->where('t.posted_at', '>=', $cutoffDate)
-            ->select(['t.category_id as category_id', ...CategoryDisplayName::columns('c')])
-            ->selectRaw('COALESCE(SUM(t.amount_minor), 0) as total_minor')
-            ->groupBy('t.category_id', ...CategoryDisplayName::bareColumns('c'))
-            ->orderByRaw('ABS(SUM(t.amount_minor)) DESC')
+            ->select(['t.category_id as category_id', 't.settled_currency as settled_currency', ...CategoryDisplayName::columns('c')])
+            ->selectRaw('COALESCE(SUM(t.settled_amount_minor), 0) as total_minor')
+            ->groupBy('t.category_id', 't.settled_currency', ...CategoryDisplayName::bareColumns('c'))
             ->get();
 
         // The breakdown goes straight to Blade, so the row carries the display
@@ -227,7 +261,49 @@ final readonly class CounterpartyProfileQuery
             return $row;
         });
 
-        return new Collection($resolved->all());
+        return $this->convertedBuckets($resolved, fn (stdClass $row): string => self::toString($row->category_id ?? null));
+    }
+
+    // The SQL groups by currency too, so a category charged in two arrives as
+    // two rows, folded back into one only after each has been through its own
+    // rate. Ordering happens here for the same reason: ABS() over raw minor
+    // units ranked a dollar category above a larger euro one.
+    /**
+     * @param  Collection<int, stdClass>  $rows
+     * @param  callable(stdClass): string  $keyOf
+     * @return Collection<int, stdClass>
+     */
+    private function convertedBuckets(Collection $rows, callable $keyOf): Collection
+    {
+        $baseCurrency = $this->baseCurrency->code();
+        $currencies = [];
+        foreach ($rows as $row) {
+            $currencies[] = is_string($row->settled_currency ?? null) ? $row->settled_currency : '';
+        }
+        $rates = $this->fx->ratesTo($currencies, $baseCurrency);
+
+        /** @var array<string, stdClass> $merged */
+        $merged = [];
+        /** @var array<string, array<string, int>> $byCurrency */
+        $byCurrency = [];
+        foreach ($rows as $row) {
+            $key = $keyOf($row);
+            $currency = is_string($row->settled_currency ?? null) ? $row->settled_currency : '';
+            $merged[$key] ??= $row;
+            $byCurrency[$key][$currency] = is_numeric($row->total_minor ?? null) ? (int) $row->total_minor : 0;
+        }
+
+        $result = [];
+        foreach ($merged as $key => $row) {
+            $row->total_minor = $this->fx->withRates($byCurrency[$key], $baseCurrency, $rates)->minor;
+            $row->currency = $baseCurrency;
+            unset($row->settled_currency);
+            $result[] = $row;
+        }
+
+        usort($result, fn (stdClass $a, stdClass $b): int => abs(self::toInt($b->total_minor)) <=> abs(self::toInt($a->total_minor)));
+
+        return new Collection($result);
     }
 
     // Nothing writes metadata.funding_chain yet, so this returns null in
@@ -269,12 +345,15 @@ final readonly class CounterpartyProfileQuery
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $cp->user_id)
             ->where('counterparty_id', $cp->id)
-            ->selectRaw("CAST(strftime('%Y', posted_at) AS INTEGER) as year, COALESCE(SUM(amount_minor), 0) as total_minor")
-            ->groupBy('year')
-            ->orderByDesc('year')
+            ->selectRaw("CAST(strftime('%Y', posted_at) AS INTEGER) as year, settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total_minor")
+            ->groupBy('year', 'settled_currency')
             ->get();
 
-        return new Collection($rows->all());
+        $converted = $this->convertedBuckets($rows, fn (stdClass $row): string => self::toString($row->year ?? null));
+        $years = $converted->all();
+        usort($years, fn (stdClass $a, stdClass $b): int => self::toInt($b->year) <=> self::toInt($a->year));
+
+        return new Collection($years);
     }
 
     // A column this device could not open is unknown, not empty. Read off the

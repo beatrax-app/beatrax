@@ -9,6 +9,10 @@ return [
         'title' => 'Denne siden finnes ikke',
         'body' => 'Lenken kan være gammel, eller siden kan ha fått nytt navn. Det er ingenting galt med dataene dine.',
     ],
+    '4xx' => [
+        'title' => 'Denne forespørselen kan ikke håndteres',
+        'body' => 'Siden ble åpnet på en måte den ikke forventer. Dataene dine er uendret.',
+    ],
 
     '419' => [
         'title' => 'Økten din er utløpt',

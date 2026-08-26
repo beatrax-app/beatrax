@@ -66,8 +66,11 @@ step that keeps the answer coherent:
   `goal_contributions` pivot with `transactions.posted_at >=
   $effectiveStart`.
 
-Both are FX-converted into the goal's `target_currency`, which is fixed
-at creation and never follows the user's base currency. The rate and the
+Both are FX-converted into the goal's `target_currency` through
+`CrossCurrencyTotal`, which is fixed at creation and never follows the
+user's base currency. A window amount the rate table cannot price is
+left out of the sum, so the rate never counts foreign minor units as the
+goal's own. The rate and the
 level therefore always measure the same money in the same unit: a
 pot-linked goal whose rate came from attributed transactions would
 report progress from one source and speed from another, and could show a

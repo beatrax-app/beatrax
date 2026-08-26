@@ -5,10 +5,10 @@ declare(strict_types=1);
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
 
-// `--force` on the scheduled run is deliberate: the data_version smart-skip
-// would otherwise silence a quiet day, the 48h freshness probe would then trip,
-// and the resulting backup_overdue banner could not be cleared by a manual
-// db:backup, which smart-skips for the same reason.
+// `--force` on the scheduled run is deliberate: the smart-skip would otherwise
+// silence a quiet day, the 48h freshness probe would then trip, and the
+// resulting backup_overdue banner could not be cleared by a manual db:backup,
+// which skips a genuinely unchanged database for the same reason.
 
 it('registers a db.backup-daily schedule entry at 03:00 with --force and a withoutOverlapping mutex', function (): void {
     /** @var Schedule $schedule */

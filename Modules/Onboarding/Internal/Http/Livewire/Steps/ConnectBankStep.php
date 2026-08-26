@@ -22,6 +22,8 @@ use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Import\Public\Services\UploadFilename;
+use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
@@ -35,21 +37,31 @@ final class ConnectBankStep extends Component
 {
     use WithFileUploads;
 
-    // Only the CSV variants need a follow-on bank pick; CAMT.053 and MT940
-    // are self-describing.
+    // Every value here is an adapter key the ingestion registry binds, so the
+    // format the user picks is the format that reaches the pipeline. Only the
+    // CSV variants need a follow-on bank pick; CAMT.053 and MT940 are
+    // self-describing.
     /** @var list<string> */
-    private const SUPPORTED_FORMATS = ['camt053', 'mt940', 'asn-csv', 'ing-csv'];
+    private const array SUPPORTED_FORMATS = [
+        SourceFormat::Camt053->value,
+        SourceFormat::Mt940->value,
+        SourceFormat::AsnCsv->value,
+        CsvPresetRegistry::ING_NL,
+    ];
 
     /** @var list<string> */
-    private const SUPPORTED_BANK_FORMAT_HINTS = ['asn-csv', 'ing-csv'];
+    private const array CSV_BANK_FORMATS = [SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL];
 
     public ?TemporaryUploadedFile $file = null;
 
     public ?string $uploadError = null;
 
-    public string $selectedFormat = 'camt053';
+    public string $selectedFormat = SourceFormat::Camt053->value;
 
-    public ?string $selectedBankFormatHint = null;
+    // The CSV chip has to land on some CSV format, so $selectedFormat alone
+    // cannot say whether the user has named their bank or is looking at that
+    // landing default. This carries only that, and never the bank's identity.
+    public bool $csvBankPicked = false;
 
     /**
      * @return array<string, list<string>>
@@ -59,7 +71,6 @@ final class ConnectBankStep extends Component
         return [
             'file' => ['required', 'file', 'max:'.UploadLimits::MAX_KB, 'extensions:csv,txt,xml,sta,mt940,940'],
             'selectedFormat' => ['required', 'in:'.implode(',', self::SUPPORTED_FORMATS)],
-            'selectedBankFormatHint' => ['nullable', 'in:'.implode(',', self::SUPPORTED_BANK_FORMAT_HINTS)],
         ];
     }
 
@@ -82,10 +93,17 @@ final class ConnectBankStep extends Component
         }
 
         $this->selectedFormat = $format;
+        $this->csvBankPicked = false;
+    }
 
-        if (! $this->isCsvFormat($format)) {
-            $this->selectedBankFormatHint = null;
+    public function setCsvBank(string $format): void
+    {
+        if (! in_array($format, self::CSV_BANK_FORMATS, strict: true)) {
+            return;
         }
+
+        $this->selectedFormat = $format;
+        $this->csvBankPicked = true;
     }
 
     public function submit(
@@ -104,10 +122,11 @@ final class ConnectBankStep extends Component
             return;
         }
 
-        // The validator's in: rule still admits a (CSV, null) pair, so a
-        // tampered request is caught here rather than inside the pipeline.
-        if ($this->isCsvFormat($this->selectedFormat) && $this->selectedBankFormatHint === null) {
-            $this->addError('selectedBankFormatHint', Lang::get('onboarding::connect_bank.errors.pick_bank'));
+        // The chip row lands on a CSV format before the user has named a bank,
+        // so submitting from that state would import the landing default under
+        // the user's file.
+        if ($this->isCsvFormat($this->selectedFormat) && ! $this->csvBankPicked) {
+            $this->addError('csvBankPicked', Lang::get('onboarding::connect_bank.errors.pick_bank'));
 
             return;
         }
@@ -115,9 +134,7 @@ final class ConnectBankStep extends Component
         $user = $currentUser->user();
         $originalFilename = UploadFilename::sanitise($this->file->getClientOriginalName(), UploadFilename::extensionFor($this->selectedFormat));
 
-        $formatHint = $this->selectedBankFormatHint === null
-            ? null
-            : BankCsvFormatHint::from($this->selectedBankFormatHint);
+        $formatHint = $this->formatHint();
 
         $result = $this->runPreview($importer, $this->file->getRealPath(), $user, $originalFilename, $formatHint, $logger, $app);
         if ($result === null) {
@@ -150,12 +167,22 @@ final class ConnectBankStep extends Component
         }
     }
 
+    // A preset names its own dialect in its format id; only the built-in ASN
+    // CSV has to declare one separately.
+    private function formatHint(): ?BankCsvFormatHint
+    {
+        return match ($this->selectedFormat) {
+            SourceFormat::AsnCsv->value => BankCsvFormatHint::Asn,
+            default => null,
+        };
+    }
+
     /**
      * @return int how many accounts the preview needed that did not exist yet
      */
     private function createMissingBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, AccountSlugResolver $slugs, BaseCurrency $baseCurrency): int
     {
-        $bankLabel = $this->bankLabelFor($this->selectedFormat, $this->selectedBankFormatHint);
+        $bankLabel = $this->bankLabel();
 
         $created = 0;
         foreach ($result->accountsToName as $unknown) {
@@ -235,18 +262,14 @@ final class ConnectBankStep extends Component
         $progress->update(['data' => $data]);
     }
 
-    private function bankLabelFor(string $sourceFormat, ?string $bankFormatHint): string
+    private function bankLabel(): string
     {
         // Concatenated into "We detected your {label} account started at",
         // so the label must never itself contain the word "account".
-        return match ($sourceFormat) {
-            'camt053', 'mt940', 'asn-csv' => 'ASN bank',
-            'ing-csv' => 'ING bank',
-            default => match ($bankFormatHint) {
-                'asn-csv' => 'ASN bank',
-                'ing-csv' => 'ING bank',
-                default => AccountKind::Bank->value,
-            },
+        return match ($this->selectedFormat) {
+            SourceFormat::Camt053->value, SourceFormat::Mt940->value, SourceFormat::AsnCsv->value => 'ASN bank',
+            CsvPresetRegistry::ING_NL => 'ING bank',
+            default => AccountKind::Bank->value,
         };
     }
 
@@ -262,6 +285,6 @@ final class ConnectBankStep extends Component
 
     private function isCsvFormat(string $format): bool
     {
-        return in_array($format, self::SUPPORTED_BANK_FORMAT_HINTS, strict: true);
+        return in_array($format, self::CSV_BANK_FORMATS, strict: true);
     }
 }

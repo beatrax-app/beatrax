@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Avaa argumenttilomakkeen',
 
+    'spawning_unavailable' => 'Artisan-komennot ajetaan erillisessä prosessissa, eikä tämä alusta anna sovelluksen käynnistää sellaista. Aja ne tietokonesovelluksessa.',
+
     'status' => [
         'running' => 'Käynnissä',
         'done' => 'Valmis',

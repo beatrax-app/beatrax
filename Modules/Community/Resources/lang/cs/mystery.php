@@ -21,7 +21,6 @@ return [
     'footer' => 'Sdílený seznam je soubor YAML dodávaný přímo s Beatraxem. Odeslání návrhu otevře GitHub v prohlížeči; nic dalšího toto zařízení neopustí.',
 
     'card' => [
-        'likely' => 'Pravděpodobně: nepojmenovaný obchodník.',
         'seen_times' => 'Viděno :count krát|Viděno :count krát|Viděno :count krát',
         'last_seen' => 'Naposledy viděno :date',
         'suggest' => 'Navrhnout název →',

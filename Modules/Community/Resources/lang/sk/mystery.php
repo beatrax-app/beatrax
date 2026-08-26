@@ -21,7 +21,6 @@ return [
     'footer' => 'Zdieľaný zoznam je priložený YAML súbor, ktorý sa dodáva s aplikáciou Beatrax. Odoslanie návrhu otvorí GitHub v prehliadači; nič iné toto zariadenie neopustí.',
 
     'card' => [
-        'likely' => 'Pravdepodobne: nepomenovaný obchodník.',
         'seen_times' => 'Videné :count krát|Videné :count krát|Videné :count krát',
         'last_seen' => 'Naposledy videné :date',
         'suggest' => 'Navrhnúť názov →',

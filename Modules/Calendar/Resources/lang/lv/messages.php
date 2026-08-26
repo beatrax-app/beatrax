@@ -10,7 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognoze tiek atjaunināta…',
-        'risk' => 'Atlikums noslīd zem 0 € :count dienās — pirmā: :date.|Atlikums noslīd zem 0 € :count dienā — pirmā: :date.|Atlikums noslīd zem 0 € :count dienās — pirmā: :date.',
+        'risk' => 'Atlikums noslīd zem :zero :count dienās — pirmā: :date.|Atlikums noslīd zem :zero :count dienā — pirmā: :date.|Atlikums noslīd zem :zero :count dienās — pirmā: :date.',
     ],
 
     'toolbar' => [
@@ -49,11 +49,15 @@ return [
     'cell' => [
         'entry' => 'ierakstu|ieraksts|ieraksti',
         'aria' => ':date: :count :entries',
-        'aria_balance_negative' => ', prognozētais atlikums mīnus :amount €',
-        'aria_balance_positive' => ', prognozētais atlikums :amount €',
+        'aria_balance_negative' => ', prognozētais atlikums mīnus :amount',
+        'aria_balance_positive' => ', prognozētais atlikums :amount',
         'overflow' => 'vēl +:count',
         'paid' => 'Samaksāts',
         'missed' => 'Gaidīts — nav atrasts',
+    ],
+
+    'entry' => [
+        'booked_unnamed' => 'Iegrāmatots maksājums',
     ],
 
     'panel' => [
@@ -64,6 +68,7 @@ return [
         'date_approximate' => '~ aptuvens datums',
         'series' => '↗ sērija',
         'counterparty' => '↗ darījuma partneris',
+        'transaction' => '↗ darījums',
         'end_of_day' => 'Dienas beigas',
     ],
 ];

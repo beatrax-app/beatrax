@@ -152,6 +152,7 @@ final class RecurringReviewPage extends Component
             'rows' => $rows,
             'reviewTab' => $this->activeTab(),
             'snoozeTargets' => $snoozeTargets,
+            'today' => $clock->now(),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

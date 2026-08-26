@@ -27,19 +27,20 @@ return [
     ],
 
     'next' => 'Neste',
+    'overdue' => 'Forfalt',
     'cadence_changed_note' => 'intervallet endret',
-
-    'select_aria' => 'Velg gjentakende serie :id',
     'un_reject' => 'Angre avvisning',
     'approve' => 'Godkjenn',
     'approve_aria' => 'Godkjenn gjentakende serie :id',
     'reject' => 'Avvis',
     'reject_aria' => 'Avvis gjentakende serie :id',
     'snooze' => 'Utsett',
+    'snooze_aria' => 'Utsett gjentakende serie :id',
     'snooze_1w' => '1 uke',
     'snooze_1m' => '1 måned',
     'snooze_3m' => '3 måneder',
     'edit_name' => 'Rediger navnet',
+    'edit_name_aria' => 'Gi gjentakende serie :id nytt navn',
     'new_name_label' => 'Nytt navn for denne serien',
     'save' => 'Lagre',
 

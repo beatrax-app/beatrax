@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Alertas',
+    'page_title' => 'Alertas de desvio',
     'heading' => 'Alertas',
     'intro_anomaly' => 'Cobranças individuais que parecem fora do normal para ti.',
     'intro_drift' => 'Séries recorrentes aprovadas cuja última cobrança saiu do teu limite.',

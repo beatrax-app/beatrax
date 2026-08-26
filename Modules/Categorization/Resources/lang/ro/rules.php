@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Potriviri',
     'col_created' => 'Creată',
     'col_row_actions' => 'Acțiuni',
+    'inactive_badge' => 'Inactivă',
+    'inactive_title' => 'Această regulă nu rulează. O regulă se dezactivează când categoria sau contrapartida la care trimite este ștearsă.',
 
     'more_conditions' => '+:count în plus',
 

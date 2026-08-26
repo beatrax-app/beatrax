@@ -51,6 +51,8 @@ return [
     'no_series_contribute' => 'Do prognózy tohto účtu zatiaľ nevstupuje žiadna séria.',
 
     'net_diff' => 'Čistý rozdiel',
+
+    'net_diff_unknown' => 'Pre tento horizont zatiaľ nevypočítané.',
     'net_diff_section_aria' => 'Čistý rozdiel medzi východiskom a scenárom v dňoch horizontu 30 / 60 / 90',
     'net_diff_delta_aria' => 'Čistý rozdiel v deň :day: :value, scenár je :state',
     'better_than_baseline' => 'lepší než východisko',
@@ -67,9 +69,9 @@ return [
 
     'highlights_title' => 'Hlavné body prognózy',
     'highlights_shortfall_aria' => ':count aktívne okno nedostatku v najbližších :days dňoch|:count aktívne okná nedostatku v najbližších :days dňoch|:count aktívnych okien nedostatku v najbližších :days dňoch',
-    'dips_to' => ':name klesá na :amount',
     'on_date_suffix' => ' dňa :date',
     'shortfall_window' => ':count aktívne okno nedostatku|:count aktívne okná nedostatku|:count aktívnych okien nedostatku',
-    'lowest_in_30' => 'Najnižšie za 30 dní: :amount',
+    'lowest_in_30_label' => 'Najnižšie za 30 dní',
     'next_ics' => 'Ďalšie zúčtovanie ICS: :amount dňa :date',
+    'ics_overdue' => 'Zúčtovanie ICS po splatnosti: :amount, splatné :date',
 ];

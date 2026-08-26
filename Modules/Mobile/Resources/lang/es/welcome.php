@@ -8,5 +8,6 @@ return [
     'subtitle' => 'Configura este dispositivo para ver tus finanzas en un solo sitio.',
     'create_account' => 'Crear cuenta',
     'import' => 'Importar desde otro dispositivo',
+    'restore' => 'Restaurar desde una copia',
     'create_account_note' => 'Esto funciona por sí solo, pero configurarlo en un ordenador y sincronizarlo aquí es más sencillo.',
 ];

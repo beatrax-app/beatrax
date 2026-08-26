@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Console\Kernel;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
 beforeEach(function (): void {
@@ -13,13 +12,7 @@ beforeEach(function (): void {
     // command line.
     $this->livePath = RealSqliteFixture::create('restore-success-live');
 
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.connections.sqlite.database', $this->livePath);
-
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $db->purge('sqlite');
+    LiveSqliteConnection::pointAt($this->app, $this->livePath);
 
     $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-restore-success-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
@@ -30,6 +23,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    LiveSqliteConnection::restore($this->app);
     putenv('NATIVEPHP_STORAGE_PATH');
 
     /** @var string $livePath */

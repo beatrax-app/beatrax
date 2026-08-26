@@ -9,9 +9,12 @@ use Modules\Core\Public\Contracts\DeviceNameSource;
 final class DeviceNameDetector
 {
     // Unbound on platforms with nothing better to offer, in which case the
-    // container passes the default and the OS-family fallback stands.
+    // container passes the default and the OS-family fallback stands. The
+    // family is a defaulted parameter rather than a constant read inline, so
+    // the fallback can be exercised for a platform the test is not running on.
     public function __construct(
         private readonly ?DeviceNameSource $source = null,
+        private readonly string $platformFamily = PHP_OS_FAMILY,
     ) {}
 
     // Stored in device_registry.name and EXCHANGED with peers, so it must
@@ -28,7 +31,7 @@ final class DeviceNameDetector
             return $platformName;
         }
 
-        return match (PHP_OS_FAMILY) {
+        return match ($this->platformFamily) {
             'Darwin' => 'Mac',
             'Windows' => 'PC',
             'Linux' => 'Linux',

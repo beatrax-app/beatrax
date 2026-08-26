@@ -142,8 +142,12 @@ Modules/Ledger/
 - `Models/Account` — maps to `accounts`. Uses
   `BelongsToUser`. `kind` enum enforced by triggers
   (`asn_checking`, `ics_card`, `paypal`, ...). Includes
-  `starting_balance_minor`, `opening_balance_minor`,
-  `forecast_buffer_minor` (added by Forecasting's migration).
+  `starting_balance_minor` / `starting_balance_date` (this
+  module's own auto-detected baseline, read through
+  `AccountStartingBalanceQuery`) plus `opening_balance_minor` /
+  `opening_balance_as_of_date` and `forecast_buffer_minor`
+  (Forecasting's manual override and buffer, added by its
+  migration).
 - `Models/Category` — maps to `categories`. Per-user OR global
   (`user_id = NULL`).
 - `Models/Currency` — `iso_code` (PK), display metadata.

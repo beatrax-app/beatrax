@@ -1,0 +1,4 @@
+Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance
+CARD_PAYMENT,Current,2026-07-28 09:00:00,2026-07-28 09:00:00,Coffee Company,-4.75,0.00,EUR,COMPLETED,1000.00
+REFUND,Current,2026-07-28 10:00:00,2026-07-28 10:00:00,Amazon.com refund,12.00,0.00,EUR,COMPLETED,1012.00
+EXCHANGE,Current,2026-07-29 11:00:00,2026-07-29 11:00:00,Exchange EUR to USD,-100.00,1.25,EUR,COMPLETED,910.75

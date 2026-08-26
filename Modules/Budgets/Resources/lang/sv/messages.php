@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budgetar',
-        'subtitle' => 'Fördela varje euro — :period.',
+        'subtitle' => 'Fördela allt — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'För över minus',
-        'non_eur_aria' => 'Utgifter i annan valuta än EUR i den här kategorin visas inte här — se översikten',
-        'non_eur_title' => 'Utgifter i annan valuta än EUR visas inte här — se översikten',
+        'unconverted_aria' => 'Utgifter i en valuta utan tillgänglig kurs räknas inte här — se översikten',
+        'unconverted_title' => 'Utgifter utan tillgänglig kurs räknas inte här — se översikten',
         'over_budget' => ':count över budget',
     ],
 

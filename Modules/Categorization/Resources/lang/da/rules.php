@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Træf',
     'col_created' => 'Oprettet',
     'col_row_actions' => 'Handlinger',
+    'inactive_badge' => 'Fra',
+    'inactive_title' => 'Denne regel kører ikke. En regel slås fra, når den kategori eller modpart, den peger på, slettes.',
 
     'more_conditions' => '+:count flere',
 

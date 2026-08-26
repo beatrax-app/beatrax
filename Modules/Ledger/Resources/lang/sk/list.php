@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Nedávne transakcie (posledných 90 dní).',
 
     'currency_aria' => 'Zobrazenie meny',
-    'currency_eur' => 'Iba EUR',
+    'currency_eur' => 'Iba :code',
     'currency_original' => 'Pôvodná mena',
 
     'show_recent' => 'Zobraziť iba nedávne',

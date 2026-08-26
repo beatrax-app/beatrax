@@ -146,6 +146,23 @@
     --space-10: 40px;
     --space-12: 48px;
 
+    /*
+     * The subject column of a table that has restacked into cards. Every one
+     * of them puts the row's subject — a merchant, a rule's conditions — in a
+     * 1fr track beside an auto one holding its amount or its actions, and 1fr
+     * has no floor. Measured on an iPhone 12 mini at the largest iOS
+     * accessibility text size: the amount took 223px of a 309px row and the
+     * merchant was left 42, which is one glyph per line, forty lines deep.
+     * The floor is a rem so it grows with the reader's text. The other track
+     * is max-content rather than auto for the same reason: auto shrinks to
+     * min-content when the pair no longer fits, which turned every "Delete"
+     * on /rules into a five-line column of letters. Past the point where both
+     * fit, the row keeps both readable and moves into the horizontal scroll
+     * the table already has, which is where content wider than the screen
+     * belongs.
+     */
+    --restacked-row-subject: minmax(min(100%, 8rem), 1fr);
+
     /* Spacing — named scale.
      *
      * Tailwind v4 builds spacing utilities (p-md, gap-sm, bottom-md, …)
@@ -270,11 +287,28 @@ td.date,
  * the layered :where() default; flyout drawers use `w-*` (not these two
  * classes) and are untouched.
  */
+/*
+ * 36rem is 576px and a phone is 375. Nothing capped a dialog at the screen it
+ * is drawn on, so its content set its width: the Gmail OAuth wizard measured
+ * 407px on an iPhone 12 mini with 46 elements past the right edge, the scope
+ * URL and "Publish App" cut off mid-word. min-width is capped too, because
+ * min always beats max and would put the cap back where it was.
+ */
 [data-flux-modal] > dialog:where([class~="[:where(&)]:max-w-xl"]) {
-    max-width: 36rem;
+    max-width: min(36rem, calc(100vw - 1rem));
 }
 [data-flux-modal] > dialog:where([class~="[:where(&)]:min-w-xs"]) {
-    min-width: 20rem;
+    min-width: min(20rem, calc(100vw - 1rem));
+}
+
+/*
+ * The cap alone left three elements outside it: one 46-character scope URL
+ * has no break opportunity, so it overflows whatever box holds it. anywhere
+ * rather than break-word, because only anywhere lowers the min-content width
+ * the dialog is sized from.
+ */
+[data-flux-modal] > dialog p {
+    overflow-wrap: anywhere;
 }
 
 /*
@@ -907,6 +941,32 @@ td.date,
     .wiz-brand-name {
         font-weight: 600;
         font-size: var(--text-sm);
+    }
+
+    /* Sits at the head of .wiz-brand rather than as a fourth child of the
+       .wiz-top row: that row already collides below 640px with three items,
+       and this one has to survive the longest word in 26 languages. */
+    .wiz-back {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        min-height: 44px;
+        padding: 6px var(--space-2);
+        margin-left: calc(var(--space-2) * -1);
+        border-radius: var(--radius-md);
+        background: transparent;
+        border: 0;
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .wiz-back:hover {
+        background: var(--color-surface-2);
+        color: var(--color-text);
     }
 
     .wiz-resume-later {
@@ -1860,6 +1920,8 @@ td.date,
         display: flex;
         align-items: center;
         gap: var(--space-2);
+        flex-wrap: wrap;
+        row-gap: var(--space-1);
     }
 
     .preview-section-eyebrow .ready {
@@ -2411,6 +2473,14 @@ td.date,
         font-variant-numeric: tabular-nums;
     }
 
+    /* One amount and the label that names it. The wrap above needs items to
+       break between, not a flat run of four spans it can split anywhere. */
+    .cp-stat {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-1);
+    }
+
     /* A card is ~290px on a phone and holds two amounts plus their labels,
        so without these the row broke inside a number: "€ 3.750," on one
        line and "00" on the next. The amounts stay whole and the pairs wrap
@@ -2735,11 +2805,11 @@ td.date,
     }
 
     /* Same size as the placeholder it replaces, so the row does not resize
-       when the reader clicks Show. An IBAN is one unbroken token in a flex
-       row, hence the wrap release. */
+       when the reader clicks Show. It is drawn in groups of four, like the
+       placeholder, so a narrow row breaks it between groups and never
+       mid-identifier -- no wrap release is needed to get it to break. */
     .iban-revealed {
         min-width: 0;
-        overflow-wrap: anywhere;
         font-family: var(--font-mono);
         font-variant-numeric: tabular-nums;
         font-size: var(--text-sm);
@@ -2855,10 +2925,14 @@ td.date,
         font-variant-numeric: tabular-nums;
     }
 
+    /* A fieldset carries min-width: min-content from the browser, so at the
+       phone's largest font size it refused to shrink below the name box inside
+       it and took the whole queue 30px sideways. */
     .triage-section {
         display: flex;
         flex-direction: column;
         gap: var(--space-4);
+        min-width: 0;
     }
 
     /* The report builder's control rail. It was a hardcoded `flex: 0 0 280px`,
@@ -3342,9 +3416,21 @@ td.date,
     .drawer-container .side {
         display: flex;
         height: 100%;
-        padding-top: calc(var(--space-4) + var(--safe-top));
+        padding-top: var(--space-4);
         padding-bottom: calc(var(--space-4) + var(--safe-bottom));
         overscroll-behavior: contain;
+    }
+
+    /* The status-bar strip belongs to the PANEL, not to the scroller inside
+       it. As padding on .side it only held the FIRST screen of the list clear
+       of the clock: the nav is 1776px tall in an 812px viewport, so everything
+       past it scrolled straight up underneath, and "Reconcile" was measured
+       rendering through "16:35". Padding here shortens the scroll viewport
+       instead, so no row can reach the strip at any scroll position, and the
+       panel paints it in the sidebar's own colour. */
+    .drawer-container {
+        padding-top: var(--safe-top);
+        background: var(--color-bg-subtle);
     }
 }
 
@@ -3747,8 +3833,17 @@ td.date,
            no break opportunity, so the clamp cannot save it and the text runs
            under the amount. Same guard the counterparty cards and the tax
            rows already carry. */
+
+        /* Wrapping alone only trades an overflow for a column: 300 characters
+           of unbroken name took eleven lines and 350px of a 812px screen,
+           burying the amount and the delete it belongs to. The desktop list
+           truncates the same field; this is that, with a second line. */
         .card-list-item .primary {
             overflow-wrap: anywhere;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
         }
 
         .card-list-item .amount {
@@ -3915,6 +4010,16 @@ td.date,
     display: flex;
     flex-direction: column;
     gap: var(--space-6, 24px);
+}
+
+/* A tile that decided it had nothing to show still leaves Livewire's mandatory
+ * root element behind, and a zero-height flex child costs a full gap on each
+ * side of itself. On a fresh install four of the twelve were empty and three
+ * sat together under the header: 96px of nothing between it and the first
+ * figure, on the screen the app opens to. `> * > *` is the tile's own content
+ * — the root is always there, whatever it wrapped is not. */
+.dashboard-main > .dashboard-tile:not(:has(> * > *)) {
+    display: none;
 }
 
 @media (max-width: 767px) {
@@ -4385,8 +4490,12 @@ td.date,
     pointer-events: none;
 }
 
+/* A flex item's default min-width is auto, so at the phone's largest display
+   size the box kept the intrinsic width of its own twenty characters and took
+   the page 44px sideways. */
 .srch-input {
     flex: 1;
+    min-width: 0;
     height: 36px;
     padding: 0 var(--space-2, 8px);
     border: 1px solid var(--color-border, oklch(93% 0 0));
@@ -5272,7 +5381,7 @@ mark {
 
     .dash-recent-table tr {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: var(--restacked-row-subject) minmax(0, max-content);
         column-gap: var(--space-3);
         padding: var(--space-3) var(--space-4);
     }
@@ -5341,7 +5450,7 @@ mark {
 
     .triage-inbox-table tr {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: var(--restacked-row-subject) minmax(0, max-content);
         column-gap: var(--space-3);
         row-gap: var(--space-2);
         padding: var(--space-3) var(--space-4);
@@ -5385,6 +5494,85 @@ mark {
     .triage-inbox-table td:nth-child(4) select,
     .triage-inbox-table td:nth-child(4) input {
         width: 100%;
+    }
+}
+
+/*
+ * Import-preview rows at phone width.
+ *
+ * Five columns — date, funding source, counterparty, amount, status — measure
+ * 533px against 305px of room, so AMOUNT (382-484) and STATUS (484-568) both
+ * sat entirely past the right edge of a 375px screen and 18 of the 45 cells
+ * started off it. The screen asks the reader to review the parsed rows before
+ * anything is written to their ledger, and the amount and whether it is new or
+ * a duplicate are what there is to review.
+ *
+ * Restacked below 768px: counterparty and amount on the first line, the date
+ * and the funding IBAN beneath as secondary, then the status badge on its own
+ * full width, which is what an error row needs for its reason and detail. Same
+ * cells, same DOM order, same reading order for assistive tech.
+ */
+@media (max-width: 767px) {
+    .preview-rows-table,
+    .preview-rows-table tbody {
+        display: block;
+    }
+
+    /* The cells name themselves here — a merchant, a date, an amount, a
+       badge — so the column labels stop earning their line. */
+    .preview-rows-table thead {
+        display: none;
+    }
+
+    .preview-rows-table tr {
+        display: grid;
+        grid-template-columns: var(--restacked-row-subject) minmax(0, max-content);
+        column-gap: var(--space-3);
+        row-gap: var(--space-1);
+        padding: var(--space-3) var(--space-4);
+        /* The counterparty is a padded rename button and the amount is bare
+           text; stretched, the two sat 30px apart on a line that reads as one. */
+        align-items: baseline;
+    }
+
+    .preview-rows-table td {
+        padding: 0;
+    }
+
+    /* Counterparty leads, amount holds the right of the same line. */
+    .preview-rows-table td:nth-child(3) {
+        grid-column: 1;
+        grid-row: 1;
+        overflow-wrap: anywhere;
+    }
+
+    .preview-rows-table td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 1;
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    .preview-rows-table td:nth-child(1) {
+        grid-column: 1;
+        grid-row: 2;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    .preview-rows-table td:nth-child(2) {
+        grid-column: 2;
+        grid-row: 2;
+        text-align: right;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    /* Full width: an error row spells its reason and detail out under the
+       badge, and that prose has nowhere to go in an auto-width column. */
+    .preview-rows-table td:nth-child(5) {
+        grid-column: 1 / -1;
+        grid-row: 3;
     }
 }
 
@@ -5452,6 +5640,11 @@ mark {
  * The file picker is matched through the input it wraps: the real control is
  * hidden inside the label, so the label IS the button to a finger.
  *
+ * The pill classes are listed by name because an action drawn as a button is
+ * sometimes marked up as a link: the report library's own primary CTA measured
+ * 36px on the phone while the identical control one screen away, a <button>,
+ * measured 44.
+ *
  * Coarse pointers only and unlayered, for the same two reasons as the rule
  * above: the desktop density the design specifies is untouched, and `h-10` is
  * a utility that would otherwise win.
@@ -5463,7 +5656,9 @@ mark {
     input[type='button'],
     input[type='submit'],
     input[type='reset'],
-    label:has(> input[type='file']) {
+    label:has(> input[type='file']),
+    .pill-btn-primary,
+    .pill-btn-ghost {
         min-height: 44px;
         min-width: 44px;
     }
@@ -5532,8 +5727,15 @@ mark {
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 44px;
-        height: 44px;
+
+        /*
+         * max(), because a fixed 44px square is SMALLER than a wide control and
+         * shrinks the reach to a strip at its centre. Measured on an iPhone 12
+         * mini: the two 324x36 welcome links answered a tap 3px above them at
+         * 1 of 11 x positions. Never below the element, never below 44.
+         */
+        width: max(100%, 44px);
+        height: max(100%, 44px);
         transform: translate(-50%, -50%);
     }
 
@@ -5544,6 +5746,24 @@ mark {
      */
     .srch-chip-close::after {
         width: 24px;
+    }
+
+    /*
+     * A halo is only 44px when nothing else's halo is stacked against it.
+     * Measured on an iPhone 12 mini: the filter chips wrap into rows 37px
+     * apart, and a table row of links is 37px tall, so each band was cut to
+     * its neighbour's edge and every chip on /reports and /counterparties
+     * answered over 37px, and the search chips over 38. The pitch is what has
+     * to clear 44, so the wrapped rows get the gap and the cell gets real
+     * height — `height`, because min-height does nothing to a table cell.
+     */
+    .filter-chips,
+    .srch-chips {
+        row-gap: var(--space-4);
+    }
+
+    td:has(> a:only-child) {
+        height: 44px;
     }
 
     /*
@@ -5618,6 +5838,193 @@ mark {
     }
 
     /*
+     * Reflow at 320px. Every run of characters with no break opportunity in it
+     * — a heading word, a path in a paragraph, a URL printed in mono, a bank's
+     * machine reference — sized its own parent and took the page sideways with
+     * it at the reader's largest text. `anywhere` rather than `break-word`:
+     * only `anywhere` counts toward min-content, which is what lets the flex
+     * and grid parents shrink instead of the page growing.
+     */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    li,
+    dd,
+    dt,
+    code,
+    .code {
+        overflow-wrap: anywhere;
+    }
+
+    /*
+     * A strip of tabs, a strip of radio pills, and the calendar's own toolbar:
+     * a row of controls whose labels do not shrink, in a container with no
+     * wrap. At the reader's largest text the Open / History / Dismissed strip
+     * needed 306px of a 288px column and clipped "Dismissed" inside its own
+     * box. Keyed on the role the strips already share rather than a class each
+     * new one would have to remember.
+     */
+    [role='tablist'],
+    [role='radiogroup'],
+    .cal-toolbar {
+        flex-wrap: wrap;
+    }
+
+    /*
+     * A segmented group is one non-wrapping row of nowrap labels with its own
+     * h-10 pinning the height. Measured at the largest font size and screen
+     * zoom this phone offers — a 320px viewport, 32px text — the currency
+     * toggle on /transactions was 372.7px wide, ended 80px past the right
+     * edge, and took the whole page sideways with it. Releasing the height is
+     * half the fix: wrapping alone drew the second option underneath the
+     * button below it.
+     */
+    [data-flux-radio-group-segmented] {
+        flex-wrap: wrap;
+        height: auto;
+    }
+
+    /* The floor above lists buttons, and a radio is not one, so these measured
+       32px at default text as well.
+
+       flex-1's 0% basis is what makes the options share one line equally, and
+       once their labels could break that handed "Original currency" half a row
+       and wrapped it onto two lines at the default text size. An auto basis
+       sizes each option to its own label again — 91px and 144px, as before —
+       and at the accessibility sizes it is what puts each option on a row of
+       its own, which is the width its label needs to wrap into. */
+    [data-flux-radio-group-segmented] > [role='radio'] {
+        flex-basis: auto;
+        min-height: 44px;
+    }
+
+    /*
+     * The label inside a control, at the five accessibility text sizes. A
+     * wrapping container is only half the fix once the root is 53px: "Save
+     * categories" measured 407px alone on its own row of a 375px display, and
+     * "Original currency" 427px beside its sibling. A label that cannot
+     * break takes the page sideways from inside a row that already wrapped.
+     * Breaking is a no-op wherever the label still fits on one line, which is
+     * every standard size.
+     */
+    button,
+    summary,
+    [role='button'],
+    [role='radio'],
+    [role='tab'],
+    .status-pill,
+    .type-chip,
+    .ptype-chip,
+    .tax-badge,
+    .chip-count,
+    .cp-stats .value,
+    .cp-stats .label {
+        white-space: normal;
+    }
+
+    /*
+     * And the run inside it. An amount, a date and a percentage each carry
+     * separators that are not break opportunities, and the prose rule above
+     * reaches neither a span nor a table cell.
+     */
+    span,
+    a,
+    label,
+    legend,
+    td,
+    th {
+        overflow-wrap: anywhere;
+    }
+
+    /*
+     * A control asks for its widest word before it breaks one. `anywhere`
+     * drops min-content to a single character, so a flex row squeezed
+     * "Discard import" into 80px and split it as "Discar / d / import" at
+     * the default text size. `break-word` still breaks a word that cannot
+     * fit alone; it just stops the row assuming one always can.
+     */
+    button,
+    summary,
+    [role='button'],
+    [role='radio'],
+    [role='tab'] {
+        overflow-wrap: break-word;
+    }
+
+    /*
+     * A row that is not allowed to wrap needs the same restraint. The
+     * first-import step's per-source eyebrow is three spans in a nowrap flex
+     * row, and with `anywhere` each one's min-content is a single character:
+     * all three were squeezed and broken mid-word, so "· ✓ READY" rendered as
+     * "READ" over "Y" in 42px of a 243px row. The row is allowed to wrap where
+     * it declares its flex, and its parts break here only where a word
+     * genuinely cannot fit on a line of its own.
+     */
+    .preview-section-eyebrow > span {
+        overflow-wrap: break-word;
+    }
+
+    /*
+     * The row the two of them sit in: a name opposite its amount, a category
+     * opposite its subtotal, a figure opposite its label. Each was built to
+     * hold both halves on one line, and at these sizes neither half fits
+     * beside the other.
+     */
+    .card-list-item,
+    .cp-stats,
+    .cp-stat,
+    .cp-head,
+    .tax-section-header {
+        flex-wrap: wrap;
+    }
+
+    /*
+     * A flexible item with a zero basis never widens the row it is in; it
+     * takes whatever the row has left over, and once a run can break anywhere
+     * that is one glyph. Measured on /notifications at the largest
+     * accessibility size: the body of every alert was a 4px column fifty-two
+     * lines deep, between a type chip and a timestamp that would not shrink.
+     * Sizing from content is what makes the row wrap around it instead.
+     */
+    .flex-1 {
+        flex-basis: auto;
+    }
+
+    /*
+     * A gutter is a distance from the edge of the glass, not a multiple of the
+     * reader's text. The design tokens above have always said so — every
+     * --space-* is a px — but the Tailwind padding utilities are rems, and
+     * they nest. Measured on /community at the largest accessibility size: an
+     * 80px page gutter, an 80px card inset inside it, and a 53px note inset
+     * inside THAT left the note a content box 0px wide. No run of characters
+     * fits in nothing, so nothing above can rescue it. The inline axis only:
+     * padding above and below a line IS about the text and grows with it.
+     */
+    .p-3,
+    .px-3 {
+        padding-inline: var(--space-3);
+    }
+
+    .p-4,
+    .px-4 {
+        padding-inline: var(--space-4);
+    }
+
+    .p-6,
+    .px-6 {
+        padding-inline: var(--space-6);
+    }
+
+    .p-8,
+    .px-8 {
+        padding-inline: var(--space-8);
+    }
+
+    /*
      * A box the reader types into is tapped before it is typed into, and the
      * floor above names only buttons. Measured on an iPhone 12 mini: 34px on
      * every /budgets amount cell, 42px on the signup and login boxes. The
@@ -5648,15 +6055,19 @@ mark {
         display: block;
     }
 
-    /* Every cell below is self-describing once stacked, so the column labels
-       stop earning their line. */
+    /* The column labels stop earning their line once stacked — every cell
+       says what it is, except priority and hits, which are bare numbers and
+       carry their own `md:hidden` label in the markup instead. */
     .rules-table thead {
         display: none;
     }
 
     .rules-table tr {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        /* minmax(0, max-content), not max-content: a bare max-content track
+           cannot shrink, so the actions sized the row and the row overflowed
+           the screen. Shrinkable, the pair below stacks instead. */
+        grid-template-columns: var(--restacked-row-subject) minmax(0, max-content);
         column-gap: var(--space-3);
         row-gap: var(--space-2);
         padding: var(--space-3) var(--space-4);
@@ -5677,7 +6088,16 @@ mark {
         grid-column: 2;
         grid-row: 1;
         text-align: right;
-        white-space: nowrap;
+    }
+
+    /* `nowrap` here held Edit and Delete on one line, and the column is
+       max-content, so the pair set the row's width. In Dutch that is
+       "Bewerken Verwijderen" and the row measured 338px against 309px of
+       screen -- putting the destructive action past the right edge, reachable
+       only by a horizontal drag nothing advertises. They stack instead. */
+    .rules-table td:nth-child(6) > div {
+        flex-wrap: wrap;
+        justify-content: flex-end;
     }
 
     /* What the rule does, full width underneath. */
@@ -5984,4 +6404,15 @@ mark {
 .palette-source--action {
     background: var(--color-blue-bg, #dbeafe);
     color: var(--color-blue, #2563eb);
+}
+
+/*
+ * Livewire's 500 modal is a <dialog> holding a full-bleed <iframe>, and its
+ * close listener is on the dialog. A click cannot cross an iframe boundary, so
+ * the only thing that dismisses it is the backdrop — the one part of the screen
+ * with nothing on it, and on iOS the part under the system edge gestures.
+ * Padding gives the dialog a surface of its own to be tapped on.
+ */
+dialog#livewire-error {
+    padding: 12px;
 }

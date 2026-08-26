@@ -19,7 +19,15 @@ function pageShellFiles(): array
             continue;
         }
 
-        if (! str_contains($file->getPathname(), '/Resources/views/livewire/')) {
+        // A routed view that extends the app layout is a page shell too, and
+        // scanning only the livewire directory is how /community kept a bare
+        // px-6: at the reader's largest accessibility text that gutter was
+        // 80px a side, and the note nested two boxes inside it was handed a
+        // content width of zero.
+        $isPageShell = str_contains($file->getPathname(), '/Resources/views/livewire/')
+            || str_contains((string) file_get_contents($file->getPathname()), "@extends('layouts.app'");
+
+        if (! $isPageShell) {
             continue;
         }
 

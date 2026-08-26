@@ -64,7 +64,7 @@
          last. Wrapping moves it to its own row intact. --}}
     <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.heading') }}</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $pageName }}</h1>
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 @if ($pageType === DriftPageType::Anomaly)
                     {{ Lang::get('drift-alerts::alerts.intro_anomaly') }}
@@ -76,12 +76,12 @@
         @if ($pageType === DriftPageType::Drift)
             <a
                 href="{{ Destination::Settings->url() }}#drift-threshold"
-                class="shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+                class="tap-link shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
             >{{ Lang::get('drift-alerts::alerts.adjust_threshold') }}</a>
         @else
             <a
                 href="{{ Destination::Settings->url() }}#anomaly-detection"
-                class="shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+                class="tap-link shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
             >{{ Lang::get('drift-alerts::alerts.adjust_sensitivity') }}</a>
         @endif
     </header>
@@ -183,7 +183,7 @@
                         <button
                             type="button"
                             wire:click="loadMoreAnomalies('{{ $anomalyRows[count($anomalyRows) - 1]->detectedAt->toDateTimeString() }}', '{{ $anomalyRows[count($anomalyRows) - 1]->anomalyAlertId }}')"
-                            class="shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+                            class="tap-link shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
                         >{{ Lang::get('drift-alerts::alerts.load_more') }}</button>
                     </div>
                 @endif
@@ -314,7 +314,7 @@
                         <button
                             type="button"
                             wire:click="$set('cursorId', {{ $rows[count($rows) - 1]->driftAlertId }})"
-                            class="shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+                            class="tap-link shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
                         >{{ Lang::get('drift-alerts::alerts.load_more') }}</button>
                     </div>
                 @endif

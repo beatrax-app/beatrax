@@ -27,19 +27,20 @@ return [
     ],
 
     'next' => 'Next',
+    'overdue' => 'Overdue',
     'cadence_changed_note' => 'cadence changed',
-
-    'select_aria' => 'Select recurring series :id',
     'un_reject' => 'Un-reject',
     'approve' => 'Approve',
     'approve_aria' => 'Approve recurring series :id',
     'reject' => 'Reject',
     'reject_aria' => 'Reject recurring series :id',
     'snooze' => 'Snooze',
+    'snooze_aria' => 'Snooze recurring series :id',
     'snooze_1w' => '1 week',
     'snooze_1m' => '1 month',
     'snooze_3m' => '3 months',
     'edit_name' => 'Edit name',
+    'edit_name_aria' => 'Rename recurring series :id',
     'new_name_label' => 'New name for this series',
     'save' => 'Save',
 

@@ -27,19 +27,20 @@ return [
     ],
 
     'next' => 'Příští',
+    'overdue' => 'Po termínu',
     'cadence_changed_note' => 'změněná frekvence',
-
-    'select_aria' => 'Vybrat opakovanou řadu :id',
     'un_reject' => 'Vrátit odmítnutí',
     'approve' => 'Schválit',
     'approve_aria' => 'Schválit opakovanou řadu :id',
     'reject' => 'Odmítnout',
     'reject_aria' => 'Odmítnout opakovanou řadu :id',
     'snooze' => 'Odložit',
+    'snooze_aria' => 'Odložit opakovanou řadu :id',
     'snooze_1w' => '1 týden',
     'snooze_1m' => '1 měsíc',
     'snooze_3m' => '3 měsíce',
     'edit_name' => 'Upravit název',
+    'edit_name_aria' => 'Přejmenovat opakovanou řadu :id',
     'new_name_label' => 'Nový název této řady',
     'save' => 'Uložit',
 

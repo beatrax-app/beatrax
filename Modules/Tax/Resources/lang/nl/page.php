@@ -37,7 +37,7 @@ return [
     'col_account' => 'Rekening',
     'col_counterparty' => 'Tegenpartij',
     'col_note' => 'Notitie',
-    'col_settled_eur' => 'Verrekend EUR',
+    'col_settled' => 'Verrekend',
     'col_original' => 'Origineel',
     'col_year' => 'Jaar',
 

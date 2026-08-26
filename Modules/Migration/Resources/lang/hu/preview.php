@@ -16,13 +16,10 @@ return [
         'budget' => 'Költségvetési hónapok',
     ],
 
-    'fully_mapped' => '✓ teljesen megfeleltetve',
     'all_clean' => 'Minden tisztán megfeleltethető — a megerősítés előtt semmi nem igényel figyelmet.',
 
     'groups' => [
         'conflict' => 'Döntést igényel',
-        'category' => 'Feloldatlan kategóriák',
-        'payee' => 'Feloldatlan partnerek',
         'extra' => 'Nem importálva',
     ],
 

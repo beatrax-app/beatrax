@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Åpner et argumentskjema',
 
+    'spawning_unavailable' => 'Artisan-kommandoer kjører i en egen prosess, og denne plattformen lar ikke appen starte en. Kjør dem fra skrivebordsappen i stedet.',
+
     'status' => [
         'running' => 'Kjører',
         'done' => 'Ferdig',

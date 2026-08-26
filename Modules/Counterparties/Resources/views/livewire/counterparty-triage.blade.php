@@ -100,9 +100,16 @@
             </p>
         </section>
     @else
+        @php
+            // A PayPal or card counterparty is keyed on its name; there is no
+            // account number to key on. The mask answered an em dash for it,
+            // so the screen asking the reader to identify a counterparty was
+            // the one screen not naming it.
+            $hasIban = is_string($current->iban) && $current->iban !== '';
+        @endphp
         <section class="triage-card">
             <header class="triage-head">
-                <span class="triage-iban">{{ $maskIban($current->iban) }}</span>
+                <span class="triage-iban">{{ $hasIban ? $maskIban($current->iban) : $current->display_name }}</span>
                 <x-counterparties::type-chip type="unknown" />
             </header>
 
@@ -150,9 +157,14 @@
             @endif
 
             <div class="triage-section">
-                <h3 style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0;">
-                    {{ Lang::get('counterparties::triage.recent_on_iban') }}
-                </h3>
+                {{-- h2, not h3: the only h2 on this page lives in the
+                     all-caught-up card, which is the other arm of the same
+                     @if, so with work left in the queue this followed the
+                     page h1 directly. Its size is set here, so the level
+                     carries no appearance. --}}
+                <h2 style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0;">
+                    {{ Lang::get($hasIban ? 'counterparties::triage.recent_on_iban' : 'counterparties::triage.recent_on_counterparty') }}
+                </h2>
                 @if (count($recentTransactions) === 0)
                     <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
                         {{ Lang::get('counterparties::triage.no_transactions_yet') }}
@@ -171,9 +183,9 @@
                                 // pages: this is one transaction, not an aggregate, and an abs()
                                 // made a charge and a refund of the same size read identically
                                 // on the one screen whose question direction most helps answer.
-                                $amountMinor = (int) ($tx->amount_minor ?? 0);
-                                $currency = is_string($tx->currency ?? null) && $tx->currency !== ''
-                                    ? $tx->currency
+                                $amountMinor = (int) ($tx->settled_amount_minor ?? 0);
+                                $currency = is_string($tx->settled_currency ?? null) && $tx->settled_currency !== ''
+                                    ? $tx->settled_currency
                                     : Currency::Eur->value;
                             @endphp
                             <li class="triage-tx">
@@ -207,7 +219,7 @@
                         type="text"
                         placeholder="{{ Lang::get('counterparties::triage.display_name_placeholder') }}"
                         x-model="manualName"
-                        style="flex: 1 1 240px; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px;"
+                        style="flex: 1 1 240px; min-width: 0; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px;"
                     />
                     <label for="triage-manual-type" class="sr-only">{{ Lang::get('counterparties::triage.type_label') }}</label>
                     <select

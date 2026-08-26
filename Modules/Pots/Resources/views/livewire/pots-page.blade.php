@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Pots\Internal\Enums\PotLinkType')
 {{--
     /pots page — savings pots grouped by account with per-account reconciliation
     headers (real · allocated · unallocated), negative-unallocated amber
@@ -57,7 +58,7 @@
     </style>
 
     {{-- Page header --}}
-    <header class="mb-8 flex items-start justify-between gap-4">
+    <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('pots::messages.heading') }}</h1>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.subtitle') }}</p>
@@ -92,6 +93,30 @@
         {{-- Phone: flat .card-list-item list across all accounts --}}
         <div class="pots-phone-list rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden">
             @foreach ($groups as $accountId => $pots)
+                @php
+                    /** @var \Modules\Pots\Public\Dto\PotRow[] $pots */
+                    $phoneRec = $reconciliations[$accountId] ?? null;
+                @endphp
+                {{-- The three figures the pots have to add up to. They were in
+                     the desktop group header only, so a phone showed envelopes
+                     with nothing to weigh them against. --}}
+                @if ($phoneRec !== null)
+                    <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                        <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $pots[0]->accountName }}</p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
+                            {{ Lang::get('pots::messages.recon.real_balance') }} {{ $fmt($phoneRec->realBalanceMinor, $phoneRec->currency) }}
+                            <span aria-hidden="true"> · </span>
+                            {{ Lang::get('pots::messages.recon.allocated') }} {{ $fmt($phoneRec->allocatedMinor, $phoneRec->currency) }}
+                            <span aria-hidden="true"> · </span>
+                            {{ Lang::get('pots::messages.recon.unallocated') }} <span class="{{ $phoneRec->isOverAllocated ? 'font-medium text-amber-600 dark:text-amber-400' : '' }}">{{ $fmt($phoneRec->unallocatedMinor, $phoneRec->currency) }}</span>
+                        </p>
+                        @if ($phoneRec->isOverAllocated)
+                            <p class="mt-2 text-xs font-medium text-amber-600 dark:text-amber-400" role="alert">
+                                {{ Lang::get('pots::messages.recon.over_allocated', ['amount' => $fmt(abs($phoneRec->unallocatedMinor), $phoneRec->currency)]) }}
+                            </p>
+                        @endif
+                    </div>
+                @endif
                 @foreach ($pots as $pot)
                     <div class="card-list-item flex-wrap">
                         <div class="flex-1 min-w-0">
@@ -431,7 +456,7 @@
                     field-id="pot-name-sheet"
                     :label="Lang::get('pots::messages.form.name')"
                     size="base"
-                    wire:model="name"
+                    wire:model.live.blur="name"
                     :placeholder="Lang::get('pots::messages.form.name_placeholder')"
                     style="font-size: 16px;"
                 />
@@ -449,7 +474,7 @@
                 type="select"
                 :label="Lang::get('pots::messages.form.account')"
                 size="base"
-                wire:model="accountId"
+                wire:model.live.blur="accountId"
                 :disabled="$editPotId !== 0"
                 :class="$editPotId ? 'opacity-50 cursor-not-allowed' : ''"
                 style="font-size: 16px;"
@@ -459,6 +484,58 @@
                     <option value="{{ $account->id }}">{{ $account->name }}</option>
                 @endforeach
             </x-core::form-field>
+            @if (! $editPotId)
+                <div>
+                    <x-core::form-field
+                        name="amount"
+                        field-id="pot-amount-sheet"
+                        :label="Lang::get('pots::messages.form.initial_amount')"
+                        :hint="Lang::get('pots::messages.form.initial_amount_help')"
+                        size="base"
+                        inputmode="decimal"
+                        wire:model.live.blur="amount"
+                        :placeholder="Lang::get('core::components.amount_placeholder')"
+                        :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                        :aria-describedby="$errorAmount !== '' ? 'pot-amount-sheet-error' : null"
+                        style="font-size: 16px; font-variant-numeric: tabular-nums;"
+                    />
+                    @if ($errorAmount !== '')
+                        <p id="pot-amount-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                    @endif
+                </div>
+            @endif
+            <fieldset>
+                <legend class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.link_to') }}</legend>
+                <div class="flex gap-2">
+                    <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-2 text-sm {{ $linkType === PotLinkType::Goal->value ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400' }}">
+                        <input type="radio" name="linkTypeSheet" wire:model.live="linkType" value="{{ PotLinkType::Goal->value }}" class="sr-only" />
+                        {{ Lang::get('pots::messages.form.link_goal') }}
+                    </label>
+                    <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-2 text-sm {{ $linkType === PotLinkType::None->value ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400' }}">
+                        <input type="radio" name="linkTypeSheet" wire:model.live="linkType" value="{{ PotLinkType::None->value }}" class="sr-only" />
+                        {{ Lang::get('pots::messages.form.link_none') }}
+                    </label>
+                </div>
+                {{-- A legend names the FIELDSET, not the controls inside it, so
+                     this select reached a screen reader with no name at all. The
+                     label is its own placeholder option, which every locale
+                     already carries, and sr-only because the legend above it
+                     already says this on screen. --}}
+                @if ($linkType === PotLinkType::Goal->value)
+                    <label for="pot-goal-picker-sheet" class="sr-only">{{ Lang::get('pots::messages.form.select_goal') }}</label>
+                    <select
+                        id="pot-goal-picker-sheet"
+                        wire:model="goalId"
+                        class="mt-2 block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                        style="font-size: 16px;"
+                    >
+                        <option value="">{{ Lang::get('pots::messages.form.select_goal') }}</option>
+                        @foreach ($goalsForPicker as $goal)
+                            <option value="{{ $goal->id }}">{{ $goal->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+            </fieldset>
             <div class="flex gap-3 pt-2">
                 <x-core::neutral-button
                     block="flex"
@@ -487,12 +564,14 @@
                     :label="Lang::get('pots::messages.common.amount')"
                     size="base"
                     inputmode="decimal"
-                    wire:model="operationAmount"
+                    wire:model.live.blur="operationAmount"
                     :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                    :aria-describedby="$errorAmount !== '' ? 'fund-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                 />
                 @if ($errorAmount !== '')
-                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                    <p id="fund-amount-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                 @endif
             </div>
             <x-core::form-field
@@ -529,12 +608,14 @@
                     :label="Lang::get('pots::messages.common.amount')"
                     size="base"
                     inputmode="decimal"
-                    wire:model="operationAmount"
+                    wire:model.live.blur="operationAmount"
                     :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                    :aria-describedby="$errorAmount !== '' ? 'withdraw-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                 />
                 @if ($errorAmount !== '')
-                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                    <p id="withdraw-amount-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                 @endif
                 @if ($withdrawPot !== null)
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -595,12 +676,14 @@
                     :label="Lang::get('pots::messages.common.amount')"
                     size="base"
                     inputmode="decimal"
-                    wire:model="operationAmount"
+                    wire:model.live.blur="operationAmount"
                     :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                    :aria-describedby="$errorAmount !== '' ? 'move-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                 />
                 @if ($errorAmount !== '')
-                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                    <p id="move-amount-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                 @endif
             </div>
             <div class="flex gap-3 pt-2">
@@ -635,7 +718,7 @@
                         name="name"
                         field-id="pot-name"
                         :label="Lang::get('pots::messages.form.name')"
-                        wire:model="name"
+                        wire:model.live.blur="name"
                         :placeholder="Lang::get('pots::messages.form.name_placeholder')"
                         :aria-invalid="$errorName !== '' ? 'true' : null"
                         :aria-describedby="$errorName !== '' ? 'pot-name-error' : null"
@@ -651,7 +734,7 @@
                     field-id="pot-account"
                     type="select"
                     :label="Lang::get('pots::messages.form.account')"
-                    wire:model="accountId"
+                    wire:model.live.blur="accountId"
                     :disabled="$editPotId !== 0"
                     :class="$editPotId ? 'opacity-50 cursor-not-allowed' : ''"
                 >
@@ -670,7 +753,7 @@
                             :label="Lang::get('pots::messages.form.initial_amount')"
                             :hint="Lang::get('pots::messages.form.initial_amount_help')"
                             inputmode="decimal"
-                            wire:model="amount"
+                            wire:model.live.blur="amount"
                             :placeholder="Lang::get('core::components.amount_placeholder')"
                             :aria-invalid="$errorAmount !== '' ? 'true' : null"
                             :aria-describedby="$errorAmount !== '' ? 'pot-amount-error' : null"
@@ -689,22 +772,24 @@
                 <fieldset>
                     <legend class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.link_to') }}</legend>
                     <div class="flex gap-2">
-                        <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === 'goal' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
-                            <input type="radio" name="linkType" wire:model.live="linkType" value="goal" class="sr-only" />
+                        <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === PotLinkType::Goal->value ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
+                            <input type="radio" name="linkType" wire:model.live="linkType" value="{{ PotLinkType::Goal->value }}" class="sr-only" />
                             {{ Lang::get('pots::messages.form.link_goal') }}
                         </label>
-                        <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === 'none' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
-                            <input type="radio" name="linkType" wire:model.live="linkType" value="none" class="sr-only" />
+                        <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === PotLinkType::None->value ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
+                            <input type="radio" name="linkType" wire:model.live="linkType" value="{{ PotLinkType::None->value }}" class="sr-only" />
                             {{ Lang::get('pots::messages.form.link_none') }}
                         </label>
                     </div>
-                    {{-- Left hand-rolled on purpose: this select has no label of
-                         its own — the "Link to" legend names the whole group it
-                         sits in — and x-core::form-field requires one. Giving it a label
-                         means a new user-facing string in all 26 locales, which
-                         is a copy decision, not a refactor. --}}
-                    @if ($linkType === 'goal')
+                    {{-- Hand-rolled rather than x-core::form-field, which would
+                         demand a visible label and a new string in 26 locales.
+                         The accessible name is the placeholder option every
+                         locale already carries; the legend names the group, and
+                         a group name is not a control name. --}}
+                    @if ($linkType === PotLinkType::Goal->value)
+                        <label for="pot-goal-picker-modal" class="sr-only">{{ Lang::get('pots::messages.form.select_goal') }}</label>
                         <select
+                            id="pot-goal-picker-modal"
                             wire:model="goalId"
                             class="mt-2 block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         >
@@ -756,7 +841,7 @@
                         field-id="fund-amount"
                         :label="Lang::get('pots::messages.common.amount')"
                         inputmode="decimal"
-                        wire:model="operationAmount"
+                        wire:model.live.blur="operationAmount"
                         :placeholder="Lang::get('core::components.amount_placeholder')"
                         :aria-invalid="$errorAmount !== '' ? 'true' : null"
                         :aria-describedby="$errorAmount !== '' ? 'fund-amount-error' : null"
@@ -825,7 +910,7 @@
                         field-id="move-amount"
                         :label="Lang::get('pots::messages.common.amount')"
                         inputmode="decimal"
-                        wire:model="operationAmount"
+                        wire:model.live.blur="operationAmount"
                         :placeholder="Lang::get('core::components.amount_placeholder')"
                         :aria-invalid="$errorAmount !== '' ? 'true' : null"
                         :aria-describedby="$errorAmount !== '' ? 'move-amount-error' : null"
@@ -872,7 +957,7 @@
                         field-id="withdraw-amount"
                         :label="Lang::get('pots::messages.common.amount')"
                         inputmode="decimal"
-                        wire:model="operationAmount"
+                        wire:model.live.blur="operationAmount"
                         :placeholder="Lang::get('core::components.amount_placeholder')"
                         :aria-invalid="$errorAmount !== '' ? 'true' : null"
                         :aria-describedby="$errorAmount !== '' ? 'withdraw-amount-error' : null"

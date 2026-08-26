@@ -16,13 +16,10 @@ return [
         'budget' => 'Luni de buget',
     ],
 
-    'fully_mapped' => '✓ mapate complet',
     'all_clean' => 'Totul a fost mapat curat — nimic nu îți cere atenția înainte de a confirma.',
 
     'groups' => [
         'conflict' => 'Necesită decizia ta',
-        'category' => 'Categorii nerezolvate',
-        'payee' => 'Contrapărți nerezolvate',
         'extra' => 'Neimportate',
     ],
 

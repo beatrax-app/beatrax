@@ -9,6 +9,10 @@ return [
     'confirm' => 'Import bevestigen',
     'subtitle' => 'Bekijk de ingelezen regels. Er wordt niets in je grootboek opgeslagen totdat je bevestigt.',
 
+    'already_imported' => 'Dit bestand is al geïmporteerd.',
+
+    'already_imported_link' => 'Bekijk het importresultaat',
+
     'expired_html' => 'De voorvertoning is verlopen. <a href="/imports/new" class="underline">Upload het bestand opnieuw</a> om het nog eens te proberen.',
 
     'save_name' => 'Naam opslaan',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Deze tegenpartij hernoemen',
 
     'unknown_iban_prefix' => 'We vonden een onbekend IBAN:',
+
+    'unknown_account_prefix' => 'We vonden een onbekende rekening:',
     'unknown_iban_suffix' => 'Geef deze rekening een naam.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'om opnieuw te proberen of te inspecteren.',
     ],
 
+    'rows_shown' => 'Regels getoond: :shown van :total',
+
+    'show_more' => 'Meer regels tonen',
+
     'errors' => [
         'app_locked' => 'Ontgrendel de app om te importeren: de versleutelingssleutels kunnen niet worden gebruikt zolang hij vergrendeld is.',
+        'file_stopped_short' => 'De kopregel klopte, dus het formaat is goed. Het lezen stopte voor het einde van het bestand. Eén onleesbare regel doet dat, en een bestand dat te groot is voor dit apparaat ook. Probeer een kortere periode.',
         'file_unreadable' => 'Dit bestand kon niet worden gelezen.',
         'iban_not_in_preview' => 'Dit IBAN maakt geen deel uit van de huidige voorvertoning.',
+        'pdf_reader_unavailable' => 'Voor pdf-afschriften is het programma pdftotext nodig, en dat is hier niet geïnstalleerd. Importeer dit bestand op een desktop waar het wel staat, of gebruik een CSV-export van je bank.',
         'row_unreadable' => 'Deze regel kon niet worden gelezen.',
         'unknown_account' => 'Deze regel hoort bij een rekening die je nog geen naam hebt gegeven.',
     ],

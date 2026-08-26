@@ -37,7 +37,7 @@ return [
     'col_account' => 'Account',
     'col_counterparty' => 'Counterparty',
     'col_note' => 'Note',
-    'col_settled_eur' => 'Settled EUR',
+    'col_settled' => 'Settled',
     'col_original' => 'Original',
     'col_year' => 'Year',
 

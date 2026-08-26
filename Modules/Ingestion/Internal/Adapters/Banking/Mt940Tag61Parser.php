@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Throwable;
@@ -87,7 +88,7 @@ final class Mt940Tag61Parser
 
     private function parseDate(string $isoDate): CarbonImmutable
     {
-        $parsed = CarbonImmutable::createFromFormat('!Y-m-d', $isoDate);
+        $parsed = SafeDate::fromFormatOrNull('!Y-m-d', $isoDate);
         if (! $parsed instanceof CarbonImmutable) {
             throw new InvalidAmountException(sprintf('Bad MT940 date: %s', $isoDate));
         }

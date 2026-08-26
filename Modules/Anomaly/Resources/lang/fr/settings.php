@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Sensibilité des alertes',
-    'sensitivity_help' => 'Signale les débits supérieurs de plus de :percent% à tes dépenses habituelles pour ce commerçant ou cette catégorie.',
+    'sensitivity_help' => 'À quel point Beatrax juge vite un débit inhabituel pour ce commerçant ou cette catégorie, de 1 à 100. Plus haut signale davantage.',
 
     'min_amount_label' => 'Montant minimum du débit',
-    'min_amount_help' => 'Ignore les anomalies sur les débits inférieurs à ce montant. Stocké en centimes (€) — 1000 signifie 10,00 €.',
+    'min_amount_help' => 'Ignore les anomalies sur les débits inférieurs à ce montant. Stocké en centimes (:symbol) — 1000 signifie :example.',
 
     'save' => 'Enregistrer les paramètres d\'anomalie',
     'saved' => 'Enregistré.',

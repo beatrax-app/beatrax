@@ -14,6 +14,7 @@ use Modules\Forecasting\Public\Http\Livewire\OpeningBalanceEditor;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
@@ -269,3 +270,23 @@ it('rejects opening balance with a future as-of date', function (): void {
     expect(fn () => ($action)($account->id, $this->user, 0, '2030-01-01', allowDivergence: false))
         ->toThrow(InvalidArgumentException::class, 'Opening balance date cannot be in the future.');
 });
+
+// A funding sub-account is a PayPal account too, and its export carries no
+// balance line either, so it gets the same instruction as the parent.
+it('gives every PayPal-kind account the PayPal help text and everything else the default', function (string $kind, string $expected): void {
+    $account = obeAccount($this->user, $kind, 'help-'.$kind);
+
+    Livewire::test(OpeningBalanceEditor::class, [
+        'accountId' => $account->id,
+        'accountName' => 'Help copy',
+        'accountKind' => $kind,
+        'currentOpeningMinor' => null,
+        'currentAsOfDate' => null,
+        'currency' => 'EUR',
+    ])->assertSee($expected);
+})->with([
+    [AccountKind::Paypal->value, "PayPal exports don't carry balance lines, so set this manually."],
+    [AccountKind::PaypalFunding->value, "PayPal exports don't carry balance lines, so set this manually."],
+    [AccountKind::Bank->value, 'Override only if you know the current live balance differs from what Beatrax computes.'],
+    [AccountKind::Cash->value, 'Override only if you know the current live balance differs from what Beatrax computes.'],
+]);

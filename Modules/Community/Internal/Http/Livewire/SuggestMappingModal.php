@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Community\Internal\Services\ContributionLog;
 use Modules\Community\Internal\Services\GitHubCompareUrlBuilder;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Community\Public\Dto\SuggestMappingDto;
@@ -59,6 +60,7 @@ final class SuggestMappingModal extends Component
         OpenExternalUrlAction $openUrl,
         GitHubCompareUrlBuilder $urlBuilder,
         Dispatcher $events,
+        ContributionLog $contributions,
     ): void {
         $this->submitError = '';
 
@@ -99,6 +101,8 @@ final class SuggestMappingModal extends Component
 
             return;
         }
+
+        $contributions->record($currentUser->user()->id, $currentUser->user()->username, $dto);
 
         $events->dispatch(new MysteryMerchantSubmitted(
             userId: $currentUser->user()->id,

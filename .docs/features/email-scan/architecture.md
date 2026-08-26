@@ -26,7 +26,7 @@ and the same `inbox_scan_state` resumes from its cursor.
 What the module explicitly does NOT do:
 
 - It never speaks IMAP. The only paths in are Gmail API and Microsoft
-  Graph (see [tech stack](../../../CLAUDE.md#email-integration)).
+  Graph (see [provider transport hardening](provider-transport-hardening.md)).
   `ext-imap` was removed from PHP 8.4 core; the project avoids it
   entirely.
 - It never stores plaintext OAuth secrets. The `OAuthSecret` model's

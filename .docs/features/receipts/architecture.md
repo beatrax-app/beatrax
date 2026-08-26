@@ -64,7 +64,9 @@ What the module explicitly does NOT do:
     registry hands `canHandle()`.
   - `MatchOutcomeDto` — `(kind, parsed, skipReason,
     unmatchedReason)`, a sum type with `parsed()`, `skipped()`
-    and `unmatched()` constructors.
+    and `unmatched()` constructors. `kind` is a
+    `MatchOutcomeKind`, whose values are the
+    `InboxMessageStatus` each outcome is stored as.
   - `ParsedReceiptDto` — the matcher's structured output.
   - `ChainHintPayload/FundedByCardPayload`,
     `ChainHintPayload/RefundOfPayload` — typed chain-hint

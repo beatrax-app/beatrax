@@ -34,6 +34,14 @@ final class Money implements Stringable
         'JPY' => '¥',
     ];
 
+    // The glyph alone, for a label that names the currency a field is typed in
+    // rather than printing an amount. A code with no glyph answers itself, the
+    // same fallback assemble() applies.
+    public static function symbolFor(string $currencyCode): string
+    {
+        return self::SYMBOLS[$currencyCode] ?? $currencyCode;
+    }
+
     private function __construct(private readonly BrickMoney $inner) {}
 
     // The only constructor — no ofFloat, no fromString, on purpose. Negative

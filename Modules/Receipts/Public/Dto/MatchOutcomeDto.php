@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Receipts\Public\Dto;
 
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Spatie\LaravelData\Data;
 
 // Sum-type wrapper returned by SenderMatcher::match(): parsed() on
@@ -13,7 +14,7 @@ use Spatie\LaravelData\Data;
 final class MatchOutcomeDto extends Data
 {
     public function __construct(
-        public readonly string $kind,
+        public readonly MatchOutcomeKind $kind,
         public readonly ?ParsedReceiptDto $parsed,
         public readonly ?string $skipReason,
         public readonly ?string $unmatchedReason = null,
@@ -21,16 +22,16 @@ final class MatchOutcomeDto extends Data
 
     public static function parsed(ParsedReceiptDto $receipt): self
     {
-        return new self(kind: 'parsed', parsed: $receipt, skipReason: null);
+        return new self(kind: MatchOutcomeKind::Parsed, parsed: $receipt, skipReason: null);
     }
 
     public static function skipped(string $reason): self
     {
-        return new self(kind: 'skipped', parsed: null, skipReason: $reason);
+        return new self(kind: MatchOutcomeKind::Skipped, parsed: null, skipReason: $reason);
     }
 
     public static function unmatched(?string $reason = null): self
     {
-        return new self(kind: 'unmatched', parsed: null, skipReason: null, unmatchedReason: $reason);
+        return new self(kind: MatchOutcomeKind::Unmatched, parsed: null, skipReason: null, unmatchedReason: $reason);
     }
 }

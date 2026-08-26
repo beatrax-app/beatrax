@@ -8,28 +8,34 @@
     bank is picked.
 
     Submission delegates to the existing `RunsImports` pipeline — the
-    same path the standalone `/imports` UploadWizard uses. The CSV
-    branch carries the bank-format hint through the contract; the
-    successful-submit path stashes the resulting ImportRun id into
+    same path the standalone `/imports` UploadWizard uses. Picking a
+    bank sets the source format the import runs as, so the two chip
+    rows resolve to one identifier; the successful-submit path stashes
+    the resulting ImportRun id into
     `wizard_progress.data['bank_import_run_id']` for the consolidated
     preview screen to read back.
 --}}
 @use('Modules\Ingestion\Public\Enums\SourceFormat')
+@use('Modules\Ingestion\Public\Services\CsvPresetRegistry')
 @php
-    $isCsv = in_array($selectedFormat, [SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value], strict: true);
-    $isGated = $isCsv && $selectedBankFormatHint === null;
+    $isCsv = in_array($selectedFormat, [SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL], strict: true);
+    $isGated = $isCsv && ! $csvBankPicked;
+
+    // Null until the user names a bank, because the CSV chip lands on a CSV
+    // format before that choice is made and nothing may read it as one.
+    $pickedCsvBank = $isCsv && $csvBankPicked ? $selectedFormat : null;
 
     $miniStepFourSub = match ($selectedFormat) {
         SourceFormat::Mt940->value => 'MT940 (.sta / .940)',
-        SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => 'CSV (.csv)',
+        SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL => 'CSV (.csv)',
         default => 'CAMT.053 (.xml)',
     };
 
     $dropZoneLead = match (true) {
         $selectedFormat === SourceFormat::Camt053->value => Lang::get('onboarding::connect_bank.drop_lead_camt053'),
         $selectedFormat === SourceFormat::Mt940->value => Lang::get('onboarding::connect_bank.drop_lead_mt940'),
-        $isCsv && $selectedBankFormatHint === SourceFormat::AsnCsv->value => Lang::get('onboarding::connect_bank.drop_lead_asn'),
-        $isCsv && $selectedBankFormatHint === SourceFormat::IngCsv->value => Lang::get('onboarding::connect_bank.drop_lead_ing'),
+        $pickedCsvBank === SourceFormat::AsnCsv->value => Lang::get('onboarding::connect_bank.drop_lead_asn'),
+        $pickedCsvBank === CsvPresetRegistry::ING_NL => Lang::get('onboarding::connect_bank.drop_lead_ing'),
         $isCsv => Lang::get('onboarding::connect_bank.drop_lead_pick_bank'),
         default => Lang::get('onboarding::connect_bank.drop_lead_default'),
     };
@@ -40,28 +46,28 @@
     $dropZoneFileLabel = match (true) {
         $selectedFormat === SourceFormat::Camt053->value => 'CAMT.053',
         $selectedFormat === SourceFormat::Mt940->value => 'MT940',
-        $isCsv && $selectedBankFormatHint === SourceFormat::AsnCsv->value => 'ASN CSV',
-        $isCsv && $selectedBankFormatHint === SourceFormat::IngCsv->value => 'ING CSV',
+        $pickedCsvBank === SourceFormat::AsnCsv->value => 'ASN CSV',
+        $pickedCsvBank === CsvPresetRegistry::ING_NL => 'ING CSV',
         default => null,
     };
 
     $dropZoneAccept = match ($selectedFormat) {
         SourceFormat::Mt940->value => '.sta,.940,.txt',
-        SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => '.csv',
+        SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL => '.csv',
         default => '.xml',
     };
 
     $bankListLine = match ($selectedFormat) {
         SourceFormat::Mt940->value => Lang::get('onboarding::connect_bank.banks_mt940'),
-        SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => Lang::get('onboarding::connect_bank.banks_csv'),
+        SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL => Lang::get('onboarding::connect_bank.banks_csv'),
         default => Lang::get('onboarding::connect_bank.banks_default'),
     };
 
     $eyebrowSuffix = match (true) {
         $selectedFormat === SourceFormat::Camt053->value => '· CAMT.053',
         $selectedFormat === SourceFormat::Mt940->value => '· MT940',
-        $isCsv && $selectedBankFormatHint === SourceFormat::AsnCsv->value => '· CSV — ASN',
-        $isCsv && $selectedBankFormatHint === SourceFormat::IngCsv->value => '· CSV — ING',
+        $pickedCsvBank === SourceFormat::AsnCsv->value => '· CSV — ASN',
+        $pickedCsvBank === CsvPresetRegistry::ING_NL => '· CSV — ING',
         $isCsv => '· CSV',
         default => '',
     };
@@ -120,7 +126,7 @@
     <p class="format-bank-list">{{ $bankListLine }}</p>
 
     @if ($isCsv)
-        <x-onboarding::csv-bank-picker-row :selected="$selectedBankFormatHint" />
+        <x-onboarding::csv-bank-picker-row :selected="$pickedCsvBank" />
     @endif
 
     @if ($isGated)
@@ -155,7 +161,7 @@
         <p class="wiz-error" role="alert">{{ $message }}</p>
     @enderror
 
-    @error('selectedBankFormatHint')
+    @error('csvBankPicked')
         <p class="wiz-error" role="alert">{{ $message }}</p>
     @enderror
 

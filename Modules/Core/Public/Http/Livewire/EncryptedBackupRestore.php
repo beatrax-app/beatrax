@@ -7,9 +7,11 @@ namespace Modules\Core\Public\Http\Livewire;
 use Illuminate\Config\Repository;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Session\Store as Session;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SqliteDatabase;
@@ -21,6 +23,8 @@ final class EncryptedBackupRestore extends Component
 
     public const CONFIRM_PHRASE = 'RESTORE';
 
+    public const SNAPSHOT_FLASH_KEY = 'backup.snapshot_path';
+
     public ?TemporaryUploadedFile $backup = null;
 
     public string $passphrase = '';
@@ -31,7 +35,16 @@ final class EncryptedBackupRestore extends Component
 
     public string $snapshotPath = '';
 
-    public function restore(RestoreEncryptedBackup $restore): void
+    // Livewire uploads on its own request, before restore() runs, and drops
+    // the property when that request fails. Without this the only branch left
+    // was the null check, which cannot tell an empty field from a crossing that
+    // failed -- so the reader was told to choose a file they had chosen.
+    public function uploadFailed(): void
+    {
+        $this->error = Lang::get('core::backup.errors.upload_failed');
+    }
+
+    public function restore(RestoreEncryptedBackup $restore, LogoutAction $logout, Session $session): void
     {
         $this->error = '';
         $this->snapshotPath = '';
@@ -50,6 +63,16 @@ final class EncryptedBackupRestore extends Component
         }
 
         $this->reset('backup', 'passphrase', 'confirmation');
+
+        // The screen promised a sign-out and performed none. The session holds
+        // a user id, and that id now names whoever the backup says it does, so
+        // it would have continued as a different person. Flashed after logout,
+        // because invalidate() drops anything put there before it.
+        $logout();
+
+        $session->flash(self::SNAPSHOT_FLASH_KEY, $this->snapshotPath);
+
+        $this->redirectRoute('login');
     }
 
     // Runs the four preflight checks in message-priority order and returns
@@ -74,16 +97,8 @@ final class EncryptedBackupRestore extends Component
     public function render(ViewFactory $views, Repository $config): View
     {
         return $views->make('core::livewire.encrypted-backup-restore', [
-            'sqliteOnly' => $this->isSqliteBuild($config),
+            'sqliteOnly' => SqliteDatabase::isSqliteBuild($config),
             'confirmPhrase' => self::CONFIRM_PHRASE,
         ]);
-    }
-
-    private function isSqliteBuild(Repository $config): bool
-    {
-        $default = $config->get('database.default');
-
-        return is_string($default)
-            && $config->get('database.connections.'.$default.'.driver') === SqliteDatabase::DRIVER;
     }
 }

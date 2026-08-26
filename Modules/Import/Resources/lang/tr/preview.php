@@ -9,6 +9,10 @@ return [
     'confirm' => 'İçe aktarmayı onayla',
     'subtitle' => 'Ayrıştırılan satırları gözden geçir. Sen onaylayana kadar defterine hiçbir şey kaydedilmez.',
 
+    'already_imported' => 'Bu dosya zaten içe aktarıldı.',
+
+    'already_imported_link' => 'İçe aktarma sonucunu görüntüle',
+
     'expired_html' => 'Önizlemenin süresi doldu. Yeniden denemek için <a href="/imports/new" class="underline">dosyayı yeniden yükle</a>.',
 
     'save_name' => 'Adı kaydet',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Bu karşı tarafı yeniden adlandır',
 
     'unknown_iban_prefix' => 'Tanımadığımız bir IBAN bulduk:',
+
+    'unknown_account_prefix' => 'Tanımadığımız bir hesap bulduk:',
     'unknown_iban_suffix' => 'Bu hesaba bir ad ver.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'yeniden denemek veya incelemek için.',
     ],
 
+    'rows_shown' => 'Gösterilen satırlar: :shown / :total',
+
+    'show_more' => 'Daha fazla satır göster',
+
     'errors' => [
         'app_locked' => 'İçe aktarmak için uygulamanın kilidini açın: kilitliyken şifreleme anahtarları kullanılamaz.',
+        'file_stopped_short' => 'Başlık satırı eşleşti, yani biçim doğru. Okuma dosyanın sonuna gelmeden durdu. Tek bir okunamayan satır buna yol açar, bu cihaz için fazla büyük bir dosya da öyle. Daha kısa bir tarih aralığı dene.',
         'file_unreadable' => 'Bu dosya okunamadı.',
         'iban_not_in_preview' => 'Bu IBAN geçerli önizlemenin bir parçası değil.',
+        'pdf_reader_unavailable' => 'PDF ekstreleri için pdftotext programı gerekir, o da burada kurulu değil. Bu dosyayı programın kurulu olduğu bir bilgisayarda içe aktar ya da bankandan CSV dışa aktarımı kullan.',
         'row_unreadable' => 'Bu satır okunamadı.',
         'unknown_account' => 'Bu satır henüz ad vermediğin bir hesaba ait.',
     ],

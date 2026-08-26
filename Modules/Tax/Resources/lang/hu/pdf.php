@@ -17,7 +17,7 @@ return [
     'col_counterparty' => 'Partner',
     'col_description' => 'Leírás',
     'col_note' => 'Megjegyzés',
-    'col_amount' => 'Összeg (EUR)',
+    'col_amount' => 'Összeg',
 
     'subtotal' => 'Részösszeg',
 

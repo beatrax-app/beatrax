@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'sensitivity_label' => 'Alert sensitivity',
-    'sensitivity_help' => 'Flag charges more than :percent% above your typical spend for that merchant or category.',
+    'sensitivity_help' => 'How readily Beatrax calls a charge unusual for that merchant or category, from 1 to 100. Higher flags more.',
 
     'min_amount_label' => 'Minimum charge amount',
-    'min_amount_help' => 'Ignore anomalies on charges under this amount. Stored in cents (€) — 1000 means €10.00.',
+    'min_amount_help' => 'Ignore anomalies on charges under this amount. Stored in cents (:symbol) — 1000 means :example.',
 
     'save' => 'Save anomaly settings',
     'saved' => 'Saved.',

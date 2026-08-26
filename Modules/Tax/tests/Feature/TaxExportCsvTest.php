@@ -104,7 +104,7 @@ function tcefTag(DatabaseManager $db, int $userId, int $txId, ?int $catId = null
     ], $overrides));
 }
 
-it('CSV header is the exact 16 columns in documented order', function (): void {
+it('CSV header is the exact 17 columns in documented order', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = tcefUser($db, 'tcef-header-user');
@@ -119,7 +119,7 @@ it('CSV header is the exact 16 columns in documented order', function (): void {
     expect($header)->toBe([
         'tax_year', 'booked_date', 'account', 'counterparty',
         'counterparty_iban', 'description', 'deduction_category',
-        'note', 'settled_eur_amount', 'original_amount',
+        'note', 'settled_amount', 'settled_currency', 'original_amount',
         'original_currency', 'transaction_type', 'transaction_id',
         'source_format', 'import_run_id', 'fingerprint',
     ]);
@@ -149,7 +149,7 @@ it('contains one data row per tagged transaction in the year', function (): void
     expect(count($lines))->toBe(4);
 });
 
-it('settled_eur_amount is a 2-decimal string (not a float)', function (): void {
+it('settled_amount is a 2-decimal string (not a float), beside the code it is denominated in', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = tcefUser($db, 'tcef-money-str-user');
@@ -169,9 +169,10 @@ it('settled_eur_amount is a 2-decimal string (not a float)', function (): void {
     $lines = array_values(array_filter(explode("\n", trim($csv))));
     $row = str_getcsv($lines[1]);
 
-    // settled_eur_amount at index 8
+    // settled_amount at index 8, settled_currency at index 9
     expect($row[8])->toMatch('/^\d+\.\d{2}$/')
-        ->and($row[8])->toBe('99.99');
+        ->and($row[8])->toBe('99.99')
+        ->and($row[9])->toBe('EUR');
 });
 
 it('uses COALESCE tax_year_override: row with override=2025 appears in 2025, not 2026', function (): void {

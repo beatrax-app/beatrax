@@ -21,7 +21,6 @@ return [
     'footer' => 'Skupni seznam je datoteka YAML, ki je priložena Beatraxu. Pošiljanje predloga odpre GitHub v tvojem brskalniku; nič drugega ne zapusti te naprave.',
 
     'card' => [
-        'likely' => 'Verjetno: neimenovani trgovec.',
         'seen_times' => 'Zaznano :count krat|Zaznano :count krat|Zaznano :count krat|Zaznano :count krat',
         'last_seen' => 'Nazadnje zaznano :date',
         'suggest' => 'Predlagaj ime →',

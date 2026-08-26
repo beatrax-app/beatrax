@@ -3,7 +3,7 @@
 {{-- UI-SPEC §19: overflow-x-auto wrapper ensures the dense log pane
      scrolls horizontally at phone width without breaking the page layout. --}}
 <div class="p-8 space-y-4 overflow-x-auto" data-testid="log-tailer-page">
-    <header class="flex items-start justify-between gap-4">
+    <header class="flex flex-wrap items-start justify-between gap-4">
         <div class="space-y-1">
             <h1 class="text-xl font-semibold text-[var(--color-text)]">{{ Lang::get('dev::logs.heading') }}</h1>
             <p class="text-sm text-[var(--color-text-muted)]">

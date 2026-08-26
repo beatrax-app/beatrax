@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Fortsatt ikke importert — kategorier',
-        'payee' => 'Fortsatt ikke importert — betalingsmottakere',
         'extra' => 'Ikke importert',
         'conflict' => 'Krever din avgjørelse',
     ],

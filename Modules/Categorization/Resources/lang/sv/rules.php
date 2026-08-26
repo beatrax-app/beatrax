@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Träffar',
     'col_created' => 'Skapad',
     'col_row_actions' => 'Åtgärder',
+    'inactive_badge' => 'Av',
+    'inactive_title' => 'Den här regeln körs inte. En regel stängs av när kategorin eller motparten den pekar på tas bort.',
 
     'more_conditions' => '+:count till',
 

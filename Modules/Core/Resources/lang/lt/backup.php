@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
+        'no_download_route' => 'Šis telefonas negali įrašyti failo, kurį programėlė jam perduoda, todėl užšifruota atsarginė kopija daroma kompiuterio programėlėje. Susiek šį įrenginį, kad abu liktų sinchronizuoti.',
         'unavailable' => 'Šifruotos atsarginės kopijos veikia darbalaukio (SQLite) versijoje. Serverio duomenų bazėje naudok pačios duomenų bazės atsarginių kopijų įrankius.',
         'intro' => 'Atsisiųsk slaptafraze užšifruotą visos savo duomenų bazės kopiją — ją saugu laikyti išoriniame diske ar debesijos saugykloje, nes be slaptafrazės jos perskaityti neįmanoma (kvantams atsparus XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Slaptafrazė',
@@ -16,8 +17,8 @@ return [
     'restore' => [
         'heading' => 'Atkurti iš atsarginės kopijos',
 
-        'intro_html' => 'Pakeisk dabartinę duomenų bazę šifruota atsargine kopija. Failas iššifruojamas ir patikrinamas prieš keičiant bet ką, o dabartinių duomenų momentinė kopija išsaugoma pirmiausia — bet tai vis tiek <strong class="text-slate-700 dark:text-slate-200">perrašo viską</strong>, todėl veiksmas yra apsaugotas.',
-        'restored' => 'Atkurta. Įkelk programėlę iš naujo, kad matytum atkurtus duomenis.',
+        'intro_html' => 'Pakeisk dabartinę duomenų bazę šifruota atsargine kopija. Failas iššifruojamas ir patikrinamas prieš keičiant bet ką, o dabartinių duomenų momentinė kopija išsaugoma pirmiausia — bet tai vis tiek <strong class="text-slate-700 dark:text-slate-200">perrašo viską</strong>, todėl veiksmas yra apsaugotas. Būsi atjungtas, nes tavo prisijungimas taip pat yra duomenų bazėje.',
+        'restored' => 'Atsarginė kopija atkurta. Prisijunkite naudotojo vardu ir slaptažodžiu, galiojusiais ją kuriant.',
         'snapshot_saved_prefix' => 'Ankstesnių duomenų momentinė kopija išsaugota į',
         'file_label' => 'Šifruota atsarginė kopija (.enc)',
         'uploading' => 'Įkeliama…',
@@ -35,6 +36,7 @@ return [
         'create_failed' => 'Nepavyko sukurti atsarginės kopijos: :message',
         'confirm_phrase' => 'Įvesk :phrase, kad patvirtintum — tai pakeis dabartinius tavo duomenis.',
         'choose_file' => 'Pasirink šifruotos atsarginės kopijos failą (.enc), kurį nori atkurti.',
+        'upload_failed' => 'Failas nebuvo įkeltas iki galo. Jis gali būti per didelis šiam įrenginiui — atkūrimas kompiuterio programoje priima didesnę atsarginę kopiją.',
         'enter_passphrase' => 'Įvesk slaptafrazę, kuria atsarginė kopija buvo užšifruota.',
         'unreadable' => 'Įkelto failo perskaityti nepavyko. Bandyk dar kartą.',
     ],

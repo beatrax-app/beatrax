@@ -9,7 +9,7 @@ return [
     'sign_out' => 'Çıkış yap',
     'forgot_pin' => 'PIN kodunu mu unuttun? Çıkış yap — hesap parolanla tekrar giriş yapıp yeni bir PIN belirleyebilirsin. Hiçbir veri kaybolmaz.',
 
-    'digits_suffix' => 'hane girildi',
+    'digits_entered' => ':count hane girildi',
     'pad_label' => 'PIN tuş takımı',
     'digit_aria' => ':digit rakamı',
     'backspace_aria' => 'Geri sil',

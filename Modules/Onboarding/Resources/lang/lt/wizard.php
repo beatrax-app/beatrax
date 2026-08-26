@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => ':number žingsnis iš :total',
 
+    'back' => 'Atgal',
+    'back_aria' => 'Atgal — grįžta į ankstesnį sąrankos žingsnį',
+
     'resume_later' => 'Tęsti vėliau',
     'resume_later_aria' => 'Tęsti vėliau — išsaugo tavo eigą ir uždaro sąrankos vediklį',
     'resume_banner' => 'Sveikas sugrįžęs — tęskime nuo tos vietos, kur baigei.',

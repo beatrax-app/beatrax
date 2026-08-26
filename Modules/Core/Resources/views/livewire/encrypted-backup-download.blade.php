@@ -4,6 +4,10 @@
         <p class="text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('core::backup.download.unavailable') }}
         </p>
+    @elseif (! $savesDownloads)
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+            {{ Lang::get('core::backup.download.no_download_route') }}
+        </p>
     @else
         <p class="text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('core::backup.download.intro') }}

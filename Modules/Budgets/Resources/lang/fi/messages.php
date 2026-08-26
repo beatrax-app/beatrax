@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Budjetit',
-        'subtitle' => 'Jaa jokainen euro — :period.',
+        'subtitle' => 'Jaa kaikki — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Siirtää miinuksen',
-        'non_eur_aria' => 'Muun kuin euromääräisen kulutuksen osuutta ei näytetä tässä kategoriassa — katso yleisnäkymä',
-        'non_eur_title' => 'Muuta kuin euromääräistä kulutusta ei näytetä tässä — katso yleisnäkymä',
+        'unconverted_aria' => 'Valuutassa, jolle ei ole kurssia, tehtyjä menoja ei lasketa tähän — katso koontinäyttö',
+        'unconverted_title' => 'Menot ilman kurssia eivät sisälly tähän — katso koontinäyttö',
         'over_budget' => ':count yli budjetin',
     ],
 

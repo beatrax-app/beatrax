@@ -248,7 +248,7 @@ it('ChainLinkHintRow carries the from-counterparty slug', function (): void {
     ccSeedLink(
         $this->db, $this->user, (int) $hintFrom->id, null,
         'funded_by_card_hint', 'candidate', '0.700', 'fuzzy',
-        ['card_last_four' => '1234'],
+        ['card_last4' => '1234'],
     );
 
     $rows = $this->query->hintsForReview($this->user);

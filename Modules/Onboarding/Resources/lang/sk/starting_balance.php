@@ -34,7 +34,7 @@ return [
     'errors' => [
         'account_not_set' => 'Účet nie je nastavený. Načítaj sprievodcu znova.',
         'invalid_amount' => 'Zadaj platnú sumu.',
-        'amount_range' => 'Zadaj sumu od -10 mil. € do 10 mil. €.',
+        'amount_range' => 'Zadaj sumu od :min do :max.',
         'pick_date' => 'Vyber dátum.',
         'pick_valid_date' => 'Vyber platný dátum.',
         'future_date' => 'Dátum počiatočného zostatku nemôže byť v budúcnosti.',

@@ -12,6 +12,9 @@ return [
 
     'step_dot_aria' => ':number. solis no :total',
 
+    'back' => 'Atpakaļ',
+    'back_aria' => 'Atpakaļ — atgriežas pie iepriekšējā iestatīšanas soļa',
+
     'resume_later' => 'Turpināt vēlāk',
     'resume_later_aria' => 'Turpināt vēlāk — saglabā gaitu un aizver iestatīšanas vedni',
     'resume_banner' => 'Laipni lūdzam atpakaļ — turpinām no tās vietas, kur apstājāties.',

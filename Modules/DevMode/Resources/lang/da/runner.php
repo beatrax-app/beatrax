@@ -22,6 +22,8 @@ return [
     'args_badge' => 'args',
     'args_badge_title' => 'Åbner en argumentformular',
 
+    'spawning_unavailable' => 'Artisan-kommandoer kører i en separat proces, og denne platform lader ikke appen starte en. Kør dem fra computer-appen i stedet.',
+
     'status' => [
         'running' => 'Kører',
         'done' => 'Færdig',

@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Pogoci',
     'col_created' => 'Stvoreno',
     'col_row_actions' => 'Radnje',
+    'inactive_badge' => 'Isključeno',
+    'inactive_title' => 'Ovo pravilo se ne primjenjuje. Pravilo se isključuje kada se izbriše kategorija ili druga strana na koju upućuje.',
 
     'more_conditions' => '+:count više',
 

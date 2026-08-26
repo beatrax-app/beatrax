@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page' => [
         'title' => 'Orçamentos',
-        'subtitle' => 'Atribui cada euro — :period.',
+        'subtitle' => 'Atribui tudo — :period.',
     ],
 
     'nav' => [
@@ -42,8 +42,8 @@ return [
 
     'badge' => [
         'carries_negative' => 'Transita o negativo',
-        'non_eur_aria' => 'As despesas fora do EUR nesta categoria não são mostradas aqui — consulta o painel',
-        'non_eur_title' => 'Despesas fora do EUR não mostradas aqui — consulta o painel',
+        'unconverted_aria' => 'As despesas numa moeda sem taxa disponível não são contadas aqui — vê o painel',
+        'unconverted_title' => 'As despesas sem taxa disponível não são contadas aqui — vê o painel',
         'over_budget' => ':count acima do orçamento',
     ],
 

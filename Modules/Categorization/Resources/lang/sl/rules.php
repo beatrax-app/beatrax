@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Zadetki',
     'col_created' => 'Ustvarjeno',
     'col_row_actions' => 'Dejanja',
+    'inactive_badge' => 'Izklopljeno',
+    'inactive_title' => 'To pravilo se ne izvaja. Pravilo se izklopi, ko se izbriše kategorija ali nasprotna stranka, na katero se sklicuje.',
 
     'more_conditions' => '+:count več',
 

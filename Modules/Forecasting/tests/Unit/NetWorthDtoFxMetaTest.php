@@ -16,7 +16,7 @@ it('carries nullable FX metadata with safe defaults', function (): void {
     expect($nw->ratesSource)->toBeNull();
     expect($nw->ratesAsOf)->toBeNull();
     expect($nw->hasStaleRates)->toBeFalse();
-    expect($nw->accountsWithoutRate)->toBe(0);
+    expect($nw->balancesWithoutRate)->toBe(0);
 });
 
 it('stores FX metadata when all fields are supplied', function (): void {
@@ -30,13 +30,13 @@ it('stores FX metadata when all fields are supplied', function (): void {
         ratesSource: 'ecb',
         ratesAsOf: $asOf,
         hasStaleRates: false,
-        accountsWithoutRate: 0,
+        balancesWithoutRate: 0,
     );
 
     expect($nw->ratesSource)->toBe('ecb');
     expect($nw->ratesAsOf)->toBe($asOf);
     expect($nw->hasStaleRates)->toBeFalse();
-    expect($nw->accountsWithoutRate)->toBe(0);
+    expect($nw->balancesWithoutRate)->toBe(0);
 });
 
 it('marks stale rates and missing accounts when set', function (): void {
@@ -48,10 +48,10 @@ it('marks stale rates and missing accounts when set', function (): void {
         ratesSource: 'bundled',
         ratesAsOf: CarbonImmutable::parse('2026-01-01'),
         hasStaleRates: true,
-        accountsWithoutRate: 2,
+        balancesWithoutRate: 2,
     );
 
     expect($nw->hasStaleRates)->toBeTrue();
-    expect($nw->accountsWithoutRate)->toBe(2);
+    expect($nw->balancesWithoutRate)->toBe(2);
     expect($nw->ratesSource)->toBe('bundled');
 });

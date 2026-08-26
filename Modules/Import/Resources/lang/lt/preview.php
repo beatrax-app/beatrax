@@ -9,6 +9,10 @@ return [
     'confirm' => 'Patvirtinti importą',
     'subtitle' => 'Peržiūrėk nuskaitytas eilutes. Kol nepatvirtinsi, į didžiąją knygą nieko neįrašoma.',
 
+    'already_imported' => 'Šis failas jau importuotas.',
+
+    'already_imported_link' => 'Peržiūrėti importo rezultatą',
+
     'expired_html' => 'Peržiūros galiojimas baigėsi. <a href="/imports/new" class="underline">Įkelk failą iš naujo</a> ir bandyk dar kartą.',
 
     'save_name' => 'Išsaugoti pavadinimą',
@@ -17,6 +21,8 @@ return [
     'rename_aria' => 'Pervadinti šią kitą šalį',
 
     'unknown_iban_prefix' => 'Radome nepažįstamą IBAN:',
+
+    'unknown_account_prefix' => 'Radome nepažįstamą sąskaitą:',
     'unknown_iban_suffix' => 'Pavadink šią sąskaitą.',
 
     'ics' => [
@@ -57,10 +63,16 @@ return [
         'failed_suffix' => 'ir pakartok arba patikrink.',
     ],
 
+    'rows_shown' => 'Rodomos eilutės: :shown iš :total',
+
+    'show_more' => 'Rodyti daugiau eilučių',
+
     'errors' => [
         'app_locked' => 'Atrakinkite programėlę, kad importuotumėte: šifravimo raktų negalima naudoti, kol ji užrakinta.',
+        'file_stopped_short' => 'Antraštės eilutė atitiko, tad formatas teisingas. Skaitymas sustojo nepasiekęs failo pabaigos. Taip nutinka dėl vienos neperskaitomos eilutės arba dėl šiam įrenginiui per didelio failo. Pabandyk trumpesnį laikotarpį.',
         'file_unreadable' => 'Šio failo nepavyko perskaityti.',
         'iban_not_in_preview' => 'Šis IBAN nėra dabartinės peržiūros dalis.',
+        'pdf_reader_unavailable' => 'PDF išrašams reikia programos pdftotext, kuri čia neįdiegta. Importuok šį failą kompiuteryje, kuriame ji yra, arba naudok banko CSV eksportą.',
         'row_unreadable' => 'Šios eilutės nepavyko perskaityti.',
         'unknown_account' => 'Ši eilutė priklauso sąskaitai, kuriai dar nesuteikei pavadinimo.',
     ],

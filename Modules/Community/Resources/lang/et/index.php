@@ -14,6 +14,5 @@ return [
     'translations_ai_notice' => 'Enamik tõlkeid on praegu tehisintellekti loodud — Beatrax on avatud lähtekoodiga ja aega napib, seega masintõlge oli parem kui keeled tühjaks jätta. Kui midagi tundub sulle vale, siis tõenäoliselt ongi, ja üherealine parandus aitab kõiki, kes seda kasutavad.',
     'translations_how' => 'Iga keel on kaust lihtsate PHP-failidega asukohas Modules/*/Resources/lang. Kopeeri ingliskeelne kaust, tõlgi stringid ja ava pull request — ehitussammu pole ja tööriistu pole vaja paigaldada.',
     'translations_cta' => 'Loe kaastöö juhendit',
-    'translations_url' => 'https://github.com/beatrax/beatrax',
     'shared_heading' => 'Jagatud kaupmeeste nimekiri',
 ];

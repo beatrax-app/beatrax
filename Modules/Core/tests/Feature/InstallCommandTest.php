@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Ledger\Models\Category;
+use Tests\Helpers\LiveSqliteConnection;
 
 it('creates User id=1 on a fresh install', function (): void {
     Event::fake([UserInstalled::class]);
@@ -88,8 +88,8 @@ it('re-dispatches UserInstalled on a re-run so seed listeners can heal missing r
 });
 
 it('refuses an iCloud-Drive database path', function (): void {
-    $this->app->make(Repository::class)->set(
-        'database.connections.sqlite.database',
+    LiveSqliteConnection::pathOnDefault(
+        $this->app,
         '/Users/test/Library/Mobile Documents/com~apple~CloudDocs/db.sqlite',
     );
 
@@ -105,8 +105,8 @@ it('refuses an iCloud-Drive database path', function (): void {
 });
 
 it('refuses a Dropbox database path', function (): void {
-    $this->app->make(Repository::class)->set(
-        'database.connections.sqlite.database',
+    LiveSqliteConnection::pathOnDefault(
+        $this->app,
         '/Users/test/Dropbox/finance/db.sqlite',
     );
 
@@ -120,8 +120,8 @@ it('refuses a Dropbox database path', function (): void {
 });
 
 it('refuses a OneDrive database path', function (): void {
-    $this->app->make(Repository::class)->set(
-        'database.connections.sqlite.database',
+    LiveSqliteConnection::pathOnDefault(
+        $this->app,
         '/Users/test/OneDrive/finance/db.sqlite',
     );
 

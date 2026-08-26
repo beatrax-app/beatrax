@@ -115,7 +115,7 @@ it('hard-deletes a canonical ics_bulk_settle hint with tolerance_used=exceeded',
 it('hard-deletes a funded_by_card_hint row', function (): void {
     $tx = dchTx($this->user, $this->bank, $this->run, 2);
     $hintId = dchHint($this->db, $this->user, (int) $tx->id, 'funded_by_card_hint', [
-        'card_last_four' => '1234',
+        'card_last4' => '1234',
     ]);
 
     ($this->dismiss)($hintId, $this->user);

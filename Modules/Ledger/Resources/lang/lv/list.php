@@ -11,7 +11,7 @@ return [
     'subtitle_recent' => 'Nesenie darījumi (pēdējās 90 dienas).',
 
     'currency_aria' => 'Valūtas skats',
-    'currency_eur' => 'Tikai EUR',
+    'currency_eur' => 'Tikai :code',
     'currency_original' => 'Sākotnējā valūta',
 
     'show_recent' => 'Rādīt tikai nesenos',

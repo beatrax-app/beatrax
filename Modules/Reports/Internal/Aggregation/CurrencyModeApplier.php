@@ -8,8 +8,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
-use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
@@ -19,7 +20,8 @@ final class CurrencyModeApplier
 {
     public function __construct(
         private readonly DatabaseManager $db,
-        private readonly ExchangeRateService $fx,
+        private readonly CrossCurrencyTotal $fx,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -87,7 +89,13 @@ final class CurrencyModeApplier
      */
     private function applyBase(User $user, array $currencies, callable $queryForCurrency, array $otherTotalsByCurrency = []): ReportResultDto
     {
-        $baseCurrency = $user->base_currency;
+        $baseCurrency = $this->baseCurrency->forUser($user);
+
+        // One rate per currency for the whole report, fees included: every row
+        // a dimension query returns is denominated in the one currency it was
+        // asked for, so converting per row read the whole rate table once per
+        // row for a rate that could not have changed between them.
+        $rates = $this->fx->ratesTo([...$currencies, ...array_keys($otherTotalsByCurrency)], $baseCurrency);
 
         /** @var array<string, array{key: int|string|null, label: string, amount: int}> $merged */
         $merged = [];
@@ -102,12 +110,10 @@ final class CurrencyModeApplier
             $rows = $queryForCurrency($currency);
 
             foreach ($rows as $row) {
-                $money = Money::ofMinor($row->amountMinor, $currency);
-                $conversion = $this->fx->convertToBase($money, $baseCurrency);
+                $money = Money::tryOfMinor($row->amountMinor, $currency);
+                $converted = $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates);
 
-                // Never a silent 1:1 fallback: a converted currency that still
-                // differs from the target means no rate was available at all.
-                if ($conversion->converted->currency() !== $baseCurrency) {
+                if ($converted === null) {
                     $excludedCurrencies[$currency] = true;
 
                     continue;
@@ -117,7 +123,7 @@ final class CurrencyModeApplier
                 if (! isset($merged[$mapKey])) {
                     $merged[$mapKey] = ['key' => $row->groupKey, 'label' => $row->groupLabel, 'amount' => 0];
                 }
-                $merged[$mapKey]['amount'] += $conversion->converted->toMinor();
+                $merged[$mapKey]['amount'] += $converted->toMinor();
             }
         }
 
@@ -134,18 +140,12 @@ final class CurrencyModeApplier
         }
 
         // Fees come from their own query, not $currencies: a currency carrying
-        // only fees produces no rows, so it never reaches the list above.
-        $other = 0;
-        foreach ($otherTotalsByCurrency as $currency => $amount) {
-            $conversion = $this->fx->convertToBase(Money::ofMinor($amount, $currency), $baseCurrency);
-            if ($conversion->converted->currency() !== $baseCurrency) {
-                // The banner reads ":count not converted", so flagging without
-                // counting renders a literal zero beside the warning.
-                $excludedCurrencies[$currency] = true;
-
-                continue;
-            }
-            $other += $conversion->converted->toMinor();
+        // only fees produces no rows, so it never reaches the list above. The
+        // banner reads ":count not converted", so flagging without counting
+        // renders a literal zero beside the warning.
+        $fees = $this->fx->withRates($otherTotalsByCurrency, $baseCurrency, $rates);
+        foreach ($fees->unconverted as $code) {
+            $excludedCurrencies[$code] = true;
         }
 
         return new ReportResultDto(
@@ -154,7 +154,7 @@ final class CurrencyModeApplier
             currency: $baseCurrency,
             hasExcludedAccounts: $excludedCurrencies !== [],
             accountsWithoutRate: count($excludedCurrencies),
-            otherMovementMinor: $other,
+            otherMovementMinor: $fees->minor,
         );
     }
 
@@ -182,7 +182,7 @@ final class CurrencyModeApplier
             $totalsByCurrency[$currency] = ($totalsByCurrency[$currency] ?? 0) + $currencyTotal;
         }
 
-        $primaryCurrency = $currencies[0] ?? $user->base_currency;
+        $primaryCurrency = $currencies[0] ?? $this->baseCurrency->forUser($user);
         $total = 0;
         $bestAbsTotal = -1;
         foreach ($totalsByCurrency as $currency => $currencyTotal) {

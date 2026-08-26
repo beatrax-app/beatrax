@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'error_enroll_unsupported' => 'Bu cihazda biyometrik kilit açma kullanılamıyor.',
+    'error_enroll_unsupported' => 'Beatrax\'ın bu sürümünde kilit açma anahtarını saklayacak bir yer yok, bu yüzden biyometrik kilit açma sunulmuyor. Sınırlama cihazın değil.',
     'error_enroll_unprotected' => 'Biyometrik kilit açma, işletim sisteminin anahtar deposuna ihtiyaç duyar ve bu kurulumda böyle bir depo yok. Kaydolmak, kilit açma anahtarını verilerinin yanında okunabilir bırakırdı; bu yüzden burada sunulmuyor.',
     'error_enroll_locked' => 'Kaydetmeden önce uygulamanın kilidini aç.',
     'error_enroll_failed' => 'Cihazın anahtarı saklamayı reddetti. Biyometrik kilit açma kullanılamıyor.',
@@ -32,7 +32,7 @@ return [
     'biometric_enroll_description' => 'Biyometrik olarak açabilmek için bu cihazı kaydet.',
     'remove' => 'Kaldır',
     'enroll' => 'Kaydet',
-    'biometric_unavailable' => 'Bu cihazda biyometrik kilit açma kullanılamıyor.',
+    'biometric_unavailable' => 'Beatrax\'ın bu sürümü biyometrik kilit açma sunamıyor. Burada tek kilit açma yolun PIN kodun.',
 
     'deenroll_modal_heading' => 'Biyometrik kilit açmayı kaldır — PIN ile onayla',
     'current_pin_label' => 'Mevcut PIN',

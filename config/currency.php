@@ -5,7 +5,8 @@ declare(strict_types=1);
 use Modules\Ledger\Public\Enums\Currency;
 
 return [
-    // Only the fallback for a row that carries no currency of its own; the
-    // user-selectable display set is data-driven.
+    // What an install ships with, for a reader who has never opened the
+    // /settings base-currency picker; once they have, users.base_currency is
+    // what every roll-up renders in. The selectable set is data-driven.
     'base' => Currency::Eur->value,
 ];

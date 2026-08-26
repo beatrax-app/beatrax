@@ -6,7 +6,7 @@ return [
     'unknown_device' => 'Appareil supprimé',
     'dismiss_peer' => 'Masquer cet appareil',
     'dismiss_stale' => 'Effacer les appareils qui ne sont plus appairés',
-    'no_devices' => 'Aucun appareil synchronisé pour l\'instant',
+    'not_synced_yet' => 'Pas encore synchronisé',
     'error' => 'Erreur de synchronisation sur un ou plusieurs appareils',
     'syncing' => 'Synchronisation…',
     'offline' => 'Appareils hors ligne',

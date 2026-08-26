@@ -9,7 +9,7 @@ return [
     'counterparty' => 'Partner',
     'description' => 'Leírás',
     'amount_native' => 'Összeg (eredeti deviza)',
-    'amount_settled' => 'Összeg (elszámolt EUR)',
+    'amount_settled' => 'Összeg (elszámolt)',
     'effective_rate' => 'Tényleges árfolyam',
     'ics_markup' => 'Tartalmazza az esetleges ICS-felárat.',
 

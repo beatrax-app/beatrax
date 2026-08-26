@@ -103,9 +103,20 @@
 
             @foreach ($rules as $rule)
                 <tr class="min-h-12 hover:bg-slate-50 dark:hover:bg-slate-900">
-                    <td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $rule->priority }}</td>
+                    {{-- Below 768px the restack drops <thead>, and a bare 10
+                         beside a bare 2 names neither column. These two carry
+                         their own label there; every other cell says what it
+                         is on its own. --}}
+                    <td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;"><span class="md:hidden">{{ Lang::get('categorization::rules.col_priority') }} </span>{{ $rule->priority }}</td>
                     <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
                         <div class="flex flex-wrap items-center gap-1">
+                            {{-- RuleEngine matches active rules only, and deleting a
+                                 category switches every rule that pointed at it off.
+                                 Without this the list printed a rule that had not run
+                                 since exactly like the live ones above it. --}}
+                            @if (! $rule->active)
+                                <span class="chip text-amber-700 dark:text-amber-300" title="{{ Lang::get('categorization::rules.inactive_title') }}">{{ Lang::get('categorization::rules.inactive_badge') }}</span>
+                            @endif
                             @if (count($rule->conditions) >= 2)
                                 <span class="chip">{{ $rule->combinator === RuleCombinator::Any->value ? 'ANY' : 'ALL' }}</span>
                             @endif
@@ -128,7 +139,7 @@
                         </div>
                     </td>
                     <td class="px-4 py-3 text-right text-sm {{ $rule->hitsCount === 0 ? 'text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">
-                        {{ $rule->hitsCount }}
+                        <span class="md:hidden">{{ Lang::get('categorization::rules.col_hits') }} </span>{{ $rule->hitsCount }}
                     </td>
                     <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
                         {{ \Carbon\CarbonImmutable::instance($rule->createdAt)->translatedFormat('d M Y') }}

@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
 use Modules\Import\Public\Contracts\NamesAccounts;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
@@ -32,6 +33,7 @@ final class AccountNamer implements NamesAccounts
     public function __construct(
         private readonly AccountSlugResolver $slugs,
         private readonly BaseCurrency $baseCurrency,
+        private readonly CsvPresetRegistry $presets,
     ) {}
 
     public function __invoke(string $iban, string $userSuppliedName, User $user): int
@@ -46,11 +48,24 @@ final class AccountNamer implements NamesAccounts
             self::IBAN_MIN_LENGTH,
             self::IBAN_MAX_LENGTH,
         );
-        if (preg_match($pattern, $iban) !== 1) {
+        if (preg_match($pattern, $iban) !== 1 && ! $this->presets->issuesOwnAccountIdentifier($iban)) {
             throw new InvalidAccountNameException(Lang::get('import::accounts.errors.iban_format', [
                 'min' => self::IBAN_MIN_LENGTH,
                 'max' => self::IBAN_MAX_LENGTH,
             ]));
+        }
+
+        // accounts.user_id + iban is unique, and a preview lists the IBANs it
+        // did not know when the file was parsed -- so a second file from the
+        // same new bank prompts for a name the first one already gave. An
+        // unconditional insert left that import with no way forward at all.
+        $existing = Account::query()
+            ->where('user_id', $user->id)
+            ->where('iban', $iban)
+            ->first();
+
+        if ($existing instanceof Account) {
+            return $existing->id;
         }
 
         $account = Account::create([

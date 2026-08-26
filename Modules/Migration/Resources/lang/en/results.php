@@ -23,8 +23,6 @@ return [
     ],
 
     'groups' => [
-        'category' => 'Still not imported — categories',
-        'payee' => 'Still not imported — payees',
         'extra' => 'Not imported',
         'conflict' => 'Needs your decision',
     ],

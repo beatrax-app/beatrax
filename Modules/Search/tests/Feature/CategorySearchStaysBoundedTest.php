@@ -102,7 +102,10 @@ it('reads a bounded number of category rows for a category token', function () u
         $search->search($this->user, 'anything category:Groceries', SearchFilters::empty());
     });
 
-    expect($rowsRead)->toBe(3);
+    // Two, not three: the summary is grouped by settled currency now, so over a
+    // fixture with no transactions it returns no rows where the flat aggregate
+    // always returned one. The bound is what this measures, and it is tighter.
+    expect($rowsRead)->toBe(2);
 });
 
 it('caps the palette at three categories and takes the lowest ids', function (): void {

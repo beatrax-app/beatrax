@@ -37,7 +37,7 @@ return [
     'col_account' => 'Hesap',
     'col_counterparty' => 'Karşı taraf',
     'col_note' => 'Not',
-    'col_settled_eur' => 'EUR karşılığı',
+    'col_settled' => 'Tahsil edilen',
     'col_original' => 'Orijinal',
     'col_year' => 'Yıl',
 

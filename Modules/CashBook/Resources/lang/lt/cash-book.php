@@ -11,7 +11,7 @@ return [
     'expense' => 'Išlaidos',
     'income' => 'Pajamos',
 
-    'amount' => 'Suma (€)',
+    'amount' => 'Suma (:symbol)',
     'date' => 'Data',
     'counterparty' => 'Kita šalis',
     'counterparty_placeholder' => 'pvz. Kepykla',

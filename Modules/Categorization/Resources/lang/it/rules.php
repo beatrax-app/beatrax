@@ -26,6 +26,8 @@ return [
     'col_hits' => 'Corrispondenze',
     'col_created' => 'Creata',
     'col_row_actions' => 'Azioni',
+    'inactive_badge' => 'Inattiva',
+    'inactive_title' => 'Questa regola non viene applicata. Una regola si disattiva quando la categoria o la controparte a cui punta viene eliminata.',
 
     'more_conditions' => '+:count altre',
 

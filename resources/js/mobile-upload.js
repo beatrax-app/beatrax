@@ -34,6 +34,17 @@ const UPLOAD_PATH = '/upload-file';
 const TRANSPORT_FIELD = '_beatrax_transport';
 const TRANSPORT_MARKER = 'base64';
 
+/*
+ * Matches `upload_max_filesize` in scripts/nativephp_ios_upload_limits.php.
+ * Checked from `file.size` BEFORE anything is read, because the encode itself
+ * is what kills the tab: arrayBuffer() holds the file, toBase64() holds four
+ * thirds of it again, and JSON.stringify copies that — about 3.7x the file
+ * live in the content process at once. A 26 MB pick took the whole WebView
+ * down on an iPhone 12 mini, with no crash report and no jetsam event, so
+ * there was not even a record that anything had happened.
+ */
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
 /** Whether this runtime can carry a multipart body at all. */
 function carriesMultipart() {
     return document.querySelector('meta[name="beatrax-upload-transport"][content="base64"]') === null;
@@ -144,6 +155,24 @@ function install() {
 
         if (files.length === 0) {
             return originalSend.call(this, body);
+        }
+
+        // Sent as an envelope carrying no files, which EncodedUploadTransport
+        // refuses with a 422 — the same non-2xx Livewire turns into
+        // `livewire-upload-error`, which the restore screens listen for. The
+        // point is to reach that path without allocating: refusing silently
+        // here would reproduce the very silence this transport was given a
+        // message for.
+        const tooLarge = files.some(({ value }) => value.size > MAX_UPLOAD_BYTES);
+
+        if (tooLarge) {
+            this.setRequestHeader('Content-Type', 'application/json');
+
+            return originalSend.call(this, JSON.stringify({
+                [TRANSPORT_FIELD]: TRANSPORT_MARKER,
+                fields,
+                files: [],
+            }));
         }
 
         // send() cannot wait for the encode, but nothing is waiting on send()
