@@ -3416,9 +3416,21 @@ td.date,
     .drawer-container .side {
         display: flex;
         height: 100%;
-        padding-top: calc(var(--space-4) + var(--safe-top));
+        padding-top: var(--space-4);
         padding-bottom: calc(var(--space-4) + var(--safe-bottom));
         overscroll-behavior: contain;
+    }
+
+    /* The status-bar strip belongs to the PANEL, not to the scroller inside
+       it. As padding on .side it only held the FIRST screen of the list clear
+       of the clock: the nav is 1776px tall in an 812px viewport, so everything
+       past it scrolled straight up underneath, and "Reconcile" was measured
+       rendering through "16:35". Padding here shortens the scroll viewport
+       instead, so no row can reach the strip at any scroll position, and the
+       panel paints it in the sidebar's own colour. */
+    .drawer-container {
+        padding-top: var(--safe-top);
+        background: var(--color-bg-subtle);
     }
 }
 
