@@ -516,11 +516,15 @@
                         {{ Lang::get('pots::messages.form.link_none') }}
                     </label>
                 </div>
-                {{-- Unlabelled for the same reason as the modal's picker: the
-                     legend names the group, and x-core::form-field would demand
-                     a label of its own — a new string in 26 locales. --}}
+                {{-- A legend names the FIELDSET, not the controls inside it, so
+                     this select reached a screen reader with no name at all. The
+                     label is its own placeholder option, which every locale
+                     already carries, and sr-only because the legend above it
+                     already says this on screen. --}}
                 @if ($linkType === PotLinkType::Goal->value)
+                    <label for="pot-goal-picker-sheet" class="sr-only">{{ Lang::get('pots::messages.form.select_goal') }}</label>
                     <select
+                        id="pot-goal-picker-sheet"
                         wire:model="goalId"
                         class="mt-2 block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         style="font-size: 16px;"
@@ -777,13 +781,15 @@
                             {{ Lang::get('pots::messages.form.link_none') }}
                         </label>
                     </div>
-                    {{-- Left hand-rolled on purpose: this select has no label of
-                         its own — the "Link to" legend names the whole group it
-                         sits in — and x-core::form-field requires one. Giving it a label
-                         means a new user-facing string in all 26 locales, which
-                         is a copy decision, not a refactor. --}}
+                    {{-- Hand-rolled rather than x-core::form-field, which would
+                         demand a visible label and a new string in 26 locales.
+                         The accessible name is the placeholder option every
+                         locale already carries; the legend names the group, and
+                         a group name is not a control name. --}}
                     @if ($linkType === PotLinkType::Goal->value)
+                        <label for="pot-goal-picker-modal" class="sr-only">{{ Lang::get('pots::messages.form.select_goal') }}</label>
                         <select
+                            id="pot-goal-picker-modal"
                             wire:model="goalId"
                             class="mt-2 block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         >
