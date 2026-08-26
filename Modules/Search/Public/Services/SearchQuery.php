@@ -461,12 +461,11 @@ final class SearchQuery
         }
     }
 
+    // Bucketed by the currency each row settled in, then converted — counting
+    // only rows already in the reader's currency reported nothing at all over a
+    // ledger denominated elsewhere. A bucket with no currency still counts
+    // toward the total; it just cannot be converted.
     /**
-     * Bucketed by the currency each row settled in, then converted — counting
-     * only rows already in the reader's currency reported nothing at all over a
-     * ledger denominated elsewhere. A bucket with no currency still counts
-     * toward the total; it just cannot be converted.
-     *
      * @return array{count: int, out: int, in: int}
      */
     private function totals(Builder $query, string $base): array
@@ -501,10 +500,9 @@ final class SearchQuery
         ];
     }
 
+    // The cursor is the LAST row mapped, so it is carried out of the loop
+    // rather than re-derived from a collection the caller has already sliced.
     /**
-     * The cursor is the LAST row mapped, so it is carried out of the loop
-     * rather than re-derived from a collection the caller has already sliced.
-     *
      * @param  Collection<int, \stdClass>  $sliced
      * @param  array<int, \stdClass>  $highlights
      * @return array{rows: list<SearchRowDto>, lastId: int|null, lastPostedAt: string|null}

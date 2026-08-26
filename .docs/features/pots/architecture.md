@@ -87,6 +87,13 @@ matching `GoalWriter`'s convention.
   `linkedPotIdForGoal()`, `currencyForLinkedPot()`) the Goals module
   consumes to show a linked pot's balance as a goal's contribution.
 - **Services/PotWriter** — the sole write path described above.
+
+`PotBalanceQuery` answers what an account holds; assembling a pot as the
+reader sees it — account, goal, category spend for the open period, last
+ten movements — is a separate job, and lives in
+`Internal/Services/PotRowLoader`. It also owns the one read of a pot's
+`pot_movements` sum, which `balanceForPot()` delegates to, so the pot cards
+and the guard `PotWriter` checks against cannot drift apart.
 - **Dto** — `PotRow` (one pot card), `PotMovementRow` (one line of inline
   movement history), `ReconciliationRow` (one account's reconciliation
   header).

@@ -94,10 +94,9 @@ final class ArtisanRunnerPage extends Component
         $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
     }
 
+    // Every reason this command does not reach the spawner, and the answer the
+    // operator gets for it. True means answered — the caller stops.
     /**
-     * Every reason this command does not reach the spawner, and the answer the
-     * operator gets for it. True means answered — the caller stops.
-     *
      * @param  array<string, mixed>  $args
      */
     private function refused(string $command, array $args, DevCommandRegistry $registry): bool

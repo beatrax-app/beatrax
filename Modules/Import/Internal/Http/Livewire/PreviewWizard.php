@@ -433,10 +433,9 @@ final class PreviewWizard extends Component
     }
 
     // Anchored on source_format rather than the unknown-IBAN list, so drift in
-    // the synthetic IBAN literal still raises the prompt.
-    // The card and the wallet ask the same question of the same three things,
-    // and differ only in which format raises it and which own-IBAN literal
-    // answers it.
+    // the synthetic IBAN literal still raises the prompt. The card and the wallet
+    // ask the same question of the same three things, differing only in which
+    // format raises it and which own-IBAN literal answers it.
     private function needsIcsAccountName(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
     {
         return $this->needsOwnAccountNamed(SourceFormat::IcsPdf, self::ICS_OWN_IBAN, $currentUser, $cache, $db);
