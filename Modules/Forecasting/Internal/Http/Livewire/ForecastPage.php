@@ -256,7 +256,9 @@ final class ForecastPage extends Component
 
         $viewData = array_merge(
             $this->selectedAccountView($selectedAccountId, $forecastQuery, $db, $user, $mapper, $baseCurrency->code()),
-            $this->aggregateView($accountList, $isAllAccountsView, $isEmpty, $forecastQuery, $db, $user, $baseCurrency->code(), $fx),
+            $isAllAccountsView && ! $isEmpty
+                ? $this->aggregateView($accountList, $forecastQuery, $db, $user, $baseCurrency->code(), $fx)
+                : self::noAggregate($baseCurrency->code()),
             [
                 'accounts' => $accountList,
                 'selectedAccountId' => $selectedAccountId,
@@ -449,29 +451,34 @@ final class ForecastPage extends Component
         ];
     }
 
+    // The shape drawn when there is no aggregate to draw: a single account is
+    // selected, or the ledger is empty. Deciding that at the call site is what
+    // keeps aggregateView() down to the six things it computes with.
+    /**
+     * @return array<string, mixed>
+     */
+    private static function noAggregate(string $baseCurrency): array
+    {
+        return [
+            'aggregatePoints' => [],
+            'aggregateBufferFloor' => 0,
+            'aggregateChartElementId' => null,
+            'aggregateCurrency' => $baseCurrency,
+        ];
+    }
+
     /**
      * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
      * @return array<string, mixed>
      */
     private function aggregateView(
         array $accountList,
-        bool $isAllAccountsView,
-        bool $isEmpty,
         ForecastQuery $forecastQuery,
         DatabaseManager $db,
         User $user,
         string $baseCurrency,
         CrossCurrencyTotal $fx,
     ): array {
-        if (! $isAllAccountsView || $isEmpty) {
-            return [
-                'aggregatePoints' => [],
-                'aggregateBufferFloor' => 0,
-                'aggregateChartElementId' => null,
-                'aggregateCurrency' => $baseCurrency,
-            ];
-        }
-
         [$aggregatePoints, $aggregateBufferFloor] = $this->computeAllAccountsAggregate(
             accountList: $accountList,
             horizon: $this->horizon,

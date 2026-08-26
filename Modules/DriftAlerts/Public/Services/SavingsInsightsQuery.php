@@ -12,6 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
+use Modules\DriftAlerts\Internal\Dto\InsightCandidate;
 use Modules\DriftAlerts\Public\Dto\SavingsInsight;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
@@ -87,12 +88,14 @@ final class SavingsInsightsQuery
 
             $monthlyMinor = abs($series->monthlyEquivalent->toMinor());
             $insight = $this->pick(
-                $series->seriesId,
-                $series->displayName(),
-                $monthlyMinor,
-                $series->monthlyEquivalent->currency(),
-                $this->inBase($monthlyMinor, $series->monthlyEquivalent->currency(), $baseCurrency, $rates),
-                $identity['slug'],
+                new InsightCandidate(
+                    seriesId: $series->seriesId,
+                    name: $series->displayName(),
+                    monthlyMinor: $monthlyMinor,
+                    currency: $series->monthlyEquivalent->currency(),
+                    monthlyInBaseMinor: $this->inBase($monthlyMinor, $series->monthlyEquivalent->currency(), $baseCurrency, $rates),
+                    counterpartySlug: $identity['slug'],
+                ),
                 $resource,
                 isset($openAlerts[$series->seriesId]),
             );
@@ -166,15 +169,17 @@ final class SavingsInsightsQuery
     }
 
     private function pick(
-        int $seriesId,
-        string $name,
-        int $monthlyMinor,
-        string $currency,
-        ?int $monthlyInBaseMinor,
-        string $slug,
+        InsightCandidate $candidate,
         SupportResource $resource,
         bool $hasOpenAlert,
     ): ?SavingsInsight {
+        $seriesId = $candidate->seriesId;
+        $name = $candidate->name;
+        $monthlyMinor = $candidate->monthlyMinor;
+        $currency = $candidate->currency;
+        $monthlyInBaseMinor = $candidate->monthlyInBaseMinor;
+        $slug = $candidate->counterpartySlug;
+
         $monthly = Money::ofMinor($monthlyMinor, $currency)->format();
 
         // The review floor is a threshold in the reader's reporting currency,
