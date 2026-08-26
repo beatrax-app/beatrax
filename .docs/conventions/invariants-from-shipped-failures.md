@@ -1568,6 +1568,41 @@ lifecycle hook may not have a view binding a field with `.blur` unless `.live`
 comes first. A component with no such hook is left alone — there the modifier
 only delays a client-side sync, which is a real if rare intent.
 
+## Asking whether text wrapped, and being told about its box
+
+Three rounds of device sweeps have now filed the same false positive under
+three different measurements, and each one measured something adjacent to the
+question.
+
+The question is "did this string break across lines". The wrong instruments,
+in the order they were tried:
+
+- **Element height ÷ line-height.** A 44px tap row holding one 19.7px line
+  reports 2.2, so every amount on `/uncategorized` came back as wrapped. This is
+  the touch-floor mistake again in another costume: the box is not the glyphs.
+- **Subtracting padding first.** Better, and still wrong — the 44px came from
+  the row's own layout, not from padding, so there was nothing to subtract.
+- **`Range.getClientRects().length` on the text node.** Exact about fragments,
+  not about lines. A text node with leading whitespace yields a 4px rect
+  *beside* the glyphs on the same line, which read as two lines for every
+  amount on `/drift/watch`.
+
+What answers the question is the number of **distinct tops** among the rects
+wider than a hairline:
+
+```js
+const r = document.createRange();
+r.selectNodeContents(textNode);
+const lines = new Set([...r.getClientRects()]
+    .filter((x) => x.width > 1 && x.height > 0)
+    .map((x) => Math.round(x.top))).size;
+```
+
+The same shape settles the touch floor: `elementFromPoint` across the 44px band
+rather than `getBoundingClientRect()`, because the halo is a pseudo-element
+larger than the control it extends. Both are the one rule — ask the browser
+about the thing you are asking about, not about the box that contains it.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
