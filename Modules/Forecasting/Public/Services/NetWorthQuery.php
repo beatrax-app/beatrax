@@ -18,6 +18,7 @@ use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\AccountBalance;
 use Modules\Ledger\Public\ValueObjects\Money;
+use stdClass;
 
 // Net worth is what the reader holds today, so it reads the ledger balance as
 // of today rather than the forecast anchor. One account can hold several
@@ -59,51 +60,13 @@ final class NetWorthQuery
         $today = $this->clock->now()->startOfDay();
 
         foreach ($accounts as $account) {
-            $accountId = self::toInt($account->id);
-            $kind = is_string($account->kind) ? $account->kind : '';
-            $defaultCurrency = self::toString($account->default_currency);
-            if ($defaultCurrency === '') {
-                $defaultCurrency = $baseCurrency;
-            }
+            ['lines' => $accountLines, 'total' => $accountTotal, 'withoutRate' => $withoutRate]
+                = $this->accountLines($account, $user, $baseCurrency, $today, $fxMeta);
 
-            $held = $this->heldLines(
-                $this->balances->currentBalanceAsOf($accountId, $user, $today),
-                $defaultCurrency,
-            );
-
-            foreach ($held as $currency => $balanceMinor) {
-                $result = $this->fx->convertToBase(Money::ofMinor($balanceMinor, $currency), $baseCurrency);
-
-                // With no rate the conversion returns the native currency untouched.
-                // Such a line is still listed in the breakdown, but left out of the total.
-                $rateAvailable = $result->converted->currency() === $baseCurrency;
-
-                $lines[] = new AccountBalanceLine(
-                    accountId: $accountId,
-                    name: is_string($account->name) ? $account->name : '',
-                    kind: $kind,
-                    balanceMinor: $balanceMinor,
-                    currency: $currency,
-                    isLiability: $kind === AccountKind::IcsCard->value,
-                    baseEquivalentMinor: $rateAvailable && ! $result->isPassthrough
-                        ? $result->converted->toMinor()
-                        : null,
-                    fxRate: $result->rate,
-                    fxSource: $result->source,
-                    fxAsOf: $result->asOf,
-                    fxIsStale: $result->isStale,
-                );
-
-                if (! $rateAvailable) {
-                    $hasExcluded = true;
-                    $balancesWithoutRate++;
-
-                    continue;
-                }
-
-                $total += $result->converted->toMinor();
-                $this->trackFxMetadata($fxMeta, $result);
-            }
+            $lines = [...$lines, ...$accountLines];
+            $total += $accountTotal;
+            $balancesWithoutRate += $withoutRate;
+            $hasExcluded = $hasExcluded || $withoutRate > 0;
         }
 
         return new NetWorth(
@@ -116,6 +79,72 @@ final class NetWorthQuery
             hasStaleRates: $fxMeta['stale'],
             balancesWithoutRate: $balancesWithoutRate,
         );
+    }
+
+    // One account can hold several currencies, so it yields one line per
+    // currency held, each converted at its own rate.
+    /**
+     * @param  array{stale: bool, source: ?string, asOf: ?CarbonImmutable}  $fxMeta
+     * @return array{lines: list<AccountBalanceLine>, total: int, withoutRate: int}
+     */
+    private function accountLines(
+        stdClass $account,
+        User $user,
+        string $baseCurrency,
+        CarbonImmutable $today,
+        array &$fxMeta,
+    ): array {
+        $accountId = self::toInt($account->id);
+        $kind = is_string($account->kind) ? $account->kind : '';
+        $name = is_string($account->name) ? $account->name : '';
+        $defaultCurrency = self::toString($account->default_currency);
+        if ($defaultCurrency === '') {
+            $defaultCurrency = $baseCurrency;
+        }
+
+        $held = $this->heldLines(
+            $this->balances->currentBalanceAsOf($accountId, $user, $today),
+            $defaultCurrency,
+        );
+
+        $lines = [];
+        $total = 0;
+        $withoutRate = 0;
+
+        foreach ($held as $currency => $balanceMinor) {
+            $result = $this->fx->convertToBase(Money::ofMinor($balanceMinor, $currency), $baseCurrency);
+
+            // With no rate the conversion returns the native currency untouched.
+            // Such a line is still listed in the breakdown, but left out of the total.
+            $rateAvailable = $result->converted->currency() === $baseCurrency;
+
+            $lines[] = new AccountBalanceLine(
+                accountId: $accountId,
+                name: $name,
+                kind: $kind,
+                balanceMinor: $balanceMinor,
+                currency: $currency,
+                isLiability: $kind === AccountKind::IcsCard->value,
+                baseEquivalentMinor: $rateAvailable && ! $result->isPassthrough
+                    ? $result->converted->toMinor()
+                    : null,
+                fxRate: $result->rate,
+                fxSource: $result->source,
+                fxAsOf: $result->asOf,
+                fxIsStale: $result->isStale,
+            );
+
+            if (! $rateAvailable) {
+                $withoutRate++;
+
+                continue;
+            }
+
+            $total += $result->converted->toMinor();
+            $this->trackFxMetadata($fxMeta, $result);
+        }
+
+        return ['lines' => $lines, 'total' => $total, 'withoutRate' => $withoutRate];
     }
 
     // An account with nothing on it yet still belongs in the breakdown, at
