@@ -22,4 +22,18 @@ enum DriftPageType: string
     {
         return 'drift-alerts::alerts.type.'.$this->value;
     }
+
+    // Two nav items land here — "Drift Alerts" and "Unusual charges" — and the
+    // page carried one name for both, so tapping the second arrived at a screen
+    // headed with the first one's name. The toggle already labels them apart in
+    // every locale, so each type names its own screen.
+    public function headingKey(): string
+    {
+        return $this === self::Anomaly ? $this->labelKey() : 'drift-alerts::alerts.heading';
+    }
+
+    public function pageTitleKey(): string
+    {
+        return $this === self::Anomaly ? $this->labelKey() : 'drift-alerts::alerts.page_title';
+    }
 }
