@@ -583,7 +583,6 @@ supersedes. Without that the table is append-only: a round-6 desktop reached
 taking the database from 9 MB to 62 MB — a weight every encrypted backup, and
 every restore, then carries.
 
-
 ```json
 {
   "as_of": "YYYY-MM-DD",
