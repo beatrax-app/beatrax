@@ -78,25 +78,32 @@ it('keeps the amount and the status on the phone, which is what the reader is as
 // and the button beside it broke "Save name" over two lines at 55px in a 44px
 // row. Three rows share the shape -- the two preset wallets and the unknown
 // IBAN -- so all three are checked.
-it('stacks every name-this-account row on a phone, and never wraps its button', function (): void {
+it('stacks every name-this-account row on a phone, so its button has a row to itself', function (): void {
     $blade = (string) file_get_contents(base_path('Modules/Import/Resources/views/livewire/preview-wizard.blade.php'));
 
     $rows = substr_count($blade, 'import::preview.save_name');
     expect($rows)->toBe(3)
         ->and(substr_count($blade, 'flex flex-col gap-2 sm:flex-row sm:items-end'))->toBe($rows)
         ->and($blade)->not->toContain('<div class="flex items-end gap-2">');
+});
 
-    $unwrapped = [];
-    $offset = 0;
-    while (($at = strpos($blade, 'import::preview.save_name', $offset)) !== false) {
-        $button = strrpos(substr($blade, 0, $at), '<button');
-        expect($button)->not->toBeFalse();
+// The width is the whole fix. A `whitespace-nowrap` on these buttons LOOKS like
+// a second guard and is inert: the coarse-pointer block sets white-space:normal
+// on every button, unlayered, so it outranks the utility whatever the
+// specificity. Measured on the device -- the class was present, matched, and
+// computed `normal`. Asserting a no-op is worse than asserting nothing, because
+// the next reader takes it for protection.
+it('does not pretend a nowrap protects a label the phone deliberately lets wrap', function (): void {
+    $blade = (string) file_get_contents(base_path('Modules/Import/Resources/views/livewire/preview-wizard.blade.php'));
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-        if (! str_contains(substr($blade, (int) $button, $at - (int) $button), 'whitespace-nowrap')) {
-            $unwrapped[] = substr_count(substr($blade, 0, $at), "\n") + 1;
-        }
-        $offset = $at + 1;
-    }
+    expect($blade)->not->toContain('whitespace-nowrap');
 
-    expect($unwrapped)->toBe([], 'Save-name buttons that can break over two lines, at line: '.implode(', ', $unwrapped));
+    // The rule this defers to, found by its selector list rather than by a
+    // line number, and read to its closing brace.
+    $start = strpos($css, "    [role='tab'],\n    .status-pill,");
+    expect($start)->not->toBeFalse('The coarse-pointer rule that lets control labels wrap is gone.');
+
+    $block = substr($css, (int) $start, (int) strpos($css, '}', (int) $start) - (int) $start);
+    expect($block)->toContain('white-space: normal;');
 });

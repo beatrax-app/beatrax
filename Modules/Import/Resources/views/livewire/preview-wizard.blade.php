@@ -84,7 +84,11 @@
                 {{-- Stacked below sm, here and at the two rows below it: side by
                      side on a 375px screen the input measured 173px against a
                      placeholder needing 197, and the squeezed button broke
-                     "Save name" over two lines and outgrew its own row. --}}
+                     "Save name" over two lines and outgrew its own row. The
+                     width is the whole fix -- a nowrap here would be inert,
+                     because the coarse-pointer block deliberately lets every
+                     control label wrap so it cannot take the page sideways at
+                     the reader's largest text sizes. --}}
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
                     <div class="flex-1">
                         <x-core::form-field
@@ -99,7 +103,7 @@
                     <button
                         type="button"
                         wire:click="saveIcsAccountName"
-                        class="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                     >
                         {{ Lang::get('import::preview.save_name') }}
                     </button>
@@ -127,7 +131,7 @@
                     <button
                         type="button"
                         wire:click="savePaypalAccountName"
-                        class="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                     >
                         {{ Lang::get('import::preview.save_name') }}
                     </button>
@@ -158,7 +162,7 @@
                             <button
                                 type="button"
                                 wire:click="nameAccount(@js($unknown->iban), $wire.accountName)"
-                                class="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                             >
                                 {{ Lang::get('import::preview.save_name') }}
                             </button>
