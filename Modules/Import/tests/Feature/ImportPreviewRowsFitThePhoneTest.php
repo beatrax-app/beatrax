@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Tests\Helpers\CssRule;
+
 function previewTableMarkup(): string
 {
     $blade = file_get_contents(base_path('Modules/Import/Resources/views/livewire/preview-wizard.blade.php'));
@@ -87,23 +89,23 @@ it('stacks every name-this-account row on a phone, so its button has a row to it
         ->and($blade)->not->toContain('<div class="flex items-end gap-2">');
 });
 
-// The width is the whole fix. A `whitespace-nowrap` on these buttons LOOKS like
-// a second guard and is inert: the coarse-pointer block sets white-space:normal
-// on every button, unlayered, so it outranks the utility whatever the
-// specificity. Measured on the device -- the class was present, matched, and
-// computed `normal`. Asserting a no-op is worse than asserting nothing, because
-// the next reader takes it for protection.
-it('does not pretend a nowrap protects a label the phone deliberately lets wrap', function (): void {
-    $blade = (string) file_get_contents(base_path('Modules/Import/Resources/views/livewire/preview-wizard.blade.php'));
+// The width is the whole fix ON A PHONE. A `whitespace-nowrap` on these
+// buttons looks like a second guard and cannot act as one there: the
+// coarse-pointer block sets white-space:normal on every button, unlayered, so
+// it outranks the utility whatever the specificity. Measured on the device --
+// the class was present, matched its selector, carried no inline style, and
+// computed `normal`. It is not dead everywhere: that block is scoped to
+// pointer:coarse, so the same class still holds a desktop label on one line,
+// which is why two other buttons in this repo keep theirs.
+it('leans on the stacking rather than on a nowrap the phone overrides', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-    expect($blade)->not->toContain('whitespace-nowrap');
-
-    // The rule this defers to, found by its selector list rather than by a
-    // line number, and read to its closing brace.
+    // The rule this defers to, found by its selector list rather than a line
+    // number, and read to its closing brace.
     $start = strpos($css, "    [role='tab'],\n    .status-pill,");
     expect($start)->not->toBeFalse('The coarse-pointer rule that lets control labels wrap is gone.');
 
     $block = substr($css, (int) $start, (int) strpos($css, '}', (int) $start) - (int) $start);
-    expect($block)->toContain('white-space: normal;');
+    expect($block)->toContain('white-space: normal;')
+        ->and(CssRule::atRuleEnclosing($css, "    [role='tab'],\n    .status-pill,"))->toContain('pointer: coarse');
 });
