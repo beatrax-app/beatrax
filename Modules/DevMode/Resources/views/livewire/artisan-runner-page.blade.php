@@ -3,7 +3,7 @@
 {{-- UI-SPEC §19: overflow-x-auto wrapper ensures the artisan runner
      timeline and run cards scroll horizontally at phone width. --}}
 <div class="p-8 space-y-6 overflow-x-auto" data-testid="artisan-runner-page">
-    <header class="flex items-center justify-between gap-4">
+    <header class="flex flex-wrap items-center justify-between gap-4">
         <div class="space-y-1">
             <h1 class="text-xl font-semibold text-[var(--color-text)]">{{ Lang::get('dev::runner.heading') }}</h1>
             <p class="text-sm text-[var(--color-text-muted)]">{{ Lang::get('dev::runner.subtitle') }}</p>

@@ -51,7 +51,7 @@
             aria-live="polite"
         >
             @foreach ($activeBackfills as $inbox)
-                <div class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300">
+                <div class="flex flex-wrap items-center justify-between text-xs text-slate-700 dark:text-slate-300">
                     <span>
                         {{ Lang::get('email-scan::inboxes.backfilling') }} {{ $inbox->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365' }} ({{ $inbox->email }}):
                         <span style="font-variant-numeric: tabular-nums;">{{ Fmt::number((int) $inbox->backfillFetchedCount) }} / ~{{ Fmt::number((int) ($inbox->backfillTotalEstimated ?? 0)) }}</span>

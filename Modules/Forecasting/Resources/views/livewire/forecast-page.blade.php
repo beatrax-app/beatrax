@@ -31,7 +31,7 @@
 @endphp
 
 <div class="mx-auto max-w-7xl px-4 py-12">
-    <header class="mb-8 flex items-start justify-between gap-4">
+    <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.heading') }}</h1>
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
@@ -40,7 +40,7 @@
         </div>
         <a
             href="{{ Destination::Settings->url() }}#forecast-buffers"
-            class="tap-link text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
+            class="tap-link whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
         >{{ Lang::get('forecasting::forecast.adjust_buffers') }} &rarr;</a>
     </header>
 

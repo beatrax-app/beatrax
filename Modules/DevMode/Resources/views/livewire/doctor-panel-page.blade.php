@@ -2,7 +2,7 @@
 {{-- UI-SPEC §19: overflow-x-auto wrapper ensures the doctor panel
      probe rows scroll horizontally at phone width. --}}
 <div class="p-6 space-y-6 overflow-x-auto" data-testid="doctor-panel-page">
-    <header class="flex items-center justify-between gap-4">
+    <header class="flex flex-wrap items-center justify-between gap-4">
         <div class="space-y-1">
             <h1 class="text-xl font-semibold text-[var(--color-text)]">{{ Lang::get('dev::doctor.heading') }}</h1>
             <p class="text-sm text-[var(--color-text-muted)]">
@@ -53,7 +53,7 @@
         </div>
     @else
         <div class="card p-4" data-testid="doctor-results-card">
-            <div class="flex items-center justify-between mb-3">
+            <div class="flex flex-wrap items-center justify-between mb-3">
                 <h2 class="text-sm font-semibold">{{ Lang::get('dev::doctor.latest_output') }}</h2>
                 @if ($finishedAt !== null)
                     <span class="text-xs text-[var(--color-text-muted)]">{{ $finishedAt }}</span>

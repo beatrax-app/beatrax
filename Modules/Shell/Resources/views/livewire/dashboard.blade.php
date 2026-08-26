@@ -291,7 +291,7 @@
 
         {{-- Recent transactions --}}
         <section class="space-y-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between">
                 <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.recent_transactions') }}</h2>
                 <a
                     href="{{ Destination::Transactions->url() }}"

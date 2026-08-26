@@ -114,7 +114,7 @@
                 >
                     @if (! $editingSplit)
                         {{-- §7.2 Not-yet-split empty state. --}}
-                        <div class="flex items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
                             <div class="space-y-1">
                                 <h2 id="split-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
                                     {{ Lang::get('ledger::detail.split.category') }}
