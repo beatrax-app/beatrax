@@ -2473,6 +2473,14 @@ td.date,
         font-variant-numeric: tabular-nums;
     }
 
+    /* One amount and the label that names it. The wrap above needs items to
+       break between, not a flat run of four spans it can split anywhere. */
+    .cp-stat {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-1);
+    }
+
     /* A card is ~290px on a phone and holds two amounts plus their labels,
        so without these the row broke inside a number: "€ 3.750," on one
        line and "00" on the next. The amounts stay whole and the pairs wrap
@@ -5956,6 +5964,7 @@ mark {
      */
     .card-list-item,
     .cp-stats,
+    .cp-stat,
     .cp-head,
     .tax-section-header {
         flex-wrap: wrap;
