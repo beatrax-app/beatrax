@@ -434,41 +434,36 @@ final class PreviewWizard extends Component
 
     // Anchored on source_format rather than the unknown-IBAN list, so drift in
     // the synthetic IBAN literal still raises the prompt.
+    // The card and the wallet ask the same question of the same three things,
+    // and differ only in which format raises it and which own-IBAN literal
+    // answers it.
     private function needsIcsAccountName(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
     {
-        $user = $currentUser->user();
-
-        /** @var ImportRun|null $importRun */
-        $importRun = ImportRun::query()
-            ->where('id', $this->importRunId)
-            ->where('user_id', $user->id)
-            ->first();
-
-        if ($importRun === null) {
-            return false;
-        }
-
-        if ($importRun->source_format !== SourceFormat::IcsPdf->value) {
-            return false;
-        }
-
-        if ($this->previewReadNothing($cache)) {
-            return false;
-        }
-
-        // Whether THIS literal is claimed, not whether any card account exists:
-        // a card account on some other IBAN suppressed the prompt, and the
-        // generic namer then had to validate ICS-CARD as a real IBAN, which it
-        // can never be. Drift in the literal still raises the prompt.
-        return ! $db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('iban', self::ICS_OWN_IBAN)
-            ->exists();
+        return $this->needsOwnAccountNamed(SourceFormat::IcsPdf, self::ICS_OWN_IBAN, $currentUser, $cache, $db);
     }
 
     private function needsPaypalAccountName(CurrentUser $currentUser, PreviewCache $cache, DatabaseManager $db): bool
     {
+        return $this->needsOwnAccountNamed(
+            SourceFormat::PaypalCsv,
+            EnsurePaypalAccountAction::PAYPAL_OWN_IBAN,
+            $currentUser,
+            $cache,
+            $db,
+        );
+    }
+
+    // Whether THIS literal is claimed, not whether any account of the kind
+    // exists: an account on some other IBAN suppressed the prompt, and the
+    // generic namer then had to validate ICS-CARD or PAYPAL as a real IBAN,
+    // which neither can ever be. Drift in the literal still raises the prompt.
+    private function needsOwnAccountNamed(
+        SourceFormat $format,
+        string $ownIban,
+        CurrentUser $currentUser,
+        PreviewCache $cache,
+        DatabaseManager $db,
+    ): bool {
         $user = $currentUser->user();
 
         /** @var ImportRun|null $importRun */
@@ -477,26 +472,14 @@ final class PreviewWizard extends Component
             ->where('user_id', $user->id)
             ->first();
 
-        if ($importRun === null) {
-            return false;
-        }
+        $raisesThePrompt = $importRun !== null
+            && $importRun->source_format === $format->value
+            && ! $this->previewReadNothing($cache);
 
-        if ($importRun->source_format !== SourceFormat::PaypalCsv->value) {
-            return false;
-        }
-
-        if ($this->previewReadNothing($cache)) {
-            return false;
-        }
-
-        // Whether THIS literal is claimed, not whether any wallet exists: a
-        // PayPal account on some other identifier suppressed the prompt, and
-        // the generic namer then had to validate PAYPAL as a real IBAN, which
-        // it can never be. The card path above already reads it this way.
-        return ! $db->connection()
+        return $raisesThePrompt && ! $db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
-            ->where('iban', EnsurePaypalAccountAction::PAYPAL_OWN_IBAN)
+            ->where('iban', $ownIban)
             ->exists();
     }
 

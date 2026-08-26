@@ -507,11 +507,9 @@ final class PotsPage extends Component
         }
 
         $minor = $writer->parseAmount($typed);
-        if ($minor === null) {
-            return true;
-        }
 
-        return $this->errorAmountLimitMinor !== null && $minor > $this->errorAmountLimitMinor;
+        return $minor === null
+            || ($this->errorAmountLimitMinor !== null && $minor > $this->errorAmountLimitMinor);
     }
 
     private function resetForm(): void

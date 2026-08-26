@@ -79,18 +79,41 @@ final class ArtisanRunnerPage extends Component
         CurrentUser $user,
         DevCommandRegistry $registry,
     ): void {
+        if ($this->refused($command, $args, $registry)) {
+            return;
+        }
+
+        try {
+            $runId = $spawner->start($command, $args, $user->id(), CommandTier::Safe);
+        } catch (ProcessSpawningUnavailableException $e) {
+            $this->toast($e->readerMessage());
+
+            return;
+        }
+
+        $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
+    }
+
+    /**
+     * Every reason this command does not reach the spawner, and the answer the
+     * operator gets for it. True means answered — the caller stops.
+     *
+     * @param  array<string, mixed>  $args
+     */
+    private function refused(string $command, array $args, DevCommandRegistry $registry): bool
+    {
         try {
             $spec = $registry->find($command);
         } catch (\InvalidArgumentException) {
             $this->toast(Lang::get('dev::runner.toast.unknown_command', ['command' => $command]));
 
-            return;
+            return true;
         }
 
         if (! $spec->tier->reachesThePalette()) {
             $this->dispatch('triple-gate:open', command: $command, args: $args);
 
-            return;
+            return true;
         }
 
         // A palette pick dispatches `args: []`, so a SAFE command with a
@@ -105,19 +128,9 @@ final class ArtisanRunnerPage extends Component
                     'list' => implode(', ', $missing),
                 ]),
             );
-
-            return;
         }
 
-        try {
-            $runId = $spawner->start($command, $args, $user->id(), CommandTier::Safe);
-        } catch (ProcessSpawningUnavailableException $e) {
-            $this->toast($e->readerMessage());
-
-            return;
-        }
-
-        $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
+        return $missing !== [];
     }
 
     /**

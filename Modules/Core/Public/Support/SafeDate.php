@@ -42,7 +42,7 @@ final class SafeDate
         try {
             $parsed = CarbonImmutable::createFromFormat($format, $raw);
         } catch (Throwable) {
-            return null;
+            $parsed = false;
         }
 
         if (! $parsed instanceof CarbonImmutable) {
@@ -50,11 +50,8 @@ final class SafeDate
         }
 
         $errors = CarbonImmutable::getLastErrors();
+        $rejected = ($errors['warning_count'] ?? 0) > 0 || ($errors['error_count'] ?? 0) > 0;
 
-        if (($errors['warning_count'] ?? 0) > 0 || ($errors['error_count'] ?? 0) > 0) {
-            return null;
-        }
-
-        return $parsed;
+        return $rejected ? null : $parsed;
     }
 }

@@ -61,10 +61,6 @@ final readonly class DestructiveSpawnController
             ->validate();
 
         $commandRaw = $validated['command'] ?? null;
-        if (! is_string($commandRaw)) {
-            return new JsonResponse(['error' => 'invalid_command'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-        $command = $commandRaw;
 
         // SAFE-tier names are refused rather than run, so neither controller
         // doubles as a second route to the other tier.
@@ -72,12 +68,26 @@ final readonly class DestructiveSpawnController
             static fn (CommandSpec $spec): string => $spec->name,
             $this->registry->destructive(),
         );
-        if (! in_array($command, $destructiveNames, true)) {
-            return new JsonResponse(
-                ['error' => 'not_destructive', 'command' => $command],
+
+        $rejection = match (true) {
+            ! is_string($commandRaw) => new JsonResponse(
+                ['error' => 'invalid_command'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            ),
+            ! in_array($commandRaw, $destructiveNames, true) => new JsonResponse(
+                ['error' => 'not_destructive', 'command' => $commandRaw],
                 422,
-            );
+            ),
+            default => null,
+        };
+
+        if ($rejection !== null) {
+            return $rejection;
         }
+
+        // Surviving the match is proof of a string: the first arm refuses every
+        // other shape.
+        $command = $commandRaw;
 
         $spec = $this->registry->find($command);
 

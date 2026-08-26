@@ -73,19 +73,11 @@ final class StripAsnDescriptionDelimiters
     {
         $current = $this->summary->for($userId);
 
-        if ($this->isSettled($userId, $current)) {
-            return 0;
-        }
-
-        if ($current->isEmpty()) {
-            $this->markComplete($userId, $current);
-
-            return 0;
-        }
-
-        if ($this->encryption->isEnabled($userId) && ! $this->codec->canSeal($userId, $session)) {
-            $this->reportSkipped($userId);
-
+        // Three ways to sweep nothing, and each leaves a different trace: an
+        // already-settled marker is left alone, an empty set is marked answered
+        // so the next unlock does not look again, and a sealed-out set is
+        // reported rather than recorded, because it has NOT been answered.
+        if ($this->noWorkToDo($userId, $current, $session)) {
             return 0;
         }
 
@@ -98,6 +90,26 @@ final class StripAsnDescriptionDelimiters
         $this->markComplete($userId, $current);
 
         return $rewritten;
+    }
+
+    private function noWorkToDo(int $userId, SweptRowSummary $current, Session $session): bool
+    {
+        if ($this->isSettled($userId, $current)) {
+            return true;
+        }
+
+        if ($current->isEmpty()) {
+            $this->markComplete($userId, $current);
+
+            return true;
+        }
+
+        $sealedOut = $this->encryption->isEnabled($userId) && ! $this->codec->canSeal($userId, $session);
+        if ($sealedOut) {
+            $this->reportSkipped($userId);
+        }
+
+        return $sealedOut;
     }
 
     private function isSettled(int $userId, SweptRowSummary $current): bool

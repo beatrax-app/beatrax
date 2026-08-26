@@ -49,15 +49,15 @@ final readonly class ArtisanSpawnController
             ->validate();
 
         $commandRaw = $validated['command'] ?? null;
-        if (! is_string($commandRaw)) {
-            return new JsonResponse(['error' => 'invalid_command'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-        $command = $commandRaw;
 
-        $rejection = $this->commandRejection($command, $safeNames, $destructiveNames);
+        $rejection = $this->commandRejection($commandRaw, $safeNames, $destructiveNames);
         if ($rejection !== null) {
             return $rejection;
         }
+
+        // Unreachable as anything but a string: the guard above refuses every
+        // other shape before this line.
+        $command = is_string($commandRaw) ? $commandRaw : '';
 
         $spec = $this->registry->find($command);
 
@@ -99,9 +99,13 @@ final readonly class ArtisanSpawnController
      * @param  list<string>  $safeNames
      * @param  list<string>  $destructiveNames
      */
-    private function commandRejection(string $command, array $safeNames, array $destructiveNames): ?JsonResponse
+    private function commandRejection(mixed $command, array $safeNames, array $destructiveNames): ?JsonResponse
     {
         return match (true) {
+            ! is_string($command) => new JsonResponse(
+                ['error' => 'invalid_command'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            ),
             in_array($command, $destructiveNames, true) => new JsonResponse(
                 ['error' => 'destructive_requires_triple_gate'],
                 403,
