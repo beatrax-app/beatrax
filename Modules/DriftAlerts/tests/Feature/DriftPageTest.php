@@ -282,3 +282,37 @@ it('draws a snooze button for every window, wired the way the hand-written three
         ->toBe(count(SnoozeWindow::cases()));
     expect($content)->not->toContain('snooze_1w');
 });
+
+// Two nav items land on this one page — "Drift Alerts" and "Unusual charges" —
+// and it carried a single name for both, so a reader who tapped the second
+// arrived at a screen headed with the first one's name. Measured on an iPhone:
+// /drift and /drift?type=anomaly were both titled "Afwijkingswaarschuwingen"
+// and both headed "Driftmeldingen", with only the intro paragraph telling them
+// apart.
+it('names whichever of its two screens the reader actually opened', function (): void {
+    $drift = $this->actingAs($this->user)->get('/drift');
+    $anomaly = $this->actingAs($this->user)->get('/drift?type=anomaly');
+
+    $nameOf = static function (string $html): string {
+        expect(preg_match('/<h1[^>]*>(.*?)<\/h1>/s', $html, $m))->toBe(1);
+
+        return trim(strip_tags($m[1]));
+    };
+    $titleOf = static function (string $html): string {
+        expect(preg_match('/<title[^>]*>(.*?)<\/title>/s', $html, $m))->toBe(1);
+
+        return trim(html_entity_decode($m[1]));
+    };
+
+    $driftHtml = $drift->getContent();
+    $anomalyHtml = $anomaly->getContent();
+    expect($driftHtml)->toBeString()->and($anomalyHtml)->toBeString();
+
+    expect($nameOf($anomalyHtml))->toBe('Unusual charges')
+        ->and($nameOf($driftHtml))->toBe('Alerts')
+        ->and($nameOf($driftHtml))->not->toBe($nameOf($anomalyHtml))
+        ->and($titleOf($driftHtml))->not->toBe($titleOf($anomalyHtml));
+
+    // The name the reader tapped to get here, so the two agree.
+    expect($nameOf($anomalyHtml))->toBe(trans('core::sidebar.nav.unusual_charges'));
+});

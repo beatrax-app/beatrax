@@ -98,6 +98,24 @@ final class DriftPage extends Component
         return is_numeric($alertId) ? (int) $alertId : 0;
     }
 
+    // Two nav items land here — "Drift Alerts" and "Unusual charges" — and the
+    // page carried one name for both, so tapping the second arrived at a screen
+    // headed with the first one's name. The type toggle already labels them
+    // apart in every locale, so the page borrows the label the reader tapped.
+    private function pageName(): string
+    {
+        return $this->activeType() === DriftPageType::Anomaly
+            ? Lang::get('drift-alerts::alerts.type.anomaly')
+            : Lang::get('drift-alerts::alerts.heading');
+    }
+
+    private function pageTitle(): string
+    {
+        return $this->activeType() === DriftPageType::Anomaly
+            ? Lang::get('drift-alerts::alerts.type.anomaly')
+            : Lang::get('drift-alerts::alerts.page_title');
+    }
+
     private function resetCursors(): void
     {
         $this->cursorId = null;
@@ -218,6 +236,7 @@ final class DriftPage extends Component
 
             $view = $views->make('drift-alerts::livewire.drift-page', [
                 'pageType' => DriftPageType::Anomaly,
+                'pageName' => $this->pageName(),
                 'lifecycleTab' => $this->activeTab(),
                 'anomalyRows' => $anomalyRows,
                 'snoozeTargets' => $snoozeTargets,
@@ -229,7 +248,7 @@ final class DriftPage extends Component
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => Lang::get('drift-alerts::alerts.page_title').' · Beatrax']);
+            $view->extends('layouts.app', ['title' => $this->pageTitle().' · Beatrax']);
 
             return $view;
         }
@@ -269,6 +288,7 @@ final class DriftPage extends Component
 
         $view = $views->make('drift-alerts::livewire.drift-page', [
             'pageType' => DriftPageType::Drift,
+            'pageName' => $this->pageName(),
             'rows' => $rows,
             'lifecycleTab' => $this->activeTab(),
             'grouped' => $grouped,
@@ -280,7 +300,7 @@ final class DriftPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('drift-alerts::alerts.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => $this->pageTitle().' · Beatrax']);
 
         return $view;
     }

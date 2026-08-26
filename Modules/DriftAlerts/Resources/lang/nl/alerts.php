@@ -13,7 +13,7 @@ return [
     'type_aria' => 'Type melding',
     'type' => [
         'drift' => 'Abonnementsdrift',
-        'anomaly' => 'Ongewone afschrijvingen',
+        'anomaly' => 'Ongebruikelijke afschrijvingen',
     ],
 
     'lifecycle_aria' => 'Levensloop van melding',

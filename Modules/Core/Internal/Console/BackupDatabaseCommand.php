@@ -33,6 +33,10 @@ final class BackupDatabaseCommand extends Command
     // table is worse than saying what happened here.
     private const BACKUP_CORRUPT_MESSAGE = 'Backup failed — the database did not pass its integrity check.';
 
+    // The suffix a rejected copy is kept under, so the operator has something
+    // to inspect rather than a deletion.
+    private const SUSPECT_SUFFIX = '.suspect';
+
     /** @var string */
     protected $signature = 'db:backup {--force : Keep the copy even when it is identical to the last backup}';
 
@@ -131,7 +135,7 @@ final class BackupDatabaseCommand extends Command
         } catch (PDOException $e) {
             // VACUUM INTO refused the source; keep any partial output as
             // .suspect so the operator can inspect it.
-            $suspect = $reportAs.'.suspect';
+            $suspect = $reportAs.self::SUSPECT_SUFFIX;
             if ($this->files->exists($destination)) {
                 $this->files->move($destination, $suspect);
             }
@@ -171,7 +175,7 @@ final class BackupDatabaseCommand extends Command
         $integrityRows = $this->readIntegrityCheck($destination);
 
         if ($integrityRows !== ['ok']) {
-            $suspect = $reportAs.'.suspect';
+            $suspect = $reportAs.self::SUSPECT_SUFFIX;
             $this->files->move($destination, $suspect);
             $this->failCorrupt($reportAs, $suspect, [
                 'integrity_check' => $integrityRows,
@@ -263,7 +267,7 @@ final class BackupDatabaseCommand extends Command
     private function promoteOrFail(string $partial, string $destination): void
     {
         if ($this->files->exists($destination) || @rename($partial, $destination) === false) {
-            $suspect = $destination.'.suspect';
+            $suspect = $destination.self::SUSPECT_SUFFIX;
             $this->files->move($partial, $suspect);
             $this->failCorrupt($destination, $suspect, [
                 'phase' => 'promote',
