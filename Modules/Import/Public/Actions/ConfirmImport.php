@@ -28,6 +28,9 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 /**
  * @link ../../../../.docs/architecture/ingestion-pipeline.md#confirm-bounded-recorder-and-post-commit-dispatch
  */
+/**
+ * @link ../../../../.docs/architecture/import-confirm-cost.md
+ */
 final class ConfirmImport implements ConfirmsImports
 {
     public function __construct(
