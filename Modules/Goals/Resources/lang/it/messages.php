@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Inserisci un nome per il tuo obiettivo.',
         'date' => 'Scegli una data obiettivo.',
+        'date_invalid' => 'Scegli una data reale.',
+        'generic' => 'Impossibile salvare l\'obiettivo. Controlla i campi e riprova.',
         'amount' => 'Inserisci un importo valido maggiore di zero.',
         'pot_linked_category' => 'Questo salvadanaio è collegato a una categoria. Rimuovi prima quel collegamento nella pagina Salvadanai.',
     ],

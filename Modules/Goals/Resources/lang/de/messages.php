@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Gib deinem Ziel einen Namen.',
         'date' => 'Wähle ein Zieldatum.',
+        'date_invalid' => 'Wählen Sie ein gültiges Datum.',
+        'generic' => 'Das Ziel konnte nicht gespeichert werden. Prüfen Sie die Felder und versuchen Sie es erneut.',
         'amount' => 'Gib einen gültigen Betrag größer als null ein.',
         'pot_linked_category' => 'Diese Rücklage ist mit einer Kategorie verknüpft. Entferne diese Verknüpfung zuerst auf der Seite Rücklagen.',
     ],

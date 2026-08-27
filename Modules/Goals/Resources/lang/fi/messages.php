@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Anna tavoitteelle nimi.',
         'date' => 'Valitse tavoitepäivä.',
+        'date_invalid' => 'Valitse todellinen päivämäärä.',
+        'generic' => 'Tavoitetta ei voitu tallentaa. Tarkista kentät ja yritä uudelleen.',
         'amount' => 'Anna kelvollinen nollaa suurempi summa.',
         'pot_linked_category' => 'Tämä potti on liitetty kategoriaan. Poista liitos ensin Säästöpotit-sivulla.',
     ],

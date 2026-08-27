@@ -203,5 +203,8 @@ it('renders the empty-state copy when no transactions match the window', functio
     $response = $this->get('/transactions');
 
     $response->assertOk();
-    $response->assertSee('Nothing here for this period.');
+    // The row exists, it is just older than the window. Saying "nothing here"
+    // and leaving the way out in a header button read as an empty ledger.
+    $response->assertSee('Nothing in the last 90 days. Your older transactions are still here.');
+    $response->assertSee('Show full history');
 });

@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Escribe un nombre para tu objetivo.',
         'date' => 'Elige una fecha objetivo.',
+        'date_invalid' => 'Elige una fecha real.',
+        'generic' => 'No se pudo guardar el objetivo. Revisa los campos e inténtalo de nuevo.',
         'amount' => 'Introduce un importe válido mayor que cero.',
         'pot_linked_category' => 'Esta hucha está vinculada a una categoría. Quita primero ese vínculo en la página Huchas.',
     ],

@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Ievadiet mērķa nosaukumu.',
         'date' => 'Izvēlieties mērķa datumu.',
+        'date_invalid' => 'Izvēlieties reālu datumu.',
+        'generic' => 'Mērķi neizdevās saglabāt. Pārbaudiet laukus un mēģiniet vēlreiz.',
         'amount' => 'Ievadiet derīgu summu, kas lielāka par nulli.',
         'pot_linked_category' => 'Šī krājkase ir saistīta ar kategoriju. Vispirms noņemiet šo saiti Krājkasu lapā.',
     ],

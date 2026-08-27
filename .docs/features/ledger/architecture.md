@@ -1019,11 +1019,16 @@ using the injected Clock (deterministic under `setTestNow()`);
 "Show full history".
 
 **Currency projection.** Both entry points accept an optional
-`$currency` filter. When supplied, the query restricts to rows whose
-`settled_currency` matches and projects the settled pair as the
-rendered amount (`display_minor`/`display_currency`), keeping a EUR
-view coherent even when the native pair is a foreign currency (e.g. a
-USD Google Play charge settled to EUR). When `$currency` is null, the
+`$currency` argument. It is a PROJECTION, not a filter: no row is
+dropped for being settled in another currency — `TheGlanceCountsALedgerNotDenominatedInTheReaderCurrencyTest` pins that, and the sibling
+top-categories query converts such a row rather than hiding it. What the
+argument changes is which pair is rendered: it projects the settled pair
+as `display_minor`/`display_currency`, keeping a EUR view coherent when
+the native pair is foreign (e.g. a USD Google Play charge settled to
+EUR). A row settled in a third currency is therefore still listed, in
+its own currency — `ThisPeriodAtAGlanceQuery` names those in
+`unconvertedCurrencies` and the list does not yet say the same thing.
+When `$currency` is null, the
 native pair projects instead, and a `secondary_minor`/
 `secondary_currency` pair is additionally selected so the row DTO can
 carry the settled-EUR Money alongside the native Money — the Blade

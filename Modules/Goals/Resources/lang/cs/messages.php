@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Zadej název svého cíle.',
         'date' => 'Zvol cílové datum.',
+        'date_invalid' => 'Zvolte skutečné datum.',
+        'generic' => 'Cíl se nepodařilo uložit. Zkontrolujte pole a zkuste to znovu.',
         'amount' => 'Zadej platnou částku větší než nula.',
         'pot_linked_category' => 'Tato spořicí obálka je propojená s kategorií. Nejdřív toto propojení odstraň na stránce Spořicí obálky.',
     ],

@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Znesek presega nerazporejeno stanje.',
         'amount_exceeds_unallocated_available' => 'Znesek presega nerazporejeno stanje (na voljo: :amount).',
         'amount_exceeds_pot_balance' => 'Znesek presega stanje v hranilniku :name (na voljo: :amount).',
+        'generic' => 'Sklada ni bilo mogoče shraniti. Preverite polja in poskusite znova.',
+        'amount_invalid' => 'Vnesite znesek, večji od nič.',
+        'goal_already_linked' => 'Ta cilj že ima aktiven povezan sklad. Najprej ga arhivirajte.',
     ],
 
     'toast' => [

@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Suma presahuje nepriradený zostatok.',
         'amount_exceeds_unallocated_available' => 'Suma presahuje nepriradený zostatok (k dispozícii :amount).',
         'amount_exceeds_pot_balance' => 'Suma presahuje zostatok v obálke „:name“ (k dispozícii :amount).',
+        'generic' => 'Obálku sa nepodarilo uložiť. Skontrolujte polia a skúste to znova.',
+        'amount_invalid' => 'Zadajte sumu väčšiu ako nula.',
+        'goal_already_linked' => 'Tento cieľ už má aktívnu prepojenú obálku. Najprv ju archivujte.',
     ],
 
     'toast' => [

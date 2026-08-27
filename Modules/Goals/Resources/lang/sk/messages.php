@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Zadaj názov cieľa.',
         'date' => 'Vyber cieľový dátum.',
+        'date_invalid' => 'Vyberte skutočný dátum.',
+        'generic' => 'Cieľ sa nepodarilo uložiť. Skontrolujte polia a skúste to znova.',
         'amount' => 'Zadaj platnú sumu väčšiu ako nula.',
         'pot_linked_category' => 'Táto sporiaca obálka je prepojená s kategóriou. Najprv toto prepojenie odstráň na stránke Sporiace obálky.',
     ],

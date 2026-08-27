@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Beloppet överstiger det ofördelade saldot.',
         'amount_exceeds_unallocated_available' => 'Beloppet överstiger det ofördelade saldot (:amount tillgängligt).',
         'amount_exceeds_pot_balance' => 'Beloppet överstiger saldot i :name (:amount tillgängligt).',
+        'generic' => 'Potten kunde inte sparas. Kontrollera fälten och försök igen.',
+        'amount_invalid' => 'Ange ett belopp större än noll.',
+        'goal_already_linked' => 'Det här målet har redan en aktiv kopplad pott. Arkivera den först.',
     ],
 
     'toast' => [

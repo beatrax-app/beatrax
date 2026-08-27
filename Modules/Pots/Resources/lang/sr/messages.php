@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Iznos premašuje neraspoređeno stanje.',
         'amount_exceeds_unallocated_available' => 'Iznos premašuje neraspoređeno stanje (dostupno :amount).',
         'amount_exceeds_pot_balance' => 'Iznos premašuje stanje u :name (dostupno :amount).',
+        'generic' => 'Fond nije sačuvan. Proverite polja i pokušajte ponovo.',
+        'amount_invalid' => 'Unesite iznos veći od nule.',
+        'goal_already_linked' => 'Ovaj cilj već ima aktivan povezani fond. Prvo ga arhivirajte.',
     ],
 
     'toast' => [

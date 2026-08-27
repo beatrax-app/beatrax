@@ -43,9 +43,13 @@ as "untagged".
 ### Supersession
 
 Once a transaction has *any* leg-scoped tag, its whole-transaction tag
-row stops being surfaced by `TaxYearQuery::forUser()` — the query keeps
-every row with a non-null `transaction_split_id` and, for the null ones,
-only those whose transaction has no leg-tagged sibling.
+row stops being surfaced by every query that reads tagged rows — the
+filter keeps every row with a non-null `transaction_split_id` and, for
+the null ones, only those whose transaction has no leg-tagged sibling.
+Inside this module it is written once, in
+`Internal\Support\TaggedRowScope`; [tax year
+resolution](tax-year-resolution.md#three-rules-written-down-once) lists
+the surfaces that apply it and what each one reported while it did not.
 
 The row is **not deleted**. It is a pure read-time exclusion, so
 un-splitting a transaction brings the original tag back rather than

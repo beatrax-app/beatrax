@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Sisesta oma eesmärgi nimi.',
         'date' => 'Vali sihtkuupäev.',
+        'date_invalid' => 'Valige tegelik kuupäev.',
+        'generic' => 'Eesmärki ei õnnestunud salvestada. Kontrollige välju ja proovige uuesti.',
         'amount' => 'Sisesta kehtiv nullist suurem summa.',
         'pot_linked_category' => 'See pott on seotud kategooriaga. Eemalda see seos kõigepealt kogumispottide lehel.',
     ],

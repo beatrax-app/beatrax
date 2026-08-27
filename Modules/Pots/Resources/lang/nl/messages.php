@@ -121,6 +121,9 @@ return [
         'amount_exceeds_unallocated' => 'Bedrag overschrijdt het niet-toegewezen saldo.',
         'amount_exceeds_unallocated_available' => 'Bedrag overschrijdt het niet-toegewezen saldo (:amount beschikbaar).',
         'amount_exceeds_pot_balance' => 'Bedrag overschrijdt het saldo in :name (:amount beschikbaar).',
+        'generic' => 'Dit potje kon niet worden opgeslagen. Controleer de velden en probeer het opnieuw.',
+        'amount_invalid' => 'Voer een bedrag groter dan nul in.',
+        'goal_already_linked' => 'Dit doel heeft al een actief gekoppeld potje. Archiveer dat eerst.',
     ],
 
     'toast' => [

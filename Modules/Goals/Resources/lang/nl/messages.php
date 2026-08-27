@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Voer een naam voor je doel in.',
         'date' => 'Kies een streefdatum.',
+        'date_invalid' => 'Kies een bestaande datum.',
+        'generic' => 'Dit doel kon niet worden opgeslagen. Controleer de velden en probeer het opnieuw.',
         'amount' => 'Voer een geldig bedrag groter dan nul in.',
         'pot_linked_category' => 'Deze pot is aan een categorie gekoppeld. Verwijder die koppeling eerst op de Potten-pagina.',
     ],

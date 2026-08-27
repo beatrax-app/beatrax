@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => "L'importo supera il saldo non assegnato.",
         'amount_exceeds_unallocated_available' => "L'importo supera il saldo non assegnato (:amount disponibile).",
         'amount_exceeds_pot_balance' => "L'importo supera il saldo di :name (:amount disponibile).",
+        'generic' => 'Impossibile salvare il salvadanaio. Controlla i campi e riprova.',
+        'amount_invalid' => 'Inserisci un importo maggiore di zero.',
+        'goal_already_linked' => 'Questo obiettivo ha già un salvadanaio collegato attivo. Archivialo prima.',
     ],
 
     'toast' => [

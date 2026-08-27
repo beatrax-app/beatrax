@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Nichts in diesem Zeitraum.',
 
+
+    'empty_recent_has_older' => 'Nichts in den letzten 90 Tagen. Ihre älteren Buchungen sind weiterhin da.',
+
+    'empty_history' => 'Noch keine Buchungen.',
     'loading_more' => 'Weitere Transaktionen werden geladen',
     'load_more' => 'Mehr laden',
 

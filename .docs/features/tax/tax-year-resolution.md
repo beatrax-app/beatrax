@@ -11,7 +11,7 @@ necessarily the current one, and a leg-scoped tag reports the leg's
 amount rather than its parent's. This page is the three of those and the
 one deliberate non-error they share.
 
-## The effective year is one SQL expression, repeated verbatim
+## Three rules, written down once
 
 Every read resolves the year the same way:
 
@@ -25,13 +25,29 @@ transaction, so reassigning a payment to another tax year never rewrites
 the ledger — the transaction keeps the date it actually has, and only the
 tax view moves.
 
-The expression appears in `TaxYearQuery::forUser()` (the cockpit, the CSV
-and the PDF all read through it), `TaxYearQuery::availableYears()` (the
+Three surfaces read tagged rows: `TaxYearQuery::forUser()` (the cockpit,
+and the CSV and PDF through it), `TaxYearQuery::availableYears()` (the
 year switcher) and `TaxTagQuery::summaryForUser()` (the dashboard card).
-Keeping it identical in all three is what stops the year switcher from
-offering a year the cockpit then renders empty, or the dashboard card
-from disagreeing with the page it links to. A new query that resolves the
-year any other way will drift from the rest on its first override.
+Each of them must apply that year expression, [the leg-aware
+amount](#amounts-follow-the-tags-scope-not-the-transactions-total) and
+[the supersession filter](tag-write-contract.md#supersession) — and all
+three now come from `Internal\Support\TaggedRowScope`, the only place
+this module writes any of them. `Core`'s `NavCountsService` keeps a
+fourth copy of the supersession filter for the sidebar badge: it counts
+the same rows from outside the module, where `Internal` cannot be
+reached.
+
+They were written out per query instead, and the wording here said
+keeping the copies identical was what stopped the drift. It did not. The
+dashboard card was missing two of the three rules outright: it counted a
+whole-tx tag the cockpit had superseded, and it summed the parent's
+`settled_amount_minor` for a leg-scoped tag. The card read €1,362.39 over
+19 items beside a cockpit reading €1,137.89 over 18 — the same €124.50
+parent counted twice where the cockpit counted its €24.50 leg once. The
+year switcher was missing the supersession filter too, so it offered a
+year the cockpit then rendered as "€ 0,00 · 0 items". Three copies
+agreeing is not the same as one rule, and a query that reaches for the
+tag table without going through `TaggedRowScope` is the next one to drift.
 
 `TagTransaction` bounds the override to ±10 years of
 `Clock::now()->year` and throws `InvalidArgumentException` outside it —
@@ -47,7 +63,7 @@ the *previous* year and May–December to the current one, matching the
 Dutch `aangifte` filing season: someone opening `/tax` in February is
 almost certainly working on last year's return.
 
-Unlike the SQL expression above, this rule is written down once, in
+This rule is written down once too, in
 `FilingSeason::defaultYear()`. `TaxPage::mount()` (the cockpit),
 `TaxSummaryCard::render()` (the dashboard card) and
 `HandlesTaxTagging::resolveCurrentTaxYear()` (the tag picker's fallback)
@@ -81,6 +97,17 @@ which loses the deduction entirely. See
 [`Ledger` architecture](../ledger/architecture.md) for the split model
 these legs come from.
 
+The CSV's `original_amount` obeys the same rule, and needs its own
+arithmetic to do so. `transaction_splits` records only the settled slice
+— there is no native amount on a leg — so `TaxYearQuery::mapRow()`
+derives one: the leg's native amount is the share of the parent's
+`amount_minor` that its `settled_amount_minor` is of the parent's,
+rounded half away from zero in integer arithmetic. For the common
+single-currency row that reproduces the leg exactly; for a $100 charge
+that settled at €90, a €30 leg reports $33.33. Reading `t.amount_minor`
+straight through instead put the whole parent's `124.50` beside a
+leg-sized `24.50` — on the one row shape an accountant opens directly.
+
 Two more rules govern the totals:
 
 - Every amount is summed from `settled_amount_minor`, an integer count of
@@ -101,22 +128,25 @@ conflating them puts a grocery category on a tax return.
 `TaxYearSummary::$totalMinor` sums non-income rows and nothing else:
 
 ```sql
-SUM(CASE WHEN t.type = 'income' THEN 0 ELSE ABS(t.settled_amount_minor) END)
+SUM(CASE WHEN t.type = 'income' THEN 0
+         ELSE ABS(COALESCE(ts.settled_amount_minor, t.settled_amount_minor)) END)
 ```
 
 Reading it as "all tagged money in the year" is the miscomputation to
-avoid. It matches the cockpit's "Total deductions" KPI by construction;
-folding income and deductions into one absolute sum produced a figure
-that matched neither number on the page, which is what the `CASE` exists
-to prevent. `TaxYearSummary::$count`, by contrast, does cover every
-tagged item regardless of type — so the total and the count deliberately
-do not describe the same set of rows.
+avoid. It matches the cockpit's "Total deductions" KPI — the `CASE`,
+the leg-aware `COALESCE` and the supersession filter are the three
+reasons it does, and the card lost that agreement each time one of them
+was missing. Folding income and deductions into one absolute sum produced
+a figure that matched neither number on the page, which is what the
+`CASE` exists to prevent. `TaxYearSummary::$count`, by contrast, does
+cover every tagged item regardless of type — so the total and the count
+deliberately do not describe the same set of rows.
 
 ## A year with no tags is not an error
 
 `TaxYearQuery::forUser()` returns a `TaxYearData` with zeroed totals and
 `categories: []` before it builds anything. `TaxCsvExporter::export()`
-writes its 16-column header first and only then iterates, so an empty
+writes its 17-column header first and only then iterates, so an empty
 year produces a valid header-only CSV rather than an empty file or an
 exception. The PDF renders its empty table the same way.
 

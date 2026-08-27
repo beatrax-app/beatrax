@@ -66,6 +66,18 @@ final class TransactionListQuery
         return $this->buildPage($query, $limit, $user->id);
     }
 
+    // Whether the reader has any transaction at all. Asked only when a bounded
+    // window came back empty, so an empty recent window can be told apart from
+    // an empty ledger -- on screen those two look identical, and the way out of
+    // the first is a header button nothing connects to the empty state.
+    public function hasAnyTransaction(User $user): bool
+    {
+        return $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->exists();
+    }
+
     private function baseQuery(User $user, ?string $currency = null): Builder
     {
         // See the linked architecture page for the currency-projection

@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Le montant dépasse le solde non affecté.',
         'amount_exceeds_unallocated_available' => 'Le montant dépasse le solde non affecté (:amount disponible).',
         'amount_exceeds_pot_balance' => 'Le montant dépasse le solde de :name (:amount disponible).',
+        'generic' => 'L\'enveloppe n\'a pas pu être enregistrée. Vérifiez les champs et réessayez.',
+        'amount_invalid' => 'Saisissez un montant supérieur à zéro.',
+        'goal_already_linked' => 'Cet objectif a déjà une enveloppe liée active. Archivez-la d\'abord.',
     ],
 
     'toast' => [

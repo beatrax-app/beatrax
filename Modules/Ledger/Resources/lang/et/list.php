@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Sel perioodil pole siin midagi.',
 
+
+    'empty_recent_has_older' => 'Viimase 90 päeva jooksul pole midagi. Vanemad tehingud on endiselt alles.',
+
+    'empty_history' => 'Tehinguid veel pole.',
     'loading_more' => 'Laadin veel tehinguid',
     'load_more' => 'Laadi veel',
 

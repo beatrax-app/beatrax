@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Kwota przekracza nieprzydzielone saldo.',
         'amount_exceeds_unallocated_available' => 'Kwota przekracza nieprzydzielone saldo (dostępne: :amount).',
         'amount_exceeds_pot_balance' => 'Kwota przekracza saldo skarbonki :name (dostępne: :amount).',
+        'generic' => 'Nie udało się zapisać koperty. Sprawdź pola i spróbuj ponownie.',
+        'amount_invalid' => 'Podaj kwotę większą od zera.',
+        'goal_already_linked' => 'Ten cel ma już aktywną powiązaną kopertę. Najpierw ją zarchiwizuj.',
     ],
 
     'toast' => [

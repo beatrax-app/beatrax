@@ -13,7 +13,9 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Internal\Enums\PotLinkType;
+use Modules\Pots\Public\Exceptions\GoalAlreadyLinkedException;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
+use Modules\Pots\Public\Exceptions\InvalidPotAmountException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 use Modules\Pots\Public\Services\PotWriter;
@@ -125,8 +127,12 @@ final class PotsPage extends Component
             if ($e instanceof InsufficientUnallocatedException) {
                 $this->errorAmount = Lang::get('pots::messages.errors.amount_exceeds_unallocated');
                 $this->errorAmountLimitMinor = max(0, $query->currentUnallocatedForAccount($accountId, $currentUser->user()));
+            } elseif ($e instanceof GoalAlreadyLinkedException) {
+                $this->errorName = Lang::get('pots::messages.errors.goal_already_linked');
             } else {
-                $this->errorName = $e->getMessage();
+                // Every other message here is written for a developer, and in
+                // one language only.
+                $this->errorName = Lang::get('pots::messages.errors.generic');
             }
 
             return;
@@ -199,8 +205,12 @@ final class PotsPage extends Component
             // covers both and the instance check separates the two responses.
             if ($e instanceof PotNotFoundException) {
                 $this->resetForm();
+            } elseif ($e instanceof GoalAlreadyLinkedException) {
+                $this->errorName = Lang::get('pots::messages.errors.goal_already_linked');
             } else {
-                $this->errorName = $e->getMessage();
+                // Every other message here is written for a developer, and in
+                // one language only.
+                $this->errorName = Lang::get('pots::messages.errors.generic');
             }
 
             return;
@@ -255,8 +265,12 @@ final class PotsPage extends Component
             );
 
             return;
-        } catch (\InvalidArgumentException $e) {
-            $this->errorAmount = $e->getMessage();
+        } catch (InvalidPotAmountException) {
+            $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
+
+            return;
+        } catch (\InvalidArgumentException) {
+            $this->errorAmount = Lang::get('pots::messages.errors.generic');
 
             return;
         }
@@ -312,8 +326,12 @@ final class PotsPage extends Component
             );
 
             return;
-        } catch (\InvalidArgumentException $e) {
-            $this->errorAmount = $e->getMessage();
+        } catch (InvalidPotAmountException) {
+            $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
+
+            return;
+        } catch (\InvalidArgumentException) {
+            $this->errorAmount = Lang::get('pots::messages.errors.generic');
 
             return;
         }
@@ -370,8 +388,12 @@ final class PotsPage extends Component
             );
 
             return;
-        } catch (\InvalidArgumentException $e) {
-            $this->errorAmount = $e->getMessage();
+        } catch (InvalidPotAmountException) {
+            $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
+
+            return;
+        } catch (\InvalidArgumentException) {
+            $this->errorAmount = Lang::get('pots::messages.errors.generic');
 
             return;
         }

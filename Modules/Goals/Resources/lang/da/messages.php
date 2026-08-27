@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Indtast et navn til dit mål.',
         'date' => 'Vælg en måldato.',
+        'date_invalid' => 'Vælg en rigtig dato.',
+        'generic' => 'Målet kunne ikke gemmes. Tjek felterne, og prøv igen.',
         'amount' => 'Indtast et gyldigt beløb større end nul.',
         'pot_linked_category' => 'Denne pulje er tilknyttet en kategori. Fjern den tilknytning på siden Opsparingspuljer først.',
     ],

@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Saisis un nom pour ton objectif.',
         'date' => 'Choisis une date cible.',
+        'date_invalid' => 'Choisissez une date réelle.',
+        'generic' => 'L\'objectif n\'a pas pu être enregistré. Vérifiez les champs et réessayez.',
         'amount' => 'Saisis un montant valide supérieur à zéro.',
         'pot_linked_category' => 'Cette cagnotte est liée à une catégorie. Supprime d\'abord ce lien sur la page Cagnottes.',
     ],

@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Tutar, dağıtılmamış bakiyeyi aşıyor.',
         'amount_exceeds_unallocated_available' => 'Tutar, dağıtılmamış bakiyeyi aşıyor (:amount kullanılabilir).',
         'amount_exceeds_pot_balance' => 'Tutar, :name kumbarasındaki bakiyeyi aşıyor (:amount kullanılabilir).',
+        'generic' => 'Kumbara kaydedilemedi. Alanları kontrol edip yeniden deneyin.',
+        'amount_invalid' => 'Sıfırdan büyük bir tutar girin.',
+        'goal_already_linked' => 'Bu hedefin zaten etkin bir bağlı kumbarası var. Önce onu arşivleyin.',
     ],
 
     'toast' => [

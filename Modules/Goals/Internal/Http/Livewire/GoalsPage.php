@@ -12,13 +12,14 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
-use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
+use Modules\Goals\Public\Exceptions\InvalidGoalTargetDateException;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Goals\Public\Services\GoalWriter;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
+use Modules\Pots\Public\Enums\PotStatus;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 use Modules\Pots\Public\Services\PotWriter;
@@ -230,7 +231,7 @@ final class GoalsPage extends Component
             return $db->connection()
                 ->table('pots')
                 ->where('user_id', $user->id)
-                ->where('status', GoalStatus::Active->value)
+                ->where('status', PotStatus::Active->value)
                 ->whereNull('goal_id')
                 ->whereNull('category_id');
         };
@@ -243,7 +244,7 @@ final class GoalsPage extends Component
                     $db->connection()
                         ->table('pots')
                         ->where('user_id', $user->id)
-                        ->where('status', GoalStatus::Active->value)
+                        ->where('status', PotStatus::Active->value)
                         ->where('goal_id', $this->editGoalId)
                         ->select(['id', 'name', 'account_id', 'goal_id'])
                 );
@@ -322,7 +323,16 @@ final class GoalsPage extends Component
             return;
         }
 
-        $this->errorLinkedPot = $e->getMessage();
+        if ($e instanceof InvalidGoalTargetDateException) {
+            $this->errorDate = Lang::get('goals::messages.errors.date_invalid');
+
+            return;
+        }
+
+        // The message of an exception the app threw is written for a developer
+        // and exists in one language. It also has nothing to do with the linked
+        // pot, which is the field it was being printed under.
+        $this->errorLinkedPot = Lang::get('goals::messages.errors.generic');
     }
 
     private function applyPotRelink(

@@ -16,6 +16,8 @@ final class GoalProjectionService
 
     private const int HORIZON_LIMIT_DAYS = 90;
 
+    private const int MAX_DATE_DAYS = 36_500;
+
     // Below this, one early deposit would extrapolate a misleadingly-soon
     // finish, so the card says it has too little history instead. Past it, a
     // zero rate means an empty trailing window, which is a different sentence.
@@ -54,11 +56,19 @@ final class GoalProjectionService
         }
 
         $remainingMinor = $goal->target_minor - $contributedMinor;
-        $daysToFinish = (int) ceil($remainingMinor / $dailyRateMinor);
+        $daysToFinish = ceil($remainingMinor / $dailyRateMinor);
+
+        // A rate of a few cents a day answers past PHP_INT_MAX, where the int
+        // cast wraps and addDays() walks BACKWARDS -- printing a finish date
+        // twenty years in the PAST. Bounded at a century, which no real answer
+        // reaches and every wrapped one exceeds; the horizon flag is still
+        // decided from the true value.
+        $beyondHorizon = $daysToFinish > (float) self::HORIZON_LIMIT_DAYS;
+        $boundedDays = (int) min($daysToFinish, (float) self::MAX_DATE_DAYS);
 
         return [
-            'date' => CarbonImmutable::today()->addDays($daysToFinish)->format('Y-m-d'),
-            'beyondHorizon' => $daysToFinish > self::HORIZON_LIMIT_DAYS,
+            'date' => CarbonImmutable::today()->addDays($boundedDays)->format('Y-m-d'),
+            'beyondHorizon' => $beyondHorizon,
             'stalled' => false,
         ];
     }

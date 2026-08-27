@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Ange ett namn för ditt mål.',
         'date' => 'Välj ett måldatum.',
+        'date_invalid' => 'Välj ett riktigt datum.',
+        'generic' => 'Målet kunde inte sparas. Kontrollera fälten och försök igen.',
         'amount' => 'Ange ett giltigt belopp större än noll.',
         'pot_linked_category' => 'Den här sparpotten är kopplad till en kategori. Ta bort den kopplingen på sidan Sparpotter först.',
     ],

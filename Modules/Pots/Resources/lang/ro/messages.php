@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Suma depășește soldul nealocat.',
         'amount_exceeds_unallocated_available' => 'Suma depășește soldul nealocat (:amount disponibil).',
         'amount_exceeds_pot_balance' => 'Suma depășește soldul din :name (:amount disponibil).',
+        'generic' => 'Plicul nu a putut fi salvat. Verificați câmpurile și încercați din nou.',
+        'amount_invalid' => 'Introduceți o sumă mai mare decât zero.',
+        'goal_already_linked' => 'Acest obiectiv are deja un plic activ asociat. Arhivați-l mai întâi.',
     ],
 
     'toast' => [

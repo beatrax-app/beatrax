@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Vnesi ime svojega cilja.',
         'date' => 'Izberi ciljni datum.',
+        'date_invalid' => 'Izberite resničen datum.',
+        'generic' => 'Cilja ni bilo mogoče shraniti. Preverite polja in poskusite znova.',
         'amount' => 'Vnesi veljaven znesek, večji od nič.',
         'pot_linked_category' => 'Ta hranilnik je povezan s kategorijo. Najprej odstrani to povezavo na strani Hranilniki.',
     ],

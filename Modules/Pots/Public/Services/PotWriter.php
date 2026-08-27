@@ -13,7 +13,9 @@ use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Pots\Models\Pot;
 use Modules\Pots\Public\Enums\PotStatus;
+use Modules\Pots\Public\Exceptions\GoalAlreadyLinkedException;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
+use Modules\Pots\Public\Exceptions\InvalidPotAmountException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Sync\Public\Events\EntityMutated;
 
@@ -164,7 +166,7 @@ final class PotWriter
     {
         $minor = $this->parseAmount($rawAmount);
         if ($minor === null) {
-            throw new \InvalidArgumentException(self::INVALID_AMOUNT_MESSAGE);
+            throw new InvalidPotAmountException(self::INVALID_AMOUNT_MESSAGE);
         }
 
         $pot = $this->findOwnedActivePot($user, $potId);
@@ -206,7 +208,7 @@ final class PotWriter
     {
         $minor = $this->parseAmount($rawAmount);
         if ($minor === null) {
-            throw new \InvalidArgumentException(self::INVALID_AMOUNT_MESSAGE);
+            throw new InvalidPotAmountException(self::INVALID_AMOUNT_MESSAGE);
         }
 
         $pot = $this->findOwnedActivePot($user, $potId);
@@ -250,7 +252,7 @@ final class PotWriter
     ): void {
         $minor = $this->parseAmount($rawAmount);
         if ($minor === null) {
-            throw new \InvalidArgumentException(self::INVALID_AMOUNT_MESSAGE);
+            throw new InvalidPotAmountException(self::INVALID_AMOUNT_MESSAGE);
         }
 
         if ($fromPotId === $toPotId) {
@@ -488,7 +490,7 @@ final class PotWriter
             ->exists();
 
         if ($alreadyLinked) {
-            throw new \InvalidArgumentException(
+            throw new GoalAlreadyLinkedException(
                 'This goal already has an active linked pot. Archive it first.'
             );
         }

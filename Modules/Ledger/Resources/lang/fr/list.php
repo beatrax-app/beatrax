@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Rien à afficher pour cette période.',
 
+
+    'empty_recent_has_older' => 'Rien sur les 90 derniers jours. Vos opérations plus anciennes sont toujours là.',
+
+    'empty_history' => 'Aucune opération pour le moment.',
     'loading_more' => 'Chargement d\'autres transactions',
     'load_more' => 'Afficher plus',
 

@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Amount exceeds unallocated balance.',
         'amount_exceeds_unallocated_available' => 'Amount exceeds unallocated balance (:amount available).',
         'amount_exceeds_pot_balance' => 'Amount exceeds balance in :name (:amount available).',
+        'generic' => 'That pot could not be saved. Check the fields and try again.',
+        'amount_invalid' => 'Enter an amount greater than zero.',
+        'goal_already_linked' => 'This goal already has an active linked pot. Archive it first.',
     ],
 
     'toast' => [

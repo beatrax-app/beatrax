@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Unesi naziv svog cilja.',
         'date' => 'Izaberi ciljani datum.',
+        'date_invalid' => 'Izaberite stvarni datum.',
+        'generic' => 'Cilj nije sačuvan. Proverite polja i pokušajte ponovo.',
         'amount' => 'Unesi ispravan iznos veći od nule.',
         'pot_linked_category' => 'Ova kasica je povezana sa kategorijom. Prvo ukloni tu vezu na stranici Kasice.',
     ],

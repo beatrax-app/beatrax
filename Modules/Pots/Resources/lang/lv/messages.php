@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Summa pārsniedz nepiešķirto atlikumu.',
         'amount_exceeds_unallocated_available' => 'Summa pārsniedz nepiešķirto atlikumu (pieejams :amount).',
         'amount_exceeds_pot_balance' => 'Summa pārsniedz atlikumu krājkasē :name (pieejams :amount).',
+        'generic' => 'Aploksni neizdevās saglabāt. Pārbaudiet laukus un mēģiniet vēlreiz.',
+        'amount_invalid' => 'Ievadiet summu, kas lielāka par nulli.',
+        'goal_already_linked' => 'Šim mērķim jau ir aktīva saistīta aploksne. Vispirms to arhivējiet.',
     ],
 
     'toast' => [

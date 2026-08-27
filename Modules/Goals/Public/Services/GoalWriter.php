@@ -12,6 +12,7 @@ use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
+use Modules\Goals\Public\Exceptions\InvalidGoalTargetDateException;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Events\GoalMutated;
@@ -25,6 +26,7 @@ final class GoalWriter
 
     /**
      * @throws InvalidGoalAmountException when `$rawAmount` is invalid or non-positive.
+     * @throws InvalidGoalTargetDateException when `$targetDate` is not a calendar date.
      */
     public function save(
         User $user,
@@ -36,6 +38,9 @@ final class GoalWriter
         if ($minor === null) {
             throw new InvalidGoalAmountException('Invalid or non-positive target amount.');
         }
+
+        $startDate = CarbonImmutable::today()->toDateString();
+        $targetDate = self::assertRealDate($targetDate, $startDate);
 
         // Always a fresh row: an updateOrCreate keyed on (user_id, name,
         // start_date) would silently overwrite a second "Holiday" goal made the
@@ -77,6 +82,8 @@ final class GoalWriter
         if ($minor === null) {
             throw new InvalidGoalAmountException('Invalid or non-positive target amount.');
         }
+
+        $targetDate = self::assertRealDate($targetDate, $goal->start_date->toDateString());
 
         $goal->name = $name;
         $goal->target_minor = $minor;
@@ -144,6 +151,28 @@ final class GoalWriter
             mutationType: $mutationType,
             dirtyFields: $fields,
         ));
+    }
+
+    public const DATE_FORMAT = 'Y-m-d';
+
+    // Carbon accepts "2026-02-30" and normalises it to "2026-03-02", so a
+    // round-trip format comparison is the real validity check -- the same one
+    // PeriodQuery::containingDate makes. The column took whatever the form
+    // sent, and the projection, the card and the sort then all worked from a
+    // date the goal's owner never chose.
+    private static function assertRealDate(string $targetDate, string $startDate): string
+    {
+        $parsed = CarbonImmutable::createFromFormat(self::DATE_FORMAT, $targetDate);
+
+        if ($parsed === null || $parsed->format(self::DATE_FORMAT) !== $targetDate) {
+            throw new InvalidGoalTargetDateException('Target date is not a calendar date.');
+        }
+
+        if ($targetDate < $startDate) {
+            throw new InvalidGoalTargetDateException('Target date is before the goal starts.');
+        }
+
+        return $targetDate;
     }
 
     public function parseAmount(string $value): ?int

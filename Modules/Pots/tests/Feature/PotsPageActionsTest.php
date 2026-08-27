@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Models\Goal;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -183,7 +184,7 @@ it('surfaces a rejected goal link as an inline error on the edit form', function
         ->set('linkType', 'goal')
         ->set('goalId', (string) $goal->id)
         ->call('updatePot')
-        ->assertSet('errorName', 'This goal already has an active linked pot. Archive it first.')
+        ->assertSet('errorName', Lang::get('pots::messages.errors.goal_already_linked'))
         ->assertNotDispatched('modal-close');
 });
 
@@ -234,7 +235,7 @@ it('surfaces an unparseable withdrawal amount inline', function (): void {
         ->set('operationPotId', $pot->id)
         ->set('operationAmount', 'abc')
         ->call('withdrawPot')
-        ->assertSet('errorAmount', 'Invalid or non-positive amount.');
+        ->assertSet('errorAmount', Lang::get('pots::messages.errors.amount_invalid'));
 });
 
 it('moves funds between two pots and closes the modal', function (): void {

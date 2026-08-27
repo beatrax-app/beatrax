@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Inget här för den här perioden.',
 
+
+    'empty_recent_has_older' => 'Inget de senaste 90 dagarna. Dina äldre transaktioner finns kvar.',
+
+    'empty_history' => 'Inga transaktioner ännu.',
     'loading_more' => 'Laddar fler transaktioner',
     'load_more' => 'Ladda fler',
 

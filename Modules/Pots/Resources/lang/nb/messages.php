@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Beløpet overstiger den ufordelte saldoen.',
         'amount_exceeds_unallocated_available' => 'Beløpet overstiger den ufordelte saldoen (:amount tilgjengelig).',
         'amount_exceeds_pot_balance' => 'Beløpet overstiger saldoen i :name (:amount tilgjengelig).',
+        'generic' => 'Potten kunne ikke lagres. Sjekk feltene og prøv igjen.',
+        'amount_invalid' => 'Angi et beløp større enn null.',
+        'goal_already_linked' => 'Dette målet har allerede en aktiv tilknyttet pott. Arkiver den først.',
     ],
 
     'toast' => [

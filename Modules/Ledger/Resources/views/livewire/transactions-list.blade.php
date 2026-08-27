@@ -89,9 +89,24 @@
         {{-- No-results state --}}
         @include('ledger::livewire.partials.search-no-results')
     @elseif (! $isSearchMode && count($page->rows) === 0)
-        <p class="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500 dark:bg-slate-950 dark:text-slate-400 dark:border-slate-700">
-            {{ Lang::get('ledger::list.empty_period') }}
-        </p>
+        {{-- An empty recent window and an empty ledger read the same on screen,
+             and the only way out is a header button nothing connects to it. --}}
+        <div class="flex flex-col items-center gap-4 rounded-lg border border-slate-200 bg-white px-6 py-12 text-center dark:bg-slate-950 dark:border-slate-700">
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                @if ($hasOlderTransactions)
+                    {{ Lang::get('ledger::list.empty_recent_has_older') }}
+                @elseif ($fullHistory)
+                    {{ Lang::get('ledger::list.empty_history') }}
+                @else
+                    {{ Lang::get('ledger::list.empty_period') }}
+                @endif
+            </p>
+            @if ($hasOlderTransactions)
+                <x-core::secondary-button size="sm" wire:click="toggleFullHistory">
+                    {{ Lang::get('ledger::list.show_full') }}
+                </x-core::secondary-button>
+            @endif
+        </div>
     @else
         {{-- ============================================================
              PHONE card-list (visible only at <768px)

@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Der Betrag übersteigt den nicht zugeteilten Saldo.',
         'amount_exceeds_unallocated_available' => 'Der Betrag übersteigt den nicht zugeteilten Saldo (:amount verfügbar).',
         'amount_exceeds_pot_balance' => 'Der Betrag übersteigt den Saldo in :name (:amount verfügbar).',
+        'generic' => 'Der Topf konnte nicht gespeichert werden. Prüfen Sie die Felder und versuchen Sie es erneut.',
+        'amount_invalid' => 'Geben Sie einen Betrag größer als null ein.',
+        'goal_already_linked' => 'Dieses Ziel hat bereits einen aktiven verknüpften Topf. Archivieren Sie ihn zuerst.',
     ],
 
     'toast' => [

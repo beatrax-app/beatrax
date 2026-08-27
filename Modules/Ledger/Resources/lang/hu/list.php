@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Ebben az időszakban nincs semmi.',
 
+
+    'empty_recent_has_older' => 'Az elmúlt 90 napban semmi. A korábbi tételei továbbra is megvannak.',
+
+    'empty_history' => 'Még nincsenek tételek.',
     'loading_more' => 'További tranzakciók betöltése',
     'load_more' => 'Továbbiak betöltése',
 

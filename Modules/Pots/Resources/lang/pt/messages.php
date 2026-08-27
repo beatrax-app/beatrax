@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'O montante excede o saldo não alocado.',
         'amount_exceeds_unallocated_available' => 'O montante excede o saldo não alocado (:amount disponível).',
         'amount_exceeds_pot_balance' => 'O montante excede o saldo em :name (:amount disponível).',
+        'generic' => 'Não foi possível guardar o mealheiro. Verifique os campos e tente novamente.',
+        'amount_invalid' => 'Introduza um valor maior que zero.',
+        'goal_already_linked' => 'Este objetivo já tem um mealheiro associado ativo. Arquive-o primeiro.',
     ],
 
     'toast' => [

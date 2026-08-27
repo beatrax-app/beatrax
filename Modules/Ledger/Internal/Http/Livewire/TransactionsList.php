@@ -246,6 +246,7 @@ final class TransactionsList extends Component
             ...$this->sharedViewData($state, $filterOptions, $user, $readerCurrency),
             'page' => $page,
             'chainTxIds' => [],
+            'hasOlderTransactions' => false,
             'isSearchMode' => true,
             'searchTotalCount' => $page->totalCount,
             'searchTotalOut' => $page->totalOutMinor,
@@ -286,10 +287,19 @@ final class TransactionsList extends Component
         $rowIds = array_values(array_map(static fn ($row): int => $row->id, $page->rows));
         $state = $this->decorateAccumulatedRows($rowIds, $currentUser, $rows, $readerCurrency);
 
+        // An empty recent window and an empty ledger look identical on screen,
+        // and the way out is a button in the header the reader has no reason to
+        // connect to it. Asked only when the window came back empty, so the
+        // common path pays nothing.
+        $hasOlderTransactions = $page->rows === []
+            && ! $this->fullHistory
+            && $listQuery->hasAnyTransaction($user);
+
         return $views->make('ledger::livewire.transactions-list', [
             ...$this->sharedViewData($state, $filterOptions, $user, $readerCurrency),
             'page' => $page,
             'chainTxIds' => $rows->chainTxIdsFor($rowIds, $user->id),
+            'hasOlderTransactions' => $hasOlderTransactions,
             'isSearchMode' => false,
             'searchTotalCount' => 0,
             'searchTotalOut' => 0,

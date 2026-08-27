@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Skriv inn et navn på målet ditt.',
         'date' => 'Velg en måldato.',
+        'date_invalid' => 'Velg en reell dato.',
+        'generic' => 'Målet kunne ikke lagres. Sjekk feltene og prøv igjen.',
         'amount' => 'Skriv inn et gyldig beløp større enn null.',
         'pot_linked_category' => 'Denne sparepotten er tilknyttet en kategori. Fjern den tilknytningen på Sparepotter-siden først.',
     ],

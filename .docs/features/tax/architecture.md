@@ -30,6 +30,17 @@ works through the arithmetic; [the tag write
 contract](tag-write-contract.md) covers the supersession rule and the
 uniqueness indexes behind it.
 
+Both rules, and the year expression above, live in
+`Internal\Support\TaggedRowScope` and are applied from there by every
+query in this module that reads tagged rows — the cockpit, the year
+switcher and the dashboard card. They were written out per query before,
+and the dashboard card was missing both: it counted a superseded
+whole-tx tag *and* summed the parent's amount for a leg-scoped one,
+over-reporting against the cockpit it links to. `Core`'s
+`NavCountsService` applies the supersession filter from its own copy —
+the sidebar badge counts these rows from outside the module, so it
+cannot reach `Internal`.
+
 The category name shown for a leg-scoped tag always resolves from
 `tag.deduction_category_id` (the tax deduction category), never from
 the leg's own `category_id` (the spend category on
@@ -51,7 +62,11 @@ fixed, tested 17-column order (`tax_year`, `booked_date`, `account`,
 the column could hold dollars: a per-row currency needs a per-row code
 beside it, not a currency in the header — an audit-extra shape
 richer than the on-screen cockpit, meant to be opened directly by an
-accountant. Every cell is passed through `League\Csv\EscapeFormula` to
+accountant. Both money columns are leg-scoped on a leg-scoped tag —
+`original_amount` reported the whole parent beside a leg-sized
+`settled_amount` on exactly the row an accountant opens directly, which
+[tax year resolution](tax-year-resolution.md#amounts-follow-the-tags-scope-not-the-transactions-total)
+works through. Every cell is passed through `League\Csv\EscapeFormula` to
 mitigate spreadsheet formula injection (a cell starting with `=`, `+`,
 `-`, `@`, tab, or CR is prefixed with a single quote), since
 descriptions/counterparties/notes are free text. Money values are
@@ -61,7 +76,10 @@ monetary calculation in this class uses floats.
 
 `TaxPdfRenderer` uses dompdf v3 with `isHtml5ParserEnabled=true`,
 `isRemoteEnabled=false` (local-only app; no remote CSS/image fetches),
-and `defaultFont=Helvetica` (bundled, no network fetch). The PDF Blade
+and `defaultFont=DejaVu Sans` — an *embedded* font, not one of the PDF
+core fourteen. Helvetica is a core font, which means it ships no glyphs
+at all: a reader whose substitute font had no euro sign drew one at the
+core metrics' width, over the first digit of every amount. The PDF Blade
 template (`tax::pdf.export`) is CSS 2.1 table-only layout — no
 Tailwind/Flexbox/Grid, since dompdf's CSS 2.1 engine doesn't support
 them — and every dynamic value uses Blade's `{{ }}` auto-escaping to
@@ -216,10 +234,23 @@ row, and treat absence from the result map as "untagged." [The tag
 write contract](tag-write-contract.md) explains what dropping the
 whole-transaction filter breaks, and why the breakage is silent.
 
+Both also select the badge's label as
+`COALESCE(cat.short_name, cat.name)`. `short_name` is optional and only
+the corpus fills it in, so every category a reader adds — from the
+picker's quick-add or from Settings, neither of which asks for one —
+has none, and the badge fell all the way through to the generic
+`tax::badge.default_label`. The row then said "Tax" for a tag that had
+a category, on the one surface that shows the category at all: the
+cockpit, the PDF and the CSV all print `cat.name`.
+
 `summaryForUser()`'s `totalMinor` is the deductions total only
 (non-income rows), while `count` covers every tagged item regardless of
 type — the two deliberately describe different sets of rows, as
-[tax year resolution](tax-year-resolution.md) sets out.
+[tax year resolution](tax-year-resolution.md) sets out. It applies the
+same supersession filter and the same leg-aware amount the cockpit
+does, from `TaggedRowScope`, so the card and the page it links to agree
+on both figures by construction rather than by two queries happening to
+say the same thing.
 
 ## Year cockpit (`/tax`)
 
@@ -303,6 +334,11 @@ singleton `TaxServiceProvider` binds and constructs a fresh internal
 instance per call, so external consumers (TaxPage, exporters, the
 year-switcher, other modules' tax-tagging surfaces) never reach into
 `Modules\Tax\Internal\*`.
+
+`Internal/Support/TaggedRowScope` sits behind both: it is the module's
+only definition of the effective-year expression, the leg-aware settled
+amount, and the supersession filter, and `Public/Services/TaxTagQuery`
+reaches into it directly (same module, so `Internal` is not crossed).
 
 `Public/Http/Livewire/Concerns/HandlesTaxTagging` is the shared trait
 any Livewire component embeds to get tax-tag state + the tag/untag

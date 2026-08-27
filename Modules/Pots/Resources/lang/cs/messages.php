@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Částka přesahuje nepřiřazený zůstatek.',
         'amount_exceeds_unallocated_available' => 'Částka přesahuje nepřiřazený zůstatek (k dispozici: :amount).',
         'amount_exceeds_pot_balance' => 'Částka přesahuje zůstatek obálky „:name“ (k dispozici: :amount).',
+        'generic' => 'Přihrádku se nepodařilo uložit. Zkontrolujte pole a zkuste to znovu.',
+        'amount_invalid' => 'Zadejte částku větší než nula.',
+        'goal_already_linked' => 'Tento cíl už má aktivní propojenou přihrádku. Nejprve ji archivujte.',
     ],
 
     'toast' => [

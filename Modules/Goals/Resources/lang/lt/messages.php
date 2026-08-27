@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Įvesk tikslo pavadinimą.',
         'date' => 'Pasirink tikslo datą.',
+        'date_invalid' => 'Pasirinkite tikrą datą.',
+        'generic' => 'Tikslo išsaugoti nepavyko. Patikrinkite laukus ir bandykite dar kartą.',
         'amount' => 'Įvesk tinkamą sumą, didesnę už nulį.',
         'pot_linked_category' => 'Ši taupyklė susieta su kategorija. Pirmiausia pašalink tą ryšį Taupyklių puslapyje.',
     ],

@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Bu dönem için burada bir şey yok.',
 
+
+    'empty_recent_has_older' => 'Son 90 günde bir şey yok. Daha eski işlemleriniz hâlâ burada.',
+
+    'empty_history' => 'Henüz işlem yok.',
     'loading_more' => 'Daha fazla işlem yükleniyor',
     'load_more' => 'Daha fazla yükle',
 

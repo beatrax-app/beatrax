@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Nic w tym okresie.',
 
+
+    'empty_recent_has_older' => 'Nic z ostatnich 90 dni. Starsze transakcje nadal tu są.',
+
+    'empty_history' => 'Nie ma jeszcze transakcji.',
     'loading_more' => 'Wczytywanie kolejnych transakcji',
     'load_more' => 'Wczytaj więcej',
 

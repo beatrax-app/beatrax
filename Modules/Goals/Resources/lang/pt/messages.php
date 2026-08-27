@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Introduz um nome para o teu objetivo.',
         'date' => 'Escolhe uma data-alvo.',
+        'date_invalid' => 'Escolha uma data real.',
+        'generic' => 'Não foi possível guardar o objetivo. Verifique os campos e tente novamente.',
         'amount' => 'Introduz um montante válido superior a zero.',
         'pot_linked_category' => 'Esta reserva está associada a uma categoria. Remove primeiro essa associação na página Reservas.',
     ],

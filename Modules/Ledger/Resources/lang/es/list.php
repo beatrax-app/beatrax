@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'No hay nada en este periodo.',
 
+
+    'empty_recent_has_older' => 'Nada en los últimos 90 días. Tus movimientos anteriores siguen aquí.',
+
+    'empty_history' => 'Aún no hay movimientos.',
     'loading_more' => 'Cargando más transacciones',
     'load_more' => 'Cargar más',
 

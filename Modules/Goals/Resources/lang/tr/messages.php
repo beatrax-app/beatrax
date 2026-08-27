@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Hedefin için bir ad gir.',
         'date' => 'Bir son tarih seç.',
+        'date_invalid' => 'Gerçek bir tarih seçin.',
+        'generic' => 'Hedef kaydedilemedi. Alanları kontrol edip yeniden deneyin.',
         'amount' => 'Sıfırdan büyük geçerli bir tutar gir.',
         'pot_linked_category' => 'Bu kumbara bir kategoriye bağlı. Önce Kumbaralar sayfasında bu bağlantıyı kaldır.',
     ],

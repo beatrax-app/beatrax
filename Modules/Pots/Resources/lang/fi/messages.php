@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Summa ylittää jakamattoman saldon.',
         'amount_exceeds_unallocated_available' => 'Summa ylittää jakamattoman saldon (:amount käytettävissä).',
         'amount_exceeds_pot_balance' => 'Summa ylittää potin :name saldon (:amount käytettävissä).',
+        'generic' => 'Potin tallennus ei onnistunut. Tarkista kentät ja yritä uudelleen.',
+        'amount_invalid' => 'Anna nollaa suurempi summa.',
+        'goal_already_linked' => 'Tällä tavoitteella on jo aktiivinen linkitetty potti. Arkistoi se ensin.',
     ],
 
     'toast' => [

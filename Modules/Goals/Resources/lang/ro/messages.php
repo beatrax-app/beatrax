@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Introdu un nume pentru obiectiv.',
         'date' => 'Alege o dată țintă.',
+        'date_invalid' => 'Alegeți o dată reală.',
+        'generic' => 'Obiectivul nu a putut fi salvat. Verificați câmpurile și încercați din nou.',
         'amount' => 'Introdu o sumă validă, mai mare decât zero.',
         'pot_linked_category' => 'Această pușculiță este asociată unei categorii. Elimină întâi asocierea din pagina Pușculițe.',
     ],

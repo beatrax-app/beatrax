@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Enter a name for your goal.',
         'date' => 'Choose a target date.',
+        'date_invalid' => 'Choose a real date.',
+        'generic' => 'That goal could not be saved. Check the fields and try again.',
         'amount' => 'Enter a valid amount greater than zero.',
         'pot_linked_category' => 'This pot is linked to a category. Remove that link on the Pots page first.',
     ],

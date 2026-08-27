@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Šiuo laikotarpiu nieko nėra.',
 
+
+    'empty_recent_has_older' => 'Per pastarąsias 90 dienų nieko. Senesnės operacijos vis dar čia.',
+
+    'empty_history' => 'Operacijų dar nėra.',
     'loading_more' => 'Įkeliama daugiau operacijų',
     'load_more' => 'Įkelti daugiau',
 

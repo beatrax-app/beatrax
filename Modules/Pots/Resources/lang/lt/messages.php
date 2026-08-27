@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Suma viršija nepaskirstytą likutį.',
         'amount_exceeds_unallocated_available' => 'Suma viršija nepaskirstytą likutį (galima :amount).',
         'amount_exceeds_pot_balance' => 'Suma viršija likutį taupyklėje :name (galima :amount).',
+        'generic' => 'Voko išsaugoti nepavyko. Patikrinkite laukus ir bandykite dar kartą.',
+        'amount_invalid' => 'Įveskite didesnę nei nulis sumą.',
+        'goal_already_linked' => 'Šis tikslas jau turi aktyvų susietą voką. Pirmiausia jį archyvuokite.',
     ],
 
     'toast' => [

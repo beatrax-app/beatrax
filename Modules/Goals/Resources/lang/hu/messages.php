@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Adj nevet a célnak.',
         'date' => 'Válassz céldátumot.',
+        'date_invalid' => 'Válasszon valós dátumot.',
+        'generic' => 'A célt nem sikerült menteni. Ellenőrizze a mezőket, és próbálja újra.',
         'amount' => 'Adj meg érvényes, nullánál nagyobb összeget.',
         'pot_linked_category' => 'Ez a persely egy kategóriához van kapcsolva. Előbb szüntesd meg a kapcsolatot a Perselyek oldalon.',
     ],

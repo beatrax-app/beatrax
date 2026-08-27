@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'El importe supera el saldo sin asignar.',
         'amount_exceeds_unallocated_available' => 'El importe supera el saldo sin asignar (:amount disponible).',
         'amount_exceeds_pot_balance' => 'El importe supera el saldo de :name (:amount disponible).',
+        'generic' => 'No se pudo guardar el bote. Revisa los campos e inténtalo de nuevo.',
+        'amount_invalid' => 'Introduce un importe mayor que cero.',
+        'goal_already_linked' => 'Este objetivo ya tiene un bote vinculado activo. Archívalo primero.',
     ],
 
     'toast' => [

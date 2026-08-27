@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Ei mitään tältä jaksolta.',
 
+
+    'empty_recent_has_older' => 'Ei mitään viimeisten 90 päivän ajalta. Vanhemmat tapahtumasi ovat yhä tallessa.',
+
+    'empty_history' => 'Ei vielä tapahtumia.',
     'loading_more' => 'Ladataan lisää tapahtumia',
     'load_more' => 'Lataa lisää',
 

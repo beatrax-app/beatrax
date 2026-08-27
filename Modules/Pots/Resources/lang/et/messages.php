@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Summa ületab jaotamata jääki.',
         'amount_exceeds_unallocated_available' => 'Summa ületab jaotamata jääki (saadaval :amount).',
         'amount_exceeds_pot_balance' => 'Summa ületab poti :name jääki (saadaval :amount).',
+        'generic' => 'Rahakotti ei õnnestunud salvestada. Kontrollige välju ja proovige uuesti.',
+        'amount_invalid' => 'Sisestage nullist suurem summa.',
+        'goal_already_linked' => 'Sellel eesmärgil on juba aktiivne seotud rahakott. Arhiveerige see esmalt.',
     ],
 
     'toast' => [

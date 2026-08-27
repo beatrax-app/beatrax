@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Nimic aici pentru această perioadă.',
 
+
+    'empty_recent_has_older' => 'Nimic în ultimele 90 de zile. Tranzacțiile mai vechi sunt încă aici.',
+
+    'empty_history' => 'Încă nicio tranzacție.',
     'loading_more' => 'Se încarcă mai multe tranzacții',
     'load_more' => 'Încarcă mai multe',
 

@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Nothing here for this period.',
 
+
+    'empty_recent_has_older' => 'Nothing in the last 90 days. Your older transactions are still here.',
+
+    'empty_history' => 'No transactions yet.',
     'loading_more' => 'Loading more transactions',
     'load_more' => 'Load more',
 

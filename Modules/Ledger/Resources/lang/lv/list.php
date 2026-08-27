@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Šajā periodā nekā nav.',
 
+
+    'empty_recent_has_older' => 'Pēdējās 90 dienās nekā. Jūsu vecākie darījumi joprojām ir šeit.',
+
+    'empty_history' => 'Darījumu vēl nav.',
     'loading_more' => 'Ielādē vairāk darījumu',
     'load_more' => 'Ielādēt vairāk',
 

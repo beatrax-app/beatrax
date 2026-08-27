@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Beløbet overstiger den ufordelte saldo.',
         'amount_exceeds_unallocated_available' => 'Beløbet overstiger den ufordelte saldo (:amount til rådighed).',
         'amount_exceeds_pot_balance' => 'Beløbet overstiger saldoen i :name (:amount til rådighed).',
+        'generic' => 'Puljen kunne ikke gemmes. Tjek felterne, og prøv igen.',
+        'amount_invalid' => 'Angiv et beløb større end nul.',
+        'goal_already_linked' => 'Dette mål har allerede en aktiv tilknyttet pulje. Arkivér den først.',
     ],
 
     'toast' => [

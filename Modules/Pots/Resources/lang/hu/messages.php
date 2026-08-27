@@ -122,6 +122,9 @@ return [
         'amount_exceeds_unallocated' => 'Az összeg meghaladja a kiosztatlan egyenleget.',
         'amount_exceeds_unallocated_available' => 'Az összeg meghaladja a kiosztatlan egyenleget (:amount érhető el).',
         'amount_exceeds_pot_balance' => 'Az összeg meghaladja a(z) :name egyenlegét (:amount érhető el).',
+        'generic' => 'A kasszát nem sikerült menteni. Ellenőrizze a mezőket, és próbálja újra.',
+        'amount_invalid' => 'Adjon meg nullánál nagyobb összeget.',
+        'goal_already_linked' => 'Ehhez a célhoz már tartozik aktív kassza. Előbb archiválja.',
     ],
 
     'toast' => [

@@ -19,6 +19,10 @@ return [
 
     'empty_period' => 'Nema ničega za ovaj period.',
 
+
+    'empty_recent_has_older' => 'Ništa u poslednjih 90 dana. Vaše starije transakcije su i dalje ovde.',
+
+    'empty_history' => 'Još nema transakcija.',
     'loading_more' => 'Učitavanje još transakcija',
     'load_more' => 'Učitaj još',
 

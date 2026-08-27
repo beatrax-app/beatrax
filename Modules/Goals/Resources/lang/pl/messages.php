@@ -95,6 +95,8 @@ return [
     'errors' => [
         'name' => 'Podaj nazwę celu.',
         'date' => 'Wybierz datę docelową.',
+        'date_invalid' => 'Wybierz prawdziwą datę.',
+        'generic' => 'Nie udało się zapisać celu. Sprawdź pola i spróbuj ponownie.',
         'amount' => 'Podaj prawidłową kwotę większą od zera.',
         'pot_linked_category' => 'Ta skarbonka jest powiązana z kategorią. Najpierw usuń to powiązanie na stronie Skarbonki.',
     ],
