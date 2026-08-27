@@ -363,13 +363,37 @@
                 <label for="goal-date-sheet" class="mb-1 block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('goals::messages.form.target_date') }}</label>
                 <x-core::date-input
                     field-id="goal-date-sheet"
-                    wire:model="targetDate"
+                    wire:model.live="targetDate"
                     :aria-label="Lang::get('goals::messages.form.target_date')"
                     :aria-invalid="$errorDate !== '' ? 'true' : null"
                     :aria-describedby="$errorDate !== '' ? 'goal-date-sheet-error' : null"
                 />
                 @if ($errorDate !== '')
                     <p id="goal-date-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorDate }}</p>
+                @endif
+            </div>
+
+            {{-- The desktop modal has carried this field since the feature
+                 shipped and the sheet never did, so on a phone a goal could not
+                 be linked to a pot at all -- the same shape as the missing
+                 target-date field the modal comment below describes. --}}
+            <div>
+                <x-core::form-field
+                    name="linkedPotId"
+                    field-id="goal-pot-sheet"
+                    type="select"
+                    :label="Lang::get('goals::messages.form.linked_pot')"
+                    :hint="Lang::get('goals::messages.form.linked_pot_help')"
+                    wire:model="linkedPotId"
+                    class="disabled:opacity-50"
+                >
+                    <option value="">{{ Lang::get('goals::messages.form.no_pot') }}</option>
+                    @foreach ($pots as $pot)
+                        <option value="{{ $pot->id }}">{{ $pot->name }}</option>
+                    @endforeach
+                </x-core::form-field>
+                @if ($errorLinkedPot !== '')
+                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorLinkedPot }}</p>
                 @endif
             </div>
 
@@ -460,7 +484,7 @@
                     @if ($errorDate !== '')
                         <x-core::date-input
                             field-id="goal-date"
-                            wire:model="targetDate"
+                            wire:model.live="targetDate"
                             :aria-label="Lang::get('goals::messages.form.target_date')"
                             aria-invalid="true"
                             aria-describedby="goal-date-error"
@@ -468,7 +492,7 @@
                     @else
                         <x-core::date-input
                             field-id="goal-date"
-                            wire:model="targetDate"
+                            wire:model.live="targetDate"
                             :aria-label="Lang::get('goals::messages.form.target_date')"
                         />
                     @endif

@@ -88,3 +88,59 @@ it('never binds a field with wire:model.blur in a component whose updated() hook
         .implode("\n  ", array_unique($offenders)),
     );
 });
+
+// The tag a binding sits on decides whether the modifier means what it reads
+// as. On a `flux:modal` the component rewrites the directive to `.self` and
+// owns its own open/close sync, so the same string there is not the same
+// promise. Only fields the reader types into are judged here.
+/** @return list<string> */
+function deferredFieldBindings(string $view, string $property): array
+{
+    if (preg_match_all('/<([\w:.-]+)\b[^>]*?wire:model((?:\.[\w]+)*)=\"([^\"]+)\"/s', $view, $matches, PREG_SET_ORDER) === false) {
+        return [];
+    }
+
+    $bindings = [];
+    foreach ($matches as $match) {
+        [, $tag, $modifiers, $target] = $match;
+
+        $isField = in_array($tag, ['input', 'select', 'textarea'], true) || str_starts_with($tag, 'x-core::');
+        if (! $isField || explode('.', $target)[0] !== $property || str_contains($modifiers, 'live')) {
+            continue;
+        }
+
+        $bindings[] = $target.($modifiers === '' ? '' : $modifiers);
+    }
+
+    return $bindings;
+}
+
+// A goal refused for its date kept saying so after a date was chosen: the sheet
+// showed 26-08-2026 with "Kies een streefdatum." in red under it, and
+// aria-invalid still true. `updatedTargetDate()` was already there and could not
+// run, because a plain wire:model does not reach the server until the next
+// round trip -- which was the submit the reader was trying to avoid.
+it('binds every property an updated() hook watches so the hook can actually run', function (): void {
+    $offenders = [];
+
+    foreach (livewireComponentFiles() as $componentPath) {
+        $source = (string) file_get_contents($componentPath);
+
+        if (preg_match_all('/function\s+updated([A-Z][A-Za-z0-9]*)\s*\(/', $source, $hooks) === false) {
+            continue;
+        }
+
+        foreach (viewsRenderedBy($componentPath) as $viewPath) {
+            $view = (string) file_get_contents($viewPath);
+
+            foreach ($hooks[1] as $hook) {
+                foreach (deferredFieldBindings($view, lcfirst($hook)) as $binding) {
+                    $offenders[] = str_replace(base_path().'/', '', $viewPath)
+                        .' wire:model="'.$binding.'" ← updated'.$hook.'()';
+                }
+            }
+        }
+    }
+
+    expect(array_values(array_unique($offenders)))->toBe([]);
+});

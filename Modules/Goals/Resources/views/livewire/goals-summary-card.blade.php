@@ -27,7 +27,7 @@
             {{ Lang::get('goals::messages.summary.no_goals') }}
             <a
                 href="{{ Destination::Goals->url() }}"
-                class="text-slate-900 underline underline-offset-2 hover:no-underline dark:text-slate-100"
+                class="tap-link text-slate-900 underline underline-offset-2 hover:no-underline dark:text-slate-100"
             >{{ Lang::get('goals::messages.summary.add_first') }}</a>
         </p>
     @else
