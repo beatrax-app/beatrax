@@ -12,6 +12,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Modules\Budgets\Public\Services\EnvelopePeriodRekeyer;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -248,11 +249,12 @@ final class SettingsPage extends Component
         $this->fxLastUpdated = is_string($rawDate) ? substr($rawDate, 0, 10) : null;
     }
 
-    public function save(CurrentUser $currentUser): void
+    public function save(CurrentUser $currentUser, EnvelopePeriodRekeyer $envelopePeriods): void
     {
         $this->validate();
 
         $user = $currentUser->user();
+        $periodStartDayMoved = $user->period_start_day !== $this->periodStartDay;
         $user->default_currency_view = $this->defaultCurrencyView;
         $user->period_start_day = $this->periodStartDay;
         $user->recurring_detection_window_months = $this->recurringDetectionWindowMonths;
@@ -260,6 +262,14 @@ final class SettingsPage extends Component
         $user->drift_alert_threshold_percent = $this->driftAlertThresholdPercent;
         $user->base_currency = $this->baseCurrency;
         $user->save();
+
+        // Envelope rows are keyed by a literal period-start date, so moving
+        // the day strands every one of them outside the periods the carryover
+        // fold walks. Re-keyed after the save, because the target period is
+        // computed from the day now stored on the user.
+        if ($periodStartDayMoved) {
+            $envelopePeriods->rekeyToCurrentPeriods();
+        }
 
         // No `settings-saved` dispatch: nothing listened for it. Every
         // sibling section on this page owns its own columns, and the only
