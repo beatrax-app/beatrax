@@ -313,7 +313,7 @@
                             <span class="text-xs" style="color: var(--color-text-muted);">{{ Lang::get('reports::builder.vs_previous') }}</span>
                             <span
                                 style="font-variant-numeric: tabular-nums; font-weight: 600;"
-                                class="{{ $headlineDelta >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}"
+                                class="{{ $headlineDelta >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}"
                             >{{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}</span>
                         </div>
                     @endif
@@ -361,11 +361,11 @@
                             @if ($definition->compare)
                                 <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
                                     @if ($row->deltaMinor !== null)
-                                        <span class="{{ $row->deltaMinor >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
+                                        <span class="{{ $row->deltaMinor >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
                                             {{ $row->deltaMinor >= 0 ? '+' : '−' }}{{ $fmt(abs($row->deltaMinor), $row->currency) }}
                                         </span>
                                     @else
-                                        <span class="text-slate-400 dark:text-slate-500">—</span>
+                                        <span class="text-slate-600 dark:text-slate-400">—</span>
                                     @endif
                                 </td>
                             @endif
@@ -379,7 +379,7 @@
                         </td>
                         @if ($definition->compare)
                             <td class="px-4 py-2 text-right font-semibold" style="font-variant-numeric: tabular-nums;">
-                                <span class="{{ $headlineDelta >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
+                                <span class="{{ $headlineDelta >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
                                     {{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}
                                 </span>
                             </td>

@@ -271,7 +271,7 @@
                                                     $flux.modal('pot-fund').show();
                                                 }
                                             "
-                                            class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                                            class="text-sm text-slate-600 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100 dark:text-slate-400"
                                             title="{{ Lang::get('pots::messages.actions.fund') }}"
                                             aria-label="{{ Lang::get('pots::messages.actions.fund') }}"
                                         >{{ Lang::get('pots::messages.actions.fund') }}</button>
@@ -287,7 +287,7 @@
                                                     $flux.modal('pot-move').show();
                                                 }
                                             "
-                                            class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                                            class="text-sm text-slate-600 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100 dark:text-slate-400"
                                             title="{{ Lang::get('pots::messages.actions.move') }}"
                                             aria-label="{{ Lang::get('pots::messages.actions.move') }}"
                                         >{{ Lang::get('pots::messages.actions.move') }}</button>
@@ -339,7 +339,7 @@
                                             x-on:click="open = !open"
                                             :aria-expanded="open.toString()"
                                             aria-controls="pot-history-{{ $pot->id }}"
-                                            class="text-xs text-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-300"
+                                            class="text-xs text-slate-600 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-300 dark:text-slate-400"
                                         >
                                             <span x-show="!open">{{ Lang::get('pots::messages.history.show') }}</span>
                                             <span x-show="open" x-cloak>{{ Lang::get('pots::messages.history.hide') }}</span>
@@ -365,14 +365,14 @@
                                                     @endphp
                                                     <li class="flex items-center justify-between gap-4 py-2 px-0 text-sm">
                                                         <div class="min-w-0">
-                                                            <span class="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{{ substr($movement->createdAt, 0, 10) }}</span>
+                                                            <span class="text-xs text-slate-600 dark:text-slate-400 tabular-nums">{{ substr($movement->createdAt, 0, 10) }}</span>
                                                             <span class="ml-2 text-sm text-slate-500 dark:text-slate-400">{{ $label }}</span>
                                                             @if ($movement->memo !== null)
-                                                                <span class="ml-1 text-xs italic text-slate-400 dark:text-slate-500">{{ $movement->memo }}</span>
+                                                                <span class="ml-1 text-xs italic text-slate-600 dark:text-slate-400">{{ $movement->memo }}</span>
                                                             @endif
                                                         </div>
                                                         <span
-                                                            class="shrink-0 text-sm tabular-nums {{ $isIncoming ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}"
+                                                            class="shrink-0 text-sm tabular-nums {{ $isIncoming ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}"
                                                             style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;"
                                                         >
                                                             {{ $isIncoming ? '+' : '' }}{{ $fmt($movement->amountMinor, $movement->currency) }}
@@ -848,7 +848,7 @@
                         style="font-variant-numeric: tabular-nums;"
                     />
                     @if ($fundRec !== null)
-                        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">
+                        <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
                             {{ Lang::get('pots::messages.fund.available', ['amount' => $fmt(max(0, $fundRec->unallocatedMinor), $fundRec->currency)]) }}
                         </p>
                     @endif
@@ -917,7 +917,7 @@
                         style="font-variant-numeric: tabular-nums;"
                     />
                     @if ($moveSrcPot !== null)
-                        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">
+                        <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
                             {{ Lang::get('pots::messages.available_in', ['name' => $moveSrcPot->name, 'amount' => $fmt($moveSrcPot->balanceMinor, $moveSrcPot->currency)]) }}
                         </p>
                     @endif
@@ -964,7 +964,7 @@
                         style="font-variant-numeric: tabular-nums;"
                     />
                     @if ($withdrawPot !== null)
-                        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">
+                        <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
                             {{ Lang::get('pots::messages.available_in', ['name' => $withdrawPot->name, 'amount' => $fmt($withdrawPot->balanceMinor, $withdrawPot->currency)]) }}
                         </p>
                     @endif

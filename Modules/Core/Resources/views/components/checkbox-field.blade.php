@@ -20,7 +20,7 @@
     Nobody noticed ten spellings because most of what they said does nothing.
     This app sets appearance:none on no checkbox and carries no forms plugin,
     so a native box ignores `rounded`, `border-slate-300` and
-    `text-emerald-600` outright. Eight of the thirteen asked for an emerald
+    `text-emerald-700` outright. Eight of the thirteen asked for an emerald
     checkbox; all thirteen rendered in the operating system's blue. `accent-*`
     is the property that actually paints one, so that is what this uses.
 
@@ -59,7 +59,7 @@
 
     $checkboxAccent = $tone === 'danger'
         ? 'accent-slate-900 focus-visible:ring-slate-900 dark:accent-slate-100 dark:focus-visible:ring-slate-100'
-        : 'accent-emerald-600 focus-visible:ring-emerald-600 dark:accent-emerald-500';
+        : 'accent-emerald-600 focus-visible:ring-emerald-700 dark:accent-emerald-500';
 
     // mt-0.5, not the mt-1 three of the copies used: now that every box is a
     // fixed 16px against a 20px line, 2px centres it and 4px sits it low.

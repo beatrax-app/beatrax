@@ -28,8 +28,8 @@
         // Severity colour: DEBUG/INFO muted, WARNING amber,
         // ERROR/CRITICAL/ALERT/EMERGENCY rose, NOTICE neutral.
         $severityClass = [
-            'DEBUG' => 'text-slate-400',
-            'INFO' => 'text-slate-400',
+            'DEBUG' => 'text-slate-600',
+            'INFO' => 'text-slate-600',
             'NOTICE' => 'text-slate-600 dark:text-slate-300',
             'WARNING' => 'text-amber-700 dark:text-amber-400',
             'ERROR' => 'text-rose-700 dark:text-rose-400',
@@ -140,7 +140,7 @@
                     <div class="flex items-baseline gap-2 px-2 py-1 text-[11.5px]">
                         <span class="text-[10.5px] text-slate-500 shrink-0 w-[60px] tabular-nums" x-text="shortTime(line.timestamp)"></span>
                         <span class="text-[10px] font-semibold uppercase tracking-wide shrink-0 w-[64px]" x-bind:class="severityColor(line.severity)" x-text="line.severity"></span>
-                        <span class="text-[10.5px] text-slate-400 shrink-0 w-[72px] truncate" x-text="line.channel || '—'" x-bind:title="line.channel"></span>
+                        <span class="text-[10.5px] text-slate-600 shrink-0 w-[72px] truncate dark:text-slate-400" x-text="line.channel || '—'" x-bind:title="line.channel"></span>
                         {{-- A floor, not min-w-0. Every other cell in the row is
                              shrink-0, so the message was the only thing that could
                              give: at phone width (the dev shell keeps its 220px
@@ -182,7 +182,7 @@
                                 x-on:click.stop.prevent="dismissLine(line)"
                                 title="{{ Lang::get('dev::logs.dismiss_title') }}"
                                 aria-label="{{ Lang::get('dev::logs.dismiss_aria') }}"
-                                class="rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-400 hover:bg-rose-900/40 hover:text-rose-300"
+                                class="rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-rose-900/40 hover:text-rose-300 dark:text-slate-400"
                                 data-testid="log-dismiss-button"
                             >
                                 {{ Lang::get('dev::logs.dismiss') }}
@@ -190,7 +190,7 @@
                         </div>
                     </div>
                     <template x-if="line.expanded && line.continuation">
-                        <div class="pl-[208px] pr-3 pb-2 text-[10.5px] text-slate-400 whitespace-pre-wrap break-words" x-text="line.continuation"></div>
+                        <div class="pl-[208px] pr-3 pb-2 text-[10.5px] text-slate-600 whitespace-pre-wrap break-words dark:text-slate-400" x-text="line.continuation"></div>
                     </template>
                 </div>
             </template>
@@ -453,7 +453,7 @@
 
                     severityColor(sev) {
                         switch (sev) {
-                            case 'DEBUG': case 'INFO': return 'text-slate-400';
+                            case 'DEBUG': case 'INFO': return 'text-slate-600';
                             case 'NOTICE': return 'text-slate-200';
                             case 'WARNING': return 'text-amber-400';
                             case 'ERROR': case 'CRITICAL': case 'ALERT': case 'EMERGENCY': return 'text-rose-400';

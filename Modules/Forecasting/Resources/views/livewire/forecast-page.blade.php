@@ -171,7 +171,7 @@
                         wire:click="startCreateScenario"
                         @class([
                             'rounded-md px-3 py-1 text-sm',
-                            'bg-emerald-600 dark:bg-emerald-500 text-white hover:bg-emerald-700 dark:hover:bg-emerald-400' => count($scenarios) === 0,
+                            'bg-emerald-700 dark:bg-emerald-700 text-white hover:bg-emerald-800 dark:hover:bg-emerald-800' => count($scenarios) === 0,
                             'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' => count($scenarios) > 0,
                         ])
                     >{{ Lang::get('forecasting::forecast.new_scenario') }}</button>
@@ -188,7 +188,7 @@
                         <button
                             type="button"
                             wire:click="saveNewScenario"
-                            class="rounded-md bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-700 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                            class="rounded-md bg-emerald-700 px-3 py-1 text-sm text-white hover:bg-emerald-800 dark:hover:bg-emerald-800 dark:bg-emerald-700"
                         >{{ Lang::get('forecasting::forecast.create_scenario') }}</button>
                         <button
                             type="button"

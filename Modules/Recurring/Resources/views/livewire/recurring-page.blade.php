@@ -56,15 +56,15 @@
         @unless ($sectionEmpty)
             <div class="mt-6 flex flex-wrap items-baseline gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300">
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totals->expense) }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.expenses') }}</span>
+                <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.expenses') }}</span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">+</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totals->income) }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.income') }}</span>
+                <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.income') }}</span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">=</span>
                 <span class="font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($totals->net) }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.net_per_month') }}</span>
+                <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.net_per_month') }}</span>
                 @if ($totals->isPartial())
-                    <span class="text-slate-400 dark:text-slate-500" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $totals->unconvertedList()]) }}</span>
+                    <span class="text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $totals->unconvertedList()]) }}</span>
                 @endif
             </div>
         @endunless
@@ -130,11 +130,11 @@
                                         >{{ $row->displayName() }}</a>
                                         <span class="ml-2 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
                                         @if ($row->latestAmount->currency() !== $baseCurrency && $row->eurEquivalent !== null)
-                                            <span class="ml-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
+                                            <span class="ml-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
                                         @endif
                                     </p>
                                     <p
-                                        class="mt-1 text-xs {{ $row->nextExpectedConfidenceLow ? 'italic text-slate-400 dark:text-slate-500' : 'text-slate-500 dark:text-slate-400' }}"
+                                        class="mt-1 text-xs {{ $row->nextExpectedConfidenceLow ? 'italic text-slate-600 dark:text-slate-400' : 'text-slate-500 dark:text-slate-400' }}"
                                         data-confidence-low="{{ $row->nextExpectedConfidenceLow ? 'true' : 'false' }}"
                                     >
                                         {{ $row->cadence->label() }}
@@ -205,11 +205,11 @@
                                         >{{ $row->displayName() }}</a>
                                         <span class="ml-2 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
                                         @if ($row->latestAmount->currency() !== $baseCurrency && $row->eurEquivalent !== null)
-                                            <span class="ml-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
+                                            <span class="ml-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
                                         @endif
                                     </p>
                                     <p
-                                        class="mt-1 text-xs {{ $row->nextExpectedConfidenceLow ? 'italic text-slate-400 dark:text-slate-500' : 'text-slate-500 dark:text-slate-400' }}"
+                                        class="mt-1 text-xs {{ $row->nextExpectedConfidenceLow ? 'italic text-slate-600 dark:text-slate-400' : 'text-slate-500 dark:text-slate-400' }}"
                                         data-confidence-low="{{ $row->nextExpectedConfidenceLow ? 'true' : 'false' }}"
                                     >
                                         {{ $row->cadence->label() }}

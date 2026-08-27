@@ -289,7 +289,7 @@
         <div class="space-y-1 border-t border-slate-100 pt-6 dark:border-slate-800">
             <button
                 type="submit"
-                class="block w-full max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:focus-visible:ring-emerald-500"
+                class="block w-full max-w-xs bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800 dark:focus-visible:ring-emerald-500"
             >
                 {{ Lang::get('core::settings.save') }}
             </button>

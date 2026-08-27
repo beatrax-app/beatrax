@@ -18,7 +18,7 @@
 
     $deltaClass = [
         'up' => 'text-rose-600 dark:text-rose-400',
-        'down' => 'text-emerald-600 dark:text-emerald-400',
+        'down' => 'text-emerald-700 dark:text-emerald-400',
         'flat' => 'text-slate-500 dark:text-slate-400',
     ];
 
@@ -65,20 +65,20 @@
             <div class="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300">
                 <span class="whitespace-nowrap">
                     <span class="font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $trackedCount }}</span>
-                    <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.tracked') }}</span>
+                    <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('drift-alerts::watch.tracked') }}</span>
                 </span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
                 <span class="whitespace-nowrap">
                     <span class="font-medium {{ $driftedUpCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">{{ $driftedUpCount }}</span>
-                    <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.crept_up') }}</span>
+                    <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('drift-alerts::watch.crept_up') }}</span>
                 </span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
                 <span class="whitespace-nowrap">
                     <span style="font-variant-numeric: tabular-nums;">{{ $fmt($monthlyTotal->minor, $monthlyTotal->currency) }}</span>
-                    <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.per_month_total') }}</span>
+                    <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('drift-alerts::watch.per_month_total') }}</span>
                 </span>
                 @if ($monthlyTotal->isPartial())
-                    <span class="text-slate-400 dark:text-slate-500" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $monthlyTotal->unconvertedList()]) }}</span>
+                    <span class="text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $monthlyTotal->unconvertedList()]) }}</span>
                 @endif
             </div>
         @endif

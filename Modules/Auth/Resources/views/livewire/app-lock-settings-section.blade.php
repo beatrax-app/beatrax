@@ -87,7 +87,7 @@
                 >
                     <x-slot:label>
                         {{ Lang::get('auth::app_lock.account_password_label') }}
-                        <span class="ml-1 text-xs text-slate-400">{{ Lang::get('auth::app_lock.account_password_note') }}</span>
+                        <span class="ml-1 text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('auth::app_lock.account_password_note') }}</span>
                     </x-slot:label>
                 </x-core::form-field>
 
@@ -255,7 +255,7 @@
                 </x-core::setting-row>
             @else
                 {{-- Empty state: platform does not support WebAuthn --}}
-                <p class="text-sm text-slate-400 dark:text-slate-500">
+                <p class="text-sm text-slate-600 dark:text-slate-400">
                     {{ Lang::get('auth::app_lock.biometric_unavailable') }}
                 </p>
             @endif

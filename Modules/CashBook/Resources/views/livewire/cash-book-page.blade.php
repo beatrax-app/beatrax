@@ -91,7 +91,7 @@
             <p class="text-sm text-rose-600 dark:text-rose-500">{{ $error }}</p>
         @endif
 
-        <button type="submit" class="w-full rounded-md bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400">
+        <button type="submit" class="w-full rounded-md bg-emerald-700 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800">
             {{ Lang::get('cashbook::cash-book.add_entry') }}
         </button>
     </form>
@@ -165,7 +165,7 @@
                         </div>
                         {{-- Tax badge: hover-reveal on desktop. --}}
                         <x-tax::tax-badge :transaction="$dEntryTaxRow" :showAlways="false" />
-                        <span class="shrink-0 font-medium {{ (int) $entry->settled_amount_minor < 0 ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-400' }}" style="font-variant-numeric: tabular-nums;">
+                        <span class="shrink-0 font-medium {{ (int) $entry->settled_amount_minor < 0 ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-700 dark:text-emerald-400' }}" style="font-variant-numeric: tabular-nums;">
                             {{ $fmt((int) $entry->settled_amount_minor, $entry->settled_currency) }}
                         </span>
                         @if ($deletingEntryId === $dEntryId)
@@ -182,7 +182,7 @@
                                 type="button"
                                 wire:click="confirmDelete({{ (int) $entry->id }})"
                                 aria-label="{{ Lang::get('cashbook::cash-book.delete_entry') }}"
-                                class="shrink-0 rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800 dark:hover:text-rose-400"
+                                class="shrink-0 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800 dark:hover:text-rose-400 dark:text-slate-400"
                             >{{ Lang::get('cashbook::cash-book.delete') }}</button>
                         @endif
                     </li>

@@ -51,11 +51,11 @@
         { label: @js($matchLabel), ok: matchOk, met: @js($met), unmet: @js($unmet) },
     ]" :key="req.label">
         <li class="flex items-center gap-2 text-xs transition-colors"
-            :class="req.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'">
+            :class="req.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'">
             <span
                 class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors"
                 :class="req.ok
-                    ? 'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-400 dark:bg-emerald-400 dark:text-slate-950'
+                    ? 'border-emerald-600 bg-emerald-700 text-white dark:border-emerald-400 dark:bg-emerald-400 dark:text-slate-950'
                     : 'border-slate-300 text-transparent dark:border-slate-600'"
                 aria-hidden="true"
             >

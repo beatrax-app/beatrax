@@ -53,7 +53,7 @@
 
         <button
             type="submit"
-            class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+            class="inline-flex items-center rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
         >{{ Lang::get('anomaly::settings.save') }}</button>
 
         @if ($saved)
@@ -79,8 +79,8 @@
                     <li class="flex items-center justify-between gap-3 py-2" data-testid="suppression-rule-{{ $rule->id }}">
                         <span class="min-w-0 flex-1 truncate text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">
                             {{ $rule->displayName !== '' ? $rule->displayName : Lang::get('anomaly::settings.unknown_merchant') }}
-                            <span class="mx-1 text-slate-400">·</span>{{ Lang::get('anomaly::settings.detectors.'.$rule->detector) }}
-                            <span class="mx-1 text-slate-400">·</span>{{ $ruleFmt($rule->bandLow) }} – {{ $ruleFmt($rule->bandHigh) }}
+                            <span class="mx-1 text-slate-600 dark:text-slate-400">·</span>{{ Lang::get('anomaly::settings.detectors.'.$rule->detector) }}
+                            <span class="mx-1 text-slate-600 dark:text-slate-400">·</span>{{ $ruleFmt($rule->bandLow) }} – {{ $ruleFmt($rule->bandHigh) }}
                         </span>
                         <button
                             type="button"

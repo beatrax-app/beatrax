@@ -29,7 +29,7 @@
             // down one shade on dark to keep contrast against slate-950
             // (UI-SPEC § Color); amber dot ticks to amber-500.
             $dotColor = match ($line->status) {
-                'healthy' => 'bg-emerald-600 dark:bg-emerald-500',
+                'healthy' => 'bg-emerald-700 dark:bg-emerald-700',
                 'stale' => 'bg-amber-700 dark:bg-amber-500',
                 'reauth' => 'bg-rose-600 dark:bg-rose-500',
                 default => 'bg-slate-400 dark:bg-slate-500',

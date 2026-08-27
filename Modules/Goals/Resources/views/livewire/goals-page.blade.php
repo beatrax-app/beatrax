@@ -89,7 +89,7 @@
                             @if ($row->progressState === GoalProgressState::Overdue->value)
                                 · <span class="text-amber-600 dark:text-amber-400">{{ Lang::get('goals::messages.status.overdue') }}</span>
                             @elseif ($row->progressState === GoalProgressState::Reached->value)
-                                · <span class="text-emerald-600 dark:text-emerald-400">{{ Lang::get('goals::messages.status.reached') }}</span>
+                                · <span class="text-emerald-700 dark:text-emerald-400">{{ Lang::get('goals::messages.status.reached') }}</span>
                             @elseif ($row->isCompleted())
                                 {{-- Completed lived only on the desktop badge, so a
                                      finished goal read as an unfinished one at 375pt. --}}
@@ -215,7 +215,7 @@
                     <div class="mt-3 flex flex-wrap items-baseline justify-between gap-4">
                         <p class="text-sm" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                             {{ $fmt($row->contributedMinor, $row->currency) }}
-                            <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">/</span>
+                            <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">/</span>
                             {{ $fmt($row->targetMinor, $row->currency) }}
                         </p>
                         @include('goals::partials.goal-projection-line', ['row' => $row, 'class' => 'shrink-0 text-xs text-slate-500 dark:text-slate-400'])
@@ -290,12 +290,12 @@
                         <li class="rounded-lg border border-slate-200 bg-white p-4 opacity-60 dark:bg-slate-950 dark:border-slate-700">
                             <div class="flex items-center justify-between gap-3">
                                 <p class="min-w-0 truncate text-sm font-semibold text-slate-500 dark:text-slate-400">{{ $row->name }}</p>
-                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('goals::messages.status.archived') }}</span>
+                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('goals::messages.status.archived') }}</span>
                             </div>
                             <div class="mt-3 flex flex-wrap items-baseline justify-between gap-4">
                                 <p class="text-sm" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                                     {{ $fmt($row->contributedMinor, $row->currency) }}
-                                    <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">/</span>
+                                    <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">/</span>
                                     {{ $fmt($row->targetMinor, $row->currency) }}
                                 </p>
                             </div>

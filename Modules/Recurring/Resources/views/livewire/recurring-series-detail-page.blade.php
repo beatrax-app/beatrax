@@ -42,7 +42,7 @@
                 <x-core::status-pill>{{ ucfirst($series->state) }}</x-core::status-pill>
                 <x-core::status-pill>{{ $series->cadence->label() }}</x-core::status-pill>
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($series->latestAmount) }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">·</span>
+                <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">·</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($series->monthlyEquivalent->toMinor()) }}/mo</span>
             </p>
             @if (! empty($counterpartyLink))

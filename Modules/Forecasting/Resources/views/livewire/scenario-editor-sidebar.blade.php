@@ -26,7 +26,7 @@
                 <button
                     type="button"
                     wire:click="saveRename"
-                    class="rounded-md bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-700 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                    class="rounded-md bg-emerald-700 px-3 py-1 text-sm text-white hover:bg-emerald-800 dark:hover:bg-emerald-800 dark:bg-emerald-700"
                 >{{ Lang::get('forecasting::scenario.save') }}</button>
                 <button
                     type="button"
@@ -128,7 +128,7 @@
             <button
                 type="button"
                 wire:click="startAddMutation"
-                class="rounded-md bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-700 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                class="rounded-md bg-emerald-700 px-3 py-1 text-sm text-white hover:bg-emerald-800 dark:hover:bg-emerald-800 dark:bg-emerald-700"
             >{{ Lang::get('forecasting::scenario.add_mutation') }}</button>
         @elseif ($addingMutation)
             @if ($selectedKind === null)

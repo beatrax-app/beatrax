@@ -109,12 +109,16 @@
 
     /* Text */
     --color-text: #0f172a;
-    --color-text-muted: #64748b;
-    --color-text-faint: #94a3b8;
+    /* Both moved one step down the slate ramp to clear WCAG AA 1.4.3 on the
+       three surfaces they sit on -- white, slate-50 and slate-100. The old
+       pair read 4.34:1 and 2.56:1, and faint carried real labels: the palette
+       hint, the weekday headers, the settings section names. */
+    --color-text-muted: #475569;
+    --color-text-faint: #5a6a80;
     --color-text-inverse: #f8fafc;
 
     /* State */
-    --color-emerald: #059669;
+    --color-emerald: #047857;
     --color-emerald-bg: #d1fae5;
     --color-amber: #b45309;
     --color-amber-bg: #fef3c7;
@@ -226,8 +230,10 @@
     --color-border: #1e293b;
     --color-border-strong: #334155;
     --color-text: #f1f5f9;
-    --color-text-muted: #94a3b8;
-    --color-text-faint: #64748b;
+    /* Same move up the ramp for the dark surfaces, which run slate-950 to
+       slate-800: the old pair read 4.24:1 and 3.07:1 against them. */
+    --color-text-muted: #cbd5e1;
+    --color-text-faint: #94a3b8;
     --color-text-inverse: #0f172a;
     --color-emerald: #10b981;
     --color-emerald-bg: rgba(16, 185, 129, 0.12);
@@ -704,7 +710,7 @@ td.date,
 
     /* Pressed reads as movement, which is what tells a thumb it landed. */
     .emoji-action:active {
-        background: var(--color-border-faint);
+        background: var(--color-border);
         transform: translateY(1px);
     }
 
@@ -719,8 +725,8 @@ td.date,
     }
 
     .emoji-action--danger:hover {
-        border-color: var(--color-danger, currentColor);
-        color: var(--color-danger, currentColor);
+        border-color: var(--color-rose);
+        color: var(--color-rose);
     }
 
     .dev-side {
@@ -1955,12 +1961,12 @@ td.date,
         letter-spacing: 0.06em;
         color: var(--color-text-muted);
         padding: var(--space-1) var(--space-3) var(--space-2);
-        border-bottom: 1px solid var(--color-border-faint);
+        border-bottom: 1px solid var(--color-border);
     }
 
     .preview-section-table tbody td {
         padding: var(--space-2) var(--space-3);
-        border-bottom: 1px solid var(--color-border-faint);
+        border-bottom: 1px solid var(--color-border);
         vertical-align: middle;
     }
 
@@ -2045,7 +2051,7 @@ td.date,
             column-gap: var(--space-2);
             row-gap: var(--space-1);
             padding: var(--space-2) 0;
-            border-bottom: 1px solid var(--color-border-faint);
+            border-bottom: 1px solid var(--color-border);
         }
 
         .preview-section-table tbody tr:last-child {
@@ -2569,7 +2575,7 @@ td.date,
     }
 
     .view-toggle button.active {
-        background: var(--color-primary, var(--color-text));
+        background: var(--color-text);
         color: var(--color-text-inverse);
         font-weight: 600;
     }
@@ -4496,7 +4502,7 @@ td.date,
 .srch-icon {
     flex-shrink: 0;
     font-size: 1rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     line-height: 1;
     pointer-events: none;
 }
@@ -4519,15 +4525,15 @@ td.date,
 }
 
 .srch-input:focus {
-    border-color: var(--color-accent, oklch(55% 0.2 260));
-    box-shadow: 0 0 0 2px color-mix(in oklch, var(--color-accent, oklch(55% 0.2 260)) 20%, transparent);
+    border-color: var(--color-blue);
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--color-blue) 20%, transparent);
 }
 
 .srch-spinner {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
 }
 
 /* ── Filter chip row (desktop) ───────────────────────────────────────────── */
@@ -4549,7 +4555,7 @@ td.date,
     border-radius: 9999px;
     background: transparent;
     font-size: 0.8125rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     cursor: pointer;
     white-space: nowrap;
     transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
@@ -4562,9 +4568,9 @@ td.date,
 }
 
 .srch-chip--active {
-    background: color-mix(in oklch, var(--color-accent, oklch(55% 0.2 260)) 10%, transparent);
-    border-color: var(--color-accent, oklch(55% 0.2 260));
-    color: var(--color-accent, oklch(55% 0.2 260));
+    background: color-mix(in oklch, var(--color-blue) 10%, transparent);
+    border-color: var(--color-blue);
+    color: var(--color-blue);
     font-weight: 500;
 }
 
@@ -4607,7 +4613,7 @@ td.date,
 /* ── Clear-all button ─────────────────────────────────────────────────────── */
 .srch-clear-all {
     font-size: 0.8125rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     text-decoration: underline;
     background: none;
     border: none;
@@ -4623,19 +4629,19 @@ td.date,
 .srch-strip {
     margin-top: var(--space-2, 8px);
     font-size: 0.8125rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
 }
 
 /* ── Result rows ─────────────────────────────────────────────────────────── */
 .srch-row {
     /* Subtle left accent when in search mode */
-    border-left: 2px solid var(--color-accent, oklch(55% 0.2 260));
+    border-left: 2px solid var(--color-blue);
 }
 
 .srch-snippet {
     font-size: 0.75rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     margin-top: 2px;
     line-height: 1.4;
     overflow: hidden;
@@ -4667,7 +4673,7 @@ mark {
 
 .srch-no-results__body {
     font-size: 0.875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     margin-bottom: var(--space-3, 12px);
 }
 
@@ -4681,14 +4687,14 @@ mark {
 
 .srch-no-results__suggestion {
     font-size: 0.875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
 }
 
 .srch-did-you-mean {
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--color-accent, oklch(55% 0.2 260));
+    color: var(--color-blue);
     text-decoration: underline;
     font-size: inherit;
     padding: 0;
@@ -4718,7 +4724,7 @@ mark {
 .srch-filter-label {
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     display: block;
 }
 
@@ -4759,12 +4765,12 @@ mark {
 
 .srch-date-sep {
     font-size: 0.875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
 }
 
 .srch-chip-meta {
     font-size: 0.6875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
 }
 
 .srch-check-row {
@@ -4826,7 +4832,7 @@ mark {
 .srch-sheet-section-label {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: var(--space-2, 8px);
@@ -4855,7 +4861,7 @@ mark {
 .srch-sheet-apply {
     flex: 1;
     height: 40px;
-    background: var(--color-accent, oklch(55% 0.2 260));
+    background: var(--color-blue);
     color: oklch(99% 0 0);
     border: none;
     border-radius: 6px;
@@ -4871,7 +4877,7 @@ mark {
     border: 1px solid var(--color-border, oklch(93% 0 0));
     border-radius: 6px;
     font-size: 0.875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     cursor: pointer;
 }
 
@@ -4885,7 +4891,7 @@ mark {
     border-radius: 9999px;
     background: transparent;
     font-size: 0.875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     cursor: pointer;
 }
 
@@ -4896,7 +4902,7 @@ mark {
     min-width: 18px;
     height: 18px;
     padding: 0 4px;
-    background: var(--color-accent, oklch(55% 0.2 260));
+    background: var(--color-blue);
     color: oklch(99% 0 0);
     border-radius: 9999px;
     font-size: 0.6875rem;

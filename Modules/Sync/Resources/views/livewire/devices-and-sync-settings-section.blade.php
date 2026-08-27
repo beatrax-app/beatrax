@@ -371,9 +371,9 @@
                         placeholder="https://relay.example.com"
                         aria-label="{{ Lang::get('sync::devices.relay_endpoint_aria') }}"
                         class="block min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                               placeholder:text-slate-400
+                               placeholder:text-slate-500 dark:placeholder:text-slate-400
                                focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500
+                               dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400
                                dark:focus-visible:ring-slate-100"
                         data-testid="relay-endpoint-input"
                     />
@@ -479,7 +479,7 @@
                     </div>
                 @elseif ($encryptionModalStep === EncryptionSetupStep::Done)
                     <div class="space-y-3 text-center">
-                        <svg class="mx-auto h-6 w-6 text-emerald-600 dark:text-emerald-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <svg class="mx-auto h-6 w-6 text-emerald-700 dark:text-emerald-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
                         </svg>
                         <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100" aria-live="polite" aria-atomic="true">{{ Lang::get('sync::devices.encryption_enabled') }}</h3>

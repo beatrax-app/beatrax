@@ -27,7 +27,7 @@
         {{ Lang::get('goals::messages.projection.not_enough_history') }}
     @elseif ($row->projectionBeyondHorizon)
         {{ Lang::get('goals::messages.projection.est', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
-        <span class="text-slate-400 dark:text-slate-500">{{ Lang::get('goals::messages.projection.projection_note') }}</span>
+        <span class="text-slate-600 dark:text-slate-400">{{ Lang::get('goals::messages.projection.projection_note') }}</span>
     @else
         {{ Lang::get('goals::messages.projection.projected', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
     @endif

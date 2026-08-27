@@ -28,7 +28,7 @@
                 {{-- Rules never leave the device that authored them, and the
                      backfiller skips them, so the page says so rather than
                      letting a second device look like it is missing them. --}}
-                <p class="mt-1 max-w-2xl text-sm text-slate-400 dark:text-slate-500">
+                <p class="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
                     {{ Lang::get('categorization::rules.device_local_note') }}
                 </p>
             </div>
@@ -44,7 +44,7 @@
                 <button
                     type="button"
                     wire:click="openCreateModal"
-                    class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                    class="inline-flex items-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 >
                     {{ Lang::get('categorization::rules.new_rule') }}
                 </button>
@@ -85,7 +85,7 @@
             <button
                 type="button"
                 wire:click="openCreateModal"
-                class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                class="inline-flex items-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
             >
                 {{ Lang::get('categorization::rules.empty_cta') }}
             </button>
@@ -138,7 +138,7 @@
                             @endforeach
                         </div>
                     </td>
-                    <td class="px-4 py-3 text-right text-sm {{ $rule->hitsCount === 0 ? 'text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">
+                    <td class="px-4 py-3 text-right text-sm {{ $rule->hitsCount === 0 ? 'text-slate-600 dark:text-slate-400' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">
                         <span class="md:hidden">{{ Lang::get('categorization::rules.col_hits') }} </span>{{ $rule->hitsCount }}
                     </td>
                     <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">

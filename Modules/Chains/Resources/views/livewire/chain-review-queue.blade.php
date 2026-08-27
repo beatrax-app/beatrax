@@ -122,7 +122,7 @@
                                 type="button"
                                 wire:click="confirm({{ $row->chainLinkId }})"
                                 aria-label="{{ Lang::get('chains::review.confirm_aria', ['id' => $row->chainLinkId]) }}"
-                                class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                                class="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                             >{{ Lang::get('chains::review.confirm') }}</button>
                             <button
                                 type="button"

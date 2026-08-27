@@ -125,7 +125,7 @@
 
                 <button
                     type="submit"
-                    class="w-full min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                    class="w-full min-h-[44px] bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:hover:bg-emerald-800 dark:bg-emerald-700"
                 >
                     {{ Lang::get('mobile::import.continue') }}
                 </button>
@@ -164,7 +164,7 @@
 
             <a
                 href="{{ PairingEntryUrl::importing() }}"
-                class="flex w-full min-h-[44px] items-center justify-center rounded-md bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                class="flex w-full min-h-[44px] items-center justify-center rounded-md bg-emerald-700 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
             >{{ Lang::get('mobile::import.continue_to_pairing') }}</a>
         </div>
     @endif
@@ -273,9 +273,9 @@
                     x-bind:tabindex="confirmed ? '0' : '-1'"
                     x-on:click="if (! confirmed) { $event.preventDefault(); }"
                     :class="confirmed
-                        ? 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400'
-                        : 'bg-emerald-600/50 cursor-not-allowed dark:bg-emerald-500/40'"
-                    class="flex w-full min-h-[44px] items-center justify-center rounded-md py-2 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-emerald-500"
+                        ? 'bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-800'
+                        : 'bg-emerald-700/50 cursor-not-allowed dark:bg-emerald-700/40'"
+                    class="flex w-full min-h-[44px] items-center justify-center rounded-md py-2 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:focus-visible:ring-emerald-500"
                 >
                     {{ Lang::get('mobile::import.continue_to_pairing') }}
                 </a>

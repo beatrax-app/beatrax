@@ -68,7 +68,7 @@
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-emerald-500 dark:bg-emerald-400" aria-hidden="true"></span>
             {{ Lang::get('sync::status.all_synced') }}
             @if ($lastSyncedHuman !== null)
-                <span class="text-emerald-600 dark:text-emerald-400">&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
+                <span class="text-emerald-700 dark:text-emerald-400">&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
             @endif
         </x-core::alert>
     @endif
@@ -120,7 +120,7 @@
                                 'text-slate-500 italic dark:text-slate-400' => ! $isKnownPeer,
                             ])>{{ $displayName }}</p>
                             <p
-                                class="truncate font-mono text-slate-400 dark:text-slate-500"
+                                class="truncate font-mono text-slate-600 dark:text-slate-400"
                                 style="font-family: 'JetBrains Mono', 'Fira Mono', monospace; font-size: 11px;"
                                 data-testid="peer-device-id"
                             >{{ $peerDeviceId }}</p>
@@ -148,7 +148,7 @@
                                     data-testid="peer-last-seen"
                                 >{{ $lastSeenHuman }}</span>
                             @else
-                                <span class="text-xs text-slate-400 dark:text-slate-500" data-testid="peer-last-seen">{{ Lang::get('sync::status.never') }}</span>
+                                <span class="text-xs text-slate-600 dark:text-slate-400" data-testid="peer-last-seen">{{ Lang::get('sync::status.never') }}</span>
                             @endif
                         </div>
 

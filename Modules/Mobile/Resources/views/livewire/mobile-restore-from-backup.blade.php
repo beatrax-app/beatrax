@@ -28,7 +28,7 @@
                     accept=".enc"
                     x-on:livewire-upload-error="$wire.uploadFailed()"
                 />
-                <div wire:loading wire:target="backup" class="text-xs text-slate-400">{{ Lang::get('core::backup.restore.uploading') }}</div>
+                <div wire:loading wire:target="backup" class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::backup.restore.uploading') }}</div>
             </div>
 
             <x-core::form-field

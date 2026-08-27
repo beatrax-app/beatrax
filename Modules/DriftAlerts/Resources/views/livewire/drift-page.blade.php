@@ -107,7 +107,7 @@
                 @class([
                     'flex-1 rounded-md px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 sm:flex-none',
                     'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' => $typeOption === $pageType,
-                    'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $typeOption !== $pageType,
+                    'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $typeOption !== $pageType,
                 ])
             >{{ Lang::get($typeOption->labelKey()) }}</button>
         @endforeach

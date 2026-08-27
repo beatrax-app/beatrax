@@ -63,19 +63,19 @@
         <div class="rounded-lg border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <dl>
-                    <dt class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ Lang::get('ledger::reconcile.cleared_balance') }}</dt>
+                    <dt class="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('ledger::reconcile.cleared_balance') }}</dt>
                     <dd class="mt-1 font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                         {{ $fmt($clearedBalanceMinor) }}
                     </dd>
                 </dl>
                 <dl>
-                    <dt class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ Lang::get('ledger::reconcile.statement_target') }}</dt>
+                    <dt class="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('ledger::reconcile.statement_target') }}</dt>
                     <dd class="mt-1 font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                         {{ $hasTarget ? $fmt($statementTargetMinor) : '—' }}
                     </dd>
                 </dl>
                 <dl>
-                    <dt class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ Lang::get('ledger::reconcile.difference') }}</dt>
+                    <dt class="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('ledger::reconcile.difference') }}</dt>
                     <dd class="mt-1" style="font-variant-numeric: tabular-nums;">
                         @if (! $hasAccount)
                             <span class="status-pill muted"><span class="dot"></span> {{ Lang::get('ledger::reconcile.pill.choose_account') }}</span>

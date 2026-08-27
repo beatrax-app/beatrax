@@ -258,7 +258,7 @@
                                  balance corner once the entry rows appear) --}}
                             <div class="flex items-center justify-center sm:justify-between">
                                 <span class="cal-day-num
-                                    {{ $day->isToday ? 'inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white dark:bg-blue-500' : '' }}"
+                                    {{ $day->isToday ? 'inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white dark:bg-blue-600' : '' }}"
                                     style="{{ $day->isToday ? '' : ($day->date->month !== $displayMonth ? 'color: var(--color-text-faint);' : 'color: var(--color-text);') }}"
                                 >
                                     {{ $day->date->day }}

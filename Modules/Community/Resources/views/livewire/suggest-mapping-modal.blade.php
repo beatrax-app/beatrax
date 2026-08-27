@@ -99,7 +99,7 @@
                     <x-core::secondary-button wire:click="cancel">{{ Lang::get('community::suggest.cancel') }}</x-core::secondary-button>
                     <button
                         type="submit"
-                        class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                        class="inline-flex items-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                     >{{ Lang::get('community::suggest.submit') }}</button>
                 </div>
             </form>

@@ -132,7 +132,7 @@
             <x-core::card>
                 <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.net') }}</p>
                 <p
-                    class="mt-2 text-3xl font-semibold {{ $summary->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-500' }}"
+                    class="mt-2 text-3xl font-semibold {{ $summary->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-700 dark:text-emerald-500' }}"
                     style="font-variant-numeric: tabular-nums;"
                 >
                     {{ $fmt($summary->net) }}
@@ -165,7 +165,7 @@
                         <x-core::card>
                             <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.net') }}</p>
                             <p
-                                class="mt-2 text-3xl font-semibold {{ $tile->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-500' }}"
+                                class="mt-2 text-3xl font-semibold {{ $tile->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-700 dark:text-emerald-500' }}"
                                 style="font-variant-numeric: tabular-nums;"
                             >
                                 {{ $fmt($tile->net) }}

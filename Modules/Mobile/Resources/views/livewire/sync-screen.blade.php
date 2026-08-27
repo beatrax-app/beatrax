@@ -58,7 +58,7 @@
         @class([
             'w-full min-h-[44px] rounded-md px-4 py-2.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100',
             'bg-slate-900 text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200' => $hasPeers,
-            'bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-500' => ! $hasPeers,
+            'bg-slate-200 text-slate-600 cursor-not-allowed dark:bg-slate-800 dark:text-slate-400' => ! $hasPeers,
         ])
         data-testid="sync-now-button"
     >

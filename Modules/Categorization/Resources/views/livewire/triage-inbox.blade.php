@@ -22,7 +22,7 @@
                 type="button"
                 wire:click="save"
                 @disabled(count($pending) === 0)
-                class="inline-flex max-w-full shrink-0 items-center whitespace-nowrap rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                class="inline-flex max-w-full shrink-0 items-center whitespace-nowrap rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-700 dark:hover:bg-emerald-800"
             >{{ Lang::get('categorization::triage.save_categories') }}</button>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -121,7 +121,7 @@
                                     <button
                                         type="button"
                                         wire:click="$dispatch('suggest-mapping:open', { rawDescription: @js($row->description ?? ($row->counterpartyName ?? '')) })"
-                                        class="help-others-link inline-flex items-center rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-500 hover:border-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-200"
+                                        class="help-others-link inline-flex items-center rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-600 hover:border-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-200"
                                         data-testid="help-others-cta"
                                     >{{ Lang::get('categorization::triage.help_others') }}</button>
                                 @endif

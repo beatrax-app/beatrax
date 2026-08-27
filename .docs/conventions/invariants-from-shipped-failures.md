@@ -1710,6 +1710,48 @@ required `/drift`'s title and its sidebar item to be the same string, so a rule
 covering the title and not the label would let the pair drift apart while both
 halves of the product still passed.
 
+## A fallback on a name that was never defined
+
+`var(--color-muted, oklch(60% 0 0))` appeared in fourteen rules and
+`var(--color-accent, …)` in nine. Neither token has ever been declared — the
+real names are `--color-text-muted` and `--color-blue` — so all twenty-three
+rules silently took their fallback and rendered the same unthemed grey and blue
+in light and dark alike. That is how the `/reports` filter labels came to sit at
+3.77:1: nothing was broken enough to notice.
+
+Three more had no fallback at all. `border-bottom: 1px solid
+var(--color-border-faint)` is invalid at computed-value time when the token does
+not exist, which throws away the whole shorthand, so two table rules had been
+drawing no border and a pressed emoji-action no background.
+
+`EveryColourVariableNamesATokenThatExistsArchTest` compares the declared set
+against the referenced set. It found `--color-border-faint`, `--color-danger`
+and `--color-primary` on its first run, none of which the contrast sweep could
+have surfaced, because a rule that renders nothing has nothing to measure.
+
+## Contrast is not visible to a structural probe, and not a matter of eye either
+
+The round-19 sweep reported 25 routes clean and 24-of-25 all-44 on tap targets.
+Measured against WCAG 1.4.3 the same build had **349 low-contrast text nodes in
+light and 315 in dark**, worst 2.34:1 against a 4.5:1 floor, including every
+primary button in the product at 3.65:1 and 2.47:1.
+
+Two things make it measurable rather than a judgement call. Colours resolve
+through a 1×1 canvas — Tailwind v4 emits `oklch()`, and a regex over
+`oklch(0.514 0.222 16.935)` reads `0.514` as a red channel and produces
+confident nonsense; three such artefacts nearly went into a report as findings.
+And the floor depends on the type: 14px at weight 500 is normal text, so a
+button needs 4.5:1, not the 3:1 that applies at 18.66px bold.
+
+The fix has a shape worth keeping. Fixing the light value alone moved nine nodes
+*below* the floor at night, because a class list carrying `text-slate-400` with
+no `dark:` sibling was relying on one colour being tolerable in both themes.
+A light-mode contrast fix needs its dark half in the same breath, which is what
+the third assertion in `AMutedTextColourStaysAboveTheContrastFloorArchTest`
+pins. The other two pin the pairings that fail by construction rather than by
+route: slate-400 on any light surface, and slate-500 on an element that also
+carries slate-100.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

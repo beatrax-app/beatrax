@@ -94,7 +94,7 @@
                 wire:target="install({{ $alert->id }})"
                 aria-label="{{ Lang::get('core::alerts.actions.install_next_launch_aria', ['id' => $alert->id]) }}"
                 data-testid="resolve-alert-{{ $alert->id }}"
-                class="rounded bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-600 px-3 py-1.5 text-sm font-medium dark:hover:bg-rose-400 dark:bg-rose-500"
+                class="rounded bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-600 px-3 py-1.5 text-sm font-medium dark:hover:bg-rose-700 dark:bg-rose-600"
             >{{ Lang::get('core::alerts.actions.install_next_launch') }}</button>
         </div>
         @break
@@ -108,7 +108,7 @@
             data-testid="resolve-alert-{{ $alert->id }}"
             @class([
                 'rounded px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-                'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-600 dark:hover:bg-rose-400 dark:bg-rose-500' => $alert->severity === \Modules\Core\Public\Enums\SystemAlertSeverity::Critical->value,
+                'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-600 dark:hover:bg-rose-700 dark:bg-rose-600' => $alert->severity === \Modules\Core\Public\Enums\SystemAlertSeverity::Critical->value,
                 'bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-900 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-300' => $alert->severity !== \Modules\Core\Public\Enums\SystemAlertSeverity::Critical->value,
             ])
         >{{ Lang::get('core::alerts.actions.mark_resolved') }}</button>

@@ -81,7 +81,7 @@
             <button
                 type="button"
                 wire:click="confirm({{ $node->chainLinkId }})"
-                class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                class="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 aria-label="{{ Lang::get('chains::drawer.confirm_aria', ['id' => $node->chainLinkId]) }}"
             >{{ Lang::get('chains::drawer.confirm') }}</button>
             <button

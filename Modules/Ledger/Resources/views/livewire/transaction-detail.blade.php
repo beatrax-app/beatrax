@@ -143,7 +143,7 @@
                             </p>
                             @if ($hasPersistedSplit)
                                 {{-- Tax ownership moves to legs once a split is persisted. --}}
-                                <p class="text-xs text-slate-400 dark:text-slate-500" data-testid="split-tax-ownership-note">
+                                <p class="text-xs text-slate-600 dark:text-slate-400" data-testid="split-tax-ownership-note">
                                     {{ Lang::get('ledger::detail.split.tax_per_category') }}
                                 </p>
                             @endif
@@ -236,7 +236,7 @@
                             </button>
 
                             @if (count($legs) >= 18)
-                                <span class="text-xs text-slate-400 dark:text-slate-500" data-testid="split-soft-cap-advisory">
+                                <span class="text-xs text-slate-600 dark:text-slate-400" data-testid="split-soft-cap-advisory">
                                     {{ Lang::get('ledger::detail.split.soft_cap', ['count' => count($legs)]) }}
                                 </span>
                             @endif
@@ -426,7 +426,7 @@
                         x-show="toast"
                         x-cloak
                         x-transition.opacity
-                        class="text-sm text-slate-600"
+                        class="text-sm text-slate-600 dark:text-slate-400"
                         aria-atomic="true"
                         aria-live="polite"
                         x-text="toast"
@@ -485,7 +485,7 @@
 
                         @if ($noteSaved)
                             <span
-                                class="text-sm text-emerald-600 dark:text-emerald-400"
+                                class="text-sm text-emerald-700 dark:text-emerald-400"
                                 aria-live="polite" aria-atomic="true"
                                 data-testid="note-saved-indicator"
                             >{{ Lang::get('ledger::detail.note.saved') }}</span>
@@ -570,7 +570,7 @@
                                         type="button"
                                         wire:click="removeGoalAttribution({{ $attributed->goalId }})"
                                         aria-label="{{ Lang::get('ledger::detail.goal.remove_aria', ['name' => $attributed->goalName]) }}"
-                                        class="rounded-full px-1.5 text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:hover:text-slate-100"
+                                        class="rounded-full px-1.5 text-slate-600 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:hover:text-slate-100 dark:text-slate-400"
                                         data-testid="goal-attribution-remove"
                                     >
                                         <span aria-hidden="true">&times;</span>

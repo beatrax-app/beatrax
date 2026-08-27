@@ -17,7 +17,7 @@
         <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.page.title') }}</p>
         <a
             href="{{ Destination::Goals->url() }}"
-            class="tap-link text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
+            class="tap-link text-xs text-slate-600 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-400 dark:hover:text-slate-300"
         >{{ Lang::get('goals::messages.summary.see_all') }}</a>
     </div>
 
