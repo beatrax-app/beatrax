@@ -5767,46 +5767,43 @@ mark {
     }
 
     /*
-     * The cell gives the band its height; the band takes its width from the
-     * link, which is only as wide as the name in it. A counterparty called
-     * "Etos" is 28px on /uncategorized, so the row was 44 tall and 29 across.
-     * Centred with a floor, it keeps a long name's full width and gives a
-     * short one the rest. The cell's own px-4 is what it grows into -- these
-     * rows carry one link, so there is no neighbour to take it from.
-     */
-    td > a:only-child::after {
-        left: 50%;
-        right: auto;
-        width: 100%;
-        min-width: 44px;
-        transform: translate(-50%, -50%);
-    }
-
-    /*
-     * A full-width band rather than the centred square, for a link that is
-     * already wider than 44px and only ever short of height. It is what the
-     * phone-width rule above gives .tap-link; coarse pointers wider than a
-     * phone were the ones left out.
+     * The band for every control that is the right size to look at and the
+     * wrong size to hit. The phone-width rule above gives .tap-link and the
+     * chips one; coarse pointers wider than a phone were left out, and these
+     * three were never in it at all:
      *
      * The switch track is 44x26 on purpose -- that IS the control, and growing
-     * it to 44 tall makes a pill the size of a button. It is 44 wide already
-     * and short only in height, which is the same shape, so it takes the same
-     * band: all twenty of them answered over 35px on an iPhone 12 mini.
+     * it to 44 tall makes a pill the size of a button. Twenty of them answered
+     * a finger over 35px on an iPhone 12 mini.
+     *
+     * A table cell gives its link the height and the band took its width from
+     * the link, so a counterparty called "Etos" was 44 tall and 29 across. The
+     * link is also only positioned at phone width, so on a tablet the band
+     * escaped to whatever ancestor happened to be positioned.
+     *
+     * Centred with a floor rather than stretched edge to edge: a long name
+     * keeps its full width and a short one gets the rest. `right: auto`
+     * cancels the phone-width rule's `right: 0` -- anchored on both sides the
+     * min-width can never widen it, which is a 42px "Hints →" on /chains.
      */
     .tap-link,
-    .switch {
+    .switch,
+    td > a:only-child {
         position: relative;
     }
 
     .tap-link::after,
-    .switch::after {
+    .switch::after,
+    td > a:only-child::after {
         content: '';
         position: absolute;
-        left: 0;
-        right: 0;
+        left: 50%;
+        right: auto;
         top: 50%;
+        width: 100%;
+        min-width: 44px;
         height: 44px;
-        transform: translateY(-50%);
+        transform: translate(-50%, -50%);
     }
 
     /*

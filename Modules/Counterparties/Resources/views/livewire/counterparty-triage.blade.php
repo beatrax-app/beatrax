@@ -222,10 +222,14 @@
                         style="flex: 1 1 240px; min-width: 0; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px;"
                     />
                     <label for="triage-manual-type" class="sr-only">{{ Lang::get('counterparties::triage.type_label') }}</label>
+                    {{-- No padding-right here. The base `select` rule draws the
+                         chevron and reserves the room it needs on the right; an
+                         inline shorthand beats that rule and put the chevron on
+                         top of the value -- visible on the Dutch "Winkelier". --}}
                     <select
                         id="triage-manual-type"
                         x-model="manualType"
-                        style="padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px;"
+                        style="padding-top: 6px; padding-bottom: 6px; padding-left: 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px;"
                     >
                         <option value="{{ CounterpartyType::Merchant->value }}">{{ Lang::get('counterparties::triage.type_merchant') }}</option>
                         <option value="{{ CounterpartyType::Personal->value }}">{{ Lang::get('counterparties::triage.type_personal') }}</option>

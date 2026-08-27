@@ -22,12 +22,22 @@
     </div>
 
     @if (count($goals) === 0)
-        {{-- Empty state --}}
-        <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
+        {{-- Empty state.
+
+             mt-7 rather than mt-4: this link and the card header's "See all"
+             both carry a 44px band, and at 384px their centres were 33px
+             apart, so each band was cut to its neighbour's edge and "See all"
+             answered a finger over 33px. A tap on its lower half opened the
+             goal form instead. The pitch is what has to clear 44.
+
+             inline-block on the link for the same reason as the imports CTA:
+             it wraps in Dutch, and .tap-link's band is placed nowhere on an
+             inline box split across two lines. --}}
+        <p class="mt-7 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('goals::messages.summary.no_goals') }}
             <a
                 href="{{ Destination::Goals->url() }}"
-                class="tap-link text-slate-900 underline underline-offset-2 hover:no-underline dark:text-slate-100"
+                class="tap-link inline-block text-slate-900 underline underline-offset-2 hover:no-underline dark:text-slate-100"
             >{{ Lang::get('goals::messages.summary.add_first') }}</a>
         </p>
     @else

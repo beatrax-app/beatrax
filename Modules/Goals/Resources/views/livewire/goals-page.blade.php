@@ -118,7 +118,16 @@
                     {{-- Row actions — always visible on phone. Drawn
                          as icons rather than the text characters they were:
                          a pencil, a tick and a box each carry their own
-                         metrics, so none of them sat centred. --}}
+                         metrics, so none of them sat centred.
+
+                         The three sit in their own shrink-0 group because the
+                         row is flex-wrap: as three siblings they wrapped
+                         individually, and on a 411px phone Edit stayed up on
+                         the first line beside the percentage while Complete and
+                         Archive dropped to the next one 300px to the left,
+                         reading as one control belonging to the figure and two
+                         belonging to nothing. --}}
+                    <span class="flex shrink-0 items-center gap-1">
                     <x-core::emoji-action
                         :label="Lang::get('goals::messages.row.edit')"
                         x-on:click="
@@ -143,6 +152,7 @@
                         :label="Lang::get('goals::messages.actions.archive')"
                         wire:click="confirmArchive({{ $row->id }})"
                     >🗄️</x-core::emoji-action>
+                    </span>
                 </li>
 
                 @if ($archivingGoalId === $row->id)

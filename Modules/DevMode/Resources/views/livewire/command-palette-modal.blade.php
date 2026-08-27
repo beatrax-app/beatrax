@@ -243,7 +243,7 @@
                                             >
                                                 <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">◈</span>
                                                 <span class="flex-1 text-sm" x-text="entity.label"></span>
-                                                <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">{{ Lang::get('dev::palette.source_counterparty') }}</span>
+                                                <span class="shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">{{ Lang::get('dev::palette.source_counterparty') }}</span>
                                             </button>
                                         </template>
                                     </div>
@@ -264,7 +264,7 @@
                                             >
                                                 <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">⊞</span>
                                                 <span class="flex-1 text-sm" x-text="entity.label"></span>
-                                                <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">{{ Lang::get('dev::palette.source_category') }}</span>
+                                                <span class="shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">{{ Lang::get('dev::palette.source_category') }}</span>
                                             </button>
                                         </template>
                                     </div>
@@ -285,7 +285,7 @@
                                             >
                                                 <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">◎</span>
                                                 <span class="flex-1 text-sm" x-text="entity.label"></span>
-                                                <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800" x-text="entity.type"></span>
+                                                <span class="shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800" x-text="entity.type"></span>
                                             </button>
                                         </template>
                                     </div>
@@ -326,8 +326,13 @@
                                         <span class="block text-sm font-medium" x-text="hit.item.label"></span>
                                         <span class="block text-xs text-slate-500 dark:text-slate-400" x-text="hit.item.hint"></span>
                                     </span>
+                                    {{-- shrink-0 and nowrap, like the txn badge above: the row
+                                         is one flex line, so a long label squeezed this to
+                                         64px and `overflow-wrap: anywhere` -- inherited from
+                                         the 320px reflow rule -- broke WEERGAVE as
+                                         "WEERGAV" / "E". --}}
                                     <span
-                                        class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800"
+                                        class="shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800"
                                         :class="'palette-source--' + hit.item.source"
                                         x-text="hit.item.sourceLabel"
                                     ></span>

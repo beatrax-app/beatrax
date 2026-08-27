@@ -54,9 +54,15 @@ it('gives every standalone action link beside a page title its 44px band', funct
 it('gives the switch track the same band, since it is 44 wide and 26 tall', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-    $band = CssRule::blockFor($css, ".tap-link::after,\n    .switch::after {");
+    $selector = ".tap-link::after,\n    .switch::after,\n    td > a:only-child::after {";
+    $band = CssRule::blockFor($css, $selector);
 
     expect($band)->not->toBe('', 'The switch no longer shares the band .tap-link gets.')
         ->and($band)->toContain('height: 44px;')
-        ->and(CssRule::blockFor($css, ".tap-link,\n    .switch {"))->toContain('position: relative;');
+        // A band anchored to one edge takes its width from the control, which
+        // is how a 42px "Hints →" and a 29px "Etos" got through.
+        ->and($band)->toContain('min-width: 44px;')
+        ->and($band)->toContain('right: auto;')
+        ->and(CssRule::blockFor($css, ".tap-link,\n    .switch,\n    td > a:only-child {"))
+        ->toContain('position: relative;');
 });
