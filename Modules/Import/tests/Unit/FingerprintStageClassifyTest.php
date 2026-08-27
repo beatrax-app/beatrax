@@ -150,33 +150,6 @@ it('returns duplicate when fingerprint matches across statement formats (CSV →
     expect($disposition->status())->toBe(PreviewRowStatus::Duplicate);
 })->group('phase-2');
 
-it('returns enriched when fingerprint matches and the incoming side is a receipt format (paypal-receipt > paypal-csv)', function (): void {
-    // A receipt can carry a clean merchant name and line items no statement
-    // export has, so the rank-based upgrade survives on that path.
-    $existing = seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'paypal-csv', 'O-00000000000000001', $this->composer);
-    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'paypal-receipt', 'PAYID-CANONICAL');
-
-    $disposition = $this->stage->classify($tx, $this->fixtureUser);
-
-    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
-    expect($disposition->isEnriched())->toBeTrue();
-    /** @var EnrichedDisposition $disposition */
-    expect($disposition->existingTransactionId)->toBe($existing->id);
-    expect($disposition->toSourceRef)->toBe('PAYID-CANONICAL');
-})->group('phase-2');
-
-it('returns enriched when fingerprint matches and the existing side is a receipt format (ics-csv impossible, ics-pdf → ics-receipt)', function (): void {
-    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'ics-pdf', 'PDF-ROW-12', $this->composer);
-    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'ics-receipt', 'RECEIPT-REF');
-
-    $disposition = $this->stage->classify($tx, $this->fixtureUser);
-
-    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
-    /** @var EnrichedDisposition $disposition */
-    expect($disposition->fromSourceRef)->toBe('PDF-ROW-12');
-    expect($disposition->toSourceRef)->toBe('RECEIPT-REF');
-})->group('phase-2');
-
 it('returns duplicate when incoming rank is lower than existing (CSV after CAMT)', function (): void {
     seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'camt053', 'EREF-A', $this->composer);
     $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001');

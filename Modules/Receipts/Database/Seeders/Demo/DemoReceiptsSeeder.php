@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Receipts\Database\Seeders\Demo;
 
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
@@ -148,7 +149,7 @@ final class DemoReceiptsSeeder
             // resolution action.
             'stored_value' => json_encode($storedValue, JSON_THROW_ON_ERROR),
             'incoming_value' => json_encode($incomingValue, JSON_THROW_ON_ERROR),
-            'incoming_source_format' => 'eml-receipt',
+            'incoming_source_format' => SourceFormat::Eml->value,
             'import_run_id' => $importRun->id,
             'created_at' => $now->subHours(6),
             'updated_at' => $now->subHours(6),

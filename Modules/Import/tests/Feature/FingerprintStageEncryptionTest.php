@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Public\Dto\EnrichedDisposition;
@@ -94,7 +95,7 @@ function fseSeed(
         normalizationVersion: 3,
         description: $incomingDescription,
         categoryId: null,
-        sourceFormat: 'paypal-receipt',
+        sourceFormat: SourceFormat::Eml->value,
         importRunId: $run->id,
         sourceRowIndex: 0,
         sourceRef: 'PAYID-'.bin2hex(random_bytes(6)),
