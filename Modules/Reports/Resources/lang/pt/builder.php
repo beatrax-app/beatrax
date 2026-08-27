@@ -40,6 +40,11 @@ return [
         'custom' => 'Intervalo personalizado',
         'from' => 'De',
         'to' => 'Até',
+        'error' => [
+            'incomplete' => 'Escolha uma data de início e uma de fim.',
+            'malformed' => 'Use uma data válida no formato AAAA-MM-DD.',
+            'inverted' => 'A data de fim é anterior à de início.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtros',
+        'net_worth_note' => 'O património líquido é um saldo: só se aplica o filtro de conta.',
     ],
 
     'compare' => 'Comparar com o período anterior',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Taxas e ajustes (não contados acima)',
+    'other_movement_with_refunds' => 'Taxas, reembolsos e ajustes (não contados acima)',
 ];

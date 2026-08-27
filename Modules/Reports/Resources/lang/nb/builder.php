@@ -40,6 +40,11 @@ return [
         'custom' => 'Egendefinert intervall',
         'from' => 'Fra',
         'to' => 'Til',
+        'error' => [
+            'incomplete' => 'Velg både en start- og en sluttdato.',
+            'malformed' => 'Bruk en gyldig dato på formatet ÅÅÅÅ-MM-DD.',
+            'inverted' => 'Sluttdatoen er før startdatoen.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtre',
+        'net_worth_note' => 'Nettoformue er en saldo: bare kontofilteret gjelder.',
     ],
 
     'compare' => 'Sammenlign med forrige periode',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Gebyrer og justeringer (ikke medregnet)',
+    'other_movement_with_refunds' => 'Gebyrer, refusjoner og justeringer (ikke medregnet)',
 ];

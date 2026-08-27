@@ -110,11 +110,10 @@ it('drilldown_filter_mapping: carries amount_min/amount_max/amount_dir through f
         ->and($params['amount_dir'])->toBe('out');
 });
 
-it('drilldown_filter_mapping: omits amount_dir when the direction is the default "both"', function (): void {
+it('drilldown_filter_mapping: omits amount_min/amount_max when the definition carries neither', function (): void {
     $url = app(DrilldownUrlBuilder::class)->build('category', 5, dubPeriod(), dubDefinition('category'));
     $params = dubParseQuery($url);
 
-    expect($params)->not->toHaveKey('amount_dir')
-        ->and($params)->not->toHaveKey('amount_min')
+    expect($params)->not->toHaveKey('amount_min')
         ->and($params)->not->toHaveKey('amount_max');
 });

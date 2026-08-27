@@ -40,6 +40,11 @@ return [
         'custom' => 'Kohandatud vahemik',
         'from' => 'Alates',
         'to' => 'Kuni',
+        'error' => [
+            'incomplete' => 'Vali nii algus- kui lõppkuupäev.',
+            'malformed' => 'Kasuta kehtivat kuupäeva kujul AAAA-KK-PP.',
+            'inverted' => 'Lõppkuupäev on enne alguskuupäeva.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtrid',
+        'net_worth_note' => 'Netoväärtus on saldo: kehtib ainult konto filter.',
     ],
 
     'compare' => 'Võrdle eelmise perioodiga',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Tasud ja korrektsioonid (pole arvestatud)',
+    'other_movement_with_refunds' => 'Tasud, tagasimaksed ja korrektsioonid (pole arvestatud)',
 ];

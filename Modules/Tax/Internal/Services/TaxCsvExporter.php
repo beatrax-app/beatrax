@@ -87,8 +87,8 @@ final class TaxCsvExporter
         $rawOriginal = $row['amountMinor'] ?? 0;
         $originalMinor = is_numeric($rawOriginal) ? (int) $rawOriginal : 0;
 
-        $settledAmount = MoneyInput::toDecimalString(abs($settledMinor));
-        $originalAmount = MoneyInput::toDecimalString(abs($originalMinor));
+        $settledAmount = MoneyInput::toDecimalString(abs($settledMinor), self::str($row['settledCurrency'] ?? null));
+        $originalAmount = MoneyInput::toDecimalString(abs($originalMinor), self::str($row['currency'] ?? null));
 
         return [
             (string) $taxYear,

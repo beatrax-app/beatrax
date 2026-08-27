@@ -66,7 +66,7 @@ final class CurrencyModeApplier
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->whereNotNull('settled_currency')
             ->when($accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('account_id', $accountIds))
-            ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('category_id', $categoryIds))
+            ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => self::whereCategoryOnParentOrLeg($q, $categoryIds))
             ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('counterparty_id', $counterpartyIds))
             ->distinct()
             ->orderBy('settled_currency')
@@ -80,6 +80,26 @@ final class CurrencyModeApplier
         }
 
         return $currencies;
+    }
+
+    // Splitting a transaction is how part of it is attributed to a category, so
+    // the category a leg carries has to discover its parent's currency too. The
+    // parent-only predicate found nothing for a category that lives only on
+    // legs, and the dimension query was then never called at all.
+    /**
+     * @param  list<int>  $categoryIds
+     */
+    private static function whereCategoryOnParentOrLeg(QueryBuilder $query, array $categoryIds): QueryBuilder
+    {
+        return $query->where(static function (QueryBuilder $q) use ($categoryIds): void {
+            $q->whereIn('category_id', $categoryIds)
+                ->orWhereExists(static function (QueryBuilder $sub) use ($categoryIds): void {
+                    $sub->selectRaw('1')
+                        ->from('transaction_splits')
+                        ->whereColumn('transaction_splits.transaction_id', 'transactions.id')
+                        ->whereIn('transaction_splits.category_id', $categoryIds);
+                });
+        });
     }
 
     /**
@@ -108,22 +128,25 @@ final class CurrencyModeApplier
         foreach ($currencies as $currency) {
             /** @var list<ReportResultRow> $rows */
             $rows = $queryForCurrency($currency);
+            if ($rows === []) {
+                continue;
+            }
 
-            foreach ($rows as $row) {
-                $money = Money::tryOfMinor($row->amountMinor, $currency);
-                $converted = $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates);
+            $converted = $this->convertRowsOfOneCurrency($rows, $currency, $baseCurrency, $rates);
 
-                if ($converted === null) {
-                    $excludedCurrencies[$currency] = true;
+            if ($converted === null) {
+                $excludedCurrencies[$currency] = true;
 
-                    continue;
-                }
+                continue;
+            }
 
+            foreach ($converted as $index => $amountMinor) {
+                $row = $rows[$index];
                 $mapKey = self::rowKey($row);
                 if (! isset($merged[$mapKey])) {
                     $merged[$mapKey] = ['key' => $row->groupKey, 'label' => $row->groupLabel, 'amount' => 0];
                 }
-                $merged[$mapKey]['amount'] += $converted->toMinor();
+                $merged[$mapKey]['amount'] += $amountMinor;
             }
         }
 
@@ -154,8 +177,72 @@ final class CurrencyModeApplier
             currency: $baseCurrency,
             hasExcludedAccounts: $excludedCurrencies !== [],
             accountsWithoutRate: count($excludedCurrencies),
-            otherMovementMinor: $fees->minor,
+            otherMovementsByCurrency: $fees->minor === 0 ? [] : [$baseCurrency => $fees->minor],
         );
+    }
+
+    // Rounding each group's conversion on its own drifts by up to half a minor
+    // unit per group, which put one report at 8942.01 by category and 8942.04 by
+    // counterparty. The currency's own subtotal converts once and the remainder
+    // is handed back to the rows, so the total cannot depend on the grouping.
+    /**
+     * @param  list<ReportResultRow>  $rows  all denominated in $currency
+     * @param  array<string, string>  $rates
+     * @return ?list<int> converted minor units, index-aligned to $rows; null when the pair has no rate
+     */
+    private function convertRowsOfOneCurrency(array $rows, string $currency, string $baseCurrency, array $rates): ?array
+    {
+        $rawTotal = 0;
+        foreach ($rows as $row) {
+            $rawTotal += $row->amountMinor;
+        }
+
+        $subtotal = Money::tryOfMinor($rawTotal, $currency);
+        $convertedSubtotal = $subtotal === null ? null : $this->fx->convert($subtotal, $baseCurrency, $rates);
+
+        if ($convertedSubtotal === null) {
+            return null;
+        }
+
+        $converted = [];
+        $sumOfRows = 0;
+        foreach ($rows as $index => $row) {
+            $money = Money::tryOfMinor($row->amountMinor, $currency);
+            $rowConverted = $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates);
+
+            if ($rowConverted === null) {
+                return null;
+            }
+
+            $converted[$index] = $rowConverted->toMinor();
+            $sumOfRows += $converted[$index];
+        }
+
+        return self::spreadRemainder($converted, $rows, $convertedSubtotal->toMinor() - $sumOfRows);
+    }
+
+    // Largest magnitude first, ties broken by position, so the same report
+    // always lands the same cents on the same rows.
+    /**
+     * @param  list<int>  $converted
+     * @param  list<ReportResultRow>  $rows
+     * @return list<int>
+     */
+    private static function spreadRemainder(array $converted, array $rows, int $remainder): array
+    {
+        if ($remainder === 0 || $converted === []) {
+            return $converted;
+        }
+
+        $order = array_keys($converted);
+        usort($order, static fn (int $a, int $b): int => abs($rows[$b]->amountMinor) <=> abs($rows[$a]->amountMinor) ?: $a <=> $b);
+
+        $step = $remainder > 0 ? 1 : -1;
+        for ($i = 0; $i < abs($remainder); $i++) {
+            $converted[$order[$i % count($order)]] += $step;
+        }
+
+        return array_values($converted);
     }
 
     // No conversion. currency/totalMinor go to whichever currency has the largest
@@ -199,9 +286,11 @@ final class CurrencyModeApplier
             currency: $primaryCurrency,
             hasExcludedAccounts: false,
             accountsWithoutRate: 0,
-            // Nothing is converted in this mode, so only the currency the
-            // headline total is denominated in can be reported beside it.
-            otherMovementMinor: $otherTotalsByCurrency[$primaryCurrency] ?? 0,
+            // Every currency, not just the headline one: nothing is converted
+            // here, so a fee bucket outside it has no other line to appear on
+            // and used to vanish -- a total that omits money reading as all of
+            // it, which is the one thing this disclosure exists to prevent.
+            otherMovementsByCurrency: array_filter($otherTotalsByCurrency, static fn (int $minor): bool => $minor !== 0),
         );
     }
 

@@ -40,6 +40,11 @@ return [
         'custom' => 'Aangepast bereik',
         'from' => 'Van',
         'to' => 'Tot',
+        'error' => [
+            'incomplete' => 'Kies zowel een begin- als een einddatum.',
+            'malformed' => 'Gebruik een geldige datum in de vorm JJJJ-MM-DD.',
+            'inverted' => 'De einddatum ligt vóór de begindatum.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filters',
+        'net_worth_note' => 'Nettovermogen is een saldo: alleen het rekeningfilter werkt hier.',
     ],
 
     'compare' => 'Vergelijk met vorige periode',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Kosten en correcties (niet meegeteld)',
+    'other_movement_with_refunds' => 'Kosten, terugbetalingen en correcties (niet meegeteld)',
 ];

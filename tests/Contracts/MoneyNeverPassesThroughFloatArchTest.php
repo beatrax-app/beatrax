@@ -12,12 +12,12 @@ use Modules\Ledger\Public\ValueObjects\MoneyInput;
 // pixel position rather than a money value — a y-axis needs a number, and the
 // loss sits orders of magnitude below display resolution.
 //
-// Five sites rely on that boundary, so a reader can re-check it rather than
-// take it on trust:
+// The sites relying on that boundary, so a reader can re-check it rather than
+// take it on trust. The three Reports charts now reach their coordinate through
+// Modules/Reports/Internal/Support/ChartAmount, which asks the money value
+// object for the currency's own scale instead of dividing by a hardcoded 100:
 //   Modules/Forecasting/Resources/views/livewire/partials/aggregate-line-chart.blade.php:22,27
-//   Modules/Reports/Resources/views/livewire/partials/report-donut-chart.blade.php:22
-//   Modules/Reports/Resources/views/livewire/partials/report-line-chart.blade.php:17
-//   Modules/Reports/Resources/views/livewire/partials/report-bar-chart.blade.php:18
+//   Modules/Reports/Internal/Support/ChartAmount.php
 //
 // The boundary holds only while the float stays a coordinate. It does here:
 // every one of those charts renders its LABELS through the currency formatter

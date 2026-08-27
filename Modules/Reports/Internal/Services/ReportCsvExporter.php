@@ -21,13 +21,10 @@ final class ReportCsvExporter
     {
         $writer = Writer::createFromString();
 
-        // Mitigate spreadsheet formula injection — group labels
-        // (counterparty/category/account names) are free text.
-        // Escape only the group label. It is the one free-text column -- an
-        // account or counterparty name the reader typed -- and the three that
-        // follow are generated here. Escaping them too turned a negative
-        // amount into the text "'-75.00", which no spreadsheet will sum, so
-        // the file could not be totalled the moment the sign was restored.
+        // Only the group label is escaped against formula injection: it is the
+        // one free-text column, and escaping the three generated ones turned a
+        // negative amount into the text "'-75.00", which no spreadsheet sums --
+        // untotallable the moment the sign was restored.
         $escapeFormula = new EscapeFormula;
         $writer->addFormatter(static function (array $record) use ($escapeFormula): array {
             $record[0] = $escapeFormula->escapeRecord([$record[0]])[0];
@@ -56,7 +53,7 @@ final class ReportCsvExporter
                 // left than arrived and the file carries nothing else to
                 // recover the sign from, so abs() made the export unsummable
                 // and put it at odds with the table it is documented to match.
-                MoneyInput::toDecimalString($row->amountMinor),
+                MoneyInput::toDecimalString($row->amountMinor, $row->currency),
                 $row->currency,
             ]);
         }

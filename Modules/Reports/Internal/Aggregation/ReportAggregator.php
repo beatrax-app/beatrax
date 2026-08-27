@@ -13,6 +13,7 @@ use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ComparisonJoin;
 use Modules\Reports\Internal\Enums\ReportDimension;
 use Modules\Reports\Internal\Enums\ReportMetricSelection;
 
@@ -51,6 +52,7 @@ final class ReportAggregator
             fn (Period $previousPeriod): ReportResultDto => $definition->metric === ReportMetricSelection::NetWorth->value
                 ? $this->buildNetWorthResult($user, $previousPeriod, $definition)
                 : $this->buildTransactionResult($user, $previousPeriod, $definition),
+            self::joinFor($definition),
         );
 
         return new ReportResultDto(
@@ -60,8 +62,20 @@ final class ReportAggregator
             hasExcludedAccounts: $result->hasExcludedAccounts || $comparison['previousHasExcludedAccounts'],
             accountsWithoutRate: $result->accountsWithoutRate + $comparison['previousAccountsWithoutRate'],
             comparisonRows: $comparison['rows'],
-            otherMovementMinor: $result->otherMovementMinor,
+            otherMovementsByCurrency: $result->otherMovementsByCurrency,
+            previousTotalMinor: $comparison['previousTotalMinor'],
+            previousCurrency: $comparison['previousCurrency'],
         );
+    }
+
+    // Both of these are ordered series whose group key is a date, so no key can
+    // survive the shift into the previous window.
+    private static function joinFor(ReportDefinition $definition): ComparisonJoin
+    {
+        return $definition->metric === ReportMetricSelection::NetWorth->value
+            || $definition->dimension === ReportDimension::TimeBucket->value
+            ? ComparisonJoin::Sequence
+            : ComparisonJoin::Group;
     }
 
     private function buildTransactionResult(User $user, Period $period, ReportDefinition $definition): ReportResultDto
@@ -123,22 +137,24 @@ final class ReportAggregator
 
     private function buildNetWorthResult(User $user, Period $period, ReportDefinition $definition): ReportResultDto
     {
-        $points = $this->netWorthSeriesQuery->forUser($user, $period, $definition->granularity);
+        $points = $this->netWorthSeriesQuery->forUser($user, $period, $definition->granularity, self::filtersFor($definition));
         $rows = self::pointsToRows($points);
 
         $totalMinor = 0;
         $currency = $this->baseCurrency->forUser($user);
-        $hasExcluded = false;
-        $excludedTotal = 0;
+        // A set of accounts, not a tally of samples: one unconvertible account
+        // sampled over 60 buckets is still one account, and adding the counts up
+        // told a reader with five accounts that 4108 of them were left out.
+        /** @var array<int, true> $excludedAccounts */
+        $excludedAccounts = [];
         foreach ($points as $point) {
             // Net worth is a balance, not a flow, so the total is the most recent
             // point; summing would count every account's balance once per bucket.
             // Overwritten each iteration so the last point wins.
             $totalMinor = $point->totalMinor;
             $currency = $point->currency;
-            if ($point->excludedCount > 0) {
-                $hasExcluded = true;
-                $excludedTotal += $point->excludedCount;
+            foreach ($point->excludedAccountIds as $accountId) {
+                $excludedAccounts[$accountId] = true;
             }
         }
 
@@ -146,8 +162,8 @@ final class ReportAggregator
             rows: $rows,
             totalMinor: $totalMinor,
             currency: $currency,
-            hasExcludedAccounts: $hasExcluded,
-            accountsWithoutRate: $excludedTotal,
+            hasExcludedAccounts: $excludedAccounts !== [],
+            accountsWithoutRate: count($excludedAccounts),
         );
     }
 

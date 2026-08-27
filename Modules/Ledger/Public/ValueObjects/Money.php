@@ -83,6 +83,21 @@ final class Money implements Stringable
             && $this->inner->getAmount()->isEqualTo($other->inner->getAmount());
     }
 
+    // Brick carries each currency's real minor-unit count; the constant above
+    // is the two-decimal assumption every parse boundary in this repo still
+    // makes, and JPY has no minor unit at all.
+    public function minorUnitsPerMajor(): int
+    {
+        return 10 ** $this->inner->getCurrency()->getDefaultFractionDigits();
+    }
+
+    // A number in major units, for a chart axis. Callers were parsing
+    // __toString() to reach it, because Brick may only be named from here.
+    public function toMajorFloat(): float
+    {
+        return $this->inner->getAmount()->toFloat();
+    }
+
     public function toMinor(): int
     {
         return $this->inner->getMinorAmount()->toInt();

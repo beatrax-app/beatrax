@@ -13,7 +13,12 @@
     Variables in scope: $availableAccounts, $availableCategories,
     $availableCounterparties (list<array{id:int,name:string,...}>),
     $filterAccounts, $filterCategories, $filterCounterparties (list<int>),
-    $filterAmountMin, $filterAmountMax, $filterAmountDir (string).
+    $filterAmountMin, $filterAmountMax, $filterAmountDir (string),
+    $showTransactionFilters (bool).
+
+    The account chip is unconditional; the other three select on transactions,
+    which a net-worth balance has none of, so they are not offered for it
+    rather than being offered and then dropped.
 --}}
 
 {{-- ─── Account chip ───────────────────────────────────────────────────── --}}
@@ -58,7 +63,7 @@
 @endif
 
 {{-- ─── Category chip ──────────────────────────────────────────────────── --}}
-@if (! empty($availableCategories ?? []))
+@if (($showTransactionFilters ?? true) && ! empty($availableCategories ?? []))
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
         <span class="srch-chip {{ ! empty($filterCategories ?? []) ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
@@ -98,7 +103,7 @@
 @endif
 
 {{-- ─── Counterparty chip (999.6-02 — new dimension, no prior UI precedent) ── --}}
-@if (! empty($availableCounterparties ?? []))
+@if (($showTransactionFilters ?? true) && ! empty($availableCounterparties ?? []))
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
         <span class="srch-chip {{ ! empty($filterCounterparties ?? []) ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
@@ -138,6 +143,7 @@
 @endif
 
 {{-- ─── Amount chip ────────────────────────────────────────────────────── --}}
+@if ($showTransactionFilters ?? true)
 <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
     @php
         $amountActive = ($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? AmountDirection::Both->value) !== AmountDirection::Both->value;
@@ -194,3 +200,4 @@
         </div>
     </div>
 </div>
+@endif

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Enums\FxRefreshFailureReason;
+use Modules\FX\Public\Services\FxRefreshStatus;
 use Modules\FX\Public\Support\BundledRates;
 use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
@@ -81,4 +83,17 @@ it('gives up and says so when nothing ever arrives', function (): void {
     // The rates already on the device stay in use, and the line says that
     // rather than leaving the reader to guess what a stalled spinner meant.
     $component->assertSee(__('core::settings.exchange_rates.refresh_gave_up'));
+});
+
+it('says the refresh gave up as soon as the job records why, not fifteen polls later', function (): void {
+    $component = Livewire::test(SettingsPage::class)->call('refreshFxRates');
+    expect($component->get('fxRefreshing'))->toBeTrue();
+
+    // The job's own record of the failure. Without reading it the only signal
+    // was silence, so the reader was told the refresh had stopped and never why.
+    app(FxRefreshStatus::class)->recordFailure((int) auth()->id(), FxRefreshFailureReason::AllProvidersFailed);
+
+    $component->call('pollFxRefresh')
+        ->assertSet('fxRefreshing', false)
+        ->assertSet('fxRefreshGaveUp', true);
 });

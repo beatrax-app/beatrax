@@ -40,6 +40,11 @@ return [
         'custom' => 'Özel aralık',
         'from' => 'Başlangıç',
         'to' => 'Bitiş',
+        'error' => [
+            'incomplete' => 'Hem başlangıç hem de bitiş tarihi seç.',
+            'malformed' => 'YYYY-AA-GG biçiminde geçerli bir tarih kullan.',
+            'inverted' => 'Bitiş tarihi başlangıç tarihinden önce.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtreler',
+        'net_worth_note' => 'Net değer bir bakiyedir: yalnızca hesap filtresi geçerlidir.',
     ],
 
     'compare' => 'Önceki dönemle karşılaştır',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Ücretler ve düzeltmeler (yukarıda sayılmadı)',
+    'other_movement_with_refunds' => 'Ücretler, iadeler ve düzeltmeler (yukarıda sayılmadı)',
 ];

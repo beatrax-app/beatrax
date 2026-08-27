@@ -17,6 +17,7 @@ use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\LocaleCollator;
 use Modules\Counterparties\Public\Queries\CounterpartyDisplayName;
+use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
@@ -24,6 +25,8 @@ use Modules\Reports\Internal\Actions\SaveReport;
 use Modules\Reports\Internal\Actions\UpdateReport;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
+use Modules\Reports\Internal\Aggregation\ReportMetric;
+use Modules\Reports\Internal\Aggregation\TimeBucketGenerator;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
@@ -33,8 +36,10 @@ use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Enums\ReportMetricSelection;
 use Modules\Reports\Internal\Enums\ReportPeriodPreset;
 use Modules\Reports\Internal\Enums\ReportViz;
+use Modules\Reports\Internal\Exceptions\InvalidReportPeriod;
 use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
+use Modules\Reports\Internal\Support\ReportDefinitionFactory;
 use Modules\Reports\Internal\Support\ReportVocabulary;
 use Modules\Reports\Models\SavedReport;
 use stdClass;
@@ -121,7 +126,7 @@ final class ReportBuilder extends Component
             return;
         }
 
-        $this->applyDefinition(ReportDefinition::from($saved->definition));
+        $this->applyDefinition(ReportDefinitionFactory::fromStored($saved->definition));
         $this->loadedReportId = $saved->id;
         $this->loadedReportName = $saved->name;
     }
@@ -176,7 +181,7 @@ final class ReportBuilder extends Component
 
     // A Livewire action rather than an <a href> so it joins wire:loading, and it
     // reads the same currentDefinition() the table renders from.
-    public function export(ResponseFactory $responses, ReportCsvExporter $exporter, CurrentUser $currentUser): StreamedResponse
+    public function export(ResponseFactory $responses, ReportCsvExporter $exporter, CurrentUser $currentUser, PeriodPresetResolver $periodPresetResolver): ?StreamedResponse
     {
         if (! $currentUser->isAuthenticated()) {
             return new StreamedResponse(static function (): void {
@@ -190,6 +195,17 @@ final class ReportBuilder extends Component
         $user = $currentUser->user();
 
         $definition = $this->currentDefinition();
+
+        // Checked before the stream opens, never inside it: an exception thrown
+        // from the download callback has already sent 200 and the headers, so
+        // the reader gets a truncated file instead of the message.
+        try {
+            $periodPresetResolver->resolve($definition->periodPreset, $definition->customFrom, $definition->customTo);
+        } catch (InvalidReportPeriod $problem) {
+            $this->flashMessage = self::periodMessage($problem);
+
+            return null;
+        }
 
         return $responses->streamDownload(
             static function () use ($exporter, $user, $definition): void {
@@ -207,6 +223,7 @@ final class ReportBuilder extends Component
         DatabaseManager $db,
         DrilldownUrlBuilder $drilldownUrlBuilder,
         PeriodPresetResolver $periodPresetResolver,
+        TimeBucketGenerator $timeBucketGenerator,
         BaseCurrency $baseCurrency,
         CounterpartyDisplayName $counterpartyNames,
     ): View {
@@ -220,26 +237,25 @@ final class ReportBuilder extends Component
         $this->filterCounterparties = ReportVocabulary::ids($this->filterCounterparties);
 
         $definition = $this->currentDefinition();
+        $isNetWorth = $definition->metric === ReportMetricSelection::NetWorth->value;
 
-        // "custom" needs both dates, and resolving mid-selection would throw,
-        // so render the empty state rather than a 500.
-        $customIncomplete = $definition->periodPreset === ReportPeriodPreset::Custom->value
-            && ($definition->customFrom === null || $definition->customFrom === '' || $definition->customTo === null || $definition->customTo === '');
+        // Picking the end date before the start one is an ordinary mid-edit
+        // state in a two-date picker. The reader gets told which half is wrong
+        // and keeps the composition; resolving it threw an HTML error page.
+        $periodError = '';
+        $result = new ReportResultDto(rows: [], totalMinor: 0, currency: $baseCurrency->forUser($user));
+        $displayRows = [];
+        $drilldownUrls = [];
 
-        if ($customIncomplete) {
-            $result = new ReportResultDto(rows: [], totalMinor: 0, currency: $baseCurrency->forUser($user));
-            $displayRows = [];
-            $drilldownUrls = [];
-        } else {
+        try {
+            $period = $periodPresetResolver->resolve($definition->periodPreset, $definition->customFrom, $definition->customTo);
             $result = $aggregator->run($user, $definition);
             // With compare on, comparisonRows is the union of current+previous
             // keys carrying deltaMinor; plain `rows` has no delta info.
             $displayRows = ($definition->compare && $result->comparisonRows !== null) ? $result->comparisonRows : $result->rows;
-            $period = $periodPresetResolver->resolve($definition->periodPreset, $definition->customFrom, $definition->customTo);
-            $drilldownUrls = array_map(
-                static fn (ReportResultRow $row): string => $drilldownUrlBuilder->build($definition->dimension, $row->groupKey, $period, $definition),
-                $displayRows,
-            );
+            $drilldownUrls = self::drilldownUrls($drilldownUrlBuilder, $definition, $displayRows, $period, $timeBucketGenerator);
+        } catch (InvalidReportPeriod $problem) {
+            $periodError = self::periodMessage($problem);
         }
 
         $view = $views->make('reports::livewire.report-builder', [
@@ -247,8 +263,16 @@ final class ReportBuilder extends Component
             'displayRows' => $displayRows,
             'definition' => $definition,
             'drilldownUrls' => $drilldownUrls,
-            'showDimension' => $definition->metric !== ReportMetricSelection::NetWorth->value,
-            'showGranularity' => $definition->metric === ReportMetricSelection::NetWorth->value || $definition->dimension === ReportDimension::TimeBucket->value,
+            'periodError' => $periodError,
+            'showDimension' => ! $isNetWorth,
+            'showGranularity' => $isNetWorth || $definition->dimension === ReportDimension::TimeBucket->value,
+            'showTransactionFilters' => ! $isNetWorth,
+            'ignoredFilterNote' => $isNetWorth && self::carriesTransactionFilters($definition)
+                ? Lang::get('reports::builder.filters.net_worth_note')
+                : '',
+            'otherMovementLabel' => Lang::get($isNetWorth || ! ReportMetric::fromMetric($definition->metric)->disclosesRefunds()
+                ? 'reports::builder.other_movement'
+                : 'reports::builder.other_movement_with_refunds'),
             'availableAccounts' => $this->availableAccounts($db, $user->id, $baseCurrency->code()),
             'availableCategories' => $this->availableCategories($db, $user->id),
             'availableCounterparties' => $this->availableCounterparties($counterpartyNames, $user->id),
@@ -258,6 +282,63 @@ final class ReportBuilder extends Component
         $view->extends('layouts.app', ['title' => Lang::get('reports::builder.page_title')]);
 
         return $view;
+    }
+
+    // A time bucket and a net-worth point each own a WINDOW, and the row's
+    // group key is that window's date. Handed the report's whole period every
+    // monthly row linked to one identical full-range list.
+    /**
+     * @param  list<ReportResultRow>  $displayRows
+     * @return list<string>
+     */
+    private static function drilldownUrls(DrilldownUrlBuilder $builder, ReportDefinition $definition, array $displayRows, Period $period, TimeBucketGenerator $timeBucketGenerator): array
+    {
+        $buckets = self::bucketsByDate($definition, $period, $timeBucketGenerator);
+
+        return array_map(
+            static fn (ReportResultRow $row): string => $builder->build(
+                $definition->dimension,
+                $row->groupKey,
+                (is_string($row->groupKey) ? $buckets[$row->groupKey] ?? null : null) ?? $period,
+                $definition,
+            ),
+            $displayRows,
+        );
+    }
+
+    // Keyed by both ends: a time-bucket row is keyed by its window's start date
+    // and a net-worth point by its sample date, which is the last day of the
+    // same window.
+    /**
+     * @return array<string, Period>
+     */
+    private static function bucketsByDate(ReportDefinition $definition, Period $period, TimeBucketGenerator $timeBucketGenerator): array
+    {
+        if ($definition->metric !== ReportMetricSelection::NetWorth->value && $definition->dimension !== ReportDimension::TimeBucket->value) {
+            return [];
+        }
+
+        $byDate = [];
+        foreach ($timeBucketGenerator->generate($period, $definition->granularity) as $bucket) {
+            $byDate[$bucket->start->toDateString()] = $bucket;
+            $byDate[$bucket->endExclusive->subDay()->toDateString()] = $bucket;
+        }
+
+        return $byDate;
+    }
+
+    private static function periodMessage(InvalidReportPeriod $problem): string
+    {
+        return Lang::get('reports::builder.period.error.'.$problem->problem->value);
+    }
+
+    private static function carriesTransactionFilters(ReportDefinition $definition): bool
+    {
+        return $definition->categories !== []
+            || $definition->counterparties !== []
+            || $definition->amountMin !== null
+            || $definition->amountMax !== null
+            || $definition->amountDirection !== AmountDirection::Both->value;
     }
 
     private function applyDefinition(ReportDefinition $definition): void

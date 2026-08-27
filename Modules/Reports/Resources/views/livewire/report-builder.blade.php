@@ -15,8 +15,12 @@
       $displayRows             list<ReportResultRow>  — comparisonRows when compare is on, else $result->rows
       $definition               ReportDefinition
       $drilldownUrls            list<string>            — parallel to $displayRows
+      $periodError              string                   — '' unless the custom range cannot resolve
       $showDimension            bool                     — hidden entirely when metric=net_worth
       $showGranularity          bool                     — shown only for time-series reports
+      $showTransactionFilters   bool                     — category/counterparty/amount filters, which a balance cannot honour
+      $ignoredFilterNote        string                   — '' unless a net-worth URL still carries them
+      $otherMovementLabel       string                   — names whichever types the metric leaves out
       $availableAccounts / $availableCategories / $availableCounterparties  list<array{id:int,name:string,...}>
 
     Public component properties (metric, dimension, periodPreset, customFrom,
@@ -74,16 +78,14 @@
 
     $hasResults = $displayRows !== [];
 
-    // Headline delta — current total minus the previous-period
-    // total, derived from $displayRows' previousAmountMinor (only
-    // populated when compare is on and $displayRows is $result->comparisonRows).
-    $previousTotal = 0;
-    if ($definition->compare) {
-        foreach ($displayRows as $dRow) {
-            $previousTotal += $dRow->previousAmountMinor ?? 0;
-        }
-    }
-    $headlineDelta = $result->totalMinor - $previousTotal;
+    // The previous period's own headline total, computed the way this one was.
+    // Summing the rows' previousAmountMinor added USD cents into a EUR figure
+    // in 'original' mode and added a balance up once per bucket for net worth.
+    // A delta across two different currencies is not a number, so it is not shown.
+    $comparable = $definition->compare
+        && $result->previousTotalMinor !== null
+        && $result->previousCurrency === $result->currency;
+    $headlineDelta = $comparable ? $result->totalMinor - $result->previousTotalMinor : null;
 @endphp
 
 <div class="space-y-8">
@@ -195,6 +197,9 @@
                 <div class="srch-chips" style="flex-wrap: wrap;">
                     @include('reports::livewire.partials.report-filter-popovers')
                 </div>
+                @if ($ignoredFilterNote !== '')
+                    <p class="text-xs mt-2" style="color: var(--color-amber);">{{ $ignoredFilterNote }}</p>
+                @endif
             </div>
 
             {{-- Compare to previous period --}}
@@ -269,7 +274,14 @@
                 >{{ Lang::get('reports::builder.updating') }}</span>
             </div>
 
-            @if (! $hasResults)
+            @if ($periodError !== '')
+                {{-- The composition is untouched: only the range needs fixing,
+                     and the rail still holds every other choice the reader made. --}}
+                <div class="srch-no-results" aria-live="polite" aria-atomic="true" role="alert">
+                    <p class="srch-no-results__heading">{{ Lang::get('reports::builder.period.heading') }}</p>
+                    <p class="srch-no-results__body">{{ $periodError }}</p>
+                </div>
+            @elseif (! $hasResults)
                 {{-- Friendly empty state (Req: never an error) — rail stays interactive --}}
                 <div class="srch-no-results" aria-live="polite" aria-atomic="true">
                     <p class="srch-no-results__heading">{{ Lang::get('reports::builder.empty.heading') }}</p>
@@ -311,24 +323,30 @@
                     @if ($definition->compare)
                         <div class="flex items-center justify-end gap-2">
                             <span class="text-xs" style="color: var(--color-text-muted);">{{ Lang::get('reports::builder.vs_previous') }}</span>
-                            <span
-                                style="font-variant-numeric: tabular-nums; font-weight: 600;"
-                                class="{{ $headlineDelta >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}"
-                            >{{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}</span>
+                            @if ($headlineDelta === null)
+                                <span class="text-slate-600 dark:text-slate-400">—</span>
+                            @else
+                                <span
+                                    style="font-variant-numeric: tabular-nums; font-weight: 600;"
+                                    class="{{ $headlineDelta >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}"
+                                >{{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}</span>
+                            @endif
                         </div>
                     @endif
                     {{-- Fees and adjustments are in no metric, by design: a bank
                          fee is not category spending. Shown beside the total
                          rather than folded into it, so a total that omits money
-                         does not read as everything that left the account. --}}
-                    @if ($result->otherMovementMinor !== 0)
+                         does not read as everything that left the account. One
+                         line PER currency, since 'original' mode converts none
+                         of them and a non-headline bucket had nowhere to go. --}}
+                    @foreach ($result->otherMovementsByCurrency as $otherCurrency => $otherMinor)
                         <div class="flex flex-wrap items-baseline justify-between gap-4">
-                            <span class="text-xs" style="color: var(--color-text-muted);">{{ Lang::get('reports::builder.other_movement') }}</span>
+                            <span class="text-xs" style="color: var(--color-text-muted);">{{ $otherMovementLabel }}</span>
                             <span class="text-xs" style="color: var(--color-text-muted); font-variant-numeric: tabular-nums;">
-                                {{ $fmt($result->otherMovementMinor, $result->currency) }}
+                                {{ $fmt($otherMinor, $otherCurrency) }}
                             </span>
                         </div>
-                    @endif
+                    @endforeach
                     @if ($result->hasExcludedAccounts)
                         <p class="text-xs" style="color: var(--color-amber);">
                             {{ Lang::choice('reports::builder.fx_excluded', $result->accountsWithoutRate, ['count' => $result->accountsWithoutRate]) }}
@@ -379,9 +397,13 @@
                         </td>
                         @if ($definition->compare)
                             <td class="px-4 py-2 text-right font-semibold" style="font-variant-numeric: tabular-nums;">
-                                <span class="{{ $headlineDelta >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
-                                    {{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}
-                                </span>
+                                @if ($headlineDelta === null)
+                                    <span class="text-slate-600 dark:text-slate-400">—</span>
+                                @else
+                                    <span class="{{ $headlineDelta >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
+                                        {{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}
+                                    </span>
+                                @endif
                             </td>
                         @endif
                     </x-slot:foot>

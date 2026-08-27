@@ -40,6 +40,11 @@ return [
         'custom' => 'Eigener Zeitraum',
         'from' => 'Von',
         'to' => 'Bis',
+        'error' => [
+            'incomplete' => 'Wähle sowohl ein Start- als auch ein Enddatum.',
+            'malformed' => 'Verwende ein gültiges Datum im Format JJJJ-MM-TT.',
+            'inverted' => 'Das Enddatum liegt vor dem Startdatum.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filter',
+        'net_worth_note' => 'Nettovermögen ist ein Saldo: nur der Kontofilter wirkt hier.',
     ],
 
     'compare' => 'Mit vorherigem Zeitraum vergleichen',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Gebühren und Korrekturen (oben nicht enthalten)',
+    'other_movement_with_refunds' => 'Gebühren, Erstattungen und Korrekturen (oben nicht enthalten)',
 ];

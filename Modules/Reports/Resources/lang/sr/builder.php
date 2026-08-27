@@ -40,6 +40,11 @@ return [
         'custom' => 'Prilagođeni opseg',
         'from' => 'Od',
         'to' => 'Do',
+        'error' => [
+            'incomplete' => 'Izaberi i početni i završni datum.',
+            'malformed' => 'Unesi ispravan datum u obliku GGGG-MM-DD.',
+            'inverted' => 'Završni datum je pre početnog.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filteri',
+        'net_worth_note' => 'Neto vrednost je stanje: primenjuje se samo filter računa.',
     ],
 
     'compare' => 'Uporedi sa prethodnim periodom',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Naknade i usklađivanja (nisu uračunata)',
+    'other_movement_with_refunds' => 'Naknade, povraćaji i usklađivanja (nisu uračunata)',
 ];

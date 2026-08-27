@@ -25,6 +25,7 @@ use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\ProjectLinks;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
+use Modules\FX\Public\Services\FxRefreshStatus;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -198,19 +199,30 @@ final class SettingsPage extends Component
     // for as long as the page stayed open.
     private const FX_REFRESH_MAX_POLLS = 15;
 
-    public function refreshFxRates(DispatchFxRatesRefresh $dispatch, CurrentUser $currentUser, DatabaseManager $db): void
+    public function refreshFxRates(DispatchFxRatesRefresh $dispatch, CurrentUser $currentUser, DatabaseManager $db, FxRefreshStatus $fxStatus): void
     {
         $this->fxRefreshing = true;
         $this->fxRefreshGaveUp = false;
         $this->fxRefreshPolls = 0;
         $this->fxRefreshBaseline = $this->latestRateWrite($db);
 
+        $fxStatus->clear($currentUser->user()->id);
         $dispatch($currentUser->user()->id);
     }
 
-    public function pollFxRefresh(DatabaseManager $db): void
+    public function pollFxRefresh(DatabaseManager $db, CurrentUser $currentUser, FxRefreshStatus $fxStatus): void
     {
         if (! $this->fxRefreshing) {
+            return;
+        }
+
+        // The job records why it gave up. Without reading that, the only signal
+        // was fifteen polls of silence, so the reader was told the refresh had
+        // stopped and never why.
+        if ($fxStatus->lastFailure($currentUser->user()->id) !== null) {
+            $this->fxRefreshing = false;
+            $this->fxRefreshGaveUp = true;
+
             return;
         }
 

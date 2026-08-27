@@ -12,14 +12,14 @@
       $drilldownUrls  : list<string>  — parallel to $rows, one URL per segment
       $metricLabel    : string
 --}}
-@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Reports\Internal\Support\ChartAmount')
 @php
     $labels = array_map(static fn ($row) => $row->groupLabel, $rows);
     // ApexCharts donut series expects non-negative magnitudes; a report
     // total is signed (spend renders as a negative settled amount), so the
     // slice size is the absolute value while the table/total elsewhere
     // still shows the true signed figure.
-    $series = array_map(static fn ($row) => abs($row->amountMinor) / Money::MINOR_UNITS_PER_MAJOR, $rows);
+    $series = ChartAmount::magnitudes($rows);
 
     $palette = ['#0F172A', '#334155', '#64748B', '#94A3B8', '#0EA5E9', '#059669', '#B45309', '#BE123C', '#7C3AED', '#0891B2'];
     $colors = [];

@@ -40,6 +40,11 @@ return [
         'custom' => 'Anpassat intervall',
         'from' => 'Från',
         'to' => 'Till',
+        'error' => [
+            'incomplete' => 'Välj både ett start- och ett slutdatum.',
+            'malformed' => 'Använd ett giltigt datum i formatet ÅÅÅÅ-MM-DD.',
+            'inverted' => 'Slutdatumet ligger före startdatumet.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filter',
+        'net_worth_note' => 'Nettoförmögenhet är ett saldo: bara kontofiltret gäller.',
     ],
 
     'compare' => 'Jämför med föregående period',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Avgifter och justeringar (ej medräknade)',
+    'other_movement_with_refunds' => 'Avgifter, återbetalningar och justeringar (ej medräknade)',
 ];

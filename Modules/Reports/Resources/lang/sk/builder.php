@@ -40,6 +40,11 @@ return [
         'custom' => 'Vlastný rozsah',
         'from' => 'Od',
         'to' => 'Do',
+        'error' => [
+            'incomplete' => 'Vyber počiatočný aj koncový dátum.',
+            'malformed' => 'Zadaj platný dátum v tvare RRRR-MM-DD.',
+            'inverted' => 'Koncový dátum je skôr ako počiatočný.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtre',
+        'net_worth_note' => 'Čisté imanie je zostatok: platí len filter účtu.',
     ],
 
     'compare' => 'Porovnať s predchádzajúcim obdobím',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Poplatky a úpravy (nezapočítané vyššie)',
+    'other_movement_with_refunds' => 'Poplatky, vratky a úpravy (nezapočítané vyššie)',
 ];

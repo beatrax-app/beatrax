@@ -40,6 +40,11 @@ return [
         'custom' => 'Custom range',
         'from' => 'From',
         'to' => 'To',
+        'error' => [
+            'incomplete' => 'Pick both a start and an end date.',
+            'malformed' => 'Use a valid date in YYYY-MM-DD form.',
+            'inverted' => 'The end date falls before the start date.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filters',
+        'net_worth_note' => 'Net worth is a balance: only the account filter applies.',
     ],
 
     'compare' => 'Compare to previous period',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Fees and adjustments (not counted above)',
+    'other_movement_with_refunds' => 'Fees, refunds and adjustments (not counted above)',
 ];

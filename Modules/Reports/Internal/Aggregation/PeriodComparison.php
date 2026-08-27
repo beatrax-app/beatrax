@@ -7,20 +7,38 @@ namespace Modules\Reports\Internal\Aggregation;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ComparisonJoin;
 
 final class PeriodComparison
 {
     /**
      * @param  list<ReportResultRow>  $currentRows
      * @param  callable(Period): ReportResultDto  $queryForPeriod  Re-runs the same dimension-query-plus-currency-mode pipeline (already carrying the driving definition's currency mode + filters) for an arbitrary Period, returning its full result (rows and FX-exclusion metadata).
-     * @return array{rows: list<ReportResultRow>, previousHasExcludedAccounts: bool, previousAccountsWithoutRate: int} rows is comparisonRows — union of current+previous groups, previousAmountMinor/deltaMinor populated, sorted by abs(delta) desc; previousHasExcludedAccounts/previousAccountsWithoutRate surface the previous period's own FX-exclusion state
+     * @return array{rows: list<ReportResultRow>, previousHasExcludedAccounts: bool, previousAccountsWithoutRate: int, previousTotalMinor: int, previousCurrency: string} rows is comparisonRows — previousAmountMinor/deltaMinor populated; previousHasExcludedAccounts/previousAccountsWithoutRate surface the previous period's own FX-exclusion state, and previousTotalMinor/previousCurrency its own headline total
      */
-    public function compare(Period $currentPeriod, array $currentRows, callable $queryForPeriod): array
+    public function compare(Period $currentPeriod, array $currentRows, callable $queryForPeriod, ComparisonJoin $join = ComparisonJoin::Group): array
     {
         $previousPeriod = $this->previousPeriod($currentPeriod);
         $previousResult = $queryForPeriod($previousPeriod);
-        $previousRows = $previousResult->rows;
 
+        return [
+            'rows' => $join === ComparisonJoin::Sequence
+                ? self::joinBySequence($currentRows, $previousResult->rows)
+                : self::joinByGroup($currentRows, $previousResult->rows),
+            'previousHasExcludedAccounts' => $previousResult->hasExcludedAccounts,
+            'previousAccountsWithoutRate' => $previousResult->accountsWithoutRate,
+            'previousTotalMinor' => $previousResult->totalMinor,
+            'previousCurrency' => $previousResult->currency,
+        ];
+    }
+
+    /**
+     * @param  list<ReportResultRow>  $currentRows
+     * @param  list<ReportResultRow>  $previousRows
+     * @return list<ReportResultRow>
+     */
+    private static function joinByGroup(array $currentRows, array $previousRows): array
+    {
         /** @var array<string, array{key: int|string|null, label: string, currency: string, current: int, previous: int}> $byKey */
         $byKey = [];
 
@@ -62,11 +80,64 @@ final class PeriodComparison
 
         usort($result, static fn (ReportResultRow $a, ReportResultRow $b): int => abs($b->deltaMinor ?? 0) <=> abs($a->deltaMinor ?? 0));
 
-        return [
-            'rows' => $result,
-            'previousHasExcludedAccounts' => $previousResult->hasExcludedAccounts,
-            'previousAccountsWithoutRate' => $previousResult->accountsWithoutRate,
-        ];
+        return $result;
+    }
+
+    // A time bucket's and a net-worth point's group key is a DATE, which two
+    // disjoint windows can never share: joining on it gave every current row a
+    // previous of zero and appended every previous row as a fabricated current
+    // one. Never re-sorted by delta either -- the row order IS the series.
+    /**
+     * @param  list<ReportResultRow>  $currentRows
+     * @param  list<ReportResultRow>  $previousRows
+     * @return list<ReportResultRow>
+     */
+    private static function joinBySequence(array $currentRows, array $previousRows): array
+    {
+        $previousByOrdinal = [];
+        foreach (self::withOrdinals($previousRows) as $ordinal => $row) {
+            $previousByOrdinal[$ordinal] = $row->amountMinor;
+        }
+
+        $result = [];
+        foreach (self::withOrdinals($currentRows) as $ordinal => $row) {
+            // Null, never zero, for a bucket the previous window does not
+            // reach: the table renders an em dash for it, and "no counterpart"
+            // must not read as "was zero then".
+            $previous = $previousByOrdinal[$ordinal] ?? null;
+
+            $result[] = new ReportResultRow(
+                groupKey: $row->groupKey,
+                groupLabel: $row->groupLabel,
+                amountMinor: $row->amountMinor,
+                currency: $row->currency,
+                previousAmountMinor: $previous,
+                deltaMinor: $previous === null ? null : $row->amountMinor - $previous,
+            );
+        }
+
+        return $result;
+    }
+
+    // Ordinal within the row's own currency, since 'original' mode emits the
+    // whole bucket run once per currency and the two windows need not have
+    // discovered the same set of them.
+    /**
+     * @param  list<ReportResultRow>  $rows
+     * @return array<string, ReportResultRow>
+     */
+    private static function withOrdinals(array $rows): array
+    {
+        $seen = [];
+        $keyed = [];
+
+        foreach ($rows as $row) {
+            $position = $seen[$row->currency] ?? 0;
+            $seen[$row->currency] = $position + 1;
+            $keyed[$row->currency.'|'.$position] = $row;
+        }
+
+        return $keyed;
     }
 
     // A day-count shift is only correct for an arbitrary custom range: a

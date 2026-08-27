@@ -10,6 +10,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Reports\Internal\Enums\ReportPeriodPreset;
+use Modules\Reports\Internal\Exceptions\InvalidReportPeriod;
 
 final class PeriodPresetResolver
 {
@@ -68,14 +69,14 @@ final class PeriodPresetResolver
     private function custom(?string $customFrom, ?string $customTo): Period
     {
         if ($customFrom === null || $customFrom === '' || $customTo === null || $customTo === '') {
-            throw new InvalidArgumentException('The "custom" period preset requires both customFrom and customTo dates.');
+            throw InvalidReportPeriod::incomplete();
         }
 
-        $start = self::parseStrictDate($customFrom, 'customFrom');
-        $inclusiveEnd = self::parseStrictDate($customTo, 'customTo');
+        $start = self::tryParseDate($customFrom) ?? throw InvalidReportPeriod::malformed('customFrom', $customFrom);
+        $inclusiveEnd = self::tryParseDate($customTo) ?? throw InvalidReportPeriod::malformed('customTo', $customTo);
 
         if ($inclusiveEnd->lessThan($start)) {
-            throw new InvalidArgumentException('The "custom" period preset requires customTo to be on or after customFrom.');
+            throw InvalidReportPeriod::inverted();
         }
 
         $endExclusive = $inclusiveEnd->addDay();
@@ -87,21 +88,22 @@ final class PeriodPresetResolver
         );
     }
 
+    // The one spelling of "is this a Y-m-d date": the stored-definition factory
+    // asks it too, so a replayed blob and a typed date are judged alike.
     // createFromFormat() normalizes an out-of-range day ("2026-02-30" becomes
-    // 2026-03-02) rather than rejecting it, so the round-tripped format('Y-m-d')
-    // is compared back against the raw input.
-    private static function parseStrictDate(string $value, string $field): CarbonImmutable
+    // 2026-03-02), so the round-trip is compared back against the raw input.
+    public static function tryParseDate(?string $value): ?CarbonImmutable
     {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
         try {
             $parsed = CarbonImmutable::createFromFormat('Y-m-d', $value);
         } catch (InvalidArgumentException) {
-            $parsed = null;
+            return null;
         }
 
-        if ($parsed === null || $parsed->format('Y-m-d') !== $value) {
-            throw new InvalidArgumentException("The \"{$field}\" date must be a valid \"Y-m-d\" date string, got: \"{$value}\".");
-        }
-
-        return $parsed->startOfDay();
+        return $parsed !== null && $parsed->format('Y-m-d') === $value ? $parsed->startOfDay() : null;
     }
 }

@@ -40,6 +40,11 @@ return [
         'custom' => 'Plage personnalisée',
         'from' => 'Du',
         'to' => 'Au',
+        'error' => [
+            'incomplete' => 'Choisissez une date de début et une date de fin.',
+            'malformed' => 'Utilisez une date valide au format AAAA-MM-JJ.',
+            'inverted' => 'La date de fin précède la date de début.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtres',
+        'net_worth_note' => 'La valeur nette est un solde : seul le filtre de compte s’applique.',
     ],
 
     'compare' => 'Comparer à la période précédente',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Frais et ajustements (non comptés ci-dessus)',
+    'other_movement_with_refunds' => 'Frais, remboursements et ajustements (non comptés ci-dessus)',
 ];

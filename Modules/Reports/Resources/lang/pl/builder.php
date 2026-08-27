@@ -40,6 +40,11 @@ return [
         'custom' => 'Własny zakres',
         'from' => 'Od',
         'to' => 'Do',
+        'error' => [
+            'incomplete' => 'Wybierz datę początkową i końcową.',
+            'malformed' => 'Podaj poprawną datę w formacie RRRR-MM-DD.',
+            'inverted' => 'Data końcowa jest wcześniejsza niż początkowa.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtry',
+        'net_worth_note' => 'Wartość netto to saldo: działa tylko filtr konta.',
     ],
 
     'compare' => 'Porównaj z poprzednim okresem',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Opłaty i korekty (nieuwzględnione powyżej)',
+    'other_movement_with_refunds' => 'Opłaty, zwroty i korekty (nieuwzględnione powyżej)',
 ];

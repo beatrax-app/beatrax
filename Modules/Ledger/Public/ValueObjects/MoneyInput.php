@@ -130,8 +130,24 @@ final class MoneyInput
 
     // The machine-readable form: "1234.56", no symbol and no group mark, for a
     // CSV cell or an API field where a reader's separators would be a bug.
-    public static function toDecimalString(int $minor): string
+    // Given a currency it writes that currency's own scale -- JPY has no minor
+    // unit, so a hundredth of a yen in an export is not a smaller number, it is
+    // a wrong one. Without a currency it keeps the two-decimal assumption.
+    public static function toDecimalString(int $minor, ?string $currencyCode = null): string
     {
+        $money = $currencyCode === null ? null : Money::tryOfMinor($minor, $currencyCode);
+
+        if ($money !== null) {
+            $scale = $money->minorUnitsPerMajor();
+            $decimals = (int) round(log10((float) $scale));
+            $abs = abs($minor);
+
+            return ($minor < 0 ? '-' : '').
+                ($scale === 1
+                    ? (string) $abs
+                    : intdiv($abs, $scale).'.'.str_pad((string) ($abs % $scale), $decimals, '0', STR_PAD_LEFT));
+        }
+
         $abs = abs($minor);
 
         return ($minor < 0 ? '-' : '').

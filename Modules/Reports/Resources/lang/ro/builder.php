@@ -40,6 +40,11 @@ return [
         'custom' => 'Interval personalizat',
         'from' => 'De la',
         'to' => 'Până la',
+        'error' => [
+            'incomplete' => 'Alege atât o dată de început, cât și una de sfârșit.',
+            'malformed' => 'Folosește o dată validă în formatul AAAA-LL-ZZ.',
+            'inverted' => 'Data de sfârșit este înaintea celei de început.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtre',
+        'net_worth_note' => 'Valoarea netă este un sold: se aplică doar filtrul de cont.',
     ],
 
     'compare' => 'Compară cu perioada anterioară',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Comisioane și ajustări (necontabilizate mai sus)',
+    'other_movement_with_refunds' => 'Comisioane, rambursări și ajustări (necontabilizate mai sus)',
 ];

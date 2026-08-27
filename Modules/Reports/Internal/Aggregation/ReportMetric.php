@@ -19,21 +19,48 @@ enum ReportMetric: string
 
     case Net = 'net';
 
+    /** @var list<string> */
+    private const array DISCLOSED_TYPES = [
+        TransactionType::Fee->value,
+        TransactionType::Adjustment->value,
+        TransactionType::Refund->value,
+    ];
+
     public static function fromMetric(string $metric): self
     {
         return self::tryFrom($metric) ?? throw new InvalidArgumentException("Unknown report metric: {$metric}");
     }
 
+    // A refund is a reversal of an expense, never income of its own: counting it
+    // in both would make `income - spend` and `net` disagree about it. Nothing
+    // outside these three plus DISCLOSED_TYPES is money the reader moved --
+    // transfer_in/transfer_out are the two halves of one internal move.
     /**
      * @return list<string>
      */
     public function types(): array
     {
         return match ($this) {
-            self::Spend => [TransactionType::Expense->value],
+            self::Spend => [TransactionType::Expense->value, TransactionType::Refund->value],
             self::Income => [TransactionType::Income->value],
-            self::Net => [TransactionType::Expense->value, TransactionType::Income->value],
+            self::Net => [TransactionType::Expense->value, TransactionType::Income->value, TransactionType::Refund->value],
         };
+    }
+
+    // Real movement no metric is defined over. Derived by subtraction rather
+    // than listed, so a type this metric already counts can never be reported
+    // twice -- once in the total and again beside it.
+    /**
+     * @return list<string>
+     */
+    public function disclosedTypes(): array
+    {
+        return array_values(array_diff(self::DISCLOSED_TYPES, $this->types()));
+    }
+
+    public function disclosesRefunds(): bool
+    {
+        return in_array(TransactionType::Refund->value, $this->disclosedTypes(), true);
     }
 
     // Connection::raw() needs a literal-string, so the caller's column

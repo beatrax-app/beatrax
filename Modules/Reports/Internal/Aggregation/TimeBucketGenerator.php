@@ -25,11 +25,9 @@ final class TimeBucketGenerator
         };
     }
 
-    // The chain of steps tried in order, coarsest last. The cap was applied
-    // once per level and then stopped being checked, so weekly widened to
-    // monthly and monthly widened to quarterly -- and quarterly was final. A
-    // custom range starting in the year 1000 therefore produced 4108 buckets,
-    // and every bucket costs one query per account plus an FX conversion: 7.8
+    // Steps tried in order, coarsest last. The cap was checked once per level
+    // and then stopped being checked, so a range starting in the year 1000 made
+    // 4108 buckets -- each one a query per account plus an FX conversion, 7.8
     // seconds on a 164-transaction database, from a plain GET.
     /**
      * @param  callable(CarbonImmutable): CarbonImmutable  $step

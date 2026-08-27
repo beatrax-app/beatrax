@@ -12,15 +12,17 @@ use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Tax\Internal\Support\TaggedRowScope;
 use Modules\Tax\Public\Dto\BatchTagSuggestion;
 use Modules\Tax\Public\Dto\TaxTagData;
 use Modules\Tax\Public\Dto\TaxYearSummary;
 
 final class TaxTagQuery
 {
-    private const TAX_TAGS_ALIAS = 'tax_transaction_tags AS tag';
-
-    private const TRANSACTIONS_ALIAS = 'transactions AS t';
+    // short_name is optional and only the corpus fills it in, so a category the
+    // reader added themselves has none; without the fall-through every badge on
+    // such a category reads as the generic tax word instead of naming it.
+    private const CATEGORY_BADGE_LABEL = 'COALESCE(cat.short_name, cat.name) AS category_short_name';
 
     use CoercesScalars;
 
@@ -45,7 +47,7 @@ final class TaxTagQuery
         }
 
         $rows = $this->db->connection()
-            ->table(self::TAX_TAGS_ALIAS)
+            ->table(TaggedRowScope::TAGS)
             ->leftJoin('tax_deduction_categories AS cat', 'cat.id', '=', 'tag.deduction_category_id')
             ->where('tag.user_id', $userId)
             ->whereIn('tag.transaction_id', $transactionIds)
@@ -53,7 +55,7 @@ final class TaxTagQuery
             ->get([
                 'tag.transaction_id',
                 'tag.deduction_category_id',
-                'cat.short_name AS category_short_name',
+                $this->db->connection()->raw(self::CATEGORY_BADGE_LABEL),
                 'tag.note',
                 'tag.tax_year_override',
             ]);
@@ -84,7 +86,7 @@ final class TaxTagQuery
         }
 
         $rows = $this->db->connection()
-            ->table(self::TAX_TAGS_ALIAS)
+            ->table(TaggedRowScope::TAGS)
             ->leftJoin('tax_deduction_categories AS cat', 'cat.id', '=', 'tag.deduction_category_id')
             ->where('tag.user_id', $userId)
             ->whereIn('tag.transaction_id', $transactionIds)
@@ -92,7 +94,7 @@ final class TaxTagQuery
                 'tag.transaction_id',
                 'tag.transaction_split_id',
                 'tag.deduction_category_id',
-                'cat.short_name AS category_short_name',
+                $this->db->connection()->raw(self::CATEGORY_BADGE_LABEL),
                 'tag.note',
                 'tag.tax_year_override',
             ]);
@@ -140,17 +142,21 @@ final class TaxTagQuery
     // bucket: a dollar receipt's cents are not the reader's.
     public function summaryForUser(int $userId, int $year): TaxYearSummary
     {
-        $rows = $this->db->connection()
-            ->table(self::TAX_TAGS_ALIAS)
-            ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'tag.transaction_id')
+        $connection = $this->db->connection();
+
+        $query = $connection
+            ->table(TaggedRowScope::TAGS)
+            ->join(TaggedRowScope::TRANSACTIONS, 't.id', '=', 'tag.transaction_id')
             ->where('tag.user_id', $userId)
-            ->whereRaw(
-                'COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) = ?',
-                [$year],
-            )
+            ->whereRaw(TaggedRowScope::EFFECTIVE_YEAR.' = ?', [$year]);
+
+        TaggedRowScope::joinLegs($query);
+        TaggedRowScope::withoutSuperseded($query, $connection);
+
+        $rows = $query
             ->groupBy('t.settled_currency')
             ->selectRaw(
-                't.settled_currency, COUNT(*) AS cnt, SUM(CASE WHEN t.type = ? THEN 0 ELSE ABS(t.settled_amount_minor) END) AS bucket_minor',
+                't.settled_currency, COUNT(*) AS cnt, SUM(CASE WHEN t.type = ? THEN 0 ELSE ABS('.TaggedRowScope::SETTLED_AMOUNT_MINOR.') END) AS bucket_minor',
                 [TransactionType::Income->value],
             )
             ->get();
@@ -205,8 +211,8 @@ final class TaxTagQuery
             : '';
 
         $untaggedCount = $connection
-            ->table(self::TRANSACTIONS_ALIAS)
-            ->leftJoin(self::TAX_TAGS_ALIAS, static function (JoinClause $join) use ($userId): void {
+            ->table(TaggedRowScope::TRANSACTIONS)
+            ->leftJoin(TaggedRowScope::TAGS, static function (JoinClause $join) use ($userId): void {
                 $join->on('tag.transaction_id', '=', 't.id')
                     ->where('tag.user_id', '=', $userId);
             })
@@ -233,8 +239,8 @@ final class TaxTagQuery
     public function untaggedIdsForCounterparty(int $userId, int $counterpartyId, int $taxYear): array
     {
         $rows = $this->db->connection()
-            ->table(self::TRANSACTIONS_ALIAS)
-            ->leftJoin(self::TAX_TAGS_ALIAS, static function (JoinClause $join) use ($userId): void {
+            ->table(TaggedRowScope::TRANSACTIONS)
+            ->leftJoin(TaggedRowScope::TAGS, static function (JoinClause $join) use ($userId): void {
                 $join->on('tag.transaction_id', '=', 't.id')
                     ->where('tag.user_id', '=', $userId);
             })

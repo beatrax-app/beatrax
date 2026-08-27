@@ -8,16 +8,40 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\FX\Public\Dto\ConversionResult;
+use Modules\FX\Public\Enums\ConversionOutcome;
 use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\RateTable;
 
+/**
+ * @link ../../../../.docs/features/fx/architecture.md
+ */
 final class ExchangeRateService
 {
     private const int STALE_DAYS_THRESHOLD = 3;
 
     private const string BASE_CURRENCY = Currency::Eur->value;
+
+    // The rate in effect on a date is the newest one published on or before it,
+    // resolved per pair: ECB publishes on business days only, so an exact-date
+    // match drops every weekend, every holiday, and every date older than the
+    // first row. Nothing on or before it falls forward to the oldest row held.
+    private const string RATE_DATE_IN_EFFECT = <<<'SQL'
+        er.rate_date = COALESCE(
+            (SELECT MAX(on_or_before.rate_date) FROM exchange_rates AS on_or_before
+              WHERE on_or_before.base_currency = er.base_currency
+                AND on_or_before.quote_currency = er.quote_currency
+                AND on_or_before.rate_date <= ?),
+            (SELECT MIN(on_or_after.rate_date) FROM exchange_rates AS on_or_after
+              WHERE on_or_after.base_currency = er.base_currency
+                AND on_or_after.quote_currency = er.quote_currency
+                AND on_or_after.rate_date >= ?)
+        )
+        SQL;
+
+    /** @var array<string, Collection<int, \stdClass>> */
+    private array $ratesByDate = [];
 
     public function __construct(private readonly DatabaseManager $db) {}
 
@@ -27,34 +51,16 @@ final class ExchangeRateService
             return ConversionResult::passthrough($money);
         }
 
-        $rows = $this->fetchLatestRates();
-
-        return $this->convertWithRows($money, $targetCurrency, $rows);
+        return $this->convertWithRows($money, $targetCurrency, $this->fetchLatestRates());
     }
 
-    /**
-     * @param  string  $date  used to look up the dated snapshot row when
-     *                        $knownRate is not supplied
-     * @param  ?string  $knownRate  caller-supplied rate (tx.fx_rate_used),
-     *                              preferred over the dated snapshot row
-     */
-    public function convertAtDate(
-        Money $money,
-        string $targetCurrency,
-        string $date,
-        ?string $knownRate = null,
-    ): ConversionResult {
+    public function convertAtDate(Money $money, string $targetCurrency, string $date): ConversionResult
+    {
         if ($money->currency() === $targetCurrency) {
             return ConversionResult::passthrough($money);
         }
 
-        if ($knownRate !== null) {
-            return $this->convertWithKnownRate($money, $targetCurrency, $knownRate, $date);
-        }
-
-        $rows = $this->fetchRatesForDate($date);
-
-        return $this->convertWithRows($money, $targetCurrency, $rows);
+        return $this->convertWithRows($money, $targetCurrency, $this->ratesForDate($date));
     }
 
     /**
@@ -81,45 +87,34 @@ final class ExchangeRateService
             ->get();
     }
 
+    // Memoised for the life of the resolved instance. A net-worth series asks
+    // for one bucket date once per account currency line, and which row a date
+    // resolves to cannot change while a single render is in flight.
+    /**
+     * @return Collection<int, \stdClass>
+     */
+    private function ratesForDate(string $date): Collection
+    {
+        return $this->ratesByDate[$date] ??= $this->fetchRatesForDate($date);
+    }
+
     /**
      * @return Collection<int, \stdClass>
      */
     private function fetchRatesForDate(string $date): Collection
     {
         return $this->db->connection()
-            ->table('exchange_rates')
-            ->where('rate_date', $date)
-            ->orderByRaw('case when source = ? then 0 else 1 end', [BundledRates::SOURCE])
-            ->get(['base_currency', 'quote_currency', 'rate', 'rate_date', 'source']);
-    }
-
-    private function convertWithKnownRate(
-        Money $money,
-        string $targetCurrency,
-        string $knownRate,
-        string $date,
-    ): ConversionResult {
-        // tx.fx_rate_used is stored in the direction this conversion needs, so it
-        // is registered as a direct pair and never inverted.
-        $converted = RateTable::direct()
-            ->withRate($money->currency(), $targetCurrency, $knownRate)
-            ->convert($money, $targetCurrency);
-
-        if ($converted === null) {
-            // null means the direct rate was insufficient (a cross-rate is needed)
-            // or the result overflows the platform integer range.
-            return $this->convertWithRows($money, $targetCurrency, $this->fetchRatesForDate($date));
-        }
-
-        return new ConversionResult(
-            original: $money,
-            converted: $converted,
-            isPassthrough: false,
-            rate: $knownRate,
-            source: 'transaction',
-            asOf: CarbonImmutable::parse($date),
-            isStale: false,
-        );
+            ->table('exchange_rates as er')
+            ->select([
+                'er.base_currency',
+                'er.quote_currency',
+                'er.rate',
+                'er.rate_date',
+                'er.source',
+            ])
+            ->whereRaw(self::RATE_DATE_IN_EFFECT, [$date, $date])
+            ->orderByRaw('case when er.source = ? then 0 else 1 end', [BundledRates::SOURCE])
+            ->get();
     }
 
     /**
@@ -131,7 +126,7 @@ final class ExchangeRateService
     private function convertWithRows(Money $money, string $targetCurrency, Collection $rows): ConversionResult
     {
         if ($rows->isEmpty()) {
-            return ConversionResult::passthrough($money);
+            return ConversionResult::noRate($money);
         }
 
         $table = RateTable::crossedThrough(self::BASE_CURRENCY);
@@ -166,9 +161,9 @@ final class ExchangeRateService
         $converted = $table->convert($money, $targetCurrency);
 
         if ($converted === null) {
-            // An unavailable pair or an integer-range overflow degrades to
-            // passthrough rather than crashing the whole net-worth render.
-            return ConversionResult::passthrough($money);
+            // An unavailable pair or an integer-range overflow leaves the amount
+            // in its own currency rather than crashing the net-worth render.
+            return ConversionResult::noRate($money);
         }
 
         $rate = $table->rateFor($money->currency(), $targetCurrency);
@@ -179,7 +174,7 @@ final class ExchangeRateService
         return new ConversionResult(
             original: $money,
             converted: $converted,
-            isPassthrough: false,
+            outcome: ConversionOutcome::Converted,
             rate: $rate === null ? null : (string) $rate,
             source: $source,
             asOf: $asOf,

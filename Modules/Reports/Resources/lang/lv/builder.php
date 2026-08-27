@@ -40,6 +40,11 @@ return [
         'custom' => 'Pielāgots periods',
         'from' => 'No',
         'to' => 'Līdz',
+        'error' => [
+            'incomplete' => 'Izvēlies gan sākuma, gan beigu datumu.',
+            'malformed' => 'Izmanto derīgu datumu formātā GGGG-MM-DD.',
+            'inverted' => 'Beigu datums ir pirms sākuma datuma.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtri',
+        'net_worth_note' => 'Neto vērtība ir atlikums: darbojas tikai konta filtrs.',
     ],
 
     'compare' => 'Salīdzināt ar iepriekšējo periodu',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Maksas un korekcijas (nav ieskaitītas)',
+    'other_movement_with_refunds' => 'Maksas, atmaksas un korekcijas (nav ieskaitītas)',
 ];

@@ -123,7 +123,7 @@ it('fx_exclusion_never_1to1: an unconvertible account is excluded and counted, n
     $point = $points[0];
 
     expect($point->totalMinor)->toBe(20_000);
-    expect($point->excludedCount)->toBe(1);
+    expect($point->excludedCount())->toBe(1);
 
     // A 1:1 leak would have added the raw JPY minor amount into the EUR total.
     $wouldBeOneToOneTotal = 20_000 + 500_000;

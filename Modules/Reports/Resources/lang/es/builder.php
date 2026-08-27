@@ -40,6 +40,11 @@ return [
         'custom' => 'Intervalo personalizado',
         'from' => 'Desde',
         'to' => 'Hasta',
+        'error' => [
+            'incomplete' => 'Elige una fecha de inicio y una de fin.',
+            'malformed' => 'Usa una fecha válida con el formato AAAA-MM-DD.',
+            'inverted' => 'La fecha de fin es anterior a la de inicio.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtros',
+        'net_worth_note' => 'El patrimonio neto es un saldo: solo se aplica el filtro de cuenta.',
     ],
 
     'compare' => 'Comparar con el periodo anterior',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Comisiones y ajustes (no incluidos arriba)',
+    'other_movement_with_refunds' => 'Comisiones, reembolsos y ajustes (no incluidos arriba)',
 ];

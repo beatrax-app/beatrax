@@ -8,14 +8,15 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use Modules\Reports\Internal\Enums\ReportDimension;
 use Modules\Reports\Internal\Enums\ReportMetricSelection;
 use Modules\Reports\Internal\Enums\ReportViz;
+use Modules\Reports\Internal\Exceptions\InvalidReportPeriod;
 use Modules\Reports\Internal\Services\PinnedReportsQuery;
+use Modules\Reports\Internal\Support\ChartAmount;
 
 final class PinnedReportsRow extends Component
 {
@@ -44,13 +45,22 @@ final class PinnedReportsRow extends Component
         $cards = [];
         foreach ($pins as $pin) {
             $definition = $pin['definition'];
-            $result = $aggregator->run($user, $definition);
+
+            // A saved definition whose custom range cannot resolve renders as an
+            // empty card. It is one card of three on a page that is not about
+            // reports, and taking the dashboard down with it is never the right
+            // trade -- the builder is where the range gets fixed, and it says so.
+            try {
+                $rows = $aggregator->run($user, $definition)->rows;
+            } catch (InvalidReportPeriod) {
+                $rows = [];
+            }
 
             $cards[] = [
                 'id' => $pin['id'],
                 'name' => $pin['name'],
                 'chartElementId' => 'pinned-report-chart-'.$pin['id'],
-                'optionsJson' => $this->chartOptionsJson($definition, $result->rows),
+                'optionsJson' => $this->chartOptionsJson($definition, $rows),
             ];
         }
 
@@ -97,7 +107,7 @@ final class PinnedReportsRow extends Component
         $rows = self::withoutLeadingEmptyBuckets($rows);
 
         $categories = array_map(static fn (ReportResultRow $row): string => $row->groupLabel, $rows);
-        $data = array_map(static fn (ReportResultRow $row): float => $row->amountMinor / Money::MINOR_UNITS_PER_MAJOR, $rows);
+        $data = ChartAmount::series($rows);
 
         return [
             'chart' => [
@@ -171,9 +181,7 @@ final class PinnedReportsRow extends Component
     private function donutOptions(array $rows): array
     {
         $labels = array_map(static fn (ReportResultRow $row): string => $row->groupLabel, $rows);
-        // ApexCharts donut series wants non-negative magnitudes, but a report
-        // total is signed, so slice size is the absolute value.
-        $series = array_map(static fn (ReportResultRow $row): float => abs($row->amountMinor) / Money::MINOR_UNITS_PER_MAJOR, $rows);
+        $series = ChartAmount::magnitudes($rows);
 
         $colors = [];
         foreach (array_keys($labels) as $i) {

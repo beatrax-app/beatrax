@@ -40,6 +40,11 @@ return [
         'custom' => 'Pasirinktas laikotarpis',
         'from' => 'Nuo',
         'to' => 'Iki',
+        'error' => [
+            'incomplete' => 'Pasirink ir pradžios, ir pabaigos datą.',
+            'malformed' => 'Naudok teisingą datą formatu MMMM-MM-DD.',
+            'inverted' => 'Pabaigos data yra anksčiau nei pradžios.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtrai',
+        'net_worth_note' => 'Grynoji vertė yra likutis: taikomas tik sąskaitos filtras.',
     ],
 
     'compare' => 'Palyginti su ankstesniu laikotarpiu',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Mokesčiai ir korekcijos (neįskaičiuota)',
+    'other_movement_with_refunds' => 'Mokesčiai, grąžinimai ir korekcijos (neįskaičiuota)',
 ];

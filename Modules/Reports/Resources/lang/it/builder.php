@@ -40,6 +40,11 @@ return [
         'custom' => 'Intervallo personalizzato',
         'from' => 'Da',
         'to' => 'A',
+        'error' => [
+            'incomplete' => 'Scegli sia una data di inizio sia una di fine.',
+            'malformed' => 'Usa una data valida nel formato AAAA-MM-GG.',
+            'inverted' => 'La data di fine precede quella di inizio.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +63,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtri',
+        'net_worth_note' => 'Il patrimonio netto è un saldo: si applica solo il filtro conto.',
     ],
 
     'compare' => 'Confronta con il periodo precedente',
@@ -142,4 +148,5 @@ return [
     ],
 
     'other_movement' => 'Commissioni e rettifiche (non conteggiate sopra)',
+    'other_movement_with_refunds' => 'Commissioni, rimborsi e rettifiche (non conteggiate sopra)',
 ];

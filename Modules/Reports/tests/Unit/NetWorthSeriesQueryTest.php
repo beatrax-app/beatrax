@@ -117,7 +117,7 @@ it('renders one point per monthly bucket over a 12-month span — a time series,
 
     foreach ($points as $point) {
         expect($point->currency)->toBe('EUR');
-        expect($point->excludedCount)->toBe(0);
+        expect($point->excludedCount())->toBe(0);
     }
 });
 

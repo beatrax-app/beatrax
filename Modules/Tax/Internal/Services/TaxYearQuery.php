@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Tax\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
@@ -13,6 +12,7 @@ use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Tax\Internal\Support\TaggedRowScope;
 use Modules\Tax\Public\Dto\TaxYearData;
 
 /**
@@ -55,33 +55,19 @@ final class TaxYearQuery
     {
         $connection = $this->db->connection();
 
-        return $connection
-            ->table('tax_transaction_tags AS tag')
-            ->join('transactions AS t', 't.id', '=', 'tag.transaction_id')
-            // A whole-tx tag leaves every ts.* column NULL, which is what the
-            // settled_amount_minor COALESCE below falls back through.
-            ->leftJoin('transaction_splits AS ts', 'ts.id', '=', 'tag.transaction_split_id')
+        $query = $connection
+            ->table(TaggedRowScope::TAGS)
+            ->join(TaggedRowScope::TRANSACTIONS, 't.id', '=', 'tag.transaction_id')
             ->leftJoin('tax_deduction_categories AS cat', 'cat.id', '=', 'tag.deduction_category_id')
             ->leftJoin('accounts AS a', 'a.id', '=', 't.account_id')
             ->leftJoin('counterparties AS cp', 'cp.id', '=', 't.counterparty_id')
             ->where('tag.user_id', $userId)
-            ->whereRaw(
-                'COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) = ?',
-                [$year],
-            )
-            // Supersession: a whole-tx tag is dropped once the same transaction
-            // carries any leg-scoped tag, so the two never double-count. Leg
-            // rows are always kept.
-            ->where(function (QueryBuilder $q) use ($connection): void {
-                $q->whereNotNull('tag.transaction_split_id')
-                    ->orWhereNotExists(function (QueryBuilder $sub) use ($connection): void {
-                        $sub->select($connection->raw(1))
-                            ->from('tax_transaction_tags AS tag2')
-                            ->whereColumn('tag2.transaction_id', 'tag.transaction_id')
-                            ->whereColumn('tag2.user_id', 'tag.user_id')
-                            ->whereNotNull('tag2.transaction_split_id');
-                    });
-            })
+            ->whereRaw(TaggedRowScope::EFFECTIVE_YEAR.' = ?', [$year]);
+
+        TaggedRowScope::joinLegs($query);
+        TaggedRowScope::withoutSuperseded($query, $connection);
+
+        return $query
             ->orderBy('cat.sort_order')
             ->orderBy('t.booked_at')
             ->select([
@@ -89,8 +75,9 @@ final class TaxYearQuery
                 'tag.transaction_split_id',
                 't.id AS transaction_id',
                 't.booked_at',
-                $connection->raw('COALESCE(ts.settled_amount_minor, t.settled_amount_minor) AS settled_amount_minor'),
+                $connection->raw(TaggedRowScope::SETTLED_AMOUNT_MINOR.' AS settled_amount_minor'),
                 't.settled_currency',
+                't.settled_amount_minor AS parent_settled_amount_minor',
                 't.amount_minor',
                 't.currency',
                 't.description',
@@ -213,7 +200,7 @@ final class TaxYearQuery
             'note' => $this->decryptOrNull('tax_transaction_tags', 'note', $row->note, $userId),
             'settledAmountMinor' => $signedMinor,
             'settledCurrency' => self::toString($row->settled_currency),
-            'amountMinor' => self::toInt($row->amount_minor),
+            'amountMinor' => self::legScopedOriginalMinor($row, $signedMinor),
             'currency' => self::toString($row->currency),
             'transactionType' => self::toString($row->transaction_type),
             'categoryId' => $row->category_id !== null ? self::toInt($row->category_id) : null,
@@ -224,6 +211,26 @@ final class TaxYearQuery
             'importRunId' => self::toInt($row->import_run_id),
             'fingerprint' => self::toString($row->fingerprint),
         ];
+    }
+
+    // transaction_splits carries only the settled slice, so a leg's native
+    // amount is the share of the parent's native amount that its settled amount
+    // is of the parent's. Integer arithmetic, rounded half away from zero.
+    private static function legScopedOriginalMinor(\stdClass $row, int $legSettledMinor): int
+    {
+        $originalMinor = self::toInt($row->amount_minor);
+        $parentSettledMinor = self::toInt($row->parent_settled_amount_minor);
+
+        if ($row->transaction_split_id === null || $parentSettledMinor === 0 || $legSettledMinor === $parentSettledMinor) {
+            return $originalMinor;
+        }
+
+        $share = intdiv(
+            abs($originalMinor) * abs($legSettledMinor) * 2 + abs($parentSettledMinor),
+            abs($parentSettledMinor) * 2,
+        );
+
+        return $originalMinor < 0 ? -$share : $share;
     }
 
     /**
@@ -280,13 +287,15 @@ final class TaxYearQuery
     {
         $connection = $this->db->connection();
 
-        $rows = $connection
-            ->table('tax_transaction_tags AS tag')
-            ->join('transactions AS t', 't.id', '=', 'tag.transaction_id')
-            ->where('tag.user_id', $userId)
-            ->selectRaw(
-                'DISTINCT COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) AS effective_year',
-            )
+        $query = $connection
+            ->table(TaggedRowScope::TAGS)
+            ->join(TaggedRowScope::TRANSACTIONS, 't.id', '=', 'tag.transaction_id')
+            ->where('tag.user_id', $userId);
+
+        TaggedRowScope::withoutSuperseded($query, $connection);
+
+        $rows = $query
+            ->selectRaw('DISTINCT '.TaggedRowScope::EFFECTIVE_YEAR.' AS effective_year')
             ->orderByRaw('effective_year DESC')
             ->get();
 
