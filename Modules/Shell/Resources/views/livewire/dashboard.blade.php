@@ -333,8 +333,9 @@
 
     {{-- Standing install-hint card (order 8 on phone, bottom of column on all viewports) --}}
     {{-- "Also want to see your data on your phone?" standing promo card.
-         The install-hint component owns the copy and the
-         beforeinstallprompt / iOS fallback logic. --}}
+         The install-hint component owns the copy and the visibility rule.
+         That rule is beforeinstallprompt (Chromium) or a wide viewport --
+         there is no iOS branch, so this never renders on an iPhone. --}}
     {{-- The order class is the component's own, not a wrapper's: Alpine hides
          the root with display:none, and a wrapper around it would stay a flex
          item and keep its gap. --}}
