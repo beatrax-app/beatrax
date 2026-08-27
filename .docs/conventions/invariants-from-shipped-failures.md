@@ -1216,7 +1216,7 @@ that fix left behind was the more dangerous half: the columns beside it kept
 `->toIso8601String()`, so a single row carried a Zulu expiry next to a `+02:00`
 `created_at`, and a reader could not tell which form it had. `device_registry`
 was the same shape and worse placed — `confirmedDevices()` orders by
-`paired_at`, so the Devices & Sync list was already sorting on it, and the
+`paired_at`, so the Devices & sync list was already sorting on it, and the
 registry is long-lived: the rows sat on both of the user's devices for as long
 as the pairing lasted, where a pairing token expires in ten minutes.
 
