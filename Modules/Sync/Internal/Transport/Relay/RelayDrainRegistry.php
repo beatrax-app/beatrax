@@ -37,7 +37,8 @@ final class RelayDrainRegistry
         return $this->authorizes($did, $presentedToken);
     }
 
-    // Verify only. An unregistered did is refused rather than claimed.
+    // Verify only, never register: an unregistered did is refused here rather
+    // than claimed, which is what keeps the TOFU decision in one place.
     public function authorizes(string $did, string $presentedToken): bool
     {
         if ($did === '' || $presentedToken === '') {

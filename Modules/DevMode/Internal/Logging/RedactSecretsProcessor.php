@@ -34,7 +34,8 @@ final class RedactSecretsProcessor implements ProcessorInterface
         '/\bgh[pousr]_[A-Za-z0-9]{20,}/' => '[REDACTED]',
         '/\bsk_(?:live|test)_[A-Za-z0-9]{10,}/' => '[REDACTED]',
         '/\bxox[baprs]-[A-Za-z0-9-]{10,}/' => '[REDACTED]',
-        // A DSN's userinfo: scheme://user:password@host.
+        // A DSN carries its password in the userinfo segment,
+        // scheme://user:password@host, which no key-name match reaches.
         '/([a-z][a-z0-9+.-]*:\/\/)[^\/\s:@]+:[^\/\s@]+@/i' => '$1[REDACTED]@',
     ];
 

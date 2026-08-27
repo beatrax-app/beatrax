@@ -258,11 +258,10 @@ final class DriftPage extends Component
             return $view;
         }
 
-        // The Open tab renders the grouped projection, so the flat page is not
-        // read for it at all — it was queried and discarded on every render.
-        // Read one past the window and render the window. Rendering the
-        // lookahead row too made "Load more" appear on an exact multiple of the
-        // page size and then grow the list by nothing.
+        // The Open tab renders the grouped projection, so the flat page it
+        // once queried was discarded on every render. The window is read one
+        // row long and rendered short, so the extra row IS the evidence of
+        // more rather than a full page being read as one.
         $lookahead = $this->pageSize + 1;
         $rows = match ($this->activeTab()) {
             DriftPageTab::History => $query->historyForUser($user, null, $lookahead),

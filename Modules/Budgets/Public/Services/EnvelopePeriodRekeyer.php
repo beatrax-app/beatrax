@@ -194,11 +194,10 @@ final class EnvelopePeriodRekeyer
         return $events;
     }
 
+    // Only the rows that actually move. A stored value that is no longer a
+    // plain date has no period at all, so it is left where it is rather than
+    // guessed at.
     /**
-     * Row id => the period start that now contains its stored date, for the
-     * rows that actually move. A stored value that is no longer a plain date
-     * has no period at all and is left where it is rather than guessed at.
-     *
      * @param  Collection<int, \stdClass>  $rows
      * @return array<int, string>
      */
