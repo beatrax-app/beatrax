@@ -23,7 +23,6 @@ final class NotificationStateMachine
     {
         $this->db->connection()->transaction(function () use ($notificationId, $userId): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
 
             $row = $connection->table('notifications')
                 ->where('id', $notificationId)

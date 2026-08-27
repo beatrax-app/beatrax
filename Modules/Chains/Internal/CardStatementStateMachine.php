@@ -31,9 +31,6 @@ final class CardStatementStateMachine
         $connection = $this->db->connection();
 
         return $connection->transaction(function () use ($connection, $statementId, $deltaMinor, $user): StatementSettlement {
-            // Laravel opens the transaction DEFERRED, so the write fence is not
-            // taken at BEGIN; wait out a competing writer instead of SQLITE_BUSY.
-            $connection->statement('PRAGMA busy_timeout = 5000');
 
             $row = $connection->table('card_statements')
                 ->where('id', $statementId)

@@ -175,7 +175,6 @@ final class OAuthCallbackController
             $existingInboxId, $userId, $provider, $email, $now,
         ): int {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
 
             if ($existingInboxId > 0) {
                 $affected = $connection->table('inboxes')
@@ -250,7 +249,6 @@ final class OAuthCallbackController
     {
         $this->db->connection()->transaction(function () use ($inboxId, $userId): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
             $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
                 ->where('user_id', $userId)

@@ -23,13 +23,26 @@ final class ReportCsvExporter
 
         // Mitigate spreadsheet formula injection — group labels
         // (counterparty/category/account names) are free text.
-        $writer->addFormatter(new EscapeFormula);
+        // Escape only the group label. It is the one free-text column -- an
+        // account or counterparty name the reader typed -- and the three that
+        // follow are generated here. Escaping them too turned a negative
+        // amount into the text "'-75.00", which no spreadsheet will sum, so
+        // the file could not be totalled the moment the sign was restored.
+        $escapeFormula = new EscapeFormula;
+        $writer->addFormatter(static function (array $record) use ($escapeFormula): array {
+            $record[0] = $escapeFormula->escapeRecord([$record[0]])[0];
 
-        $groupHeader = match ($definition->dimension) {
+            return $record;
+        });
+
+        // net_worth ignores the dimension entirely -- the builder even hides
+        // the picker -- so a stale value in the URL used to head a column of
+        // months with "Counterparty".
+        $groupHeader = $definition->metric === 'net_worth' ? 'Period' : match ($definition->dimension) {
             'category' => 'Category',
             'counterparty' => 'Counterparty',
             'account' => 'Account',
-            'time_bucket' => 'Month',
+            'time_bucket' => 'Period',
             default => 'Group',
         };
         $writer->insertOne([$groupHeader, 'Metric', 'Amount', 'Currency']);
@@ -39,7 +52,11 @@ final class ReportCsvExporter
             $writer->insertOne([
                 $row->groupLabel,
                 $definition->metric,
-                MoneyInput::toDecimalString(abs($row->amountMinor)),
+                // Signed, like the screen. A `net` row is negative when more
+                // left than arrived and the file carries nothing else to
+                // recover the sign from, so abs() made the export unsummable
+                // and put it at odds with the table it is documented to match.
+                MoneyInput::toDecimalString($row->amountMinor),
                 $row->currency,
             ]);
         }

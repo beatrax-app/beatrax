@@ -82,11 +82,6 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 
         $connection = $db->connection();
 
-        // Discovery (per-user lock) runs concurrently with the hourly
-        // incremental scan (per-inbox lock); without this pragma one
-        // contended write throws mid-loop and silently aborts the pass.
-        $connection->statement('PRAGMA busy_timeout = 5000');
-
         /** @var User $user */
         $user = User::query()->where('id', $this->userId)->firstOrFail();
 

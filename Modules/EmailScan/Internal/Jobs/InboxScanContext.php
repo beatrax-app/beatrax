@@ -60,7 +60,6 @@ final readonly class InboxScanContext
 
         try {
             $this->connection->transaction(function () use ($messageId, $headers): void {
-                $this->connection->statement('PRAGMA busy_timeout = 5000');
                 $now = $this->clock->now()->toDateTimeString();
                 $this->connection->table('inbox_messages')->insertOrIgnore([
                     'user_id' => $this->userId,

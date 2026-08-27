@@ -21,15 +21,17 @@ final class UpdateTransactionCategory implements UpdatesTransactionCategory
 
     public function __invoke(int $transactionId, ?int $categoryId, User $user): int
     {
-        $status = $this->db->connection()
+        $row = $this->db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $user->id)
-            ->value('status');
+            ->first(['status', 'category_id']);
 
-        if ($status === ClearedStatus::Reconciled->value) {
+        if ($row === null || $row->status === ClearedStatus::Reconciled->value) {
             return 0;
         }
+
+        $currentCategoryId = is_numeric($row->category_id) ? (int) $row->category_id : null;
 
         if ($categoryId !== null) {
             $categoryVisible = $this->db->connection()
@@ -43,6 +45,17 @@ final class UpdateTransactionCategory implements UpdatesTransactionCategory
             if (! $categoryVisible) {
                 return 0;
             }
+        }
+
+        // Write-only-on-change, like ReassignCounterparty. SQLite reports one
+        // affected row for an UPDATE that writes the value already there, and
+        // AssignCategory gates every side effect on that count: re-picking the
+        // category a row already shows bumped merchant_memories.occurrence_count
+        // (the very number the memory ranking sorts on), wrote an op every
+        // device replays, and stamped field_provenance.category_id = 'manual',
+        // which locks the field out of every future rule re-apply.
+        if ($currentCategoryId === $categoryId) {
+            return 0;
         }
 
         return Transaction::query()

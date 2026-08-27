@@ -15,8 +15,6 @@ use Modules\EmailScan\Public\Enums\MailProvider;
 
 final class InboxScanStateMachine
 {
-    private const BUSY_TIMEOUT_PRAGMA = 'PRAGMA busy_timeout = 5000';
-
     use CoercesScalars;
 
     // Indices past the end clamp to the final entry, so a runaway retry
@@ -36,7 +34,6 @@ final class InboxScanStateMachine
     ): void {
         $this->db->connection()->transaction(function () use ($inboxId, $newStatus, $errorMessage): void {
             $connection = $this->db->connection();
-            $connection->statement(self::BUSY_TIMEOUT_PRAGMA);
 
             $row = $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
@@ -81,7 +78,6 @@ final class InboxScanStateMachine
     {
         $this->db->connection()->transaction(function () use ($inboxId, $retryAfterSeconds): void {
             $connection = $this->db->connection();
-            $connection->statement(self::BUSY_TIMEOUT_PRAGMA);
 
             $row = $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
@@ -117,7 +113,6 @@ final class InboxScanStateMachine
     {
         $this->db->connection()->transaction(function () use ($inboxId): void {
             $connection = $this->db->connection();
-            $connection->statement(self::BUSY_TIMEOUT_PRAGMA);
 
             $row = $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
@@ -157,7 +152,6 @@ final class InboxScanStateMachine
 
         $this->db->connection()->transaction(function () use ($inboxId, $cursor): void {
             $connection = $this->db->connection();
-            $connection->statement(self::BUSY_TIMEOUT_PRAGMA);
 
             $row = $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
@@ -203,7 +197,6 @@ final class InboxScanStateMachine
     {
         $this->db->connection()->transaction(function () use ($inboxId, $progress): void {
             $connection = $this->db->connection();
-            $connection->statement(self::BUSY_TIMEOUT_PRAGMA);
 
             $encoded = $progress === null
                 ? null

@@ -37,6 +37,7 @@ use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -371,6 +372,7 @@ final class TransactionDetail extends Component
         DatabaseManager $db,
         Dispatcher $events,
         UrlGenerator $urls,
+        SearchIndexWriterContract $searchIndex,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -404,6 +406,14 @@ final class TransactionDetail extends Component
             ->where('id', $this->transactionId)
             ->where('user_id', $userId)
             ->delete();
+
+        // transaction_search_docs.search_body is the deliberate plaintext
+        // shadow of the encrypted counterparty name and description, and it has
+        // no FK, no cascade and no trigger. Only a PEER's delete was reaped, via
+        // SearchIndexRefresher, so a row the reader deleted themselves left its
+        // decrypted text on disk for good -- and permanently red-flagged the
+        // Doctor's FTS health check.
+        $searchIndex->deleteForTransaction($this->transactionId, $userId);
 
         $events->dispatch(new TransactionMutated(
             transactionId: $this->transactionId,

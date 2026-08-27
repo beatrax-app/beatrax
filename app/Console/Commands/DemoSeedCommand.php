@@ -305,6 +305,12 @@ final class DemoSeedCommand extends Command
      */
     private function purgeUserScopedData(ConnectionInterface $connection, array $demoUserIds): void
     {
+        // The plaintext shadow of the encrypted counterparty name and
+        // description. It has no FK and no cascade, so a reset that missed it
+        // left the previous demo users' bank lines readable on disk: 363
+        // orphaned bodies, and an FTS health check that read "-364 behind".
+        $connection->table('transaction_search_docs')->whereIn('user_id', $demoUserIds)->delete();
+
         $connection->table('anomaly_alert_transitions')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('anomaly_alerts')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('saved_reports')->whereIn('user_id', $demoUserIds)->delete();

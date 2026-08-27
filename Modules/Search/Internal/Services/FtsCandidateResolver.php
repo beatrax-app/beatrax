@@ -57,15 +57,19 @@ final class FtsCandidateResolver
 
         $searchable = self::separateControlBytes($textQuery);
 
-        // Short words (1-2 chars) still exist in the FTS body and pass
-        // through naturally, but can't be explicit MATCH predicates; a
-        // query with no >=3-char word falls back to the LIKE scan.
+        // Short words (1-2 chars) cannot be MATCH predicates -- the trigram
+        // tokenizer needs three characters -- but they still have to narrow.
+        // Dropping them made a query WIDER than the words the reader typed:
+        // "de la place" returned exactly what "la place" did, and a term
+        // present nowhere in the index changed nothing at all. That is the
+        // same failure typed `account:` tokens were fixed for.
         $ftsWords = $this->significantFtsWords($searchable);
-        if (strlen($searchable) < 3 || $ftsWords === []) {
+        $shortWords = $this->shortFtsWords($searchable);
+        if (mb_strlen($searchable) < 3 || $ftsWords === []) {
             return $this->likeFallbackIds($user, $searchable, $applyFilters);
         }
 
-        $rowids = $this->db->connection()
+        $query = $this->db->connection()
             ->table('transaction_search_fts')
             ->whereRaw('transaction_search_fts MATCH ?', [$this->ftsMatchExpression($ftsWords)])
             ->join(
@@ -74,9 +78,13 @@ final class FtsCandidateResolver
                 '=',
                 'transaction_search_fts.rowid',
             )
-            ->where('transaction_search_docs.user_id', $user->id)
-            ->pluck('transaction_search_fts.rowid')
-            ->all();
+            ->where('transaction_search_docs.user_id', $user->id);
+
+        foreach ($shortWords as $word) {
+            $query->where('transaction_search_docs.search_body', 'like', '%'.self::escapeLike($word).'%');
+        }
+
+        $rowids = $query->pluck('transaction_search_fts.rowid')->all();
 
         return array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rowids));
     }
@@ -199,14 +207,35 @@ final class FtsCandidateResolver
     }
 
     /**
-     * @return list<string> the query's words of at least 3 chars
+     * @return list<string> the query's words of at least 3 CHARACTERS
      */
     private function significantFtsWords(string $textQuery): array
     {
+        // Characters, not bytes. A two-letter accented word is three bytes, so
+        // a byte count sent it to FTS5, whose trigram tokenizer needs three
+        // characters and matched nothing -- and because words are AND-joined,
+        // it took every other term in the query down with it. "Ze" with an
+        // acute was unfindable and made "bar" unfindable beside it.
         return array_values(array_filter(
             explode(' ', trim($textQuery)),
-            static fn (string $w): bool => strlen($w) >= 3,
+            static fn (string $w): bool => mb_strlen($w) >= 3,
         ));
+    }
+
+    /**
+     * @return list<string> the query's non-empty words of fewer than 3 characters
+     */
+    private function shortFtsWords(string $textQuery): array
+    {
+        return array_values(array_filter(
+            explode(' ', trim($textQuery)),
+            static fn (string $w): bool => $w !== '' && mb_strlen($w) < 3,
+        ));
+    }
+
+    private static function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $value);
     }
 
     // The reader's text is a URL parameter, so it can carry bytes no keyboard

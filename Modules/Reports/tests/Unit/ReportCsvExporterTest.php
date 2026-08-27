@@ -75,13 +75,13 @@ it('dimension=account header uses the literal Account label', function (): void 
     expect($header)->toBe(['Account', 'Metric', 'Amount', 'Currency']);
 });
 
-it('dimension=time_bucket header uses the literal Month label, not group or time_bucket', function (): void {
+it('dimension=time_bucket header says Period, because a bucket is not always a month', function (): void {
     $user = rceUser();
     test()->actingAs($user);
     $csv = app(ReportCsvExporter::class)->export($user, rceDefinition('time_bucket'));
 
     $header = str_getcsv(explode("\n", trim($csv))[0]);
-    expect($header)->toBe(['Month', 'Metric', 'Amount', 'Currency']);
+    expect($header)->toBe(['Period', 'Metric', 'Amount', 'Currency']);
 });
 
 it('data rows match the aggregator totals for the same definition', function (): void {
@@ -135,7 +135,7 @@ it('data rows match the aggregator totals for the same definition', function ():
     expect($dataRow[3])->toBe('EUR');
 });
 
-it('writes the Amount column unsigned, so a negative aggregate keeps its magnitude', function (): void {
+it('writes the Amount column signed, so the file sums to the total the screen shows', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = rceUser();
@@ -181,8 +181,10 @@ it('writes the Amount column unsigned, so a negative aggregate keeps its magnitu
 
     expect(count($lines))->toBe(2);
     $dataRow = str_getcsv($lines[1]);
-    expect($dataRow[2])->toBe('75.00')
-        ->and($dataRow[2])->not->toContain('-');
+    // A `net` row carries its direction in the sign and the file carries
+    // nothing else to recover it from: stripping it made the export unsummable
+    // and put every row at odds with the table it is documented to match.
+    expect($dataRow[2])->toBe('-75.00');
 });
 
 it('escapes formula-leading group labels so the CSV is safe to open in Excel', function (): void {

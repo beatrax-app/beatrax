@@ -77,6 +77,14 @@ final class SetTransactionNote implements SetsTransactionNote
             return $trimmed;
         }
 
+        // A rule's note action re-runs over the same rows every time the reader
+        // presses "re-apply to history". Unconditional concatenation made the
+        // change guard above unreachable, so the note grew one line per run and
+        // every run wrote an op every paired device replayed.
+        if (in_array($trimmed, explode("\n", $currentNote), true)) {
+            return $currentNote;
+        }
+
         return $currentNote."\n".$trimmed;
     }
 }
