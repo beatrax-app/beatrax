@@ -79,14 +79,24 @@ object BeatraxShareFunctions {
                 return mapOf("success" to false)
             }
 
-            // getUriForFile throws when the path is outside every <paths> entry
-            // the provider declares. That is a build-time mistake rather than a
-            // device condition, and it must not surface as a share sheet that
-            // opens onto nothing.
+            // Staged into the cache before it is handed over. Laravel writes
+            // under getDir("storage") -- /data/data/<pkg>/app_storage -- and no
+            // FileProvider tag covers that; <files-path> is getFilesDir(), a
+            // sibling of it. The cache root is already declared, and a copy made
+            // to be shared is exactly what a cache is for.
+            val staged = try {
+                val shareDir = File(context.cacheDir, "beatrax-share")
+                shareDir.mkdirs()
+                File(shareDir, file.name).also { file.copyTo(it, overwrite = true) }
+            } catch (e: Exception) {
+                Log.e("Share.File", "Could not stage $path for sharing", e)
+                return mapOf("success" to false)
+            }
+
             val uri = try {
-                FileProvider.getUriForFile(context, context.packageName + ".fileprovider", file)
+                FileProvider.getUriForFile(context, context.packageName + ".fileprovider", staged)
             } catch (e: IllegalArgumentException) {
-                Log.e("Share.File", "No FileProvider path covers $path", e)
+                Log.e("Share.File", "No FileProvider path covers ${staged.absolutePath}", e)
                 return mapOf("success" to false)
             }
 
@@ -157,27 +167,15 @@ if (! str_contains($registration, 'BeatraxShareFunctions')) {
 
 $paths = (string) file_get_contents($pathsTarget);
 
-// The export is written under the app's internal files directory, which the
-// generated <paths> did not list at all — it declares only the cache. The
-// provider stays exported="false" and each intent grants read on one URI.
-if (! str_contains($paths, 'beatrax-internal')) {
-    $pathsAnchor = '<cache-path name="cache" path="." />';
+// Nothing to add here: the share copy is staged into the cache, which the
+// generated <paths> already declares. A <files-path> entry would be the wrong
+// root -- Laravel writes to app_storage, a sibling of files -- and a wider
+// grant than one shared file needs.
+$pathsAnchor = '<cache-path name="cache" path="." />';
 
-    if (! str_contains($paths, $pathsAnchor)) {
-        fwrite(STDERR, "nativephp_android_share_file: cache-path anchor not found in {$pathsTarget}.\n");
-        exit(1);
-    }
-
-    $paths = str_replace(
-        $pathsAnchor,
-        $pathsAnchor."\n".'    <files-path name="beatrax-internal" path="." />',
-        $paths,
-    );
-
-    if (file_put_contents($pathsTarget, $paths) === false) {
-        fwrite(STDERR, "nativephp_android_share_file: could not write {$pathsTarget}.\n");
-        exit(1);
-    }
+if (! str_contains($paths, $pathsAnchor)) {
+    fwrite(STDERR, "nativephp_android_share_file: no cache-path root in {$pathsTarget} to stage a share into.\n");
+    exit(1);
 }
 
 fwrite(STDOUT, "nativephp_android_share_file: Share.File registered.\n");

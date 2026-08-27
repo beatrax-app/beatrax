@@ -3631,6 +3631,17 @@ td.date,
     /* .top-bar — mobile top bar.
      * Only visible at <1024px (CSS hidden at desktop via the .top-bar rule above).
      * safe-area-inset-top handles the notch/Dynamic Island on phones. */
+    /*
+     * Held against the visual viewport while the keyboard displaces it. Both of
+     * these anchor to the LAYOUT viewport, which the keyboard does not move, so
+     * without this the bar is off the top of the screen and the scrim that
+     * keeps content out of the status bar goes with it.
+     */
+    .kb-offset .top-bar,
+    .kb-offset .safe-screen::before {
+        transform: translateY(var(--vv-offset-top, 0px));
+    }
+
     .top-bar {
         display: flex;
         align-items: center;

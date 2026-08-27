@@ -742,6 +742,30 @@ document.addEventListener('alpine:init', () => {
         // turn this panel from a drawer into the static desktop sidebar. The
         // dialog semantics have to follow it: aria-modal on a permanently
         // visible nav tells a screen reader the rest of the page is inert.
+        // The soft keyboard offsets the VISUAL viewport and leaves the layout
+        // viewport where it was. `interactive-widget=resizes-content` is meant
+        // to prevent that and is inert in the Android WebView (151.x), so the
+        // sticky top bar and the status-bar scrim sit above the visible area
+        // and the page draws its own content through the status bar. Measured
+        // on a Galaxy S24 Ultra: offsetTop 303 with innerHeight unchanged.
+        //
+        // The class gates the transform so nothing carries one at rest: a
+        // transform on .top-bar makes it the containing block for any fixed
+        // descendant, which is a change worth not making 100% of the time.
+        const viewport = window.visualViewport;
+
+        if (viewport) {
+            const syncKeyboardOffset = () => {
+                const offset = Math.round(viewport.offsetTop);
+                document.documentElement.style.setProperty('--vv-offset-top', offset + 'px');
+                document.documentElement.classList.toggle('kb-offset', offset > 0);
+            };
+
+            viewport.addEventListener('resize', syncKeyboardOffset);
+            viewport.addEventListener('scroll', syncKeyboardOffset);
+            syncKeyboardOffset();
+        }
+
         const drawerBreakpoint = window.matchMedia('(max-width: 1023.98px)');
 
         window.Alpine.store('mobileNav', {

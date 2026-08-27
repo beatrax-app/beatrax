@@ -106,7 +106,13 @@ it('backs the Android container route with a patch that registers Share.File', f
         ->toContain('FileProvider.getUriForFile')
         ->toContain('Intent.EXTRA_STREAM')
         ->toContain('FLAG_GRANT_READ_URI_PERMISSION')
-        ->toContain('files-path');
+        // Staged into the cache rather than shared in place: Laravel writes to
+        // getDir("storage"), which is a sibling of getFilesDir() and outside
+        // every root the provider declares. Sharing in place threw
+        // IllegalArgumentException on the device and produced no share sheet.
+        ->toContain('context.cacheDir')
+        ->toContain('beatrax-share')
+        ->not->toContain('files-path name=');
 
     $perBuild = (new ReflectionClass(NativeBuildPatches::class))
         ->getReflectionConstant('SCRIPTS')
