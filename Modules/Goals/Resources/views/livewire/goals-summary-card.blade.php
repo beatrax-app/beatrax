@@ -66,7 +66,7 @@
                     <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $pct }}%</span>
                     <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
                         @if ($row->progressState === GoalProgressState::Overdue->value)
-                            <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ Lang::get('goals::messages.status.overdue') }}</span>
+                            <x-core::status-pill tone="warning">{{ Lang::get('goals::messages.status.overdue') }}</x-core::status-pill>
                         @elseif ($row->projectedFinishDate !== null)
                             · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->translatedFormat('d M \'y') }}
                         @endif

@@ -26,7 +26,7 @@
     <form wire:submit="save" class="space-y-6">
         {{-- ===== What to notify me about ===== --}}
         <div class="space-y-4">
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.what_heading') }}</h3>
+            <x-core::section-heading :title="Lang::get('notifications::settings.what_heading')" :level="3" />
 
             {{-- Payment reminders --}}
             <x-core::setting-row :label="Lang::get('notifications::settings.reminders.label')" :description="Lang::get('notifications::settings.reminders.help')">
@@ -90,7 +90,7 @@
 
         {{-- ===== When and how ===== --}}
         <div class="space-y-4 border-t border-slate-100 pt-6 dark:border-slate-800">
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.when_heading') }}</h3>
+            <x-core::section-heading :title="Lang::get('notifications::settings.when_heading')" :level="3" />
 
             {{-- Quiet hours --}}
             <x-core::setting-row :label="Lang::get('notifications::settings.quiet_hours.label')" :description="Lang::get('notifications::settings.quiet_hours.help')">

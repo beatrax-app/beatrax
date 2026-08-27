@@ -48,6 +48,14 @@
     settle. size="base" is not a look — Safari zooms the whole viewport when a
     focused control is under 16px, so every PIN and passphrase field that
     lives in a phone modal needs it to stay put.
+
+    A `label` this can render is the precondition, and it is what most of the
+    remaining bare selects do not have: of the 29 in the tree, 25 carry only an
+    `aria-label` or sit in a builder row with no visible name of their own, and
+    of the four that do have a `<label for>`, three put it BESIDE the control
+    on one flex line rather than above it. This renders the stacked field, so
+    converting those would move their label. The duplication in their class
+    strings is real; this is not the component that resolves it.
 --}}
 
 @php

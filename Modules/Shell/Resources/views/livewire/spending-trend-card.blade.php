@@ -17,7 +17,7 @@
     @if ($trend->hasComparison())
         <x-core::card tag="section" aria-label="{{ Lang::get('core::spending_trend.aria') }}">
             <div class="flex flex-wrap items-baseline justify-between gap-4">
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::spending_trend.heading') }}</h2>
+                <x-core::section-heading :title="Lang::get('core::spending_trend.heading')" />
                 <span class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::spending_trend.vs', ['label' => $trend->previousLabel]) }}</span>
             </div>
 

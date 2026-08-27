@@ -35,7 +35,7 @@
 
     {{-- ===== Step 1: choose direction ===== --}}
     @if ($wizardStep === PairingWizardStep::ChooseDirection)
-        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.title') }}</h3>
+        <x-core::section-heading :level="3" id="pairing-modal-title" :title="Lang::get('sync::pairing.title')" />
         <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_1_of_3') }}</p>
 
         @if ($flashMessage !== '')
@@ -80,7 +80,7 @@
     {{-- ===== Step 2a: show my code (QR + word-code + countdown) ===== --}}
     @if ($wizardStep === PairingWizardStep::ShowCode)
         <div wire:poll.3s.keep-alive="checkPairingState">
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.show_this_code') }}</h3>
+            <x-core::section-heading :level="3" id="pairing-modal-title" :title="Lang::get('sync::pairing.show_this_code')" />
             <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_2_of_3') }}</p>
 
             @if ($expiresInSeconds > 0)
@@ -155,7 +155,7 @@
 
     {{-- ===== Step 2b: enter a code ===== --}}
     @if ($wizardStep === PairingWizardStep::EnterCode)
-        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.enter_the_code') }}</h3>
+        <x-core::section-heading :level="3" id="pairing-modal-title" :title="Lang::get('sync::pairing.enter_the_code')" />
         <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_2_of_3') }}</p>
 
         <div
@@ -207,7 +207,7 @@
     {{-- ===== Step 3: confirm safety numbers (the trust gate) ===== --}}
     @if ($wizardStep === PairingWizardStep::Confirm)
         <div wire:poll.3s.keep-alive="checkPairingState">
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.compare_words') }}</h3>
+            <x-core::section-heading :level="3" id="pairing-modal-title" :title="Lang::get('sync::pairing.compare_words')" />
             <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_3_of_3') }}</p>
 
             {{-- The words prove the CHANNEL is untampered; the names say

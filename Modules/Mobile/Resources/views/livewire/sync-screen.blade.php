@@ -24,7 +24,7 @@
              that heading for the list you actually manage, and having the
              same label twice on one page made the two read as duplicates of
              each other rather than as status vs. management. --}}
-        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.sync_status') }}</h2>
+        <x-core::section-heading :title="Lang::get('mobile::sync.sync_status')" />
 
         {{-- Reuse, not rebuild: the existing component owns the overall
              banner (idle/syncing/offline/error) + the per-device list. It is
@@ -91,7 +91,7 @@
     </section>
 
     <section class="space-y-3">
-        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.network') }}</h2>
+        <x-core::section-heading :title="Lang::get('mobile::sync.network')" />
 
         {{-- ===== "Pause sync on cellular" toggle ===== --}}
         <x-core::setting-row
@@ -125,7 +125,7 @@
     </section>
 
     <section class="space-y-3" id="data-backup" data-testid="data-backup">
-        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.data_backup_heading') }}</h2>
+        <x-core::section-heading :title="Lang::get('core::settings.data_backup_heading')" />
         @livewire('core.encrypted-backup-download')
         @livewire('core.encrypted-backup-restore')
     </section>

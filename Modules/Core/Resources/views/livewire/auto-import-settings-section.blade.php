@@ -6,9 +6,7 @@
     and not a preference like theme or currency.
 --}}
 <div class="space-y-2">
-    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-        {{ Lang::get('core::settings.auto_import.heading') }}
-    </h2>
+    <x-core::section-heading :title="Lang::get('core::settings.auto_import.heading')" />
 
     {{-- Not x-core::setting-row: the help line carries a <code> path, which
          that component's description prop escapes, and it needs an id of its

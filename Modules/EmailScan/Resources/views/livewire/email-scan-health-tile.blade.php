@@ -21,7 +21,7 @@
 @props(['tile'])
 
 <div class="space-y-3 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::health.heading') }}</h3>
+    <x-core::section-heading :title="Lang::get('email-scan::health.heading')" :level="3" />
 
     @foreach ($tile->lines as $line)
         @php

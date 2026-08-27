@@ -199,7 +199,7 @@
 
         {{-- "Add another inbox" card pair per UI-SPEC § Add-inbox card pair. --}}
         <section class="mt-12">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::inboxes.add_another') }}</h2>
+            <x-core::section-heading :title="Lang::get('email-scan::inboxes.add_another')" />
             <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="rounded-lg border border-slate-200 bg-white p-6 space-y-4 dark:bg-slate-950 dark:border-slate-700">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Gmail</p>

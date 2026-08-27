@@ -353,7 +353,7 @@
             class="rounded-md border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700"
             aria-live="polite"
         >
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('import::preview.chain.heading') }}</h3>
+            <x-core::section-heading :title="Lang::get('import::preview.chain.heading')" :level="3" />
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 @if ($chainResolutionStatus === JobRunStatus::Pending)
                     {{ Lang::get('import::preview.chain.pending') }}

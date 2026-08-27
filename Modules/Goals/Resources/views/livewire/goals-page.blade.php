@@ -191,11 +191,11 @@
                         <p class="min-w-0 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $row->name }}</p>
                         <div class="flex shrink-0 items-center gap-2">
                             @if ($isReached)
-                                <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-[3px] text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">{{ Lang::get('goals::messages.status.reached') }}</span>
+                                <x-core::status-pill tone="positive">{{ Lang::get('goals::messages.status.reached') }}</x-core::status-pill>
                             @elseif ($isOverdue)
-                                <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-[3px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ Lang::get('goals::messages.status.overdue') }}</span>
+                                <x-core::status-pill tone="warning">{{ Lang::get('goals::messages.status.overdue') }}</x-core::status-pill>
                             @elseif ($isCompleted)
-                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('goals::messages.status.completed') }}</span>
+                                <x-core::status-pill>{{ Lang::get('goals::messages.status.completed') }}</x-core::status-pill>
                             @endif
                         </div>
                     </div>
@@ -290,7 +290,7 @@
                         <li class="rounded-lg border border-slate-200 bg-white p-4 opacity-60 dark:bg-slate-950 dark:border-slate-700">
                             <div class="flex items-center justify-between gap-3">
                                 <p class="min-w-0 truncate text-sm font-semibold text-slate-500 dark:text-slate-400">{{ $row->name }}</p>
-                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('goals::messages.status.archived') }}</span>
+                                <x-core::status-pill>{{ Lang::get('goals::messages.status.archived') }}</x-core::status-pill>
                             </div>
                             <div class="mt-3 flex flex-wrap items-baseline justify-between gap-4">
                                 <p class="text-sm" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
@@ -428,9 +428,7 @@
     {{-- ------------------------------------------------------------------- --}}
     <flux:modal name="goal-form" dismissible>
         <div class="pt-[44px]" style="max-width: 520px;">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {{ $editGoalId ? Lang::get('goals::messages.form.title_edit') : Lang::get('goals::messages.form.title_create') }}
-            </h2>
+            <x-core::section-heading :title="$editGoalId ? Lang::get('goals::messages.form.title_edit') : Lang::get('goals::messages.form.title_create')" />
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {{ $editGoalId ? Lang::get('goals::messages.form.subtitle_edit') : Lang::get('goals::messages.form.subtitle_create') }}
             </p>

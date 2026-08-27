@@ -25,7 +25,7 @@
 
 <fieldset class="space-y-3 rounded-md border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
     <legend class="sr-only">{{ Lang::get('ledger::account_currency.legend', ['name' => $accountName]) }}</legend>
-    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $accountName }}</h3>
+    <x-core::section-heading :title="$accountName" :level="3" />
 
     <x-core::form-field
         name="currency"

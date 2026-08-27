@@ -132,9 +132,7 @@
                     :label="Lang::get('sync::devices.encrypted_at_rest')"
                     :description="Lang::get('sync::devices.encrypted_at_rest_scope')"
                 >
-                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                        {{ Lang::get('sync::devices.on') }}
-                    </span>
+                    <x-core::status-pill tone="positive">{{ Lang::get('sync::devices.on') }}</x-core::status-pill>
                 </x-core::setting-row>
             @elseif ($syncEnabled)
                 {{-- Mandatory once synced: transient auto-activation. NO CTA, NO decline. --}}
@@ -254,27 +252,19 @@
                                         @endif
 
                                         @if ($device['is_self'])
-                                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                                                {{ Lang::get('sync::devices.this_device') }}
-                                            </span>
+                                            <x-core::status-pill tone="warning">{{ Lang::get('sync::devices.this_device') }}</x-core::status-pill>
                                         @endif
 
                                         {{-- Surface C: "Removed" replaces Confirmed/Awaiting. --}}
                                         @if ($device['removed'] ?? false)
-                                            <span
-                                                class="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-1 text-xs text-rose-700 dark:bg-rose-950 dark:text-rose-300"
+                                            <x-core::status-pill
+                                                tone="danger"
                                                 data-testid="removed-badge-{{ $device['id'] }}"
-                                            >
-                                                {{ Lang::get('sync::devices.removed') }}
-                                            </span>
+                                            >{{ Lang::get('sync::devices.removed') }}</x-core::status-pill>
                                         @elseif ($device['confirmed'])
-                                            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                                                {{ Lang::get('sync::devices.confirmed') }}
-                                            </span>
+                                            <x-core::status-pill tone="positive">{{ Lang::get('sync::devices.confirmed') }}</x-core::status-pill>
                                         @else
-                                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                                                {{ Lang::get('sync::devices.awaiting_confirmation') }}
-                                            </span>
+                                            <x-core::status-pill tone="warning">{{ Lang::get('sync::devices.awaiting_confirmation') }}</x-core::status-pill>
                                         @endif
                                     </div>
                                 @endif
@@ -420,9 +410,7 @@
         <flux:modal wire:model="showEncryptionModal" class="md:max-w-sm" data-testid="enable-encryption-modal">
             <div class="space-y-4 p-6">
                 @if ($encryptionModalStep === EncryptionSetupStep::Confirm)
-                    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                        {{ Lang::get('sync::devices.enable_at_rest') }}
-                    </h3>
+                    <x-core::section-heading :title="Lang::get('sync::devices.enable_at_rest')" :level="3" />
                     <p class="text-sm text-slate-700 dark:text-slate-300">
                         {{ Lang::get('sync::devices.enable_at_rest_body') }}
                     </p>
@@ -467,9 +455,7 @@
                     </div>
                 @elseif ($encryptionModalStep === EncryptionSetupStep::Progress)
                     <div wire:poll.750ms.keep-alive="pollEncryptionProgress">
-                        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" aria-live="polite">
-                            {{ Lang::get('sync::devices.securing') }}
-                        </h3>
+                        <x-core::section-heading :level="3" aria-live="polite" :title="Lang::get('sync::devices.securing')" />
                         <x-core::progress-bar
                             class="mt-4"
                             :value="$encryptionProgress"
@@ -498,7 +484,7 @@
                         <svg class="mx-auto h-6 w-6 text-rose-600 dark:text-rose-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
                         </svg>
-                        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" aria-live="polite" aria-atomic="true">{{ Lang::get('sync::devices.encryption_failed') }}</h3>
+                        <x-core::section-heading :level="3" aria-live="polite" aria-atomic="true" :title="Lang::get('sync::devices.encryption_failed')" />
                         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.encryption_failed_body') }}</p>
                         <x-core::secondary-button
                             block="full"
@@ -521,7 +507,7 @@
         <flux:modal wire:model="showRemoveModal" class="md:max-w-sm" data-testid="revoke-device-modal">
             <div class="space-y-4 p-6">
                 <div>
-                    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.remove_this_device') }}</h3>
+                    <x-core::section-heading :title="Lang::get('sync::devices.remove_this_device')" :level="3" />
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.removing') }} {{ $this->currentNameFor($removingDeviceId) }}</p>
                 </div>
 
