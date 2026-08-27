@@ -7,7 +7,7 @@
     <a href="{{ Destination::Settings->url() }}" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; {{ Lang::get('openbanking::messages.page.back_link') }}</a>
 
     <header class="space-y-1">
-        <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.page.heading') }}</h1>
+        <x-core::page-heading level="section">{{ Lang::get('openbanking::messages.page.heading') }}</x-core::page-heading>
         <p class="text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('openbanking::messages.page.subtitle') }}
         </p>

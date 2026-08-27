@@ -42,7 +42,7 @@
              would only give it more to absorb. Measured at 343px against the
              built stylesheet: h1 136px over two lines, 151.7px over one. --}}
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::index.title') }}</h1>
+            <x-core::page-heading>{{ Lang::get('recurring::index.title') }}</x-core::page-heading>
             <x-core::secondary-button
                 size="sm"
                 class="gap-1"

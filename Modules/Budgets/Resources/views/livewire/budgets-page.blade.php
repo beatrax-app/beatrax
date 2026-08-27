@@ -28,7 +28,7 @@
          475px on a 375pt screen, "augusztus 2026" at 449. --}}
     <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('budgets::messages.page.title') }}</h1>
+            <x-core::page-heading>{{ Lang::get('budgets::messages.page.title') }}</x-core::page-heading>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('budgets::messages.page.subtitle', ['period' => $period->label]) }}
             </p>

@@ -46,7 +46,7 @@
     {{-- Page header --}}
     <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('goals::messages.page.title') }}</h1>
+            <x-core::page-heading>{{ Lang::get('goals::messages.page.title') }}</x-core::page-heading>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.page.subtitle') }}</p>
         </div>
         {{-- Trigger: phone → dispatch open-sheet; desktop → $flux.modal().show() --}}

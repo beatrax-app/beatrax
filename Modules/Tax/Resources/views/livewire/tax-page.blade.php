@@ -26,9 +26,9 @@
         {{-- ────────────────────────────────────────────────────────────────── --}}
 
         <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">
+            <x-core::page-heading style="color: var(--color-text);">
                 {{ Lang::get('tax::page.title', ['year' => $year]) }}
-            </h1>
+            </x-core::page-heading>
 
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 {{-- Year switcher — wire:model.live updates results immediately --}}

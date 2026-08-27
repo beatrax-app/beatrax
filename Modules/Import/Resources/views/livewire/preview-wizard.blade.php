@@ -37,7 +37,7 @@
              broke mid-word. Now the group keeps its own width and drops below
              the heading when the row cannot hold both. --}}
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('import::preview.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('import::preview.heading') }}</x-core::page-heading>
             <div class="flex shrink-0 items-center gap-3">
                 <x-core::secondary-button
                     class="disabled:cursor-not-allowed disabled:opacity-50"

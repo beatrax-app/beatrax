@@ -4,7 +4,7 @@
      scrolls horizontally at phone width rather than forcing page overflow. --}}
 <div class="space-y-6 overflow-x-auto">
     <header class="space-y-1">
-        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('import::upload.heading') }}</h1>
+        <x-core::page-heading>{{ Lang::get('import::upload.heading') }}</x-core::page-heading>
         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('import::upload.subtitle') }}</p>
         <p class="sr-only" id="upload-statement-mime-hint">{{ Lang::get('import::upload.mime_hint') }}</p>
     </header>

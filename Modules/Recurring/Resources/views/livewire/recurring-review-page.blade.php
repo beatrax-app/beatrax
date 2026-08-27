@@ -34,7 +34,7 @@
 
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::review.title') }}</h1>
+        <x-core::page-heading>{{ Lang::get('recurring::review.title') }}</x-core::page-heading>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('recurring::review.subtitle') }}
         </p>

@@ -17,7 +17,7 @@
 @use('Modules\Ledger\Public\ValueObjects\Money')
 <div class="mx-auto max-w-7xl px-1 sm:px-4 py-12" x-data="{ panelOpen: false }">
     <header class="mb-6">
-        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">{{ Lang::get('calendar::messages.page.title') }}</h1>
+        <x-core::page-heading style="color: var(--color-text);">{{ Lang::get('calendar::messages.page.title') }}</x-core::page-heading>
         <p class="mt-1 max-w-prose text-sm" style="color: var(--color-text-muted);">
             {{ Lang::get('calendar::messages.page.subtitle') }}
         </p>

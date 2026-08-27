@@ -33,7 +33,7 @@
             </p>
 
             <header class="space-y-1">
-                <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::import.heading') }}</h1>
+                <x-core::page-heading level="section">{{ Lang::get('mobile::import.heading') }}</x-core::page-heading>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ Lang::get('mobile::import.subtitle') }}
                 </p>
@@ -120,7 +120,7 @@
                 </x-core::form-field>
 
                 @if ($flashMessage !== '')
-                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>
+                    <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
                 @endif
 
                 <button
@@ -141,7 +141,7 @@
                 </p>
 
                 @if ($flashMessage !== '')
-                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>
+                    <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
                 @endif
 
                 <x-core::neutral-button
@@ -159,7 +159,7 @@
          showing it as though nothing had happened. --}}
     @if ($alreadyProvisioned && $bootstrapStep === ImportBootstrapStep::CollectPin)
         <div class="space-y-4" data-testid="import-already-provisioned">
-            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::import.already_heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('mobile::import.already_heading') }}</x-core::page-heading>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.already_body') }}</p>
 
             <a
@@ -216,7 +216,7 @@
                 }"
             >
                 <header class="space-y-1">
-                    <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::import.recovery_heading') }}</h1>
+                    <x-core::page-heading>{{ Lang::get('mobile::import.recovery_heading') }}</x-core::page-heading>
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.recovery_body') }}</p>
                 </header>
 

@@ -61,7 +61,7 @@
          buttons a second row and their own widths back. --}}
     <header class="flex flex-col gap-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6 dashboard-phone-order-1">
         <div class="space-y-1">
-            <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $summary->period->label }}</h1>
+            <x-core::page-heading level="section">{{ $summary->period->label }}</x-core::page-heading>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.subtitle') }}</p>
         </div>
         <div class="flex shrink-0 flex-wrap items-center gap-1">

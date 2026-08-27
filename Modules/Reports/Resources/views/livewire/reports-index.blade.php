@@ -12,12 +12,13 @@
       $activeView   'cards' | 'list'
       $pinnedCount  int  — count of $rows where pinned === true
 --}}
-<div class="space-y-8" style="padding: var(--space-6) var(--space-4); max-width: 1200px; margin: 0 auto;">
+<x-core::page-shell width="6xl">
+<div class="space-y-8">
     {{-- Page head ------------------------------------------------- --}}
     <header class="space-y-2">
-        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">
+        <x-core::page-heading style="color: var(--color-text);">
             {{ Lang::get('reports::index.title') }}
-        </h1>
+        </x-core::page-heading>
         <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0; font-variant-numeric: tabular-nums;">
             {{ Lang::choice('reports::index.saved_report', $rows->count()) }} · {{ Lang::choice('reports::index.pinned_count', $pinnedCount, ['max' => TogglePin::MAX_PINS]) }}
         </p>
@@ -190,3 +191,4 @@
         </div>
     @endif
 </div>
+</x-core::page-shell>

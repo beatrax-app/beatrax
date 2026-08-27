@@ -14,7 +14,7 @@
 
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-12">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::inboxes.heading') }}</h1>
+        <x-core::page-heading>{{ Lang::get('email-scan::inboxes.heading') }}</x-core::page-heading>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('email-scan::inboxes.intro') }}
         </p>

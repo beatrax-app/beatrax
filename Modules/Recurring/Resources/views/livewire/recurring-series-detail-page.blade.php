@@ -37,7 +37,7 @@
     />
     <header class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="min-w-0 flex-1">
-            <h1 class="truncate text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $series->displayName() }}</h1>
+            <x-core::page-heading class="truncate">{{ $series->displayName() }}</x-core::page-heading>
             <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
                 <x-core::status-pill>{{ ucfirst($series->state) }}</x-core::status-pill>
                 <x-core::status-pill>{{ $series->cadence->label() }}</x-core::status-pill>

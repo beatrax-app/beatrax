@@ -64,7 +64,7 @@
          last. Wrapping moves it to its own row intact. --}}
     <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $pageName }}</h1>
+            <x-core::page-heading>{{ $pageName }}</x-core::page-heading>
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 @if ($pageType === DriftPageType::Anomaly)
                     {{ Lang::get('drift-alerts::alerts.intro_anomaly') }}

@@ -20,7 +20,7 @@
     {{-- Tax tag picker — rendered once for the whole page (not per-row). --}}
     @include('tax::components.tax-tag-popover')
     <header class="mb-8">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.heading') }}</h1>
+        <x-core::page-heading>{{ Lang::get('cashbook::cash-book.heading') }}</x-core::page-heading>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('cashbook::cash-book.intro') }}
         </p>

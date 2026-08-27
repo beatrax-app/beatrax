@@ -40,9 +40,9 @@
 
         @if ($pending !== null && $filename !== null)
             <header class="space-y-2">
-                <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">
+                <x-core::page-heading>
                     {{ $headingPrefix }}{{ $filename }}
-                </h1>
+                </x-core::page-heading>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ $pending['extension'] === 'csv'
                         ? Lang::get('desktop::screens.staging.csv_subtitle')
@@ -55,9 +55,9 @@
             </x-core::primary-button>
         @else
             <header class="space-y-2">
-                <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">
+                <x-core::page-heading>
                     {{ $emptyHeading }}
-                </h1>
+                </x-core::page-heading>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ $emptyBody }}
                 </p>

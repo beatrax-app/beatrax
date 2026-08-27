@@ -63,9 +63,9 @@
     @endif
 >
     <header style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap;">
-        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">
+        <x-core::page-heading style="color: var(--color-text);">
             {{ Lang::get('counterparties::triage.heading') }}
-        </h1>
+        </x-core::page-heading>
         {{-- Only when there is something to be through. With an empty queue
              this read "0 of 0 · 100 % · ~1 min remaining" over a full bar —
              asserting both that work existed and that it was done. The

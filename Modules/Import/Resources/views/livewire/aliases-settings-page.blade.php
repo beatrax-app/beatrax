@@ -13,10 +13,10 @@
      from layouts.app. --}}
 
 @use('Modules\Core\Public\Support\Lang')
-<div class="max-w-5xl mx-auto px-6 py-8 space-y-8" data-testid="aliases-settings-page">
+<div class="max-w-5xl mx-auto px-6 py-12 space-y-8" data-testid="aliases-settings-page">
 
     <header class="space-y-1">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('import::aliases.heading') }}</h1>
+        <x-core::page-heading>{{ Lang::get('import::aliases.heading') }}</x-core::page-heading>
         <p class="max-w-2xl text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('import::aliases.subtitle') }}
         </p>

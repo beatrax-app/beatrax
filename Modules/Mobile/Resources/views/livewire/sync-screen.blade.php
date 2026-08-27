@@ -15,9 +15,9 @@
     semantic colors, never through this ink accent.
 --}}
 @use('Modules\Core\Public\Support\Lang')
-<div class="max-w-lg mx-auto px-6 py-8 space-y-6" data-testid="sync-screen">
+<div class="max-w-lg mx-auto px-4 py-12 space-y-6 sm:px-6" data-testid="sync-screen">
 
-    <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.heading') }}</h1>
+    <x-core::page-heading>{{ Lang::get('mobile::sync.heading') }}</x-core::page-heading>
 
     <section class="space-y-3">
         {{-- "Sync status", not "Your devices": the devices section below owns

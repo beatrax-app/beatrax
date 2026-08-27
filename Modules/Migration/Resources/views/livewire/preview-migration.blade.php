@@ -15,7 +15,7 @@
 
 <div class="space-y-8 pb-24">
     <header class="space-y-1">
-        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('migration::preview.heading') }}</h1>
+        <x-core::page-heading>{{ Lang::get('migration::preview.heading') }}</x-core::page-heading>
         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('migration::preview.subtitle') }}</p>
     </header>
 

@@ -12,6 +12,6 @@
     only the scale, the colour and the gap between them.
 --}}
 <header {{ $attributes->merge(['class' => 'space-y-1']) }}>
-    <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ $title }}</h1>
+    <x-core::page-heading level="section">{{ $title }}</x-core::page-heading>
     <p class="text-sm text-slate-500 dark:text-slate-400">{{ $subtitle }}</p>
 </header>

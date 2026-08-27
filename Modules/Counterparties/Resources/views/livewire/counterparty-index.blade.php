@@ -24,12 +24,12 @@
     $unknownCount = $counts[CounterpartyTypeFilter::Unknown->value] ?? 0;
 @endphp
 
-<div class="space-y-8" style="padding: var(--space-6) var(--space-4); max-width: 1200px; margin: 0 auto;">
+<div class="space-y-8">
     {{-- Page head ------------------------------------------------- --}}
     <header class="space-y-2">
-        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">
+        <x-core::page-heading style="color: var(--color-text);">
             {{ Lang::get('counterparties::index.heading') }}
-        </h1>
+        </x-core::page-heading>
         <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
             @if ($unknownCount > 0)
                 {{ Lang::choice('counterparties::index.entities', $totalEntities) }} ·

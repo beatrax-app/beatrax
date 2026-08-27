@@ -17,7 +17,7 @@
              text size "Save categories" measures 407px, which is wider than
              the screen it has to itself. --}}
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-            <h1 class="min-w-0 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('categorization::triage.heading') }}</h1>
+            <x-core::page-heading class="min-w-0">{{ Lang::get('categorization::triage.heading') }}</x-core::page-heading>
             <button
                 type="button"
                 wire:click="save"
