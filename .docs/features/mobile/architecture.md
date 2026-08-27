@@ -26,8 +26,9 @@ and `$_ENV` as well, and `isMobileRuntime()` keeps the structural fallback (the
 sibling `persisted_data` directory, which only NativePHP mobile provisions) for
 the config-load window where even those are not yet populated.
 
-Gates that branch on *which* shell — currently only
-`Internal\Http\Middleware\ClientSideRedirect` — ask
+Gates that branch on *which* shell — `Internal\Http\Middleware\ClientSideRedirect`,
+`Core`'s `EncryptedBackupDownload`, `Auth`'s `RecoveryCodesDisplay`, this module's
+`MobileImportBootstrap`, and `Sync`'s `MulticastMdnsQuery` — ask
 `UserDataPathService::platform()` instead, which returns a
 `Modules\Core\Public\Enums\MobilePlatform` case and answers the decision
 through `needsClientSideRedirect()` rather than comparing to `'android'`. A
@@ -59,9 +60,13 @@ scan anything at that point. Decoding runs on `requestAnimationFrame`, so it
 stops when the page is backgrounded rather than holding the camera open
 behind a backgrounded finance app.
 
-**The generated shell needs five patches, applied from the mobile root's
-`post-update-cmd`.** `native:install` regenerates the native trees, so none is
-hand-edited; all are idempotent and fail loudly if their anchor moves.
+**The generated shell needs eighteen patches, applied from the mobile root's
+`post-update-cmd`.** The authoritative list is
+`Modules\Mobile\Internal\Boot\NativeBuildPatches::SCRIPTS`, which
+`scripts/nativephp_patch_all.php` mirrors; `native:install` regenerates the
+native trees, so none is hand-edited; all are idempotent and fail loudly if
+their anchor moves. Five of them carry reasoning a reader cannot reconstruct
+from the script:
 
 - `nativephp_grant_webview_camera.php` adds the missing `onPermissionRequest`
   override so the in-page scanner can obtain a camera. Video capture only.
@@ -98,23 +103,25 @@ because the failure is silent — an unpatched shell builds, installs and runs,
 and only the patched behaviour is missing:
 
 - `composer update` regenerates the trees via `native:install` and then
-  re-applies all five, because they follow it in `post-update-cmd`. Net
-  effect: patched.
+  re-applies every one of them, because they follow it in `post-update-cmd`.
+  Net effect: patched.
 - `php artisan native:run android|ios` (and `native:build`) does **not**
   regenerate the tree, so patches already in it survive the build. A patch
   script added after the last `composer update` is therefore **not** in the
   build — writing the script is not applying it. That cost a device pass: the
   file-chooser fix was written, committed, built and installed, and the picker
   was still inert because nothing had run the script.
-- `php artisan native:install` on its own regenerates the trees and drops all
-  five.
+- `php artisan native:install` on its own regenerates the trees and drops every
+  one of them.
 
-`composer native:patch` runs all five on demand, and is the recovery for the
+`composer native:patch` runs them all on demand, and is the recovery for the
 last case — and the step to run the first time a new patch script lands.
 
-The two iOS patches are also listed in `NativeBuildPatches`, which re-applies
-them immediately before `native:run` / `native:build`, so a regenerated tree
-cannot ship without them.
+`NativeBuildPatches` re-applies the whole set immediately before `native:run` /
+`native:build`, so a regenerated tree cannot ship without them. Two are listed
+in its `REQUIRED_SCRIPTS` as well — the privacy manifest and the export
+compliance key — because a cosmetic patch that fails is visible on the device
+while those two are invisible until App Store review rejects the build.
 
 ### Signed URLs cannot be absolute on iOS
 
@@ -393,6 +400,17 @@ serialized wire-snapshot payload to the browser on every later render.
 While the form is still being filled those properties necessarily hold
 what the reader typed, exactly as every other password screen in the app
 does — a rejected submit deliberately leaves them alone (below).
+The screen's own PIN gate is the provisioner's floor — six to ten digits,
+nothing else — because it runs *before* `SignupAction` commits and the floor
+runs after. A gate that admitted what the floor refuses made the account and
+then could not finish the device: eleven digits (the input has no `maxlength`)
+landed on `provisioning_failed` with the lock disabled, no self device row,
+and a stash the retry replayed to the same refusal forever. Provisioning tells
+a refused credential apart from a failed step — `DeviceProvisioningOutcome` —
+so the screen names the rule instead of offering a retry that is arithmetic on
+a fixed answer, and a fresh mount with the stash still present returns to the
+failure rather than walking past it into the codes.
+
 The retry path never re-runs `SignupAction` (the account already exists)
 and reads only the session stash, never the emptied public properties —
 reading those was a real bug that either permanently stranded the device
@@ -723,7 +741,9 @@ defect: the command skips cleanly, touches nothing, and never caches a
 key anywhere for background convenience. It fans out over every `users`
 row (rather than a single hard-coded user) since the schema stays
 multi-user-ready even in a single-user v1, and each user's burst is
-isolated so one user's failure never stops the rest.
+isolated so one user's failure never stops the rest — one `try` around the
+fan-out body, because an OS-scheduled process has nobody to report a fatal to
+and `DeviceIdentityLoader::load()` throws on an unreadable key-file.
 
 That schedule is declared in `Modules/Mobile/Routes/console.php`, and *when*
 the file is loaded decides whether iOS ever runs it. The plugin hands

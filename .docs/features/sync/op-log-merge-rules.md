@@ -31,6 +31,13 @@ Clock state is persisted per `(user_id, device_id)` in `hlc_clock_state` and res
 `OpLogWriter` constructor, so a restart cannot rewind the clock: the next `tick()` starts
 from `max(wall clock, last_l)`.
 
+`receive()` runs in `Internal\Clock\RemoteClockAdvance`, called by
+`OpLogReplayer::replay()` with every verified entry and persisting the result to the same
+row. That persistence IS the wiring: `OpLogWriter` is bound transient, so it restores the
+advanced clock on the next resolve. Feeding `receive()` only this device's own stored state
+— the constructor call above, and nothing else — made the whole mechanism dead, and the fast
+peer above then won every subsequent merge instead of only the first.
+
 ## Values are always JSON, and `NULL` is a sentinel
 
 Every op-log `value` is `json_encode`d by the producer, without exception. The decoder is an
@@ -107,7 +114,10 @@ JSON-encodes any non-scalar, non-null result before it reaches a column.
 
 1. Is the table registered in the merge rules? (`unknown_table`)
 2. Is this a system op? (See [System ops](#system-ops-bypass-the-signature-gate).)
-3. Is the device id in the confirmed device-key map? (`missing_device_key`)
+3. Is there a key for the device id — in the confirmed map, or failing that in
+   `DeviceRegistryService::retainedDeviceKeys()`, which also covers a device the user has
+   REMOVED? If not, is this exact entry (identity **and** signature) already in
+   `op_log_entries`? Only then is it `missing_device_key`.
 4. Does the Ed25519 signature verify? (`forged_signature`)
 5. Is the field a real column of that table? (`unknown_column`)
 
@@ -181,9 +191,9 @@ the write is refused, because a target that cannot be resolved cannot be cleared
 
 `user_id` in a create payload is **ignored, not compared**. It is the origin device's
 autoincrement, so rejecting a mismatch quarantined every peer row. The payload's `user_id` is
-overwritten from the session after the field loop — `insertOrIgnore` has no `WHERE` clause,
-so that forced re-seed is what stops a device supplying somebody else's id from planting a
-row in their namespace.
+overwritten from the session after the field loop — the insert has no `WHERE` clause, so that
+forced re-seed is what stops a device supplying somebody else's id from planting a row in
+their namespace.
 
 ## One bad op is isolated, never fatal
 
@@ -192,9 +202,13 @@ Every failure mode is deliberately scoped to a single op:
 - A strategy that throws, or a value the driver refuses to bind, is caught around **both** the
   encode and the write. Computing the value inside the try but running `->update()` outside it
   let a non-scalar OR-Set throw during binding and roll back the entire merge transaction.
-- An insert whose foreign key is unsatisfiable is caught and quarantined as
-  `missing_reference`. Uncaught, one unsatisfiable reference discarded every op replayed
-  beside it, and the poll driving the UI answered 500 instead of advancing.
+- An insert the database refuses is caught and classified by `CreateRowInsertFailure`: a
+  duplicate is the idempotent re-apply and stays silent, a `NOT NULL` violation is
+  `incomplete_create_row`, an unsatisfiable foreign key is `missing_reference`. Uncaught, one
+  unsatisfiable reference discarded every op replayed beside it, and the poll driving the UI
+  answered 500 instead of advancing. The insert is a plain `insert()`, never `insertOrIgnore`:
+  OR IGNORE silences NOT NULL as readily as it silences a duplicate, so a create whose ops
+  straddled a frame boundary wrote no row, raised no quarantine and reported success.
 - A delete refused by an `ON DELETE NO ACTION` foreign key (`import_runs`, `categories`) is
   swallowed. The tombstone is simply not applied yet; it re-applies once the children are
   gone, which beats aborting every other op.

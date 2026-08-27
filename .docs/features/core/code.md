@@ -180,7 +180,7 @@ Modules/Core/
 - `Internal/Console/InstallCommand` — `beatrax:install`. Creates the
   user (or confirms an existing one), dispatches `UserInstalled` so
   listeners re-seed reference data, prints the recovery codes once.
-- `Internal/Console/DoctorCommand` — `diederik:doctor`. Runs every
+- `Internal/Console/DoctorCommand` — `beatrax:doctor`. Runs every
   probe (PHP / Composer / Node / SQLite CLI / external tools / backup
   freshness / WAL / synchronous mode) and prints a coloured pass /
   warn / fail report.

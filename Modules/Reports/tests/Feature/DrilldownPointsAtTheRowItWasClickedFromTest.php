@@ -152,3 +152,15 @@ it('keeps the whole range on a dimension whose rows carry no window', function (
         ->and($params[0]['after'])->toBe('2026-01-01')
         ->and($params[0]['before'])->toBe('2026-03-31');
 });
+
+it('narrows a spend row to the types the metric summed, not just to money going out', function (): void {
+    // A fee and a transfer out are both negative and neither is counted as
+    // spend, so a direction alone cannot reconstruct the figure the row shows.
+    $user = dpaUser();
+    test()->actingAs($user);
+    dpaMovement($user, 'expense', -10_000, '2026-01-15');
+    dpaMovement($user, 'income', 500_000, '2026-01-20');
+
+    expect(array_column(dpaUrlParams('spend', 'category'), 'type'))->toBe([['expense', 'refund']])
+        ->and(array_column(dpaUrlParams('income', 'category'), 'type'))->toBe([['income']]);
+});

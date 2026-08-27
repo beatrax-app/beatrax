@@ -220,6 +220,7 @@ final class SearchQuery
             amountMin: $amountMin,
             amountMax: $amountMax,
             amountDirection: $filters->amountDirection,
+            types: $filters->types,
         );
     }
 
@@ -458,6 +459,12 @@ final class SearchQuery
             $query->where('transactions.amount_minor', '>', 0);
         } elseif ($filters->amountDirection === AmountDirection::Out->value) {
             $query->where('transactions.amount_minor', '<', 0);
+        }
+
+        // A direction alone cannot reconstruct a report figure: a fee and a
+        // transfer out are both negative, and neither is counted as spend.
+        if ($filters->types !== []) {
+            $query->whereIn('transactions.type', $filters->types);
         }
     }
 

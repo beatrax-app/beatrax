@@ -82,11 +82,14 @@ Modules/DriftAlerts/
     (single COUNT against the `(user_id, state)` index). The sidebar
     badge applies the same predicate from `NavCountsService`.
   - `DriftAlertQuery::openForUser($user, $cursorId, $limit)` — the
-    drift page's open tab, keyset-paged on id DESC rather than
-    offset-paged. `historyForUser(...)` and `dismissedForUser(...)`
-    are the same shape over the acknowledged and dismissed states.
-  - `DriftAlertQuery::groupedBySeriesForUser($user)` — the per-series
-    drill-in.
+    flat open list, keyset-paged on id DESC rather than offset-paged.
+    `historyForUser(...)` and `dismissedForUser(...)` are the same
+    shape over the acknowledged and dismissed states, and are what the
+    History and Dismissed tabs render.
+  - `DriftAlertQuery::groupedBySeriesForUser($user, $seriesLimit)` —
+    the per-series grouping the Open tab actually renders, bounded to
+    `$seriesLimit` series. The Open tab does NOT call `openForUser`:
+    it once called it on every render and discarded the result.
   - `CancellationImpactQuery::forSeries($seriesId, $user)` —
     projected annual savings (the series' monthly equivalent × 12).
     Keyed on the recurring series, not on an alert id;

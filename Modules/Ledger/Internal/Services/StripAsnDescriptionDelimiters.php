@@ -12,7 +12,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\RowChunk;
-use Modules\Ingestion\Public\Asn\AsnDescriptionDelimiters;
+use Modules\Ingestion\Public\Csv\AsnDescriptionDelimiters;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Internal\Enums\BackfillPass;
 use Modules\Ledger\Internal\Support\SweptRowSummary;

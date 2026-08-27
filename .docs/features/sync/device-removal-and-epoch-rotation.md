@@ -60,6 +60,32 @@ unexpected state, and the code fails closed rather than emitting an unsigned wra
 could adopt. What happens to the wrap after it is enqueued is covered in
 [Getting a group data key epoch onto every device](gdk-epoch-wrap-delivery.md).
 
+### What the purge takes, and the one thing it must not
+
+`DevicesAndSyncSettingsSection::removeDevice()` follows the rotation with
+`DeviceRegistryService::purge()`, which deletes everything keyed to the device that would
+otherwise keep surfacing it: its `sync_sessions` rows (what the status section lists), its
+`relay_mailbox` rows, its `pairing_tokens`.
+
+It does **not** delete the `device_registry` row. The row is already revoked, so every
+confirmed-only query — `deviceKeys()`, `deviceX25519Keys()`, `confirmedDevices()`,
+`otherDeviceNames()` — steps over it and the device is invisible in the UI. What survives is
+its Ed25519 public key, and that key is the only thing that can ever verify the history the
+device wrote. Deleting the row made `OpLogRebuilder::rebuild()` — which deletes every row a
+CreateRow op created, then replays the log to put them back — refuse the whole of that
+device's log as `missing_device_key` and never recreate a single row. A goal made on the
+phone, the phone removed, one rebuild later: goals count 0, quarantine full, transaction
+committed cleanly.
+
+Retention grants the removed device nothing. Revocation shut the Noise transport to it, so it
+cannot deliver anything to anybody; `deviceKeys()` still refuses it as an admission anchor, and
+`GdkEpochControlHandler` still refuses a wrap it signs. The wider map, from
+`retainedDeviceKeys()`, is consulted only when reading history back.
+
+For an install where an older build already deleted the row, `OpLogEntryVerifier` has a second
+door: an entry byte-identical to one `op_log_entries` already holds — same identity AND same
+signature — is accepted without a key, because only verified entries are ever persisted there.
+
 ### The one residual
 
 The SQL transaction covers the revoke, the `current_epoch` advance and the mailbox rows.
@@ -68,7 +94,9 @@ and a filesystem rename does not join a SQLite transaction. A rollback after tha
 leaves an extra epoch key in the keyring file that `current_epoch` does not point at. That
 is benign — the keyring is append-only by design and an unused key decrypts nothing — but
 it is the known edge, and it is why the rest of the operation is inside the transaction:
-so the *revoke* can never be the thing that survives alone.
+so the *revoke* can never be the thing that survives alone. `removeDevice()` logs the
+exception through `SafeExceptionContext::describe()` when any of this fails, so the split
+state has something naming it; it used to catch `\Throwable` with no bound variable at all.
 
 ## Epoch ids are minted, not counted
 

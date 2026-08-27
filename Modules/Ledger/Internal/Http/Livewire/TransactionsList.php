@@ -10,12 +10,13 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Ledger\Public\Enums\CurrencyView;
 use Modules\Ledger\Internal\Services\TransactionFilterOptions;
 use Modules\Ledger\Internal\Services\TransactionRowDecorator;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
 use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Ledger\Public\Enums\ClearedStatus;
+use Modules\Ledger\Public\Enums\CurrencyView;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\TransactionListQuery;
@@ -74,6 +75,12 @@ final class TransactionsList extends Component
     #[Url(as: 'amount_dir', except: AmountDirection::Both->value)]
     public string $filterAmountDir = AmountDirection::Both->value;
 
+    // A direction alone cannot reconstruct a report figure: a fee and a
+    // transfer out are both negative, and neither is counted as spend.
+    /** @var list<string> */
+    #[Url(as: 'type', except: [])]
+    public array $filterTypes = [];
+
     public ?bool $preSearchFullHistory = null;
 
     /** @var list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}> */
@@ -109,7 +116,8 @@ final class TransactionsList extends Component
             || $this->filterBefore !== ''
             || $this->filterAmountMin !== ''
             || $this->filterAmountMax !== ''
-            || $this->filterAmountDir !== AmountDirection::Both->value;
+            || $this->filterAmountDir !== AmountDirection::Both->value
+            || $this->filterTypes !== [];
     }
 
     public function clearSearch(): void
@@ -123,6 +131,7 @@ final class TransactionsList extends Component
         $this->filterAmountMin = '';
         $this->filterAmountMax = '';
         $this->filterAmountDir = AmountDirection::Both->value;
+        $this->filterTypes = [];
 
         if ($this->preSearchFullHistory !== null) {
             $this->fullHistory = $this->preSearchFullHistory;
@@ -308,6 +317,21 @@ final class TransactionsList extends Component
         ]);
     }
 
+    // A URL parameter, so an unknown value is dropped rather than passed into
+    // a whereIn that would then narrow to nothing on a typo.
+    /**
+     * @return list<string>
+     */
+    private function knownTypes(): array
+    {
+        $known = array_map(static fn (TransactionType $type): string => $type->value, TransactionType::cases());
+
+        return array_values(array_filter(
+            array_map(static fn (mixed $value): string => is_string($value) ? $value : '', $this->filterTypes),
+            static fn (string $value): bool => in_array($value, $known, true),
+        ));
+    }
+
     private function searchFilters(): SearchFilters
     {
         return new SearchFilters(
@@ -319,6 +343,7 @@ final class TransactionsList extends Component
             amountMin: $this->filterAmountMin !== '' ? $this->filterAmountMin : null,
             amountMax: $this->filterAmountMax !== '' ? $this->filterAmountMax : null,
             amountDirection: $this->filterAmountDir,
+            types: $this->knownTypes(),
         );
     }
 

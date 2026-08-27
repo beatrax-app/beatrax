@@ -7,10 +7,21 @@ Practical recipes for exercising the `Community` module in isolation.
 - **Location:** `Modules/Community/tests/Unit/`
 - **What they test:** the URL gates in `OpenExternalUrlAction`
   (`OpenExternalUrlActionTest`) — every rejected scheme + every
-  rejected host, plus a happy-path `github.com/...` URL. Also the
-  matcher: `CompiledNeedleDecidesTheSameTest` answers a fixture of
-  awkward needles (accented and non-Latin, regex metacharacters, edges,
-  punctuation-only, invalid UTF-8) needle-by-needle *and* through the
+  rejected host, plus a happy-path `github.com/...` URL. The support
+  corpus: `SupportResourceCountryScopeTest` and
+  `SharedBrandSupportLookupTest` (per-country resolution),
+  `TheSameBrandAnsweredTwoWaysTest` (a country-less lookup refuses a
+  brand two countries answer differently),
+  `TheSupportEntryItsNeighbourOverwroteTest` (two entries under one name
+  in one file both survive the load), and
+  `TheCancellationMailToldToCcAStrangerTest` (a recipient carrying a
+  second address never becomes a `mailto:`). `BundledCorpusIntegrityTest`
+  replays the whole shipped corpus: unique patterns, compiling regexes,
+  contact values that survive the reader, and support entries that stay
+  reachable under their own name. Also the matcher:
+  `CompiledNeedleDecidesTheSameTest` answers a fixture of awkward needles
+  (accented and non-Latin, regex metacharacters, edges, punctuation-only,
+  invalid UTF-8) needle-by-needle *and* through the
   precompiled path and fails on any disagreement, and
   `RegexPatternIsJudgedOnceTest` counts the warnings a bad corpus regex
   earns across a scan.
@@ -31,7 +42,11 @@ Practical recipes for exercising the `Community` module in isolation.
   - The `/community/mystery-merchants` Livewire page
     (`MysteryMerchantsPageTest`).
   - The settings panel's toggle persistence
-    (`SharedListSettingsPanelTest`).
+    (`SharedListSettingsPanelTest`) and the toggle being readable by the
+    consumer that gates on it
+    (`TheSharedListToggleNothingCouldReadTest`).
+  - That correcting a suggestion keeps the date the contribution was
+    made (`TheCorrectedSuggestionRestampedItsOwnDateTest`).
   - The end-to-end suggest submit
     (`SuggestMappingModalSubmitTest`).
   - The `/triage` "Help others" CTA visibility gate
@@ -89,13 +104,15 @@ composer test
   audit relies on that single chokepoint.
 - **The `/community/mystery-merchants` page shows zero rows on a
   fresh install** — confirm `UserInstalled` fired and that the
-  YAML corpus files exist at `resources/corpus/*.yaml`. Read the
+  YAML corpus files exist at `resources/corpus/merchants/*.yaml`. Read the
   Laravel log for the loader's `warning` lines; a missing file
   produces `corpus file not found at <path>`.
 - **A new corpus entry doesn't appear after editing the YAML** —
   the seed only runs on `UserInstalled`. For local iteration, run
   `php artisan tinker` and dispatch the listener manually:
   `app(SeedCommunityCorpus::class)->handle(new UserInstalled($user->id))`.
+  A support-corpus edit needs no seed at all: `SupportResourceProvider`
+  reads the YAML directly and memoises per instance.
 - **The suggest modal opens the wrong repo on Compare** — the env
   var `BEATRAX_GITHUB_COMPARE_BASE` is set to a fork. Override in
   `.env` for local development; the production bundle ships with
@@ -126,9 +143,10 @@ The behavioural contract for the `Community` module.
   accepts are rejected by the explicit `str_starts_with('https://')`
   check. (`tests/Unit/OpenExternalUrlActionTest.php`)
 - **The seed runs on every `UserInstalled` dispatch without producing
-  duplicate rows.** `SeedCommunityCorpus` upserts via `updateOrInsert`
-  keyed on `(pattern, user_id IS NULL)`; re-dispatches are no-ops at
-  the row level. (`tests/Feature/SeedCommunityCorpusTest.php`)
+  duplicate rows.** `SeedCommunityCorpus` reads the global tier as one
+  pattern→id map, then updates the rows it already has and batch-inserts
+  the rest, keyed on `(pattern, user_id IS NULL)`; re-dispatches change
+  no row's `created_at`. (`tests/Feature/SeedCommunityCorpusTest.php`)
 - **A malformed YAML file or a malformed entry is logged and
   skipped — never thrown.** Per-entry failure does not abort the
   loader; per-file failure does not abort the seed.
@@ -163,9 +181,33 @@ The behavioural contract for the `Community` module.
   1.2.** A name containing `"`, `\`, or a stray newline round-trips
   cleanly through GitHub's PR composer.
 - **The `/triage` "Help others" CTA is only rendered when the user
-  has opted into the shared list.** A user who turned the toggle off
-  in `/settings` sees no community surface in their triage flow.
+  has left "Offer to contribute" on.** With it off the button is
+  structurally absent from the DOM, not CSS-hidden.
   (`tests/Feature/TriageHelpOthersCtaTest.php`)
+- **"Use the shared merchant list" is readable by the consumer that
+  gates on it.** The toggle is stored under the `CommunitySetting` enum's
+  key and read back through `CommunitySettings::usesSharedList()`; it was
+  written by the panel and read by nothing.
+  (`tests/Feature/TheSharedListToggleNothingCouldReadTest.php`)
+- **Correcting a suggestion keeps the date it was made.**
+  `ContributionLog` upserts on `(user_id, pattern)` with `created_at`
+  outside the update list.
+  (`tests/Feature/TheCorrectedSuggestionRestampedItsOwnDateTest.php`)
+- **A country-less support lookup never picks between two countries.**
+  Own country, then `international.yaml`, then a foreign file only when
+  exactly one answers — otherwise `null`, because the wrong country's
+  cancellation route is worse than none.
+  (`tests/Unit/TheSameBrandAnsweredTwoWaysTest.php`)
+- **A cancellation `mailto:` addresses exactly one recipient.** The
+  recipient passes `RecipientAddress::isSingle()` at corpus-load time and
+  again at href-build time; `,`, `%2C`, `;` and a percent-encoded
+  anything are all refused.
+  (`tests/Unit/TheCancellationMailToldToCcAStrangerTest.php`)
+- **Two support entries in one country file under the same name both
+  survive.** The bucket holds a list and the lookup filters on type;
+  the shipped corpus is held collision-free by
+  `BundledCorpusIntegrityTest`.
+  (`tests/Unit/TheSupportEntryItsNeighbourOverwroteTest.php`)
 - **The settings panel applies the toggle change atomically.**
   Switching the share-corpus toggle off persists in one write; the
   triage CTA disappears on the next render.
@@ -191,10 +233,12 @@ The behavioural contract for the `Community` module.
 - **A user submitting a suggestion they later edit** — the deterministic
   branch slug means the same Compare URL opens; the GitHub UI shows
   the updated body. No second branch is spawned.
-- **A user toggling the share-corpus opt-in mid-session** — the
-  triage page reflects the change on next render; the corpus
-  reads do not change (the corpus is always consultable; the
-  share toggle only governs outbound suggestions).
+- **A user toggling an opt-in mid-session** — the triage page reflects
+  "Offer to contribute" on the next render. "Use the shared merchant
+  list" is a different toggle with a different consumer: it is stored
+  under the `CommunitySetting` enum's key and read through
+  `CommunitySettings`, and the corpus tail of `MerchantNameResolver` is
+  what has to honour it.
 - **A corpus row whose `generalized_pattern` collides with another
   row's `pattern`** — the exact match wins, because
   `MerchantNameResolver::resolve` chains the three corpus lookups with
@@ -231,9 +275,11 @@ The behavioural contract for the `Community` module.
   change. This is the single configuration knob the public-release
   boundary needs to flip the repo destination at publication.
 - `users.community_settings` (per-user JSON column) — the opt-in
-  toggles `SharedListSettingsPanel` reads + writes:
-  `consult_corpus`, `share_suggestions`. Default `false` on both for
-  every new user.
+  toggles `SharedListSettingsPanel` reads + writes, named by the
+  `CommunitySetting` enum: `useSharedList` (default on),
+  `offerToContribute` (default on) and `updateOnAppUpdates` (default
+  off, and its handler writes nothing). An absent key means the
+  default, so a user who never opened the panel is not opted out.
 - No environment flag changes the privacy posture: the HTTPS scheme
   - `github.com` allow-list in `OpenExternalUrlAction` are hard-
   coded, not config-driven.

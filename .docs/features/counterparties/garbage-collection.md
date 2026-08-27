@@ -57,6 +57,14 @@ a [triage suggestion](triage-suggestions.md) matters here: it writes
 
 ## The prune
 
+The prune is announced, not silent: one `TransactionMutated` (`edit`,
+`counterparty_id => null`) per row it unlinks, then one `EntityMutated`
+(`delete`) per counterparty it drops, in that order — a peer that saw
+the delete first would replay a transaction pointing at a row it had
+just dropped. `CounterpartyResolverService` emits on create and edit,
+so without these a GC run on one device left the peer holding rows this
+device deleted and links this device broke.
+
 Both steps run inside one `$connection->transaction()`:
 
 ```

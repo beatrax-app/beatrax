@@ -239,10 +239,10 @@ Livewire events dispatched from the active step, not a parent-method
 call chain: `wizard.step.completed` marks the current row `done`,
 `wizard.step.skipped` marks it `skipped` (a no-op on non-skippable
 steps per `WizardStepRegistry::isSkippable()`), and both advance to
-the next registry step. `skipRest` marks every non-done row `skipped`
-and redirects to `/` in one action — the wizard_progress rows still
-record what the user did vs. dropped, so a later `/setup-wizard` hit
-resumes at `done` rather than restarting. `goToStep()` guards against
+the next registry step. There is no bulk skip: `leaveForNow()` writes
+nothing at all (see "Leaving the wizard" below), so the wizard_progress
+rows keep recording what the user did versus dropped and a later
+`/setup-wizard` hit resumes where they stopped. `goToStep()` guards against
 client-side tampering (`wire:model="currentStepKey"`-style attacks):
 the target step must be in the registry and every step before it must
 already be `done` or `skipped` — a user can walk back to a completed

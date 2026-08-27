@@ -221,9 +221,11 @@ The behavioural contract for the `Chains` module.
   permits a NULL endpoint only in `state='candidate'` for this kind +
   tolerance combination.
 - **Concurrent job dispatches for the same user** — the second
-  dispatch's unique-lock prevents enqueueing; the audit row inserted
-  by the dispatcher remains `pending` and is reaped by the periodic
-  cleanup job (see `Modules\Chains\Internal\Jobs` future work).
+  dispatch's unique-lock prevents enqueueing, leaving its reserved
+  `pending` row behind. `ResolveChainLinksJob::handle()` claims every
+  pending row for the user at the start of a pass and completes them
+  all with it: the pass covers the work each reservation stood for, so
+  the pass is what closes them. There is no separate cleanup job.
 - **Worker hard-crashes mid-run** — the audit row stays `running`
   with no `completed_at`. The wizard's `wire:poll` surfaces the
   orphan with an "in progress" message; a manual retry re-dispatches.
@@ -241,8 +243,9 @@ The behavioural contract for the `Chains` module.
   after `RecordReceipt` persists the canonical transaction, so the
   FK on `chain_links.from_transaction_id` always binds.
 - **A user runs `/import` and the chain pass right after a previous
-  pass failed** — the dispatcher inserts a fresh `pending` row; the
-  prior `failed` row remains as an audit trail.
+  pass failed** — `ConfirmImport` inserts a fresh `pending` row, which
+  the job then claims; the prior `failed` row remains as an audit
+  trail.
 
 ## Cross-module collaborators
 

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
+// The two producers that put a row on the wire: an EntityMutated dispatch, and
+// a direct OpLogWriter call from a capture listener. Both name their table as
+// the first named argument, so the match IS the write site.
+const CAPTURE_SITE_PATTERN = "/(?:new EntityMutated\(|->write[A-Za-z]+\()\s*table:\s*'([a-z_]+)'/";
+
 // A table with merge rules but no capture syncs exactly once, in the initial
 // backfill, and then diverges forever: both devices show the same history and
 // disagree about the present. goals shipped that way until this test existed.
@@ -95,7 +100,12 @@ function capturedTables(): array
                 continue;
             }
 
-            preg_match_all("/table: '([a-z_]+)'/", $source, $matches);
+            // The table name has to be the argument of an actual write, not
+            // merely present somewhere in a file that also happens to contain
+            // one. A bare `table: '…'` anywhere marked the whole table captured,
+            // which is how merchant_aliases passed this gate with a single YAML
+            // insert covering for four uncaptured user-facing writes.
+            preg_match_all(CAPTURE_SITE_PATTERN, $source, $matches);
 
             foreach ($matches[1] as $table) {
                 $found[$table] = true;
@@ -169,6 +179,26 @@ it('never captures a table that is meant to stay on the device', function (): vo
         implode("\n  - ", $leaked),
     ));
 });
+
+// The tightening itself. A table used to count as captured because SOME file
+// containing `new EntityMutated(` also contained its name somewhere — one line
+// satisfying the gate for every write site in the codebase.
+it('counts a table as captured only where a write actually names it', function (string $source, array $expected): void {
+    preg_match_all(CAPTURE_SITE_PATTERN, $source, $matches);
+
+    expect(array_values(array_unique($matches[1])))->toBe($expected);
+})->with([
+    'an EntityMutated dispatch' => ["new EntityMutated(\n    table: 'merchant_aliases',\n    pk: 1,\n)", ['merchant_aliases']],
+    'an OpLogWriter call' => ["\$writer->writeSet(\n    table: 'goals',\n    pk: 1,\n)", ['goals']],
+    'a name mentioned beside a write of another table' => [
+        "// Unlike table: 'merchant_aliases', this one is captured.\nnew EntityMutated(\n    table: 'goals',\n);",
+        ['goals'],
+    ],
+    'a named argument to something that is not a write' => [
+        "new EntityMutated(\n    table: 'goals',\n);\n\$this->preview(table: 'merchant_aliases');",
+        ['goals'],
+    ],
+]);
 
 // A stale entry on an excuse list silently widens the exemption, which is how a
 // gap becomes permanent.

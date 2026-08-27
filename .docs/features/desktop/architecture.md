@@ -169,6 +169,13 @@ the difference is load-bearing:
   developer-only submenu. It emits `type: 'submenu'` with its entries
   inline.
 
+The developer submenu is gated on the signed-in user, and the boot-time
+`Menu::create()` runs from `POST /_native/api/booted` — a route with no `web`
+group, therefore no session and no user. `RebuildAppMenuOnAuthChange` listens
+to `Login` and `Logout` and re-runs `AppMenuBuilder::install()`, which is the
+only reason those entries can ever appear; outside the Electron bundle it
+returns without touching the facade.
+
 Two NativePHP shapes look like they would work here and neither does.
 
 `Menu::file()->submenu(...)` loses its entries. The shell compiles the menu
@@ -206,6 +213,13 @@ NativePHP main process boots
   → WelcomeScreen or LoginPage
 ```
 
+Each pre-window step is attempted, logged and carried past. The window IS the
+recovery for a failed migration — `EnsureDatabaseReady` redirects to
+`desktop.setup`, whose `poll()` re-drives it — so a throw before `open()` took
+the one screen that repairs it down with the window, and left the sync and
+relay listeners unstarted for the rest of the launch. The mobile mirror
+swallows the same failure for the same reason.
+
 The OS-file-open flow:
 
 ```
@@ -218,11 +232,19 @@ User opens a .csv from Finder / Explorer
             → dispatch FileOpenedFromOs($path, $extension) on success
             → return without a trace on rejection (no event, no log)
   → Import / Receipts listeners pick up FileOpenedFromOs
-       → if user logged in: route to ImportPipeline preview
-       → if no auth: PendingFileIntent::remember($path); redirect /login
+       → PendingFileIntent::remember($path)
   → after login: ContinuePendingFileIntentAfterLogin::handle
-       → PendingFileIntent::consume() → /desktop/file-staging
+       → PendingFileIntent::pending() drops an intent whose file has gone
+  → next HTML GET: ContinueToStagedFile (pushed onto the `web` group by
+    DesktopServiceProvider) redirects to /desktop/file-staging, which
+    consumes the intent on mount so it redirects exactly once
 ```
+
+The staging page still hands the Import wizard no reference to the staged
+path: `startImport()` navigates to `Destination::Imports` and the wizard
+starts empty. Nothing outside Desktop reads the intent — the
+`RemembersPendingFileIntent` contract is write-only — so closing that gap is
+an Import-side change, not a Desktop one.
 
 The OS-notification dispatch:
 
@@ -277,11 +299,15 @@ contract and is bound only when `nativephp-internal.running` is true
 `NullKeyCustodian` default applies instead. It holds the already
 Auth-unwrapped session data key at rest via Electron `safeStorage` (OS
 keychain / DPAPI / Keychain Services): `store()` encrypts and returns
-an opaque ciphertext blob, `read()` decrypts it back. When
-`System::canEncrypt()` is false (headless CI, an early-boot race
-before Electron initialises safeStorage) both methods degrade
-gracefully to a pass-through, and the Auth module's own encrypted-
-session custody applies unchanged. `DesktopKeyCustodian` never touches
+an opaque ciphertext blob under a `nativephp:safestorage:v1:` marker,
+`read()` decrypts it back. When `System::canEncrypt()` is false (headless CI,
+an early-boot race before Electron initialises safeStorage) `store()` degrades
+to a pass-through and the Auth module's own encrypted-session custody applies
+unchanged. `read()` degrades only for an *unmarked* handle: the marker is what
+tells a raw key stored while safeStorage was down from ciphertext that has to
+be opened, and handing the second back unchanged released a 56-byte non-key
+into `DeviceIdentityLoader`, the GDK keyring and the sensitive-column codec
+instead of the `null` that forces a PIN unlock. `DesktopKeyCustodian` never touches
 `AppLockKeyWrap`/`AppLockKdf` — the wrap/unwrap KDF + secretbox stay
 entirely in the Auth module; this class only protects the key *at
 rest while unlocked*, between the moment Auth unwraps it and a later
@@ -291,26 +317,35 @@ custodian to shield other persisted secrets (a biometric wrap blob, an
 OAuth token blob) — no second facade-calling class is needed.
 
 `NativeBiometricUnlock` is the sole caller of NativePHP's
-`System::canPromptTouchID()`/`promptTouchID()`. It is registered as a
-singleton but has **no caller yet** — native macOS Touch ID unlock is
-not wired; the lock screen currently offers only the browser-native
-WebAuthn biometric path. Wiring it requires a Desktop→Auth bridge
-(an Auth Public contract bound here) plus a lock-screen affordance
-inside the bundle. This class never imports any `Modules\Auth\*`
-symbol beyond returning a bool — the actual key-release logic (and the
-Touch-ID-bypass mitigation) stays entirely in Auth.
+`System::canPromptTouchID()`/`promptTouchID()`. `DesktopColdStartVault` is what
+calls it, through the Auth `ColdStartVault` contract that `LockScreen` asks on
+a cold start. This class never imports any `Modules\Auth\*` symbol beyond
+returning a bool — the actual key-release logic (and the Touch-ID-bypass
+mitigation) stays entirely in Auth.
+
+`ForgetColdStartVaultOnKeyRotation` drops the enclave blob only when
+`AppLockPassphraseChanged` carries two *different* keys. A PIN change re-wraps
+the same data key, so the blob still opens it; forgetting unconditionally
+turned Touch ID unlock off every time a reader changed their PIN. The event's
+only producer today is `AppLockProvisioner::changePin()`, which passes the same
+key twice by design — so the listener's `forget()` arm is currently reached by
+nothing, and the paths that genuinely rotate the data key do not raise the
+event at all.
 
 ## Known risks
 
 `LockOnWindowHideOrClose` locks the session the instant NativePHP
 fires `WindowHidden`/`WindowClosed`, dispatched from the Electron main
-process over its own internal HTTP channel. This has not been verified
-to always carry the focused window's session cookie — if it does not,
-the request-scoped `Session` this listener withholds against could be
-a *different* (anonymous) session than the one the UI reads, and the
-lock-on-close guarantee would silently not hold. This cannot be
-verified outside a real desktop bundle build (tests share one
-session, so they pass either way). The client-side privacy veil and
+process over its own internal HTTP channel. That channel is
+`POST _native/api/events`, declared in `nativephp/desktop/routes/api.php`
+behind `OptionalNightwatchNever` and `PreventRegularBrowserAccess` and
+**no `web` group** — so no `StartSession`, and the store this listener
+withholds against was never started from the WebView cookie and is never
+saved. The main process holds NativePHP's own security cookie, not a Laravel
+session cookie, so there is no session for that route to start: attaching
+`StartSession` to it would begin a fresh anonymous session rather than the
+reader's. The downstream lock failure is not reproducible in-process (tests
+share one session, so they pass either way). The client-side privacy veil and
 the grace-window server lock still cover the backgrounding case in the
 meantime; confirming — or fixing, via a session-independent per-user
 `locked_at` marker `AppLockMiddleware` could consult instead — is

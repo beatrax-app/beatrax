@@ -48,6 +48,7 @@ Modules/EmailScan/
 │   │   ├── FakeGmailApiClient.php
 │   │   ├── FakeGraphApiClient.php
 │   │   ├── CursorExpiredException.php
+│   │   ├── MessageUnavailableException.php
 │   │   └── RateLimitedException.php
 │   ├── Jobs/
 │   │   ├── DiscoveryScanJob.php

@@ -96,7 +96,8 @@ What the module explicitly does NOT do:
   statement or the user-entered opening balance for an ICS card).
 - **Internal/Pipeline/RangeProjector** — produces
   `ForecastContribution` instances per recurring series across the
-  horizon, with `CadenceJitter` modelling cadence drift.
+  horizon, one per occurrence, marking the percentile tier's dates
+  uncertain for `CadenceJitter` to smear at the end of the pipeline.
 - **Internal/Pipeline/ChainAwareForecastRouter** — routes
   contributions through the chains (PayPal-funded charges show up
   on the funder account, ICS purchases reduce the ICS card-statement
@@ -137,12 +138,17 @@ What the module explicitly does NOT do:
      routing.
   4. (if scenario) `ScenarioApplier::apply` — transform the
      routed contributions.
-  5. `DailyFold::fold` — collapse to a daily balance curve with
-     P10/P50/P90 bands.
-  6. `ShortfallDetector::detect` — find windows below buffer;
-     write rows + dispatch `ForecastShortfallDetected`.
-  7. Persist `forecast_runs.result_json` for the read-side query.
-  8. Prune the runs this one supersedes — every row with a lower id
+  5. `CadenceJitter::apply` — smear the occurrences whose date is
+     uncertain, clamped into the fold's own walk. Last, because
+     every step above it selects occurrences.
+  6. `DailyFold::fold` — collapse to a daily balance curve with
+     P10/P50/P90 bands, twice: once per series and once over
+     `ChainAwareForecastRouter::collapseByFunder`.
+  7. `ShortfallDetector::detect` — find windows below buffer for
+     this run's horizon; write rows, and dispatch
+     `ForecastShortfallDetected` when this is a baseline run.
+  8. Persist `forecast_runs.result_json` for the read-side query.
+  9. Prune the runs this one supersedes — every row with a lower id
      sharing its `(user_id, scenario_id, horizon_days)`.
 - `ForecastRunStateMachine::transition($run, $next)` — the
   `pending → running → complete | failed` lifecycle; the sole
@@ -154,8 +160,9 @@ What the module explicitly does NOT do:
   drift alert is dismissed as cancelled.
 - `ProjectForecastOnScenarioChange::handle($event)` — same when
   the user creates / edits / deletes a scenario.
-- `ForecastShortfallDetected` — raised by `ShortfallDetector`;
-  consumed by `Desktop` for OS notifications.
+- `ForecastShortfallDetected` — raised by `ShortfallDetector` for a
+  baseline run's windows only; consumed by `Notifications` for the inbox
+  row and by `Desktop` for OS notifications.
 
 ## Data flow
 
@@ -175,14 +182,15 @@ ProjectForecastJob::handle()
   → ForecastRunStateMachine: pending → running
   → ProjectionPipeline::run
        → BalanceAnchorResolver
-       → RangeProjector (with CadenceJitter)
+       → RangeProjector (percentile tier marks dateIsUncertain)
        → BookedRowProjector
        → ChainAwareForecastRouter
        → ScenarioApplier (only when scenarioId != null)
-       → DailyFold (P10/P50/P90)
-       → ShortfallDetector
+       → CadenceJitter (last: every stage above selects occurrences)
+       → DailyFold, twice: points + points_by_funder
+       → ShortfallDetector (per horizon)
             → write forecast_shortfall_windows rows
-            → dispatch ForecastShortfallDetected
+            → dispatch ForecastShortfallDetected (baseline runs only)
   → persist forecast_runs.result_json
   → ForecastRunStateMachine: running → complete
 ```
@@ -299,16 +307,22 @@ which resolves in two steps, and the second is the one that matters:
    of it anyway and there is nothing left to suppress.
 2. **The cluster identity the detector groups on** —
    `transactions.counterparty_normalized` = `recurring_series.cluster_counterparty_key`,
-   same currency, same direction. Both columns are keyed blind indexes under
-   `DOMAIN_COUNTERPARTY_NORMALIZED`, so they are directly comparable. This is
+   same currency, same direction. The two columns are NOT keyed the same way:
+   the income detector writes an IBAN-derived key into
+   `cluster_counterparty_key`, so a plain SQL equality resolves the expense
+   arm and misses income entirely. `TransactionSeriesMembershipQuery::ibanClusteredSeriesIds()`
+   derives the IBAN blind index in PHP for exactly those rows. This is
    the arm that carries the fix: the double count exists precisely in the
    window between a future-dated row landing in the ledger and the next sweep
    reading it, which is when no occurrence link exists yet and
    `next_expected_at` still points at the very day the row is dated.
 
-`UNIQUE(user_id, direction, cluster_counterparty_key, latest_currency)` makes
-the joined triple plus a direction at most one series, so the second arm needs
-no tie-break. Both arms are scoped to `approved` / `cadence_changed` — the two
+There is **no** `UNIQUE(user_id, direction, cluster_counterparty_key,
+latest_currency)`; the migration creates a plain index, so the joined triple can
+match more than one series. The second arm therefore orders by `recurring_series.id`
+and takes the lowest — the same tie-break the detectors use — rather than
+letting the query planner choose. Both arms are scoped to `approved` /
+`cadence_changed` — the two
 states `allApprovedForUser()` walks — because a series in neither is not on the
 curve to be superseded.
 
@@ -360,13 +374,26 @@ a 404 by the HTTP kernel.
 
 ## Cadence jitter
 
-`CadenceJitter` spreads each per-occurrence contribution across a ±N-day
+`CadenceJitter` spreads a per-occurrence contribution across a ±N-day
 window, because real-world recurring charges rarely hit exactly on the
 cadence-derived occurrence date (weekend processing, bulk-settlement lag,
-funding-charge drift). Each contribution is replicated `2 × jitterDays + 1`
+funding-charge drift). A contribution is replicated `2 × jitterDays + 1`
 times with equal weighting (`weight = 100 / window` per replica); integer
 rounding of the weight is accepted up to ±2 minor units per replica (locked
 by `CadenceJitterTest`). The jitter is deterministic and pure math — no DI.
+
+Two properties are load-bearing:
+
+- **It smears only what asks to be smeared.** A contribution reaches it
+  carrying `dateIsUncertain`, set by `RangeProjector` on the percentile tier
+  alone; anything else passes through untouched.
+- **It runs last, and it stays inside the fold's walk.**
+  `ProjectionPipeline` calls it after chain routing, booked-row
+  supersession and every scenario mutation, and hands it the walk's own
+  `[asOf, asOf + horizonDays]` bounds so a replica dated past either end
+  lands on the boundary day instead of in a bucket nothing reads. See
+  [Projection math — cadence jitter](projection-math.md#cadence-jitter)
+  for what each of those two used to cost.
 
 ## Percentile tier (R-7 method)
 
@@ -398,9 +425,11 @@ occurrence, in one of two tiers:
   across the observed occurrences; the triple is constant across every
   occurrence in the horizon (it reflects the full empirical distribution,
   not occurrence-by-occurrence variance). Because both the amount AND the
-  date are uncertain for these series, the result is routed through
-  `CadenceJitter` (±3 days) so the daily fold's quadrature shows the
-  genuine date uncertainty.
+  date are uncertain for these series, the contribution is marked
+  `dateIsUncertain`; the ±3-day smear itself is applied by `CadenceJitter`
+  at the end of the pipeline, so the daily fold's quadrature shows the
+  genuine date uncertainty without any earlier stage mistaking a replica
+  for an occurrence.
 
 ## Chain-aware routing
 
@@ -423,12 +452,25 @@ Algorithm:
    date) survives, so the daily fold sums it alongside the settlement.
 4. Drop the synthesised settlement itself where a booked row on the funder
    already is it — see below.
-5. When `$viewByFunder=true`, per-series contributions collapse onto a
-   single per-day-per-account aggregate (one line per funder account
-   instead of N series-tagged lines) — the collapse assumes contributions
-   sharing a tuple are already in the funder's default currency, since FX
-   conversion never happens in this router (it stays at the daily-fold
-   boundary per RESEARCH Pitfall 6).
+5. `collapseByFunder()` reduces per-series contributions to a single
+   per-day-per-account aggregate (one line per funder account instead of N
+   series-tagged lines). It is public and `ProjectionPipeline` calls it
+   after the jitter rather than inside `route()`, because collapsing by
+   date before the dates are smeared would fold a replica into a bucket it
+   does not belong in. Its buckets are keyed by currency and FX rate as
+   well as by (account, date): this router never converts — conversion
+   stays at the daily-fold boundary per RESEARCH Pitfall 6 — so summing
+   two denominations into one line under the first one's code, with the
+   rate that reached it dropped, would state a total in a currency the
+   money was never in.
+
+   `ProjectionPipeline` folds both lists and writes both curves into
+   `result_json` as `points` and `points_by_funder` (`ForecastPointSet`
+   owns the two keys). The "View by funder" toggle on /forecast chooses
+   between them at read time through `ForecastQuery::forUser`; a run
+   written before the second curve existed falls back to `points`. The
+   toggle used to flip a Livewire property nothing downstream read, so
+   pressing it changed nothing but the button's own fill.
 
 ### Which wins where a booked row and the synthesised settlement are the same payment
 
@@ -545,11 +587,18 @@ else 0 — zero-crossing default). Audit honesty: the captured
 buffer edit triggers a re-projection that writes NEW rows, and historical
 rows survive with the original buffer captured (mirrors the DriftAlerts
 honest-audit pattern). Every `detect()` call deletes the previous
-`(user_id, account_id, scenario_id)` windows BEFORE inserting new ones,
-wrapped in a single DB transaction so a partial write never leaves the
-table inconsistent. Emits `ForecastShortfallDetected` per new window,
+`(user_id, account_id, scenario_id, horizon_days)` windows BEFORE inserting
+new ones, wrapped in a single DB transaction so a partial write never leaves
+the table inconsistent. The horizon belongs in that key because
+`ProjectForecastJob::HORIZON_DAYS` queues five runs per account in
+nondeterministic order; without it each run wiped the other four's rows and
+whichever finished last spoke for all of them. Emits
+`ForecastShortfallDetected` per new window **of a baseline run only** —
 consumed by operational-hardening hooks (backup-trigger, health-monitor
-pings) and `Desktop` for OS notifications.
+pings) and `Desktop` for OS notifications. A scenario's windows are written
+and read under its own `scenario_id` but raise nothing, because a
+notification is a row written on a scenario's behalf in a table no scenario
+read ever filters (see [Scenario isolation](scenario-isolation.md)).
 
 ## Forecast run lifecycle
 

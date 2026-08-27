@@ -54,10 +54,22 @@ what does.
 
 ## Catch-up: an HLC watermark exchange
 
-Both peers keep a hybrid logical clock watermark, `(hlc_l, hlc_c)`, recording
-how far they have consumed. Catch-up is each side telling the other its
-watermark and receiving everything newer. From the responder's side the
-choreography is:
+Each side keeps a watermark **per peer** — `(hlc_l, hlc_c)` in
+`sync_peer_catch_up_state`, keyed by `(user_id, peer_device_id)` — recording how
+far it has consumed of THAT peer's stream. `PeerCatchUpWatermarks::advance()`
+moves it, forwards only, from what the peer actually delivered, after the replay
+rather than before: a cursor advanced over ops that failed to apply would ask
+the peer to skip them next time and nothing else would ever send them again. A
+peer never heard from reads `(0, 0)` — "send me everything".
+
+It is deliberately NOT this device's own `hlc_clock_state`. That is the last
+LOCAL write, which is not a statement about the peer at all: A writes at 10:00
+and 10:10, B writes at 10:01, and A's request for "everything after 10:10" left
+B's op below the watermark forever. The same design already existed two files
+away in `InitialSyncPuller`'s `mobile_sync_progress.last_hlc_l`.
+
+Catch-up is each side telling the other its watermark and receiving everything
+newer. From the responder's side the choreography is:
 
 1. Read the peer's `CATCH_UP_REQUEST`, carrying its watermark.
 2. Send a `CATCH_UP_RESPONSE` announcing a frame count, then that many frames.
@@ -82,10 +94,16 @@ without bound. Nothing else on this path bounds attacker-declared counts.
 ### What gets sent
 
 `PeerCatchUpExchanger::opsAfterWatermark()` restricts the query to entries
-signed by a device the registry still holds as confirmed. An entry signed by a
-retired identity can be verified by nobody, so sending it only wastes the wire
-and fills the peer's log with drops — one import shipped 12,948 entries and the
-phone refused 12,476 of them.
+signed by a device the registry still holds a ROW for. An entry signed by an
+identity nobody can name is verifiable by nobody, so sending it only wastes the
+wire and fills the peer's log with drops — one import shipped 12,948 entries and
+the phone refused 12,476 of them.
+
+Confirmed is deliberately not the test. A REMOVED device keeps its registry row
+(`DeviceRegistryService::purge()` deletes its sessions, mailbox and tokens, never
+the row) precisely so its key survives to verify what it wrote. Filtering on
+`confirmed_at` instead withheld every transaction, goal, envelope move and pot
+movement the old phone ever created from the new phone replacing it.
 
 Entries are packed into frames against **two** limits, `BATCH_OPS` (1024) and
 `MAX_FRAME_BYTES` (65536), because entries with long signatures or values hit
@@ -102,8 +120,11 @@ Noise authenticates the *socket*. It says nothing about who originally signed a
 given op, and ops legitimately arrive having been forwarded through the relay
 or replayed from disk — so the transport channel is not the signing boundary.
 `SyncSession::receiveOps()` verifies each entry's Ed25519 signature against the
-snapshot key map and drops anything unverifiable before handing the rest to the
-replayer.
+connect-time snapshot key map UNIONED with
+`DeviceRegistryService::retainedDeviceKeys()`, and drops anything unverifiable
+before handing the rest to the replayer. The snapshot admits peers; the retained
+map only reads history, and removal has already shut the Noise transport to a
+revoked device, so a wider verification map grants it nothing.
 
 Two dropped-entry cases are logged very differently on purpose. An invalid
 signature is one warning per entry. An entry whose author key is not in the map

@@ -11,6 +11,8 @@ Modules/Forecasting/
 │   │                          launchpad, buffer, opening balance)
 │   ├── Dto/                 (7 DTOs + 5 ScenarioMutationPayload
 │   │                          variants)
+│   ├── Enums/               (ScenarioMutationKind, ShiftScope,
+│   │                          ForecastPointSet)
 │   ├── Events/              (4 events)
 │   ├── Exceptions/
 │   │   └── OpeningBalanceDivergenceWarning.php
@@ -112,9 +114,11 @@ Modules/Forecasting/
 
 - `Internal/Pipeline/BalanceAnchorResolver::forAccount($accountId,
   $user): BalanceAnchorDto` — picks the anchor balance.
-- `Internal/Pipeline/RangeProjector::project($contributions,
-  $horizonDays): list<ForecastContribution>` — produces per-day
-  contributions; uses `CadenceJitter` to model cadence drift.
+- `Internal/Pipeline/RangeProjector::project($series, $accountId,
+  $asOf, $horizonDays, $user): list<ForecastContribution>` — one
+  contribution per occurrence, with the percentile tier's dates marked
+  `dateIsUncertain` for `CadenceJitter` to smear at the end of the
+  pipeline.
 - `Internal/Pipeline/ChainAwareForecastRouter::route` — routes
   contributions through chain links.
 - `Internal/Pipeline/ScenarioApplier::apply($contributions,
@@ -122,9 +126,15 @@ Modules/Forecasting/
 - `Internal/Pipeline/DailyFold::fold($contributions, $anchor)` —
   collapses contributions into a daily curve with P10/P50/P90
   bands.
-- `Internal/Pipeline/ShortfallDetector::detect($curve, $buffer)`
-  — finds windows below buffer; writes
-  `forecast_shortfall_windows` rows.
+- `Internal/Pipeline/CadenceJitter::apply($contributions,
+  $windowStart, $windowEnd, $jitterDays)` — replaces each
+  date-uncertain contribution with `2 × jitterDays + 1` replicas,
+  clamped into the fold's own walk.
+- `Internal/Pipeline/ShortfallDetector::detect($curve, $accountId,
+  $scenarioId, $horizonDays, $buffer, $currency, $user)` — finds
+  windows below buffer; writes `forecast_shortfall_windows` rows keyed
+  by horizon, and dispatches `ForecastShortfallDetected` for a baseline
+  run only.
 - `Internal/Pipeline/Percentile::p10($values)` / `p50(...)` /
   `p90(...)` — the percentile fan. Three named methods over a closed
   set, not a `compute($values, $level)` that would accept a level the
@@ -166,9 +176,12 @@ Migrations:
 - `2026_05_19_010003_create_forecast_shortfall_windows_table.php`
 - `2026_05_19_010004_create_forecast_runs_table.php`
 - `2026_05_19_010005_add_forecast_columns_to_accounts.php` —
-  adds `forecast_buffer_minor` + `opening_balance_minor` to
+  adds `forecast_min_buffer_minor` + `opening_balance_minor` to
   `accounts`.
 - `2026_05_19_010006_add_result_json_to_forecast_runs.php`.
+- `2026_08_27_000001_key_shortfall_windows_by_horizon.php` — adds
+  `horizon_days` to `forecast_shortfall_windows` so the five queued
+  horizons stop deleting each other's rows.
 
 ## Provider wiring
 

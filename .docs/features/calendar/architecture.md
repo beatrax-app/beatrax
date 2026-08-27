@@ -24,6 +24,30 @@ output.
   navigation, the Accounts popover, day selection, and account-preference
   persistence to `user_preferences`.
 
+## The grid edge
+
+A month is rendered as a Mon–Sun strip, so the grid runs from the Monday on or
+before the 1st to the Sunday on or after the last day — up to six days of the
+previous month and six of the next. Those lead-in and lead-out cells are
+ordinary cells: they draw a balance corner off the forecast, they carry
+`tabindex="0"` and a `wire:click`, and only their day number is dimmed.
+
+`CalendarQuery::gridRange()` is the single answer to where that strip starts and
+ends, and **every** map `forMonth()` builds is built over it: series entries,
+booked entries, the balance map and the occurrence map alike. Building them over
+the calendar month instead left a 3 September cell in the August grid stepping
+the balance down €1,450.00 with nothing listed on it, announcing "0 entries" to
+a screen reader, and rejecting its own click — `selectDay()` accepted only dates
+inside the display month, so the cell was a dead target that still looked live.
+`selectDay()` now accepts any day inside the rendered grid and nothing outside
+it, so a cell's balance, its entries, its click and its `aria-label` all say the
+same thing.
+
+The same range reaches `DailyBalanceAggregator`, which used to widen whatever it
+was handed to a Mon–Sun week of its own. Two independent answers to where the
+grid begins is how the edge cells came to disagree with the entries drawn on
+them; the caller owns the range now.
+
 ## Entry placement
 
 Recurring series are placed onto grid dates by **index-stepping from the
@@ -84,6 +108,13 @@ which pairs booked dates to expected ones
 rather than clearing the whole window. A weekly series' next occurrence is
 exactly `MatchWindow::DAYS` from the one the ledger has already booked, and
 clearing the window took that week's entry off the grid entirely.
+
+Both placers are handed the same grid range, and they have to reach exactly the
+same cells or one placer's payment vanishes on a day the other's is drawn.
+`BookedFutureRowQuery::between()` takes an **exclusive** lower bound, so the
+booked side asks from the day *before* the first grid cell — that subtraction is
+compensation for the exclusivity, not a wider reach, and it must be anchored on
+the grid's first day rather than the month's.
 
 Booked entries are placed **only ahead of today**. A past day already draws its
 balance from the transactions themselves and gives its entries a paid-or-missed
@@ -207,11 +238,19 @@ boundary.
 
 - Every DB query in `CalendarQuery` scopes on `user_id` — no query can read
   another user's series, occurrences, or transactions.
-- `month`/`year` URL properties are clamped to a valid range and to a
-  12-month forward forecast ceiling both when resolving the display month
-  and on `nextMonth()`, so a tampered `?year=&month=` query string cannot
-  render or navigate past the forecast horizon.
+- `month`/`year` URL properties are clamped to **both** bounds — a
+  `CalendarQuery::HORIZON_MONTHS` forward ceiling and a
+  `CalendarQuery::HISTORY_MONTHS` backward floor — when resolving the display
+  month and again on `nextMonth()`/`prevMonth()`, so a tampered
+  `?year=&month=` query string cannot render or navigate outside them. The
+  backward direction had no floor at all: `prevMonth()` stepped freely and the
+  display resolver then rejected the year it produced (a bare `>= 2000`) and
+  fell back to *today's* year, so paging back far enough teleported the reader
+  to the current year instead of stopping. The floor now clamps to itself, and
+  the toolbar's "previous month" control reports it the way `atCeiling` does
+  for the forward one.
 - Day selection validates the date string shape and calendar validity
   (`checkdate()`) before parsing, since a shape-only regex still admits
   impossible dates that would otherwise throw from the date parser on a
-  trivially tampered `wire:click` payload.
+  trivially tampered `wire:click` payload. It then bounds the date to the
+  rendered grid — wider than the display month, and no wider.

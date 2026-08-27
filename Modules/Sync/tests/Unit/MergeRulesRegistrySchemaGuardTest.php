@@ -13,6 +13,17 @@ uses(RefreshDatabase::class);
 // will misroute a future set. The registry must match the real schema, so a
 // failure here is fixed in the registry and never by weakening the test.
 
+// OpLogEntryApplier::buildCreatePayload writes both of these itself — `id` from
+// the op's own pk, `user_id` from the session scope — so a create is never
+// incomplete for want of them and neither has to be sent.
+/**
+ * @return list<string>
+ */
+function applierSeededColumns(): array
+{
+    return ['id', 'user_id'];
+}
+
 /**
  * @return list<string>
  */
@@ -89,5 +100,49 @@ it('MergeRulesRegistry references only real columns and keeps _create_required a
     expect($subsetFailures)->toBe(
         [],
         'MergeRulesRegistry _create_required contains columns that are not NOT-NULL-without-default (they will be dropped or are optional): '.$renderFailures($subsetFailures),
+    );
+});
+
+// The other direction, and the one that was open: a NOT-NULL column missing
+// from `_create_required` passes the completeness gate and then dies at the
+// INSERT, where `insertOrIgnore` swallowed it — no row, no quarantine, no log.
+// transactions.posted_at/booked_at/value_date and goals.start_date/target_date
+// were all in that gap.
+it('MergeRulesRegistry names every NOT-NULL-without-default column of every registered table in _create_required', function (): void {
+    $connection = app(DatabaseManager::class)->connection();
+    $schemaBuilder = $connection->getSchemaBuilder();
+
+    $registry = new MergeRulesRegistry;
+
+    /** @var array<string, list<string>> $unlisted */
+    $unlisted = [];
+
+    foreach (array_keys($registry->rules()) as $table) {
+        /** @var list<string> $notNullWithoutDefault */
+        $notNullWithoutDefault = collect($schemaBuilder->getColumns($table))
+            ->reject(static fn (array $col): bool => (bool) $col['auto_increment'])
+            ->filter(static fn (array $col): bool => $col['nullable'] === false && $col['default'] === null)
+            ->pluck('name')
+            ->all();
+
+        $missing = array_values(array_diff(
+            $notNullWithoutDefault,
+            $registry->requiredCreateColumns($table),
+            applierSeededColumns(),
+        ));
+
+        if ($missing !== []) {
+            $unlisted[$table] = $missing;
+        }
+    }
+
+    $rendered = [];
+    foreach ($unlisted as $table => $cols) {
+        $rendered[] = sprintf('%s => [%s]', $table, implode(', ', $cols));
+    }
+
+    expect($unlisted)->toBe(
+        [],
+        'These NOT-NULL-without-default columns are absent from _create_required, so a create missing one is discarded instead of quarantined: '.implode('; ', $rendered),
     );
 });

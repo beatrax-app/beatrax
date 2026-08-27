@@ -52,7 +52,9 @@ What the module explicitly does NOT do:
     requires every user-scoped Eloquent model to use this trait.
 - **Contracts/**
   - `Clock` — returns the current time as `CarbonImmutable`. Bound to
-    `SystemClock`; tests bind a `FrozenClock`.
+    `SystemClock`; tests freeze time either by binding a PHPUnit stub of
+    this interface or with `CarbonImmutable::setTestNow()`. There is no
+    `FrozenClock` class.
   - `CurrentUser` — exposes `id()`, `user()`, `periodStartDay()`,
     `isAuthenticated()`. Bound to `CurrentUserService`.
   - `PublisherManifestFetcher` — the contract the auto-update path
@@ -80,8 +82,17 @@ What the module explicitly does NOT do:
     Notifications, Chains, Forecast, Inboxes — come from that module's
     own sidebar composer instead. The sidebar renders on every authenticated
     page, so the whole set is computed once and CACHED per user (short
-    TTL) rather than running a COUNT per item per render; writes that
-    materially change a count call `forget()` to drop the cache. Counts
+    TTL) rather than running a COUNT per item per render. Invalidation is
+    NOT the writing module's job — that contract was written down and then
+    honoured by one module out of eight, so seven badges sat five minutes
+    behind the reader's own action. `Internal/Listeners/
+    ForgetNavCountsOnWrite` watches `QueryExecuted` instead, and bumps a
+    generation counter folded into every cache key whenever an insert,
+    update or delete names one of the tables in `NavCountsService::TABLES`.
+    Core may not import the eight modules that own those tables, and a
+    statement is the one thing all of them produce whether they write
+    through Eloquent or the query builder. `forget()` survives as a
+    per-user drop for a caller that wants one. Counts
     read straight from the canonical tables (user-scoped) rather than
     fanning out to each module's query service. A missing table (a
     module whose migrations aren't present in this build) counts as 0,
@@ -97,10 +108,22 @@ What the module explicitly does NOT do:
   because larastan-strict-rules rejects chained Eloquent\Builder calls
   after `Model::query()`; the row set is hydrated back into `SystemAlert`
   models via `SystemAlert::hydrate()` to recover the model surface the
-  banner expects.
+  banner expects. A system-wide row is additionally filtered against
+  `system_alert_acknowledgements` for the reader being asked about;
+  `active(null)` skips that filter, because a background probe asks
+  whether the fault is still open and nobody's dismissal answers that.
 - **Actions/**
   - `AcknowledgeSystemAlert` — single sanctioned write path for
-    `system_alerts.acknowledged_at`.
+    acknowledgement, and the two shapes it takes. An OWNED row is stamped
+    on `system_alerts.acknowledged_at`, because one person is all it was
+    ever addressed to. A SYSTEM-WIDE row (`user_id IS NULL`) is never
+    stamped: it is one row every member of the household sees, so a row
+    stamp let either member take a WAL-mode or PRAGMA-drift warning off
+    the other's screen permanently. Those get a per-reader row in
+    `system_alert_acknowledgements` instead, which also leaves the shared
+    row un-acknowledged for the probes' own "is this fault already
+    raised" check. Nothing about a system-wide dismissal is put on the op
+    log — the peer never received the alert.
 - **Bootstrap/**
   - `EnsureAppKey` — first-launch APP_KEY regeneration with
     sentinel-driven idempotency. Bound into the NativePHP first-launch
@@ -177,8 +200,9 @@ listener that watches the boot probes during the install ceremony.
   boot hooks run static and cannot accept constructor DI).
 - `CurrentUser::user()` — the read-everywhere identity. Returns a real
   `User` or throws `NotAuthenticatedException`; never null.
-- `Clock::now()` — the read-everywhere wall clock. Tests substitute a
-  `FrozenClock`; production substitutes `SystemClock`.
+- `Clock::now()` — the read-everywhere wall clock. Production binds
+  `SystemClock`; a test that needs a fixed instant binds a stub of the
+  interface or calls `CarbonImmutable::setTestNow()`.
 - `UserCountry` — the only reader and writer of `users.country_code`.
   `current(int $userId): string` returns `''` for an unset preference —
   a real answer meaning "every region", not a missing one — and

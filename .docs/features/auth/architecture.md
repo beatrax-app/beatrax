@@ -8,11 +8,11 @@ reset-password Livewire surface, the recovery-code display, and the owner's
 
 ## What this module is for
 
-A `diederik` install is local-only — no SMTP, no third-party identity
+A Beatrax install is local-only — no SMTP, no third-party identity
 provider, no password-reset email link to fall back on. The user therefore
 needs an authentication surface that closes that loop on its own:
 twelve-character passwords, ten single-use recovery codes printed once at
-signup, and a CLI escape hatch (`diederik:reset-password`) when the user
+signup, and a CLI escape hatch (`beatrax:reset-password`) when the user
 loses every code and is locked out of the machine. The trade-offs are
 captured in [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md).
 
@@ -89,7 +89,15 @@ must keep that posture.
   [`Categorization`](../categorization/architecture.md)) run identically
   whether the install ceremony is the GUI signup or the
   `beatrax:install` console path.
-- `AddUserAction` — owner-creates-partner. Asserts the caller's
+- `AddUserAction` — owner-creates-partner. Mints NO recovery codes: the
+  owner is never shown a partner's sheet and the partner is not present,
+  so ten issued here were ten working credentials no human held.
+  `ChangePasswordPage` mints the sheet at the partner's forced first
+  password change instead — the first moment there is somebody to hand it
+  to — and redirects into the existing recovery-codes ceremony with
+  `RecoveryCodesDisplay::RETURN_TO_DASHBOARD`. It is gated on the account
+  holding no sheet at all, so an ordinary password change is untouched.
+  Asserts the caller's
   `is_developer` flag and throws `NotFoundHttpException` (not 403) when it
   is false, so the probing surface stays hidden.
 - `ResetPasswordAction` — recovery-code-driven password reset. Verifies
@@ -216,7 +224,8 @@ chosen the password they want.)
 ## App-lock (PIN / biometric)
 
 A second, session-scoped lock sits in front of the app once a user opts in:
-a 4–10 digit PIN (Argon2id-hashed) or, on capable devices, WebAuthn
+a 6–10 digit PIN (Argon2id-hashed; the bounds are
+`AppLockPinShape::MINIMUM_LENGTH`/`MAXIMUM_LENGTH`) or, on capable devices, WebAuthn
 platform biometrics. Both gate access to a per-session **data key** that
 downstream encryption features (base-currency FX, at-rest field encryption)
 read through `AppLockKeyService::release()`/`withhold()`.
@@ -331,6 +340,12 @@ sanctioned reader — going through the custodian's `read()` rather than
 reading the session key directly, which would yield the opaque handle
 instead of the key on non-web bundles.
 
+Every path that drops the handle goes through one private
+`releaseHandle()`, which calls `custodian->forget()` before the session
+forgets it. Both `lock()` and `clearStaleLock()` use it: dropping the
+handle alone is a no-op on web and desktop but leaves the raw key in the
+Keychain/Keystore on mobile with nothing left that could ever name it.
+
 Lock-state changes are UI-scoped only: background queue/scheduler workers
 hold their own in-memory copy of the data key, independent of any session
 lock state. Locking the UI never revokes a running worker's copy — only
@@ -344,7 +359,13 @@ race the failure counter. On a wrong PIN, `failed_attempts` increments;
 crossing a threshold sets an escalating `locked_until` backoff window
 (30s, 60s, then 300s and beyond) that short-circuits further attempts
 without even hashing; reaching the hard cap signs the session out
-entirely and emits a `SystemAlert`. A corrupted wrap blob is treated as a
+entirely and emits a `SystemAlert`. `AppLockProvisioner::
+primeSessionAfterLogin()` clears `failed_attempts` and `locked_until`
+whenever it runs — the lock screen's own copy sends a reader who has
+forgotten the PIN to sign back in with the account password, so arriving
+there IS that credential being proved. Without it the meter stayed at the
+cap that signed them out, and the next mistyped digit signed them out
+again over a screen reading "0 attempts remaining". A corrupted wrap blob is treated as a
 non-counting failure (also alerted) rather than a crash. A successful PIN
 unlock re-arms every one of the user's biometric credentials (see below)
 and refreshes the "must re-enter PIN periodically" clock the mobile
@@ -438,13 +459,23 @@ middleware — it must never appear on any non-developer surface.
 The idle lock is server-authoritative: the global session lifetime is
 already a 30-day rolling window, so `lock_enabled` (not the session
 lifetime) controls whether the lock gate fires at all. On every gated
-request the middleware compares `last_activity_at` to the current time;
-past the configured idle timeout it locks the session and redirects to
-`/lock`. To avoid a DB read on every request, the lock config
+request the middleware compares this session's last activity to the
+current time; past the configured idle timeout it locks the session and
+redirects to `/lock`. To avoid a DB read on every request, the lock config
 (`lock_enabled`, `idle_timeout_minutes`) is cached in the session and
-re-read from the DB only once per a short TTL window; the
-`last_activity_at` write still happens on every passing request so the DB
-stays fresh independent of that cache.
+re-read from the DB only once per a short TTL window.
+
+The idle clock is PER SESSION, held in
+`AppLockMiddleware::SESSION_LAST_ACTIVITY`. `user_app_lock_configs.
+last_activity_at` is a single column keyed on `user_id`, so with two
+sessions of one account — the ordinary shape here, the desktop bundle
+plus a browser tab — every session wrote it and every session read it,
+and activity in one held the other's idle timer open indefinitely. The
+column is still written on every passing request, because
+`LockEngageController`'s unlock grace window and the client's own timer
+read it; only the idle DECISION moved into the session. A session with no
+stamp of its own yet falls back to the column, which is what the request
+right after a sign-in does.
 
 Livewire update traffic (`wire:poll` machine polling included) must never
 count as user activity, or any page with a polling component would hold

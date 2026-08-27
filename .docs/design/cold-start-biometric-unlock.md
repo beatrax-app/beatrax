@@ -215,9 +215,12 @@ is on-device UAT):
   primitive as the desktop path). Unit-tested incl. tamper/short/wrong-secret →
   fail-closed.
 - `Modules/Mobile/Internal/Identity/BiometricKeyVault` — enroll / recover /
-  clear over the enclave-gated entry, per-user slot, seam-testable; maps native
-  outcomes to `BiometricRecoverResult` (recovered / pendingAsync / canceled /
-  missing / unavailable). Unit-tested incl. round-trip + every outcome.
+  clear over the enclave-gated entry, seam-testable; maps native outcomes to
+  `BiometricRecoverResult` (recovered / pendingAsync / canceled / missing /
+  unavailable). Unit-tested incl. round-trip + every outcome. The slot name
+  carries the owning user id and every method takes it as an argument: read
+  from the session instead, one account's `store()` overwrote the other's key
+  and a console or job caller threw rather than clearing.
 - `Modules/Auth/Public/Services/AppLockKeyService::admitDataKey()` — the
   authorized admit point; provenance (a real enclave recover) is the trust gate.
 - `MobileLockScreen::biometricPrompt()` — cold-start path: on a held key →
@@ -234,7 +237,7 @@ Remaining (native / on-device / product):
    device and prove the enclave gates the read; wire the plugin (path repo +
    `native:plugin:register`).
 3. **Enrollment UX + PIN floor** — a settings toggle that calls
-   `BiometricKeyVault::enroll($dataKey)` while unlocked after a fresh PIN entry;
+   `BiometricKeyVault::enroll($userId, $dataKey)` while unlocked after a fresh PIN entry;
    the "PIN mandatory after biometry change / every N days" cadence.
 4. **Lifecycle hooks** — call `clear()` on disable, on PIN reset re-enroll, and
    on Phase 14 rekey/revocation (invalidate-and-re-enroll).

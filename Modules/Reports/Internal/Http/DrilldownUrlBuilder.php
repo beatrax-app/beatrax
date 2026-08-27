@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\AmountDirection;
+use Modules\Reports\Internal\Aggregation\ReportMetric;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Enums\ReportMetricSelection;
 
@@ -39,6 +40,7 @@ final class DrilldownUrlBuilder
         $params['amount_min'] = $definition->amountMin;
         $params['amount_max'] = $definition->amountMax;
         $params['amount_dir'] = self::direction($definition);
+        $params['type'] = self::types($definition);
 
         $params = array_filter(
             $params,
@@ -52,6 +54,25 @@ final class DrilldownUrlBuilder
     // reconciled against the figure it was clicked from, so the metric's own
     // direction narrows the list. An explicit direction on the definition is
     // the reader's, and stays.
+    // The direction alone does not reconstruct the figure: a fee and a transfer
+    // out are both negative and neither is counted as spend, so the list a
+    // drill-down opens has to be narrowed to the same types the metric summed.
+    /**
+     * @return list<string>|null
+     */
+    private static function types(ReportDefinition $definition): ?array
+    {
+        $metric = ReportMetric::tryFrom($definition->metric);
+
+        if ($metric === null) {
+            return null;
+        }
+
+        $types = $metric->types();
+
+        return $types === [] ? null : $types;
+    }
+
     private static function direction(ReportDefinition $definition): ?string
     {
         if ($definition->amountDirection !== AmountDirection::Both->value) {

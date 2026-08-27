@@ -138,9 +138,15 @@ The behavioural contract for the `Recurring` module.
   Any other transition raises
   `InvalidStateTransitionException`.
 - **Detection is idempotent on the cluster key.** A re-run
-  against the same input upserts via
-  `UNIQUE(user_id, cluster_counterparty_key)`; existing rows
-  are touched but not duplicated.
+  against the same input finds the existing row and refreshes
+  it. There is no
+  `UNIQUE(user_id, cluster_counterparty_key)` to upsert
+  against — that tuple carries a plain INDEX and the UNIQUE is
+  on `cluster_key`. The insert-or-refresh decision is made in
+  PHP against the detector's own in-memory index, so a read
+  that joins on the counterparty tuple has to break the tie
+  itself; `TransactionSeriesMembershipQuery` takes the lowest
+  series id, which is the row that index hands back first.
 - **A new occurrence on an `approved` series raises
   `RecurringSeriesMetricsRefreshed`.** `Forecasting` and
   `DriftAlerts` both subscribe; the projection re-runs and

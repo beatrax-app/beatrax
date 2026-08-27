@@ -259,10 +259,22 @@ are the matching and routing keys; `display_name`, `merchant_name`,
 `iban`, and `metadata` go through
 `Modules\Sync\Public\Services\SensitiveColumnCodec::encryptAttrs()`.
 
-Two events fire:
+When the row already existed, `type`, `iban`, `merchant_name` and
+`metadata` are refreshed from the current resolution — a `null` from
+this pass means it knows less, not that the stored value is wrong, and
+a `type` of `unknown` never overwrites a known one. `display_name` is
+deliberately left alone: the slug is derived from it, so a different
+name is a different row. Without the refresh the returned DTO reported
+the fresh classification while the stored row kept the first pass's, so
+a row that landed `unknown` never left `CounterpartyTriageQueue` (which
+selects strictly `type='unknown'`) and a row that later resolved to a
+merchant kept the NULL `merchant_name` the garbage collector prunes on.
 
-- `EntityMutated` — only when the row was actually created, and with
-  **plaintext** field values. `OpLogWriter` encrypts sensitive columns
+Events:
+
+- `EntityMutated` — `create` when the row was created and `edit` when
+  the refresh above wrote something, both with **plaintext** field
+  values. `OpLogWriter` encrypts sensitive columns
   itself under the current key epoch and the backfiller decrypts before
   handing them over; passing the stored ciphertext would encrypt it
   twice and the peer would never read it back. `metadata` is part of

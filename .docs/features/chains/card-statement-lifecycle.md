@@ -100,8 +100,11 @@ the previous and new open balances, and the new state.
 
 `Modules\Chains\Internal\Resolvers\IcsSettlementResolver` is the only
 caller. When an ASN-side bulk settlement matches a statement within
-tolerance, the resolver writes the per-expense `chain_links` rows and
-then hands the transfer's magnitude to `applySettlement()`. If the
+tolerance and covers at least one expense, the resolver writes the
+per-expense `chain_links` rows and then hands the transfer's magnitude
+to `applySettlement()`. A settlement that covers no expense is left
+alone entirely — there would be no link recording that it was applied,
+and the next pass would apply it again. If the
 resulting state is `overpaid`, it writes a `card_statement_credits` row
 for the surplus. The matching algorithm — the tolerance arms, the
 period window and the sign convention of the delta — is described in
@@ -135,8 +138,11 @@ period rolls in.
 
 The consumer is `IcsSettlementResolver::priorCreditsMinor()`, which
 sums `amount_minor` over the credits whose `to_statement_id` is the
-statement being settled, and subtracts that sum when computing the
-unaccounted delta. A credit whose `to_statement_id` is still NULL is
+statement being settled **and whose `currency` is the statement's own**,
+and adds that sum to what the payment covered when computing the
+unaccounted delta. The currency predicate is load-bearing: a USD 20
+credit summed into a EUR 500 statement pushed a fully-paid statement
+back out of tolerance and left it `open`. A credit whose `to_statement_id` is still NULL is
 therefore invisible to that sum: `overpayment` rows are written with a
 NULL destination and nothing currently fills it in, so an overpayment
 surplus is recorded for audit but does not yet reduce the next

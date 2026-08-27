@@ -144,10 +144,22 @@ for) this device's row, `forOtherDevices()` reads every other device
 read-only for the settings "Other devices" panel, and
 `saveForCurrentDevice()` is the only write path, validating server-side
 (out-of-range input throws, never clamps) and dispatching
-`NotificationPreferenceMutated` only after the write commits. An unpaired
-device (no local device id from `DeviceRegistryService`) is a total
-contract, never an error: reads return defaults, writes are a logged
-no-op.
+`NotificationPreferenceMutated` only after the write commits.
+
+An install with no sync identity — `DeviceRegistryService::localDeviceId()`
+null, which is the DEFAULT state and the whole life of a single-device
+install — writes its row under the reserved `device_id`
+`NotificationPreferenceQuery::UNPAIRED_DEVICE_ID`. It used to be a logged
+no-op, so the entire ~9-control settings section was inert on any install
+that never paired: quiet hours, lead days and "hide details" all reverted
+on reload while the UI said "Saved", and `SuppressionEvaluator` read the
+defaults through the same seam and kept posting at 03:00 with amounts
+shown. The sentinel is deliberately not a UUID, which a real `device_id`
+always is, so it can never collide with a peer's. `saveForCurrentDevice()`
+renames that row onto the real device id the first time the install has
+one, and `forCurrentDevice()` falls back to it, so pairing neither loses
+the settings nor leaves the pre-pairing row showing up as a foreign device
+in "Other devices".
 
 `NotificationPreferenceMutated`'s `preferenceId` is
 `notification_preferences.id`, a local autoincrement surrogate — unlike
@@ -169,7 +181,12 @@ signal. A handful of `target_kind` values (`dashboard`, `forecast`,
 `inbox`, `import`, `ics-import`) never carry a deletable per-user entity
 and are always live; the rest (`series`, `budget`, `counterparty`,
 `transaction`) resolve through each owning module's Public existence
-check. `NotificationCopy` is the single copy authority for every
+check. A row that never carried a `target_kind` at all is a different
+answer from a target that is gone: it renders as a plain non-link with
+NO explanation line, because "This item no longer exists." about
+something that never existed is a lie the reader cannot check. A kind
+this build does not recognise still degrades to the neutral word
+`item`. `NotificationCopy` is the single copy authority for every
 notification title and type-chip glyph/word pair — the reactive titles
 are ported byte-for-byte from the desktop OS-notification adapter's
 original constants (locked, no rewording) so the OS banner and the inbox
@@ -207,15 +224,21 @@ fires a real OS/mobile notification. Every dispatch runs under
 derives byte-identical occurrence keys, collapsing via the writer's
 idempotent insert like any other repeated trigger.
 
-`NotificationQuery` clones `DriftAlertQuery`'s shape (limit 26 = 25 + 1
-lookahead) with one mandatory deviation: `drift_alerts.id` is an
+`NotificationQuery` clones `DriftAlertQuery`'s shape (`PAGE_SIZE` rows
+plus one lookahead row, read and then WITHHELD) with one mandatory
+deviation: `drift_alerts.id` is an
 autoincrement surrogate, so `ORDER BY id DESC` + `WHERE id < cursor`
 stays monotone with insertion order, but `notifications.id` is a sha256
 hex digest and is not insertion-ordered. This query instead sorts on
 `created_at DESC, id DESC` and pages on a compound cursor —
 `(created_at < ?) OR (created_at = ? AND id < ?)` — backed by a
 `(user_id, created_at, id)` index. A malformed cursor is treated as null
-(first page) rather than thrown. `unreadCountForUser()` is the one
+(first page) rather than thrown. The three page reads return a
+`array{rows: list<NotificationDto>, nextCursor: ?string}` — the rows and
+the cursor that follows them, never a bare list: the lookahead row used to be rendered as well as read,
+and the Blade then took the cursor from it against a page count spelled
+out as a literal, so an inbox holding an exact multiple of a page landed
+on the empty state with no way back. `unreadCountForUser()` is the one
 method that never touches the encryption codec or session — it counts
 on the plaintext `read_at`/`dismissed_at` columns only, so the nav badge
 works on a locked device; every other method decrypts

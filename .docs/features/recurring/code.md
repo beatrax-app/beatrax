@@ -146,15 +146,19 @@ Modules/Recurring/
     $user): ?RecurringSeriesDto`.
   - `RecurringSeriesQuery::occurrencesForSeries(int $seriesId,
     User $user): array` — every occurrence row for the series,
-    ordered `observed_at` DESC. This is the read
-    `DriftAlerts::DriftEvaluator` consumes; it takes the first
-    two entries itself, so the query has no "last two" of its
-    own to name.
+    ordered `observed_at` DESC. What the detail page's
+    occurrence table renders.
+  - `RecurringSeriesQuery::latestOccurrencesForSeries(int
+    $seriesId, User $user, int $limit): array` — the same rows
+    with an `ORDER BY … LIMIT`. `DriftAlerts::DriftEvaluator`
+    reads two; on the unlimited call above it hydrated the
+    whole history to reach them.
   - `RecurringSeriesQuery::pendingCountForUser($user): int`
     — pending-review count.
   - The rest of `RecurringSeriesQuery` is bulk reads the
     detail and review pages batch through:
-    `driftThresholdForSeries`, `statesForSeriesIds`,
+    `driftThresholdForSeries`,
+    `driftThresholdsForSeriesIds`, `statesForSeriesIds`,
     `displayNamesForSeriesIds`, `forSeriesIds`,
     `counterpartyIdForSeries`, `counterpartyIdsForSeriesIds`,
     `approvedSeriesForCounterparty`, `amountTrendForSeries`,
@@ -170,14 +174,21 @@ Modules/Recurring/
 
 ## Internal services
 
-- `Internal/CadenceInferrer::infer($occurrences): string` —
-  classifies as `monthly` / `weekly` / `quarterly` /
-  `yearly` / `irregular`. The `irregular` verdict makes a
-  series ineligible for drift detection.
-- `Internal/Detection/ClusterKeyComposer::compose($tx):
-  string` — produces the cluster key
-  (`{counterparty_normalized}|{amount_minor}|{cadence}` or
-  similar) that groups occurrences into one series.
+- `Internal/CadenceInferrer::infer($sortedTimestamps):
+  InferredCadence` — classifies as `monthly` / `weekly` /
+  `quarterly` / `yearly` / `irregular` and carries the median
+  interval, the projected `next_expected_at`, the
+  low-confidence flag and the missed-period count. The
+  `irregular` verdict makes a series ineligible for drift
+  detection.
+- `Internal/Detectors/ClusterAmountFilter::keep($rows,
+  $tolerancePercent)` — the sign guard and the variance band,
+  shared by both detectors.
+- `Internal/Detection/ClusterKeyComposer::compose($direction,
+  $counterpartyKey, $currency, $cadenceBand): string` —
+  produces `{direction}::{counterparty}::{currency}::{cadence}`,
+  each part lower-cased and reduced to `\p{L}\p{N}&` runs, which
+  groups occurrences into one series.
 - `Internal/Detectors/ExpenseSeriesDetector::detectForUser($user)`
   — finds repeating expense clusters in the user's recent
   transactions, and writes them: per cluster it either calls

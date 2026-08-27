@@ -21,9 +21,12 @@ large enough to surface.
 
 The default threshold is 5%; the user can override globally via
 `/settings`, or per-series via the per-series editor on the drift
-page. The effective threshold for any one series is
-`max(perSeriesOverride, userGlobal, 5%)` — the 5% hard floor exists
-so a careless override cannot silence real drift.
+page. The effective threshold is the most specific setting that
+exists: per-series override, else user-global, else the 5% default.
+There is no floor over the top of it. `DriftThresholdOptions::PERCENTS`
+offers 1 and 2, and a floor would make both inert while the settings
+screen went on reading back the number the reader chose. A lower
+threshold reports more drift, not less, so nothing is silenced by it.
 
 What the module explicitly does NOT do:
 
@@ -67,8 +70,9 @@ What the module explicitly does NOT do:
   - `DriftAlertQuery::openCountForUser($user)`,
     `openForUser($user, $cursorId, $limit)`,
     `historyForUser(...)`, `dismissedForUser(...)`,
-    `groupedBySeriesForUser($user)`,
-    `totalOpenAnnualizedImpactForUser($user)`,
+    `groupedBySeriesForUser($user, $seriesLimit)`,
+    `openAnnualizedImpactByCurrencyForUser($user)`,
+    `openSeriesIdsForUser($user)`,
     `seriesStatesForUser($user, $seriesIds)`,
     `seriesThresholdsForUser($user, $seriesIds)`.
   - `CancellationImpactQuery::forSeries($seriesId, $user)` and
@@ -114,21 +118,33 @@ which keeps the cursor consistent when multiple alerts share an exact
 batch several writes inside a single scheduler tick).
 
 The open-tab projection (`openForUser`, `openCountForUser`,
-`totalOpenAnnualizedImpactForUser`, `groupedBySeriesForUser`) applies a
+`openAnnualizedImpactByCurrencyForUser`, `openSeriesIdsForUser`,
+`groupedBySeriesForUser`) applies a
 compound filter — `state='open' OR (state='snoozed' AND snoozed_until <=
 now())` — so snoozed-but-expired rows surface immediately, before the
 next hourly `RevivedExpiredDriftSnoozesJob` sweep writes the audit
 transition. The two paths produce the same eventual set; the sweep is the
 durable write, the query is the fresh read.
 
-`totalOpenAnnualizedImpactForUser` SUMs `annualized_impact_minor` across
-open EXPENSE-direction alerts only, in original-currency-minor units —
-the dashboard tile's "potential annualized cost" headline must stay
-scoped to expenses, since folding an income raise's positive delta into
-the same headline would conflate "subscriptions going up" with "salary
-going up" under one up-arrow tile. Cross-module reads of `recurring_series`
-(display name, state) are delegated to `RecurringSeriesQuery` so
+`openAnnualizedImpactByCurrencyForUser` returns one magnitude per
+currency over open EXPENSE-direction alerts, in original-currency-minor
+units. Two things it is deliberately not: it is not summed across
+currencies, because `annualized_impact_minor` is denominated in the
+series' own and euro cents do not add to dollar cents; and it is not a
+signed SUM, because the tile says "potential annualized cost" and a
+signed total let one series getting EUR 120/yr cheaper erase another
+getting EUR 120/yr dearer. Only the rows whose impact makes the expense
+larger are counted, and the total is their magnitude. It stays scoped to
+expenses because folding an income raise's positive delta into the same
+headline would conflate "subscriptions going up" with "salary going up"
+under one up-arrow tile.
+
+Cross-module reads of `recurring_series` (display name, state,
+per-series threshold) are delegated to `RecurringSeriesQuery` so
 `DriftAlerts` never issues a raw SELECT against another module's table.
+`seriesThresholdsForUser` reads through `driftThresholdsForSeriesIds`,
+which is batched — one editor read per rendered series would restore the
+N+1 that method exists to kill.
 
 ## `CancellationImpactQuery`, `SavingsInsightsQuery`, `SubscriptionDriftWatchQuery`
 
@@ -293,9 +309,16 @@ skips silently so a single mid-sweep user action cannot fail the whole job.
 
 The single legal mutator of `drift_alerts.state` and the sole inserter
 into `drift_alert_transitions`. Other module code may UPDATE non-state
-columns (the evaluator refreshes `latest_amount_minor` /
-`annualized_impact_minor` / `detected_at` on a revival flip; the snooze
-action sets `snoozed_until` alongside the state flip via `$extraColumns`).
+columns: the snooze action sets `snoozed_until` alongside the state flip
+via `$extraColumns`, and moving an existing snooze to a new date writes
+`snoozed_until` on its own, since the state does not change and the
+machine has no `snoozed -> snoozed` edge.
+
+The evaluator never UPDATEs an alert at all — it only inserts. A revived
+alert therefore keeps the amounts captured when it opened, which is the
+point: `thresholdPercentUsed` and the baseline/latest pair are an audit
+of one movement. If the price moved again during the snooze, the new
+occurrence carries a new `latest_occurrence_id` and opens its own row.
 The sole-mutator contract is enforced at three layers: static analysis
 (the `noOtherDriftAlertStateMutator` arch test rejects any non-allowed
 file writing to `drift_alerts.state`), runtime (`ALLOWED_TRANSITIONS`
@@ -333,12 +356,21 @@ letting Carbon raise a bare `InvalidFormatException` out of an unscoped
 ## Key services + events
 
 - `DriftEvaluator::evaluateForSeries($seriesId, $user)` — the math. Reads
-  the last two occurrences through `RecurringSeriesQuery`, computes
-  `delta_minor`, applies the effective threshold (per-series →
-  user-global → 5% floor, max), inserts on threshold-crossing.
-  Guards against divide-by-zero on a prior amount of zero (the
-  `prior-zero.php` fixture covers it). Idempotent via the unique
-  constraint.
+  the newest three occurrences through
+  `RecurringSeriesQuery::latestOccurrencesForSeries` — two for the
+  movement, a third for the interval the prior amount was billed over —
+  computes
+  `delta_minor`, applies the effective threshold (per-series override →
+  user-global → 5% default, first one set), inserts on
+  threshold-crossing. `AmountMovement` decides whether there is a
+  movement to measure at all: it refuses a zero prior (the
+  `prior-zero.php` fixture), a currency change mid-series
+  (`mixed-currency-within-series.php`) and a sign flip such as a refund
+  against a charge (`sign-flip-refund.php`). The annualised impact is
+  each side at the rate it was billed at, so a monthly-to-yearly
+  restructure reports the change in yearly cost rather than one period's
+  delta at the new multiplier (`cadence-restructure.php`). Idempotent
+  via the unique constraint; any other write failure is re-raised.
 - `DriftAlertStateMachine::transition($alert, $next, $reason)` —
   the single sanctioned mutator of `drift_alerts.state`. Records
   the transition in `drift_alert_transitions` as the audit trail.
@@ -365,11 +397,11 @@ Recurring metrics refresh
 
 DetectDriftAlertsJob handle()
   → DriftEvaluator::evaluate($seriesId, $user)
-       → RecurringSeriesQuery::lastTwoOccurrences($seriesId, $user)
+       → RecurringSeriesQuery::occurrencesForSeries($seriesId, $user)
        → compute delta_minor + ratio
-       → effective threshold = max(perSeriesOverride,
-                                   userGlobal,
-                                   5%)
+       → effective threshold = perSeriesOverride
+                               ?? userGlobal
+                               ?? 5%
        → if |ratio| > threshold:
             INSERT INTO drift_alerts (...)
               ON UNIQUE-CONFLICT no-op
@@ -383,7 +415,8 @@ The user-facing actions:
 ```
 /drift
   → DriftPage Livewire SFC
-       → DriftAlertQuery::listFor($user)
+       → DriftAlertQuery::openForUser / historyForUser /
+         dismissedForUser / groupedBySeriesForUser
        → user clicks Acknowledge / Snooze / Dismiss cancelled
             → corresponding Public action
                  → DriftAlertStateMachine::transition

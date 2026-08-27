@@ -91,9 +91,20 @@ never invoked at all. A warning is logged naming the user, saying income
 detection was skipped for this sweep and will run on the next in-app
 "Detect now" refresh.
 
-`ExpenseSeriesDetector` does not touch any encrypted column and runs
-normally either way, so a locked scheduled sweep still keeps expense
-series current.
+`ExpenseSeriesDetector` clusters on `counterparty_normalized`, which is
+already a keyed blind index — it never decrypts anything, so it is called
+on every sweep. What it cannot always do without a KEK is *name* the
+series: `detected_name` is a displayed column and a keyed digest must not
+reach it, so a cluster with no readable name is held back for a later
+sweep rather than written. Two sources still answer without a KEK — the
+user's own `merchants` row, and, for a user who is not encrypted at all,
+the key itself — so a locked scheduled sweep keeps most expense series
+current and defers the rest.
+
+That deferral used to be silent: no row, no event, no log line, which
+reads exactly like a user with no recurring expenses. Both detectors now
+count the clusters they held back and log one warning per sweep naming
+the count and the user.
 
 The probe is conditional on all three collaborators being present.
 Callers that invoke `handle()` without a session, an

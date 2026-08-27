@@ -201,7 +201,7 @@ layout to render the ⌘K palette and the sidebar nav-list:
 - **Internal/Navigation/** — `NavigationRegistryImpl`,
   `AppActionRegistryImpl`, `DevSidebarItems` (the dev-shell sidebar
   rendering data).
-- **Internal/Console/PruneDevAuditCommand** — `dev:prune-audit`.
+- **Internal/Console/PruneDevAuditCommand** — `beatrax:prune-dev-audit`.
 
 The repo-wide arch invariants `noHorizonImportsInShippedBuildCode`
 and `noUnsanctionedAuditWriter` are anchored here.
@@ -331,8 +331,10 @@ The artisan-runner flow:
   → CommandSpawner::start($name, $args, $callerUserId, $tier)
        → whitelist against CommandRegistry → InvalidArgumentException
                                               if not found
+       → CommandArgValidator::assertValid($spec, $args)
        → AuditWriter::recordCommandRun(outcome-less row + run_id)
-       → Symfony Process::start
+       → Symfony Process::start (watcher subshell writes the child's
+                                 exit code to the .out.exit sidecar)
        → RunRegistry::record($run)
   → ArtisanRunnerPage subscribes to the run via wire:poll
        → display stdout/stderr tail
@@ -384,15 +386,20 @@ Per-page detail that doesn't fit the flow diagrams above:
   system-wide cohort).
 - **ArtisanRunnerPage** (`/dev/artisan`) — header with a primary "⌘K Run
   a command" CTA; a filter chips row (All/Running/Failed/Destructive,
-  persisted via `#[Url]`); a worker pre-flight pill reading
+  persisted via `#[Url]`, each chip keyed on the run status the audit
+  row actually carries — `failed` is a status the mapper produces from
+  a non-zero exit code, not a shape the filter alone knows); a worker pre-flight pill reading
   `dev_mode.queue_worker_heartbeat` (green when fresher than 60s); a
   day-section timeline of run-cards; and a fallback Flux modal exposing
   SAFE-tier commands ONLY (DESTRUCTIVE stays reachable via the palette,
   the CLI, or the timeline's Re-run affordance, to avoid muscle-memory
   disasters). `mount()` resets `dev_mode.advanced` on first-load-per-
   session as a belt-and-braces alongside `ResetAdvancedToggleOnLogin`
-  (Login does not always refire on session-resume). Method-DI
-  throughout — Livewire components never receive constructor DI per the
+  (Login does not always refire on session-resume). `spawn()` runs the
+  declared `ArgSpec::$rules` through `CommandArgValidator`, the same
+  seam both spawn controllers use; `rerun()` refuses another
+  developer's run the way the stream and cancel endpoints do — it is
+  the one of the three that EXECUTES. Method-DI throughout — Livewire components never receive constructor DI per the
   project's larastan-strict-rules profile.
 - **CommandArgPromptModal** — global arg-prompt modal SFC, mounted once
   per layout so `command-args:prompt` can open it from anywhere (command
@@ -474,13 +481,25 @@ Per-page detail that doesn't fit the flow diagrams above:
   (`tests/Contracts/SelectOnlyValidatorContractTest.php`), means a
   future composer update that reshapes `Tokenizer` fails CI loudly
   instead of silently allowing a non-SELECT statement through; any
-  change to this file must keep that contract test green. Rejection
-  reasons surfaced via `ValidationException`'s `sql` error key:
-  `semicolon_followed_by_statement` (a SELECT followed by `;` plus
-  non-whitespace, e.g. `SELECT 1; INSERT…`), `empty_statement`, and
-  `first_token_not_select:{token}`.
+  change to this file must keep that contract test green. The
+  statement-separator scan runs over the TOKENS, not the raw text, so
+  a `;` inside a string literal or a trailing comment is data rather
+  than a second statement — a bank description carries semicolons,
+  and `PRAGMA query_only = 1` had already ruled the second statement
+  out. A leading `WITH … SELECT` CTE is admitted; a CTE carrying a
+  data-modifying keyword is not. Rejection reasons surfaced via
+  `ValidationException`'s `sql` error key:
+  `semicolon_followed_by_statement` (a statement token follows the
+  `;`, e.g. `SELECT 1; INSERT…`), `empty_statement`,
+  `first_token_not_select:{token}`, `cte_contains_write:{keyword}`,
+  and `cte_without_select`.
 - **RecentLogEntriesReader** — reads the tail of today's daily Laravel
-  log file and folds raw lines into structured entries matching
+  log file line-by-line through `SplFileObject`, keeping only a
+  200-line window (the same reason its sibling `LogFileStats` gives:
+  this pane backs `/dev`, the page opened BECAUSE something is
+  wrong, and loading a multi-megabyte log whole tripled the
+  request's peak memory). It folds raw lines into structured entries
+  matching
   `[YYYY-MM-DD HH:MM:SS] channel.SEVERITY: message body`. Continuation
   lines (stack-trace rows, JSON payload tails) fold into the preceding
   entry's message; every returned message is re-run through
@@ -537,7 +556,11 @@ Per-page detail that doesn't fit the flow diagrams above:
   stream terminates, `FinalizeRunAudit` lands the captured stdout in
   the `dev_mode_audit` row, so on the NEXT GET this page reads the
   latest `beatrax:doctor` row's `properties.stdout_excerpt` and parses
-  it via `ProbeOutputParser` into pass/warn/fail rows. This single code
+  it via `ProbeOutputParser` into pass/warn/fail rows. The read is
+  scoped to `causer_id` like every other `dev_mode_audit` read (probe
+  output carries the filesystem paths of whoever ran it), and ordered
+  by `created_at` THEN `id`, so the finished row wins over the empty
+  eager one when both land in the same second. This single code
   path gives identical UX between "run from CLI" and "run from
   /dev/doctor" — both write the same audit row the page reads back, and
   the Re-run button just re-surfaces the spawn endpoint.
@@ -596,7 +619,11 @@ JWT-shaped tokens out of both the rolling log file and the
 
 - **`OAuthScrubSet`** — a singleton cache of every distinct decrypted
   OAuth-secret string the app knows about (`oauth_secrets.client_secret`
-  plus every leaf string inside each row's `tokens_blob` JSON). Lazily
+  plus the `access_token` / `refresh_token` fields of each row's
+  `tokens_blob` JSON — the blob's `provider`, `email`, `scope` and
+  `expires_at` sit beside them and are ordinary words, and taking
+  those as needles rewrote unrelated log lines the console exists to
+  read). Lazily
   loads on first `all()`/`compiledPattern()` call so app boot never
   hits the DB before migrations run. `compiledPattern()` returns a
   single pre-compiled alternation regex (`'/(s1|s2|s3)/'`), so a record
@@ -610,8 +637,12 @@ JWT-shaped tokens out of both the rolling log file and the
   machine); once a row is deleted the cache busts and that string stops
   being scrubbed — a revoked-and-removed token is no longer considered
   sensitive by this threat model. A post-boot load failure writes a
-  critical `SystemAlert` (best-effort — a failure to write the alert
-  itself is swallowed rather than crashing the request).
+  critical `SystemAlert` once per process (best-effort — a failure to
+  write the alert itself is swallowed rather than crashing the
+  request, and `compiledPattern()` runs on every log record, so a
+  per-record alert would be a flood). A failure is never cached as
+  "nothing to scrub": the next call reloads, so redaction resumes as
+  soon as the cause clears.
 - **`RedactSecretsProcessor`** (on-write) — a Monolog `ProcessorInterface`
   registered via **`PushRedactProcessor`** (a Laravel logging "tap"
   class) onto every handler of the `stack`/`single`/`daily` channels.

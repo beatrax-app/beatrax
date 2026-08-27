@@ -177,6 +177,12 @@ The behavioural contract for the `Transfers` module.
   same instant — resolve by rule and not by whichever index
   SQLite chose. Held by the two ordering cases in
   `CounterLegSearchTest`.
+- **The orphan sweep's own order is total.** `pairOrphansForUser`
+  decides which orphan asks for a partner first and `pairOne`
+  persists that answer, so its candidate read ends on `id` too —
+  ASN books every row at 12:00:00, so a booked_at tie is the
+  ordinary case. Held by
+  `Modules/Transfers/tests/Feature/OrphanSweepOrderingIsTotalTest.php`.
 - **Cross-user reads / writes are invisible.** Every query
   filters by `$user->id`; a foreign user's transfer cannot
   pair with the current user's.

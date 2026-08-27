@@ -53,7 +53,14 @@ another module.
   first, then matches on `$definition->dimension` to pick the grouped
   query. `net` is never composed from separately-run spend/income
   totals — every dimension query implements `'net'` natively as
-  `SUM(settled_amount_minor)` over `type IN ('expense','income')`.
+  `SUM(settled_amount_minor)` over the metric's own type set.
+  `Aggregation\ReportMetric` owns that set: a `refund` is a reversal of an
+  expense, so it is counted by `spend` (which it reduces) and by `net`
+  (which it raises), and never by `income` — counting it in both would
+  make `income - spend` and `net` disagree about it, and leaving it out
+  of all three let a refunded purchase over-report `spend` by the whole
+  refund. `transfer_in`/`transfer_out` stay silent in every metric: they
+  are the two halves of one internal move.
 - **Cross-user isolation, structural not query-time:** `accounts`/
   `categories`/`counterparties` filter ids from a persisted
   `ReportDefinition` are passed straight into each dimension query's own
@@ -89,7 +96,15 @@ another module.
   currency list: every call first discovers the distinct
   `settled_currency` values actually present for the
   user+period+metric+filters, then re-runs the caller-supplied
-  dimension query once per discovered currency. `'base'` mode converts
+  dimension query once per discovered currency. Discovery applies the
+  category filter to `transactions.category_id` **or** to any of the
+  transaction's `transaction_splits.category_id` legs, matching what
+  `CategorySpendQuery`'s two passes actually select on: a category living
+  only on legs used to discover no currency at all, so the dimension query
+  was never called and a report filtered to it came back empty even though
+  that query on its own answered with the leg's total. Splitting a
+  transaction is precisely how part of it is attributed to a category.
+  `'base'` mode converts
   each currency's rows via `CrossCurrencyTotal` and merges same-group
   rows across currencies into one base-currency total; a row whose
   currency has no available rate is excluded from the total and counted
@@ -99,15 +114,49 @@ another module.
   per report: each dimension query returns rows already scoped to the
   one currency it was asked for, so converting per row read the whole
   `exchange_rates` table once per row for a rate that could not have
-  changed between them. `'original'` mode never converts: a group present in
+  changed between them.
+
+  **The total is converted from the currency's own subtotal, never summed
+  from separately-rounded rows.** Rounding each grouped row's conversion on
+  its own drifts by up to half a minor unit per group, so one report
+  totalled EUR 8942.01 by category and EUR 8942.04 by
+  counterparty/account/time_bucket — the drift is O(number of groups),
+  which is exactly what changing the dimension changes. Each currency's raw
+  subtotal is converted once, and the difference between that and the sum of
+  its converted rows is handed back to those rows largest-magnitude-first
+  (ties by position, so the same report always lands the same cents on the
+  same rows). The rows therefore still add up to the footer total, and the
+  `cross_dimension_total_consistency` invariant now holds *after* conversion
+  rather than only while every row was already in the base currency.
+
+  `'original'` mode never converts: a group present in
   more than one currency yields one row *per* currency (never merged —
   summing raw minor units across different currencies would corrupt
   the total); the DTO-level `currency`/`totalMinor` are picked as the
   currency with the largest absolute total among the *actual* result
   rows, never a "first discovered currency" guess made before the
   filtered query has run.
+- `OtherMovementQuery::totalsByCurrency()` — the money the chosen metric is
+  not defined over, per settled currency: `fee` and `adjustment` always,
+  plus `refund` for the one metric (`income`) that does not already count
+  it. The set is derived by subtracting the metric's own types rather than
+  listed, so nothing can be reported twice — once inside the total and
+  again beside it. `ReportResultDto::otherMovementsByCurrency` is keyed by
+  currency because `'original'` mode converts nothing: a fee bucket outside
+  the headline currency has no other line to appear on, and reporting only
+  the headline currency's bucket made it disappear from the one disclosure
+  that exists so a total which omits money does not read as everything that
+  left the account.
 - `NetWorthSeriesQuery::forUser()` — net worth as an on-demand *sampled*
-  series; no table stores historical net worth. Every point repeats
+  series; no table stores historical net worth. It honours the **account**
+  filter and nothing else: a balance is not a set of transactions, so a
+  category/counterparty/amount predicate has nothing to select on. The
+  builder does not offer those three controls for this metric, and says so
+  when a URL still carries one — it used to offer all four, apply none, and
+  report the whole portfolio as though the filter had been honoured. The
+  exclusion metadata is a **set of account ids** unioned across the series:
+  adding each point's count up told a reader with five accounts that 4108
+  of them were not converted. Every point repeats
   Forecasting's `NetWorthQuery::forUser()` exclude+count algorithm once
   per `TimeBucketGenerator` sample date instead of once for "today".
   **Scope limitation (C7-R8):** the most-recent point in this series is
@@ -152,7 +201,18 @@ another module.
   `saved_reports.definition` blob throws rather than silently
   resolving to an unintended date) and converts the user's inclusive
   end date to the half-open contract by adding one day; an inverted
-  range (`customTo < customFrom`) is rejected outright.
+  range (`customTo < customFrom`) is rejected outright. Every rejection is
+  an `Internal\Exceptions\InvalidReportPeriod` carrying an
+  `Enums\PeriodProblem` (`incomplete` | `malformed` | `inverted`), and
+  **every surface that resolves a period catches it**: the builder renders
+  the matching validation message with the rest of the composition
+  untouched, `/reports/export` answers 422 with the same message *before*
+  the stream opens (an exception thrown from inside the download callback
+  has already sent 200 and the CSV headers, so the reader would get a
+  truncated file instead of the reason), and `PinnedReportsRow` renders an
+  empty card rather than taking the whole dashboard down. Picking the end
+  date before the start date is an ordinary mid-edit state in a two-date
+  picker; it used to be an HTML error page with the composition lost.
 - `PeriodComparison::compare()` — period-over-period comparison. The
   previous period is a plain equal-length span-shift ending at the
   current period's `start` — never `PeriodQuery::previous()` (that
@@ -161,16 +221,59 @@ another module.
   window). Every month-anchored preset steps back the same number of
   calendar months (never a raw day-count shift, which "borrows" days
   across a shorter/longer adjacent month); only a true arbitrary-length
-  custom range uses a plain day-count shift. Comparison rows are the
-  union of current+previous group keys (a group that dropped to zero
-  still surfaces as a mover), keyed by `(group, currency)` — never
-  group alone, since `'original'` currency mode intentionally returns
-  one row per currency for a multi-currency group. Sorted by
-  `abs(deltaMinor)` descending. Currency-mode-agnostic by design: the
+  custom range uses a plain day-count shift. How rows are matched is an
+  `Enums\ComparisonJoin`, which the aggregator picks from the definition:
+
+  - `Group` — for the category, counterparty and account dimensions.
+    Comparison rows are the union of current+previous group keys (a group
+    that dropped to zero still surfaces as a mover), keyed by
+    `(group, currency)` — never group alone, since `'original'` currency
+    mode intentionally returns one row per currency for a multi-currency
+    group. Sorted by `abs(deltaMinor)` descending.
+  - `Sequence` — for the `time_bucket` dimension and the `net_worth`
+    metric. Matched by **position within the window**, counted per currency
+    (`'original'` mode emits the whole bucket run once per currency, and
+    the two windows need not have discovered the same set of them). A
+    bucket's group key is a DATE, which two disjoint windows can never
+    share: joining on it gave every current row `previous = 0` and appended
+    every previous row as a fabricated current row at 0, so the trend
+    report — the one composition where "vs. previous period" is the whole
+    point — produced double the rows, half of them invented, with every
+    delta equal to the raw value. `net_worth` was worse: it claimed the
+    reader's net worth had been zero. A current bucket the previous window
+    does not reach carries `previousAmountMinor = null`, which the table
+    renders as an em dash rather than as "was zero then", and the result is
+    never re-sorted by delta: for a series, the row order IS the series.
+
+  `compare()` also returns the previous period's **own** `totalMinor` and
+  `currency`, which reach the page as
+  `ReportResultDto::previousTotalMinor`/`previousCurrency`. The headline
+  "vs. previous period" delta used to be re-derived in Blade by summing
+  `previousAmountMinor` over the displayed rows: in `'original'` mode that
+  is one row per currency, so USD cents went straight into a EUR sum, and
+  for `net_worth` it added a balance up once per bucket — the exact
+  miscomputation `buildNetWorthResult()` documents itself as avoiding for
+  the current total. The delta renders only when both windows headline the
+  same currency; otherwise the page prints an em dash, because a EUR total
+  minus a USD total is not a figure.
+
+  Currency-mode-agnostic by design: the
   caller's `$queryForPeriod` closure already carries whichever
   `CurrencyModeApplier` call produced the current period's rows.
 - `DrilldownUrlBuilder::build()` — the tested `Period` -> URL conversion
-  for chart drill-down. Uses the *singular* array param names
+  for chart drill-down. **The `Period` it is handed is the window the
+  clicked ROW covers, not the report's.** `ReportBuilder::render()` maps a
+  time-bucket row's `groupKey` (its window's start date) and a net-worth
+  point's `groupKey` (its sample date, the last day of the same window)
+  back through `TimeBucketGenerator` to that bucket's own `Period`; handed
+  the whole range, three monthly rows all linked to one identical list. It
+  also emits the metric's own direction — `spend` -> `amount_dir=out`,
+  `income` -> `in`, `net` undirected — so a `spend` row cannot point at a
+  list carrying salary income. An explicit `amountDirection` on the
+  definition is the reader's and is left alone. `TransactionsList` has no
+  `type` filter parameter, so the drill-down narrows by direction rather
+  than by transaction type: a `transfer_out` or a `fee` can still appear
+  beside the expenses a `spend` figure counted. Uses the *singular* array param names
   `TransactionsList`'s `#[Url(as: 'account'/'category'/'counterparty')]`
   properties expect (`accounts`/`categories`/`counterparties` would
   silently no-op). `Period.endExclusive` is exclusive by contract but
@@ -183,14 +286,15 @@ another module.
 - `ReportCsvExporter::export()` — streams a report's aggregated rows as
   CSV via `ReportAggregator::run()`, so the download can never disagree
   with the on-screen table/chart. `EscapeFormula` runs on every
-  free-text column to mitigate spreadsheet formula injection. The
-  "Amount" column is written unsigned through
-  `MoneyInput::toDecimalString(abs($minor))` — the same seam
-  `TaxCsvExporter` uses, and pure integer arithmetic throughout
-  (CLAUDE.md forbids float division on money). It used to go through a
-  `MinorAmountFormatter` local to this module, which was the same
-  function with `100` written out instead of
-  `Money::MINOR_UNITS_PER_MAJOR`.
+  free-text column — and *only* that column, since escaping the three
+  generated ones turned a negative amount into the text `'-75.00`, which no
+  spreadsheet will sum. The "Amount" column is written **signed** through
+  `MoneyInput::toDecimalString($minor)` — the same seam `TaxCsvExporter`
+  uses, and pure integer arithmetic throughout (CLAUDE.md forbids float
+  division on money). Signed, because a `net` row is negative when more
+  left than arrived and the file carries nothing else to recover the sign
+  from: `abs()` made the export unsummable and put it at odds with the
+  table it is documented to match.
 
 ## Write actions: security & concurrency contracts
 
@@ -232,6 +336,20 @@ another module.
   rather than forking a new one; a fresh save's id is stashed into
   `loadedReportId` so a subsequent save on the same page load also
   updates in place instead of creating a duplicate.
+- **A stored definition is coerced, never trusted
+  (`Internal\Support\ReportDefinitionFactory::fromStored()`):**
+  `saved_reports.definition` is a synced LWW column, so a row written by a
+  peer on a different build is a realistic source of a word this build does
+  not know. `ReportDefinition::from()` *throws* on one — a missing field, an
+  unknown `granularity`, a `customFrom` that is not a date — so a single
+  unreadable row 500'd `/reports`, and the dashboard with it when the report
+  was pinned. Every read of a stored definition (`ReportBuilder::mount()`,
+  `PinnedReportsQuery`) now goes through the factory, which coerces each
+  field through the same `ReportVocabulary` the URL rail uses and drops a
+  `customFrom`/`customTo` that is not a `Y-m-d` date, so the builder asks
+  for the range again — a question the reader can answer — instead of
+  replaying a window nobody chose. `ReportDefinition::from()` is unchanged
+  and still strict; it is simply no longer the read path.
 - **Independent cap re-enforcement (`PinnedReportsQuery`):** `TogglePin`
   already enforces the 3-pin cap in the write layer; the dashboard
   read query's own `LIMIT 3` is a second, independent enforcement point
@@ -258,6 +376,16 @@ ReportBuilder (Livewire, every control is a #[Url]-bound property)
   -> table/chart partials render; DrilldownUrlBuilder maps each row to
      a /transactions filter URL
 ```
+
+Chart series go through `Internal\Support\ChartAmount`, never a division
+by a hardcoded hundred: ApexCharts needs a number in *major* units and the
+divisor is not the same for every currency, so a JPY row (which has no minor
+unit at all) was drawn at a hundredth of itself beside a table still printing
+the true figure. The scale is taken from the currency itself; an unrecognised
+code falls back to two decimals, which is what every other boundary in the
+repo assumes. The right long-term home for that scale is `Ledger`'s `Money`
+or `Currency`, both of which today hardcode `MINOR_UNITS_PER_MAJOR = 100`
+everywhere except `Money::formatWholeUnits()`.
 
 CSV export mirrors the same aggregator call
 (`ReportCsvExporter::export()`), so the download and the on-screen

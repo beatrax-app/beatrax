@@ -39,6 +39,14 @@ comparable history per currency instead of one incoherent mixed history.
 Comparison is on absolute magnitude throughout, so the ledger's signed
 convention (expenses negative) can never flip a result.
 
+The *reported* baseline is a different question from the comparison. It is
+put back on the side of zero the charge under test sits on
+(`LargeVsTypicalDetector::signedLike()`), because the sample is drawn
+same-direction and an alert reads as a pair: `baseline -> actual`. Negating
+it unconditionally to the expense sign made every income alert disagree with
+its own latest amount — a salary spike rendered as
+`baseline -EUR 3,000.00 -> actual: EUR 9,000.00`.
+
 `WINDOW_MONTHS = 12`. Twelve months is the top of the intended 6–12 month
 range: it covers a full seasonal cycle — an annual subscription renewal, a
 salary step — without letting amounts from two years ago define "typical".
@@ -67,8 +75,8 @@ a robust z-score comparable in scale to an ordinary one. That is the only
 reason it is there — it does not make the estimator more or less robust, it
 just puts `k` back on the familiar "how many sigma" scale.
 
-`median(sample)` is the baseline the alert reports back to the user as
-`baseline_amount_minor` (stored negated, matching the ledger's expense sign).
+`median(sample)` is the magnitude the alert reports back to the user as
+`baseline_amount_minor`, signed to match `latest_amount_minor`.
 
 ### The MAD floor
 
@@ -148,7 +156,8 @@ The category test is a percentile rather than a z-score, because a category
 mixes many merchants and its distribution is not remotely unimodal: the
 median of "Groceries" says nothing useful. A charge fires when it is at or
 above `CATEGORY_PERCENTILE = 95.0` of the category sample.
-`baseline_amount_minor` on the alert is that p95 value.
+`baseline_amount_minor` on the alert is that p95 magnitude, signed to match
+`latest_amount_minor` the same way the per-merchant path signs its median.
 
 ### Why the percentile test is tie-inclusive
 
@@ -210,13 +219,28 @@ monthly repeats, which are not duplicates at all.
 
 Two properties make the window safe to leave that wide:
 
-- **It looks backward only**, with an `id <` tie-break for same-day
-  siblings. A genuine double-charge therefore fires exactly once, on the
-  later charge of the pair, no matter which evaluation path (reactive
-  import, backfill, safety-net sweep) reaches the rows first, and no matter
-  what order they were inserted in. A symmetric window would open two alerts
-  for one incident, and an order-dependent one would open a different number
-  depending on the import.
+- **It looks backward only, on the date.** A sibling qualifies when its
+  `posted_at` is strictly earlier than the anchor's; the `id <` tie-break
+  applies *only* to a sibling sharing the anchor's date, where the date
+  alone cannot order the pair. A genuine double-charge therefore fires
+  exactly once, on the later-dated charge, no matter which evaluation path
+  (reactive import, backfill, safety-net sweep) reaches the rows first, and
+  no matter what order they were inserted in. A symmetric window would open
+  two alerts for one incident, and an order-dependent one would open a
+  different number depending on the import.
+
+  Applying `id <` to every row instead of only the same-day ones is not a
+  narrower version of the same rule, it is a different one: it asks the
+  sibling to be older *by insertion*. Many bank CSV exports are newest-first
+  and a backfilled older statement always is, so the earlier-dated charge
+  routinely carries the higher id — and then neither charge can see the
+  other, because the later one is excluded by the id and the earlier one is
+  outside the backward window. The pair produces no alert at all.
+
+  Among qualifying siblings the detector takes the NEAREST one
+  (`posted_at DESC, id DESC`). With three or more matches an unordered
+  `value('id')` left the series-membership test below reading whichever row
+  the scan happened to reach first.
 - **Both-on-a-series is excluded.** A weekly or fortnightly subscription
   falls inside seven days, so the detector resolves series membership for
   the candidate and the sibling through Recurring's

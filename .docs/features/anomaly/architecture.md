@@ -11,9 +11,9 @@ minting a row per reason.
 
 `AnomalyEvaluator::evaluate(int $transactionId, User $user)` is the single
 entry point shared by the reactive job, the full-history backfill, and the
-scheduled safety-net sweep. Its skeleton (idempotent insert, `QueryException`
-no-op, event dispatch, cross-module read discipline) is cloned from
-`DriftEvaluator`; the math lives in three injected detectors
+scheduled safety-net sweep. Its skeleton (idempotent insert, classified
+write-failure boundary, event dispatch, cross-module read discipline) began
+as a copy of `DriftEvaluator`'s; the math lives in three injected detectors
 (`LargeVsTypicalDetector` / `FirstTimeMerchantDetector` /
 `DuplicateChargeDetector`). Steps:
 
@@ -21,16 +21,21 @@ no-op, event dispatch, cross-module read discipline) is cloned from
    `transactions`; the evaluator never writes it).
 2. Load the user's anomaly settings (sensitivity + minimum floor).
 3. Run the three detectors, aggregating a canonically-ordered `reasons[]`
-   of tripped keys (`large` / `first_time` / `duplicate`) — one alert per
-   transaction, multi-reason.
+   of tripped `AnomalyDetector` cases — one alert per transaction,
+   multi-reason.
 4. Drop any reason a matching `anomaly_suppression_rules` row suppresses,
    checked BEFORE insert; if no reason survives, return without inserting.
 5. Insert exactly one `anomaly_alerts` row carrying `reasons[]`, the
    large-vs-typical baseline trio, `sensitivity_percent_used`, and
-   direction, under a DERIVED id (below); a `UNIQUE(transaction_id)` or
-   primary-key collision is caught at the `QueryException` boundary and
-   treated as a silent no-op.
-6. Dispatch `AnomalyAlertOpened` and `EntityMutated` on a successful insert.
+   direction, under a DERIVED id (below). Only a `UNIQUE(transaction_id)`
+   collision is a no-op, and it is confirmed by re-reading the row rather
+   than by the SQLSTATE alone: SQLite reports a `RAISE(ABORT)` trigger under
+   the same 23000 class a unique violation uses, so a code-only check
+   swallowed every schema failure as "already evaluated". Anything else
+   propagates.
+6. Dispatch `AnomalyAlertOpened` and `EntityMutated` after the insert
+   returns — outside the guard, so a throwing listener cannot cost the
+   capture event that carries the row to the paired device.
 
 Every raw query carries an explicit `where('user_id', ...)` — the
 `BelongsToUser` global scope does not fire under queue/console, where this
@@ -60,14 +65,16 @@ excluded from suppression-rule matching (see below), the per-merchant
   cutoff (5).
 - **`DuplicateChargeDetector`** — fires when an earlier sibling charge
   exists for the same counterparty, exact settled amount/currency,
-  direction, within a 7-day backward window. The window is
-  backward-only (with an `id <` tie-break for same-day siblings) so a
-  genuine double-charge produces exactly one alert, on the later charge of
-  the pair, regardless of which evaluation path (reactive import,
-  backfill, safety-net sweep) processes the rows first. When both sides of
-  a pair are members of an approved recurring series (resolved through
-  Recurring's Public `TransactionSeriesMembershipQuery`), the detector
-  does not fire — a legit cadence landing twice is not a duplicate.
+  direction, within a 7-day backward window. The window is backward-only on
+  the DATE, with the `id <` tie-break reserved for a sibling sharing the
+  anchor's date, so a genuine double-charge produces exactly one alert, on
+  the later-dated charge of the pair, regardless of which evaluation path
+  (reactive import, backfill, safety-net sweep) processes the rows first or
+  what order they were inserted in. Among qualifying siblings the nearest
+  one wins. When both sides of a pair are members of an approved recurring
+  series (resolved through Recurring's Public
+  `TransactionSeriesMembershipQuery`), the detector does not fire — a legit
+  cadence landing twice is not a duplicate.
 
 All three detectors share a minimum-amount floor that gates evaluation
 entirely, and read `transactions` directly without ever writing it.
@@ -78,27 +85,55 @@ entirely, and read `transactions` directly without ever writing it.
 `LargeVsTypicalDetector`: a median + k×MAD robust z-score, chosen over
 mean+σ because per-merchant samples are small and outlier-laden (a single
 legitimate large prior would inflate σ and mask the next anomaly). The
-percentile-boundary test (`isAtOrAbovePercentile`) is deliberately
+percentile-boundary test (`exceedsPercentile`) is deliberately
 tie-inclusive (`>=`): for small samples, linear interpolation collapses
 p95 toward the sample maximum, so a strict `>` would let a charge that
 exactly repeats the largest-ever charge slip past undetected — exactly the
 repeat-of-the-extreme case the feature exists to catch.
+
+## The detector vocabulary
+
+`Modules\Anomaly\Public\Enums\AnomalyDetector` is the one spelling of
+`large` / `first_time` / `duplicate`, and its **declaration order is the
+canonical `reasons[]` order** — paired devices must reach byte-identical
+JSON for one charge, so a case inserted in the middle re-orders every alert
+written after it.
+
+The vocabulary is enforced in the schema the way `state` is, by trigger:
+`anomaly_suppression_rules.detector` must be one of the enum's values, and
+`anomaly_alerts.reasons` must be a non-empty JSON array every element of
+which is. Before that, a drifted detector key was inert rather than loud —
+the evaluator's `whereIn('detector', ...)` simply never matched it, so the
+mute silently stopped working while the settings screen rendered the raw
+`anomaly::settings.detectors.<key>` lang key at the reader. The read layer
+now hands blades typed cases, so a template compares enum identities and
+has nothing to render for a key the enum does not have.
 
 ## Suppression
 
 Suppression is checked before insert: a reason is dropped when a matching
 `anomaly_suppression_rules` row exists (same counterparty, detector,
 direction, and the charge's settled amount within `[band_low, band_high]`
-in the same currency). `DismissAnomalyAlertAsExpected` computes the amount
-band server-side as ±15% of the alert's `latest_amount_minor`
-(`round(0.85x)` / `round(1.15x)`); for a duplicate-only or first-time-only
-alert (which carries no per-merchant `latest_amount_minor`), the band
-falls back to the alert transaction's own settled amount, so suppression
-still works for those detectors. `RemoveAnomalySuppressionRule` exposes two
-distinct paths: a settings "Remove" that deletes one rule by id (the
-originating alert stays dismissed), and an "Undo" that deletes every rule
-tied to a `source_anomaly_alert_id` and re-opens the alert via the state
-machine's `dismissed -> open` edge — the only place that edge fires.
+in the same currency). `Internal\Support\SuppressionRuleKey` is that
+tuple, and `SuppressionRuleKeyResolver` derives it from an alert once, for
+both the write and the undo — the band is ±15% of the alert's
+`latest_amount_minor` (`round(0.85x)` / `round(1.15x)`), falling back to the
+alert transaction's own settled amount for a duplicate-only or
+first-time-only alert (which carries no per-merchant `latest_amount_minor`),
+so suppression still works for those detectors.
+
+`source_anomaly_alert_id` is provenance, not identity. Two alerts in one
+band dedupe onto a single rule, and that rule keeps naming the FIRST of
+them; deleting by that column meant undoing the second dismissal reported
+success and left the merchant muted, while undoing the first pulled the rule
+the second was relying on. The undo matches on the mute's own shape (plus
+the source column, for a rule whose band can no longer be recomputed).
+
+`RemoveAnomalySuppressionRule` exposes two distinct paths: a settings
+"Remove" that deletes one rule by id (the originating alert stays
+dismissed), and an "Undo" that deletes every rule the alert's band names and
+re-opens the alert via the state machine's `dismissed -> open` edge — the
+only place that edge fires.
 
 ## State machine
 
@@ -175,4 +210,6 @@ directly — it is resolved through a permitted `transaction_id ->
 counterparty_id` ledger read). The per-detector open-count breakdown is
 computed in PHP over the revival-aware open set rather than a SQL
 `GROUP BY`, since `reasons` is a JSON list and SQLite has no first-class
-JSON-array aggregation here.
+JSON-array aggregation here; it is keyed on `AnomalyDetector` values because
+an array key cannot be an enum, and the dashboard badge walks
+`AnomalyDetector::cases()` to read it back.

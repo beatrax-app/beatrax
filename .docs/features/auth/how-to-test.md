@@ -36,7 +36,7 @@ Practical recipes for exercising the `Auth` module in isolation.
 
 ## Contract / arch invariants
 
-- `tests/Feature/CrossUserIsolationTest.php` — the cross-user 404 posture
+- `Modules/Auth/tests/Feature/CrossUserIsolationTest.php` — the cross-user 404 posture
   contract: any URL keyed by another user's id returns 404. Any new
   authenticated route that accepts a user-keyed parameter MUST be added
   to this test's data set.
@@ -137,8 +137,8 @@ The behavioural contract for the `Auth` module.
 - **Cross-user reads / writes return 404, not 403.** A logged-in user
   probing any URL keyed by another user's id receives 404; the existence
   of partner accounts is never revealed.
-  (`tests/Feature/CrossUserIsolationTest.php`)
-- **The CLI escape hatch (`diederik:reset-password`) is the only path
+  (`Modules/Auth/tests/Feature/CrossUserIsolationTest.php`)
+- **The CLI escape hatch (`beatrax:reset-password`) is the only path
   that bypasses the recovery-code requirement.** It is operator-only —
   it requires shell access to the SQLite file's host. See
   [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md).
@@ -207,9 +207,9 @@ forbid any other module from importing `Modules\Auth\Internal\*`.
 ## Configuration + feature flags
 
 - `users.is_developer` — the per-user owner/partner discriminator.
-  Toggleable from the CLI via `diederik:grant-dev` for operator break-glass.
+  Toggleable from the CLI via `beatrax:grant-dev` for operator break-glass.
 - `users.force_password_change_at_next_login` — the per-user forced-change
   flag the middleware respects.
 - No environment config keys; the module has no behaviour that varies by
   runtime (`BEATRAX_RUNTIME=local` vs `BEATRAX_RUNTIME=app`). The
-  `diederik:reset-password` CLI is gated only by shell-access posture.
+  `beatrax:reset-password` CLI is gated only by shell-access posture.

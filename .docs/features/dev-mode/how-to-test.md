@@ -34,7 +34,7 @@ Practical recipes for exercising the `DevMode` module in isolation.
   - The ⌘K palette JSON shape for developer + non-developer users.
   - The queue-worker heartbeat update on `QueueManager::looping`
     closure ticks.
-  - The `dev:prune-audit` command's retention enforcement.
+  - The `beatrax:prune-dev-audit` command's retention enforcement.
 - **Setup:** every test uses `RefreshDatabase`. Tests that
   exercise the Horizon conditional set
   `config(['app.dev_mode' => true])` and either
@@ -149,9 +149,11 @@ The behavioural contract for the `DevMode` module.
 - **Every spawned command leaves exactly one audit row.** The
   spawner writes it eagerly as `AuditEvent::CommandExecuted` with
   no outcome; `FinalizeRunAudit` finds it again by `run_id` and
-  fills in the exit code, the excerpts and `finished_at`. A cancel
-  is a `__cancelled` flag merged onto that same row, never a second
-  event.
+  fills in the exit code, the excerpts and `finished_at`. The exit
+  code comes from the `<run>.out.exit` sidecar the spawner's watcher
+  subshell writes, since neither caller holds the code itself. A
+  cancel is a `__cancelled` flag merged onto that same row, never a
+  second event.
 - **`AuditWriter` is the only sanctioned path to a
   `dev_mode_audit` row.** Direct INSERTs are blocked by the
   `noUnsanctionedAuditWriter` arch invariant.
@@ -216,9 +218,10 @@ The behavioural contract for the `DevMode` module.
   `RunRegistry` cache key survives both polls; the closing audit
   row is the durable trace.
 - **A worker dying mid-run** — the opening audit row is durable; no
-  closing row is written. `FinalizeRunAudit` does not retroactively
-  close orphan runs; the next dev-prune cycle reports them in the
-  `dev:prune-audit` summary so the operator can investigate.
+  closing row is written. Nothing reports orphans:
+  `beatrax:prune-dev-audit` deletes by age, so the open row (no
+  `finished_at`, no exit code) is the evidence and it stays until
+  someone reads it.
 - **A user with `is_developer = false` clicking a Dev Console
   bookmark** — `ensureDeveloperMode` returns 404; the same surface
   is hidden the same way as for an unauthenticated request.
@@ -269,7 +272,7 @@ The behavioural contract for the `DevMode` module.
   to false.
 - `BEATRAX_RUNTIME=local` (env) — informs the system-snapshot page's
   presentation; does NOT affect the dev gate.
-- `dev_mode_audit` retention — the `dev:prune-audit` command takes
-  a retention argument; the operator runs it periodically.
+- `dev_mode_audit` retention — the `beatrax:prune-dev-audit` command
+  takes a retention argument; the operator runs it periodically.
 - No per-user opt-out for the audit log; every dev action is
   recorded.

@@ -81,8 +81,10 @@ What the module explicitly does NOT do:
   typed error `ConfirmChainLink` throws when a hint row cannot be
   promoted because the `to` endpoint is still NULL).
 - **Services/** — `ChainLinkQuery` (review-queue + open-candidate
-  count for the sidebar badge), `CardStatementQuery` (next-settlement
-  - forecast-tile reads).
+  count for the sidebar badge — the count and the queue share the
+  NULL-endpoint filter, so a badge of one never leads to an empty
+  page; `hintCount()` is the badge for those rows),
+  `CardStatementQuery` (next-settlement + forecast-tile reads).
 
 `Internal/` houses the resolvers and the lifecycle owners:
 
@@ -110,9 +112,10 @@ What the module explicitly does NOT do:
 ## Key services + events
 
 - `BusChainResolutionDispatcher` (impl. `DispatchesChainResolution`) —
-  inserts a `pending` row in `chain_resolution_runs` and runs
-  `ResolveChainLinksJob` for the user via `dispatchSync()`, **not** the
-  queue. Called from `ConfirmImport` AFTER the import's outer
+  runs `ResolveChainLinksJob` for the user via `dispatchSync()`, **not**
+  the queue. The `pending` row in `chain_resolution_runs` is written by
+  the caller (`ConfirmImport`) before the dispatch, and the job claims
+  it rather than opening a second one. Called from `ConfirmImport` AFTER the import's outer
   transaction commits (in-transaction dispatch would let the worker
   see stale state). It runs synchronously rather than queued because
   the resolvers match against encrypted `counterparty_iban`/
@@ -229,12 +232,13 @@ The post-import resolver pass:
 ConfirmImport (Modules/Import) — outer TX commits
   → UpsertsCardStatements::upsertForImportRun($importRunId, $user)
        (creates / refreshes card_statements rows per ICS PDF)
+  → INSERT chain_resolution_runs (pending, started_at=null)
   → DispatchesChainResolution::dispatchForUser($user->id)
-       → INSERT chain_resolution_runs (pending, started_at=null)
        → Bus::dispatch(new ResolveChainLinksJob($user->id))
 
 ResolveChainLinksJob (queue worker) — uniqueId() = user->id
-  → flip audit row to running
+  → claim the pending audit row(s) and flip them to running
+    (inserting one only when nothing reserved one)
   → three healing passes (see below), then:
   → IcsSettlementResolver::resolveForUser($user)
        (for each ASN transfer_out matching an open card_statements,
@@ -280,8 +284,11 @@ The user-promotion path:
        → ConfirmChainLink($chainLinkId, $user)
             → promote candidate → confirmed
             → count same-signature confirmed rows
-            → if ≥ 3: bulk-promote remaining candidates
-                       (resolver='rule', UI shows "via learning loop")
+            → if ≥ 3: bulk-promote remaining CONCRETE candidates
+                       (resolver='rule', UI shows "via learning loop").
+                       NULL-endpoint hints share a statement's signature
+                       hash with its confirmed links and are excluded:
+                       the schema trigger would abort the whole confirm.
   → user clicks Reject
        → RejectChainLink($chainLinkId, $user)
             → state = rejected

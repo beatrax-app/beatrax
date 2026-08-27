@@ -423,6 +423,11 @@ helper from `config('cache.locks_store')`. `tries = 3` +
 the per-inbox state machine's `rate_limited`/`error` transitions ride
 the same curve.
 
+The window lower bound is `subMonthsNoOverflow`, matching
+`Ledger`'s `PeriodQuery`: plain month arithmetic on a run landing on the
+31st overflows into the month *after* the one the reader selected, and
+the oldest days of the chosen window are then never walked.
+
 **Provider dispatch:** Gmail walks `users.messages.list` +
 `users.messages.get?format=raw`. `users.messages.list` carries no
 historyId of its own, so the baseline cursor comes from a single
@@ -486,9 +491,13 @@ per-page accumulators currently live on `handle()`'s stack frame).
 
 **Error envelope** (both provider branches): `RateLimitedException` →
 transition to `rate_limited`, rethrow so the queue worker schedules the
-next attempt. `InvalidGrantException` → transition to `needs_reauth`
-and swallow the throw (the user must reconnect; another retry cannot
-make progress). Any other throwable → transition to `error` (with the
+next attempt. `InvalidGrantException` and `InboxNotConfiguredException`
+→ transition to `needs_reauth` and swallow the throw. Both are
+permanent: a revoked grant needs a Reconnect and an inbox with no
+persisted credentials needs the wizard, and neither is something a
+later attempt can reach. Rethrowing is what schedules the retry, so
+only a condition a later attempt could clear may leave through it. Any
+other throwable → transition to `error` (with the
 first 500 chars of the message) and rethrow so the job-failed listener
 can surface the failure. `failed()` (Laravel's post-retry-exhaustion
 hook) applies the same terminal `error` transition; if that write
@@ -646,8 +655,11 @@ outside both the walk's filter and the new baseline's lower bound.
 `RateLimitedException` flips status to `rate_limited` via
 `applyRateLimited` (bumps `retry_attempts`, stamps "Retry after Xs")
 and rethrows so the queue worker honours the project-wide backoff.
-`InvalidGrantException` transitions to `needs_reauth` and is swallowed
-(terminal until the user hits Reconnect). Any other `Throwable`
+`InvalidGrantException` and `InboxNotConfiguredException` transition to
+`needs_reauth` and are swallowed (both terminal until the user hits
+Reconnect or finishes the OAuth-client wizard; rethrowing either would
+spend the whole retry budget on a condition no attempt can clear). Any
+other `Throwable`
 transitions to `error` (first 500 chars of the message) and rethrows
 so the job-failed listener can surface the failure. `failed()`
 (Laravel's post-retry-exhaustion hook) applies the same terminal
@@ -658,6 +670,14 @@ error — this replaced an earlier `JobFailed` listener that regex-parsed
 the serialized job payload, which was fragile against
 serializer-format changes and any future job class whose property name
 happened to share a prefix with `inboxId`.
+
+**A message the provider will not hand over does not stall the walk.**
+`MessageUnavailableException` (a `users.messages.get` 404) and
+`GmailRawDecodeException` are permanent for that id, so the fetch is
+skipped and the batch carries on to the cursor write. Letting either
+out would leave the cursor where it was, and every later tick would
+read the same history, meet the same message and abort again — one
+unfetchable message freezing the mailbox for good.
 
 **Two early-exit paths skip the provider call entirely:** a
 `needs_reauth` inbox exits immediately on the first status read (no
@@ -1100,8 +1120,15 @@ Gmail's `after:` operator so the cursor-expiry fallback walk can be
 date-bounded to `last_scan_at - 7 days` rather than the full
 allow-list history. `getRawMessage` calls
 `users.messages.get?format=raw` and decodes the base64url payload.
-`listHistory` calls `users.history.list` and replays
-messagesAdded/messagesDeleted since the cursor. `listDiscoveryCandidates`
+`listHistory` calls `users.history.list` with
+`historyTypes=messageAdded` and unpacks each `History` record into the
+`messagesAdded[].message.id` shape `ScanMessageMapper` reads; the other
+record kinds carry no id the fetcher could pull bytes for. It follows
+`nextPageToken` to the end of the walk and then reports the mailbox's
+current `historyId`. A walk stopped early by `HISTORY_PAGE_CAP` reports
+the last record's own id instead, because the mailbox's current
+historyId would carry the cursor over records the walk never read.
+`listDiscoveryCandidates`
 runs a broad `subject:(...)` keyword query minus the known-sender
 allow-list, pairing the list call with a per-message
 `users.messages.get?format=metadata&metadataHeaders=['From','Date']`
@@ -1190,7 +1217,9 @@ cached token never reaches the wire. Quota-shaped provider errors
 Gmail, HTTP 429 for Graph) become `RateLimitedException` so the caller
 can transition the inbox state and let the queue worker reschedule.
 `users.history.list` 404 / Graph `$delta` 410 become
-`CursorExpiredException`. Token payloads never appear in a thrown
+`CursorExpiredException`; a `users.messages.get` 404 becomes
+`MessageUnavailableException`, which is the signal the incremental scan
+uses to skip that id rather than stall the cursor behind it. Token payloads never appear in a thrown
 exception message. The discovery surface deliberately never calls
 `getRawMessage` — only the `format=metadata` / minimal-field fetch —
 so no `.eml` blob is ever persisted from a discovery walk.

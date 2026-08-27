@@ -76,15 +76,17 @@ composer test
   raised the matching event. Tail `/dev/logs` for the listener's
   job-dispatch log line.
 - **The shortfall band is missing on a chart the user expects** —
-  read the underlying `forecast_runs.result_json`; the
-  `shortfall_windows` array is empty when the curve stayed above
-  the buffer. Check `accounts.forecast_buffer_minor` for the
-  account; the default is zero.
-- **The percentile bands look identical to the median** — the
-  cadence jitter for every series in the contribution set was
-  zero. `CadenceJitter` produces zero jitter only for a series
-  with perfectly stable historical cadence; this is usually
-  correct.
+  the windows live in `forecast_shortfall_windows`, not in
+  `forecast_runs.result_json`, and the chart reads only the rows whose
+  `horizon_days` matches the horizon on screen. No row means the curve
+  stayed above the buffer at that horizon. Check
+  `accounts.forecast_min_buffer_minor` for the account; the default is
+  zero.
+- **The percentile bands look identical to the median** — the series
+  took the envelope tier rather than the percentile one, so nothing was
+  jittered. `CadenceJitter` smears only a contribution `RangeProjector`
+  marked `dateIsUncertain`, which is the percentile tier alone; failing
+  either bar of the two-part gate is usually correct.
 - **`OpeningBalanceDivergenceWarning` raised but the user wants
   the override anyway** — the warning is informational, not
   blocking; the write completes. The Livewire SFC re-renders the
@@ -102,7 +104,8 @@ composer test
   requests, the COUNT query in
   `ForecastHighlightsQuery::activeShortfallCountForUser` returned
   zero — confirm `forecast_shortfall_windows` has the expected
-  rows and that the window's `window_end` is still in the future.
+  rows, that their `horizon_days` is the badge's own 30, and that
+  `ends_at` is still in the future.
 
 ## Behavioural contracts, and the tests that hold them
 
@@ -160,8 +163,9 @@ The behavioural contract for the `Forecasting` module.
   the scenarios cleanly.
 - **The projection is deterministic against the input set.**
   Same inputs (scenario, recurring set, anchor, horizon) produce
-  the same `result_json`. `CadenceJitter` uses a deterministic
-  per-series seed so the "noise" is reproducible.
+  the same `result_json`. There is no randomness anywhere in the
+  pipeline: `CadenceJitter` spreads a fixed `100 / window` share over a
+  fixed ±3-day window, with no seed and nothing to seed.
 - **The percentile bands are computed from the modelled cadence
   jitter, not from random sampling.** Each series's confidence
   surfaces as P10/P50/P90; the bands reflect modelling
@@ -223,13 +227,14 @@ The behavioural contract for the `Forecasting` module.
 
 ## Configuration + feature flags
 
-- `accounts.forecast_buffer_minor` — per-account buffer threshold
+- `accounts.forecast_min_buffer_minor` — per-account buffer threshold
   the shortfall detector compares against.
 - `accounts.opening_balance_minor` — per-account user-set opening
   balance override.
-- The 30 / 60 / 90 horizon options are fixed in the
-  `ForecastPage` SFC; no config knob today.
-- `CadenceJitter`'s seed scheme is deterministic per series; no
-  user-visible knob.
+- The horizon options are fixed in `ProjectForecastJob::HORIZON_DAYS`
+  (30 / 60 / 90 / 180 / 365) and the rail offers exactly those; no
+  config knob today.
+- `CadenceJitter`'s window is `WINDOW_DAYS = 3` and its share is
+  `100 / window`; no seed, no user-visible knob.
 - No per-user opt-out for the shortfall detector; the buffer is
   the chokepoint.

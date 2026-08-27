@@ -204,6 +204,13 @@ exceeds `records_applied` — since expected is derived from applied, treating
 it as a total renders a full bar the instant the first row lands.
 Everything else reports indeterminate, which is honest about not knowing.
 
+The settings screen's own progress block (`SyncScreen::hydrateProgress()`)
+reads the same cursor and answers the same two questions the same way: a total
+that merely equals what has landed is indeterminate, and the block stays on
+screen for `rebuilding` as well as `pulling` — `SyncPhase::isInitialSyncInFlight()`
+is where that pair is spelled once. Asking only about `pulling` made the block
+vanish for the whole of the slowest step.
+
 ## The one silent case left
 
 An import exists because another device *has* data. Completing one with

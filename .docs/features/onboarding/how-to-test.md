@@ -149,8 +149,8 @@ The behavioural contract for the `Onboarding` module.
 - **A skipped step persists as skipped.**
   Skip-this-step lands on the next step and sets that row's
   `wizard_progress.status` to `'skipped'` — the status column,
-  not a flag inside the JSON. "Resume later" (`skipRest`) flips
-  every remaining non-done row the same way in one call.
+  not a flag inside the JSON. "Resume later" (`leaveForNow()`) is the
+  other exit and writes nothing, so the remaining rows stay pending.
   (`tests/Feature/SkipWizardStepTest.php`)
 - **The connector steps stash their resulting `ImportRun.id`
   on `wizard_progress.data`.** The first-import step's

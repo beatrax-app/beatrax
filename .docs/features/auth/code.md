@@ -140,7 +140,7 @@ the cross-module "a user just appeared" surface.
 - `Internal/Http/Livewire/ManageUserPage` — owner-resets-partner. Writes
   the partner row inline with `force_password_change_at_next_login = true`
   so the partner picks their own password on next sign-in.
-- `Internal/Console/ResetPasswordCommand` — the `diederik:reset-password`
+- `Internal/Console/ResetPasswordCommand` — the `beatrax:reset-password`
   CLI escape hatch. The user's last-resort recovery path when every
   recovery code is lost. See [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md).
 

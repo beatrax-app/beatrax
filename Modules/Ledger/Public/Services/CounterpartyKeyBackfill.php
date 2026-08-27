@@ -357,13 +357,20 @@ final class CounterpartyKeyBackfill
         ]);
     }
 
+    // Byte-for-byte what ClusterKeyComposer produces. The sweep keys the
+    // counterparty first, so its input is hex today and the ASCII form could
+    // not diverge -- but a non-ASCII name reaching either copy has to hash the
+    // same, or a series re-keys itself away from its own history.
     private static function clusterPart(string $value): string
     {
-        $hyphenated = (string) preg_replace('/[^a-z0-9]+/', '-', strtolower($value));
+        $lower = mb_strtolower($value, 'UTF-8');
+        $hyphenated = (string) preg_replace('/[^\p{L}\p{N}&]+/u', '-', $lower);
         $trimmed = trim($hyphenated, '-');
 
-        return strlen($trimmed) > self::CLUSTER_PART_MAX_LENGTH
-            ? rtrim(substr($trimmed, 0, self::CLUSTER_PART_MAX_LENGTH), '-')
-            : $trimmed;
+        if (mb_strlen($trimmed, 'UTF-8') > self::CLUSTER_PART_MAX_LENGTH) {
+            $trimmed = rtrim(mb_substr($trimmed, 0, self::CLUSTER_PART_MAX_LENGTH, 'UTF-8'), '-');
+        }
+
+        return $trimmed;
     }
 }

@@ -229,9 +229,23 @@ series is usually uncertain in its *date* too. Real charges land on
 the next business day, lag behind a bulk settlement, or drift when the
 funding source retries. `CadenceJitter` models that by replacing each
 contribution with `2 × jitterDays + 1` replicas on consecutive days,
-centred on the original date. `RangeProjector` passes
-`jitterDays = 3`, so the window is 7 days wide, spanning `D-3` to
-`D+3`.
+centred on the original date. The window half-width is
+`CadenceJitter::WINDOW_DAYS = 3`, so the window is 7 days wide,
+spanning `D-3` to `D+3`.
+
+`RangeProjector` does not smear anything itself. It marks a
+percentile-tier contribution `dateIsUncertain` and leaves it as one
+occurrence; `ProjectionPipeline` runs the jitter **last**, after the
+booked-row supersession, after the chain routing and after every
+scenario mutation. That ordering is load-bearing rather than tidy:
+every one of those stages *selects occurrences*, and a replica is one
+seventh of an occurrence rather than one of its own. With the smearing
+done first, `change_series_amount` rewrote all seven replicas to the
+full new amount and charged a variable bill seven times over, and a
+`shift_series_date` scoped to the next occurrence moved one seventh of
+it and left the other six where they were. `CadenceJitter` passes a
+contribution that is not marked through untouched, so an envelope-tier
+series and a scenario-added one reach the fold exactly as emitted.
 
 Each replica is the original scaled by an equal share:
 
@@ -271,14 +285,23 @@ rendering of date uncertainty — while narrowing the band's *height*.
 It is worth being precise about which of the two is meant when
 reasoning about a chart.
 
-**Boundary leakage.** `RangeProjector` only emits occurrences at or
-after `asOf`, and the fold only walks `asOf` through
-`asOf + horizonDays`. Jitter adds offsets outside both ends. An
-occurrence landing exactly on `asOf` produces three replicas dated
-before `asOf`, and the fold never visits them — roughly 3/7 of that
-occurrence's magnitude is silently dropped. The same happens in
-mirror image at the horizon end. This only affects percentile-tier
-series with an occurrence within three days of either boundary.
+**The boundary.** `RangeProjector` only emits occurrences at or after
+`asOf`, and the fold only walks `asOf` through `asOf + horizonDays`.
+Jitter's offsets reach outside both ends, so a replica of an occurrence
+within three days of either boundary would land in a bucket the fold
+never visits. `CadenceJitter` therefore takes the walk's own bounds and
+clamps each replica's date into them: a replica that would fall before
+`asOf` lands on `asOf`, one past the horizon end lands on the horizon
+end. The occurrence's magnitude is preserved to the rounding error
+above, and the boundary day carries the extra shares.
+
+Left unclamped, roughly 3/7 of an occurrence dated on `asOf` was
+silently dropped — on the one day the reader is looking at — and the
+same in mirror image at the horizon end. The clamp piles several
+replicas onto the boundary day, so their half-widths combine in
+quadrature there and the band is wider on that day than on the days
+inside the window. That is the honest reading: the charge is known to
+fall on or before the day the projection starts.
 
 ## Stage 2 — contributions become a daily balance curve
 
@@ -288,7 +311,18 @@ next card settlement, and — when a scenario is active —
 `ScenarioApplier` transforms the list in memory (see
 [Scenario isolation](scenario-isolation.md)). Neither changes the
 shape of a contribution's triple, so the arithmetic below is unchanged
-by them.
+by them. `CadenceJitter` runs after both, and it is the last thing to
+touch the list before the fold.
+
+`ProjectionPipeline` folds each account twice: once over the
+contributions as they stand, and once over the funder-collapsed list
+`ChainAwareForecastRouter::collapseByFunder` produces. The two curves
+are written under `points` and `points_by_funder` — the
+`ForecastPointSet` enum owns both keys — and the "View by funder"
+toggle on /forecast picks between them at read time. They share every
+point estimate, because a sum is a sum; only the band differs, since
+the collapse adds a bucket's bounds outright where the fold would have
+combined their half-widths in quadrature.
 
 `ProjectionPipeline` then buckets the routed contributions by
 `accountId` and hands each account's list to `DailyFold` together with
@@ -399,12 +433,24 @@ Window boundaries:
   recovered by day 90 is the most important one on the chart.
 
 Persistence is delete-then-insert inside a single transaction, scoped
-to `(user_id, account_id, scenario_id)`. Every projection run fully
-replaces that account's shortfall picture, so a dip that has since
-been forecast away leaves no stale row behind. `buffer_used_minor` is
-captured per row at detection time: editing the buffer later triggers
-a re-projection that writes new rows rather than rewriting the
-historical narrative of the old ones.
+to `(user_id, account_id, scenario_id, horizon_days)`. Every projection
+run fully replaces that account's shortfall picture *at its own
+horizon*, so a dip that has since been forecast away leaves no stale
+row behind. The horizon is part of the key because
+`ProjectForecastJob::HORIZON_DAYS` queues five runs per account and
+they complete in whatever order the worker takes them: without it each
+run deleted the other four's rows on its way in, and whichever finished
+last decided the shortfall band at every horizon. Every read filters on
+the same column. `buffer_used_minor` is captured per row at detection
+time: editing the buffer later triggers a re-projection that writes new
+rows rather than rewriting the historical narrative of the old ones.
+
+**A scenario run writes its windows and raises no event.** The rows are
+the scenario's own output, keyed by its `scenario_id` and read only by
+the scenario's own chart. `ForecastShortfallDetected` is not dispatched
+for them: the event reaches `Notifications`, and a notification is a row
+written on a scenario's behalf in a table no scenario read ever filters
+— see [Scenario isolation](scenario-isolation.md).
 
 ## Constants and shapes in one place
 
@@ -414,7 +460,7 @@ historical narrative of the old ones.
 | `30` | `ForecastHighlightsQuery::HORIZON_DAYS` | The dashboard tile and sidebar badge read the 30-day run only |
 | `40` | `RangeProjector::HIGH_VARIANCE_THRESHOLD_PERCENT` | Minimum declared tolerance to consider the percentile tier |
 | `6` | `RangeProjector::MIN_OCCURRENCES_FOR_PERCENTILE` | Minimum observed occurrences to actually use it |
-| `3` | `RangeProjector::JITTER_WINDOW_DAYS` | Half-width in days; the replica window is 7 days |
+| `3` | `CadenceJitter::WINDOW_DAYS` | Half-width in days; the replica window is 7 days |
 | `0.95` / `1.05` | `ScenarioApplier::ONE_OFF_ENVELOPE_*_MULTIPLIER` | The fixed ±5% band for scenario-added amounts, which have no tolerance field |
 | `horizonDays + 1` | `DailyFold` | Points emitted per account per run |
 

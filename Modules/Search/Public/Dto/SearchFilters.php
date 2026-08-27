@@ -20,6 +20,7 @@ final readonly class SearchFilters
      * @param  ?string  $before  ISO date string (Y-m-d) — include transactions on or before this date.
      * @param  ?string  $amountMin  Minimum absolute amount as decimal string (e.g. "10.00").
      * @param  ?string  $amountMax  Maximum absolute amount as decimal string (e.g. "500.00").
+     * @param  list<string>  $types  transactions.type values to restrict to (empty = all).
      */
     public function __construct(
         public array $accounts = [],
@@ -30,6 +31,7 @@ final readonly class SearchFilters
         public ?string $amountMin = null,
         public ?string $amountMax = null,
         public string $amountDirection = AmountDirection::Both->value,
+        public array $types = [],
     ) {}
 
     public static function empty(): self
@@ -46,6 +48,7 @@ final readonly class SearchFilters
             || $this->before !== null
             || $this->amountMin !== null
             || $this->amountMax !== null
-            || $this->amountDirection !== AmountDirection::Both->value;
+            || $this->amountDirection !== AmountDirection::Both->value
+            || $this->types !== [];
     }
 }

@@ -47,8 +47,16 @@ first that matches:
    (the PayPal Activity Download) for `General Withdrawal` /
    `Bankstorting` / `Transfer to bank` events whose memo cells carry an
    IBAN matching one of the user's accounts. When an equal-and-opposite
-   `transfer_in` exists on that account within ±`DATE_WINDOW_DAYS` (3),
-   writes a confirmed chain_link with confidence 1.000. That last query
+   `transfer_in` in the same currency exists on that account within
+   ±`DATE_WINDOW_DAYS` (3), writes a chain_link: confirmed at 1.000 when
+   that row is the only such row in the window, candidate at 0.900 when
+   it is not. The export names the destination ACCOUNT and nothing about
+   the row on it, so a second incoming row of the same size is a second
+   answer to the same question and belongs in the review queue — a
+   webshop refund once took the real funder's place, confirmed, where
+   nobody could disagree with it. The currency predicate matters for the
+   same reason: both sides are compared as native `amount_minor`, so
+   without it USD 50.00 answered EUR 50.00. That last query
    is not this module's: it is
    `Modules\Transfers\Public\Services\PairLookup::counterLegOnAccount`,
    which owns the transfer counter-leg search for this arm and for
@@ -76,7 +84,15 @@ first that matches:
 3. **Fuzzy arm.** When both above miss, scores candidate `transfer_in`
    rows by a weighted blend of Levenshtein-normalized merchant
    similarity (0.5) + amount-band similarity (0.3) + date-window
-   similarity (0.2). The best score at or above 0.6 surfaces as a
+   similarity (0.2). The merchant term must clear 0.6 on its own before
+   the blend is taken: an exact amount on the day is already 0.5 of the
+   0.6 bar, so without a floor of its own the merchant term decided
+   nothing and "Netflix International BV" scored 0.625 against
+   "Nationale Nederlanden". It carries the ASN arm's already-claimed
+   exclusion too, so two PayPal expenses cannot both name one funding
+   leg. The date bounds are DATE strings, matching the DATE column they
+   compare against — datetime bounds cut the window to [-2, +3] days.
+   The best score at or above 0.6 surfaces as a
    candidate with confidence in `[0.6, 0.99]` — the ceiling is
    deliberately below 1.0 so the deterministic arm stays the only path
    to a round-confidence link. The similarity term reads the **decrypted
@@ -89,9 +105,18 @@ Every arm computes the same `evidence.signature_hash` —
 `sha256(counterparty_normalized|funding-account IBAN)`, over the value the
 column stores rather than the readable name the fuzzy arm scores — so
 `ConfirmChainLink`'s auto-promotion learning loop has one key to count
-confirmations over regardless of which arm produced the match.
+confirmations over regardless of which arm produced the match. A funding
+account with no IBAN answers to `account=<id>` instead, because the empty
+key names nothing; every arm also writes the key it used to
+`evidence.matched_iban`, which is where `CounterpartyKeyBackfill`'s
+re-signing sweep looks for it first.
+
 Duplicate writes are blocked by `ChainLinkInsertHelper`'s pre-insert
-guard, which also keeps a user-rejected pair rejected across re-runs.
+guard, which is also what keeps a user-rejected PAIR rejected across
+re-runs. The candidate query deliberately leaves a row whose only link
+was rejected in the iteration: the funder the reader turned that one
+down for may import a week later, and filtering the row out meant it was
+never looked at again.
 
 ### ICS bulk-iDEAL settlement chains
 
@@ -100,20 +125,12 @@ ASN — one EUR debit on ASN per ICS statement, covering every credit-card
 transaction that month. The user's view becomes "one big debit on ASN +
 many merchant lines on ICS" without anything linking them.
 
-The chain has one arm here:
-
-- The ICS statement-summary row (loaded from the PDF parser in Phase 3)
-  carries the bulk-iDEAL amount and the settlement date. The ASN side
-  has a matching debit with the description marker that identifies it
-  as the ICS settlement (`ICS Cards`, `ICS KLANTENSERVICE`, etc).
-- The resolver matches the two on amount + date proximity, then
-  decomposes the ICS settlement into its constituent ICS lines via the
-  `card_statement_credits` table (the per-line mapping that the PDF
-  parser produces).
-
-The result is one `chain_links` row with kind `ics_settlement` linking
-the ASN side to the ICS statement; each ICS line carries
-`pair_transaction_id` pointing back to the ASN settlement.
+The chain has one arm here, spelled out in full below: the resolver
+walks the ASN-side `transfer_out` rows, finds the `card_statements` row
+they settle, and writes one `chain_links` row of kind `ics_bulk_settle`
+per covered ICS expense — `from` is the one ASN payment, `to` is each
+charge. `card_statement_credits` is the carry-forward ledger between
+statements, not a per-line mapping.
 
 ### IcsSettlementResolver — the decomposition algorithm
 
@@ -139,17 +156,22 @@ resolves to an `ics_card`-kind Account A:
    carry a confirmed `ics_bulk_settle` chain_link.
 3. Subtract any prior credit already carried into S from
    `card_statement_credits`.
-4. Compute the unaccounted delta: `-sum(expenses) - prior_credits -
+4. Compute the unaccounted delta: `sum(expenses) + prior_credits +
    T.settled_magnitude` (expenses and the statement total are negative
    settled amounts; the transfer's magnitude is taken because it's
-   negative on the ASN side). Positive delta = user overpaid; negative
-   = underpaid.
+   negative on the ASN side, so this reads as paid + credits − owed).
+   Positive delta = user overpaid; negative = underpaid. Only credits
+   denominated in the statement's own currency are summed.
 5. If `|delta|` is within tolerance (max of ±€5 absolute or ±2% of the
    statement total, from `SettlementTolerance` — the forecast's booked-row
-   dedup reads the same figures) — write one confirmed `chain_links` row per
-   expense and call `CardStatementStateMachine::applySettlement()`. If
-   the resulting state is `overpaid`, emit a `card_statement_credits`
-   row with `reason = 'overpayment'`.
+   dedup reads the same figures) **and at least one expense is covered** —
+   write one confirmed `chain_links` row per expense and call
+   `CardStatementStateMachine::applySettlement()`. If the resulting state
+   is `overpaid`, emit a `card_statement_credits` row with
+   `reason = 'overpayment'`. Covering no expense writes nothing at all:
+   the candidate query excludes only a transfer that carries a confirmed
+   link, so applying the settlement without one would re-apply it on
+   every later pass.
 6. Else — write one **candidate** chain_link with `to_transaction_id`
    NULL and `evidence.tolerance_used = 'exceeded'` for the review
    queue; confidence is banded between 0.6 and 0.99, higher when the

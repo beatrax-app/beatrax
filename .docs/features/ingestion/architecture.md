@@ -2,7 +2,8 @@
 
 The `Ingestion` module owns every source-format adapter: the
 CAMT.053 / MT940 / CSV parsers for ASN, the PDF parser for ICS, the
-CSV parser for PayPal. Each adapter turns its source format into a
+CSV parser for PayPal, and the preset-driven generic CSV importer that
+covers every other bank. Each adapter turns its source format into a
 stream of typed `SourceTransactionDto` instances ready for the
 `ImportPipeline`'s `NormalizeStage`. The module also exposes the
 `HeaderSniffer` the upload wizard calls to validate a file's shape
@@ -11,15 +12,15 @@ format identifiers to adapters.
 
 ## What this module is for
 
-The project pulls financial data from four sources and the user
-chooses which file goes through which adapter — there is no
+The user chooses which file goes through which adapter — there is no
 content-sniffing fallback. The user-facing source-format picker on
 the upload wizard is the contract; this module is the implementation.
 Each adapter is responsible for the parsing-and-normalisation
 boundary: it transforms the source's idiosyncratic shape (CAMT.053
 ISO-20020 XML; MT940 `:61:` / `:86:` SWIFT tags; PayPal CSV with
 language profiles + transaction rollup; ICS PDF with positional text
-extraction) into a uniform DTO stream.
+extraction; a bank preset's own column names and decimal comma) into a
+uniform DTO stream.
 
 What the module explicitly does NOT do:
 
@@ -38,31 +39,44 @@ What the module explicitly does NOT do:
 `Public/` exposes the cross-module surface:
 
 - **Contracts/**
-  - `SourceAdapter::parse(SplFileInfo $file): iterable<SourceTransactionDto>`
+  - `SourceAdapter::parse(string $localPath, AccountResolver $accounts): iterable<SourceTransactionDto>`
     — the single adapter contract. Every per-source adapter
-    implements it.
-  - `AccountResolver::resolve(string $iban, User $user): AccountResolution`
-    — abstract; the concrete resolver lives in
-    [`Ledger`](../ledger/architecture.md) and is injected
-    where ingestion code needs account routing.
-- **DTOs/**
+    implements it, alongside `format()` and `statementMetadata()`.
+  - `AccountResolver::resolve(string $iban): AccountResolution`
+    — abstract; the concrete `EloquentAccountResolver` lives in
+    [`Import`](../import/architecture.md) and is injected where
+    ingestion code needs account routing. It is constructed per import
+    run with the user already bound, which is why the method takes
+    only the IBAN.
+  - `NamesAFormatMismatch` — the marker every "this file is not the
+    format you declared" exception carries, so `Import` can tell that
+    class of failure apart without naming an `Internal/` exception.
+- **Dto/**
   - `SourceTransactionDto` — the close-to-source shape.
-  - `SniffResult`, `KnownAccount`, `UnknownAccount`,
+  - `SniffResult`, `CsvPreset`, `KnownAccount`, `UnknownAccount`,
     `AccountResolution`.
+- **Enums/** — `SourceFormat`, the built-in format ids. CSV presets
+  add further ids at runtime, so a value absent from the enum is a
+  preset rather than an error.
 - **Services/**
-  - `HeaderSniffer::sniff(SplFileInfo $file): SniffResult` —
-    pre-parse validation (header shape + character set + first-row
-    sanity).
+  - `HeaderSniffer::sniff(string $localPath, string $declaredFormat): SniffResult`
+    — pre-parse validation of the file against the format the user
+    declared.
   - `SourceAdapterRegistry::for(string $formatId): SourceAdapter`
-    — maps `'asn-csv'`, `'asn-camt053'`, `'asn-mt940'`,
-    `'ics-pdf'`, `'paypal-csv'` to the adapter instance.
-- **Exceptions/** — typed exceptions for every documented failure
-  mode (`InvalidAmountException`, `InvalidDateException`,
-  `MissingPaypalTransactionTypeMapException`,
+    — maps `'asn-csv'`, `'camt053'`, `'mt940'`, `'ics-pdf'`,
+    `'paypal-csv'` plus every `CsvPresetRegistry` id to the adapter
+    instance. `'eml'` / `'mbox'` are deliberately absent: they are the
+    receipt arm's, not the registry's.
+  - `CsvPresetRegistry` — the bank/fintech presets `GenericCsvAdapter`
+    is instantiated per.
+- **Exceptions/** — `MissingPaypalTransactionTypeMapException`,
   `UnknownPaypalEventTypeException`, `UnsupportedFormatException`,
+  `PdfReaderUnavailableException`. The rest stayed `Internal/` —
+  `InvalidAmountException`, `InvalidDateException`,
   `SniffMismatchException`, `PdfExtractionFailed`,
   `UnsupportedPaypalCsvLanguageException`,
-  `UnsupportedPaypalCsvShapeException`).
+  `UnsupportedPaypalCsvShapeException` — because `Import` reaches them
+  through the `NamesAFormatMismatch` marker, never by class name.
 - **Paypal/** — `PaypalCsvEventTypeMap` (the canonical
   PayPal-event-name → PaymentType mapping table).
 
@@ -87,15 +101,17 @@ What the module explicitly does NOT do:
 
 ## Key services + events
 
-- `HeaderSniffer::sniff($file)` — opens the file, reads the
-  first few hundred bytes, returns a `SniffResult` describing
-  the detected character set, header signature, and any
-  mismatch flags. The upload wizard surfaces a friendly error
-  before reaching the adapter.
+- `HeaderSniffer::sniff($localPath, $declaredFormat)` — opens
+  the file, reads the first 8 KB, and either throws or returns
+  a `SniffResult` naming the format and how to read it
+  (delimiter, has-header, encoding, column count). It is not
+  advisory: a mismatch is an exception, and every adapter calls
+  it again itself on the first line of `parse()`, so a caller
+  that skipped the wizard is refused just the same.
 - `SourceAdapterRegistry::for($formatId)` — keyed lookup;
   unknown id raises `UnsupportedFormatException`.
-- `SourceAdapter::parse($file)` — each concrete adapter is
-  stream-based (yields DTOs); memory-efficient against
+- `SourceAdapter::parse($localPath, $accounts)` — each concrete
+  adapter is stream-based (yields DTOs); memory-efficient against
   multi-megabyte CAMT XML or thousand-row PayPal CSV.
 - `PaypalCsvEventTypeMap` — the canonical Public mapping
   table. Adding a new PayPal event type is a single edit in
@@ -110,18 +126,24 @@ The pre-parse sniff:
 
 ```
 UploadWizard
-  → HeaderSniffer::sniff($file)
-       → read first chunk
-       → return SniffResult(charset, headerSignature, mismatchFlags)
-  → wizard validates against declared format
-  → on mismatch: friendly error, don't run the adapter
+  → HeaderSniffer::sniff($localPath, $declaredFormat)
+       → read first 8 KB, strip a UTF-8 BOM
+       → per-format arm: extension + signature + header row
+       → return SniffResult(format, delimiter, hasHeader,
+                            encoding, columnCount)
+  → on mismatch: throws; the wizard renders the message,
+                 and the adapter never runs
 ```
 
 The parse phase. `ParseStage` is not a member of `ImportPipeline` — it is an
 Import-owned collaborator the pipeline takes in its constructor, entered at
 `ParseStage::run()`, and it is where this module's adapters are reached. It
 has two arms: `eml` / `mbox` go to the receipt adapter, and every other
-format is looked up in the registry.
+format is looked up in the registry. A row off the receipt arm keeps
+`eml` / `mbox` as its `source_format` all the way into `transactions` —
+the matcher key (`paypal-receipt`, `ics-receipt`, …) rides in
+`raw_payload` and is never promoted to the column, which is what
+[`Import`](../import/architecture.md)'s receipt gate has to match on.
 
 ```
 ImportPipeline::preview
@@ -344,10 +366,15 @@ resolve. `GenericCsvAmountParser` handles the cross-bank zoo of amount
 spellings: `-1.234,56` (comma decimal, dot thousands), `1,234.56` (dot
 decimal, comma thousands), `1234.56`, `-12,34`, a leading `+`,
 parenthesised negatives `(12,34)`, and stray currency symbols /
-non-breaking spaces — always assuming a two-decimal minor unit. Internal
-whitespace inside the amount is rejected (never trimmed away) since
-those shapes never appear in a real export and accepting them would
-silently merge accidentally-concatenated cells.
+non-breaking spaces — always assuming a two-decimal minor unit. Spaces
+and non-breaking spaces are removed wherever they sit in the cell, not
+only at the ends, because a plain space is the thousands separator in
+several EU exports (`1 234,50`); `GenericCsvAmountParserTest` pins the
+non-breaking-space form. What survives that has to be digits around at
+most one decimal separator, so a cell that is not an amount still raises
+`InvalidAmountException`. The cost of the rule is real and accepted: a
+`12 34` produced by two cells running together parses as `1234.00`
+rather than failing loudly.
 
 Native vs settled, and the fee that pays for the distinction: Revolut's
 export ships a `Fee` column, and the two amounts it implies are different
@@ -379,7 +406,13 @@ untouched.
 Validates a local file matches its declared source format *before* any
 adapter starts parsing: the first 8 KB of bytes, the file extension,
 the CSV header row, and (for the XML formats) the document namespace
-URI. A leading UTF-8 byte-order mark is stripped before parsing so
+URI. It also holds the two receipt arms — `eml` against an
+`EmlHeaderProfile` RFC 822 header signature, `mbox` against the
+`From ` line the archive opens with — even though neither format
+reaches an adapter in this module. The sniff is the wizard's one
+validation seam, and moving those two out would give the receipt
+transports a different failure message for the same kind of mistake.
+A leading UTF-8 byte-order mark is stripped before parsing so
 files exported through tools that prepend one (Excel, some browser
 downloads) sniff cleanly. The PayPal CSV sniff additionally rejects the
 Saldorapport (Balance Reconciliation Report) export before the

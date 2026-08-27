@@ -23,14 +23,33 @@ Modules/Chains/
 │   │   ├── StatementSettlement.php
 │   │   ├── NextSettlementDto.php
 │   │   └── SeriesFunderLink.php
-│   ├── Exceptions/
-│   │   └── ChainLinkRequiresConcretePartnerException.php
+│   ├── Enums/
+│   │   ├── CardStatementCreditReason.php
+│   │   ├── CardStatementState.php
+│   │   ├── ChainLinkKind.php
+│   │   ├── ChainLinkState.php
+│   │   ├── ConfidenceTier.php
+│   │   └── SettlementToleranceUsed.php
+│   ├── Support/
+│   │   └── SettlementTolerance.php
+│   ├── Http/Livewire/
+│   │   └── ChainDrawer.php
 │   └── Services/
 │       ├── ChainLinkQuery.php
 │       └── CardStatementQuery.php
 ├── Internal/
 │   ├── CardStatementStateMachine.php
 │   ├── ChainLinkInsertHelper.php
+│   ├── ChainTreeWalker.php
+│   ├── Exceptions/
+│   │   ├── CardStatementNotFoundException.php
+│   │   ├── ChainLinkNotDismissableException.php
+│   │   ├── ChainLinkRequiresConcretePartnerException.php
+│   │   └── EvidenceEncodingFailedException.php
+│   ├── Presentation/
+│   │   ├── HintEvidenceSummary.php
+│   │   ├── SettlementGroup.php
+│   │   └── SettlementLeg.php
 │   ├── Resolvers/
 │   │   ├── IcsSettlementResolver.php
 │   │   ├── PaypalFundingResolver.php
@@ -45,8 +64,7 @@ Modules/Chains/
 │   └── Http/Livewire/
 │       ├── ChainsIndex.php
 │       ├── ChainReviewQueue.php
-│       ├── ChainHintsQueue.php
-│       └── ChainDrawer.php
+│       └── ChainHintsQueue.php
 ├── Models/
 │   ├── ChainLink.php
 │   ├── CardStatement.php
@@ -58,7 +76,9 @@ Modules/Chains/
 │       └── Demo/DemoChainsSeeder.php
 ├── Routes/
 │   └── web.php
-├── Resources/views/
+├── Resources/
+│   ├── lang/          (26 locales × index/review/drawer/hints)
+│   └── views/livewire/
 ├── Providers/
 │   └── ChainsServiceProvider.php
 └── tests/
@@ -180,7 +200,7 @@ Modules/Chains/
 - `Models/CardStatementCredit` — maps to `card_statement_credits`. The
   per-credit detail attached to a statement.
 - `Models/ChainResolutionRun` — maps to `chain_resolution_runs`. The
-  audit row the dispatcher inserts and the job + `JobFailed` listener
+  audit row `ConfirmImport` reserves and the job + `JobFailed` listener
   mutate through the `pending → running → complete / failed`
   lifecycle.
 

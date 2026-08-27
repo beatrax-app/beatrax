@@ -739,6 +739,20 @@ Caller scoping by `user_id` is enforced inside the UPDATE itself, so a
 forged `PendingEnrichment` referencing another user's transaction id
 resolves zero rows and is silently dropped.
 
+**What counts as a receipt format** is decided in one place,
+`SourceRefRanker::isReceiptFormat()`, and both the `FingerprintStage`
+gate that produces an ENRICHED disposition and the conflict branch below
+read it. The answer has to include the **transports** `eml` and `mbox`,
+because that is the `source_format` a receipt row is stored under: the
+wizard's receipt arm and `Receipts`' inbox job both normalise under the
+transport id and leave the matcher key in `raw_payload`. Listing only the
+per-matcher ids (`paypal-receipt`, `ics-receipt`, `google-play-receipt`)
+made the gate unreachable for every receipt an install can actually
+produce — receipt-vs-statement collisions all dropped as DUPLICATE while
+the unit tests, which hand-built a `paypal-receipt` row nothing writes,
+stayed green. The per-matcher ids stay listed for a caller that already
+knows which matcher spoke.
+
 **Receipt-conflict branch** (only when `conflictingFields` is non-empty
 AND the source format is a receipt format): the user's
 `receipt_conflict_resolution` policy decides the outcome —
@@ -754,11 +768,15 @@ AND the source format is a receipt format): the user's
 Two encryption guarantees hold regardless of policy: `FingerprintStage`
 decrypts the stored value before ever populating `conflictingFields`, so
 `stored_value`/`csvValue` are always plaintext (never ciphertext)
-wherever they are persisted or dispatched; and `extractIncomingValues()`
-runs the fresh incoming values through `SensitiveColumnCodec::encryptAttrs()`
-before they reach the `transactions` UPDATE, so a `prefer_receipt`
-resolution never re-introduces plaintext into an at-rest-encrypted
-column (a documented no-op pass-through for a non-encrypted user).
+wherever they are persisted or dispatched; and the fresh incoming values
+travel as plaintext only as far as `writeEnrichment()`, which puts them
+through `SensitiveColumnCodec::encryptAttrs()` before they reach the
+`transactions` UPDATE — so a `prefer_receipt` resolution never
+re-introduces plaintext into an at-rest-encrypted column (a documented
+no-op pass-through for a non-encrypted user). The plaintext leg is not
+an oversight: `rederivedFingerprint()` has to read the counterparty name
+in the clear to re-key it, and AEAD ciphertext differs on every write of
+the same value.
 `ALLOWED_CONFLICT_FIELDS` whitelists the four column names that may flow
 through as literal SQL column names, so a poisoned preview cache can
 never turn an arbitrary array key into an UPDATE column.

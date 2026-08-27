@@ -167,8 +167,8 @@ whole history, every field of a create, and the row's tombstone beside them, so 
 sees exactly what a full replay would give it.
 
 Nothing else the rebuild does is needed. The delete exists to drop rows whose creating ops were
-pruned, and skipping it is what makes this non-destructive; `insertOrIgnore` plus per-field
-updates converge on their own. Triggers stay up, because they are up for the incremental drain
+pruned, and skipping it is what makes this non-destructive; an insert whose duplicate-key
+failure is swallowed, plus per-field updates, converge on their own. Triggers stay up, because they are up for the incremental drain
 too. In fact the narrowed replay **is** the incremental drain — `OpLogReplayer::replay()`, built
 the way `SyncWebSocketHandler` builds it, with the confirmed-device key map read for this user
 explicitly rather than from the container's idea of who is signed in — reading its entries from

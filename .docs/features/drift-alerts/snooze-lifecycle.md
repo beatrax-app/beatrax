@@ -21,8 +21,8 @@ durable and one fresh.
 
 **The read path** is `DriftAlertQuery::applyOpenStateFilter()`. Every
 open-tab projection — `openForUser()`, `openCountForUser()`,
-`totalOpenAnnualizedImpactForUser()`, `groupedBySeriesForUser()` —
-applies the same compound predicate:
+`openAnnualizedImpactByCurrencyForUser()`, `openSeriesIdsForUser()`,
+`groupedBySeriesForUser()` — applies the same compound predicate:
 
 ```
 state = 'open'
