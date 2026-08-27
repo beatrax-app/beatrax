@@ -112,7 +112,24 @@ it('backs the Android container route with a patch that registers Share.File', f
         // IllegalArgumentException on the device and produced no share sheet.
         ->toContain('context.cacheDir')
         ->toContain('beatrax-share')
-        ->not->toContain('files-path name=');
+        // The sheet's own preview runs in the resolver's process, which
+        // Context.startActivity never grants -- only an Activity migrates the
+        // extra to ClipData on the caller's behalf. Without this the chooser
+        // logs a permission denial and draws a generic tile.
+        ->toContain('ClipData.newUri');
+
+    // nativephp/ is generated and this script only ever appends to it, so a
+    // root an earlier version added outlives the version that added it. The
+    // literal may appear only as the thing being taken back out.
+    expect(substr_count($source, 'files-path name='))->toBe(1)
+        ->and($source)->toContain("\$staleRoot = '<files-path name=\"beatrax-internal\" path=\".\" />';")
+        ->and($source)->toMatch('/preg_replace\(.*\$staleRoot.*\$paths\)/');
+
+    $generatedPaths = base_path('mobile-app/nativephp/android/app/src/main/res/xml/file_paths.xml');
+
+    if (is_file($generatedPaths)) {
+        expect((string) file_get_contents($generatedPaths))->not->toContain('files-path');
+    }
 
     $perBuild = (new ReflectionClass(NativeBuildPatches::class))
         ->getReflectionConstant('SCRIPTS')

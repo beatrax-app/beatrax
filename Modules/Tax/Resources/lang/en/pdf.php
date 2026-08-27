@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'title' => 'Tax Export :year',
+    'title' => 'Tax export :year',
 
     'year_label' => 'Year:',
     'total_items_label' => 'Total items:',

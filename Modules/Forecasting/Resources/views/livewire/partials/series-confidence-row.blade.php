@@ -9,6 +9,7 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
+@use('Modules\Core\Public\Support\Fmt')
 @use('Modules\Core\Public\Support\Lang')
 @php
     $tint = match ($confidence->confidence) {
@@ -30,6 +31,6 @@
     <span
         role="img"
         class="rounded-full px-2 py-0.5 text-xs font-medium {{ $tint }}"
-        aria-label="{{ Lang::get('forecasting::forecast.confidence_chip_aria', ['name' => $confidence->seriesName, 'confidence' => $confidence->confidence, 'percent' => $rangeWidthPercent]) }}"
+        aria-label="{{ Lang::get('forecasting::forecast.confidence_chip_aria', ['name' => $confidence->seriesName, 'confidence' => $confidence->confidence, 'percent' => Fmt::number($rangeWidthPercent)]) }}"
     >{{ $confidence->confidence }}</span>
 </li>

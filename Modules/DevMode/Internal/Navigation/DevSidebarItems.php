@@ -29,7 +29,7 @@ final class DevSidebarItems
         ['slug' => 'system',   'label' => 'System',   'icon' => '◇',  'route' => 'dev.system', 'enabled' => true],
         // Registered by the Sync module, so a build shipped without Sync
         // degrades to nav-disabled at render time.
-        ['slug' => 'sync-health', 'label' => 'Sync Health', 'icon' => '⇄', 'route' => 'dev.sync-health', 'enabled' => true],
+        ['slug' => 'sync-health', 'label' => 'Sync health', 'icon' => '⇄', 'route' => 'dev.sync-health', 'enabled' => true],
     ];
 
     /**

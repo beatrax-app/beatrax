@@ -1640,6 +1640,76 @@ prefers the space. The two are complementary and both load-bearing: measured on
 device, removing `balance` brings back the needless hyphen, and removing
 `hyphens` brings back a 16px orphan "n" on the word that has no space in it.
 
+## A translation that is present is not a translation
+
+Parity checks answer whether a key exists and carries a non-empty string. Both
+of the Dutch defects this round passed it. `/community` headed the shared list
+"Gedeelde merchantlijst" and asked the reader to "Help merchants herkennen",
+while Anomaly, Counterparties and Core settings had all settled on "winkelier"
+— Core settings headed the same list "Gedeelde winkelierslijst". The sidebar
+labelled the nav item "Imports" three lines above a label reading "Importeren
+uit YNAB / Actual", and its own badge said ":count import|:count imports" beside
+":count abonnement|:count abonnementen".
+
+What made them provable rather than a matter of taste was comparison, in two
+directions. Across locales: all twenty-five others translate "merchant", and
+twenty-three of twenty-five give "imports" a native plural. Within the locale:
+the same Dutch file already had the word.
+`ALocaleKeepsItsOwnWordForATermArchTest` pins the terms a locale has settled on,
+because that is the half a cross-locale count cannot express.
+
+The same count has to be allowed to say no. `Internet & Phone` looked like the
+one title-cased category name until `Rent / Mortgage` and `Cloud / Software`
+showed it was two against one, and `DefaultCategoryNamesStayInSyncTest` added
+the reason not to reword it anyway: a seeded name is on disk in every install,
+so changing the wording costs a migration. That one was put back.
+
+The aggregate is worth keeping in mind before reaching for the same instrument
+again: measured over all 3505 translated strings, the rate of English-identical
+values runs 0.5% (bg) to 4.2% (fr), tracking script and loanword overlap. There
+is no lazy locale to find, so identity alone is a review lead, not a rule.
+
+## A number stops being a number when it leaves the formatter
+
+`Fmt::number` exists so a count picks up the locale's grouping, and three
+surfaces reached the reader without passing through it.
+
+`Lang::choice` handed the count to Laravel, which fills `:count` with the raw
+integer it selected the plural form from, so a finished import read "1200
+transacties geimporteerd" on a screen whose money read "5.701,66". Filling it at
+the seam fixes all ninety-seven call sites at once; the selection still runs on
+the integer, so grouping marks cannot reach it.
+
+The nav badge and the log tailer shortened large counts with `round($n / 1000,
+1)` and `toFixed(1)`. Neither is a rounding bug — both are correct, and both
+then cast the float with a dot, which is the character Dutch groups thousands
+with. "1.2k" arrives as twelve hundred thousand. The onboarding chip sized a
+file with bare `number_format`, which put an English comma in "1,023 KB".
+
+`ANumberAReaderSeesCarriesTheirOwnMarksArchTest` draws the line at arity:
+`number_format($v, 4, '.', '')` names both marks and is a deliberate machine
+string — a cursor, a rate, an attribute — while the call that leans on the
+defaults is the one that ends up on screen in the wrong language.
+
+## A page that sizes its own title becomes a lesser page
+
+Thirty-three pages take the h1 from the type scale at `text-2xl`. Six set it in
+a style attribute instead, and two of those chose `--text-xl`: on the phone,
+`/reports` and `/counterparties` wore a heading visibly smaller than every page
+either side of them. Nothing was broken and no test could fail — the pages were
+simply not part of the decision the other thirty-three were making.
+
+The English copy drifted the same way and for the same reason. A hundred and
+forty-five headings are written as sentences; six were written as titles, two of
+them on one screen, where "Data & Devices" sat above "App lock". Only the source
+language can drift like this, because every other locale capitalises by its own
+rules rather than by copying.
+
+The nav labels are in the same rule and not by symmetry: `DriftPageTest` already
+required `/drift`'s title and its sidebar item to be the same string, so a rule
+covering the title and not the label would let the pair drift apart while both
+halves of the product still passed.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

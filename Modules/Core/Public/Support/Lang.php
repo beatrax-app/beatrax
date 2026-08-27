@@ -50,15 +50,17 @@ final class Lang
         return $map;
     }
 
-    // Picks the plural form for $number from a `singular|plural` line,
-    // applying the active locale's pluralisation rule. :count is filled with
-    // $number automatically; the manual `$n === 1 ? a : b` at the view goes
-    // away, and a locale with richer plural rules than en/nl still resolves.
+    // Picks the plural form for $number, applying the active locale's rule. The
+    // count is filled here because the translator fills it with the raw integer:
+    // an import of 1200 rows read "1200 transacties" to a reader whose money on
+    // the next card read "5.701,66". Selection still runs on $number.
     /**
      * @param  array<string, string|int|float>  $replace
      */
     public static function choice(string $key, int $number, array $replace = []): string
     {
+        $replace['count'] = Fmt::number($number);
+
         return Container::getInstance()->make(Translator::class)->choice($key, $number, $replace);
     }
 }

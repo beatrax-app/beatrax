@@ -88,7 +88,7 @@
 
 <div class="space-y-8" style="padding: var(--space-6) var(--space-4); max-width: 1280px; margin: 0 auto;">
     <header class="space-y-2">
-        <h1 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0;">{{ Lang::get('reports::builder.title') }}</h1>
+        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">{{ Lang::get('reports::builder.title') }}</h1>
         <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">{{ Lang::get('reports::builder.subtitle') }}</p>
     </header>
 

@@ -21,6 +21,8 @@ final class Fmt
 {
     private const FALLBACK_DATE_PATTERN = 'DD-MM-YYYY';
 
+    private const COMPACT_FROM = 1000;
+
     public static function number(int|float $value, int $decimals = 0): string
     {
         $locale = Container::getInstance()->make(Translator::class)->getLocale();
@@ -78,6 +80,21 @@ final class Fmt
         // Both tokens are two characters, so swapping them in place keeps the
         // locale's own separators.
         return substr_replace(substr_replace($pattern, 'DD', $month, 2), 'MM', $day, 2);
+    }
+
+    // A badge count shortened so four digits cannot stretch the nav rail. The
+    // tenth carries the locale's decimal mark: "1.2k" is one point two thousand
+    // to an English reader and twelve hundred thousand to a Dutch one, whose
+    // own mark for a tenth is the comma the money beside it already uses.
+    public static function compactCount(int $value): string
+    {
+        if ($value < self::COMPACT_FROM) {
+            return self::number($value);
+        }
+
+        $thousands = round($value / self::COMPACT_FROM, 1);
+
+        return self::number($thousands, $thousands === floor($thousands) ? 0 : 1).'k';
     }
 
     // Every short date on screen, so the lists, the search results and the

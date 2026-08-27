@@ -586,28 +586,39 @@
                         }
                     },
 
-                    // Compact count renderer for severity chips — keeps the
-                    // chip narrow when counts grow into the thousands
-                    // ("1.2k", "5.4M") rather than expanding the row.
-                    formatCount(n) {
-                        if (typeof n !== 'number' || !isFinite(n) || n < 0) { return '0'; }
-                        if (n < 1000) { return String(n); }
-                        if (n < 1000000) { return (n / 1000).toFixed(n < 10000 ? 1 : 0) + 'k'; }
-                        return (n / 1000000).toFixed(1) + 'M';
+                    // The marks belong to the reader, not to JS: toFixed always
+                    // writes a dot, and a dot is what Dutch groups thousands
+                    // with, so "1.2k" arrived as twelve hundred thousand. This
+                    // is the mirror of Fmt::number on the server.
+                    localised(value, decimals) {
+                        return new Intl.NumberFormat(document.documentElement.lang || 'en', {
+                            minimumFractionDigits: decimals,
+                            maximumFractionDigits: decimals,
+                        }).format(value);
                     },
 
-                    // Mirrors the server-side LogTailerPage::humanBytes() so
-                    // the truncate toast wording and the totals-strip render
-                    // use the same units.
+                    // Compact count renderer for severity chips — keeps the
+                    // chip narrow when counts grow into the thousands
+                    // ("1,2k", "5,4M") rather than expanding the row.
+                    formatCount(n) {
+                        if (typeof n !== 'number' || !isFinite(n) || n < 0) { return '0'; }
+                        if (n < 1000) { return this.localised(n, 0); }
+                        if (n < 1000000) { return this.localised(n / 1000, n < 10000 ? 1 : 0) + 'k'; }
+                        return this.localised(n / 1000000, 1) + 'M';
+                    },
+
+                    // Mirrors the server-side ByteSize::human() so the truncate
+                    // toast wording and the totals-strip render use the same
+                    // units and the same marks.
                     humanBytes(bytes) {
                         const BYTES_PER_UNIT = 1024;
                         if (typeof bytes !== 'number' || !isFinite(bytes) || bytes <= 0) { return '0 B'; }
-                        if (bytes < BYTES_PER_UNIT) { return bytes + ' B'; }
+                        if (bytes < BYTES_PER_UNIT) { return this.localised(bytes, 0) + ' B'; }
                         const kb = bytes / BYTES_PER_UNIT;
-                        if (kb < BYTES_PER_UNIT) { return kb.toFixed(1) + ' KB'; }
+                        if (kb < BYTES_PER_UNIT) { return this.localised(kb, 1) + ' KB'; }
                         const mb = kb / BYTES_PER_UNIT;
-                        if (mb < BYTES_PER_UNIT) { return mb.toFixed(1) + ' MB'; }
-                        return (mb / BYTES_PER_UNIT).toFixed(2) + ' GB';
+                        if (mb < BYTES_PER_UNIT) { return this.localised(mb, 1) + ' MB'; }
+                        return this.localised(mb / BYTES_PER_UNIT, 2) + ' GB';
                     },
                 }));
             });

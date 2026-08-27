@@ -756,7 +756,11 @@ document.addEventListener('alpine:init', () => {
 
         if (viewport) {
             const syncKeyboardOffset = () => {
-                const offset = Math.round(viewport.offsetTop);
+                // Floor, not round: a fractional offsetTop rounded up puts the
+                // chrome that fraction too LOW and leaves a device-pixel row of
+                // the page showing above it. Measured at 302.93, that row was
+                // the budget card's border beside the clock. Floor covers.
+                const offset = Math.floor(viewport.offsetTop);
                 document.documentElement.style.setProperty('--vv-offset-top', offset + 'px');
                 document.documentElement.classList.toggle('kb-offset', offset > 0);
             };

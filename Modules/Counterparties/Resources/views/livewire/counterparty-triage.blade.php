@@ -63,7 +63,7 @@
     @endif
 >
     <header style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap;">
-        <h1 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0;">
+        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">
             {{ Lang::get('counterparties::triage.heading') }}
         </h1>
         {{-- Only when there is something to be through. With an empty queue

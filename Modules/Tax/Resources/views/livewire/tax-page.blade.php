@@ -26,7 +26,7 @@
         {{-- ────────────────────────────────────────────────────────────────── --}}
 
         <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h1 style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text);">
+            <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">
                 {{ Lang::get('tax::page.title', ['year' => $year]) }}
             </h1>
 

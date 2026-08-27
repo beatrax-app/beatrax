@@ -54,6 +54,7 @@ foreach ([$registrationTarget, $pathsTarget] as $required) {
 $function = <<<'KOTLIN'
 package com.nativephp.mobile.bridge.functions
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -103,6 +104,11 @@ object BeatraxShareFunctions {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_STREAM, uri)
+                // The resolver reads the stream to draw its preview, and it is
+                // a separate process. Activity.startActivityForResult would
+                // migrate the extra to ClipData and grant it; a bridge function
+                // has only Context.startActivity, which does not.
+                clipData = ClipData.newUri(context.contentResolver, title, uri)
                 putExtra(Intent.EXTRA_SUBJECT, title)
                 putExtra(Intent.EXTRA_TITLE, title)
                 if (message.isNotEmpty()) {
@@ -176,6 +182,17 @@ $pathsAnchor = '<cache-path name="cache" path="." />';
 if (! str_contains($paths, $pathsAnchor)) {
     fwrite(STDERR, "nativephp_android_share_file: no cache-path root in {$pathsTarget} to stage a share into.\n");
     exit(1);
+}
+
+// An earlier version of this script added one, and nativephp/ is a generated
+// tree this script only ever appends to, so a checkout patched before the
+// staging change keeps the wider root for good unless it is taken back out.
+$staleRoot = '<files-path name="beatrax-internal" path="." />';
+
+if (str_contains($paths, $staleRoot)) {
+    $paths = (string) preg_replace('/^[ \t]*'.preg_quote($staleRoot, '/').'\R/m', '', $paths);
+    file_put_contents($pathsTarget, $paths);
+    fwrite(STDOUT, "nativephp_android_share_file: withdrew the files-path root an earlier run added.\n");
 }
 
 fwrite(STDOUT, "nativephp_android_share_file: Share.File registered.\n");
