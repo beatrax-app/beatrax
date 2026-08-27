@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ledger\Internal\Enums;
+namespace Modules\Ledger\Public\Enums;
 
 // Which amount the transactions list prints per row. BaseOnly spells the euro
 // for history — the toggle it drives means "base currency only", and the value

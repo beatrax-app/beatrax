@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Ledger\Internal\Enums\CurrencyView')
+@use('Modules\Ledger\Public\Enums\CurrencyView')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 

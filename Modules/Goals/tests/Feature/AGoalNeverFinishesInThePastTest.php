@@ -71,3 +71,7 @@ it('stores a real target date verbatim', function (): void {
 
     expect($goal->target_date->toDateString())->toBe('2026-12-24');
 });
+
+it('refuses a target date that is not a date at all, rather than throwing Carbons own error', function (): void {
+    app(GoalWriter::class)->save($this->user, 'Holiday', '1000,00', 'not-a-date');
+})->throws(InvalidGoalTargetDateException::class);

@@ -8,6 +8,7 @@ use Modules\Budgets\Public\Services\BudgetProgressQuery;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Enums\CurrencyView;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Position\Public\Dto\PositionSummaryDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
@@ -28,7 +29,7 @@ final readonly class PositionQuery
 
         // Mirrors the dashboard's toggle byte for byte, which is what makes a
         // later seam-swap a pure no-op.
-        $tilesByCurrency = $user->default_currency_view === 'original'
+        $tilesByCurrency = $user->default_currency_view === CurrencyView::Original->value
             ? $this->glance->forByCurrency($user, $period)
             : null;
 

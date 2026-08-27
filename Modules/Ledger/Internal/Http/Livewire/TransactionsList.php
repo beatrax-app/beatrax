@@ -10,7 +10,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Ledger\Internal\Enums\CurrencyView;
+use Modules\Ledger\Public\Enums\CurrencyView;
 use Modules\Ledger\Internal\Services\TransactionFilterOptions;
 use Modules\Ledger\Internal\Services\TransactionRowDecorator;
 use Modules\Ledger\Public\Dto\TransactionRowDto;

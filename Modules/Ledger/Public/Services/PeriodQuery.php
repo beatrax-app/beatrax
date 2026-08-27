@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Carbon\CarbonImmutable;
+use Carbon\Exceptions\InvalidFormatException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Dto\Period;
@@ -49,7 +50,15 @@ final class PeriodQuery
     // caller's stored string was never a date, not that it has no period.
     public function containingDate(string $isoDate): ?Period
     {
-        $parsed = CarbonImmutable::createFromFormat(self::DATE_FORMAT, $isoDate);
+        // createFromFormat THROWS on a string it cannot read at all -- it does
+        // not return null -- so a stored anchor that is no longer a date took
+        // the page down instead of falling back to the current period.
+        try {
+            $parsed = CarbonImmutable::createFromFormat(self::DATE_FORMAT, $isoDate);
+        } catch (InvalidFormatException) {
+            return null;
+        }
+
         if ($parsed === null || $parsed->format(self::DATE_FORMAT) !== $isoDate) {
             return null;
         }
@@ -60,12 +69,17 @@ final class PeriodQuery
     // Resolves a stored view anchor. An anchor that is no longer a date comes
     // back null beside the current period, so the caller drops it rather than
     // round-tripping a value that will never parse again.
+    //
+    // The anchor comes back CANONICALISED to the period's own start, never the
+    // raw value. Any day inside a period selects that period, so a raw anchor
+    // let the page carry one date while it rendered another period's numbers,
+    // and every later step and comparison worked from the drifted value.
     public function resolveAnchor(?string $isoDate): PeriodResolution
     {
         if ($isoDate !== null) {
             $selected = $this->containingDate($isoDate);
             if ($selected !== null) {
-                return new PeriodResolution($selected, $isoDate);
+                return new PeriodResolution($selected, $selected->start->toDateString());
             }
         }
 

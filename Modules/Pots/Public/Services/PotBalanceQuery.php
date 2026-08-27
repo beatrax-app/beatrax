@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Pots\Internal\Services\PotRowLoader;
@@ -119,6 +120,7 @@ final class PotBalanceQuery
         return $this->db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
+            ->whereIn('kind', AccountKind::allocatableValues())
             ->orderBy('name')
             ->get(['id', 'name', 'default_currency'])
             ->all();

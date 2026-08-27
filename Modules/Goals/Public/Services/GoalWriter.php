@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Goals\Public\Services;
 
 use Carbon\CarbonImmutable;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
@@ -162,7 +163,13 @@ final class GoalWriter
     // date the goal's owner never chose.
     private static function assertRealDate(string $targetDate, string $startDate): string
     {
-        $parsed = CarbonImmutable::createFromFormat(self::DATE_FORMAT, $targetDate);
+        // createFromFormat throws on a string it cannot read at all rather
+        // than returning null, so both outcomes have to be caught here.
+        try {
+            $parsed = CarbonImmutable::createFromFormat(self::DATE_FORMAT, $targetDate);
+        } catch (InvalidFormatException) {
+            $parsed = null;
+        }
 
         if ($parsed === null || $parsed->format(self::DATE_FORMAT) !== $targetDate) {
             throw new InvalidGoalTargetDateException('Target date is not a calendar date.');
