@@ -200,13 +200,23 @@ final class GoalProgressQuery
             ->join('transactions', 'goal_contributions.transaction_id', '=', 'transactions.id')
             ->where('goal_contributions.user_id', $user->id)
             ->whereIn('goal_contributions.goal_id', $goalIds)
-            ->get(['goal_contributions.goal_id', 'transactions.amount_minor', 'transactions.currency', 'transactions.posted_at']);
+            // The SETTLED pair, not the original one. A goal is denominated in
+            // the reader's base currency, and the settled pair is the money
+            // that actually moved on the account; the original pair would be
+            // re-converted at today's rate, so the bar and the statement
+            // disagree by whatever the rate has done since.
+            ->get([
+                'goal_contributions.goal_id',
+                'transactions.settled_amount_minor',
+                'transactions.settled_currency',
+                'transactions.posted_at',
+            ]);
 
         $byGoal = [];
         foreach ($rows as $row) {
             $byGoal[self::toInt($row->goal_id)][] = [
-                'amountMinor' => self::toInt($row->amount_minor),
-                'currency' => self::toString($row->currency),
+                'amountMinor' => self::toInt($row->settled_amount_minor),
+                'currency' => self::toString($row->settled_currency),
                 'postedAt' => self::toString($row->posted_at),
             ];
         }
