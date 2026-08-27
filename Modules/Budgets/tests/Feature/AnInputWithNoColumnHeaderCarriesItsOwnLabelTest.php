@@ -162,3 +162,35 @@ it('labels the box that assigns the money, not only the one beside it', function
         ->and($labels[$assigned])->toContain(trans('budgets::messages.table.assigned'))
         ->and($labels[$threshold])->not->toBe('');
 });
+
+// The two rows were sized by their own content, so the boxes started at 99 and
+// 112 and ended at 184 and 214. Label widths differ per language and the % sign
+// rides inside the notify field, so neither can be what aligns them: the row
+// spans the card and the box goes to its end.
+it('lines the two boxes up instead of letting each row size itself', function (): void {
+    $blade = (string) file_get_contents(
+        base_path('Modules/Budgets/Resources/views/livewire/budgets-page.blade.php'),
+    );
+
+    $card = substr($blade, (int) strpos($blade, 'budgets::messages.phone.notify_at'));
+    $card = substr($card, 0, (int) strpos($card, 'thresholdErrors'));
+
+    expect(substr_count($card, 'justify-between'))->toBe(1)
+        ->and(substr_count($blade, 'h-8 w-24'))->toBe(2)
+        ->and($card)->not->toContain('h-8 w-20');
+
+    $inputs = budgetInputsOutsideTheTable(Livewire::test(BudgetsPage::class)->html());
+    $rows = [];
+    foreach ($inputs as $input) {
+        $label = budgetAncestorTag($input, 'label');
+        $rows[$input->getAttribute('wire:model')] = $label === null ? '' : $label->getAttribute('class');
+    }
+
+    $assigned = 'assignedInputs.'.$this->groceries->id;
+    $threshold = 'thresholdInputs.'.$this->groceries->id;
+
+    expect($rows[$assigned])->toContain('justify-between')
+        ->and($rows[$threshold])->toContain('justify-between')
+        ->and($rows[$assigned])->toContain('w-full')
+        ->and($rows[$threshold])->toContain('w-full');
+});

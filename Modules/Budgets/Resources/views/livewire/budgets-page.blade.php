@@ -259,11 +259,14 @@
                             ·&nbsp;<span class="{{ $row->availableMinor < 0 ? 'text-rose-600 dark:text-rose-400' : '' }}">{{ Lang::get('budgets::messages.phone.available', ['amount' => $fmt($row->availableMinor, $row->currency)]) }}</span>
                         </p>
                     </div>
-                    {{-- Both fields are h-8: side by side on one line they share a
-                         baseline, and the % rides inside the notify field so the
-                         two right edges line up instead of staggering. --}}
+                    {{-- Both fields are h-8 and w-24, and each row is justify-between,
+                         so the two boxes share a left edge and a right edge. The
+                         label widths differ per language and the % rides inside
+                         the notify field, so neither can be what aligns them:
+                         measured at 99/112 and 184/214 when the rows were sized
+                         by their own content. --}}
                     <div class="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-                        <label class="flex flex-wrap items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <label class="flex w-full flex-wrap items-center justify-between gap-1 text-xs text-slate-400 dark:text-slate-500">
                             <span>{{ Lang::get('budgets::messages.phone.notify_at') }}</span>
                             <span class="relative inline-flex items-center">
                                 <input
@@ -274,7 +277,7 @@
                                     wire:blur="setNotifyThreshold({{ $row->categoryId }})"
                                     aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryName]) }}"
                                     placeholder="{{ $defaultNotifyThreshold }}"
-                                    class="h-8 w-20 rounded-md border border-slate-200 bg-white pl-2 pr-6 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                    class="h-8 w-24 rounded-md border border-slate-200 bg-white pl-2 pr-6 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     style="font-variant-numeric: tabular-nums;"
                                 >
                                 <span class="pointer-events-none absolute right-2 text-xs text-slate-400 dark:text-slate-500">%</span>
@@ -284,7 +287,7 @@
                              drawn here, so the box that assigns the money was the
                              bare one and the notify threshold beside it was the
                              labelled one. Same wrapper, same header string. --}}
-                        <label class="flex flex-wrap items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <label class="flex w-full flex-wrap items-center justify-between gap-1 text-xs text-slate-400 dark:text-slate-500">
                             <span>{{ Lang::get('budgets::messages.table.assigned') }}</span>
                             <input
                                 type="text"
