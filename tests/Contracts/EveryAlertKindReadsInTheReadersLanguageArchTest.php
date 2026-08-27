@@ -26,10 +26,58 @@ function alertKindsTheBannerMustRender(): array
         }
     }
 
-    // HealthCheckListener writes these two as literals rather than through an
-    // enum, so the blade matches them as literals too.
-    $kinds['wal_mode_missing'] = "@case ('wal_mode_missing')";
-    $kinds['synchronous_misconfigured'] = "@case ('synchronous_misconfigured')";
+    foreach (alertKindLiteralsWrittenInProduction() as $kind) {
+        $kinds[$kind] = sprintf("@case ('%s')", $kind);
+    }
+
+    return $kinds;
+}
+
+// Most kinds are literals rather than enum cases, and a hand-written list of
+// them is a list that goes stale the first time a module raises a new one. The
+// writers are found instead, and their literals read off them.
+/** @return list<string> */
+function alertKindLiteralsWrittenInProduction(): array
+{
+    $kinds = [];
+
+    /** @var iterable<SplFileInfo> $files */
+    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('Modules')));
+
+    foreach ($files as $file) {
+        $path = $file->getPathname();
+
+        if (! $file->isFile() || ! str_ends_with($path, '.php')) {
+            continue;
+        }
+        if (str_contains($path, '/tests/') || str_contains($path, '/Seeders/')) {
+            continue;
+        }
+
+        $source = (string) file_get_contents($path);
+
+        if (! str_contains($source, 'raiseForUser') && ! str_contains($source, 'SystemAlert::create')
+            && ! str_contains($source, 'ALERT_KIND')) {
+            continue;
+        }
+
+        $patterns = [
+            "/(?:kind:\s*|'kind'\s*=>\s*|ALERT_KIND\s*=\s*)'([a-z0-9_.]+)'/",
+            "/emitAlert\([^,]+,\s*'([a-z0-9_.]+)'/",
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match_all($pattern, $source, $matches) === false) {
+                continue;
+            }
+            foreach ($matches[1] as $kind) {
+                $kinds[] = $kind;
+            }
+        }
+    }
+
+    $kinds = array_values(array_unique($kinds));
+    sort($kinds);
 
     return $kinds;
 }

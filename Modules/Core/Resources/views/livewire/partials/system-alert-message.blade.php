@@ -148,6 +148,59 @@
              translated; every locale carries the sentence around it. --}}
         {{ Lang::get('core::alerts.messages.oauth_reauth_required', ['file' => 'email-oauth.json.pre-phase-12.bak']) }}
         @break
+    {{-- The name is read from metadata rather than pulled out of the sentence
+         it used to be baked into, so the sentence can be a translation. --}}
+    @case ('auth.recovery_code_consumed')
+        @php
+            $metadata = is_array($alert->metadata) ? $alert->metadata : [];
+            $username = isset($metadata['username']) && is_string($metadata['username']) ? $metadata['username'] : null;
+        @endphp
+        @if ($username !== null)
+            {{ Lang::get('core::alerts.messages.auth_recovery_code_consumed', ['username' => $username]) }}
+        @else
+            {{ $alert->message }}
+        @endif
+        @break
+    @case ('auth.recovery_code_failed')
+        @php
+            $metadata = is_array($alert->metadata) ? $alert->metadata : [];
+            $username = isset($metadata['username']) && is_string($metadata['username']) ? $metadata['username'] : null;
+        @endphp
+        @if ($username !== null)
+            {{ Lang::get('core::alerts.messages.auth_recovery_code_failed', ['username' => $username]) }}
+        @else
+            {{ $alert->message }}
+        @endif
+        @break
+    {{-- Both branches that raise this kind mean the same thing to the reader,
+         so they share one sentence; which blob failed is in metadata. --}}
+    @case ('auth.lock.corrupted_key')
+        {{ Lang::get('core::alerts.messages.auth_lock_corrupted_key') }}
+        @break
+    {{-- The cap is a constant and is never one, but a count beside a bare
+         plural still has to decline in 26 languages to earn its place. It
+         tells the reader nothing they can act on, so it stays in metadata. --}}
+    @case ('auth.lock.hard_cap_reached')
+        {{ Lang::get('core::alerts.messages.auth_lock_hard_cap_reached') }}
+        @break
+    @case ('auth.lock.key_material_stranded')
+        {{ Lang::get('core::alerts.messages.auth_lock_key_material_stranded') }}
+        @break
+    @case ('auth.lock.recovery_wrap_stale')
+        {{ Lang::get('core::alerts.messages.auth_lock_recovery_wrap_stale') }}
+        @break
+    @case ('sync.gdk.rewrap_failed')
+        {{ Lang::get('core::alerts.messages.sync_gdk_rewrap_failed') }}
+        @break
+    {{-- These two were already translated, but at WRITE time, so the row froze
+         in whatever language was active when it was raised. Rendered here they
+         follow the reader instead. --}}
+    @case ('worker.crashed')
+        {{ Lang::get('core::alerts.messages.worker_crashed') }}
+        @break
+    @case ('open_banking_reconsent_required')
+        {{ Lang::get('core::alerts.messages.open_banking_reconsent') }}
+        @break
     @default
         {{-- $alert->message is operator-authored text from
              BackupDatabaseCommand::recordCorruptAlert,
