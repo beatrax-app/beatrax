@@ -27,6 +27,7 @@ declare(strict_types=1);
 $patches = [
     'nativephp_grant_webview_camera',
     'nativephp_android_file_chooser',
+    'nativephp_android_share_file',
     'nativephp_keep_webview_cookies',
     'nativephp_exclude_data_from_backup',
     'nativephp_strip_unused_permissions',
