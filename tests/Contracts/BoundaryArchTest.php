@@ -483,9 +483,12 @@ it('does not allow any file other than DriftAlertStateMachine to mutate drift_al
         }
         $contents = (string) file_get_contents($path);
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        // `state` is matched anywhere in the payload, not only as its first key:
+        // anchored to the opening bracket, update(['updated_at' => ..., 'state'
+        // => ...]) walked straight past both halves of the guard.
         if (
-            preg_match("/->table\(['\"]drift_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[\\s*['\"]state['\"]/", $stripped) === 1
-            || preg_match('/DriftAlert::query\(\)[^;]*->update\(\s*\[\s*[\'"]state[\'"]/', $stripped) === 1
+            preg_match("/->table\(['\"]drift_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[[^;]*['\"]state['\"]\\s*=>/", $stripped) === 1
+            || preg_match('/DriftAlert::query\(\)[^;]*->update\(\s*\[[^;]*[\'"]state[\'"]\s*=>/', $stripped) === 1
         ) {
             $hits[] = $path;
         }
@@ -535,8 +538,8 @@ it('does not allow any file other than AnomalyAlertStateMachine to mutate anomal
         $contents = (string) file_get_contents($path);
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
         if (
-            preg_match("/->table\(['\"]anomaly_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[\\s*['\"]state['\"]/", $stripped) === 1
-            || preg_match('/AnomalyAlert::query\(\)[^;]*->update\(\s*\[\s*[\'"]state[\'"]/', $stripped) === 1
+            preg_match("/->table\(['\"]anomaly_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[[^;]*['\"]state['\"]\\s*=>/", $stripped) === 1
+            || preg_match('/AnomalyAlert::query\(\)[^;]*->update\(\s*\[[^;]*[\'"]state[\'"]\s*=>/', $stripped) === 1
         ) {
             $hits[] = $path;
         }
@@ -1888,6 +1891,10 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Budgets/Public/Services/EnvelopeActivationService.php users 2',
         'Modules/CashBook/Internal/Http/Livewire/CashBookPage.php transactions 1',
         'Modules/Categorization/Internal/Listeners/MerchantMemoryWriter.php merchant_memories 2',
+        // Nothing in production ever wrote `merchants`, so merchant memory
+        // could not grow: the listener that owns the memory now find-or-creates
+        // the merchant its NOT NULL FK points at, beside the memory itself.
+        'Modules/Categorization/Internal/Listeners/MerchantMemoryWriter.php merchants 1',
         'Modules/Chains/Internal/Resolvers/RetypeByAliasResolver.php transactions 1',
         'Modules/Core/Internal/Console/FailedJobsCommand.php failed_jobs 1',
         // The enable-time sweep and its rollback restore reach six tables this
@@ -2034,7 +2041,9 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Auth/tests/Feature/AFailingCountrySeedNeverCostsTheRecoveryCodesTest.php -> Modules\\Tax\\Internal\\Http\\Livewire\\TaxPage',
         'Modules/Auth/tests/Feature/AppLockProvisionerGdkRewrapTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Auth/tests/Feature/CrossUserIsolationTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\AliasesSettingsPage',
+        'Modules/Auth/tests/Feature/OnlyTheOwnerManagesTheHouseholdTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Auth/tests/Feature/SignupReturnsPersistedDefaultsTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Budgets/tests/Feature/MovingTheBudgetMonthTakesThePlanWithItTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\DevMode\\Internal\\Navigation\\NavigationRegistryImpl',
         'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\AppSidebar',
         'Modules/Categorization/tests/Feature/FieldProvenanceStampingTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
@@ -2198,6 +2207,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Search/tests/Feature/SearchEncryptionFallbackTest.php -> Modules\\Counterparties\\Internal\\Resolver\\CounterpartyResolverService',
         'Modules/Sync/tests/Feature/DuplicateReminderConvergenceTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/Sync/tests/Feature/ManualEntryReachesOtherDevicesTest.php -> Modules\\CashBook\\Internal\\Actions\\RecordManualTransaction',
+        'Modules/Sync/tests/Feature/MerchantAliasEditsMustLeaveTheDeviceTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\AliasesSettingsPage',
         'Modules/Sync/tests/Feature/PairingStateLapsesWithItsTtlTest.php -> Modules\\Mobile\\Internal\\Http\\Livewire\\MobilePairingScan',
         'Modules/Sync/tests/Feature/RenderedCiphertextGuardTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',

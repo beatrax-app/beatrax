@@ -306,10 +306,15 @@ global row today.
 `MerchantMemoryWriter` listens for `TransactionCategorized` and grows
 `merchant_memories` so future imports for the same normalised merchant
 auto-suggest the chosen category. It skips when `categoryId` is null
-(un-categorize is not a memory-grow event), when the transaction's
-`counterparty_normalized` is the empty-counterparty sentinel, or when
-no `merchants` row exists for `(user_id, normalized_name)` (population
-of that table is a Ledger/NormalizeStage concern, not this listener's).
+(un-categorize is not a memory-grow event) and when the transaction's
+`counterparty_normalized` is the empty-counterparty sentinel. It used to
+skip a third case — no `merchants` row for `(user_id, normalized_name)` —
+on the premise that populating that table was a Ledger/NormalizeStage
+concern. Nothing ever did: the only insert in the tree was the demo
+seeder, so on a real install `merchants` stayed empty, `merchant_memories`
+could never grow, and this whole layer was dead. The listener now
+find-or-creates the row its NOT NULL FK points at, and publishes it
+before the memory, because a peer needs the merchant first.
 `merchants.normalized_name` is compared directly against
 `transactions.counterparty_normalized`, so the two carry the same
 construction: for a user with at-rest encryption on, both hold a keyed
