@@ -738,11 +738,22 @@ document.addEventListener('alpine:init', () => {
             get blocking() { return this.names.length > 0; },
         });
 
+        // `isDrawer` tracks the same 1024px breakpoint the stylesheet uses to
+        // turn this panel from a drawer into the static desktop sidebar. The
+        // dialog semantics have to follow it: aria-modal on a permanently
+        // visible nav tells a screen reader the rest of the page is inert.
+        const drawerBreakpoint = window.matchMedia('(max-width: 1023.98px)');
+
         window.Alpine.store('mobileNav', {
             drawerOpen: false,
+            isDrawer: drawerBreakpoint.matches,
             open() { this.drawerOpen = true; window.Alpine.store('overlay').add('drawer'); },
             close() { this.drawerOpen = false; window.Alpine.store('overlay').remove('drawer'); },
             toggle() { this.drawerOpen ? this.close() : this.open(); },
+        });
+
+        drawerBreakpoint.addEventListener('change', (event) => {
+            window.Alpine.store('mobileNav').isDrawer = event.matches;
         });
 
         // Alpine stores survive a wire:navigate page swap, so a drawer opened
