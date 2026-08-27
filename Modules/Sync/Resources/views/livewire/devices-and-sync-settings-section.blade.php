@@ -70,7 +70,7 @@
             <p>{{ Lang::get('sync::devices.app_lock_notice') }}</p>
             <a
                 href="#app-lock"
-                class="mt-1 inline-block text-sm font-semibold text-blue-700 underline-offset-2 hover:underline dark:text-blue-300"
+                class="tap-link mt-1 inline-block text-sm font-semibold text-blue-700 underline-offset-2 hover:underline dark:text-blue-300"
             >
                 {{ Lang::get('sync::devices.go_to_app_lock') }}
             </a>

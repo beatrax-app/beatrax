@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Tests\Helpers\CssRule;
+
 // The floor names every element that can be a button except the one an action
 // is often marked up as. Measured on an iPhone 12 mini: the report library's
 // own "Build a new report" — an <a> wearing .pill-btn-primary — answered a
@@ -26,10 +28,12 @@ it('gives every standalone action link beside a page title its 44px band', funct
     $blades = [
         'Modules/Chains/Resources/views/livewire/chain-hints-queue.blade.php',
         'Modules/Chains/Resources/views/livewire/chain-review-queue.blade.php',
+        'Modules/Counterparties/Resources/views/livewire/counterparty-index.blade.php',
         'Modules/DriftAlerts/Resources/views/livewire/drift-page.blade.php',
         'Modules/DriftAlerts/Resources/views/livewire/drift-watch-page.blade.php',
         'Modules/Forecasting/Resources/views/livewire/forecast-page.blade.php',
         'Modules/Notifications/Resources/views/livewire/notifications-page.blade.php',
+        'Modules/Sync/Resources/views/livewire/devices-and-sync-settings-section.blade.php',
         'Modules/Tax/Resources/views/livewire/tax-page.blade.php',
     ];
 
@@ -41,4 +45,18 @@ it('gives every standalone action link beside a page title its 44px band', funct
     }
 
     expect($without)->toBe([], 'No 44px band on: '.implode(', ', $without));
+});
+
+// The switch track is 44x26 by design, and twenty callers draw it. Growing it
+// to 44 tall would make a pill the size of a button, so it takes the band
+// .tap-link takes instead -- same shape of problem, wide enough already and
+// short only in height. Measured over 35px on an iPhone 12 mini before this.
+it('gives the switch track the same band, since it is 44 wide and 26 tall', function (): void {
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    $band = CssRule::blockFor($css, ".tap-link::after,\n    .switch::after {");
+
+    expect($band)->not->toBe('', 'The switch no longer shares the band .tap-link gets.')
+        ->and($band)->toContain('height: 44px;')
+        ->and(CssRule::blockFor($css, ".tap-link,\n    .switch {"))->toContain('position: relative;');
 });

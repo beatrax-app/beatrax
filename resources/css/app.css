@@ -5767,16 +5767,39 @@ mark {
     }
 
     /*
+     * The cell gives the band its height; the band takes its width from the
+     * link, which is only as wide as the name in it. A counterparty called
+     * "Etos" is 28px on /uncategorized, so the row was 44 tall and 29 across.
+     * Centred with a floor, it keeps a long name's full width and gives a
+     * short one the rest. The cell's own px-4 is what it grows into -- these
+     * rows carry one link, so there is no neighbour to take it from.
+     */
+    td > a:only-child::after {
+        left: 50%;
+        right: auto;
+        width: 100%;
+        min-width: 44px;
+        transform: translate(-50%, -50%);
+    }
+
+    /*
      * A full-width band rather than the centred square, for a link that is
      * already wider than 44px and only ever short of height. It is what the
      * phone-width rule above gives .tap-link; coarse pointers wider than a
      * phone were the ones left out.
+     *
+     * The switch track is 44x26 on purpose -- that IS the control, and growing
+     * it to 44 tall makes a pill the size of a button. It is 44 wide already
+     * and short only in height, which is the same shape, so it takes the same
+     * band: all twenty of them answered over 35px on an iPhone 12 mini.
      */
-    .tap-link {
+    .tap-link,
+    .switch {
         position: relative;
     }
 
-    .tap-link::after {
+    .tap-link::after,
+    .switch::after {
         content: '';
         position: absolute;
         left: 0;
@@ -5858,6 +5881,32 @@ mark {
     code,
     .code {
         overflow-wrap: anywhere;
+    }
+
+    /*
+     * `anywhere` above is the last resort, and on a heading it looks like one:
+     * Dutch titles /drift "Afwijkingswaarschuwingen", 353px of word in a 343px
+     * column, and it split after "waarschuwinge" leaving an orphan "n" at 30px.
+     * Hyphenation gives the browser a legal break to prefer, with the hyphen
+     * shown, and it reads as one word again. Headings only -- a hyphen inserted
+     * into `code` would change the value it prints.
+     *
+     * `balance` is what keeps hyphenation to the case that needs it. Line
+     * breaking fills greedily, so with hyphens available "Geen ongewone
+     * afschrijvingen" took a hyphen it never needed: 283px + "gen", where the
+     * space break gives 165 + 142. Balanced it takes the space; a word with no
+     * space in it still hyphenates, and without hyphens that one is back to a
+     * 16px "n".
+     */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        -webkit-hyphens: auto;
+        hyphens: auto;
+        text-wrap: balance;
     }
 
     /*

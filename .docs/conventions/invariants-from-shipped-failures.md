@@ -1603,6 +1603,43 @@ rather than `getBoundingClientRect()`, because the halo is a pseudo-element
 larger than the control it extends. Both are the one rule — ask the browser
 about the thing you are asking about, not about the box that contains it.
 
+## A halo that a wrapped link never gets
+
+`.tap-link` extends a short control to the 44px touch floor with an absolutely
+positioned `::after` band, and on an inline element that wrapped it does
+nothing at all. An inline box split across two lines has no single containing
+block for an absolutely positioned child, so the band is generated, computes to
+`height: 44px`, and lands on neither fragment. Probed on an iPhone 12 mini, the
+dashboard's "Voeg je eerste doel toe" answered a finger over 18px — the bare
+line box — with the class present and correct in the markup.
+
+The class is still worth carrying, because the same link is one line in another
+language and gets its band there: Dutch and English fail on different sites.
+What it means is that "the class is on it" cannot be read as "the reader can
+hit it". A source-level check answers about the markup; only the device answers
+about the target.
+
+The floor itself does not apply to every one of these. WCAG 2.5.5 and 2.5.8
+both exempt a target "in a sentence or block of text", which is exactly what a
+link finishing an empty-state sentence is. The ones that are standalone — a
+link beside a page title — are not exempt, and those are what
+`TouchTargetFloorReachesLinkButtonsArchTest` pins.
+
+## A heading offered a hyphen takes one it did not need
+
+`hyphens: auto` was added to headings so a single long word would break at a
+syllable with the hyphen shown, rather than at whatever character ran out of
+room. It also changed headings that had a space to break at. Line breaking is
+greedy: it fills each line as far as it can, and a mid-word break is one more
+place it can fill to. The Dutch `/drift?type=anomaly` empty state went from
+"Geen ongewone" / "afschrijvingen" at 165px and 142px to "Geen ongewone
+afschrijvin-" / "gen" at 283px and 38px.
+
+`text-wrap: balance` replaces the greedy fill with an even-lines choice, and it
+prefers the space. The two are complementary and both load-bearing: measured on
+device, removing `balance` brings back the needless hyphen, and removing
+`hyphens` brings back a 16px orphan "n" on the word that has no space in it.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

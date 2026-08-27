@@ -78,7 +78,7 @@
                  inside a translated sentence. --}}
             <x-slot:body>
                 {{ Lang::get('recurring::index.empty.before_link') }}
-                <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('recurring::index.empty.link') }}</a>
+                <a href="{{ route('recurring.review') }}" class="tap-link text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('recurring::index.empty.link') }}</a>
                 {{ Lang::get('recurring::index.empty.after_link') }}
             </x-slot:body>
         </x-core::empty-state>

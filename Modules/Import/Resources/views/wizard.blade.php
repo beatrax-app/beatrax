@@ -15,7 +15,7 @@
             <a
                 href="{{ route('migrations.index') }}"
                 wire:navigate
-                class="font-medium text-slate-900 underline underline-offset-2 hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                class="tap-link font-medium text-slate-900 underline underline-offset-2 hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100 dark:focus-visible:ring-slate-100"
             >{{ Lang::get('import::upload.migrate_link') }}</a>
         </p>
     </x-core::page-shell>

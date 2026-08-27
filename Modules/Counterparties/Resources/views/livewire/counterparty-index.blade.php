@@ -35,6 +35,7 @@
                 {{ Lang::choice('counterparties::index.entities', $totalEntities) }} ·
                 <a
                     href="{{ Destination::Triage->url() }}"
+                    class="tap-link"
                     style="color: var(--color-amber); text-decoration: underline;"
                 >{{ Lang::get('counterparties::index.need_identification', ['count' => $unknownCount]) }}</a>
             @else

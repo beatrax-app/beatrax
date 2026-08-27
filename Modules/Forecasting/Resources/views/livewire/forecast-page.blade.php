@@ -56,9 +56,9 @@
                  checked against the route table. --}}
             <p class="mt-3 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('forecasting::forecast.empty_start') }}
-                <a href="{{ Destination::Imports->url() }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_import_link') }}</a>
+                <a href="{{ Destination::Imports->url() }}" class="tap-link text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_import_link') }}</a>
                 {{ Lang::get('forecasting::forecast.empty_or') }}
-                <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_recurring_link') }}</a>.
+                <a href="{{ route('recurring.review') }}" class="tap-link text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_recurring_link') }}</a>.
             </p>
         </section>
     @else

@@ -90,7 +90,7 @@
                  sentence, and the prop escapes its value. --}}
             <x-slot:body>
                 {{ Lang::get('drift-alerts::watch.empty_body') }}
-                <a href="{{ Destination::Recurring->url() }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_link') }}</a>.
+                <a href="{{ Destination::Recurring->url() }}" class="tap-link text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_link') }}</a>.
             </x-slot:body>
         </x-core::empty-state>
     @else

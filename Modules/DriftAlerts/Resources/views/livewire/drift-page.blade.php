@@ -197,7 +197,7 @@
                         {{ Lang::get('drift-alerts::alerts.empty_open.body') }}
                         <a
                             href="{{ Destination::Settings->url() }}#drift-threshold"
-                            class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
+                            class="tap-link text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
                         >{{ Lang::get('drift-alerts::alerts.empty_open.link') }}</a>.
                     </x-slot:body>
                 </x-core::empty-state>
