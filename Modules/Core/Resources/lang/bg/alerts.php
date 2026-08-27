@@ -27,6 +27,9 @@ return [
         'backup_overdue' => 'Последното проверено резервно копие е отпреди :hoursh. Изпълни <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code> или изчакай планираното изпълнение в 03:00.',
         'wal_mode_missing' => 'SQLite не работи в режим WAL (в момента :mode). Едновременните записи може да блокират. Изпълни <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> за насоки.',
         'synchronous_misconfigured' => 'Нивото synchronous на SQLite е :level (очаквано NORMAL/1). Поведението при надеждност може да се различава от конфигурацията. Изпълни <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> за насоки.',
+        'oauth_scrub_set_failed' => 'Заличаването на OAuth тайни не работи. Логовете и откъсите от одита може да съдържат незаличени токени до следващото успешно зареждане.',
+        'oauth_reauth_required' => 'OAuth тайните са преместени в хранилище за отделен потребител. Оторизирайте повторно Gmail и Microsoft, за да възобновите сканирането на имейли. Старият файл с тайни е преименуван на :file за връщане назад.',
+        'oauth_reconsent' => 'Свържете отново вашия :provider',
         'reconnect_link' => 'Свържи отново →',
     ],
 ];

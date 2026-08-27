@@ -27,6 +27,9 @@ return [
         'backup_overdue' => 'Nejnovější ověřená záloha je :hoursh stará. Spusť <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code> nebo počkej na plánované spuštění ve 03:00.',
         'wal_mode_missing' => 'SQLite není v režimu WAL (aktuálně :mode). Souběžné zápisy se mohou zasekávat. Pokyny získáš spuštěním <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code>.',
         'synchronous_misconfigured' => 'Úroveň synchronous v SQLite je :level (očekává se NORMAL/1). Záruky trvanlivosti se mohou lišit od konfigurace. Pokyny získáš spuštěním <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code>.',
+        'oauth_scrub_set_failed' => 'Maskování tajemství OAuth je mimo provoz. Logy a výňatky z auditu mohou obsahovat nemaskované tokeny až do dalšího úspěšného načtení.',
+        'oauth_reauth_required' => 'Tajemství OAuth byla přesunuta do úložiště jednotlivých uživatelů. Znovu autorizujte Gmail a Microsoft, abyste obnovili skenování e-mailů. Starý soubor s tajemstvími byl přejmenován na :file pro případ návratu.',
+        'oauth_reconsent' => 'Znovu připojte svůj účet :provider',
         'reconnect_link' => 'Znovu připojit →',
     ],
 ];

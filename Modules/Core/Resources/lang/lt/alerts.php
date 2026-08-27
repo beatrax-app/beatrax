@@ -27,6 +27,9 @@ return [
         'backup_overdue' => 'Naujausiai patikrintai atsarginei kopijai jau :hoursh. Paleisk <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code> arba palauk suplanuoto paleidimo 03:00.',
         'wal_mode_missing' => 'SQLite veikia ne WAL režimu (dabar :mode). Lygiagretus rašymas gali stringti. Paleisk <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code>, kad gautum nurodymų.',
         'synchronous_misconfigured' => 'SQLite synchronous lygis yra :level (tikėtasi NORMAL/1). Patvarumo elgsena gali skirtis nuo konfigūracijos. Paleisk <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code>, kad gautum nurodymų.',
+        'oauth_scrub_set_failed' => 'OAuth paslapčių slėpimas neveikia. Žurnaluose ir audito ištraukose iki kito sėkmingo įkėlimo gali būti nepaslėptų prieigos raktų.',
+        'oauth_reauth_required' => 'OAuth paslaptys perkeltos į atskiro naudotojo saugyklą. Iš naujo autorizuokite „Gmail“ ir „Microsoft“, kad būtų tęsiamas el. laiškų nuskaitymas. Senas paslapčių failas pervadintas į :file, kad būtų galima grįžti atgal.',
+        'oauth_reconsent' => 'Iš naujo prijunkite savo :provider',
         'reconnect_link' => 'Prijungti iš naujo →',
     ],
 ];

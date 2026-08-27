@@ -27,6 +27,9 @@ return [
         'backup_overdue' => 'La sauvegarde vérifiée la plus récente date de :hoursh. Exécute <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code> ou attends l\'exécution planifiée de 03:00.',
         'wal_mode_missing' => 'SQLite n\'est pas en mode WAL (actuellement :mode). Les écritures simultanées peuvent se bloquer. Exécute <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> pour obtenir de l\'aide.',
         'synchronous_misconfigured' => 'Le niveau synchronous de SQLite est :level (NORMAL/1 attendu). La sémantique de durabilité peut différer de la configuration. Exécute <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> pour obtenir de l\'aide.',
+        'oauth_scrub_set_failed' => 'Le masquage des secrets OAuth est hors service. Les journaux et les extraits d’audit peuvent contenir des jetons non masqués jusqu’au prochain chargement réussi.',
+        'oauth_reauth_required' => 'Les secrets OAuth ont été déplacés vers un stockage par utilisateur. Réautorisez Gmail et Microsoft pour reprendre l’analyse des e-mails. L’ancien fichier de secrets a été renommé :file pour permettre un retour en arrière.',
+        'oauth_reconsent' => 'Reconnectez votre :provider',
         'reconnect_link' => 'Reconnecter →',
     ],
 ];

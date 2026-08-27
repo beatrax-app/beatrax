@@ -27,6 +27,9 @@ return [
         'backup_overdue' => 'Το πιο πρόσφατο επαληθευμένο αντίγραφο ασφαλείας είναι :hoursh παλιό. Εκτέλεσε <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code> ή περίμενε την προγραμματισμένη εκτέλεση στις 03:00.',
         'wal_mode_missing' => 'Η SQLite δεν βρίσκεται σε λειτουργία WAL (αυτή τη στιγμή :mode). Οι ταυτόχρονες εγγραφές ενδέχεται να κολλήσουν. Εκτέλεσε <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> για οδηγίες.',
         'synchronous_misconfigured' => 'Το επίπεδο synchronous της SQLite είναι :level (αναμενόταν NORMAL/1). Η συμπεριφορά ανθεκτικότητας ενδέχεται να διαφέρει από τη ρύθμιση. Εκτέλεσε <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> για οδηγίες.',
+        'oauth_scrub_set_failed' => 'Η απόκρυψη των μυστικών OAuth είναι εκτός λειτουργίας. Τα αρχεία καταγραφής και τα αποσπάσματα ελέγχου ενδέχεται να περιέχουν μη αποκρυμμένα διακριτικά μέχρι την επόμενη επιτυχή φόρτωση.',
+        'oauth_reauth_required' => 'Τα μυστικά OAuth μεταφέρθηκαν σε αποθήκευση ανά χρήστη. Εξουσιοδοτήστε ξανά το Gmail και τη Microsoft για να συνεχιστεί η σάρωση email. Το παλιό αρχείο μυστικών μετονομάστηκε σε :file για επαναφορά.',
+        'oauth_reconsent' => 'Συνδέστε ξανά το :provider σας',
         'reconnect_link' => 'Επανασύνδεση →',
     ],
 ];

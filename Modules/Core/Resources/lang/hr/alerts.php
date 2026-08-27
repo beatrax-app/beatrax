@@ -27,6 +27,9 @@ return [
         'backup_overdue' => 'Najnovija provjerena sigurnosna kopija stara je :hoursh. Pokreni <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code> ili pričekaj zakazano pokretanje u 03:00.',
         'wal_mode_missing' => 'SQLite nije u WAL načinu (trenutačno :mode). Istodobni zapisi mogli bi zastati. Za upute pokreni <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code>.',
         'synchronous_misconfigured' => 'SQLite razina synchronous je :level (očekuje se NORMAL/1). Ponašanje trajnosti može se razlikovati od konfiguracije. Za upute pokreni <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code>.',
+        'oauth_scrub_set_failed' => 'Skrivanje OAuth tajni ne radi. Zapisi i izvadci revizije mogu sadržavati neskrivene tokene do sljedećeg uspješnog učitavanja.',
+        'oauth_reauth_required' => 'OAuth tajne premještene su u pohranu po korisniku. Ponovno autorizirajte Gmail i Microsoft kako bi se nastavilo skeniranje e-pošte. Stara datoteka s tajnama preimenovana je u :file radi vraćanja.',
+        'oauth_reconsent' => 'Ponovno povežite svoj :provider',
         'reconnect_link' => 'Poveži ponovno →',
     ],
 ];

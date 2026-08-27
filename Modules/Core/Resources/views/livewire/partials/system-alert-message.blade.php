@@ -17,6 +17,7 @@
 @use('Modules\Core\Internal\Enums\BackupAlertKind')
 @use('Modules\Core\Public\Enums\OAuthAlertKind')
 @use('Modules\Core\Public\Enums\UpdateAlertKind')
+@use('Modules\EmailScan\Public\Enums\MailProvider')
 @switch ($alert->kind)
     @case (UpdateAlertKind::Available->value)
         @php
@@ -132,11 +133,20 @@
             $inboxId = isset($metadata['inbox_id']) && is_numeric($metadata['inbox_id'])
                 ? (int) $metadata['inbox_id']
                 : null;
+            $provider = ($metadata['provider'] ?? null) === MailProvider::Microsoft->value ? 'Outlook' : 'Gmail';
         @endphp
-        <span>{{ $alert->message }}</span>
+        <span>{{ Lang::get('core::alerts.messages.oauth_reconsent', ['provider' => $provider]) }}</span>
         @if ($inboxId !== null)
             <a href="/inboxes?reconnect={{ $inboxId }}" class="ml-2 inline-flex items-center font-medium text-amber-900 underline underline-offset-2 hover:text-amber-700 dark:text-amber-200 dark:hover:text-amber-100">{{ Lang::get('core::alerts.messages.reconnect_link') }}</a>
         @endif
+        @break
+    @case (OAuthAlertKind::ScrubSetFailed->value)
+        {{ Lang::get('core::alerts.messages.oauth_scrub_set_failed') }}
+        @break
+    @case (OAuthAlertKind::ReauthRequired->value)
+        {{-- The filename is a path on disk, so it is substituted rather than
+             translated; every locale carries the sentence around it. --}}
+        {{ Lang::get('core::alerts.messages.oauth_reauth_required', ['file' => 'email-oauth.json.pre-phase-12.bak']) }}
         @break
     @default
         {{-- $alert->message is operator-authored text from

@@ -27,6 +27,9 @@ return [
         'backup_overdue' => 'The most recent verified backup is :hoursh old. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code> or wait for the 03:00 scheduled run.',
         'wal_mode_missing' => 'SQLite is not in WAL mode (currently :mode). Concurrent writes may stall. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> for guidance.',
         'synchronous_misconfigured' => 'SQLite synchronous level is :level (expected NORMAL/1). Durability semantics may differ from config. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> for guidance.',
+        'oauth_scrub_set_failed' => 'OAuth secret redaction is offline. Logs and audit excerpts may contain unredacted tokens until the next successful load.',
+        'oauth_reauth_required' => 'OAuth secrets moved to per-user storage. Re-authorize Gmail and Microsoft to resume email scanning. The old secrets file was renamed to :file for rollback.',
+        'oauth_reconsent' => 'Reconnect your :provider',
         'reconnect_link' => 'Reconnect →',
     ],
 ];

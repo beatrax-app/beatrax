@@ -27,6 +27,9 @@ return [
         'backup_overdue' => 'En son doğrulanmış yedeğin üzerinden :hourssa geçti. <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code> komutunu çalıştır veya 03:00 planlı çalışmasını bekle.',
         'wal_mode_missing' => 'SQLite WAL modunda değil (şu anda :mode). Eş zamanlı yazma işlemleri takılabilir. Yönlendirme için <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> komutunu çalıştır.',
         'synchronous_misconfigured' => 'SQLite synchronous düzeyi :level (NORMAL/1 bekleniyordu). Kalıcılık davranışı yapılandırmadan farklı olabilir. Yönlendirme için <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> komutunu çalıştır.',
+        'oauth_scrub_set_failed' => 'OAuth gizli anahtarlarının maskelenmesi çalışmıyor. Günlükler ve denetim alıntıları, bir sonraki başarılı yüklemeye kadar maskelenmemiş belirteçler içerebilir.',
+        'oauth_reauth_required' => 'OAuth gizli anahtarları kullanıcı başına depolamaya taşındı. E-posta taramasını sürdürmek için Gmail ve Microsoft yetkilendirmesini yenileyin. Eski gizli anahtar dosyası, geri alma için :file olarak yeniden adlandırıldı.',
+        'oauth_reconsent' => ':provider hesabınızı yeniden bağlayın',
         'reconnect_link' => 'Yeniden bağlan →',
     ],
 ];

@@ -27,6 +27,9 @@ return [
         'backup_overdue' => 'Den seneste verificerede sikkerhedskopi er :hoursh gammel. Kør <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code>, eller vent på den planlagte kørsel kl. 03:00.',
         'wal_mode_missing' => 'SQLite kører ikke i WAL-tilstand (aktuelt :mode). Samtidige skrivninger kan gå i stå. Kør <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> for vejledning.',
         'synchronous_misconfigured' => 'SQLites synchronous-niveau er :level (forventet NORMAL/1). Holdbarheden kan afvige fra konfigurationen. Kør <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code> for vejledning.',
+        'oauth_scrub_set_failed' => 'Maskering af OAuth-hemmeligheder er ude af drift. Logfiler og revisionsuddrag kan indeholde umaskerede tokens indtil næste vellykkede indlæsning.',
+        'oauth_reauth_required' => 'OAuth-hemmeligheder er flyttet til lagring pr. bruger. Godkend Gmail og Microsoft igen for at genoptage e-mailscanning. Den gamle hemmelighedsfil blev omdøbt til :file med henblik på tilbagerulning.',
+        'oauth_reconsent' => 'Tilslut din :provider igen',
         'reconnect_link' => 'Tilslut igen →',
     ],
 ];
