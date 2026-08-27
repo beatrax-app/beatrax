@@ -13,15 +13,10 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 
-// envelope_assignments.period_start and envelope_moves.period_start are literal
-// dates that CarryoverQuery looks up by exact key. period_start_day moves every
-// boundary at once, so without this pass every stored row's key stops matching
-// any period the fold will ever walk: the rows stay on disk and the whole plan
-// reads as zero, with no month-back or "copy last month" able to reach them.
-//
-// The re-key is a row-identity change, so it propagates as delete + create
-// rather than an edit: period_start is create-only in the sync merge rules and
-// a peer would drop it from an edit op.
+// CarryoverQuery looks envelope rows up by their literal period_start, and
+// period_start_day moves every boundary at once: without this pass the rows
+// stay on disk matching no period the fold walks, and the plan reads as zero.
+// Propagated as delete + create because period_start is create-only in sync.
 final class EnvelopePeriodRekeyer
 {
     public function __construct(

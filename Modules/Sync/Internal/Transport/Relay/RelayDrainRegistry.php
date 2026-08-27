@@ -15,15 +15,10 @@ final class RelayDrainRegistry
 {
     private const REGISTRY_FILE = 'sync-relay-drain-registry.json';
 
-    // TOFU: the first token seen for a did is recorded as did -> sha256(token)
-    // and trusted; every later drain must present a token whose hash
-    // hash_equals it. Residual: an attacker who registers a victim's did BEFORE
-    // the victim ever drains wins the slot, which still costs them the id.
-    //
-    // Only the drain path may reach this. Confirm derives the did from an
-    // autoincrement row id, so registering there let an unauthenticated caller
-    // sweep DELETE /relay/drain/{1..N}, claim every slot without knowing a
-    // single device id, and black-hole the blobs it marked delivered.
+    // TOFU: the first token seen for a did is recorded and trusted; every later
+    // drain must present one whose hash hash_equals it. Only the DRAIN path may
+    // reach this. Confirm derives the did from an autoincrement row id, so
+    // registering there let a caller sweep DELETE /relay/drain/{1..N}.
     public function registerOrAuthorize(string $did, string $presentedToken): bool
     {
         if ($did === '' || $presentedToken === '') {

@@ -186,11 +186,10 @@ final class CommunityCorpusQuery
         return $rows;
     }
 
-    // The pan-European file. CorpusLoader stamps its 196 rows with the region
-    // it read off the filename, and that code matches no country, so naming
-    // your country used to delete the whole cross-border brand list --
-    // Netflix, Spotify, Lidl, Vodafone -- while the national file still worked.
-    // Its own header states a row there is answered to every country at once.
+    // The pan-European file, whose own header says a row there is answered to
+    // every country at once. CorpusLoader stamps its 196 rows with a region
+    // code matching no country, so naming your country deleted the whole
+    // cross-border brand list while the national file still worked.
     private const GLOBAL_REGION = 'EU';
 
     // A row claiming no region belongs to every reader: the column is nullable

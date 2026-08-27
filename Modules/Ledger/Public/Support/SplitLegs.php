@@ -6,13 +6,10 @@ namespace Modules\Ledger\Public\Support;
 
 use Illuminate\Database\Query\Builder;
 
-// Everything in this codebase answers "is this transaction split?" by leg-row
-// presence, and SaveTransactionSplit never sets the parent's own category_id.
-// So a transaction split out of an uncategorized state keeps category_id NULL
-// forever, and the three surfaces that count uncategorized work by that column
-// alone reported it as outstanding even though its legs categorize it in full.
-// Assigning a category to clear the row writes a value no read surface uses,
-// and stamps manual provenance that locks the row out of every future rule.
+// "Is this split?" is answered by leg-row presence everywhere, and
+// SaveTransactionSplit never sets the parent's category_id. So a split parent
+// keeps NULL forever, and the surfaces that count uncategorized work by that
+// column alone reported it outstanding though its legs categorize it in full.
 final class SplitLegs
 {
     public static function excludeParents(Builder $query, string $transactionsTable = 'transactions'): Builder

@@ -32,13 +32,10 @@ final class RuleEvaluator
                     ->where('m.normalized_name', '=', $normalized);
             })
             ->where('mm.user_id', $userId)
-            // Recency first. Ranking on the count alone meant a fresh
-            // correction at 1 could never beat an old memory at 18, so the
-            // reader corrected a merchant, imported again, and got the wrong
-            // category back -- with no divergence toast, because AssignCategory
-            // documents that memory "relearns on its own". It did not. The id
-            // is the last tiebreak so two memories at the same instant and
-            // count do not resolve on whatever the planner picks.
+            // Recency first: on the count alone a fresh correction at 1 could
+            // never beat an old memory at 18, so the reader got the wrong
+            // category back -- and no divergence toast, because AssignCategory
+            // documents that memory relearns on its own. The id breaks ties.
             ->orderByDesc('mm.last_seen_at')
             ->orderByDesc('mm.occurrence_count')
             ->orderByDesc('mm.id')

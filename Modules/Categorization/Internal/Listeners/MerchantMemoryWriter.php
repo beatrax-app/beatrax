@@ -140,12 +140,10 @@ final class MerchantMemoryWriter
             return $merchantId;
         }
 
-        // Nothing in production ever wrote this table: the only insert in the
-        // tree is the demo seeder, and NormalizeStage does not touch it despite
-        // the module doc naming it as the owner. Returning null here meant
-        // merchant_memories could never grow on a real install, so the
-        // classifier's documented second layer was dead and every correction
-        // the reader made had to be made again on the next import.
+        // Nothing in production ever wrote this table -- only the demo seeder
+        // does, despite the doc naming NormalizeStage as its owner. Returning
+        // null here meant merchant_memories could never grow on a real install,
+        // so the classifier's documented second layer was dead code.
         $now = $this->clock->now()->toDateTimeString();
         $name = self::toString($row->counterparty_name ?? null) ?: $normalized;
 

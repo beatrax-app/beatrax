@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Community\Public\Support;
 
-// A URL on its way into a log line. The query string of a suggest-mapping URL
-// carries the YAML body, i.e. the user's own statement description, and
-// encryption at rest exists to keep that off the disk. The retained path still
-// holds a stable sha256 prefix of the description, which is the branch name.
-//
-// Both shells log the same URL, so both strip it the same way: the fallback
-// shell used to log the whole thing, including the query, into the file the
-// dev-mode log viewer renders.
+// A suggest-mapping URL carries the YAML body in its query string -- the
+// reader's own statement description, which encryption at rest exists to keep
+// off the disk. Both shells log that URL, so both strip it here. The retained
+// path still holds the sha256 prefix that is the branch name.
 final class LoggableUrl
 {
     public static function withoutQuery(string $url): string

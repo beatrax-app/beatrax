@@ -200,11 +200,9 @@ final class GoalProgressQuery
             ->join('transactions', 'goal_contributions.transaction_id', '=', 'transactions.id')
             ->where('goal_contributions.user_id', $user->id)
             ->whereIn('goal_contributions.goal_id', $goalIds)
-            // The SETTLED pair, not the original one. A goal is denominated in
-            // the reader's base currency, and the settled pair is the money
-            // that actually moved on the account; the original pair would be
-            // re-converted at today's rate, so the bar and the statement
-            // disagree by whatever the rate has done since.
+            // The SETTLED pair: the money that actually moved on the account.
+            // The original pair would be re-converted at today's rate, so the
+            // bar and the statement disagreed by whatever the rate had done.
             ->get([
                 'goal_contributions.goal_id',
                 'transactions.settled_amount_minor',

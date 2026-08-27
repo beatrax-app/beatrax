@@ -57,12 +57,10 @@ final class FtsCandidateResolver
 
         $searchable = self::separateControlBytes($textQuery);
 
-        // Short words (1-2 chars) cannot be MATCH predicates -- the trigram
-        // tokenizer needs three characters -- but they still have to narrow.
-        // Dropping them made a query WIDER than the words the reader typed:
-        // "de la place" returned exactly what "la place" did, and a term
-        // present nowhere in the index changed nothing at all. That is the
-        // same failure typed `account:` tokens were fixed for.
+        // Short words cannot be MATCH predicates -- the trigram tokenizer needs
+        // three characters -- but they still have to narrow. Dropping them made
+        // a query WIDER than what the reader typed: "de la place" returned
+        // exactly what "la place" did, the failure typed tokens were fixed for.
         $ftsWords = $this->significantFtsWords($searchable);
         $shortWords = $this->shortFtsWords($searchable);
         if (mb_strlen($searchable) < 3 || $ftsWords === []) {
@@ -212,10 +210,9 @@ final class FtsCandidateResolver
     private function significantFtsWords(string $textQuery): array
     {
         // Characters, not bytes. A two-letter accented word is three bytes, so
-        // a byte count sent it to FTS5, whose trigram tokenizer needs three
-        // characters and matched nothing -- and because words are AND-joined,
-        // it took every other term in the query down with it. "Ze" with an
-        // acute was unfindable and made "bar" unfindable beside it.
+        // a byte count sent it to FTS5, whose tokenizer needs three characters
+        // and matched nothing -- and because words are AND-joined, it took
+        // every other term down with it.
         return array_values(array_filter(
             explode(' ', trim($textQuery)),
             static fn (string $w): bool => mb_strlen($w) >= 3,

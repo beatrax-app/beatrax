@@ -164,14 +164,10 @@ final class OpenBankingConnectController
     // rejects every numeric notation at once.
     private const HOSTNAME_PATTERN = '/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$/';
 
-    // Fails CLOSED, like RelayConfig::isLanHost. The old check asked
-    // FILTER_VALIDATE_IP first and fell through to "contains a dot", so every
-    // notation the filter cannot parse was answered "public": 0177.0.0.1,
-    // 127.1, 0x7f.0x0.0x0.0x1 and [::ffff:127.0.0.1] all resolve to loopback,
-    // and metadata.google.internal is a perfectly dotted name. This host is
-    // both persisted into the egress allow-list and handed to an outward
-    // redirect, so answering "public" for any of them is an open redirect at
-    // an internal address.
+    // Fails CLOSED, like RelayConfig::isLanHost. Falling through to "contains
+    // a dot" answered "public" for every notation FILTER_VALIDATE_IP cannot
+    // parse -- 0177.0.0.1, 127.1, 0x7f.0x0.0x0.0x1, [::ffff:127.0.0.1] -- for a
+    // value both allow-listed for egress and handed to an outward redirect.
     private function isPublicScaHost(string $host): bool
     {
         $host = strtolower($host);

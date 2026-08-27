@@ -65,11 +65,10 @@ final readonly class LogStreamController
         $chunk = $result['chunk'];
         $newOffset = $result['newOffset'];
 
-        // Redaction is a pattern match, so a secret split across two chunks
-        // matches in neither half and both halves reach the browser. The tailer
-        // returns a fixed byte window, so the boundary lands mid-line whenever
-        // the file is longer than the window. Hold the trailing partial line
-        // back and rewind the cursor to it: the next poll sees that line whole.
+        // Redaction is a pattern match, so a secret split across the tailer's
+        // fixed byte window matches in neither half and both halves reach the
+        // browser. The trailing partial line is held back and the cursor
+        // rewound to it, so the next poll sees that line whole.
         if ($chunk !== '' && ! str_ends_with($chunk, "\n")) {
             $lastBreak = strrpos($chunk, "\n");
 

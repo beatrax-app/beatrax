@@ -156,11 +156,10 @@ final class GoalWriter
 
     public const DATE_FORMAT = 'Y-m-d';
 
-    // Carbon accepts "2026-02-30" and normalises it to "2026-03-02", so a
-    // round-trip format comparison is the real validity check -- the same one
-    // PeriodQuery::containingDate makes. The column took whatever the form
-    // sent, and the projection, the card and the sort then all worked from a
-    // date the goal's owner never chose.
+    // Carbon normalises "2026-02-30" to "2026-03-02", so a round-trip format
+    // comparison is the real check -- the same one PeriodQuery::containingDate
+    // makes. The column took whatever the form sent, so the projection, the
+    // card and the sort all worked from a date the owner never chose.
     private static function assertRealDate(string $targetDate, string $startDate): string
     {
         // createFromFormat throws on a string it cannot read at all rather

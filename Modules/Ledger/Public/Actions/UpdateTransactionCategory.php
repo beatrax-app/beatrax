@@ -48,12 +48,9 @@ final class UpdateTransactionCategory implements UpdatesTransactionCategory
         }
 
         // Write-only-on-change, like ReassignCounterparty. SQLite reports one
-        // affected row for an UPDATE that writes the value already there, and
-        // AssignCategory gates every side effect on that count: re-picking the
-        // category a row already shows bumped merchant_memories.occurrence_count
-        // (the very number the memory ranking sorts on), wrote an op every
-        // device replays, and stamped field_provenance.category_id = 'manual',
-        // which locks the field out of every future rule re-apply.
+        // affected row for an UPDATE writing the value already there, and every
+        // side effect is gated on that count: the memory tally the ranking
+        // sorts on, an op every device replays, and a manual provenance stamp.
         if ($currentCategoryId === $categoryId) {
             return 0;
         }

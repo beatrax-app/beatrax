@@ -59,10 +59,9 @@ final class GoalProjectionService
         $daysToFinish = ceil($remainingMinor / $dailyRateMinor);
 
         // A rate of a few cents a day answers past PHP_INT_MAX, where the int
-        // cast wraps and addDays() walks BACKWARDS -- printing a finish date
-        // twenty years in the PAST. Bounded at a century, which no real answer
-        // reaches and every wrapped one exceeds; the horizon flag is still
-        // decided from the true value.
+        // cast wraps and addDays() walks BACKWARDS, printing a finish date
+        // twenty years in the PAST. Bounded at a century; the horizon flag is
+        // still decided from the true value.
         $beyondHorizon = $daysToFinish > (float) self::HORIZON_LIMIT_DAYS;
         $boundedDays = (int) min($daysToFinish, (float) self::MAX_DATE_DAYS);
 

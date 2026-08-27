@@ -138,12 +138,10 @@ final class TransactionsList extends Component
         $this->resetPagination();
     }
 
-    // The search box is wire:model.live.debounce and every filter is
-    // wire:model.live, so refining one used to re-run the query with the
-    // PREVIOUS query's cursor still set: the table started mid-history, the
-    // header counted rows it was not showing, and on the phone accumulate()'s
-    // appendedCursorIds guard already held that key, so nothing was appended
-    // and the list went on showing the rows of a query the reader had left.
+    // Search and every filter are wire:model.live, so refining one re-ran the
+    // query with the PREVIOUS cursor still set: the table started mid-history,
+    // the header counted rows it did not show, and on the phone the
+    // appendedCursorIds guard already held that key so nothing was appended.
     public function updated(string $property): void
     {
         if ($property === 'searchQuery' || str_starts_with($property, 'filter')) {

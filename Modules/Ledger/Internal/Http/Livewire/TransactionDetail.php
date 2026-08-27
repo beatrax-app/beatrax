@@ -407,12 +407,10 @@ final class TransactionDetail extends Component
             ->where('user_id', $userId)
             ->delete();
 
-        // transaction_search_docs.search_body is the deliberate plaintext
-        // shadow of the encrypted counterparty name and description, and it has
-        // no FK, no cascade and no trigger. Only a PEER's delete was reaped, via
-        // SearchIndexRefresher, so a row the reader deleted themselves left its
-        // decrypted text on disk for good -- and permanently red-flagged the
-        // Doctor's FTS health check.
+        // search_body is the deliberate plaintext shadow of the encrypted name
+        // and description, with no FK, no cascade and no trigger. Only a PEER's
+        // delete was reaped, so a row the reader deleted themselves left its
+        // decrypted text on disk and red-flagged the FTS health check.
         $searchIndex->deleteForTransaction($this->transactionId, $userId);
 
         $events->dispatch(new TransactionMutated(

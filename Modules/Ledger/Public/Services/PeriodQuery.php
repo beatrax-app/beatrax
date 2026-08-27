@@ -66,14 +66,10 @@ final class PeriodQuery
         return $this->containing($parsed);
     }
 
-    // Resolves a stored view anchor. An anchor that is no longer a date comes
-    // back null beside the current period, so the caller drops it rather than
-    // round-tripping a value that will never parse again.
-    //
-    // The anchor comes back CANONICALISED to the period's own start, never the
-    // raw value. Any day inside a period selects that period, so a raw anchor
-    // let the page carry one date while it rendered another period's numbers,
-    // and every later step and comparison worked from the drifted value.
+    // Resolves a stored view anchor, canonicalised to the period's own start.
+    // Any day inside a period selects it, so echoing the raw value let a page
+    // carry one date while rendering another period's numbers. An anchor that
+    // is no longer a date comes back null beside the current period.
     public function resolveAnchor(?string $isoDate): PeriodResolution
     {
         if ($isoDate !== null) {
