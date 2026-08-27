@@ -273,6 +273,7 @@ it('composes shortfallAhead from ForecastHighlightsQuery::activeShortfallCountFo
         'user_id' => $user->id,
         'account_id' => $accountId,
         'scenario_id' => null,
+        'horizon_days' => 30,
         'starts_at' => '2026-05-22',
         'ends_at' => '2026-05-25',
         'lowest_balance_minor' => -5000,

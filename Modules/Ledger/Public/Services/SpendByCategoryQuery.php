@@ -122,4 +122,53 @@ final class SpendByCategoryQuery
 
         return $map;
     }
+
+    // The same two reads over a whole span, grouped by day as well, so a caller
+    // that folds period by period pays two queries instead of two per period.
+    // The carryover fold walks from genesis, so that was unbounded in the
+    // length of the reader's history.
+    /**
+     * @return array<string, array<string, int>> posted_at => "categoryId|currency" => minor
+     */
+    public function forUserAndSpanByCurrencyPerDay(int $userId, Period $span): array
+    {
+        $connection = $this->db->connection();
+        $byDay = [];
+
+        $unsplit = $connection->table(self::TRANSACTIONS_ALIAS)
+            ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
+            ->where('t.user_id', $userId)
+            ->where('t.type', TransactionType::Expense->value)
+            ->where('t.settled_amount_minor', '<', 0)
+            ->where('t.posted_at', '>=', $span->start->toDateString())
+            ->where('t.posted_at', '<', $span->endExclusive->toDateString())
+            ->whereNotNull('t.category_id')
+            ->groupBy('t.posted_at', 't.category_id', 't.settled_currency')
+            ->get(['t.posted_at', 't.category_id', 't.settled_currency', $connection->raw('SUM(-t.settled_amount_minor) AS spend_minor')]);
+
+        foreach ($unsplit as $row) {
+            $day = self::toString($row->posted_at);
+            $key = self::toInt($row->category_id).'|'.self::toString($row->settled_currency);
+            $byDay[$day][$key] = ($byDay[$day][$key] ?? 0) + self::toInt($row->spend_minor);
+        }
+
+        $legs = $connection->table('transaction_splits as ts')
+            ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'ts.transaction_id')
+            ->where('t.user_id', $userId)
+            ->where('t.type', TransactionType::Expense->value)
+            ->where('ts.settled_amount_minor', '<', 0)
+            ->where('t.posted_at', '>=', $span->start->toDateString())
+            ->where('t.posted_at', '<', $span->endExclusive->toDateString())
+            ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
+            ->groupBy('t.posted_at', 'ts.category_id', 'ts.settled_currency')
+            ->get(['t.posted_at', 'ts.category_id', 'ts.settled_currency', $connection->raw('SUM(-ts.settled_amount_minor) AS spend_minor')]);
+
+        foreach ($legs as $row) {
+            $day = self::toString($row->posted_at);
+            $key = self::toInt($row->category_id).'|'.self::toString($row->settled_currency);
+            $byDay[$day][$key] = ($byDay[$day][$key] ?? 0) + self::toInt($row->spend_minor);
+        }
+
+        return $byDay;
+    }
 }

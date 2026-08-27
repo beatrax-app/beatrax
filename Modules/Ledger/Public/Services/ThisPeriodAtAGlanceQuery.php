@@ -150,6 +150,34 @@ final class ThisPeriodAtAGlanceQuery
         return $this->fx->of($byCurrency, $currency)->minor;
     }
 
+    // Income over a whole span, grouped by day and left unconverted, so a
+    // caller folding period by period pays one query and one rate lookup for
+    // the walk rather than one of each per period.
+    /**
+     * @return array<string, array<string, int>> posted_at => currency => minor
+     */
+    public function incomeForSpanByCurrencyPerDay(User $user, Period $span): array
+    {
+        $rows = $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('type', TransactionType::Income->value)
+            ->where('posted_at', '>=', $span->start->toDateString())
+            ->where('posted_at', '<', $span->endExclusive->toDateString())
+            ->groupBy('posted_at', 'settled_currency')
+            ->selectRaw('posted_at, settled_currency, COALESCE(SUM(settled_amount_minor), 0) AS income_minor')
+            ->get();
+
+        $byDay = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $day = self::toString($row->posted_at);
+            $byDay[$day][self::toString($row->settled_currency)] = self::toInt($row->income_minor);
+        }
+
+        return $byDay;
+    }
+
     /**
      * @return list<stdClass>
      */

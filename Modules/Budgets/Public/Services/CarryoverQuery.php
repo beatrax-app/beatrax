@@ -61,7 +61,7 @@ final class CarryoverQuery
     {
         $settings = $this->envelopeSettings($user);
         $currency = $this->baseCurrency->code();
-        $spendByCategory = $this->spendForPeriod($user, $target, $currency);
+        $spendByCategory = $this->batchSpend($user, [$target], $target)[$target->start->toDateString()] ?? [];
 
         $rows = [];
         $overspentCount = 0;
@@ -148,6 +148,12 @@ final class CarryoverQuery
         $context = new FoldContext($expenseCategories, $overspendModeByCategory, $notifyThresholdByCategory);
         $result = null;
 
+        // The walk starts at genesis, so reading spend, income and FX per
+        // period cost a round trip per month of the reader's whole history.
+        $span = new Period($periodsWalk[0]->start, end($periodsWalk)->endExclusive, '');
+        $spendByPeriod = $this->batchSpend($user, $periodsWalk, $span);
+        $incomeByPeriod = $this->batchIncome($user, $periodsWalk, $span);
+
         foreach ($periodsWalk as $period) {
             $periodKey = $period->start->toDateString();
             $step = $this->foldPeriod(
@@ -158,6 +164,8 @@ final class CarryoverQuery
                 $movedByPeriod[$periodKey] ?? [],
                 $poolCarry,
                 $carriedIn,
+                $spendByPeriod[$periodKey] ?? [],
+                $incomeByPeriod[$periodKey] ?? 0,
             );
 
             $poolCarry = $step->poolCarry;
@@ -227,6 +235,7 @@ final class CarryoverQuery
      * @param  array<int, int>  $assignedByCategory
      * @param  array<int, int>  $movedByCategory
      * @param  array<int, int>  $carriedIn
+     * @param  array<int, array{spent: int, unconverted: int}>  $spendByCategory
      */
     private function foldPeriod(
         User $user,
@@ -236,10 +245,10 @@ final class CarryoverQuery
         array $movedByCategory,
         int $poolCarry,
         array $carriedIn,
+        array $spendByCategory,
+        int $income,
     ): FoldStep {
         $currency = $this->baseCurrency->code();
-        $spendByCategory = $this->spendForPeriod($user, $period, $currency);
-        $income = $this->glance->incomeForPeriod($user, $period, $currency);
 
         $totalAssignedMoney = Money::ofMinor(0, $currency);
         foreach ($assignedByCategory as $assignedMinor) {
@@ -321,35 +330,93 @@ final class CarryoverQuery
     /**
      * @return array<int, array{spent: int, unconverted: int}>
      */
-    private function spendForPeriod(User $user, Period $period, string $currency): array
+    /**
+     * @param  list<Period>  $periodsWalk
+     * @return array<string, array<int, array{spent: int, unconverted: int}>>
+     */
+    private function batchSpend(User $user, array $periodsWalk, Period $span): array
     {
-        $buckets = [];
-        foreach ($this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period) as $key => $minor) {
-            [$categoryId, $bucketCurrency] = explode('|', self::toString($key), 2) + [1 => ''];
-            $buckets[(int) $categoryId][$bucketCurrency] = self::toInt($minor);
-        }
+        $currency = $this->baseCurrency->code();
+        $byDay = $this->spendByCategory->forUserAndSpanByCurrencyPerDay($user->id, $span);
 
+        $bucketsByPeriod = [];
         $currencies = [];
-        foreach ($buckets as $byCurrency) {
-            foreach (array_keys($byCurrency) as $bucketCurrency) {
-                $currencies[] = $bucketCurrency;
+        foreach ($periodsWalk as $period) {
+            $periodKey = $period->start->toDateString();
+            $bucketsByPeriod[$periodKey] = [];
+
+            foreach ($byDay as $day => $keys) {
+                if ($day < $periodKey || $day >= $period->endExclusive->toDateString()) {
+                    continue;
+                }
+
+                foreach ($keys as $key => $minor) {
+                    [$categoryId, $bucketCurrency] = explode('|', self::toString($key), 2) + [1 => ''];
+                    $bucketsByPeriod[$periodKey][(int) $categoryId][$bucketCurrency]
+                        = ($bucketsByPeriod[$periodKey][(int) $categoryId][$bucketCurrency] ?? 0) + $minor;
+                    $currencies[] = $bucketCurrency;
+                }
             }
         }
+
+        // One rate lookup for the walk: the base currency never changes across
+        // it, so asking per period was the same answer fetched N times.
         $rates = $this->fx->ratesTo($currencies, $currency);
 
-        $spend = [];
-        foreach ($buckets as $categoryId => $byCurrency) {
-            $converted = $this->fx->withRates($byCurrency, $currency, $rates);
+        $spendByPeriod = [];
+        foreach ($bucketsByPeriod as $periodKey => $buckets) {
+            $spend = [];
+            foreach ($buckets as $categoryId => $byCurrency) {
+                $converted = $this->fx->withRates($byCurrency, $currency, $rates);
 
-            $unreached = 0;
-            foreach ($converted->unconverted as $code) {
-                $unreached += $byCurrency[$code] ?? 0;
+                $unreached = 0;
+                foreach ($converted->unconverted as $code) {
+                    $unreached += $byCurrency[$code] ?? 0;
+                }
+
+                $spend[$categoryId] = ['spent' => $converted->minor, 'unconverted' => $unreached];
             }
-
-            $spend[$categoryId] = ['spent' => $converted->minor, 'unconverted' => $unreached];
+            $spendByPeriod[$periodKey] = $spend;
         }
 
-        return $spend;
+        return $spendByPeriod;
+    }
+
+    /**
+     * @param  list<Period>  $periodsWalk
+     * @return array<string, int>
+     */
+    private function batchIncome(User $user, array $periodsWalk, Period $span): array
+    {
+        $currency = $this->baseCurrency->code();
+        $byDay = $this->glance->incomeForSpanByCurrencyPerDay($user, $span);
+
+        $byPeriod = [];
+        $currencies = [];
+        foreach ($periodsWalk as $period) {
+            $periodKey = $period->start->toDateString();
+            $totals = [];
+
+            foreach ($byDay as $day => $perCurrency) {
+                if ($day < $periodKey || $day >= $period->endExclusive->toDateString()) {
+                    continue;
+                }
+
+                foreach ($perCurrency as $code => $minor) {
+                    $totals[$code] = ($totals[$code] ?? 0) + $minor;
+                    $currencies[] = $code;
+                }
+            }
+
+            $byPeriod[$periodKey] = $totals;
+        }
+
+        $rates = $this->fx->ratesTo($currencies, $currency);
+
+        return array_map(
+            fn (array $totals): int => $this->fx->withRates($totals, $currency, $rates)->minor,
+            $byPeriod,
+        );
     }
 
     /**
