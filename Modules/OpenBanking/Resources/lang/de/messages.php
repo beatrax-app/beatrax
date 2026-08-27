@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking hat eine unsichere Einwilligungs-URL zurückgegeben.',
         'no_authorization_code' => 'Der Enable-Banking-Callback hat keinen Autorisierungscode zurückgegeben.',
         'no_session_id' => 'Enable Banking hat keine Sitzungs-ID zurückgegeben.',
+        'oauth_state_mismatch' => 'Dieser Verbindungslink ist abgelaufen oder wurde bereits verwendet. Starten Sie die Verbindung zu Ihrer Bank erneut.',
     ],
 ];

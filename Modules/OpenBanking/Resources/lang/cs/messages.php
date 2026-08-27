@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking vrátilo nebezpečné URL souhlasu.',
         'no_authorization_code' => 'Zpětné volání Enable Banking nevrátilo autorizační kód.',
         'no_session_id' => 'Enable Banking nevrátilo identifikátor relace.',
+        'oauth_state_mismatch' => 'Tento odkaz pro připojení vypršel nebo již byl použit. Začněte připojení banky znovu.',
     ],
 ];

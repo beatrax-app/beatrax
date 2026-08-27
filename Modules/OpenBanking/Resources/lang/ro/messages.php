@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking a returnat un URL de consimțământ nesigur.',
         'no_authorization_code' => 'Apelul de întoarcere Enable Banking nu a returnat un cod de autorizare.',
         'no_session_id' => 'Enable Banking nu a returnat un ID de sesiune.',
+        'oauth_state_mismatch' => 'Acest link de conectare a expirat sau a fost deja folosit. Începe din nou conectarea băncii.',
     ],
 ];

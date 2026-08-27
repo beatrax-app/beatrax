@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking returnerede en usikker samtykke-URL.',
         'no_authorization_code' => 'Tilbagekaldet fra Enable Banking indeholdt ingen autorisationskode.',
         'no_session_id' => 'Enable Banking returnerede ikke noget sessions-id.',
+        'oauth_state_mismatch' => 'Dette forbindelseslink er udløbet eller allerede brugt. Start forbindelsen til din bank forfra.',
     ],
 ];

@@ -63,8 +63,10 @@ it('regenerates partner codes: stamps old unused codes used and inserts ten fres
 });
 
 it('throws a 404 when a non-developer caller regenerates another user codes', function (): void {
-    $nonDeveloper = managePartner();
+    // Owner first: the owner is the account created first, so the order the
+    // fixture writes them in is the thing under test.
     manageOwner();
+    $nonDeveloper = managePartner();
 
     /** @var RegenerateRecoveryCodesAction $regen */
     $regen = app(RegenerateRecoveryCodesAction::class);

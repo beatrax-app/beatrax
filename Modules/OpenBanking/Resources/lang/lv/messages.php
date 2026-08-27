@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking atgrieza nedrošu piekrišanas URL.',
         'no_authorization_code' => 'Enable Banking atzvana atbildē nebija autorizācijas koda.',
         'no_session_id' => 'Enable Banking neatgrieza sesijas id.',
+        'oauth_state_mismatch' => 'Šī savienojuma saite ir beigusies vai jau izmantota. Sāciet bankas savienošanu no jauna.',
     ],
 ];

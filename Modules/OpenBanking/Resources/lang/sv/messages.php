@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking returnerade en osäker samtyckes-URL.',
         'no_authorization_code' => 'Återanropet från Enable Banking innehöll ingen auktoriseringskod.',
         'no_session_id' => 'Enable Banking returnerade inget sessions-id.',
+        'oauth_state_mismatch' => 'Den här anslutningslänken har gått ut eller är redan använd. Börja om med att ansluta din bank.',
     ],
 ];

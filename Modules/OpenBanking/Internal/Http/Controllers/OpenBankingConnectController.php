@@ -155,14 +155,37 @@ final class OpenBankingConnectController
         ));
     }
 
+    // Special-use names that resolve inside the network rather than on the
+    // public internet (RFC 6761/8375, plus the cloud metadata suffix).
+    private const RESERVED_SUFFIXES = ['.local', '.localhost', '.internal', '.home.arpa', '.invalid'];
+
+    // A strict LDH name of at least two labels whose last label is alphabetic.
+    // The alphabetic TLD is what does the work: it is the one rule that
+    // rejects every numeric notation at once.
+    private const HOSTNAME_PATTERN = '/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$/';
+
+    // Fails CLOSED, like RelayConfig::isLanHost. The old check asked
+    // FILTER_VALIDATE_IP first and fell through to "contains a dot", so every
+    // notation the filter cannot parse was answered "public": 0177.0.0.1,
+    // 127.1, 0x7f.0x0.0x0.0x1 and [::ffff:127.0.0.1] all resolve to loopback,
+    // and metadata.google.internal is a perfectly dotted name. This host is
+    // both persisted into the egress allow-list and handed to an outward
+    // redirect, so answering "public" for any of them is an open redirect at
+    // an internal address.
     private function isPublicScaHost(string $host): bool
     {
-        if ($host === '' || $host === 'localhost') {
+        $host = strtolower($host);
+
+        // One trailing dot is a legal absolute-name suffix and normalises away;
+        // anything else with an empty label is malformed.
+        if (str_ends_with($host, '.')) {
+            $host = substr($host, 0, -1);
+        }
+
+        if ($host === '') {
             return false;
         }
 
-        // IP literal (v4 or v6): accept only public, non-reserved addresses.
-        // Otherwise require a dotted FQDN, rejecting bare single-label hosts.
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
             return filter_var(
                 $host,
@@ -171,6 +194,16 @@ final class OpenBankingConnectController
             ) !== false;
         }
 
-        return str_contains($host, '.');
+        if (preg_match(self::HOSTNAME_PATTERN, $host) !== 1) {
+            return false;
+        }
+
+        foreach (self::RESERVED_SUFFIXES as $suffix) {
+            if (str_ends_with($host, $suffix)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

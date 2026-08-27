@@ -278,7 +278,7 @@ final class RelayServeCommand extends Command
         return match (true) {
             $did === '' => $this->jsonError(HttpStatus::BAD_REQUEST, 'missing_did'),
             ! $this->isValidDid($did) => $this->jsonError(HttpStatus::BAD_REQUEST, 'malformed_did'),
-            ! $this->isAuthorized($request, $did) => $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized'),
+            ! $this->isAuthorized($request, $did, mayRegister: true) => $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized'),
             default => null,
         };
     }
@@ -315,7 +315,7 @@ final class RelayServeCommand extends Command
     // accessed (see class @link): the presented Bearer token is verified
     // against this device's TOFU-registered per-device drain secret. Rejects
     // an empty did, a missing/non-Bearer header, and any non-matching token.
-    private function isAuthorized(Request $request, string $did): bool
+    private function isAuthorized(Request $request, string $did, bool $mayRegister = false): bool
     {
         if ($did === '') {
             return false;
@@ -327,9 +327,14 @@ final class RelayServeCommand extends Command
             return false;
         }
 
-        // The registry runs the timing-safe compare and TOFU-registers a did's
-        // first token; an empty bearer is rejected there before it registers.
-        return $this->drainRegistry->authorizes($did, substr($authHeader, strlen('Bearer ')));
+        // The registry runs the timing-safe compare; an empty bearer is
+        // rejected there before it can register. Only the drain path, where the
+        // caller names its own device id, may register a first token.
+        $token = substr($authHeader, strlen('Bearer '));
+
+        return $mayRegister
+            ? $this->drainRegistry->registerOrAuthorize($did, $token)
+            : $this->drainRegistry->authorizes($did, $token);
     }
 
     private function isValidDid(string $did): bool

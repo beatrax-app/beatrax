@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking повернув небезпечний URL згоди.',
         'no_authorization_code' => 'Зворотний виклик Enable Banking не містив коду авторизації.',
         'no_session_id' => 'Enable Banking не повернув ідентифікатор сесії.',
+        'oauth_state_mismatch' => 'Це посилання для підключення застаріло або вже використане. Розпочніть підключення банку заново.',
     ],
 ];

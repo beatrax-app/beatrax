@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking върна несигурен URL за съгласие.',
         'no_authorization_code' => 'Обратното извикване на Enable Banking не върна код за оторизация.',
         'no_session_id' => 'Enable Banking не върна идентификатор на сесия.',
+        'oauth_state_mismatch' => 'Тази връзка за свързване е изтекла или вече е използвана. Започнете свързването с банката отново.',
     ],
 ];

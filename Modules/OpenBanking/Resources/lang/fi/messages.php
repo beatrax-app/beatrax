@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking palautti turvattoman suostumusosoitteen.',
         'no_authorization_code' => 'Enable Bankingin paluukutsu ei sisältänyt valtuutuskoodia.',
         'no_session_id' => 'Enable Banking ei palauttanut istuntotunnusta.',
+        'oauth_state_mismatch' => 'Tämä yhteyslinkki on vanhentunut tai jo käytetty. Aloita pankin yhdistäminen uudelleen.',
     ],
 ];

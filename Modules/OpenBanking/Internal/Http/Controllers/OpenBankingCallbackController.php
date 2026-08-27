@@ -47,15 +47,20 @@ final class OpenBankingCallbackController
 
         $stateParamRaw = $request->query('state');
         $stateParam = is_string($stateParamRaw) ? $stateParamRaw : '';
-        if (! $this->oauthState->consumeState($stateParam, $userId)) {
-            throw new InvalidStateException('Open Banking OAuth state mismatch.');
-        }
 
         try {
+            // Inside the try, not before it: a state that does not match is an
+            // ORDINARY way for this URL to be reached — a link opened twice, a
+            // back button, a redirect that sat in a tab overnight — and it left
+            // the reader on a 500 page in the middle of connecting their bank.
+            if (! $this->oauthState->consumeState($stateParam, $userId)) {
+                throw InvalidStateException::stateMismatch();
+            }
+
             $connectionId = $this->completeConsent($request, $userId);
         } catch (RuntimeException $e) {
-            // Every post-state refusal subclasses RuntimeException and carries
-            // a user-facing reason, so one flash handles all of them.
+            // Every refusal subclasses RuntimeException and carries a
+            // user-facing reason, so one flash handles all of them.
             return $this->redirector
                 ->route('settings.open-banking')
                 ->with('open_banking_failed', $e->getMessage());
@@ -159,7 +164,6 @@ final class OpenBankingCallbackController
             $existingId, $userId, $institutionId, $accountUid, $nowString, $consentExpiresAtString,
         ): int {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
 
             if ($existingId !== null) {
                 $connection->table('open_banking_connections')
@@ -206,7 +210,6 @@ final class OpenBankingCallbackController
     {
         $this->db->connection()->transaction(function () use ($upsert, $userId, $nowString): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
 
             if ($upsert['isNew']) {
                 $connection->table('open_banking_connections')

@@ -63,13 +63,35 @@ final readonly class LogStreamController
 
         $result = $this->tailer->tailOnce($path, $offset);
         $chunk = $result['chunk'];
+        $newOffset = $result['newOffset'];
+
+        // Redaction is a pattern match, so a secret split across two chunks
+        // matches in neither half and both halves reach the browser. The tailer
+        // returns a fixed byte window, so the boundary lands mid-line whenever
+        // the file is longer than the window. Hold the trailing partial line
+        // back and rewind the cursor to it: the next poll sees that line whole.
+        if ($chunk !== '' && ! str_ends_with($chunk, "\n")) {
+            $lastBreak = strrpos($chunk, "\n");
+
+            if ($lastBreak === false) {
+                // One line longer than the whole window: nothing can be shown
+                // yet without the risk of halving a secret.
+                $newOffset = $offset;
+                $chunk = '';
+            } else {
+                $held = strlen($chunk) - ($lastBreak + 1);
+                $newOffset -= $held;
+                $chunk = substr($chunk, 0, $lastBreak + 1);
+            }
+        }
+
         if ($chunk !== '') {
             $chunk = $this->processor->scrub($chunk);
         }
 
         return new JsonResponse([
             'chunk' => $chunk,
-            'newOffset' => $result['newOffset'],
+            'newOffset' => $newOffset,
             'inode' => $currentInode,
             'reset' => $reset,
         ]);

@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Az Enable Banking nem biztonságos hozzájárulási URL-t adott vissza.',
         'no_authorization_code' => 'Az Enable Banking visszahívása nem adott vissza engedélyezési kódot.',
         'no_session_id' => 'Az Enable Banking nem adott vissza munkamenet-azonosítót.',
+        'oauth_state_mismatch' => 'Ez a kapcsolódási hivatkozás lejárt, vagy már felhasználták. Kezdje elölről a bank összekapcsolását.',
     ],
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Community\Internal\Shell;
 
+use Modules\Community\Public\Support\LoggableUrl;
 use Native\Desktop\Contracts\Shell;
 use Psr\Log\LoggerInterface;
 
@@ -30,6 +31,6 @@ final class NoOpShell implements Shell
 
     public function openExternal(string $url): void
     {
-        $this->logger->info('NoOpShell: would launch URL', ['url' => $url]);
+        $this->logger->info('NoOpShell: would launch URL', ['url' => LoggableUrl::withoutQuery($url)]);
     }
 }

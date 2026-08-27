@@ -128,8 +128,11 @@ final class AuthServiceProvider extends ServiceProvider
         $router->prependMiddlewareToGroup('auth', Authenticate::class);
 
         // Livewire's update endpoint runs outside the route middleware group,
-        // so without this a locked session keeps working through /livewire/update.
+        // so without these a locked session — or one flagged for a forced
+        // password change, which is the answer to a suspected compromise —
+        // keeps driving every component whose snapshot it already holds.
         $livewire->addPersistentMiddleware(AppLockMiddleware::class);
+        $livewire->addPersistentMiddleware(ForcePasswordChangeMiddleware::class);
 
         $livewire->component('auth.login-page', LoginPage::class);
         $livewire->component('auth.signup-page', SignupPage::class);

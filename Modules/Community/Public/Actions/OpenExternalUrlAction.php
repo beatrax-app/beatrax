@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Community\Public\Actions;
 
 use InvalidArgumentException;
+use Modules\Community\Public\Support\LoggableUrl;
 use Native\Desktop\Contracts\Shell;
 use Psr\Log\LoggerInterface;
 
@@ -25,27 +26,22 @@ final class OpenExternalUrlAction
         // user's own statement description.
         if (filter_var($url, FILTER_VALIDATE_URL) === false || ! str_starts_with($url, 'https://')) {
             throw new InvalidArgumentException(
-                'OpenExternalUrlAction: URL must be a valid https:// URL, got: '.self::withoutQuery($url),
+                'OpenExternalUrlAction: URL must be a valid https:// URL, got: '.LoggableUrl::withoutQuery($url),
             );
         }
 
+        // Lower-cased before the compare: parse_url does not fold case and the
+        // list is matched strictly, so https://GITHUB.COM/... was refused as an
+        // un-allow-listed host.
         $host = parse_url($url, PHP_URL_HOST);
-        if (! is_string($host) || ! in_array($host, self::ALLOWED_HOSTS, true)) {
+        $host = is_string($host) ? strtolower($host) : null;
+        if ($host === null || ! in_array($host, self::ALLOWED_HOSTS, true)) {
             throw new InvalidArgumentException(
-                'OpenExternalUrlAction: host not allow-listed, got: '.(is_string($host) ? $host : 'null'),
+                'OpenExternalUrlAction: host not allow-listed, got: '.($host ?? 'null'),
             );
         }
 
         $this->shell->openExternal($url);
-        // The query string carries the suggest-mapping YAML body, i.e. the
-        // user's own statement description, and encryption at rest exists to
-        // keep that off the disk. The retained path still holds a stable
-        // sha256 prefix of that description, which is the branch name.
-        $this->logger->info('OpenExternalUrlAction: launched system browser.', ['url' => self::withoutQuery($url)]);
-    }
-
-    private static function withoutQuery(string $url): string
-    {
-        return substr($url, 0, strcspn($url, '?#'));
+        $this->logger->info('OpenExternalUrlAction: launched system browser.', ['url' => LoggableUrl::withoutQuery($url)]);
     }
 }

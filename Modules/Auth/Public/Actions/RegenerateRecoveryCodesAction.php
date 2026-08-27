@@ -7,6 +7,7 @@ namespace Modules\Auth\Public\Actions;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
+use Modules\Auth\Public\Services\AccountOwner;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -22,6 +23,7 @@ final class RegenerateRecoveryCodesAction
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly RecoveryCodeMinter $recoveryCodes,
+        private readonly AccountOwner $owner,
     ) {}
 
     /**
@@ -35,7 +37,7 @@ final class RegenerateRecoveryCodesAction
             throw new InvalidArgumentException('RegenerateRecoveryCodesAction: target username must not be empty.');
         }
 
-        $isOwner = $caller->is_developer === true;
+        $isOwner = $this->owner->isOwner($caller);
         $isSelf = strtolower(trim($caller->username)) === $target;
 
         if (! $isOwner && ! $isSelf) {

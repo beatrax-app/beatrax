@@ -16,7 +16,6 @@ use Modules\Core\Public\Contracts\SecretShield;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
@@ -206,21 +205,42 @@ it('callback happy path creates one open_banking_connections row and persists th
     expect($loaded->bankScaHost)->toBe('sca.asnbank.example');
 });
 
-it('callback with mismatched state raises InvalidStateException and inserts no rows', function (): void {
+// Asserted through the handler, not around it. With withoutExceptionHandling()
+// this read as covered while a real reader got a 500 stack trace in the middle
+// of connecting their bank -- the test watched the throw and never the outcome.
+// A state that does not match is an ORDINARY way to reach this URL: a link
+// opened twice, a back button, a tab left overnight.
+it('callback with mismatched state redirects with a reason and inserts no rows', function (): void {
     $user = ocdUser('callback-mismatch');
     $this->actingAs($user);
 
     ocdSeedApplication($this->privateKeyPem, bankScaHost: 'sca.asnbank.example', institutionId: 'ASNBNL21');
 
-    $this->withoutExceptionHandling();
+    $response = $this->get('/oauth/callback/open-banking?state=not-issued&code=fake');
 
-    expect(function (): void {
-        $this->get('/oauth/callback/open-banking?state=not-issued&code=fake');
-    })->toThrow(InvalidStateException::class);
+    $response->assertRedirect(route('settings.open-banking'));
+    $response->assertSessionHas('open_banking_failed');
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     expect($db->connection()->table('open_banking_connections')->where('user_id', $user->id)->count())->toBe(0);
+});
+
+// The reason is the reader's, so it has to be the translated string rather than
+// the mechanism. `Lang::get` returns the key back when it is missing, which is
+// what a locale that never got this line would flash.
+it('flashes a translated reason rather than the exception mechanism', function (): void {
+    $user = ocdUser('callback-mismatch-copy');
+    $this->actingAs($user);
+
+    ocdSeedApplication($this->privateKeyPem, bankScaHost: 'sca.asnbank.example', institutionId: 'ASNBNL21');
+
+    $expected = trans('openbanking::messages.errors.oauth_state_mismatch');
+
+    expect($expected)->not->toBe('openbanking::messages.errors.oauth_state_mismatch');
+
+    $this->get('/oauth/callback/open-banking?state=not-issued&code=fake')
+        ->assertSessionHas('open_banking_failed', $expected);
 });
 
 it('callback with provider error redirects with open_banking_canceled flash and inserts no rows', function (): void {
@@ -366,6 +386,17 @@ it('connect refuses a non-public consent host before it widens the egress allow-
     'loopback name' => ['localhost'],
     'private ipv4' => ['10.0.0.1'],
     'bare single-label host' => ['internalhost'],
+    // Every one of these resolves to loopback or an internal address, and
+    // every one of them used to be answered "public" because the old check
+    // fell through to "contains a dot" whenever FILTER_VALIDATE_IP could not
+    // parse the string.
+    'octal loopback' => ['0177.0.0.1'],
+    'short-form loopback' => ['127.1'],
+    'hex loopback' => ['0x7f.0x0.0x0.0x1'],
+    'ipv6-mapped loopback' => ['[::ffff:127.0.0.1]'],
+    'absolute loopback name' => ['localhost.'],
+    'cloud metadata name' => ['metadata.google.internal'],
+    'mdns name' => ['printer.local'],
 ]);
 
 it('connect refuses a consent URL that is not https even when its host is public', function (): void {

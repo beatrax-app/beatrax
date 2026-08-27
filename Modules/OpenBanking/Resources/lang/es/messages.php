@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking ha devuelto una URL de consentimiento no segura.',
         'no_authorization_code' => 'La respuesta de Enable Banking no ha devuelto ningún código de autorización.',
         'no_session_id' => 'Enable Banking no ha devuelto ningún ID de sesión.',
+        'oauth_state_mismatch' => 'Ese enlace de conexión ha caducado o ya se ha utilizado. Vuelve a iniciar la conexión con tu banco.',
     ],
 ];

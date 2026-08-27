@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking je vrnil nevaren naslov URL za privolitev.',
         'no_authorization_code' => 'Povratni klic Enable Bankinga ni vrnil avtorizacijske kode.',
         'no_session_id' => 'Enable Banking ni vrnil ID-ja seje.',
+        'oauth_state_mismatch' => 'Ta povezava za povezovanje je potekla ali je bila že uporabljena. Znova začni povezovanje banke.',
     ],
 ];

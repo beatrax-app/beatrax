@@ -11,24 +11,27 @@ use Illuminate\Validation\ValidationException;
 use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
 use Modules\Auth\Internal\Support\Username;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
+use Modules\Auth\Public\Services\AccountOwner;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\QueryFailure;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// The route that reaches this action is itself developer-gated; the
-// caller check here (404, never 403) is a defensive second layer.
+// The route that reaches this action is developer-gated; the owner check here
+// (404, never 403) is what actually holds, because developer mode is
+// self-settable.
 final class AddUserAction
 {
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Hasher $hasher,
         private readonly RecoveryCodeMinter $recoveryCodes,
+        private readonly AccountOwner $owner,
     ) {}
 
     public function __invoke(User $caller, string $usernameInput, string $password): User
     {
-        if ($caller->is_developer !== true) {
+        if (! $this->owner->isOwner($caller)) {
             throw new NotFoundHttpException;
         }
 

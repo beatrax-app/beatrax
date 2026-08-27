@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking zwróciło niebezpieczny adres URL zgody.',
         'no_authorization_code' => 'Wywołanie zwrotne Enable Banking nie zawierało kodu autoryzacji.',
         'no_session_id' => 'Enable Banking nie zwróciło identyfikatora sesji.',
+        'oauth_state_mismatch' => 'Ten link połączenia wygasł lub został już użyty. Rozpocznij łączenie banku od nowa.',
     ],
 ];

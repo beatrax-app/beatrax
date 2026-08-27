@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => "Enable Banking güvenli olmayan bir onay URL'si döndürdü.",
         'no_authorization_code' => 'Enable Banking geri çağrısı hiçbir yetkilendirme kodu döndürmedi.',
         'no_session_id' => 'Enable Banking bir oturum kimliği döndürmedi.',
+        'oauth_state_mismatch' => 'Bu bağlanma bağlantısının süresi dolmuş veya daha önce kullanılmış. Bankanızı bağlama işlemini yeniden başlatın.',
     ],
 ];

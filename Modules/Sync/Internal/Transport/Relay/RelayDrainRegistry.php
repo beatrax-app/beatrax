@@ -16,29 +16,56 @@ final class RelayDrainRegistry
     private const REGISTRY_FILE = 'sync-relay-drain-registry.json';
 
     // TOFU: the first token seen for a did is recorded as did -> sha256(token)
-    // and trusted; every later drain/confirm must present a token whose hash
+    // and trusted; every later drain must present a token whose hash
     // hash_equals it. Residual: an attacker who registers a victim's did BEFORE
-    // the victim ever drains wins the slot — far narrower than the old token.
-    public function authorizes(string $did, string $presentedToken): bool
+    // the victim ever drains wins the slot, which still costs them the id.
+    //
+    // Only the drain path may reach this. Confirm derives the did from an
+    // autoincrement row id, so registering there let an unauthenticated caller
+    // sweep DELETE /relay/drain/{1..N}, claim every slot without knowing a
+    // single device id, and black-hole the blobs it marked delivered.
+    public function registerOrAuthorize(string $did, string $presentedToken): bool
     {
         if ($did === '' || $presentedToken === '') {
             return false;
         }
 
         $store = $this->load();
-        $presentedHash = hash('sha256', $presentedToken);
-        $storedHash = isset($store[$did]) && is_string($store[$did]) ? $store[$did] : null;
 
-        if ($storedHash === null) {
-            $store[$did] = $presentedHash;
+        if ($this->storedHash($store, $did) === null) {
+            $store[$did] = hash('sha256', $presentedToken);
             $this->persist($store);
 
             return true;
         }
 
+        return $this->authorizes($did, $presentedToken);
+    }
+
+    // Verify only. An unregistered did is refused rather than claimed.
+    public function authorizes(string $did, string $presentedToken): bool
+    {
+        if ($did === '' || $presentedToken === '') {
+            return false;
+        }
+
+        $storedHash = $this->storedHash($this->load(), $did);
+
+        if ($storedHash === null) {
+            return false;
+        }
+
         // Timing-safe: the stored hash is a fixed-length hex digest, so the
         // compare never leaks how many leading characters matched.
-        return hash_equals($storedHash, $presentedHash);
+        return hash_equals($storedHash, hash('sha256', $presentedToken));
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $store
+     */
+    private function storedHash(array $store, string $did): ?string
+    {
+        return isset($store[$did]) && is_string($store[$did]) ? $store[$did] : null;
     }
 
     // A missing, unreadable, empty or non-object file all collapse to an empty

@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking tagastas ebaturvalise nõusoleku URL-i.',
         'no_authorization_code' => 'Enable Bankingu tagasikutse ei tagastanud autoriseerimiskoodi.',
         'no_session_id' => 'Enable Banking ei tagastanud sessiooni id-d.',
+        'oauth_state_mismatch' => 'See ühenduslink on aegunud või juba kasutatud. Alusta panga ühendamist uuesti.',
     ],
 ];

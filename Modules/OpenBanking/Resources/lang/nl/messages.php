@@ -153,5 +153,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking heeft een onveilige toestemmings-URL geretourneerd.',
         'no_authorization_code' => 'De Enable Banking-callback heeft geen autorisatiecode geretourneerd.',
         'no_session_id' => 'Enable Banking heeft geen sessie-ID geretourneerd.',
+        'oauth_state_mismatch' => 'Deze koppelingslink is verlopen of al gebruikt. Begin opnieuw met het koppelen van je bank.',
     ],
 ];

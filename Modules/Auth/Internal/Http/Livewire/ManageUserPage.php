@@ -13,6 +13,7 @@ use Livewire\Component;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
+use Modules\Auth\Public\Services\AccountOwner;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
@@ -20,7 +21,8 @@ use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // A 404 and never a 403, so the route never reveals its own existence to a
-// non-owner.
+// non-owner. Every entry point re-checks ownership: the route middleware does
+// not re-run on a Livewire update.
 final class ManageUserPage extends Component
 {
     use HoldsFlashMessage;
@@ -35,9 +37,9 @@ final class ManageUserPage extends Component
     /** @var list<string> */
     public array $regeneratedCodes = [];
 
-    public function mount(string $username, CurrentUser $currentUser): void
+    public function mount(string $username, CurrentUser $currentUser, AccountOwner $owner): void
     {
-        if ($currentUser->user()->is_developer !== true) {
+        if (! $owner->isOwner($currentUser->user())) {
             throw new NotFoundHttpException;
         }
 
@@ -57,10 +59,11 @@ final class ManageUserPage extends Component
         DatabaseManager $db,
         CurrentUser $currentUser,
         AppLockProvisioner $provisioner,
+        AccountOwner $owner,
     ): void {
-        // The route middleware does not re-run on a Livewire update, so a
-        // developer downgraded mid-session kept resetting passwords.
-        if ($currentUser->user()->is_developer !== true) {
+        // The route middleware does not re-run on a Livewire update, so an
+        // owner who is no longer the owner mid-session kept resetting passwords.
+        if (! $owner->isOwner($currentUser->user())) {
             throw new NotFoundHttpException;
         }
 
@@ -91,8 +94,12 @@ final class ManageUserPage extends Component
         $this->flashMessage = Lang::get('auth::manage_user.password_set', ['name' => $this->partnerUsername]);
     }
 
-    public function regenerateCodes(RegenerateRecoveryCodesAction $regenerate, CurrentUser $currentUser): void
+    public function regenerateCodes(RegenerateRecoveryCodesAction $regenerate, CurrentUser $currentUser, AccountOwner $owner): void
     {
+        if (! $owner->isOwner($currentUser->user())) {
+            throw new NotFoundHttpException;
+        }
+
         $this->regeneratedCodes = $regenerate($currentUser->user(), $this->partnerUsername);
         $this->flashMessage = Lang::get('auth::manage_user.codes_regenerated', ['name' => $this->partnerUsername]);
     }

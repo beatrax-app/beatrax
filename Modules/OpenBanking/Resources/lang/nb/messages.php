@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking returnerte en usikker samtykke-URL.',
         'no_authorization_code' => 'Tilbakekallet fra Enable Banking inneholdt ingen autorisasjonskode.',
         'no_session_id' => 'Enable Banking returnerte ingen økt-ID.',
+        'oauth_state_mismatch' => 'Denne tilkoblingslenken er utløpt eller allerede brukt. Start tilkoblingen til banken på nytt.',
     ],
 ];

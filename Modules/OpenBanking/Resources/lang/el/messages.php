@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Το Enable Banking επέστρεψε μη ασφαλές URL συγκατάθεσης.',
         'no_authorization_code' => 'Η κλήση επιστροφής του Enable Banking δεν επέστρεψε κωδικό εξουσιοδότησης.',
         'no_session_id' => 'Το Enable Banking δεν επέστρεψε ID συνεδρίας.',
+        'oauth_state_mismatch' => 'Αυτός ο σύνδεσμος σύνδεσης έληξε ή έχει ήδη χρησιμοποιηθεί. Ξεκινήστε ξανά τη σύνδεση με την τράπεζά σας.',
     ],
 ];

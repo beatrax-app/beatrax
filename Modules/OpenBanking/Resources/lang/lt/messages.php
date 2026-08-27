@@ -154,5 +154,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking grąžino nesaugų sutikimo URL.',
         'no_authorization_code' => 'Enable Banking atgalinis kvietimas negrąžino autorizacijos kodo.',
         'no_session_id' => 'Enable Banking negrąžino seanso id.',
+        'oauth_state_mismatch' => 'Ši prisijungimo nuoroda nebegalioja arba jau panaudota. Pradėkite banko prijungimą iš naujo.',
     ],
 ];
