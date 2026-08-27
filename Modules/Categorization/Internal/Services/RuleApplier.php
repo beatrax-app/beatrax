@@ -6,6 +6,7 @@ namespace Modules\Categorization\Internal\Services;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Expression;
 use Modules\Categorization\Models\RuleAction;
 use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Categorization\Public\Enums\NoteMode;
@@ -110,10 +111,24 @@ final class RuleApplier
             if ($result !== null) {
                 [$field, $value] = $result;
                 $changed[$field] = $value;
+                $this->bumpHits($entry['ruleId'], $userId);
             }
         }
 
         return $changed;
+    }
+
+    // ApplyAutoCategoryStage was the only place this column ever moved, so a
+    // rule applied across a whole history still read "0 hits" on /rules. Bumped
+    // here only when the row genuinely changed, because re-running is a no-op
+    // by contract and a second pass over unchanged data must not inflate it.
+    private function bumpHits(int $ruleId, int $userId): void
+    {
+        $this->db->connection()
+            ->table('categorization_rules')
+            ->where('id', $ruleId)
+            ->where('user_id', $userId)
+            ->update(['hits_count' => new Expression('hits_count + 1')]);
     }
 
     private function resolveUser(int $userId): User

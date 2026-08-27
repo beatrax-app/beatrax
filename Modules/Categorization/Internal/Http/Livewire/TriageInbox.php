@@ -13,6 +13,7 @@ use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\Support\SplitLegs;
 
 // The cursor is a (posted_at, id) pair so rows sharing a posted_at value
 // never silently drop between pages.
@@ -71,11 +72,11 @@ final class TriageInbox extends Component
             cursorPostedAt: $this->cursorPostedAt,
         );
 
-        $totalPending = $db->connection()
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereNull('category_id')
-            ->count();
+        $totalPending = SplitLegs::excludeParents(
+            $db->connection()->table('transactions')
+                ->where('user_id', $user->id)
+                ->whereNull('category_id')
+        )->count();
 
         $categories = $options->for($user);
         $topCategories = array_slice($categories, 0, self::QUICK_ASSIGN_CHIPS_PER_ROW);

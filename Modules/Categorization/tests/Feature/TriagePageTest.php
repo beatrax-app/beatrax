@@ -187,3 +187,32 @@ it("silently ignores a foreign user's category id when set on the inline picker"
 
     expect(Transaction::find($tx->id)->category_id)->toBeNull();
 });
+
+it('stops counting a fully split transaction as work still to do', function (): void {
+    // Everything in the app answers "is this split?" by leg-row presence, and
+    // SaveTransactionSplit never sets the parent's own category_id. The three
+    // surfaces that count uncategorized work by that column alone reported a
+    // transaction whose legs categorize it in full, forever -- and the only way
+    // to clear the row wrote a value no read surface uses and stamped manual
+    // provenance that locks it out of every future rule.
+    $tx = makeTriagePageTx($this->user, $this->account, $this->run, 12, null, 'MediaMarkt');
+
+    expect(app(Modules\Categorization\Public\Services\UncategorizedTriageQuery::class)
+        ->for($this->user)->rows)->toHaveCount(1);
+
+    DB::table('transaction_splits')->insert([
+        [
+            'user_id' => $this->user->id, 'transaction_id' => $tx->id, 'category_id' => $this->groceries->id,
+            'settled_amount_minor' => -2450, 'settled_currency' => 'EUR', 'sort_order' => 0,
+            'created_at' => CarbonImmutable::now(), 'updated_at' => CarbonImmutable::now(),
+        ],
+        [
+            'user_id' => $this->user->id, 'transaction_id' => $tx->id, 'category_id' => $this->groceries->id,
+            'settled_amount_minor' => -10000, 'settled_currency' => 'EUR', 'sort_order' => 1,
+            'created_at' => CarbonImmutable::now(), 'updated_at' => CarbonImmutable::now(),
+        ],
+    ]);
+
+    expect(app(Modules\Categorization\Public\Services\UncategorizedTriageQuery::class)
+        ->for($this->user)->rows)->toHaveCount(0);
+});

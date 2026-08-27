@@ -23,6 +23,7 @@ use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -100,11 +101,11 @@ final class ThisPeriodAtAGlanceQuery
         $inflow = $this->fx->withRates($inflowByCurrency, $displayCurrency, $rates);
         $outflow = $this->fx->withRates($outflowByCurrency, $displayCurrency, $rates);
 
-        $uncategorized = $connection
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereNull('category_id')
-            ->count();
+        $uncategorized = SplitLegs::excludeParents(
+            $connection->table('transactions')
+                ->where('user_id', $user->id)
+                ->whereNull('category_id')
+        )->count();
 
         $recent = $this->listQuery->recent($user, daysBack: 90, limit: 10, currency: $displayCurrency);
 

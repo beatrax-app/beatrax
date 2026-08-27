@@ -141,13 +141,37 @@ it('is a no-op when categoryId is null (un-categorize)', function (): void {
     expect(DB::table('merchant_memories')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('skips writing when the merchants row does not exist for (user, normalized_name)', function (): void {
+it('learns a merchant it has never seen, instead of dropping the correction', function (): void {
     $tx = makeMemoryTransaction($this->user, $this->account, $this->run, 'Spotify Premium', 'spotify premium');
-    // no seedWriterMerchant call — merchant absent.
+    // No seedWriterMerchant call. Nothing in production ever wrote that table,
+    // so requiring a row first meant merchant memory could never grow on a real
+    // install and every correction had to be made again on the next import.
 
     event(new TransactionCategorized($tx->id, $this->streaming->id, $this->user->id));
 
-    expect(DB::table('merchant_memories')->where('user_id', $this->user->id)->count())->toBe(0);
+    $merchant = DB::table('merchants')
+        ->where('user_id', $this->user->id)
+        ->where('normalized_name', 'spotify premium')
+        ->first();
+
+    expect($merchant)->not->toBeNull();
+    expect($merchant->name)->toBe('Spotify Premium');
+    expect(DB::table('merchant_memories')
+        ->where('user_id', $this->user->id)
+        ->where('merchant_id', $merchant->id)
+        ->where('category_id', $this->streaming->id)
+        ->count())->toBe(1);
+});
+
+it('reuses the merchant it learned rather than making a second one', function (): void {
+    $first = makeMemoryTransaction($this->user, $this->account, $this->run, 'Spotify Premium', 'spotify premium');
+    $second = makeMemoryTransaction($this->user, $this->account, $this->run, 'Spotify Premium', 'spotify premium');
+
+    event(new TransactionCategorized($first->id, $this->streaming->id, $this->user->id));
+    event(new TransactionCategorized($second->id, $this->streaming->id, $this->user->id));
+
+    expect(DB::table('merchants')->where('user_id', $this->user->id)->count())->toBe(1);
+    expect(DB::table('merchant_memories')->where('user_id', $this->user->id)->value('occurrence_count'))->toBe(2);
 });
 
 it('skips writing for the empty-counterparty sentinel', function (): void {

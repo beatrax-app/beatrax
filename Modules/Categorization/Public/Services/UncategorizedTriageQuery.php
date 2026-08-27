@@ -13,6 +13,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Ledger\Public\Services\TransactionCursor;
+use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -33,6 +34,7 @@ final class UncategorizedTriageQuery
             ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
             ->where('transactions.user_id', $user->id)
             ->whereNull('transactions.category_id')
+            ->tap(static fn ($q) => SplitLegs::excludeParents($q))
             ->select([
                 'transactions.id',
                 'transactions.posted_at',

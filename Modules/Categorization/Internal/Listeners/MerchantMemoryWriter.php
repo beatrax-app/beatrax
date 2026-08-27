@@ -118,11 +118,13 @@ final class MerchantMemoryWriter
     {
         $connection = $this->db->connection();
 
-        $normalized = self::toString($connection
+        $row = $connection
             ->table('transactions')
             ->where('user_id', $event->userId)
             ->where('id', $event->transactionId)
-            ->value('counterparty_normalized'));
+            ->first(['counterparty_normalized', 'counterparty_name']);
+
+        $normalized = self::toString($row->counterparty_normalized ?? null);
 
         if ($normalized === '' || $normalized === CounterpartyKey::NONE) {
             return null;
@@ -134,7 +136,57 @@ final class MerchantMemoryWriter
             ->where('normalized_name', $normalized)
             ->value('id'));
 
-        return $merchantId === 0 ? null : $merchantId;
+        if ($merchantId !== 0) {
+            return $merchantId;
+        }
+
+        // Nothing in production ever wrote this table: the only insert in the
+        // tree is the demo seeder, and NormalizeStage does not touch it despite
+        // the module doc naming it as the owner. Returning null here meant
+        // merchant_memories could never grow on a real install, so the
+        // classifier's documented second layer was dead and every correction
+        // the reader made had to be made again on the next import.
+        $now = $this->clock->now()->toDateTimeString();
+        $name = self::toString($row->counterparty_name ?? null) ?: $normalized;
+
+        // insertOrIgnore against the (user_id, normalized_name) UNIQUE, then
+        // re-read: two categorizations of the same merchant in one burst must
+        // not race into two rows, and the loser needs the winner's id.
+        $inserted = $connection->table('merchants')->insertOrIgnore([
+            'user_id' => $event->userId,
+            'name' => $name,
+            'normalized_name' => $normalized,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $merchantId = self::toInt($connection
+            ->table('merchants')
+            ->where('user_id', $event->userId)
+            ->where('normalized_name', $normalized)
+            ->value('id'));
+
+        if ($merchantId === 0) {
+            return null;
+        }
+
+        // merchant_memories carries a NOT NULL FK to this row, so the peer
+        // needs the merchant before the memory that points at it.
+        if ($inserted > 0) {
+            $this->events->dispatch(new EntityMutated(
+                table: 'merchants',
+                pk: $merchantId,
+                userId: $event->userId,
+                mutationType: 'create',
+                dirtyFields: [
+                    'user_id' => $event->userId,
+                    'name' => $name,
+                    'normalized_name' => $normalized,
+                ],
+            ));
+        }
+
+        return $merchantId;
     }
 
     private function captureMerchant(int $merchantId, int $userId): void

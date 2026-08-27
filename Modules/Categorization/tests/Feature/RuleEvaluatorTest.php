@@ -196,3 +196,35 @@ it('lookupMemory() is public and returns the raw memory row directly', function 
     expect((int) $row->id)->toBe($seeded['memory_id']);
     expect((int) $row->category_id)->toBe($this->streaming->id);
 });
+
+it('lets the newest correction outrank a long-standing memory', function (): void {
+    // AssignCategory's docblock says overriding a memory-provenance category
+    // needs no divergence prompt because "merchant memory relearns on its own".
+    // Ranked on the occurrence count alone it did not: a correction landed at 1
+    // and the old memory kept winning at 18, so the reader corrected a merchant,
+    // imported again, and silently got the wrong category back.
+    $seeded = seedMerchantAndMemory($this->user->id, 'albert heijn', $this->streaming->id, occurrenceCount: 18);
+
+    DB::table('merchant_memories')
+        ->where('id', $seeded['memory_id'])
+        ->update(['last_seen_at' => '2026-08-01 10:00:00']);
+
+    $correctedId = (int) DB::table('merchant_memories')->insertGetId([
+        'user_id' => $this->user->id,
+        'merchant_id' => $seeded['merchant_id'],
+        'category_id' => $this->groceries->id,
+        'occurrence_count' => 1,
+        'last_seen_at' => '2026-08-27 10:00:00',
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    $evaluator = $this->app->make(RuleEvaluator::class);
+    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Albert Heijn', 'albert heijn');
+
+    $row = $evaluator->lookupMemory($tx, $this->user->id);
+
+    expect($row)->not->toBeNull();
+    expect((int) $row->id)->toBe($correctedId);
+    expect((int) $row->category_id)->toBe($this->groceries->id);
+});
