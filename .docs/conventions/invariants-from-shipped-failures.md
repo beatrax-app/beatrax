@@ -1887,6 +1887,52 @@ first parent black; the other divided by alpha a second time on values
 forward rather than writing a new one, and settle any disagreement against the
 PNG.
 
+## The bars belong to the window, and the window listens to the OS
+
+An edge-to-edge Android window paints the pixels behind the status and
+navigation bars, but Android draws the clock, the signal glyphs and the nav
+chevrons on top of them, choosing light or dark from the OS night-mode setting.
+A reader whose app theme disagrees with their phone's therefore had white glyphs
+on the app's own `#f8fafc`: **1.05:1**, an invisible clock on every screen.
+
+`theme-color` does not reach this. It colours a *browser's* chrome, and a
+WebView has none. The page has to tell the window, through the JS bridge the
+activity already installs.
+
+Three things that each looked like the whole fix and were not:
+
+- **Applying the flags from the bridge is not enough.** `configureStatusBar()`
+  sets the same two from `resources.configuration.uiMode`, at startup and again
+  on every night-mode change. The bridge held until the reader touched their
+  phone's theme, at which point the activity overwrote the page's answer. The
+  reported value has to be *stored* and that function made to prefer it.
+- **`classList.contains('dark')` is not the theme.** After a config change the
+  root carried neither class and the page was dark from
+  `@media (prefers-color-scheme: dark)` alone, so the class said light while the
+  reader looked at a dark screen. Read the resolved background colour instead:
+  it is the question the bars are asking and it cannot drift from the
+  stylesheet.
+- **localStorage does not survive.** Read over the DevTools protocol on a
+  Galaxy S24 Ultra, the WebView came back from a night-mode change with
+  `localStorage.length === 0`. Flux keeps its copy of the theme choice there,
+  fell back to `system`, and repainted the page dark under a Theme toggle still
+  reading Light — a separate, worse bug than the bars. The choice is now also
+  published on the root by `x-core::head-assets`, where it lasts as long as the
+  document, and re-asserted a frame after the media query fires.
+
+Measured after all three, across a full flip cycle: status bar **8.37:1** with
+the app on Light and the phone on dark, and the page still Light after the OS
+went light and dark again. The navigation bar reaches **4.17:1** and stops
+there — One UI draws its light-mode nav glyphs at `rgb(124,124,124)`, which
+against pure white is 4.17, so no backdrop the app can paint lifts it further.
+
+Two lessons that outlive this fix. Attach the DevTools protocol
+(`adb forward tcp:9223 localabstract:webview_devtools_remote_<pid>`) rather than
+inferring DOM state from screenshots — one `Runtime.evaluate` replaced four
+rebuild-and-look cycles. And **pull the `-wal` with the database**: the theme
+read back as `system` from the `.sqlite` alone and as `light` with its WAL, and
+the first reading sent the diagnosis down a blind alley.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

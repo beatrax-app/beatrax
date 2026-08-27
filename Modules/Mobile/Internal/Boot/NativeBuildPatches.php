@@ -34,6 +34,7 @@ final readonly class NativeBuildPatches
         'nativephp_exclude_data_from_backup.php',
         'nativephp_strip_unused_permissions.php',
         'nativephp_theme_native_shell.php',
+        'nativephp_android_system_bar_appearance.php',
         'nativephp_brand_boot_splash.php',
         'nativephp_android_adaptive_icon.php',
         'nativephp_ios_app_icon.php',
