@@ -26,18 +26,17 @@
 
 
     /**
-     * Direction-aware tint for a single drift alert. Expense up and
-     * income down read as rose; expense down and income up read as
-     * emerald. Dark companions step into rose-300 / emerald-300 for
-     * the inline pill text on a slate-950 surface (UI-SPEC).
+     * Tint by whether the reader ends up worse off. Money in is positive and
+     * money out negative, so a negative delta is adverse in BOTH directions —
+     * a dearer subscription and a smaller salary alike. Branching on direction
+     * as well as sign inverted every expense: the demo data's four price rises
+     * all rendered emerald. Dark companions step into rose-300 / emerald-300
+     * for the inline pill text on a slate-950 surface (UI-SPEC).
      */
     $tintFor = static function (object $row): string {
-        $isNegative = $row->delta->isNegative();
-        if ($row->direction === \Modules\Ledger\Public\Enums\Direction::Expense->value) {
-            return $isNegative ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300';
-        }
-        // income
-        return $isNegative ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300';
+        return $row->delta->isNegative()
+            ? 'text-rose-700 dark:text-rose-300'
+            : 'text-emerald-700 dark:text-emerald-300';
     };
 
     $signedFmt = static function (object $row) use ($fmt): string {
@@ -178,7 +177,7 @@
                         </li>
                     @endforeach
                 </ul>
-                @if (count($anomalyRows) >= 26)
+                @if ($hasMoreAnomalies)
                     <div class="mt-6 flex justify-center">
                         <button
                             type="button"
@@ -276,6 +275,15 @@
                         @endif
                     @endforeach
                 </div>
+                @if (count($grouped) >= $pageSize)
+                    <div class="mt-6 flex justify-center">
+                        <button
+                            type="button"
+                            wire:click="loadMore"
+                            class="tap-link shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+                        >{{ Lang::get('drift-alerts::alerts.load_more') }}</button>
+                    </div>
+                @endif
             @endif
         @else
             @if (count($rows) === 0)
@@ -309,11 +317,11 @@
                         </li>
                     @endforeach
                 </ul>
-                @if (count($rows) >= 26)
+                @if ($hasMoreRows)
                     <div class="mt-6 flex justify-center">
                         <button
                             type="button"
-                            wire:click="$set('cursorId', {{ $rows[count($rows) - 1]->driftAlertId }})"
+                            wire:click="loadMore"
                             class="tap-link shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
                         >{{ Lang::get('drift-alerts::alerts.load_more') }}</button>
                     </div>

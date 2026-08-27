@@ -40,6 +40,8 @@ final class DriftPage extends Component
 
     private const int MAX_UNTIL_MONTHS = 6;
 
+    private const int PAGE_SIZE = 26;
+
     // Both stay strings on the wire: they are #[Url] state, so anyone can put
     // anything in the query string, and a bookmarked value outside the enum
     // has to land on the default view rather than fail the request.
@@ -49,7 +51,10 @@ final class DriftPage extends Component
     #[Url(as: 'type', except: DriftPageType::DEFAULT)]
     public string $type = DriftPageType::DEFAULT;
 
-    public ?int $cursorId = null;
+    // A page count, not a keyset cursor: the cursor replaced the list with the
+    // next page, so page 2 showed 4 rows and the first 26 vanished with no way
+    // back. Re-reading id DESC from the top keeps every row already shown.
+    public int $pageSize = self::PAGE_SIZE;
 
     public ?string $anomalyCursorDetectedAt = null;
 
@@ -98,9 +103,14 @@ final class DriftPage extends Component
         return is_numeric($alertId) ? (int) $alertId : 0;
     }
 
+    public function loadMore(): void
+    {
+        $this->pageSize += self::PAGE_SIZE;
+    }
+
     private function resetCursors(): void
     {
-        $this->cursorId = null;
+        $this->pageSize = self::PAGE_SIZE;
         $this->anomalyCursorDetectedAt = null;
         $this->anomalyCursorId = null;
     }
@@ -126,7 +136,11 @@ final class DriftPage extends Component
         $ruleWritten = ($action)(self::anomalyId($alertId), $currentUser->user());
 
         if ($ruleWritten) {
-            $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.suppression_added'), undo: 'undoAnomalySuppression', undoArg: (string) $alertId);
+            $this->toastWithUndo(
+                Lang::get('drift-alerts::alerts.toasts.suppression_added'),
+                undoAction: 'undoAnomalySuppression',
+                undoPayload: (string) $alertId,
+            );
 
             return;
         }
@@ -158,9 +172,9 @@ final class DriftPage extends Component
         $this->toast(Lang::get('drift-alerts::alerts.toasts.acknowledged'));
     }
 
-    // Bounds the accepted range to (now, now+6mo] so a tampered Livewire
-    // payload cannot snooze an alert away with no audit trail. Shared by both
-    // streams; SnoozeAnomalyAlert repeats the bound, SnoozeDriftAlert does not.
+    // Bounds the accepted range to (now, now+6mo] so a malformed date is
+    // dropped before it reaches an action. Both actions enforce the same bound
+    // themselves; this only keeps the UI from raising on a stale popover.
     private function snoozeAlert(int $alertId, string $untilIso, CurrentUser $currentUser, callable $action, Clock $clock): void
     {
         try {
@@ -216,17 +230,26 @@ final class DriftPage extends Component
                 DriftPageTab::Open => $anomalyQuery->openForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
             };
 
+            // The query reads a lookahead row; rendering it too offered "Load
+            // more" on an exact page boundary and landed the reader on an
+            // empty inbox with no control back.
+            $hasMoreAnomalies = count($anomalyRows) >= AnomalyAlertQuery::PAGE_SIZE_WITH_LOOKAHEAD;
+            $anomalyRows = array_slice($anomalyRows, 0, AnomalyAlertQuery::PAGE_SIZE_WITH_LOOKAHEAD - 1);
+
             $view = $views->make('drift-alerts::livewire.drift-page', [
                 'pageType' => DriftPageType::Anomaly,
                 'pageName' => Lang::get($this->activeType()->screenNameKey()),
                 'lifecycleTab' => $this->activeTab(),
                 'anomalyRows' => $anomalyRows,
+                'hasMoreAnomalies' => $hasMoreAnomalies,
+                'hasMoreRows' => false,
                 'snoozeTargets' => $snoozeTargets,
                 'rows' => [],
                 'grouped' => [],
                 'seriesStates' => [],
                 'impactBySeriesId' => [],
                 'thresholdBySeriesId' => [],
+                'pageSize' => $this->pageSize,
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -235,13 +258,23 @@ final class DriftPage extends Component
             return $view;
         }
 
+        // The Open tab renders the grouped projection, so the flat page is not
+        // read for it at all — it was queried and discarded on every render.
+        // Read one past the window and render the window. Rendering the
+        // lookahead row too made "Load more" appear on an exact multiple of the
+        // page size and then grow the list by nothing.
+        $lookahead = $this->pageSize + 1;
         $rows = match ($this->activeTab()) {
-            DriftPageTab::History => $query->historyForUser($user, $this->cursorId),
-            DriftPageTab::Dismissed => $query->dismissedForUser($user, $this->cursorId),
-            DriftPageTab::Open => $query->openForUser($user, $this->cursorId),
+            DriftPageTab::History => $query->historyForUser($user, null, $lookahead),
+            DriftPageTab::Dismissed => $query->dismissedForUser($user, null, $lookahead),
+            DriftPageTab::Open => [],
         };
+        $hasMoreRows = count($rows) > $this->pageSize;
+        $rows = array_slice($rows, 0, $this->pageSize);
 
-        $grouped = $this->activeTab() === DriftPageTab::Open ? $query->groupedBySeriesForUser($user) : [];
+        $grouped = $this->activeTab() === DriftPageTab::Open
+            ? $query->groupedBySeriesForUser($user, $this->pageSize)
+            : [];
 
         $seriesIds = [];
         foreach ($rows as $alert) {
@@ -279,6 +312,9 @@ final class DriftPage extends Component
             'impactBySeriesId' => $impactBySeriesId,
             'thresholdBySeriesId' => $thresholdBySeriesId,
             'anomalyRows' => [],
+            'pageSize' => $this->pageSize,
+            'hasMoreRows' => $hasMoreRows,
+            'hasMoreAnomalies' => false,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
