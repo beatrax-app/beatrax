@@ -135,16 +135,11 @@ final class EnvelopeWriter
     }
 
     /**
-     * @throws InvalidArgumentException category not owned/global (IDOR), or
-     *                                  an unrecognised mode
+     * @throws InvalidArgumentException category not owned/global (IDOR)
      */
-    public function setOverspendMode(User $user, int $categoryId, string $mode): void
+    public function setOverspendMode(User $user, int $categoryId, OverspendMode $mode): void
     {
         $this->assertCategoryAccessible($user, $categoryId);
-
-        if (! in_array($mode, [OverspendMode::ReduceToBudget->value, OverspendMode::CarryNegative->value], true)) {
-            throw new InvalidArgumentException(Lang::get('budgets::messages.errors.invalid_overspend_mode'));
-        }
 
         /** @var EnvelopeSettingMutated|null $event */
         $event = null;
@@ -158,18 +153,18 @@ final class EnvelopeWriter
                 ->first();
 
             if ($existing instanceof EnvelopeSetting) {
-                if ($existing->overspend_mode === $mode) {
+                if ($existing->overspend_mode === $mode->value) {
                     return;
                 }
 
-                $existing->overspend_mode = $mode;
+                $existing->overspend_mode = $mode->value;
                 $existing->save();
 
                 $event = new EnvelopeSettingMutated(
                     settingId: $existing->id,
                     userId: $user->id,
                     mutationType: 'edit',
-                    dirtyFields: ['overspend_mode' => $mode],
+                    dirtyFields: ['overspend_mode' => $mode->value],
                 );
 
                 return;
@@ -179,7 +174,7 @@ final class EnvelopeWriter
             $created = EnvelopeSetting::query()->withoutGlobalScope(UserScope::class)->create([
                 'user_id' => $user->id,
                 'category_id' => $categoryId,
-                'overspend_mode' => $mode,
+                'overspend_mode' => $mode->value,
             ]);
 
             $event = new EnvelopeSettingMutated(
@@ -189,7 +184,7 @@ final class EnvelopeWriter
                 dirtyFields: [
                     'user_id' => $user->id,
                     'category_id' => $categoryId,
-                    'overspend_mode' => $mode,
+                    'overspend_mode' => $mode->value,
                 ],
             );
         });

@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
+use Modules\Budgets\Public\Enums\OverspendMode;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
@@ -92,7 +93,7 @@ it('toggles the overspend mode for an envelope', function (): void {
         ->call('setOverspendMode', $this->groceries->id, 'carry_negative');
 
     $rows = $component->viewData('rows');
-    expect($rows[$this->groceries->id]->overspendMode)->toBe('carry_negative');
+    expect($rows[$this->groceries->id]->overspendMode)->toBe(OverspendMode::CarryNegative);
 });
 
 it('copies last months assignments only when the selected month has none and the prior month has some', function (): void {

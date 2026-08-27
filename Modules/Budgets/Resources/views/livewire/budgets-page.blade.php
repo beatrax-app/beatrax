@@ -117,7 +117,7 @@
                     <tr class="group border-b border-slate-100 dark:border-slate-800" wire:key="envelope-row-{{ $row->categoryId }}">
                         <td class="px-4 py-2">
                             <span class="truncate text-slate-900 dark:text-slate-100">{{ $row->categoryName }}</span>
-                            @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
+                            @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative)
                                 <x-core::status-pill tone="warning" class="ml-2">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
                             @if ($row->unconvertedSpentMinor != 0)
@@ -150,13 +150,13 @@
                         </td>
                         <td class="px-4 py-2">
                             <select
-                                x-data="{ mode: @js($row->overspendMode) }"
+                                x-data="{ mode: @js($row->overspendMode->value) }"
                                 x-on:change="if ($event.target.value !== mode) { mode = $event.target.value; $wire.setOverspendMode({{ $row->categoryId }}, mode) }"
                                 aria-label="{{ Lang::get('budgets::messages.row.overspend_aria', ['category' => $row->categoryName]) }}"
                                 class="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300"
                             >
-                                <option value="reduce_to_budget" @selected($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::ReduceToBudget->value)>{{ Lang::get('budgets::messages.overspend.reduce') }}</option>
-                                <option value="carry_negative" @selected($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)>{{ Lang::get('budgets::messages.overspend.carry') }}</option>
+                                <option value="{{ \Modules\Budgets\Public\Enums\OverspendMode::ReduceToBudget->value }}" @selected($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::ReduceToBudget)>{{ Lang::get('budgets::messages.overspend.reduce') }}</option>
+                                <option value="{{ \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value }}" @selected($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative)>{{ Lang::get('budgets::messages.overspend.carry') }}</option>
                             </select>
                         </td>
                         <td class="px-4 py-2 text-right align-top">
@@ -242,7 +242,7 @@
                     <div class="w-full min-w-0">
                         <p class="primary truncate">
                             {{ $row->categoryName }}
-                            @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
+                            @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative)
                                 <x-core::status-pill tone="warning" class="ml-1">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
                             @if ($row->unconvertedSpentMinor != 0)

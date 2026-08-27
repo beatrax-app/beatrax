@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -138,7 +139,7 @@ final class PotBalanceQuery
         $goalsQuery = $this->db->connection()
             ->table('goals')
             ->where('user_id', $user->id)
-            ->where('status', PotStatus::Active->value)
+            ->where('status', GoalStatus::Active->value)
             ->orderBy('name');
 
         if ($editPotId !== 0) {

@@ -28,7 +28,7 @@ final class CarryoverQuery
 {
     use CoercesScalars;
 
-    private const DEFAULT_OVERSPEND_MODE = OverspendMode::ReduceToBudget->value;
+    private const OverspendMode DEFAULT_OVERSPEND_MODE = OverspendMode::ReduceToBudget;
 
     // Fallback when envelope_settings.threshold_percent is null. Resolved here
     // so the nudge job reads EnvelopeRow::$notifyThresholdPercent, never the default.
@@ -82,7 +82,7 @@ final class CarryoverQuery
                 carriedInMinor: 0,
                 netMovedMinor: 0,
                 availableMinor: $available,
-                overspendMode: $settings['modes'][$categoryId] ?? self::DEFAULT_OVERSPEND_MODE,
+                overspendMode: OverspendMode::tryFrom($settings['modes'][$categoryId] ?? '') ?? self::DEFAULT_OVERSPEND_MODE,
                 currency: $currency,
                 unconvertedSpentMinor: $spendByCategory[$categoryId]['unconverted'] ?? 0,
                 notifyThresholdPercent: $settings['thresholds'][$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
@@ -277,13 +277,14 @@ final class CarryoverQuery
                 ->minus(Money::ofMinor($spent, $currency));
             $available = $availableMoney->toMinor();
 
-            $mode = $context->overspendModeByCategory[$categoryId] ?? self::DEFAULT_OVERSPEND_MODE;
+            $mode = OverspendMode::tryFrom($context->overspendModeByCategory[$categoryId] ?? '')
+                ?? self::DEFAULT_OVERSPEND_MODE;
             $notifyThreshold = $context->notifyThresholdByCategory[$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
 
             // The overspend modes differ in who absorbs a negative envelope:
             // reduce_to_budget hands the shortfall to the shared pool once per
             // period, carry_negative leaves it in the envelope and off the pool.
-            if ($available < 0 && $mode === self::DEFAULT_OVERSPEND_MODE) {
+            if ($available < 0 && $mode->absorbsShortfallIntoPool()) {
                 $shortfallMoney = $shortfallMoney->plus($availableMoney);
                 $nextCarriedIn[$categoryId] = 0;
             } else {

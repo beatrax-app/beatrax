@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Budgets\Public\Dto\EnvelopeRow;
+use Modules\Budgets\Public\Enums\OverspendMode;
 use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Budgets\Public\Services\EnvelopeBalanceQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
@@ -170,8 +171,16 @@ final class BudgetsPage extends Component
             return;
         }
 
+        $parsed = OverspendMode::tryFrom($mode);
+
+        if ($parsed === null) {
+            $this->toast(Lang::get('budgets::messages.errors.invalid_overspend_mode'));
+
+            return;
+        }
+
         try {
-            $writer->setOverspendMode($currentUser->user(), $categoryId, $mode);
+            $writer->setOverspendMode($currentUser->user(), $categoryId, $parsed);
         } catch (InvalidArgumentException $e) {
             $this->toast($e->getMessage());
         }

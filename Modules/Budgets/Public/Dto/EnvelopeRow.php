@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Budgets\Public\Dto;
 
+use Modules\Budgets\Public\Enums\OverspendMode;
 use Spatie\LaravelData\Data;
 
 final class EnvelopeRow extends Data
@@ -16,7 +17,7 @@ final class EnvelopeRow extends Data
         public readonly int $carriedInMinor,
         public readonly int $netMovedMinor,
         public readonly int $availableMinor,
-        public readonly string $overspendMode,
+        public readonly OverspendMode $overspendMode,
         public readonly string $currency,
         public readonly int $unconvertedSpentMinor = 0,
         public readonly int $notifyThresholdPercent = 90,

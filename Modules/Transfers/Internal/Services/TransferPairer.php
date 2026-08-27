@@ -123,30 +123,33 @@ final class TransferPairer implements PairsTransferLegs
         return $this->aliasResolver->resolveAccount($plainIban, $user->id)?->id;
     }
 
-    // The two updates are independent statements outside the listener's
-    // transaction frame, which ShouldBeUniqueUntilProcessing makes safe by
-    // ruling out a concurrent run for the same user.
+    // Both sides in one transaction. Uniqueness rules out a concurrent run for
+    // the same user; it does not rule out a crash between two statements, and
+    // that half-pair does not heal: pairOrphansForUser finds the partner while
+    // counterLegOnAccount's unpairedOnly narrowing hides the leg pointing at it.
     private function linkPair(Transaction $tx, User $user, int $partnerId): void
     {
         $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
 
-        $connection
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('id', $tx->id)
-            ->update([
-                'pair_transaction_id' => $partnerId,
-                'updated_at' => $now,
-            ]);
-        $connection
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('id', $partnerId)
-            ->update([
-                'pair_transaction_id' => $tx->id,
-                'updated_at' => $now,
-            ]);
+        $connection->transaction(function () use ($connection, $tx, $user, $partnerId, $now): void {
+            $connection
+                ->table('transactions')
+                ->where('user_id', $user->id)
+                ->where('id', $tx->id)
+                ->update([
+                    'pair_transaction_id' => $partnerId,
+                    'updated_at' => $now,
+                ]);
+            $connection
+                ->table('transactions')
+                ->where('user_id', $user->id)
+                ->where('id', $partnerId)
+                ->update([
+                    'pair_transaction_id' => $tx->id,
+                    'updated_at' => $now,
+                ]);
+        });
 
         // The row was written through the query builder, so the caller's model is
         // re-synced by hand and observers see the post-pair state.
@@ -158,6 +161,10 @@ final class TransferPairer implements PairsTransferLegs
     {
         $connection = $this->db->connection();
 
+        // The sweep order decides which orphan asks first, and pairOne()
+        // persists that answer — the reason counterLegOnAccount() and the
+        // reverse arm both end on id. Orphans routinely share a booked_at
+        // (ASN books every row at 12:00:00), leaving the winner to SQLite.
         /** @var list<int<1, max>> $candidateIds */
         $candidateIds = $connection
             ->table('transactions')
@@ -165,6 +172,7 @@ final class TransferPairer implements PairsTransferLegs
             ->whereIn('type', TransactionType::transferValues())
             ->whereNull('pair_transaction_id')
             ->orderBy('booked_at')
+            ->orderBy('id')
             ->pluck('id')
             ->map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
             ->filter(static fn (int $id): bool => $id > 0)
