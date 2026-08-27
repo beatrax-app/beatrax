@@ -5,7 +5,7 @@
         <x-core::card tag="section" aria-label="{{ Lang::get('drift-alerts::savings.aria') }}">
             <div class="flex flex-wrap items-baseline justify-between gap-4">
                 <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::savings.heading') }}</h2>
-                <a href="{{ Destination::Subscriptions->url() }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::savings.subscriptions_link') }}</a>
+                <a href="{{ Destination::Subscriptions->url() }}" class="tap-link text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::savings.subscriptions_link') }}</a>
             </div>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {{ Lang::get('drift-alerts::savings.disclaimer') }}

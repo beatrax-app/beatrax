@@ -60,7 +60,7 @@
                     href="{{ ProjectLinks::releaseTagUrl($releaseTag) }}"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="rounded text-slate-700 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium underline underline-offset-2 dark:text-slate-300 dark:hover:text-slate-100"
+                    class="tap-link rounded text-slate-700 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium underline underline-offset-2 dark:text-slate-300 dark:hover:text-slate-100"
                 >{{ Lang::get('core::alerts.actions.release_notes') }}</a>
             @endif
         </div>

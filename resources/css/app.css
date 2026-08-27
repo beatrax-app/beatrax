@@ -106,6 +106,10 @@
     --color-surface-raised: #ffffff;
     --color-border: #e2e8f0;
     --color-border-strong: #cbd5e1;
+    /* The step border-strong is too pale to be: a control outline and a status
+       dot are non-text that carries meaning, and 1.4.11 asks 3:1 of them.
+       border-strong is 1.48:1 on white, this is 5.12:1. */
+    --color-border-mid: #64748b;
 
     /* Text */
     --color-text: #0f172a;
@@ -124,7 +128,11 @@
     --color-amber-bg: #fef3c7;
     --color-rose: #be123c;
     --color-rose-bg: #ffe4e6;
-    --color-blue: #2563eb;
+    /* blue-700, not blue-600: on its own --color-blue-bg tint the 600 measured
+       4.24:1 at 10px, under the 4.5 floor, and the pairing is what the palette
+       source chip, .t-merchant and the batch-tag banner all draw themselves in.
+       Every other use is a fill or a border, which a darker blue only helps. */
+    --color-blue: #1d4ed8;
     --color-blue-bg: #dbeafe;
 
     /* Typography */
@@ -229,6 +237,7 @@
     --color-surface-raised: #0f172a;
     --color-border: #1e293b;
     --color-border-strong: #334155;
+    --color-border-mid: #94a3b8;
     --color-text: #f1f5f9;
     /* Same move up the ramp for the dark surfaces, which run slate-950 to
        slate-800: the old pair read 4.24:1 and 3.07:1 against them. */
@@ -573,11 +582,22 @@ td.date,
         color: var(--color-text-faint);
     }
 
+    /*
+     * Theme-locked, like .console-pane: white sits on this gradient in both
+     * themes, so it cannot take --color-emerald / --color-blue, whose dark
+     * values are the lighter ones. The stops are the LIGHT tokens spelled out.
+     *
+     * Sampled from the rendered circle, the previous emerald-500 -> blue-600
+     * ramp carried the initial at 3.37:1 to 4.16:1 against a 4.5 floor at
+     * 11px/600. No computed-style probe in this repo could see it: a gradient
+     * is a background-IMAGE, so backgroundColor reads transparent and the
+     * backdrop walk reports whatever is behind the circle.
+     */
     .avatar {
         width: 26px;
         height: 26px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #10b981, #2563eb);
+        background: linear-gradient(135deg, #047857, #1d4ed8);
         display: grid;
         place-items: center;
         color: white;
@@ -838,6 +858,13 @@ td.date,
      * 120ms thumb slide. The button itself carries the focus ring; the
      * thumb is purely visual.
      */
+    /*
+     * --color-border-mid on the OFF track, not --color-border: the track is
+     * surface-2 and the knob on it is white, so on a white page the control's
+     * outline measured 1.23:1 and the knob against its own track 1.10:1. Both
+     * are the boundary of a control, which 1.4.11 asks 3:1 of. The ON state
+     * needs none of this -- an emerald fill is 5.34:1 on either page.
+     */
     .switch {
         position: relative;
         display: inline-block;
@@ -845,7 +872,7 @@ td.date,
         height: 26px;
         border-radius: var(--radius-full);
         background: var(--color-surface-2);
-        border: 1px solid var(--color-border);
+        border: 1px solid var(--color-border-mid);
         cursor: pointer;
         transition: var(--tx-quick);
         flex-shrink: 0;
@@ -874,12 +901,14 @@ td.date,
         height: 20px;
         border-radius: var(--radius-full);
         background: var(--color-switch-knob);
+        border: 1px solid var(--color-border-mid);
         box-shadow: var(--shadow-xs);
         transition: var(--tx-quick);
     }
 
     .switch--on .switch__thumb {
         transform: translateX(18px);
+        border-color: var(--color-emerald);
     }
 }
 
@@ -2632,7 +2661,11 @@ td.date,
     .dot-bank { background: var(--color-amber); }
     .dot-gov { background: #334155; }
     .dot-self { background: var(--color-text-faint); }
-    .dot-unknown { background: var(--color-border-strong); }
+    /* border-strong measured 1.48:1 light and 1.81:1 dark against the chip it
+       sits on, beside five siblings at 7.3-9.9 -- by eye the Unknown chip
+       simply had no dot. border-mid keeps it the quietest of the six and
+       clears the 3:1 that a meaning-carrying mark is owed. */
+    .dot-unknown { background: var(--color-border-mid); }
 
     /* ─── Frame primitives (profile Overview sections) ───────────── */
 
@@ -2875,9 +2908,6 @@ td.date,
     /* ─── Triage queue card ──────────────────────────────────────── */
 
     .triage-shell {
-        max-width: 760px;
-        margin: 0 auto;
-        padding: var(--space-6) var(--space-4);
         display: flex;
         flex-direction: column;
         gap: var(--space-4);
@@ -4335,6 +4365,13 @@ td.date,
         opacity: 0;
     }
 
+    /*
+     * Asked for at rest, for a badge that sits among status chips rather than
+     * on a hover-reveal row: the reveal below never fires under a fine pointer
+     * narrow enough to show the phone card, so without this the control is
+     * invisible on a resized desktop window.
+     */
+    .tax-badge--shown,
     .triage-row:hover .tax-badge--untagged,
     .triage-row:focus-within .tax-badge--untagged,
     .group:hover .tax-badge--untagged,
@@ -5358,7 +5395,17 @@ mark {
         color: var(--color-text-muted);
     }
 
+    /*
+     * inline-flex with a floor, not an inline anchor: 10px of padding on a
+     * 14px line box measured 157x40, and this is the only control on a page
+     * the reader reached by something going wrong. The touch floor never sees
+     * it -- the error shell is rendered outside the app layout, and an <a> is
+     * matched by neither the floor nor the halo.
+     */
     .bx-error-action {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
         margin-top: var(--space-2);
         padding: 10px var(--space-5);
         border-radius: var(--radius-md);
@@ -5709,6 +5756,8 @@ mark {
     .srch-chip-toggle,
     .split-badge,
     .tax-badge,
+    .tax-badge--untagged,
+    .cleared-badge-toggle,
     .fx-disclosure-trigger,
     .srch-chip-close,
     .srch-sheet-apply,
@@ -5736,6 +5785,8 @@ mark {
     .srch-chip-toggle::after,
     .split-badge::after,
     .tax-badge::after,
+    .tax-badge--untagged::after,
+    .cleared-badge-toggle::after,
     .fx-disclosure-trigger::after,
     .srch-chip-close::after,
     .srch-sheet-apply::after,
@@ -5835,6 +5886,21 @@ mark {
     }
 
     /*
+     * The same problem, answered with pitch rather than height. A chain leg is
+     * a 28px row carrying an inline counterparty link, and stacked flush its
+     * halo reached 30px of the 44 because the row above and below had already
+     * claimed the rest. Sixteen pixels between rows takes the pitch to 44 and
+     * gives each halo the 8px a side it was asking its neighbours for.
+     *
+     * Spacing rather than min-height because the row aligns on the baseline
+     * and its ::before elbow is positioned from the row box: growing the box
+     * leaves the elbow pointing at empty space above the name.
+     */
+    .chain-leg + .chain-leg {
+        margin-top: var(--space-4);
+    }
+
+    /*
      * A select is tapped like a button but is matched by neither the floor nor
      * the halo, and px-3 py-2 on 13px text left the language picker at 29px.
      *
@@ -5848,6 +5914,7 @@ mark {
      * Coarse pointers only, like every rule in this block: a fine pointer is
      * already at the floor, and leaving it native there is also what keeps a
      * drawn chevron from ever sitting beside one the platform still paints.
+     *
      */
     select {
         min-height: 44px;
@@ -5857,6 +5924,23 @@ mark {
         background-repeat: no-repeat;
         background-position: right var(--space-3) center;
         background-size: 12px 8px;
+        padding-right: calc(var(--space-3) * 2 + 12px);
+    }
+
+    /*
+     * The same reservation again, one specificity point higher. The rule above
+     * is an element selector, so the `px-3` that most call sites carry wins
+     * and puts the right padding back to 12px — under the 36px column the
+     * chevron is painted in. Measured on a Galaxy S24 Ultra, the arrow was
+     * drawn over the last 15-24px of the selected option's text on four
+     * controls, "Choose a counterparty…" among them.
+     *
+     * Only the padding is repeated: 12 of the 30 selects in the tree carry no
+     * class at all — x-core::form-field's among them — and [class] would take
+     * the floor, the appearance reset and the chevron itself away from all of
+     * them. A select with no class also has no utility to lose to.
+     */
+    select[class] {
         padding-right: calc(var(--space-3) * 2 + 12px);
     }
 
@@ -6466,7 +6550,7 @@ mark {
 
 .palette-source--action {
     background: var(--color-blue-bg, #dbeafe);
-    color: var(--color-blue, #2563eb);
+    color: var(--color-blue, #1d4ed8);
 }
 
 /*

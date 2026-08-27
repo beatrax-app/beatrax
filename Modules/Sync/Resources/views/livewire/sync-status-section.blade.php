@@ -23,7 +23,7 @@
         {{-- No sync_sessions rows yet. Not the same as having no device: the
              list below this line may well name two paired ones. --}}
         <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400" data-testid="sync-status-overall">
-            <span class="inline-block h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" aria-hidden="true"></span>
+            <span class="inline-block h-2 w-2 rounded-full bg-slate-500 dark:bg-slate-400" aria-hidden="true"></span>
             {{ Lang::get('sync::status.not_synced_yet') }}
         </div>
 
@@ -105,7 +105,7 @@
                         @else
                             <span
                                 role="img"
-                                class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-slate-300 dark:bg-slate-600"
+                                class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-slate-500 dark:bg-slate-400"
                                 aria-label="{{ Lang::get('sync::status.dot_offline') }}"
                             ></span>
                         @endif

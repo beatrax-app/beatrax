@@ -1752,6 +1752,141 @@ pins. The other two pin the pairings that fail by construction rather than by
 route: slate-400 on any light surface, and slate-500 on an element that also
 carries slate-100.
 
+## A page that declares its own layout leaves the decision its neighbours made
+
+Two axes drifted the same way in the same round, and neither could fail a test.
+
+The `h1` had seven spellings. Five pages set the size in a `style` attribute and
+two of those chose `--text-xl`, so `/reports` and `/counterparties` wore a
+heading visibly smaller than the thirty-three pages either side of them;
+`/data-devices` sat at `text-lg` because a survey had grouped it with the
+pairing-wizard steps rather than with the nav destinations it sits among.
+
+The container was worse, because the cause was structural rather than a typo.
+The app routes pages two ways: a route view that wraps `x-core::page-shell`
+around `@livewire(...)`, and a full-page Livewire component that is the page.
+The shell already owns the column and the rhythm. `/counterparties` sat inside
+one **and** carried a second container of its own, so it ran 48px + 24px deep;
+`/counterparties/triage` did the same with `.triage-shell` in CSS; `/reports`
+was mounted bare and had only its own 24px. Measured on the phone, the same
+title sat at 119, 129, 138, 146 or 170 pixels from the top depending on which
+page you had navigated to. Each page looked self-consistent, which is why
+nobody saw it.
+
+Unwrapping is not symmetric with wrapping. `/reports/library` is a full-page
+Livewire route with nothing above it, so removing its container left no column
+at all — it takes the shell itself. Check which of the two shapes a page is
+before you take anything away from it.
+
+`APageTakesItsShapeFromTheSharedComponentsArchTest` pins both: no page writes
+its own `h1`, and every page container says `py-12` (nineteen did already). The
+exemptions are surfaces that are not pages — the dev console is deliberately
+denser, a wizard step is a step inside a page, and the tax PDF is a printed
+document — and each is listed with the reason rather than as a bare path.
+
+The near miss worth recording: the first move was to write a new `x-core::page`
+component, and `x-core::page-shell` already existed, used by twenty-four files,
+with a docblock describing this exact problem. Read the component directory
+before adding to it; a second component for one job is the duplication the
+extraction was meant to end.
+
+## A rule that selects files by path cannot see the file everything routes through
+
+`PagePaddingArchTest` forbids a bare `px-6`/`px-8` on a page container, because
+on a coarse pointer `app.css` redefines `.px-8` to 32px against `.px-4`'s 16px.
+It selects the files to scan two ways: the path contains
+`/Resources/views/livewire/`, or the source contains `@extends('layouts.app'`.
+
+`x-core::page-shell` is neither. It lives in `components/` and extends nothing,
+so the rule never opened it — and it rendered `px-8`. Its nineteen callers hold
+no `mx-auto` of their own, so every one of them passed trivially. The rule read
+green while the component shipped the exact value the rule exists to forbid, to
+every page routed through it. Measured on the phone: eight routes at a 32px
+gutter against fifteen at 16px, and moving `/reports` into the shell moved it
+from the majority to the minority without changing a number the vertical check
+was watching.
+
+Two things follow. A path-based selector is a claim about where a category of
+file lives, and it goes stale the moment the category gets a component — so the
+selector now includes `/Resources/views/components/`. And an extraction inherits
+the guard debt of whatever it absorbs: converting a call site to a component
+moves that site out of the rule's reach unless the component is in it.
+
+## A constraint is applied after the value, so no utility can beat it
+
+`min-height: 44px` from the coarse-pointer block is a **constraint**. CSS
+resolves it after the used value of `height`, which means specificity, layer
+order and source order never enter into it: a `height` declaration cannot win,
+however it is written.
+
+The transactions phone card carried `[&>*]:h-5` on its chip row, with a comment
+explaining that three primitives had each set their own height and the row read
+as lumpy. On every phone since the touch floor landed, that utility did nothing.
+The cleared badge — the one chip in the row that is a `<button>` — stood at 44px
+while the tax badge beside it, which the floor had been told to skip, stayed at
+20. Its `padding: 2px 8px` had been drawn for a 23px pill, so at 44px with a
+`9999px` radius the label sat inside its own end cap. Measured at 384px, fine
+and coarse pointers rendered the same markup 20px and 44px tall.
+
+The fix is not a bigger number on the utility; it is releasing the control from
+the floor and moving its reach to the halo, which is the pattern its own row
+mates were already using. `AChipRowKeepsOneHeightUnderAFingerArchTest` names the
+four chips that share that row and requires each to be in both the release list
+and the halo list — release without a halo shrinks the picture *and* the target.
+
+## An element selector loses to the utility class on the same element
+
+The touch rule drops a select's native appearance, which takes its arrow with
+it, and reserves a 36px column in `padding-right` for the one it draws in its
+place. `select` is an element selector. Almost every call site carries `px-3`,
+which is a class, so the reservation lost and the arrow was painted over the
+last of the selected option's own text. Ten of ten visible selects at 384px
+reserved 12px against a 36px column.
+
+Repeating the declaration as `select[class]` costs one specificity point and
+wins. Repeating **only** the padding matters: 12 of the 30 selects in the tree
+carry no class at all — `x-core::form-field`'s among them — and moving the whole
+rule behind `[class]` would take the floor, the appearance reset and the chevron
+itself away from every one of them. A select with no class also has no utility
+to lose to.
+
+## Two halos closer together than 44px take from each other
+
+A halo extends a control's reach with an `::after` that no layout can see. Two
+of them within 44px overlap, and the later one in the DOM paints on top — so the
+overlap answers for the wrong control. On the chains index the settlement's
+counterparty name and the transaction date sit 20px apart; giving both a halo
+made a tap 16px left of the name's centre open the transaction.
+
+The stylesheet already recorded half of this for `.side-item`: a flush-stacked
+list has no slack, so real height is the only honest 44px there. The other half
+is that the halo needs *pitch* as much as height. Chain legs got it as 16px
+between rows, which takes a 28px row to a 44px pitch. Where the pitch cannot be
+had, only one of the two controls can carry a halo, and it has to be the primary
+one.
+
+## A gradient is invisible to a contrast probe
+
+Every contrast probe in this repo walks `getComputedStyle(...).backgroundColor`
+up the ancestors to find what a colour sits on. A `linear-gradient` is a
+background-**image**: `backgroundColor` reads `rgba(0,0,0,0)`, the walk sails
+past the element, and the ratio comes back computed against whatever opaque
+ancestor is behind it.
+
+The sidebar avatar is a 26px circle with the account's initial in white on an
+emerald-to-blue ramp. A 664-node sweep, two device rounds and an Android agent
+all reported it clean. Sampled from the rendered pixels it ran **3.37:1 to
+4.16:1** at 11px/600, against a 4.5 floor.
+
+Pixel sampling has no such blind spot, and it is also the only method with no
+colour model in the middle. Two hand-rolled probes in one session returned
+confident nonsense — one painted its sample onto an opaque black undercoat, so
+every transparent ancestor read back at alpha 1 and the backdrop walk called the
+first parent black; the other divided by alpha a second time on values
+`getImageData` had already returned un-premultiplied. Copy the validated probe
+forward rather than writing a new one, and settle any disagreement against the
+PNG.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

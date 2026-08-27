@@ -51,7 +51,7 @@
 <div class="mx-auto max-w-3xl px-4 py-12">
     <header class="mb-8">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('drift-alerts::watch.heading') }}</x-core::page-heading>
             <a href="{{ Destination::DriftAlerts->url() }}" class="tap-link text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::watch.drift_alerts_link') }}</a>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -111,7 +111,7 @@
                                     class="tap-link min-w-0 font-medium text-slate-900 hover:underline underline-offset-2 dark:text-slate-100"
                                 ><span class="block truncate">{{ $row->name }}</span></a>
                                 @if ($row->hasOpenAlert)
-                                    <a href="{{ Destination::DriftAlerts->url() }}" class="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300" style="background: color-mix(in srgb, currentColor 14%, transparent);">{{ Lang::get('drift-alerts::watch.open_alert') }}</a>
+                                    <a href="{{ Destination::DriftAlerts->url() }}" class="tap-chip shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300" style="background: color-mix(in srgb, currentColor 14%, transparent);">{{ Lang::get('drift-alerts::watch.open_alert') }}</a>
                                 @endif
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">

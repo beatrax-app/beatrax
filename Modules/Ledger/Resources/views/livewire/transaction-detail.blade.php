@@ -35,7 +35,7 @@
         <div class="mx-auto max-w-3xl px-4 py-12 space-y-6 sm:px-8" data-testid="transaction-detail">
             <header class="space-y-1">
                 <div class="flex items-center gap-3">
-                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::detail.heading') }}</h1>
+                    <x-core::page-heading>{{ Lang::get('ledger::detail.heading') }}</x-core::page-heading>
                     {{-- Cleared/uncleared/reconciled badge + toggle. --}}
                     <x-ledger::cleared-badge :transaction="['id' => $transaction->id, 'status' => $clearedStatus ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
                     {{-- The reclassify control below offers to override the
@@ -68,7 +68,7 @@
                             <a
                                 href="{{ route('counterparties.profile', ['slug' => $transaction->counterparty->slug]) }}"
                                 wire:navigate
-                                class="break-words underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                class="tap-link break-words underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                 data-testid="tx-detail-counterparty-link"
                             >{{ $transaction->counterparty_name ?? '—' }}</a>
                         @else

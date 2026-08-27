@@ -38,7 +38,7 @@
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-12">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('chains::review.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('chains::review.heading') }}</x-core::page-heading>
             @if (($hintCount ?? 0) > 0)
                 <a
                     href="{{ route('chains.hints') }}"
@@ -85,7 +85,7 @@
                                     <a
                                         href="{{ route('counterparties.profile', ['slug' => $row->fromCounterpartySlug]) }}"
                                         wire:navigate
-                                        class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                        class="tap-link underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                         data-testid="chain-review-from-counterparty-link-{{ $row->chainLinkId }}"
                                     >{{ $row->fromCounterparty }}</a>
                                 @else
@@ -97,7 +97,7 @@
                                     <a
                                         href="{{ route('counterparties.profile', ['slug' => $row->toCounterpartySlug]) }}"
                                         wire:navigate
-                                        class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                        class="tap-link underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                         data-testid="chain-review-to-counterparty-link-{{ $row->chainLinkId }}"
                                     >{{ $row->toCounterparty }}</a>
                                 @else

@@ -185,7 +185,7 @@
                                                             x-text="hit.counterpartyName || @js(Lang::get('dev::palette.no_name'))"
                                                         ></span>
                                                         <span
-                                                            class="text-xs text-slate-500 dark:text-slate-400 shrink-0 tabular-nums ml-auto"
+                                                            class="text-xs text-slate-600 dark:text-slate-400 shrink-0 tabular-nums ml-auto"
                                                             x-text="hit.amount"
                                                         ></span>
                                                     </span>
@@ -194,12 +194,12 @@
                                                          reference, so without the day two rows read alike. --}}
                                                     <span class="flex items-baseline gap-2 min-w-0">
                                                         <span
-                                                            class="text-xs text-slate-500 dark:text-slate-400 shrink-0 tabular-nums"
+                                                            class="text-xs text-slate-600 dark:text-slate-400 shrink-0 tabular-nums"
                                                             x-text="hit.date"
                                                         ></span>
                                                         <template x-if="hit.snippet">
                                                             <span
-                                                                class="block min-w-0 flex-1 text-xs text-slate-500 dark:text-slate-400 truncate"
+                                                                class="block min-w-0 flex-1 text-xs text-slate-600 dark:text-slate-400 truncate"
                                                                 x-html="hit.snippet"
                                                             ></span>
                                                         </template>
@@ -213,7 +213,7 @@
                                         <button
                                             type="button"
                                             data-palette-row
-                                            class="palette-row flex w-full items-center gap-3 px-4 py-2 rounded-lg text-left cursor-pointer text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100"
+                                            class="palette-row flex w-full items-center gap-3 px-4 py-2 rounded-lg text-left cursor-pointer text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100"
                                             x-on:click="seeAllResults()"
                                         >
                                             <span class="w-5 text-center text-slate-600 dark:text-slate-400 shrink-0" aria-hidden="true">→</span>
@@ -321,10 +321,14 @@
                                     x-on:click="execute(hit.item)"
                                     x-on:mouseenter="activeIndex = i"
                                 >
-                                    <span class="ic w-5 text-center text-slate-500 dark:text-slate-400" aria-hidden="true" x-text="hit.item.icon"></span>
+                                    <span class="ic w-5 text-center text-slate-600 dark:text-slate-400" aria-hidden="true" x-text="hit.item.icon"></span>
                                     <span class="block flex-1 min-w-0">
                                         <span class="block text-sm font-medium" x-text="hit.item.label"></span>
-                                        <span class="block text-xs text-slate-500 dark:text-slate-400" x-text="hit.item.hint"></span>
+                                        {{-- slate-600, not 500: the row's own active and hover
+                                             background is bg-slate-100, and slate-500 on it is
+                                             4.35:1. It reads 4.76 on white, which is why a walk
+                                             that never opened this overlay saw nothing wrong. --}}
+                                        <span class="block text-xs text-slate-600 dark:text-slate-400" x-text="hit.item.hint"></span>
                                     </span>
                                     {{-- shrink-0 and nowrap, like the txn badge above: the row
                                          is one flex line, so a long label squeezed this to
