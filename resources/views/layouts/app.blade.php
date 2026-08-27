@@ -189,7 +189,9 @@
                  the form submits as `spawn-command` so the runner
                  page's onSpawnCommand listener fires the actual
                  spawn.  --}}
-            @livewire('dev.command-arg-prompt-modal')
+            @if (auth()->check() && auth()->user()->is_developer === true)
+                @livewire('dev.command-arg-prompt-modal')
+            @endif
 
             <x-core::toast-host />
             {{--

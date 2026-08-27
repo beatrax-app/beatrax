@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\DriftAlerts\Internal\Http\Livewire;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Routing\Redirector;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Anomaly\Public\Actions\AcknowledgeAnomalyAlert;
@@ -21,6 +21,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\SnoozeWindow;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeDate;
+use Modules\Core\Public\Support\SnoozeUntil;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
 use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
 use Modules\DriftAlerts\Public\Actions\SnoozeDriftAlert;
@@ -29,7 +31,7 @@ use Modules\DriftAlerts\Public\Enums\DriftPageTab;
 use Modules\DriftAlerts\Public\Enums\DriftPageType;
 use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
-use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
+use Modules\Forecasting\Public\Actions\CreateScenarioFromTemplate;
 
 /**
  * @link ../../../../../.docs/features/drift-alerts/snooze-lifecycle.md
@@ -37,8 +39,6 @@ use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
 final class DriftPage extends Component
 {
     use DispatchesToast;
-
-    private const int MAX_UNTIL_MONTHS = 6;
 
     private const int PAGE_SIZE = 26;
 
@@ -54,6 +54,8 @@ final class DriftPage extends Component
     // A page count, not a keyset cursor: the cursor replaced the list with the
     // next page, so page 2 showed 4 rows and the first 26 vanished with no way
     // back. Re-reading id DESC from the top keeps every row already shown.
+    // Locked because it is a SQL LIMIT and only loadMore() may move it.
+    #[Locked]
     public int $pageSize = self::PAGE_SIZE;
 
     public ?string $anomalyCursorDetectedAt = null;
@@ -172,19 +174,13 @@ final class DriftPage extends Component
         $this->toast(Lang::get('drift-alerts::alerts.toasts.acknowledged'));
     }
 
-    // Bounds the accepted range to (now, now+6mo] so a malformed date is
-    // dropped before it reaches an action. Both actions enforce the same bound
-    // themselves; this only keeps the UI from raising on a stale popover.
+    // A malformed or out-of-range date is dropped before it reaches an action.
+    // Both actions refuse the same value themselves; this only keeps the UI
+    // from raising on a stale popover.
     private function snoozeAlert(int $alertId, string $untilIso, CurrentUser $currentUser, callable $action, Clock $clock): void
     {
-        try {
-            $until = CarbonImmutable::parse($untilIso);
-        } catch (\Throwable) {
-            return;
-        }
-
-        $now = $clock->now();
-        if ($until->lessThanOrEqualTo($now) || $until->greaterThan($now->addMonths(self::MAX_UNTIL_MONTHS))) {
+        $until = SafeDate::parseOrNull($untilIso);
+        if ($until === null || SnoozeUntil::tryFrom($until, $clock->now()) === null) {
             return;
         }
 
@@ -201,10 +197,10 @@ final class DriftPage extends Component
     public function modelCancelInForecast(
         int $alertId,
         CurrentUser $currentUser,
-        CreateCancellationScenarioForAlert $action,
+        CreateScenarioFromTemplate $action,
         Redirector $redirector,
     ): mixed {
-        $newId = ($action)($alertId, $currentUser->user());
+        $newId = $action->forDriftAlert($alertId, $currentUser->user());
 
         return $redirector->to('/forecast?scenarioId='.$newId);
     }
