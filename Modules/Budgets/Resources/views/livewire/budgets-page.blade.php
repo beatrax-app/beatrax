@@ -280,17 +280,24 @@
                                 <span class="pointer-events-none absolute right-2 text-xs text-slate-400 dark:text-slate-500">%</span>
                             </span>
                         </label>
-                        <input
-                            type="text"
-                            inputmode="decimal"
-                            wire:model="assignedInputs.{{ $row->categoryId }}"
-                            wire:keydown.enter="setAssigned({{ $row->categoryId }})"
-                            wire:blur="setAssigned({{ $row->categoryId }})"
-                            aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryName]) }}"
-                            placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
-                            class="amount h-8 w-24 rounded-md border border-slate-200 bg-white px-2 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                            style="font-variant-numeric: tabular-nums;"
-                        >
+                        {{-- The column header the table gives this field is not
+                             drawn here, so the box that assigns the money was the
+                             bare one and the notify threshold beside it was the
+                             labelled one. Same wrapper, same header string. --}}
+                        <label class="flex flex-wrap items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                            <span>{{ Lang::get('budgets::messages.table.assigned') }}</span>
+                            <input
+                                type="text"
+                                inputmode="decimal"
+                                wire:model="assignedInputs.{{ $row->categoryId }}"
+                                wire:keydown.enter="setAssigned({{ $row->categoryId }})"
+                                wire:blur="setAssigned({{ $row->categoryId }})"
+                                aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryName]) }}"
+                                placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                                class="amount h-8 w-24 rounded-md border border-slate-200 bg-white px-2 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                style="font-variant-numeric: tabular-nums;"
+                            >
+                        </label>
                         @if (! empty($thresholdErrors[$row->categoryId]))
                             <p class="w-full text-xs text-rose-600 dark:text-rose-400">{{ $thresholdErrors[$row->categoryId] }}</p>
                         @endif
