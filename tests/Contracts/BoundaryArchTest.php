@@ -445,9 +445,10 @@ it('does not allow any file under Modules/DriftAlerts/ to mutate the recurring_s
     );
 });
 
-it('does not allow any file other than DriftAlertStateMachine to mutate drift_alerts.state (noOtherDriftAlertStateMutator)', function (): void {
-    // snoozed_until and actioned_at may be updated without the state machine, so
-    // the grep targets the `state` key inside the update payload specifically.
+it('does not allow any file other than DriftAlertStateMachine to mutate drift_alerts.state or snoozed_until (noOtherDriftAlertStateMutator)', function (): void {
+    // `snoozed_until` is a lifecycle column too: the Open tab decides whether an
+    // alert is open by reading it, and a raw update of it took no row lock, ran
+    // no edge guard and left no audit row. actioned_at is not on the list.
     $hits = [];
     $driftDir = base_path('Modules/DriftAlerts');
     if (! is_dir($driftDir)) {
@@ -487,21 +488,22 @@ it('does not allow any file other than DriftAlertStateMachine to mutate drift_al
         // anchored to the opening bracket, update(['updated_at' => ..., 'state'
         // => ...]) walked straight past both halves of the guard.
         if (
-            preg_match("/->table\(['\"]drift_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[[^;]*['\"]state['\"]\\s*=>/", $stripped) === 1
-            || preg_match('/DriftAlert::query\(\)[^;]*->update\(\s*\[[^;]*[\'"]state[\'"]\s*=>/', $stripped) === 1
+            preg_match("/->table\(['\"]drift_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[[^;]*['\"](?:state|snoozed_until)['\"]\\s*=>/", $stripped) === 1
+            || preg_match('/DriftAlert::query\(\)[^;]*->update\(\s*\[[^;]*[\'"](?:state|snoozed_until)[\'"]\s*=>/', $stripped) === 1
         ) {
             $hits[] = $path;
         }
     }
     expect($hits)->toBe(
         [],
-        "Only DriftAlertStateMachine may mutate drift_alerts.state. Offenders:\n  ".implode("\n  ", $hits),
+        "Only DriftAlertStateMachine may mutate drift_alerts.state or snoozed_until. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
 
-it('does not allow any file other than AnomalyAlertStateMachine to mutate anomaly_alerts.state (noOtherAnomalyAlertStateMutator)', function (): void {
-    // snoozed_until, actioned_at and dismissed_as may be updated without the
-    // state machine, so the grep targets the `state` key in the payload only.
+it('does not allow any file other than AnomalyAlertStateMachine to mutate anomaly_alerts.state or snoozed_until (noOtherAnomalyAlertStateMutator)', function (): void {
+    // `snoozed_until` is a lifecycle column too: the Open tab decides whether an
+    // alert is open by reading it. actioned_at and dismissed_as ride the
+    // dismissal transition and are not on the list.
     $hits = [];
     $anomalyDir = base_path('Modules/Anomaly');
     if (! is_dir($anomalyDir)) {
@@ -538,15 +540,15 @@ it('does not allow any file other than AnomalyAlertStateMachine to mutate anomal
         $contents = (string) file_get_contents($path);
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
         if (
-            preg_match("/->table\(['\"]anomaly_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[[^;]*['\"]state['\"]\\s*=>/", $stripped) === 1
-            || preg_match('/AnomalyAlert::query\(\)[^;]*->update\(\s*\[[^;]*[\'"]state[\'"]\s*=>/', $stripped) === 1
+            preg_match("/->table\(['\"]anomaly_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[[^;]*['\"](?:state|snoozed_until)['\"]\\s*=>/", $stripped) === 1
+            || preg_match('/AnomalyAlert::query\(\)[^;]*->update\(\s*\[[^;]*[\'"](?:state|snoozed_until)[\'"]\s*=>/', $stripped) === 1
         ) {
             $hits[] = $path;
         }
     }
     expect($hits)->toBe(
         [],
-        "Only AnomalyAlertStateMachine may mutate anomaly_alerts.state. Offenders:\n  ".implode("\n  ", $hits),
+        "Only AnomalyAlertStateMachine may mutate anomaly_alerts.state or snoozed_until. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
 
@@ -1048,7 +1050,7 @@ it('does not allow the impersonation surface to re-appear on disk (impersonation
     );
 });
 
-it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tests / resources / config (noDiederikLiteralAfterRename)', function (): void {
+it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tests / resources / config / .docs (noDiederikLiteralAfterRename)', function (): void {
     // The diederik -> Beatrax rename must stay complete. The three allow-listed
     // files deliberately house the literal as their assertion subject: this
     // invariant, the artisan-signature guard, and the sidebar render test.
@@ -1058,7 +1060,9 @@ it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tes
         'Modules/Shell/tests/Feature/AppSidebarRenderTest.php',
     ];
 
-    $roots = ['Modules', 'tests', 'resources', 'config'];
+    // .docs is in scope because AGENTS.md sends every new contributor to it
+    // first, which is exactly where a pre-rename brand name does most damage.
+    $roots = ['Modules', 'tests', 'resources', 'config', '.docs'];
 
     $hits = [];
     foreach ($roots as $root) {
@@ -1923,8 +1927,8 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php pending_enrichment_conflicts 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php transactions 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php users 1',
-        'Modules/Sync/Internal/Merge/TransferPairCascade.php transactions 1',
         'Modules/Transfers/Internal/Services/TransferPairer.php transactions 2',
+        'Modules/Transfers/Public/Services/PairUnlinker.php transactions 1',
     ];
 
     $ownership = boundaryTableOwnership();
@@ -2035,8 +2039,11 @@ it('does not allow a cross-module Internal import outside the pinned production 
     // welds the test to a private shape its owner is entitled to change. Each line
     // is one import somebody chose to write.
     $pinnedTestCrossings = [
+        'Modules/Anomaly/tests/Feature/AMuteThatNeverLeftTheDeviceTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'Modules/Anomaly/tests/Feature/APeerClosedTheRowBeforeTheClickLandedTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
         'Modules/Anomaly/tests/Feature/AnomalyAlertPaginationTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
         'Modules/Anomaly/tests/Feature/AnomalyAlertsHomeTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
+        'Modules/Anomaly/tests/Feature/ReSnoozingALapsedAlertIsNotA500Test.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
         'Modules/Auth/tests/Feature/AFailingCountrySeedNeverCostsTheRecoveryCodesTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Auth/tests/Feature/AFailingCountrySeedNeverCostsTheRecoveryCodesTest.php -> Modules\\Tax\\Internal\\Http\\Livewire\\TaxPage',
         'Modules/Auth/tests/Feature/AppLockProvisionerGdkRewrapTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
@@ -2072,7 +2079,6 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Desktop/tests/Feature/RelayProvisionsBeforeSpawnTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Desktop/tests/Feature/RelayProvisionsBeforeSpawnTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayTlsMaterial',
         'Modules/Desktop/tests/Unit/DesktopColdStartVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockKeyWrap',
-        'Modules/Desktop/tests/Unit/DispatchOsNotificationTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/DevMode/tests/Feature/AppMenuDeveloperSubmenuTest.php -> Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
         'Modules/DriftAlerts/tests/Feature/GlobalDriftThresholdSettingTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/EmailScan/tests/Feature/EmailScanHealthTileTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\Dashboard',
@@ -2168,7 +2174,6 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\DiscoveredPeer',
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\DiscoveryMode',
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\PeerDiscovery',
-        'Modules/Mobile/tests/Unit/DispatchMobileNotificationTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/Mobile/tests/Unit/Identity/BiometricKeyVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockKeyWrap',
         'Modules/Mobile/tests/Unit/PeerLanAddressTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Notifications/tests/Feature/ABudgetNudgeNamesTheCategoryInTheReadersLanguageTest.php -> Modules\\Budgets\\Internal\\Jobs\\EmitBudgetNudgesJob',
@@ -2186,6 +2191,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Notifications/tests/Feature/ReminderSelfInvalidationTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
         'Modules/Notifications/tests/Feature/SavingsPromptTriggerTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\EmitSavingsPromptsJob',
         'Modules/Notifications/tests/Feature/TheDigestScheduleActuallyDispatchesTest.php -> Modules\\Position\\Internal\\Jobs\\EmitPositionDigestJob',
+        'Modules/Onboarding/tests/Feature/AConfirmedStartingBalanceIsCheckedBeforeItIsWrittenTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConnectPaypalStepCacheContentsTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConnectPaypalStepReuseExistingAccountTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConsolidatedPreviewLoadTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
@@ -2202,6 +2208,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Receipts/tests/Feature/EmlFileDropTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
         'Modules/Receipts/tests/Feature/MboxFileDropTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
         'Modules/Receipts/tests/Feature/RawPayloadDecryptChainHintListenerTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
+        'Modules/Reports/tests/Feature/TheDrilldownListAddsUpToTheRowItWasOpenedFromTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Search/tests/Feature/CounterpartyFilterTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Search/tests/Feature/FtsSurvivesEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Search/tests/Feature/SearchEncryptionFallbackTest.php -> Modules\\Counterparties\\Internal\\Resolver\\CounterpartyResolverService',
@@ -2213,6 +2220,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\PinVerificationService',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Recovery\\RecoveryCodeAuthenticator',
+        'Modules/Tax/tests/Feature/ATamperedTaxPickerPayloadIsAFlashNotA500Test.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Tax/tests/Feature/LegScopedBadgeVisibilityTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Tax/tests/Feature/ReconciledLockTaxTagTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\CashBook\\Internal\\Http\\Livewire\\CashBookPage',
