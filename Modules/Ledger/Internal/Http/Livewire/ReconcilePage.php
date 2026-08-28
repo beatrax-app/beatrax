@@ -199,9 +199,10 @@ final class ReconcilePage extends Component
 
         $kind = is_string($account->kind ?? null) ? $account->kind : '';
 
-        // An account with no statement source (paypal, cash book,
-        // API-connected) finds none, so statementBalance is left blank for
-        // manual entry.
+        // A card reads its issuer statement; everything else reads whatever
+        // statement summary its import wrote. PayPal writes one, and writes
+        // none at all when its rows settle in more than one currency — so a
+        // blank here is a real absence, not a kind that never has a source.
         if ($kind === AccountKind::IcsCard->value) {
             $this->prefillFromCardStatement($connection, $user->id);
         } else {
