@@ -17,17 +17,27 @@
         <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.page.title') }}</p>
         <a
             href="{{ Destination::Goals->url() }}"
-            class="tap-link text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
+            class="tap-link text-xs text-slate-600 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-400 dark:hover:text-slate-300"
         >{{ Lang::get('goals::messages.summary.see_all') }}</a>
     </div>
 
     @if (count($goals) === 0)
-        {{-- Empty state --}}
-        <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
+        {{-- Empty state.
+
+             mt-7 rather than mt-4: this link and the card header's "See all"
+             both carry a 44px band, and at 384px their centres were 33px
+             apart, so each band was cut to its neighbour's edge and "See all"
+             answered a finger over 33px. A tap on its lower half opened the
+             goal form instead. The pitch is what has to clear 44.
+
+             inline-block on the link for the same reason as the imports CTA:
+             it wraps in Dutch, and .tap-link's band is placed nowhere on an
+             inline box split across two lines. --}}
+        <p class="mt-7 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('goals::messages.summary.no_goals') }}
             <a
                 href="{{ Destination::Goals->url() }}"
-                class="text-slate-900 underline underline-offset-2 hover:no-underline dark:text-slate-100"
+                class="tap-link inline-block text-slate-900 underline underline-offset-2 hover:no-underline dark:text-slate-100"
             >{{ Lang::get('goals::messages.summary.add_first') }}</a>
         </p>
     @else
@@ -56,7 +66,7 @@
                     <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $pct }}%</span>
                     <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
                         @if ($row->progressState === GoalProgressState::Overdue->value)
-                            <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ Lang::get('goals::messages.status.overdue') }}</span>
+                            <x-core::status-pill tone="warning">{{ Lang::get('goals::messages.status.overdue') }}</x-core::status-pill>
                         @elseif ($row->projectedFinishDate !== null)
                             · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->translatedFormat('d M \'y') }}
                         @endif

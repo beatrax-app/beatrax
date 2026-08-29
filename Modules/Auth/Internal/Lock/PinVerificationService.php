@@ -20,6 +20,12 @@ final class PinVerificationService
     // attempts-remaining copy reads it rather than duplicating the number.
     public const HARD_CAP = 10;
 
+    // What the reader can act on. Both branches that raise this kind mean the
+    // same thing to them -- the PIN cannot open the lock on this device -- and
+    // which blob failed is a log's question, so it rides in metadata.
+    public const CORRUPTED_KEY_MESSAGE = 'Your PIN cannot open the app lock on this device: the stored key is unreadable. '
+        .'Sign in with your account password to set a new PIN.';
+
     // The unlock reads the row and then writes it, and the desktop runs four
     // processes against one SQLite file. A commit landing in between refuses
     // this write outright rather than making it wait, which busy_timeout
@@ -52,7 +58,7 @@ final class PinVerificationService
     // Raised only after commit: these rows travel to the paired device, and
     // one written inside a rolled-back transaction describes a lockout that
     // never happened.
-    /** @var list<array{userId: int, kind: string, severity: string, message: string}> */
+    /** @var list<array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>}> */
     private array $pendingAlerts = [];
 
     public function verify(int $userId, string $pin, Session $session): ?string
@@ -127,7 +133,7 @@ final class PinVerificationService
     private function unwrapDataKey(int $userId, string $pin, \stdClass $row): ?string
     {
         if (! is_string($row->kdf_salt) || ! is_string($row->pin_wrapped_key)) {
-            $this->emitAlert($userId, 'auth.lock.corrupted_key', 'critical', 'PIN wrap key blob is missing or not a string.');
+            $this->emitAlert($userId, 'auth.lock.corrupted_key', 'critical', self::CORRUPTED_KEY_MESSAGE, ['detail' => 'PIN wrap key blob is missing or not a string.']);
 
             return null;
         }
@@ -137,7 +143,7 @@ final class PinVerificationService
         sodium_memzero($wrapKey);
 
         if ($dataKey === false) {
-            $this->emitAlert($userId, 'auth.lock.corrupted_key', 'critical', 'PIN-wrapped key unwrap failed (corrupted blob or wrong key).');
+            $this->emitAlert($userId, 'auth.lock.corrupted_key', 'critical', self::CORRUPTED_KEY_MESSAGE, ['detail' => 'PIN-wrapped key unwrap failed (corrupted blob or wrong key).']);
 
             return null;
         }
@@ -204,7 +210,7 @@ final class PinVerificationService
                     'locked_until' => null,
                 ]);
 
-            $this->emitAlert($userId, 'auth.lock.hard_cap_reached', 'critical', 'Hard cap of '.self::HARD_CAP.' PIN failures reached; session signed out.');
+            $this->emitAlert($userId, 'auth.lock.hard_cap_reached', 'critical', 'Signed out after too many failed PIN attempts.', ['attempts' => self::HARD_CAP]);
             ($this->logout)();
 
             return;
@@ -232,17 +238,24 @@ final class PinVerificationService
         $this->pendingAlerts = [];
 
         foreach ($raised as $alert) {
-            $this->alerts->raiseForUser($alert['userId'], $alert['kind'], $alert['severity'], $alert['message']);
+            $this->alerts->raiseForUser($alert['userId'], $alert['kind'], $alert['severity'], $alert['message'], $alert['metadata']);
         }
     }
 
-    private function emitAlert(int $userId, string $kind, string $severity, string $message): void
+    // The banner renders these by kind, so `message` is the English fallback
+    // for a reader on a build whose locale file predates the key. What went
+    // wrong technically rides in metadata, where a log can still read it.
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function emitAlert(int $userId, string $kind, string $severity, string $message, array $metadata = []): void
     {
         $this->pendingAlerts[] = [
             'userId' => $userId,
             'kind' => $kind,
             'severity' => $severity,
             'message' => $message,
+            'metadata' => $metadata,
         ];
     }
 }

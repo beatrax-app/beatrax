@@ -18,7 +18,7 @@
     $fmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
     $figureColour = $toBudgetMinor !== null && $toBudgetMinor < 0
         ? 'text-rose-600 dark:text-rose-400'
-        : 'text-emerald-600 dark:text-emerald-400';
+        : 'text-emerald-700 dark:text-emerald-400';
 @endphp
 
 {{-- Outer root div is required unconditionally (Livewire needs one root
@@ -32,7 +32,7 @@
                 <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.page.title') }}</p>
                 <a
                     href="{{ Destination::Budgets->url() }}"
-                    class="tap-link text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
+                    class="tap-link text-xs text-slate-600 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-400 dark:hover:text-slate-300"
                 >{{ Lang::get('budgets::messages.glance.see_all') }}</a>
             </div>
 
@@ -44,7 +44,7 @@
                 <div>
                     <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.ready.label') }}</p>
                     <p
-                        class="mt-1 text-3xl font-semibold {{ $toBudgetMinor === null ? 'text-slate-400 dark:text-slate-500' : $figureColour }}"
+                        class="mt-1 text-3xl font-semibold {{ $toBudgetMinor === null ? 'text-slate-600 dark:text-slate-400' : $figureColour }}"
                         style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;"
                     >
                         {{ $toBudgetMinor === null ? '—' : $fmt($toBudgetMinor) }}

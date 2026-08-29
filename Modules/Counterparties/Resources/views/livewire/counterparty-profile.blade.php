@@ -23,7 +23,7 @@
     $isSelf = $profile->type === CounterpartyType::SelfAccount->value;
 @endphp
 
-<div style="padding: var(--space-6) var(--space-4); max-width: 980px; margin: 0 auto;" class="space-y-6">
+<div class="space-y-6">
     {{-- Tax tag picker — rendered once per profile (not per row). --}}
     @include('tax::components.tax-tag-popover')
     {{-- Mobile top bar back affordance: shown at <1024px with ← to /counterparties.
@@ -38,9 +38,9 @@
     @else
         {{-- Profile hero --------------------------------------------- --}}
         <header style="display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;">
-            <h1 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0;">
+            <x-core::page-heading style="color: var(--color-text);">
                 {{ $profile->displayName }}
-            </h1>
+            </x-core::page-heading>
             <x-counterparties::type-chip :type="$profile->type" />
             <span style="font-size: var(--text-xs); color: var(--color-text-muted); margin-left: auto;">
                 {{ Lang::get('counterparties::profile.edit_display_name') }}

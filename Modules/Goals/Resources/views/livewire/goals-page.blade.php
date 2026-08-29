@@ -46,7 +46,7 @@
     {{-- Page header --}}
     <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('goals::messages.page.title') }}</h1>
+            <x-core::page-heading>{{ Lang::get('goals::messages.page.title') }}</x-core::page-heading>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.page.subtitle') }}</p>
         </div>
         {{-- Trigger: phone → dispatch open-sheet; desktop → $flux.modal().show() --}}
@@ -89,7 +89,7 @@
                             @if ($row->progressState === GoalProgressState::Overdue->value)
                                 · <span class="text-amber-600 dark:text-amber-400">{{ Lang::get('goals::messages.status.overdue') }}</span>
                             @elseif ($row->progressState === GoalProgressState::Reached->value)
-                                · <span class="text-emerald-600 dark:text-emerald-400">{{ Lang::get('goals::messages.status.reached') }}</span>
+                                · <span class="text-emerald-700 dark:text-emerald-400">{{ Lang::get('goals::messages.status.reached') }}</span>
                             @elseif ($row->isCompleted())
                                 {{-- Completed lived only on the desktop badge, so a
                                      finished goal read as an unfinished one at 375pt. --}}
@@ -118,7 +118,16 @@
                     {{-- Row actions — always visible on phone. Drawn
                          as icons rather than the text characters they were:
                          a pencil, a tick and a box each carry their own
-                         metrics, so none of them sat centred. --}}
+                         metrics, so none of them sat centred.
+
+                         The three sit in their own shrink-0 group because the
+                         row is flex-wrap: as three siblings they wrapped
+                         individually, and on a 411px phone Edit stayed up on
+                         the first line beside the percentage while Complete and
+                         Archive dropped to the next one 300px to the left,
+                         reading as one control belonging to the figure and two
+                         belonging to nothing. --}}
+                    <span class="flex shrink-0 items-center gap-1">
                     <x-core::emoji-action
                         :label="Lang::get('goals::messages.row.edit')"
                         x-on:click="
@@ -143,6 +152,7 @@
                         :label="Lang::get('goals::messages.actions.archive')"
                         wire:click="confirmArchive({{ $row->id }})"
                     >🗄️</x-core::emoji-action>
+                    </span>
                 </li>
 
                 @if ($archivingGoalId === $row->id)
@@ -181,11 +191,11 @@
                         <p class="min-w-0 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $row->name }}</p>
                         <div class="flex shrink-0 items-center gap-2">
                             @if ($isReached)
-                                <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-[3px] text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">{{ Lang::get('goals::messages.status.reached') }}</span>
+                                <x-core::status-pill tone="positive">{{ Lang::get('goals::messages.status.reached') }}</x-core::status-pill>
                             @elseif ($isOverdue)
-                                <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-[3px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ Lang::get('goals::messages.status.overdue') }}</span>
+                                <x-core::status-pill tone="warning">{{ Lang::get('goals::messages.status.overdue') }}</x-core::status-pill>
                             @elseif ($isCompleted)
-                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('goals::messages.status.completed') }}</span>
+                                <x-core::status-pill>{{ Lang::get('goals::messages.status.completed') }}</x-core::status-pill>
                             @endif
                         </div>
                     </div>
@@ -205,7 +215,7 @@
                     <div class="mt-3 flex flex-wrap items-baseline justify-between gap-4">
                         <p class="text-sm" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                             {{ $fmt($row->contributedMinor, $row->currency) }}
-                            <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">/</span>
+                            <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">/</span>
                             {{ $fmt($row->targetMinor, $row->currency) }}
                         </p>
                         @include('goals::partials.goal-projection-line', ['row' => $row, 'class' => 'shrink-0 text-xs text-slate-500 dark:text-slate-400'])
@@ -280,12 +290,12 @@
                         <li class="rounded-lg border border-slate-200 bg-white p-4 opacity-60 dark:bg-slate-950 dark:border-slate-700">
                             <div class="flex items-center justify-between gap-3">
                                 <p class="min-w-0 truncate text-sm font-semibold text-slate-500 dark:text-slate-400">{{ $row->name }}</p>
-                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('goals::messages.status.archived') }}</span>
+                                <x-core::status-pill>{{ Lang::get('goals::messages.status.archived') }}</x-core::status-pill>
                             </div>
                             <div class="mt-3 flex flex-wrap items-baseline justify-between gap-4">
                                 <p class="text-sm" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                                     {{ $fmt($row->contributedMinor, $row->currency) }}
-                                    <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">/</span>
+                                    <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">/</span>
                                     {{ $fmt($row->targetMinor, $row->currency) }}
                                 </p>
                             </div>
@@ -363,13 +373,37 @@
                 <label for="goal-date-sheet" class="mb-1 block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('goals::messages.form.target_date') }}</label>
                 <x-core::date-input
                     field-id="goal-date-sheet"
-                    wire:model="targetDate"
+                    wire:model.live="targetDate"
                     :aria-label="Lang::get('goals::messages.form.target_date')"
                     :aria-invalid="$errorDate !== '' ? 'true' : null"
                     :aria-describedby="$errorDate !== '' ? 'goal-date-sheet-error' : null"
                 />
                 @if ($errorDate !== '')
                     <p id="goal-date-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorDate }}</p>
+                @endif
+            </div>
+
+            {{-- The desktop modal has carried this field since the feature
+                 shipped and the sheet never did, so on a phone a goal could not
+                 be linked to a pot at all -- the same shape as the missing
+                 target-date field the modal comment below describes. --}}
+            <div>
+                <x-core::form-field
+                    name="linkedPotId"
+                    field-id="goal-pot-sheet"
+                    type="select"
+                    :label="Lang::get('goals::messages.form.linked_pot')"
+                    :hint="Lang::get('goals::messages.form.linked_pot_help')"
+                    wire:model="linkedPotId"
+                    class="disabled:opacity-50"
+                >
+                    <option value="">{{ Lang::get('goals::messages.form.no_pot') }}</option>
+                    @foreach ($pots as $pot)
+                        <option value="{{ $pot->id }}">{{ $pot->name }}</option>
+                    @endforeach
+                </x-core::form-field>
+                @if ($errorLinkedPot !== '')
+                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorLinkedPot }}</p>
                 @endif
             </div>
 
@@ -394,9 +428,7 @@
     {{-- ------------------------------------------------------------------- --}}
     <flux:modal name="goal-form" dismissible>
         <div class="pt-[44px]" style="max-width: 520px;">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {{ $editGoalId ? Lang::get('goals::messages.form.title_edit') : Lang::get('goals::messages.form.title_create') }}
-            </h2>
+            <x-core::section-heading :title="$editGoalId ? Lang::get('goals::messages.form.title_edit') : Lang::get('goals::messages.form.title_create')" />
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {{ $editGoalId ? Lang::get('goals::messages.form.subtitle_edit') : Lang::get('goals::messages.form.subtitle_create') }}
             </p>
@@ -460,7 +492,7 @@
                     @if ($errorDate !== '')
                         <x-core::date-input
                             field-id="goal-date"
-                            wire:model="targetDate"
+                            wire:model.live="targetDate"
                             :aria-label="Lang::get('goals::messages.form.target_date')"
                             aria-invalid="true"
                             aria-describedby="goal-date-error"
@@ -468,7 +500,7 @@
                     @else
                         <x-core::date-input
                             field-id="goal-date"
-                            wire:model="targetDate"
+                            wire:model.live="targetDate"
                             :aria-label="Lang::get('goals::messages.form.target_date')"
                         />
                     @endif

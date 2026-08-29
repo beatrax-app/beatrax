@@ -7,7 +7,7 @@
     <a href="{{ Destination::Settings->url() }}" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; {{ Lang::get('openbanking::messages.page.back_link') }}</a>
 
     <header class="space-y-1">
-        <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.page.heading') }}</h1>
+        <x-core::page-heading level="section">{{ Lang::get('openbanking::messages.page.heading') }}</x-core::page-heading>
         <p class="text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('openbanking::messages.page.subtitle') }}
         </p>
@@ -142,7 +142,7 @@
     @if ($showDisconnectModal)
         <flux:modal wire:model="showDisconnectModal" class="md:max-w-sm" data-testid="open-banking-disconnect-modal">
             <div class="space-y-4 p-6">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.disconnect.heading') }}</h3>
+                <x-core::section-heading :title="Lang::get('openbanking::messages.disconnect.heading')" :level="3" />
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ Lang::get('openbanking::messages.disconnect.body') }}
                 </p>

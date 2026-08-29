@@ -7,7 +7,7 @@
     // Spending more than last period reads as rose (worth noticing); less = emerald.
     $deltaClass = static fn (string $dir): string => match ($dir) {
         'up' => 'text-rose-600 dark:text-rose-400',
-        'down' => 'text-emerald-600 dark:text-emerald-400',
+        'down' => 'text-emerald-700 dark:text-emerald-400',
         default => 'text-slate-500 dark:text-slate-400',
     };
     $totalDir = $trend->totalDeltaMinor > 0 ? 'up' : ($trend->totalDeltaMinor < 0 ? 'down' : 'flat');
@@ -17,14 +17,14 @@
     @if ($trend->hasComparison())
         <x-core::card tag="section" aria-label="{{ Lang::get('core::spending_trend.aria') }}">
             <div class="flex flex-wrap items-baseline justify-between gap-4">
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::spending_trend.heading') }}</h2>
-                <span class="text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('core::spending_trend.vs', ['label' => $trend->previousLabel]) }}</span>
+                <x-core::section-heading :title="Lang::get('core::spending_trend.heading')" />
+                <span class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::spending_trend.vs', ['label' => $trend->previousLabel]) }}</span>
             </div>
 
             <div class="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span class="text-2xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($trend->currentTotalMinor) }}</span>
                 <span class="text-sm font-medium {{ $deltaClass($totalDir) }}" style="font-variant-numeric: tabular-nums;">{{ $signed($trend->totalDeltaMinor) }}</span>
-                <span class="text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('core::spending_trend.spent_this_period') }}</span>
+                <span class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::spending_trend.spent_this_period') }}</span>
             </div>
 
             @if (count($trend->movers) > 0)

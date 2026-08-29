@@ -53,8 +53,12 @@
 <div
     class="drawer-container"
     x-cloak
-    role="dialog"
-    aria-modal="true"
+    {{-- Dialog only while it IS a drawer. At >=1024px the stylesheet makes this
+         panel the static sidebar and it is permanently on screen, where
+         aria-modal="true" tells a screen reader everything outside the
+         navigation is unavailable. --}}
+    :role="$store.mobileNav.isDrawer ? 'dialog' : 'navigation'"
+    :aria-modal="$store.mobileNav.isDrawer ? 'true' : null"
     aria-label="{{ Lang::get('core::components.drawer_nav') }}"
     x-show="$store.mobileNav.drawerOpen"
     x-transition:enter="transition ease-[var(--ease-smooth)] duration-[220ms]"

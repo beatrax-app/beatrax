@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Data & Devices',
-    'heading' => 'Data & Devices',
+    'page_title' => 'Data & devices',
+    'heading' => 'Data & devices',
     'sync_status' => 'Sync status',
     'your_devices' => 'Your devices',
     'syncing_progress' => 'Syncing… :count record|Syncing… :count records',

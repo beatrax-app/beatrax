@@ -24,6 +24,12 @@
     one that came out right. The landmark stays in the layout and the column
     lives here, so a page has exactly one of each.
 
+    The gutter is px-4 with a sm: bump, not a bare px-8. On a coarse pointer
+    app.css redefines .px-8 to 32px against .px-4's 16px, so every page routed
+    through here stood twice as far from the edge as the fifteen that were not.
+    PagePaddingArchTest is the rule for that and could not see this file: it
+    scanned /livewire/ and anything with @extends, and a component is neither.
+
     `width` is a prop rather than something a caller merges in because two
     max-w utilities on one element have equal specificity, so stylesheet order
     would decide which won — the same reason x-core::progress-bar names its
@@ -38,7 +44,7 @@
 @endphp
 
 <div {{ $attributes->merge(['class' => 'min-h-screen bg-white dark:bg-slate-950']) }}>
-    <div class="mx-auto {{ $pageShellWidth }} px-8 py-12">
+    <div class="mx-auto {{ $pageShellWidth }} px-4 py-12 sm:px-8">
         {{ $slot }}
     </div>
 </div>

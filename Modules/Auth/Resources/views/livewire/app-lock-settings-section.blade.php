@@ -87,7 +87,7 @@
                 >
                     <x-slot:label>
                         {{ Lang::get('auth::app_lock.account_password_label') }}
-                        <span class="ml-1 text-xs text-slate-400">{{ Lang::get('auth::app_lock.account_password_note') }}</span>
+                        <span class="ml-1 text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('auth::app_lock.account_password_note') }}</span>
                     </x-slot:label>
                 </x-core::form-field>
 
@@ -164,9 +164,7 @@
         @if ($confirmingRelink)
             <flux:modal wire:model="confirmingRelink" class="md:max-w-sm">
                 <div class="space-y-4 p-6">
-                    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                        {{ Lang::get('auth::app_lock.relink_modal_heading') }}
-                    </h3>
+                    <x-core::section-heading :title="Lang::get('auth::app_lock.relink_modal_heading')" :level="3" />
                     <x-core::form-field
                         :label="Lang::get('auth::app_lock.current_pin_label')"
                         name="currentPin"
@@ -255,7 +253,7 @@
                 </x-core::setting-row>
             @else
                 {{-- Empty state: platform does not support WebAuthn --}}
-                <p class="text-sm text-slate-400 dark:text-slate-500">
+                <p class="text-sm text-slate-600 dark:text-slate-400">
                     {{ Lang::get('auth::app_lock.biometric_unavailable') }}
                 </p>
             @endif
@@ -265,9 +263,7 @@
         @if ($confirmingDeenroll)
             <flux:modal wire:model="confirmingDeenroll" class="md:max-w-sm">
                 <div class="space-y-4 p-6">
-                    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                        {{ Lang::get('auth::app_lock.deenroll_modal_heading') }}
-                    </h3>
+                    <x-core::section-heading :title="Lang::get('auth::app_lock.deenroll_modal_heading')" :level="3" />
                     <x-core::form-field
                         :label="Lang::get('auth::app_lock.current_pin_label')"
                         name="deenrollPin"
@@ -326,9 +322,7 @@
     @if ($confirmingDisable)
         <flux:modal wire:model="confirmingDisable" class="md:max-w-sm">
             <div class="space-y-4 p-6">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    {{ Lang::get('auth::app_lock.disable_modal_heading') }}
-                </h3>
+                <x-core::section-heading :title="Lang::get('auth::app_lock.disable_modal_heading')" :level="3" />
                 <x-core::form-field
                     :label="Lang::get('auth::app_lock.current_pin_label')"
                     name="currentPin"
@@ -364,9 +358,7 @@
     @if ($confirmingForgotPin)
         <flux:modal wire:model="confirmingForgotPin" class="md:max-w-sm">
             <div class="space-y-4 p-6">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    {{ Lang::get('auth::app_lock.forgot_modal_heading') }}
-                </h3>
+                <x-core::section-heading :title="Lang::get('auth::app_lock.forgot_modal_heading')" :level="3" />
                 <p class="text-xs text-slate-500 dark:text-slate-400">
                     {{ Lang::get('auth::app_lock.forgot_modal_body') }}
                 </p>
@@ -428,9 +420,7 @@
     @if ($confirmingChangePin)
         <flux:modal wire:model="confirmingChangePin" class="md:max-w-sm">
             <div class="space-y-4 p-6">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    {{ Lang::get('auth::app_lock.change_modal_heading') }}
-                </h3>
+                <x-core::section-heading :title="Lang::get('auth::app_lock.change_modal_heading')" :level="3" />
                 <div class="space-y-3">
                     <x-core::form-field
                         :label="Lang::get('auth::app_lock.current_pin_label')"

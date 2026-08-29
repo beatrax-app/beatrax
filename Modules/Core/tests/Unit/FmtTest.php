@@ -37,3 +37,24 @@ it('never writes a digit group and a decimal with the same character', function 
             ->and($locale->decimalMark())->toBe($locale === Locale::En ? '.' : ',');
     }
 });
+
+// The nav rail shortens a four-digit badge, and the shortening introduces a
+// tenth where the raw count had none. PHP casts that float with a dot whatever
+// the locale, so a Dutch reader met "1.2k" -- a dot being what Dutch groups
+// thousands with -- beside a card correctly reading "5.701,66".
+it('shortens a badge count with the marks the reader uses for a tenth', function (): void {
+    app()->make(Translator::class)->setLocale(Locale::Nl->value);
+    expect(Fmt::compactCount(1200))->toBe('1,2k');
+
+    app()->make(Translator::class)->setLocale(Locale::En->value);
+    expect(Fmt::compactCount(1200))->toBe('1.2k');
+});
+
+it('offers a tenth only when the shortened count has one', function (): void {
+    app()->make(Translator::class)->setLocale(Locale::Nl->value);
+
+    expect(Fmt::compactCount(999))->toBe('999')
+        ->and(Fmt::compactCount(1000))->toBe('1k')
+        ->and(Fmt::compactCount(12000))->toBe('12k')
+        ->and(Fmt::compactCount(0))->toBe('0');
+});

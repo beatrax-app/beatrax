@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'heading' => 'Devices & Sync',
+    'heading' => 'Devices & sync',
 
     'enable_sync' => 'Enable sync',
     'enable_sync_help' => 'Share your data securely across trusted devices. Requires an app lock. Once on, your data is encrypted and the app lock can no longer be turned off.',

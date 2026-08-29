@@ -126,9 +126,9 @@
             @disabled(! $confirmed)
             aria-disabled="{{ $confirmed ? 'false' : 'true' }}"
             @class([
-                'w-full rounded-md py-2 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-emerald-500',
-                'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400' => $confirmed,
-                'bg-emerald-600/50 cursor-not-allowed dark:bg-emerald-500/40' => ! $confirmed,
+                'w-full rounded-md py-2 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:focus-visible:ring-emerald-500',
+                'bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-800' => $confirmed,
+                'bg-emerald-700/50 cursor-not-allowed dark:bg-emerald-700/40' => ! $confirmed,
             ])
         >
             {{ Lang::get('auth::recovery_codes.continue') }}

@@ -20,7 +20,7 @@ return [
     ],
 
     'update_on_updates' => [
-        'title' => 'Werk de gedeelde lijst bij bij app-updates',
+        'title' => 'Gedeelde lijst bijwerken bij app-updates',
         'help' => 'Ververs de meegeleverde lijst telkens wanneer Beatrax zichzelf bijwerkt.',
         'note' => 'Wordt geactiveerd bij een toekomstige app-update — zie Instellingen → Over voor de huidige versie.',
     ],

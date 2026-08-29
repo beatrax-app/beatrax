@@ -30,6 +30,19 @@
 
     This is not the `.status-pill` CSS class, which is a different
     primitive with a dot and its own coarse-pointer rules.
+
+    Ten pill-shaped spans are deliberately NOT this, and each is a reason the
+    tone list stays at four:
+
+    - The anomaly reason chips and the chain confidence tier take their colour
+      from a variable — a `{{ $tint }}` or an inline `style` off the blue and
+      amber TOKENS. Blue is not a status, and a fifth tone to hold it would
+      make tone mean "any colour" again.
+    - The `chain` markers on recurring rows are indigo. A chain is a
+      relationship between two rows, not a state one row is in.
+    - The category mark on a transaction row is a 10px glyph with an sr-only
+      name. It is an icon, and its geometry is small on purpose.
+    - The mystery-card chip carries `.ptype-chip`, which has rules of its own.
 --}}
 @php
     $toneClasses = match ($tone) {

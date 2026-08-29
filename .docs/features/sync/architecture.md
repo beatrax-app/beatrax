@@ -1130,7 +1130,7 @@ days) + a recent-skip table. Always filters `op_log_quarantine` by `user_id`
 — there is no `BelongsToUser` global scope on this table in queue/console
 context.
 
-`SyncStatusSection` is the sync-status surface for the "Devices & Sync"
+`SyncStatusSection` is the sync-status surface for the "Devices & sync"
 settings section: an overall "all devices up to date - synced Nm ago" line
 (or error/offline state) and a per-peer list with online/offline dot,
 last-seen relative time, and explicit error states (can't reach peer, relay

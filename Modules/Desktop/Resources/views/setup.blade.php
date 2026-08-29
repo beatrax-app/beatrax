@@ -23,7 +23,7 @@
                 waited on a state nothing could change.
             --}}
             <div wire:poll.2000ms.keep-alive="poll" class="space-y-2">
-                <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('desktop::screens.setup.pending_heading') }}</h1>
+                <x-core::page-heading>{{ Lang::get('desktop::screens.setup.pending_heading') }}</x-core::page-heading>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ $failed ? Lang::get('desktop::screens.setup.failed_body') : Lang::get('desktop::screens.setup.pending_body') }}
                 </p>
@@ -36,7 +36,7 @@
                 while we wait for the redirect.
             --}}
             <div wire:poll.500ms.keep-alive="poll" class="space-y-2">
-                <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('desktop::screens.setup.ready_heading') }}</h1>
+                <x-core::page-heading>{{ Lang::get('desktop::screens.setup.ready_heading') }}</x-core::page-heading>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ Lang::get('desktop::screens.setup.ready_body') }}
                 </p>

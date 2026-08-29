@@ -13,5 +13,7 @@
 @extends('layouts.app', ['title' => Lang::get('reports::builder.page_title')])
 
 @section('content')
-    @livewire(\Modules\Reports\Internal\Http\Livewire\ReportBuilder::class, ['report' => $report])
+    <x-core::page-shell width="6xl">
+        @livewire(\Modules\Reports\Internal\Http\Livewire\ReportBuilder::class, ['report' => $report])
+    </x-core::page-shell>
 @endsection

@@ -24,7 +24,7 @@
 
 <div class="max-w-2xl mx-auto space-y-6" data-testid="settings-page">
     <header class="space-y-1">
-        <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.title') }}</h1>
+        <x-core::page-heading level="section">{{ Lang::get('core::settings.title') }}</x-core::page-heading>
         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.subtitle') }}</p>
     </header>
 
@@ -100,11 +100,14 @@
         <section class="space-y-2" id="country">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.country.heading') }}</h2>
             <div class="space-y-1">
-                <label for="settings-country-select" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.country.label') }}</label>
-                <select
-                    id="settings-country-select"
+                <x-core::form-field
+                    type="select"
+                    name="country"
+                    field-id="settings-country-select"
+                    :label="Lang::get('core::settings.country.label')"
+                    :hint="Lang::get('core::settings.country.help')"
+                    class="max-w-xs"
                     wire:change="setCountry($event.target.value)"
-                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                     data-testid="settings-country-select"
                 >
                     {{-- Disabled rather than merely ignored — setCountry()
@@ -117,8 +120,7 @@
                         :selected="$country"
                         placeholder-disabled
                     />
-                </select>
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.country.help') }}</p>
+                </x-core::form-field>
                 @if ($country !== '')
                     {{-- The one thing the country does bring in the country's
                          own language, said where the help line above would
@@ -289,7 +291,7 @@
         <div class="space-y-1 border-t border-slate-100 pt-6 dark:border-slate-800">
             <button
                 type="submit"
-                class="block w-full max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:focus-visible:ring-emerald-500"
+                class="block w-full max-w-xs bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800 dark:focus-visible:ring-emerald-500"
             >
                 {{ Lang::get('core::settings.save') }}
             </button>

@@ -27,10 +27,12 @@ declare(strict_types=1);
 $patches = [
     'nativephp_grant_webview_camera',
     'nativephp_android_file_chooser',
+    'nativephp_android_share_file',
     'nativephp_keep_webview_cookies',
     'nativephp_exclude_data_from_backup',
     'nativephp_strip_unused_permissions',
     'nativephp_theme_native_shell',
+    'nativephp_android_system_bar_appearance',
     'nativephp_brand_boot_splash',
     'nativephp_android_adaptive_icon',
     'nativephp_ios_app_icon',

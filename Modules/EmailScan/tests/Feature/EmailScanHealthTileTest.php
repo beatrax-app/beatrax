@@ -102,7 +102,7 @@ it('renders one healthy line for a recently-scanned single inbox', function (): 
     Livewire::test(Dashboard::class)
         ->assertSee('Email scan health')
         ->assertSee('Gmail: last scanned 3 hours ago')
-        ->assertSee('bg-emerald-600');
+        ->assertSee('bg-emerald-700');
 });
 
 it('flips overall status to reauth when any inbox needs reconnect', function (): void {

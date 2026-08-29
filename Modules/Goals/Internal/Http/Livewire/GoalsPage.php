@@ -264,6 +264,15 @@ final class GoalsPage extends Component
         return $view;
     }
 
+    // The date control syncs the moment a day is tapped, so the message it was
+    // refused for outlives the refusal: the sheet showed 15/06/2027 with
+    // "Choose a target date." in red under it, and aria-invalid still true, until
+    // the next submit. The other three fields defer to the submit and clear there.
+    public function updatedTargetDate(): void
+    {
+        $this->errorDate = '';
+    }
+
     private function clearErrors(): void
     {
         $this->errorName = '';

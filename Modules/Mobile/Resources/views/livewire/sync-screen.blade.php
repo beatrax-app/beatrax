@@ -15,16 +15,16 @@
     semantic colors, never through this ink accent.
 --}}
 @use('Modules\Core\Public\Support\Lang')
-<div class="max-w-lg mx-auto px-6 py-8 space-y-6" data-testid="sync-screen">
+<div class="max-w-lg mx-auto px-4 py-12 space-y-6 sm:px-6" data-testid="sync-screen">
 
-    <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.heading') }}</h1>
+    <x-core::page-heading>{{ Lang::get('mobile::sync.heading') }}</x-core::page-heading>
 
     <section class="space-y-3">
         {{-- "Sync status", not "Your devices": the devices section below owns
              that heading for the list you actually manage, and having the
              same label twice on one page made the two read as duplicates of
              each other rather than as status vs. management. --}}
-        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.sync_status') }}</h2>
+        <x-core::section-heading :title="Lang::get('mobile::sync.sync_status')" />
 
         {{-- Reuse, not rebuild: the existing component owns the overall
              banner (idle/syncing/offline/error) + the per-device list. It is
@@ -58,7 +58,7 @@
         @class([
             'w-full min-h-[44px] rounded-md px-4 py-2.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100',
             'bg-slate-900 text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200' => $hasPeers,
-            'bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-500' => ! $hasPeers,
+            'bg-slate-200 text-slate-600 cursor-not-allowed dark:bg-slate-800 dark:text-slate-400' => ! $hasPeers,
         ])
         data-testid="sync-now-button"
     >
@@ -91,7 +91,7 @@
     </section>
 
     <section class="space-y-3">
-        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.network') }}</h2>
+        <x-core::section-heading :title="Lang::get('mobile::sync.network')" />
 
         {{-- ===== "Pause sync on cellular" toggle ===== --}}
         <x-core::setting-row
@@ -125,7 +125,7 @@
     </section>
 
     <section class="space-y-3" id="data-backup" data-testid="data-backup">
-        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.data_backup_heading') }}</h2>
+        <x-core::section-heading :title="Lang::get('core::settings.data_backup_heading')" />
         @livewire('core.encrypted-backup-download')
         @livewire('core.encrypted-backup-restore')
     </section>

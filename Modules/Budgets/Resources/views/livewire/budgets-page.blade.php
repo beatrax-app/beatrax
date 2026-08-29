@@ -28,7 +28,7 @@
          475px on a 375pt screen, "augusztus 2026" at 449. --}}
     <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('budgets::messages.page.title') }}</h1>
+            <x-core::page-heading>{{ Lang::get('budgets::messages.page.title') }}</x-core::page-heading>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('budgets::messages.page.subtitle', ['period' => $period->label]) }}
             </p>
@@ -54,7 +54,7 @@
 
     {{-- Sticky to-budget header --}}
     @php
-        $toBudgetColour = $toBudgetMinor >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+        $toBudgetColour = $toBudgetMinor >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
     @endphp
     <div class="sticky top-0 z-10 mb-6 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
         <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.ready.label') }}</p>
@@ -183,7 +183,7 @@
                                 type="button"
                                 wire:click="openMove({{ $row->categoryId }})"
                                 x-on:click="$flux.modal('envelope-move').show()"
-                                class="hidden text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 group-hover:inline dark:hover:text-slate-100"
+                                class="hidden text-sm text-slate-600 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 group-hover:inline dark:hover:text-slate-100 dark:text-slate-400"
                             >{{ Lang::get('budgets::messages.row.move_money') }}</button>
                         </td>
                     </tr>
@@ -195,7 +195,7 @@
                                     x-on:click="open = !open"
                                     :aria-expanded="open.toString()"
                                     aria-controls="envelope-history-{{ $row->categoryId }}"
-                                    class="text-xs text-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-300"
+                                    class="text-xs text-slate-600 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-300 dark:text-slate-400"
                                 >
                                     <span x-show="!open">{{ Lang::get('budgets::messages.history.show') }}</span>
                                     <span x-show="open" x-cloak>{{ Lang::get('budgets::messages.history.hide') }}</span>
@@ -205,17 +205,17 @@
                                         @foreach ($recentMoves[$row->categoryId] as $move)
                                             <li class="flex items-center justify-between gap-4 py-2 text-sm">
                                                 <div class="min-w-0">
-                                                    <span class="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{{ substr($move->createdAt, 0, 10) }}</span>
+                                                    <span class="text-xs text-slate-600 dark:text-slate-400 tabular-nums">{{ substr($move->createdAt, 0, 10) }}</span>
                                                     <span class="ml-2 text-sm text-slate-500 dark:text-slate-400">{{ $move->direction === 'in' ? Lang::get('budgets::messages.history.moved_from', ['category' => $move->counterpartCategoryName]) : Lang::get('budgets::messages.history.moved_to', ['category' => $move->counterpartCategoryName]) }}</span>
                                                 </div>
                                                 <div class="flex shrink-0 items-center gap-3">
-                                                    <span class="text-sm tabular-nums {{ $move->direction === 'in' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}">
+                                                    <span class="text-sm tabular-nums {{ $move->direction === 'in' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}">
                                                         {{ $move->direction === 'in' ? '+' : '' }}{{ $fmt(abs($move->amountMinor), $row->currency) }}
                                                     </span>
                                                     <button
                                                         type="button"
                                                         wire:click="undoMove({{ $move->id }})"
-                                                        class="text-xs text-slate-400 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-rose-400"
+                                                        class="text-xs text-slate-600 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-rose-400 dark:text-slate-400"
                                                     >{{ Lang::get('budgets::messages.history.undo') }}</button>
                                                 </div>
                                             </li>
@@ -259,11 +259,14 @@
                             ·&nbsp;<span class="{{ $row->availableMinor < 0 ? 'text-rose-600 dark:text-rose-400' : '' }}">{{ Lang::get('budgets::messages.phone.available', ['amount' => $fmt($row->availableMinor, $row->currency)]) }}</span>
                         </p>
                     </div>
-                    {{-- Both fields are h-8: side by side on one line they share a
-                         baseline, and the % rides inside the notify field so the
-                         two right edges line up instead of staggering. --}}
+                    {{-- Both fields are h-8 and w-24, and each row is justify-between,
+                         so the two boxes share a left edge and a right edge. The
+                         label widths differ per language and the % rides inside
+                         the notify field, so neither can be what aligns them:
+                         measured at 99/112 and 184/214 when the rows were sized
+                         by their own content. --}}
                     <div class="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-                        <label class="flex flex-wrap items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <label class="flex w-full flex-wrap items-center justify-between gap-1 text-xs text-slate-600 dark:text-slate-400">
                             <span>{{ Lang::get('budgets::messages.phone.notify_at') }}</span>
                             <span class="relative inline-flex items-center">
                                 <input
@@ -274,23 +277,30 @@
                                     wire:blur="setNotifyThreshold({{ $row->categoryId }})"
                                     aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryName]) }}"
                                     placeholder="{{ $defaultNotifyThreshold }}"
-                                    class="h-8 w-20 rounded-md border border-slate-200 bg-white pl-2 pr-6 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                    class="h-8 w-24 rounded-md border border-slate-200 bg-white pl-2 pr-6 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     style="font-variant-numeric: tabular-nums;"
                                 >
-                                <span class="pointer-events-none absolute right-2 text-xs text-slate-400 dark:text-slate-500">%</span>
+                                <span class="pointer-events-none absolute right-2 text-xs text-slate-600 dark:text-slate-400">%</span>
                             </span>
                         </label>
-                        <input
-                            type="text"
-                            inputmode="decimal"
-                            wire:model="assignedInputs.{{ $row->categoryId }}"
-                            wire:keydown.enter="setAssigned({{ $row->categoryId }})"
-                            wire:blur="setAssigned({{ $row->categoryId }})"
-                            aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryName]) }}"
-                            placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
-                            class="amount h-8 w-24 rounded-md border border-slate-200 bg-white px-2 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                            style="font-variant-numeric: tabular-nums;"
-                        >
+                        {{-- The column header the table gives this field is not
+                             drawn here, so the box that assigns the money was the
+                             bare one and the notify threshold beside it was the
+                             labelled one. Same wrapper, same header string. --}}
+                        <label class="flex w-full flex-wrap items-center justify-between gap-1 text-xs text-slate-600 dark:text-slate-400">
+                            <span>{{ Lang::get('budgets::messages.table.assigned') }}</span>
+                            <input
+                                type="text"
+                                inputmode="decimal"
+                                wire:model="assignedInputs.{{ $row->categoryId }}"
+                                wire:keydown.enter="setAssigned({{ $row->categoryId }})"
+                                wire:blur="setAssigned({{ $row->categoryId }})"
+                                aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryName]) }}"
+                                placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                                class="amount h-8 w-24 rounded-md border border-slate-200 bg-white px-2 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                style="font-variant-numeric: tabular-nums;"
+                            >
+                        </label>
                         @if (! empty($thresholdErrors[$row->categoryId]))
                             <p class="w-full text-xs text-rose-600 dark:text-rose-400">{{ $thresholdErrors[$row->categoryId] }}</p>
                         @endif
@@ -304,7 +314,7 @@
                         type="button"
                         wire:click="openMove({{ $row->categoryId }})"
                         x-on:click="$dispatch('open-sheet', { name: 'envelope-move' })"
-                        class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                        class="text-xs text-slate-600 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100 dark:text-slate-400"
                      title="{{ Lang::get('budgets::messages.row.move') }}"><span aria-hidden="true" class="sm:hidden">🔄</span><span class="sr-only sm:not-sr-only">{{ Lang::get('budgets::messages.row.move') }}</span></button>
                 </div>
             @endforeach
@@ -347,7 +357,7 @@
                         style="font-variant-numeric: tabular-nums;"
                     />
                     @if ($moveFromCategory !== null)
-                        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">
+                        <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
                             {{ Lang::get('budgets::messages.modal.available_in', ['name' => $moveFromCategory->categoryName, 'amount' => $fmt($moveFromCategory->availableMinor, $moveFromCategory->currency)]) }}
                         </p>
                     @endif

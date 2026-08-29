@@ -64,7 +64,7 @@
          last. Wrapping moves it to its own row intact. --}}
     <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $pageName }}</h1>
+            <x-core::page-heading>{{ $pageName }}</x-core::page-heading>
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 @if ($pageType === DriftPageType::Anomaly)
                     {{ Lang::get('drift-alerts::alerts.intro_anomaly') }}
@@ -107,7 +107,7 @@
                 @class([
                     'flex-1 rounded-md px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 sm:flex-none',
                     'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' => $typeOption === $pageType,
-                    'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $typeOption !== $pageType,
+                    'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $typeOption !== $pageType,
                 ])
             >{{ Lang::get($typeOption->labelKey()) }}</button>
         @endforeach
@@ -197,7 +197,7 @@
                         {{ Lang::get('drift-alerts::alerts.empty_open.body') }}
                         <a
                             href="{{ Destination::Settings->url() }}#drift-threshold"
-                            class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
+                            class="tap-link text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
                         >{{ Lang::get('drift-alerts::alerts.empty_open.link') }}</a>.
                     </x-slot:body>
                 </x-core::empty-state>

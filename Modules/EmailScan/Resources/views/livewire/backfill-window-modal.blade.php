@@ -31,7 +31,7 @@
                     max="12"
                     step="1"
                     wire:model.live="months"
-                    class="w-full accent-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:accent-emerald-500"
+                    class="w-full accent-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:accent-emerald-500"
                     aria-label="{{ Lang::get('email-scan::backfill.range_aria') }}"
                 />
                 <div class="flex justify-between text-xs text-slate-500 px-1 mt-2 dark:text-slate-400">
@@ -56,7 +56,7 @@
                 <button
                     type="button"
                     wire:click="submit"
-                    class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                    class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 >{{ Lang::get('email-scan::backfill.start') }}</button>
             </div>
         </div>

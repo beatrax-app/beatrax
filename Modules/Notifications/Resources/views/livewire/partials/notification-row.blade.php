@@ -50,6 +50,6 @@
                 <p class="mt-1 text-xs text-rose-700 dark:text-rose-400">{{ Lang::get('notifications::row.dead_link', ['kind' => $notification->targetKind]) }}</p>
             @endif
         </div>
-        <span class="shrink-0 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">{{ $notification->relativeTime() }}</span>
+        <span class="shrink-0 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $notification->relativeTime() }}</span>
     </div>
 </a>

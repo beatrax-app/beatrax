@@ -66,7 +66,7 @@
                  and the last digit sat under "Breakdown". --}}
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div class="min-w-0">
-                    <p class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ Lang::get('core::net_worth.heading') }}</p>
+                    <p class="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('core::net_worth.heading') }}</p>
 
                     {{-- Total figure with FX disclosure affordance --}}
                     <p class="mt-1 text-3xl font-semibold {{ $amountClass($netWorth->totalMinor) }}" style="font-variant-numeric: tabular-nums;">
@@ -132,7 +132,7 @@
                             <span class="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-300">
                                 {{ $account->name }}
                                 @if ($account->isLiability)
-                                    <span class="ml-1 text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('core::net_worth.card_suffix') }}</span>
+                                    <span class="ml-1 text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::net_worth.card_suffix') }}</span>
                                 @endif
                             </span>
                             <span class="shrink-0 font-medium {{ $amountClass($account->balanceMinor) }}" style="font-variant-numeric: tabular-nums;">

@@ -21,7 +21,7 @@
 @props(['tile'])
 
 <div class="space-y-3 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::health.heading') }}</h3>
+    <x-core::section-heading :title="Lang::get('email-scan::health.heading')" :level="3" />
 
     @foreach ($tile->lines as $line)
         @php
@@ -29,7 +29,7 @@
             // down one shade on dark to keep contrast against slate-950
             // (UI-SPEC § Color); amber dot ticks to amber-500.
             $dotColor = match ($line->status) {
-                'healthy' => 'bg-emerald-600 dark:bg-emerald-500',
+                'healthy' => 'bg-emerald-700 dark:bg-emerald-700',
                 'stale' => 'bg-amber-700 dark:bg-amber-500',
                 'reauth' => 'bg-rose-600 dark:bg-rose-500',
                 default => 'bg-slate-400 dark:bg-slate-500',

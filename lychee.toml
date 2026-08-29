@@ -33,6 +33,12 @@ exclude = [
   # consecutive runs with "Connection failed" while the link was fine. Checking
   # it from CI measures the host's firewall, not the licence reference.
   "^https://firstdonoharm\\.dev/",
+  # The Contributor Covenant, linked from CODE_OF_CONDUCT.md. Same shape as the
+  # licence above: 200 from a developer machine on three consecutive requests,
+  # "Connection reset by peer (os error 104)" from the runner even with the
+  # action's five retries. The host resets the runner ranges, so the check was
+  # reporting on its firewall rather than on the code of conduct.
+  "^https://www\\.contributor-covenant\\.org/",
 ]
 exclude_loopback = true
 max_retries = 2

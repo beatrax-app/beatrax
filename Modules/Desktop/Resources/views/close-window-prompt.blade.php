@@ -66,7 +66,7 @@
                     type="button"
                     wire:click="chooseKeepInTray"
                     autofocus
-                    class="h-12 rounded-md bg-emerald-600 px-5 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                    class="h-12 rounded-md bg-emerald-700 px-5 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 >
                     {{ $buttonKeepInTray }}
                 </button>

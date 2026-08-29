@@ -1216,7 +1216,7 @@ that fix left behind was the more dangerous half: the columns beside it kept
 `->toIso8601String()`, so a single row carried a Zulu expiry next to a `+02:00`
 `created_at`, and a reader could not tell which form it had. `device_registry`
 was the same shape and worse placed — `confirmedDevices()` orders by
-`paired_at`, so the Devices & Sync list was already sorting on it, and the
+`paired_at`, so the Devices & sync list was already sorting on it, and the
 registry is long-lived: the rows sat on both of the user's devices for as long
 as the pairing lasted, where a pairing token expires in ten minutes.
 
@@ -1602,6 +1602,336 @@ The same shape settles the touch floor: `elementFromPoint` across the 44px band
 rather than `getBoundingClientRect()`, because the halo is a pseudo-element
 larger than the control it extends. Both are the one rule — ask the browser
 about the thing you are asking about, not about the box that contains it.
+
+## A halo that a wrapped link never gets
+
+`.tap-link` extends a short control to the 44px touch floor with an absolutely
+positioned `::after` band, and on an inline element that wrapped it does
+nothing at all. An inline box split across two lines has no single containing
+block for an absolutely positioned child, so the band is generated, computes to
+`height: 44px`, and lands on neither fragment. Probed on an iPhone 12 mini, the
+dashboard's "Voeg je eerste doel toe" answered a finger over 18px — the bare
+line box — with the class present and correct in the markup.
+
+The class is still worth carrying, because the same link is one line in another
+language and gets its band there: Dutch and English fail on different sites.
+What it means is that "the class is on it" cannot be read as "the reader can
+hit it". A source-level check answers about the markup; only the device answers
+about the target.
+
+The floor itself does not apply to every one of these. WCAG 2.5.5 and 2.5.8
+both exempt a target "in a sentence or block of text", which is exactly what a
+link finishing an empty-state sentence is. The ones that are standalone — a
+link beside a page title — are not exempt, and those are what
+`TouchTargetFloorReachesLinkButtonsArchTest` pins.
+
+## A heading offered a hyphen takes one it did not need
+
+`hyphens: auto` was added to headings so a single long word would break at a
+syllable with the hyphen shown, rather than at whatever character ran out of
+room. It also changed headings that had a space to break at. Line breaking is
+greedy: it fills each line as far as it can, and a mid-word break is one more
+place it can fill to. The Dutch `/drift?type=anomaly` empty state went from
+"Geen ongewone" / "afschrijvingen" at 165px and 142px to "Geen ongewone
+afschrijvin-" / "gen" at 283px and 38px.
+
+`text-wrap: balance` replaces the greedy fill with an even-lines choice, and it
+prefers the space. The two are complementary and both load-bearing: measured on
+device, removing `balance` brings back the needless hyphen, and removing
+`hyphens` brings back a 16px orphan "n" on the word that has no space in it.
+
+## A translation that is present is not a translation
+
+Parity checks answer whether a key exists and carries a non-empty string. Both
+of the Dutch defects this round passed it. `/community` headed the shared list
+"Gedeelde merchantlijst" and asked the reader to "Help merchants herkennen",
+while Anomaly, Counterparties and Core settings had all settled on "winkelier"
+— Core settings headed the same list "Gedeelde winkelierslijst". The sidebar
+labelled the nav item "Imports" three lines above a label reading "Importeren
+uit YNAB / Actual", and its own badge said ":count import|:count imports" beside
+":count abonnement|:count abonnementen".
+
+What made them provable rather than a matter of taste was comparison, in two
+directions. Across locales: all twenty-five others translate "merchant", and
+twenty-three of twenty-five give "imports" a native plural. Within the locale:
+the same Dutch file already had the word.
+`ALocaleKeepsItsOwnWordForATermArchTest` pins the terms a locale has settled on,
+because that is the half a cross-locale count cannot express.
+
+The same count has to be allowed to say no. `Internet & Phone` looked like the
+one title-cased category name until `Rent / Mortgage` and `Cloud / Software`
+showed it was two against one, and `DefaultCategoryNamesStayInSyncTest` added
+the reason not to reword it anyway: a seeded name is on disk in every install,
+so changing the wording costs a migration. That one was put back.
+
+The aggregate is worth keeping in mind before reaching for the same instrument
+again: measured over all 3505 translated strings, the rate of English-identical
+values runs 0.5% (bg) to 4.2% (fr), tracking script and loanword overlap. There
+is no lazy locale to find, so identity alone is a review lead, not a rule.
+
+## A number stops being a number when it leaves the formatter
+
+`Fmt::number` exists so a count picks up the locale's grouping, and three
+surfaces reached the reader without passing through it.
+
+`Lang::choice` handed the count to Laravel, which fills `:count` with the raw
+integer it selected the plural form from, so a finished import read "1200
+transacties geimporteerd" on a screen whose money read "5.701,66". Filling it at
+the seam fixes all ninety-seven call sites at once; the selection still runs on
+the integer, so grouping marks cannot reach it.
+
+The nav badge and the log tailer shortened large counts with `round($n / 1000,
+1)` and `toFixed(1)`. Neither is a rounding bug — both are correct, and both
+then cast the float with a dot, which is the character Dutch groups thousands
+with. "1.2k" arrives as twelve hundred thousand. The onboarding chip sized a
+file with bare `number_format`, which put an English comma in "1,023 KB".
+
+`ANumberAReaderSeesCarriesTheirOwnMarksArchTest` draws the line at arity:
+`number_format($v, 4, '.', '')` names both marks and is a deliberate machine
+string — a cursor, a rate, an attribute — while the call that leans on the
+defaults is the one that ends up on screen in the wrong language.
+
+## A page that sizes its own title becomes a lesser page
+
+Thirty-three pages take the h1 from the type scale at `text-2xl`. Six set it in
+a style attribute instead, and two of those chose `--text-xl`: on the phone,
+`/reports` and `/counterparties` wore a heading visibly smaller than every page
+either side of them. Nothing was broken and no test could fail — the pages were
+simply not part of the decision the other thirty-three were making.
+
+The English copy drifted the same way and for the same reason. A hundred and
+forty-five headings are written as sentences; six were written as titles, two of
+them on one screen, where "Data & Devices" sat above "App lock". Only the source
+language can drift like this, because every other locale capitalises by its own
+rules rather than by copying.
+
+The nav labels are in the same rule and not by symmetry: `DriftPageTest` already
+required `/drift`'s title and its sidebar item to be the same string, so a rule
+covering the title and not the label would let the pair drift apart while both
+halves of the product still passed.
+
+## A fallback on a name that was never defined
+
+`var(--color-muted, oklch(60% 0 0))` appeared in fourteen rules and
+`var(--color-accent, …)` in nine. Neither token has ever been declared — the
+real names are `--color-text-muted` and `--color-blue` — so all twenty-three
+rules silently took their fallback and rendered the same unthemed grey and blue
+in light and dark alike. That is how the `/reports` filter labels came to sit at
+3.77:1: nothing was broken enough to notice.
+
+Three more had no fallback at all. `border-bottom: 1px solid
+var(--color-border-faint)` is invalid at computed-value time when the token does
+not exist, which throws away the whole shorthand, so two table rules had been
+drawing no border and a pressed emoji-action no background.
+
+`EveryColourVariableNamesATokenThatExistsArchTest` compares the declared set
+against the referenced set. It found `--color-border-faint`, `--color-danger`
+and `--color-primary` on its first run, none of which the contrast sweep could
+have surfaced, because a rule that renders nothing has nothing to measure.
+
+## Contrast is not visible to a structural probe, and not a matter of eye either
+
+The round-19 sweep reported 25 routes clean and 24-of-25 all-44 on tap targets.
+Measured against WCAG 1.4.3 the same build had **349 low-contrast text nodes in
+light and 315 in dark**, worst 2.34:1 against a 4.5:1 floor, including every
+primary button in the product at 3.65:1 and 2.47:1.
+
+Two things make it measurable rather than a judgement call. Colours resolve
+through a 1×1 canvas — Tailwind v4 emits `oklch()`, and a regex over
+`oklch(0.514 0.222 16.935)` reads `0.514` as a red channel and produces
+confident nonsense; three such artefacts nearly went into a report as findings.
+And the floor depends on the type: 14px at weight 500 is normal text, so a
+button needs 4.5:1, not the 3:1 that applies at 18.66px bold.
+
+The fix has a shape worth keeping. Fixing the light value alone moved nine nodes
+*below* the floor at night, because a class list carrying `text-slate-400` with
+no `dark:` sibling was relying on one colour being tolerable in both themes.
+A light-mode contrast fix needs its dark half in the same breath, which is what
+the third assertion in `AMutedTextColourStaysAboveTheContrastFloorArchTest`
+pins. The other two pin the pairings that fail by construction rather than by
+route: slate-400 on any light surface, and slate-500 on an element that also
+carries slate-100.
+
+## A page that declares its own layout leaves the decision its neighbours made
+
+Two axes drifted the same way in the same round, and neither could fail a test.
+
+The `h1` had seven spellings. Five pages set the size in a `style` attribute and
+two of those chose `--text-xl`, so `/reports` and `/counterparties` wore a
+heading visibly smaller than the thirty-three pages either side of them;
+`/data-devices` sat at `text-lg` because a survey had grouped it with the
+pairing-wizard steps rather than with the nav destinations it sits among.
+
+The container was worse, because the cause was structural rather than a typo.
+The app routes pages two ways: a route view that wraps `x-core::page-shell`
+around `@livewire(...)`, and a full-page Livewire component that is the page.
+The shell already owns the column and the rhythm. `/counterparties` sat inside
+one **and** carried a second container of its own, so it ran 48px + 24px deep;
+`/counterparties/triage` did the same with `.triage-shell` in CSS; `/reports`
+was mounted bare and had only its own 24px. Measured on the phone, the same
+title sat at 119, 129, 138, 146 or 170 pixels from the top depending on which
+page you had navigated to. Each page looked self-consistent, which is why
+nobody saw it.
+
+Unwrapping is not symmetric with wrapping. `/reports/library` is a full-page
+Livewire route with nothing above it, so removing its container left no column
+at all — it takes the shell itself. Check which of the two shapes a page is
+before you take anything away from it.
+
+`APageTakesItsShapeFromTheSharedComponentsArchTest` pins both: no page writes
+its own `h1`, and every page container says `py-12` (nineteen did already). The
+exemptions are surfaces that are not pages — the dev console is deliberately
+denser, a wizard step is a step inside a page, and the tax PDF is a printed
+document — and each is listed with the reason rather than as a bare path.
+
+The near miss worth recording: the first move was to write a new `x-core::page`
+component, and `x-core::page-shell` already existed, used by twenty-four files,
+with a docblock describing this exact problem. Read the component directory
+before adding to it; a second component for one job is the duplication the
+extraction was meant to end.
+
+## A rule that selects files by path cannot see the file everything routes through
+
+`PagePaddingArchTest` forbids a bare `px-6`/`px-8` on a page container, because
+on a coarse pointer `app.css` redefines `.px-8` to 32px against `.px-4`'s 16px.
+It selects the files to scan two ways: the path contains
+`/Resources/views/livewire/`, or the source contains `@extends('layouts.app'`.
+
+`x-core::page-shell` is neither. It lives in `components/` and extends nothing,
+so the rule never opened it — and it rendered `px-8`. Its nineteen callers hold
+no `mx-auto` of their own, so every one of them passed trivially. The rule read
+green while the component shipped the exact value the rule exists to forbid, to
+every page routed through it. Measured on the phone: eight routes at a 32px
+gutter against fifteen at 16px, and moving `/reports` into the shell moved it
+from the majority to the minority without changing a number the vertical check
+was watching.
+
+Two things follow. A path-based selector is a claim about where a category of
+file lives, and it goes stale the moment the category gets a component — so the
+selector now includes `/Resources/views/components/`. And an extraction inherits
+the guard debt of whatever it absorbs: converting a call site to a component
+moves that site out of the rule's reach unless the component is in it.
+
+## A constraint is applied after the value, so no utility can beat it
+
+`min-height: 44px` from the coarse-pointer block is a **constraint**. CSS
+resolves it after the used value of `height`, which means specificity, layer
+order and source order never enter into it: a `height` declaration cannot win,
+however it is written.
+
+The transactions phone card carried `[&>*]:h-5` on its chip row, with a comment
+explaining that three primitives had each set their own height and the row read
+as lumpy. On every phone since the touch floor landed, that utility did nothing.
+The cleared badge — the one chip in the row that is a `<button>` — stood at 44px
+while the tax badge beside it, which the floor had been told to skip, stayed at
+20. Its `padding: 2px 8px` had been drawn for a 23px pill, so at 44px with a
+`9999px` radius the label sat inside its own end cap. Measured at 384px, fine
+and coarse pointers rendered the same markup 20px and 44px tall.
+
+The fix is not a bigger number on the utility; it is releasing the control from
+the floor and moving its reach to the halo, which is the pattern its own row
+mates were already using. `AChipRowKeepsOneHeightUnderAFingerArchTest` names the
+four chips that share that row and requires each to be in both the release list
+and the halo list — release without a halo shrinks the picture *and* the target.
+
+## An element selector loses to the utility class on the same element
+
+The touch rule drops a select's native appearance, which takes its arrow with
+it, and reserves a 36px column in `padding-right` for the one it draws in its
+place. `select` is an element selector. Almost every call site carries `px-3`,
+which is a class, so the reservation lost and the arrow was painted over the
+last of the selected option's own text. Ten of ten visible selects at 384px
+reserved 12px against a 36px column.
+
+Repeating the declaration as `select[class]` costs one specificity point and
+wins. Repeating **only** the padding matters: 12 of the 30 selects in the tree
+carry no class at all — `x-core::form-field`'s among them — and moving the whole
+rule behind `[class]` would take the floor, the appearance reset and the chevron
+itself away from every one of them. A select with no class also has no utility
+to lose to.
+
+## Two halos closer together than 44px take from each other
+
+A halo extends a control's reach with an `::after` that no layout can see. Two
+of them within 44px overlap, and the later one in the DOM paints on top — so the
+overlap answers for the wrong control. On the chains index the settlement's
+counterparty name and the transaction date sit 20px apart; giving both a halo
+made a tap 16px left of the name's centre open the transaction.
+
+The stylesheet already recorded half of this for `.side-item`: a flush-stacked
+list has no slack, so real height is the only honest 44px there. The other half
+is that the halo needs *pitch* as much as height. Chain legs got it as 16px
+between rows, which takes a 28px row to a 44px pitch. Where the pitch cannot be
+had, only one of the two controls can carry a halo, and it has to be the primary
+one.
+
+## A gradient is invisible to a contrast probe
+
+Every contrast probe in this repo walks `getComputedStyle(...).backgroundColor`
+up the ancestors to find what a colour sits on. A `linear-gradient` is a
+background-**image**: `backgroundColor` reads `rgba(0,0,0,0)`, the walk sails
+past the element, and the ratio comes back computed against whatever opaque
+ancestor is behind it.
+
+The sidebar avatar is a 26px circle with the account's initial in white on an
+emerald-to-blue ramp. A 664-node sweep, two device rounds and an Android agent
+all reported it clean. Sampled from the rendered pixels it ran **3.37:1 to
+4.16:1** at 11px/600, against a 4.5 floor.
+
+Pixel sampling has no such blind spot, and it is also the only method with no
+colour model in the middle. Two hand-rolled probes in one session returned
+confident nonsense — one painted its sample onto an opaque black undercoat, so
+every transparent ancestor read back at alpha 1 and the backdrop walk called the
+first parent black; the other divided by alpha a second time on values
+`getImageData` had already returned un-premultiplied. Copy the validated probe
+forward rather than writing a new one, and settle any disagreement against the
+PNG.
+
+## The bars belong to the window, and the window listens to the OS
+
+An edge-to-edge Android window paints the pixels behind the status and
+navigation bars, but Android draws the clock, the signal glyphs and the nav
+chevrons on top of them, choosing light or dark from the OS night-mode setting.
+A reader whose app theme disagrees with their phone's therefore had white glyphs
+on the app's own `#f8fafc`: **1.05:1**, an invisible clock on every screen.
+
+`theme-color` does not reach this. It colours a *browser's* chrome, and a
+WebView has none. The page has to tell the window, through the JS bridge the
+activity already installs.
+
+Three things that each looked like the whole fix and were not:
+
+- **Applying the flags from the bridge is not enough.** `configureStatusBar()`
+  sets the same two from `resources.configuration.uiMode`, at startup and again
+  on every night-mode change. The bridge held until the reader touched their
+  phone's theme, at which point the activity overwrote the page's answer. The
+  reported value has to be *stored* and that function made to prefer it.
+- **`classList.contains('dark')` is not the theme.** After a config change the
+  root carried neither class and the page was dark from
+  `@media (prefers-color-scheme: dark)` alone, so the class said light while the
+  reader looked at a dark screen. Read the resolved background colour instead:
+  it is the question the bars are asking and it cannot drift from the
+  stylesheet.
+- **localStorage does not survive.** Read over the DevTools protocol on a
+  Galaxy S24 Ultra, the WebView came back from a night-mode change with
+  `localStorage.length === 0`. Flux keeps its copy of the theme choice there,
+  fell back to `system`, and repainted the page dark under a Theme toggle still
+  reading Light — a separate, worse bug than the bars. The choice is now also
+  published on the root by `x-core::head-assets`, where it lasts as long as the
+  document, and re-asserted a frame after the media query fires.
+
+Measured after all three, across a full flip cycle: status bar **8.37:1** with
+the app on Light and the phone on dark, and the page still Light after the OS
+went light and dark again. The navigation bar reaches **4.17:1** and stops
+there — One UI draws its light-mode nav glyphs at `rgb(124,124,124)`, which
+against pure white is 4.17, so no backdrop the app can paint lifts it further.
+
+Two lessons that outlive this fix. Attach the DevTools protocol
+(`adb forward tcp:9223 localabstract:webview_devtools_remote_<pid>`) rather than
+inferring DOM state from screenshots — one `Runtime.evaluate` replaced four
+rebuild-and-look cycles. And **pull the `-wal` with the database**: the theme
+read back as `system` from the `.sqlite` alone and as `light` with its WAL, and
+the first reading sent the diagnosis down a blind alley.
 
 ## Related
 

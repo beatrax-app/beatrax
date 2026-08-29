@@ -106,21 +106,33 @@
     --color-surface-raised: #ffffff;
     --color-border: #e2e8f0;
     --color-border-strong: #cbd5e1;
+    /* The step border-strong is too pale to be: a control outline and a status
+       dot are non-text that carries meaning, and 1.4.11 asks 3:1 of them.
+       border-strong is 1.48:1 on white, this is 5.12:1. */
+    --color-border-mid: #64748b;
 
     /* Text */
     --color-text: #0f172a;
-    --color-text-muted: #64748b;
-    --color-text-faint: #94a3b8;
+    /* Both moved one step down the slate ramp to clear WCAG AA 1.4.3 on the
+       three surfaces they sit on -- white, slate-50 and slate-100. The old
+       pair read 4.34:1 and 2.56:1, and faint carried real labels: the palette
+       hint, the weekday headers, the settings section names. */
+    --color-text-muted: #475569;
+    --color-text-faint: #5a6a80;
     --color-text-inverse: #f8fafc;
 
     /* State */
-    --color-emerald: #059669;
+    --color-emerald: #047857;
     --color-emerald-bg: #d1fae5;
     --color-amber: #b45309;
     --color-amber-bg: #fef3c7;
     --color-rose: #be123c;
     --color-rose-bg: #ffe4e6;
-    --color-blue: #2563eb;
+    /* blue-700, not blue-600: on its own --color-blue-bg tint the 600 measured
+       4.24:1 at 10px, under the 4.5 floor, and the pairing is what the palette
+       source chip, .t-merchant and the batch-tag banner all draw themselves in.
+       Every other use is a fill or a border, which a darker blue only helps. */
+    --color-blue: #1d4ed8;
     --color-blue-bg: #dbeafe;
 
     /* Typography */
@@ -225,9 +237,12 @@
     --color-surface-raised: #0f172a;
     --color-border: #1e293b;
     --color-border-strong: #334155;
+    --color-border-mid: #94a3b8;
     --color-text: #f1f5f9;
-    --color-text-muted: #94a3b8;
-    --color-text-faint: #64748b;
+    /* Same move up the ramp for the dark surfaces, which run slate-950 to
+       slate-800: the old pair read 4.24:1 and 3.07:1 against them. */
+    --color-text-muted: #cbd5e1;
+    --color-text-faint: #94a3b8;
     --color-text-inverse: #0f172a;
     --color-emerald: #10b981;
     --color-emerald-bg: rgba(16, 185, 129, 0.12);
@@ -567,11 +582,22 @@ td.date,
         color: var(--color-text-faint);
     }
 
+    /*
+     * Theme-locked, like .console-pane: white sits on this gradient in both
+     * themes, so it cannot take --color-emerald / --color-blue, whose dark
+     * values are the lighter ones. The stops are the LIGHT tokens spelled out.
+     *
+     * Sampled from the rendered circle, the previous emerald-500 -> blue-600
+     * ramp carried the initial at 3.37:1 to 4.16:1 against a 4.5 floor at
+     * 11px/600. No computed-style probe in this repo could see it: a gradient
+     * is a background-IMAGE, so backgroundColor reads transparent and the
+     * backdrop walk reports whatever is behind the circle.
+     */
     .avatar {
         width: 26px;
         height: 26px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #10b981, #2563eb);
+        background: linear-gradient(135deg, #047857, #1d4ed8);
         display: grid;
         place-items: center;
         color: white;
@@ -704,7 +730,7 @@ td.date,
 
     /* Pressed reads as movement, which is what tells a thumb it landed. */
     .emoji-action:active {
-        background: var(--color-border-faint);
+        background: var(--color-border);
         transform: translateY(1px);
     }
 
@@ -719,8 +745,8 @@ td.date,
     }
 
     .emoji-action--danger:hover {
-        border-color: var(--color-danger, currentColor);
-        color: var(--color-danger, currentColor);
+        border-color: var(--color-rose);
+        color: var(--color-rose);
     }
 
     .dev-side {
@@ -832,6 +858,13 @@ td.date,
      * 120ms thumb slide. The button itself carries the focus ring; the
      * thumb is purely visual.
      */
+    /*
+     * --color-border-mid on the OFF track, not --color-border: the track is
+     * surface-2 and the knob on it is white, so on a white page the control's
+     * outline measured 1.23:1 and the knob against its own track 1.10:1. Both
+     * are the boundary of a control, which 1.4.11 asks 3:1 of. The ON state
+     * needs none of this -- an emerald fill is 5.34:1 on either page.
+     */
     .switch {
         position: relative;
         display: inline-block;
@@ -839,7 +872,7 @@ td.date,
         height: 26px;
         border-radius: var(--radius-full);
         background: var(--color-surface-2);
-        border: 1px solid var(--color-border);
+        border: 1px solid var(--color-border-mid);
         cursor: pointer;
         transition: var(--tx-quick);
         flex-shrink: 0;
@@ -868,12 +901,14 @@ td.date,
         height: 20px;
         border-radius: var(--radius-full);
         background: var(--color-switch-knob);
+        border: 1px solid var(--color-border-mid);
         box-shadow: var(--shadow-xs);
         transition: var(--tx-quick);
     }
 
     .switch--on .switch__thumb {
         transform: translateX(18px);
+        border-color: var(--color-emerald);
     }
 }
 
@@ -1955,12 +1990,12 @@ td.date,
         letter-spacing: 0.06em;
         color: var(--color-text-muted);
         padding: var(--space-1) var(--space-3) var(--space-2);
-        border-bottom: 1px solid var(--color-border-faint);
+        border-bottom: 1px solid var(--color-border);
     }
 
     .preview-section-table tbody td {
         padding: var(--space-2) var(--space-3);
-        border-bottom: 1px solid var(--color-border-faint);
+        border-bottom: 1px solid var(--color-border);
         vertical-align: middle;
     }
 
@@ -2045,7 +2080,7 @@ td.date,
             column-gap: var(--space-2);
             row-gap: var(--space-1);
             padding: var(--space-2) 0;
-            border-bottom: 1px solid var(--color-border-faint);
+            border-bottom: 1px solid var(--color-border);
         }
 
         .preview-section-table tbody tr:last-child {
@@ -2569,7 +2604,7 @@ td.date,
     }
 
     .view-toggle button.active {
-        background: var(--color-primary, var(--color-text));
+        background: var(--color-text);
         color: var(--color-text-inverse);
         font-weight: 600;
     }
@@ -2626,7 +2661,11 @@ td.date,
     .dot-bank { background: var(--color-amber); }
     .dot-gov { background: #334155; }
     .dot-self { background: var(--color-text-faint); }
-    .dot-unknown { background: var(--color-border-strong); }
+    /* border-strong measured 1.48:1 light and 1.81:1 dark against the chip it
+       sits on, beside five siblings at 7.3-9.9 -- by eye the Unknown chip
+       simply had no dot. border-mid keeps it the quietest of the six and
+       clears the 3:1 that a meaning-carrying mark is owed. */
+    .dot-unknown { background: var(--color-border-mid); }
 
     /* ─── Frame primitives (profile Overview sections) ───────────── */
 
@@ -2869,9 +2908,6 @@ td.date,
     /* ─── Triage queue card ──────────────────────────────────────── */
 
     .triage-shell {
-        max-width: 760px;
-        margin: 0 auto;
-        padding: var(--space-6) var(--space-4);
         display: flex;
         flex-direction: column;
         gap: var(--space-4);
@@ -3631,6 +3667,17 @@ td.date,
     /* .top-bar — mobile top bar.
      * Only visible at <1024px (CSS hidden at desktop via the .top-bar rule above).
      * safe-area-inset-top handles the notch/Dynamic Island on phones. */
+    /*
+     * Held against the visual viewport while the keyboard displaces it. Both of
+     * these anchor to the LAYOUT viewport, which the keyboard does not move, so
+     * without this the bar is off the top of the screen and the scrim that
+     * keeps content out of the status bar goes with it.
+     */
+    .kb-offset .top-bar,
+    .kb-offset .safe-screen::before {
+        transform: translateY(var(--vv-offset-top, 0px));
+    }
+
     .top-bar {
         display: flex;
         align-items: center;
@@ -4318,6 +4365,13 @@ td.date,
         opacity: 0;
     }
 
+    /*
+     * Asked for at rest, for a badge that sits among status chips rather than
+     * on a hover-reveal row: the reveal below never fires under a fine pointer
+     * narrow enough to show the phone card, so without this the control is
+     * invisible on a resized desktop window.
+     */
+    .tax-badge--shown,
     .triage-row:hover .tax-badge--untagged,
     .triage-row:focus-within .tax-badge--untagged,
     .group:hover .tax-badge--untagged,
@@ -4485,7 +4539,7 @@ td.date,
 .srch-icon {
     flex-shrink: 0;
     font-size: 1rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     line-height: 1;
     pointer-events: none;
 }
@@ -4508,15 +4562,15 @@ td.date,
 }
 
 .srch-input:focus {
-    border-color: var(--color-accent, oklch(55% 0.2 260));
-    box-shadow: 0 0 0 2px color-mix(in oklch, var(--color-accent, oklch(55% 0.2 260)) 20%, transparent);
+    border-color: var(--color-blue);
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--color-blue) 20%, transparent);
 }
 
 .srch-spinner {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
 }
 
 /* ── Filter chip row (desktop) ───────────────────────────────────────────── */
@@ -4538,7 +4592,7 @@ td.date,
     border-radius: 9999px;
     background: transparent;
     font-size: 0.8125rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     cursor: pointer;
     white-space: nowrap;
     transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
@@ -4551,9 +4605,9 @@ td.date,
 }
 
 .srch-chip--active {
-    background: color-mix(in oklch, var(--color-accent, oklch(55% 0.2 260)) 10%, transparent);
-    border-color: var(--color-accent, oklch(55% 0.2 260));
-    color: var(--color-accent, oklch(55% 0.2 260));
+    background: color-mix(in oklch, var(--color-blue) 10%, transparent);
+    border-color: var(--color-blue);
+    color: var(--color-blue);
     font-weight: 500;
 }
 
@@ -4596,7 +4650,7 @@ td.date,
 /* ── Clear-all button ─────────────────────────────────────────────────────── */
 .srch-clear-all {
     font-size: 0.8125rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     text-decoration: underline;
     background: none;
     border: none;
@@ -4612,19 +4666,19 @@ td.date,
 .srch-strip {
     margin-top: var(--space-2, 8px);
     font-size: 0.8125rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
 }
 
 /* ── Result rows ─────────────────────────────────────────────────────────── */
 .srch-row {
     /* Subtle left accent when in search mode */
-    border-left: 2px solid var(--color-accent, oklch(55% 0.2 260));
+    border-left: 2px solid var(--color-blue);
 }
 
 .srch-snippet {
     font-size: 0.75rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     margin-top: 2px;
     line-height: 1.4;
     overflow: hidden;
@@ -4656,7 +4710,7 @@ mark {
 
 .srch-no-results__body {
     font-size: 0.875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     margin-bottom: var(--space-3, 12px);
 }
 
@@ -4670,14 +4724,14 @@ mark {
 
 .srch-no-results__suggestion {
     font-size: 0.875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
 }
 
 .srch-did-you-mean {
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--color-accent, oklch(55% 0.2 260));
+    color: var(--color-blue);
     text-decoration: underline;
     font-size: inherit;
     padding: 0;
@@ -4707,7 +4761,7 @@ mark {
 .srch-filter-label {
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     display: block;
 }
 
@@ -4748,12 +4802,12 @@ mark {
 
 .srch-date-sep {
     font-size: 0.875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
 }
 
 .srch-chip-meta {
     font-size: 0.6875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
 }
 
 .srch-check-row {
@@ -4815,7 +4869,7 @@ mark {
 .srch-sheet-section-label {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: var(--space-2, 8px);
@@ -4844,7 +4898,7 @@ mark {
 .srch-sheet-apply {
     flex: 1;
     height: 40px;
-    background: var(--color-accent, oklch(55% 0.2 260));
+    background: var(--color-blue);
     color: oklch(99% 0 0);
     border: none;
     border-radius: 6px;
@@ -4860,7 +4914,7 @@ mark {
     border: 1px solid var(--color-border, oklch(93% 0 0));
     border-radius: 6px;
     font-size: 0.875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     cursor: pointer;
 }
 
@@ -4874,7 +4928,7 @@ mark {
     border-radius: 9999px;
     background: transparent;
     font-size: 0.875rem;
-    color: var(--color-muted, oklch(60% 0 0));
+    color: var(--color-text-muted);
     cursor: pointer;
 }
 
@@ -4885,7 +4939,7 @@ mark {
     min-width: 18px;
     height: 18px;
     padding: 0 4px;
-    background: var(--color-accent, oklch(55% 0.2 260));
+    background: var(--color-blue);
     color: oklch(99% 0 0);
     border-radius: 9999px;
     font-size: 0.6875rem;
@@ -5341,7 +5395,17 @@ mark {
         color: var(--color-text-muted);
     }
 
+    /*
+     * inline-flex with a floor, not an inline anchor: 10px of padding on a
+     * 14px line box measured 157x40, and this is the only control on a page
+     * the reader reached by something going wrong. The touch floor never sees
+     * it -- the error shell is rendered outside the app layout, and an <a> is
+     * matched by neither the floor nor the halo.
+     */
     .bx-error-action {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
         margin-top: var(--space-2);
         padding: 10px var(--space-5);
         border-radius: var(--radius-md);
@@ -5692,6 +5756,8 @@ mark {
     .srch-chip-toggle,
     .split-badge,
     .tax-badge,
+    .tax-badge--untagged,
+    .cleared-badge-toggle,
     .fx-disclosure-trigger,
     .srch-chip-close,
     .srch-sheet-apply,
@@ -5719,6 +5785,8 @@ mark {
     .srch-chip-toggle::after,
     .split-badge::after,
     .tax-badge::after,
+    .tax-badge--untagged::after,
+    .cleared-badge-toggle::after,
     .fx-disclosure-trigger::after,
     .srch-chip-close::after,
     .srch-sheet-apply::after,
@@ -5767,23 +5835,43 @@ mark {
     }
 
     /*
-     * A full-width band rather than the centred square, for a link that is
-     * already wider than 44px and only ever short of height. It is what the
-     * phone-width rule above gives .tap-link; coarse pointers wider than a
-     * phone were the ones left out.
+     * The band for every control that is the right size to look at and the
+     * wrong size to hit. The phone-width rule above gives .tap-link and the
+     * chips one; coarse pointers wider than a phone were left out, and these
+     * three were never in it at all:
+     *
+     * The switch track is 44x26 on purpose -- that IS the control, and growing
+     * it to 44 tall makes a pill the size of a button. Twenty of them answered
+     * a finger over 35px on an iPhone 12 mini.
+     *
+     * A table cell gives its link the height and the band took its width from
+     * the link, so a counterparty called "Etos" was 44 tall and 29 across. The
+     * link is also only positioned at phone width, so on a tablet the band
+     * escaped to whatever ancestor happened to be positioned.
+     *
+     * Centred with a floor rather than stretched edge to edge: a long name
+     * keeps its full width and a short one gets the rest. `right: auto`
+     * cancels the phone-width rule's `right: 0` -- anchored on both sides the
+     * min-width can never widen it, which is a 42px "Hints →" on /chains.
      */
-    .tap-link {
+    .tap-link,
+    .switch,
+    td > a:only-child {
         position: relative;
     }
 
-    .tap-link::after {
+    .tap-link::after,
+    .switch::after,
+    td > a:only-child::after {
         content: '';
         position: absolute;
-        left: 0;
-        right: 0;
+        left: 50%;
+        right: auto;
         top: 50%;
+        width: 100%;
+        min-width: 44px;
         height: 44px;
-        transform: translateY(-50%);
+        transform: translate(-50%, -50%);
     }
 
     /*
@@ -5795,6 +5883,21 @@ mark {
     .side-item,
     .side-search {
         min-height: 44px;
+    }
+
+    /*
+     * The same problem, answered with pitch rather than height. A chain leg is
+     * a 28px row carrying an inline counterparty link, and stacked flush its
+     * halo reached 30px of the 44 because the row above and below had already
+     * claimed the rest. Sixteen pixels between rows takes the pitch to 44 and
+     * gives each halo the 8px a side it was asking its neighbours for.
+     *
+     * Spacing rather than min-height because the row aligns on the baseline
+     * and its ::before elbow is positioned from the row box: growing the box
+     * leaves the elbow pointing at empty space above the name.
+     */
+    .chain-leg + .chain-leg {
+        margin-top: var(--space-4);
     }
 
     /*
@@ -5811,6 +5914,7 @@ mark {
      * Coarse pointers only, like every rule in this block: a fine pointer is
      * already at the floor, and leaving it native there is also what keeps a
      * drawn chevron from ever sitting beside one the platform still paints.
+     *
      */
     select {
         min-height: 44px;
@@ -5820,6 +5924,23 @@ mark {
         background-repeat: no-repeat;
         background-position: right var(--space-3) center;
         background-size: 12px 8px;
+        padding-right: calc(var(--space-3) * 2 + 12px);
+    }
+
+    /*
+     * The same reservation again, one specificity point higher. The rule above
+     * is an element selector, so the `px-3` that most call sites carry wins
+     * and puts the right padding back to 12px — under the 36px column the
+     * chevron is painted in. Measured on a Galaxy S24 Ultra, the arrow was
+     * drawn over the last 15-24px of the selected option's text on four
+     * controls, "Choose a counterparty…" among them.
+     *
+     * Only the padding is repeated: 12 of the 30 selects in the tree carry no
+     * class at all — x-core::form-field's among them — and [class] would take
+     * the floor, the appearance reset and the chevron itself away from all of
+     * them. A select with no class also has no utility to lose to.
+     */
+    select[class] {
         padding-right: calc(var(--space-3) * 2 + 12px);
     }
 
@@ -5858,6 +5979,32 @@ mark {
     code,
     .code {
         overflow-wrap: anywhere;
+    }
+
+    /*
+     * `anywhere` above is the last resort, and on a heading it looks like one:
+     * Dutch titles /drift "Afwijkingswaarschuwingen", 353px of word in a 343px
+     * column, and it split after "waarschuwinge" leaving an orphan "n" at 30px.
+     * Hyphenation gives the browser a legal break to prefer, with the hyphen
+     * shown, and it reads as one word again. Headings only -- a hyphen inserted
+     * into `code` would change the value it prints.
+     *
+     * `balance` is what keeps hyphenation to the case that needs it. Line
+     * breaking fills greedily, so with hyphens available "Geen ongewone
+     * afschrijvingen" took a hyphen it never needed: 283px + "gen", where the
+     * space break gives 165 + 142. Balanced it takes the space; a word with no
+     * space in it still hyphenates, and without hyphens that one is back to a
+     * 16px "n".
+     */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        -webkit-hyphens: auto;
+        hyphens: auto;
+        text-wrap: balance;
     }
 
     /*
@@ -6403,7 +6550,7 @@ mark {
 
 .palette-source--action {
     background: var(--color-blue-bg, #dbeafe);
-    color: var(--color-blue, #2563eb);
+    color: var(--color-blue, #1d4ed8);
 }
 
 /*
