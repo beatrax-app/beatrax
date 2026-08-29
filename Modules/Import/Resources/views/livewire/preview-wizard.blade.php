@@ -37,7 +37,7 @@
              broke mid-word. Now the group keeps its own width and drops below
              the heading when the row cannot hold both. --}}
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('import::preview.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('import::preview.heading') }}</x-core::page-heading>
             <div class="flex shrink-0 items-center gap-3">
                 <x-core::secondary-button
                     class="disabled:cursor-not-allowed disabled:opacity-50"
@@ -50,7 +50,7 @@
                     type="button"
                     wire:click="confirm"
                     @disabled(! $canConfirmImport)
-                    class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                    class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-emerald-800 dark:bg-emerald-700"
                 >
                     {{ Lang::get('import::preview.confirm') }}
                 </button>
@@ -103,7 +103,7 @@
                     <button
                         type="button"
                         wire:click="saveIcsAccountName"
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                        class="bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:hover:bg-emerald-800 dark:bg-emerald-700"
                     >
                         {{ Lang::get('import::preview.save_name') }}
                     </button>
@@ -131,7 +131,7 @@
                     <button
                         type="button"
                         wire:click="savePaypalAccountName"
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                        class="bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:hover:bg-emerald-800 dark:bg-emerald-700"
                     >
                         {{ Lang::get('import::preview.save_name') }}
                     </button>
@@ -162,7 +162,7 @@
                             <button
                                 type="button"
                                 wire:click="nameAccount(@js($unknown->iban), $wire.accountName)"
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                                class="bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:hover:bg-emerald-800 dark:bg-emerald-700"
                             >
                                 {{ Lang::get('import::preview.save_name') }}
                             </button>
@@ -295,7 +295,7 @@
                                     @if ($row->diff && isset($row->diff['source_ref']))
                                         <div class="mt-1 text-xs text-slate-500 font-mono dark:text-slate-400">
                                             source_ref:
-                                            <span class="text-slate-400">{{ $row->diff['source_ref']['from'] ?? '∅' }}</span>
+                                            <span class="text-slate-600 dark:text-slate-400">{{ $row->diff['source_ref']['from'] ?? '∅' }}</span>
                                             →
                                             <span class="text-sky-700">{{ $row->diff['source_ref']['to'] }}</span>
                                         </div>
@@ -353,7 +353,7 @@
             class="rounded-md border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700"
             aria-live="polite"
         >
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('import::preview.chain.heading') }}</h3>
+            <x-core::section-heading :title="Lang::get('import::preview.chain.heading')" :level="3" />
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 @if ($chainResolutionStatus === JobRunStatus::Pending)
                     {{ Lang::get('import::preview.chain.pending') }}

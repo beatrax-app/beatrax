@@ -98,7 +98,7 @@
         <span @if ($fieldId !== null) id="{{ $fieldId }}-name" @endif class="sr-only">{{ $fieldLabel }}</span>
         <span @if ($fieldId !== null) id="{{ $fieldId }}-value" @endif class="sr-only" x-text="display || @js($emptyLabel)">{{ $emptyLabel }}</span>
         <span aria-hidden="true" x-text="display || '—'">—</span>
-        <span aria-hidden="true" class="text-slate-400">▦</span>
+        <span aria-hidden="true" class="text-slate-600 dark:text-slate-400">▦</span>
     </button>
 
     <div
@@ -133,7 +133,7 @@
             >›</button>
         </div>
 
-        <div class="mt-2 grid grid-cols-7 gap-0.5 text-center text-[11px] text-slate-400">
+        <div class="mt-2 grid grid-cols-7 gap-0.5 text-center text-[11px] text-slate-600 dark:text-slate-400">
             <template x-for="name in weekdayLabels" :key="name">
                 <span x-text="name"></span>
             </template>

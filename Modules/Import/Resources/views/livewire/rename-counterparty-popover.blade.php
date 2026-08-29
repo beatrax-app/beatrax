@@ -73,7 +73,7 @@
                         type="submit"
                         wire:loading.attr="disabled"
                         @disabled(trim($friendly) === '')
-                        class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:disabled:bg-slate-600"
+                        class="inline-flex items-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800 dark:disabled:bg-slate-600"
                     >
                         <span wire:loading.remove wire:target="save">{{ Lang::get('import::rename.save') }}</span>
                         <span wire:loading wire:target="save">{{ Lang::get('import::rename.saving') }}</span>

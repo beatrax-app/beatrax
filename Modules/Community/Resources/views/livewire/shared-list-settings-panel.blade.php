@@ -55,7 +55,7 @@
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {{ Lang::get('community::settings.update_on_updates.help') }}
                 </p>
-                <p class="mt-1 text-xs italic text-slate-400 dark:text-slate-500" data-testid="toggle-update-note">
+                <p class="mt-1 text-xs italic text-slate-600 dark:text-slate-400" data-testid="toggle-update-note">
                     {{ Lang::get('community::settings.update_on_updates.note') }}
                 </p>
             </div>

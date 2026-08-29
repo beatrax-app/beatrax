@@ -67,7 +67,7 @@
                     >
                         @switch($row['status'])
                             @case('pass')
-                                <span role="img" class="text-emerald-600" aria-label="{{ Lang::get('dev::doctor.aria_pass') }}">✓</span>
+                                <span role="img" class="text-emerald-700" aria-label="{{ Lang::get('dev::doctor.aria_pass') }}">✓</span>
                                 @break
                             @case('warn')
                                 <span role="img" class="text-amber-500" aria-label="{{ Lang::get('dev::doctor.aria_warning') }}">⚠</span>

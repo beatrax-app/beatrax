@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Navigation\Destination')
+@use('Modules\Core\Public\Support\Fmt')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Forecasting\Public\Services\ForecastHighlightsQuery')
 @use('Modules\Shell\Public\Navigation\AppNavigation')
@@ -84,11 +85,7 @@
         // Cached per-user nav counts (NavCountsService). Compact-format large
         // counts so a four-digit badge never stretches the rail.
         $navCounts = $navCounts ?? [];
-        $navCount = static function (string $key) use ($navCounts): string {
-            $n = (int) ($navCounts[$key] ?? 0);
-
-            return $n >= 1000 ? round($n / 1000, 1).'k' : (string) $n;
-        };
+        $navCount = static fn (string $key): string => Fmt::compactCount((int) ($navCounts[$key] ?? 0));
     @endphp
 
     <a href="{{ Destination::Dashboard->url() }}" class="side-item {{ $isActive(Destination::Dashboard->path()) }}">

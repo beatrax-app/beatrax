@@ -61,7 +61,7 @@
          buttons a second row and their own widths back. --}}
     <header class="flex flex-col gap-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6 dashboard-phone-order-1">
         <div class="space-y-1">
-            <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $summary->period->label }}</h1>
+            <x-core::page-heading level="section">{{ $summary->period->label }}</x-core::page-heading>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.subtitle') }}</p>
         </div>
         <div class="flex shrink-0 flex-wrap items-center gap-1">
@@ -132,7 +132,7 @@
             <x-core::card>
                 <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.net') }}</p>
                 <p
-                    class="mt-2 text-3xl font-semibold {{ $summary->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-500' }}"
+                    class="mt-2 text-3xl font-semibold {{ $summary->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-700 dark:text-emerald-500' }}"
                     style="font-variant-numeric: tabular-nums;"
                 >
                     {{ $fmt($summary->net) }}
@@ -165,7 +165,7 @@
                         <x-core::card>
                             <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.net') }}</p>
                             <p
-                                class="mt-2 text-3xl font-semibold {{ $tile->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-500' }}"
+                                class="mt-2 text-3xl font-semibold {{ $tile->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-700 dark:text-emerald-500' }}"
                                 style="font-variant-numeric: tabular-nums;"
                             >
                                 {{ $fmt($tile->net) }}

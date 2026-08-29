@@ -4,7 +4,7 @@
 <div class="safe-screen min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-md mx-auto px-6 space-y-6">
         <header class="space-y-2 text-center">
-            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::restore.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('mobile::restore.heading') }}</x-core::page-heading>
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('mobile::restore.intro') }}
             </p>
@@ -28,7 +28,7 @@
                     accept=".enc"
                     x-on:livewire-upload-error="$wire.uploadFailed()"
                 />
-                <div wire:loading wire:target="backup" class="text-xs text-slate-400">{{ Lang::get('core::backup.restore.uploading') }}</div>
+                <div wire:loading wire:target="backup" class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::backup.restore.uploading') }}</div>
             </div>
 
             <x-core::form-field

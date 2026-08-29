@@ -183,13 +183,13 @@
                 type="button"
                 wire:click="newer"
                 @disabled(! $isPaged)
-                class="rounded border px-3 py-1 font-medium {{ $isPaged ? 'border-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:hover:bg-slate-800' : 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-600' }}"
+                class="rounded border px-3 py-1 font-medium {{ $isPaged ? 'border-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:hover:bg-slate-800' : 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-600 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-600' }}"
             >{{ Lang::get('dev::audit.newer') }}</button>
             <button
                 type="button"
                 wire:click="older({{ $oldestRenderedId }})"
                 @disabled(! $hasMore || $oldestRenderedId <= 0)
-                class="rounded border px-3 py-1 font-medium {{ $hasMore && $oldestRenderedId > 0 ? 'border-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:hover:bg-slate-800' : 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-600' }}"
+                class="rounded border px-3 py-1 font-medium {{ $hasMore && $oldestRenderedId > 0 ? 'border-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:hover:bg-slate-800' : 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-600 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-600' }}"
             >{{ Lang::get('dev::audit.older') }}</button>
         </nav>
     @endif

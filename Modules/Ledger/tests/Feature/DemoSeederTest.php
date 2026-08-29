@@ -254,7 +254,10 @@ it('produces the documented dataset shape after a single seed run', function ():
         ->unique()
         ->values()
         ->all();
-    foreach (['backup_corrupt', 'doctor_warning', 'update.available', 'force_password_change'] as $kind) {
+    // Kinds the app can actually raise. `doctor_warning` and
+    // `force_password_change` were neither: nothing writes them, so the banner
+    // had no case for them and printed their English column on a Dutch screen.
+    foreach (['backup_corrupt', 'wal_mode_missing', 'update.available', 'auth.recovery_code_failed'] as $kind) {
         expect($systemAlertKinds)->toContain($kind);
     }
 

@@ -33,7 +33,7 @@
 <div class="mx-auto max-w-7xl px-4 py-12">
     <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('forecasting::forecast.heading') }}</x-core::page-heading>
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('forecasting::forecast.subtitle') }}
             </p>
@@ -46,7 +46,7 @@
 
     @if ($isEmpty)
         <section class="rounded-lg border border-slate-200 bg-white p-8 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_heading') }}</h2>
+            <x-core::section-heading :title="Lang::get('forecasting::forecast.empty_heading')" />
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('forecasting::forecast.empty_body') }}
             </p>
@@ -56,9 +56,9 @@
                  checked against the route table. --}}
             <p class="mt-3 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('forecasting::forecast.empty_start') }}
-                <a href="{{ Destination::Imports->url() }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_import_link') }}</a>
+                <a href="{{ Destination::Imports->url() }}" class="tap-link text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_import_link') }}</a>
                 {{ Lang::get('forecasting::forecast.empty_or') }}
-                <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_recurring_link') }}</a>.
+                <a href="{{ route('recurring.review') }}" class="tap-link text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_recurring_link') }}</a>.
             </p>
         </section>
     @else
@@ -171,7 +171,7 @@
                         wire:click="startCreateScenario"
                         @class([
                             'rounded-md px-3 py-1 text-sm',
-                            'bg-emerald-600 dark:bg-emerald-500 text-white hover:bg-emerald-700 dark:hover:bg-emerald-400' => count($scenarios) === 0,
+                            'bg-emerald-700 dark:bg-emerald-700 text-white hover:bg-emerald-800 dark:hover:bg-emerald-800' => count($scenarios) === 0,
                             'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' => count($scenarios) > 0,
                         ])
                     >{{ Lang::get('forecasting::forecast.new_scenario') }}</button>
@@ -188,7 +188,7 @@
                         <button
                             type="button"
                             wire:click="saveNewScenario"
-                            class="rounded-md bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-700 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                            class="rounded-md bg-emerald-700 px-3 py-1 text-sm text-white hover:bg-emerald-800 dark:hover:bg-emerald-800 dark:bg-emerald-700"
                         >{{ Lang::get('forecasting::forecast.create_scenario') }}</button>
                         <button
                             type="button"
@@ -209,7 +209,7 @@
             @if ($isAllAccountsView)
                 <section class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
                     <header class="mb-3">
-                        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.all_accounts') }} · {{ $activeScenarioName ?? Lang::get('forecasting::forecast.baseline') }}</h2>
+                        <x-core::section-heading :title="Lang::get('forecasting::forecast.all_accounts').' · '.($activeScenarioName ?? Lang::get('forecasting::forecast.baseline'))" />
                         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                             {{ Lang::choice('forecasting::forecast.aggregate_subtitle', $horizon, ['days' => $horizon]) }}
                         </p>
@@ -245,7 +245,7 @@
                         <section class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
                             <header class="mb-3 flex flex-wrap items-baseline justify-between gap-4">
                                 <div>
-                                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $selectedAccountName }} · {{ Lang::get('forecasting::forecast.baseline') }}</h2>
+                                    <x-core::section-heading :title="$selectedAccountName.' · '.Lang::get('forecasting::forecast.baseline')" />
                                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
                                         {{ $eurFmt($todayBalanceMinor, $defaultCurrency) }} {{ Lang::get('forecasting::forecast.today') }}
                                         &nbsp;&rarr;&nbsp;
@@ -308,7 +308,7 @@
                             <section class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
                                 <header class="mb-3 flex flex-wrap items-baseline justify-between gap-4">
                                     <div>
-                                        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $selectedAccountName }} · {{ $activeScenarioName ?? Lang::get('forecasting::forecast.scenario_word') }}</h2>
+                                        <x-core::section-heading :title="$selectedAccountName.' · '.($activeScenarioName ?? Lang::get('forecasting::forecast.scenario_word'))" />
                                         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
                                             {{ Lang::get('forecasting::forecast.compared_against_baseline') }}
                                         </p>

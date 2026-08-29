@@ -19,9 +19,9 @@
 <x-core::card tag="section" aria-label="{{ Lang::get('recurring::fixed_payments.heading') }}">
     <header class="mb-4 flex flex-wrap items-baseline justify-between gap-4">
         <div>
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::fixed_payments.heading') }}</h2>
+            <x-core::section-heading :title="Lang::get('recurring::fixed_payments.heading')" />
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                {{ $fmt($totals->expense) }} {{ Lang::get('recurring::fixed_payments.summary.expenses') }} · {{ $fmt($totals->income) }} {{ Lang::get('recurring::fixed_payments.summary.income') }} · <span class="font-medium text-slate-900 dark:text-slate-100">{{ $fmt($totals->net) }} {{ Lang::get('recurring::fixed_payments.summary.net') }}</span>@if ($totals->isPartial())<span class="text-slate-400 dark:text-slate-500" data-not-converted="true"> {{ Lang::get('core::money.not_converted', ['list' => $totals->unconvertedList()]) }}</span>@endif
+                {{ $fmt($totals->expense) }} {{ Lang::get('recurring::fixed_payments.summary.expenses') }} · {{ $fmt($totals->income) }} {{ Lang::get('recurring::fixed_payments.summary.income') }} · <span class="font-medium text-slate-900 dark:text-slate-100">{{ $fmt($totals->net) }} {{ Lang::get('recurring::fixed_payments.summary.net') }}</span>@if ($totals->isPartial())<span class="text-slate-600 dark:text-slate-400" data-not-converted="true"> {{ Lang::get('core::money.not_converted', ['list' => $totals->unconvertedList()]) }}</span>@endif
             </p>
         </div>
         <div

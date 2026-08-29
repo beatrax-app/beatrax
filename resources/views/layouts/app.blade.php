@@ -44,7 +44,14 @@
 >
     <head>
         <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        {{-- interactive-widget=resizes-content, not the `resizes-visual`
+             default: with the default the soft keyboard offsets the VISUAL
+             viewport and leaves the layout viewport where it was, so every
+             fixed and sticky element stays anchored off-screen. Measured on a
+             Galaxy S24 Ultra at 384px: tapping a budget assign box put
+             visualViewport.offsetTop at 303 with .top-bar still at layout y 0,
+             and the page drew its own content through the status bar. --}}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
         <x-core::pwa-head />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
 

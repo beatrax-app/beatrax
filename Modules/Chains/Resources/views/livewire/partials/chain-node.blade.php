@@ -54,7 +54,7 @@
                 <a
                     href="{{ route('counterparties.profile', ['slug' => $node->counterpartySlug]) }}"
                     wire:navigate
-                    class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                    class="tap-link underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                     data-testid="chain-node-counterparty-link-{{ $node->transactionId }}"
                 >{{ $node->counterpartyName }}</a>
             @else
@@ -81,7 +81,7 @@
             <button
                 type="button"
                 wire:click="confirm({{ $node->chainLinkId }})"
-                class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                class="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 aria-label="{{ Lang::get('chains::drawer.confirm_aria', ['id' => $node->chainLinkId]) }}"
             >{{ Lang::get('chains::drawer.confirm') }}</button>
             <button
@@ -107,7 +107,7 @@
                             <a
                                 href="{{ route('counterparties.profile', ['slug' => $child->counterpartySlug]) }}"
                                 wire:navigate
-                                class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                class="tap-link underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                 data-testid="chain-node-child-counterparty-link-{{ $child->transactionId }}"
                             >{{ $child->counterpartyName }}</a>
                         @else

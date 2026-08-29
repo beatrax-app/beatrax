@@ -9,7 +9,7 @@
         </div>
 
         <header class="space-y-2">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::welcome.heading') }}</h1>
+            <x-core::page-heading level="section">{{ Lang::get('mobile::welcome.heading') }}</x-core::page-heading>
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('mobile::welcome.subtitle') }}
             </p>

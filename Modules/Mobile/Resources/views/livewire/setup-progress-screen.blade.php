@@ -96,14 +96,14 @@
                             'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold',
                             'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' => $done,
                             'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100' => $current,
-                            'border-slate-300 text-slate-400 dark:border-slate-600 dark:text-slate-500' => ! $done && ! $current,
+                            'border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-400' => ! $done && ! $current,
                         ])
                         aria-hidden="true"
                     >{{ $done ? '✓' : $loop->iteration }}</span>
                     <span @class([
                         'text-slate-900 dark:text-slate-100' => $done || $current,
                         'font-medium' => $current,
-                        'text-slate-400 dark:text-slate-500' => ! $done && ! $current,
+                        'text-slate-600 dark:text-slate-400' => ! $done && ! $current,
                     ])>
                         {{ Lang::get('mobile::setup.step.'.$entry->value) }}
                         @if ($current)

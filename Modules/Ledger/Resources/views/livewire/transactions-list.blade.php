@@ -60,7 +60,7 @@
          history button off the right edge of a phone. --}}
     <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div class="space-y-1">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::list.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('ledger::list.heading') }}</x-core::page-heading>
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 @if ($isSearchMode)
                     {{ Lang::get('ledger::list.subtitle_searching') }}
@@ -184,7 +184,7 @@
                                 {{-- Tax badge: always-visible at phone width. Parent-row
                                      badge unaffected by split state (UI-SPEC discretion — see the
                                      per-leg read-only badges in the expanded list below). --}}
-                                <x-tax::tax-badge :transaction="$row" :showAlways="true" />
+                                <x-tax::tax-badge :transaction="$row" :showAlways="true" :chipRow="true" />
                                 {{-- Cleared/uncleared/reconciled badge. Always visible
                                      at phone width, same as the tax badge. --}}
                                 <x-ledger::cleared-badge :transaction="['id' => $row['id'], 'status' => $row['status'] ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />

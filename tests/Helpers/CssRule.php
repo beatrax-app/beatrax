@@ -52,6 +52,29 @@ final class CssRule
         return '';
     }
 
+    // The selector list a rule is declared with, for asserting that a shared
+    // rule still names a given selector. Read back from the brace that closed
+    // the previous rule rather than from the match, so every sibling selector
+    // in the list is returned and not just the tail after $selector.
+    public static function selectorListFor(string $css, string $selector): string
+    {
+        $css = self::withoutComments($css);
+        $selectorAt = strpos($css, $selector);
+        if ($selectorAt === false) {
+            return '';
+        }
+
+        $open = strpos($css, '{', $selectorAt);
+        if ($open === false) {
+            return '';
+        }
+
+        $previous = strrpos(substr($css, 0, $selectorAt), '}');
+        $start = $previous === false ? 0 : $previous + 1;
+
+        return substr($css, $start, $open - $start);
+    }
+
     // The prelude of the innermost at-rule whose block contains $selector, e.g.
     // `@media (pointer: coarse)`. Found by tracking block depth rather than by
     // searching backwards for the nearest `@media`, which lands on the last one

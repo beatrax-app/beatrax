@@ -105,7 +105,7 @@ it('ranks the destination a user named above everything the letters also happen 
         'sub' => 'Subscriptions',
         // A word from inside a two-word label.
         'charges' => 'Unusual charges',
-        'devices' => 'Data & Devices',
+        'devices' => 'Data & devices',
     ];
 
     $answers = paletteMatchLabels($registry, array_keys($wanted));

@@ -1,8 +1,8 @@
 @use('Modules\Core\Public\Support\Lang')
 <div class="space-y-6">
     <header class="space-y-1">
-        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400" data-testid="migration-eyebrow">{{ Lang::get('migration::new.eyebrow') }}</p>
-        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('migration::new.heading') }}</h1>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400" data-testid="migration-eyebrow">{{ Lang::get('migration::new.eyebrow') }}</p>
+        <x-core::page-heading>{{ Lang::get('migration::new.heading') }}</x-core::page-heading>
         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('migration::new.intro') }}</p>
         @if ($reconcileOf !== null)
             <p class="text-sm text-slate-500 dark:text-slate-400" data-testid="reconcile-context">

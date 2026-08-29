@@ -200,7 +200,11 @@ final class BudgetsPage extends Component
         $this->moveAmount = '';
         $this->moveMemo = '';
         $this->moveError = '';
-        $this->dispatch('modal-show', name: 'envelope-move');
+
+        // No `modal-show` dispatch: which surface opens is a viewport decision
+        // the two Move buttons already make, and announcing it here opened the
+        // desktop modal over the phone's sheet. The modal then owned the hit
+        // test, so a tap on the sheet's own button dismissed the modal.
     }
 
     // No "insufficient balance" catch by design: a move that takes the source

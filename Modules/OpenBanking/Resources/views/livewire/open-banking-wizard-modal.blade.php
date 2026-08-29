@@ -43,7 +43,7 @@
                             type="button"
                             wire:click="generateKeypair"
                             wire:loading.attr="disabled"
-                            class="inline-flex min-h-[44px] items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                            class="inline-flex min-h-[44px] items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-emerald-700 dark:hover:bg-emerald-800"
                         >{{ Lang::get('openbanking::messages.wizard.generate_keypair') }}</button>
                     @else
                         <div class="space-y-2">
@@ -121,21 +121,21 @@
                     <div class="grid grid-cols-2 gap-3">
                         <label class="flex cursor-pointer flex-col gap-1 rounded-md border border-slate-300 p-3 has-[:checked]:border-slate-900 dark:border-slate-700 dark:has-[:checked]:border-slate-100">
                             <span class="flex items-center gap-2">
-                                <input type="radio" name="bankChoice" wire:click="chooseBank('asn')" @checked($bankChoice === 'asn') class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700">
+                                <input type="radio" name="bankChoice" wire:click="chooseBank('asn')" @checked($bankChoice === 'asn') class="h-4 w-4 border-slate-300 text-emerald-700 focus:ring-emerald-600 dark:border-slate-700">
                                 <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">ASN Bank</span>
                             </span>
                             <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.via_enable_banking') }}</span>
                         </label>
                         <label class="flex cursor-pointer flex-col gap-1 rounded-md border border-slate-300 p-3 has-[:checked]:border-slate-900 dark:border-slate-700 dark:has-[:checked]:border-slate-100">
                             <span class="flex items-center gap-2">
-                                <input type="radio" name="bankChoice" wire:click="chooseBank('sns')" @checked($bankChoice === 'sns') class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700">
+                                <input type="radio" name="bankChoice" wire:click="chooseBank('sns')" @checked($bankChoice === 'sns') class="h-4 w-4 border-slate-300 text-emerald-700 focus:ring-emerald-600 dark:border-slate-700">
                                 <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">SNS (de Volksbank)</span>
                             </span>
                             <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.via_enable_banking') }}</span>
                         </label>
                     </div>
                     <label class="flex items-center gap-2 pt-1">
-                        <input type="radio" name="bankChoice" wire:click="chooseBank('other')" @checked($bankChoice === 'other') class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700">
+                        <input type="radio" name="bankChoice" wire:click="chooseBank('other')" @checked($bankChoice === 'other') class="h-4 w-4 border-slate-300 text-emerald-700 focus:ring-emerald-600 dark:border-slate-700">
                         <span class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.other_institution') }}</span>
                     </label>
                     @if ($bankChoice === 'other')

@@ -14,7 +14,7 @@
 
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-12">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::inboxes.heading') }}</h1>
+        <x-core::page-heading>{{ Lang::get('email-scan::inboxes.heading') }}</x-core::page-heading>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('email-scan::inboxes.intro') }}
         </p>
@@ -73,12 +73,12 @@
                 <button
                     type="button"
                     wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value }}')"
-                    class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                    class="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 >{{ Lang::get('email-scan::inboxes.connect_gmail') }}</button>
                 <button
                     type="button"
                     wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Microsoft->value }}')"
-                    class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                    class="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 >{{ Lang::get('email-scan::inboxes.connect_microsoft') }}</button>
             </div>
             <p class="mt-4 text-xs text-slate-500 dark:text-slate-400">
@@ -199,7 +199,7 @@
 
         {{-- "Add another inbox" card pair per UI-SPEC § Add-inbox card pair. --}}
         <section class="mt-12">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::inboxes.add_another') }}</h2>
+            <x-core::section-heading :title="Lang::get('email-scan::inboxes.add_another')" />
             <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="rounded-lg border border-slate-200 bg-white p-6 space-y-4 dark:bg-slate-950 dark:border-slate-700">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Gmail</p>
@@ -207,7 +207,7 @@
                     <button
                         type="button"
                         wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value }}')"
-                        class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                        class="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                     >{{ Lang::get('email-scan::inboxes.connect_gmail') }}</button>
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-white p-6 space-y-4 dark:bg-slate-950 dark:border-slate-700">
@@ -216,7 +216,7 @@
                     <button
                         type="button"
                         wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Microsoft->value }}')"
-                        class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                        class="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                     >{{ Lang::get('email-scan::inboxes.connect_microsoft') }}</button>
                 </div>
             </div>
@@ -264,13 +264,13 @@
                                 type="button"
                                 wire:click="promoteSender({{ $cand->id }})"
                                 aria-label="{{ Lang::get('email-scan::inboxes.add_aria', ['email' => $cand->senderEmail]) }}"
-                                class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                                class="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                             >{{ Lang::get('email-scan::inboxes.add') }}</button>
                             <button
                                 type="button"
                                 wire:click="dismissSender({{ $cand->id }})"
                                 aria-label="{{ Lang::get('email-scan::inboxes.dismiss_aria', ['email' => $cand->senderEmail]) }}"
-                                class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                                class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                             >{{ Lang::get('email-scan::inboxes.dismiss') }}</button>
                         </div>
                     </li>

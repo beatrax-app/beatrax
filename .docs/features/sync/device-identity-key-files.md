@@ -68,7 +68,7 @@ app-lock side of that is guarded:
 
 An unopenable key file is therefore an ordinary state of a real install, not a corruption. It
 is read on a settings mount and on a poll tick, so it must never be an exception: an escape
-there is a 500 on Data & Devices, which is the only route to pairing.
+there is a 500 on Data & devices, which is the only route to pairing.
 
 ## An unopenable key file is retired, never deleted
 

@@ -18,7 +18,7 @@
 
     $deltaClass = [
         'up' => 'text-rose-600 dark:text-rose-400',
-        'down' => 'text-emerald-600 dark:text-emerald-400',
+        'down' => 'text-emerald-700 dark:text-emerald-400',
         'flat' => 'text-slate-500 dark:text-slate-400',
     ];
 
@@ -51,7 +51,7 @@
 <div class="mx-auto max-w-3xl px-4 py-12">
     <header class="mb-8">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('drift-alerts::watch.heading') }}</x-core::page-heading>
             <a href="{{ Destination::DriftAlerts->url() }}" class="tap-link text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::watch.drift_alerts_link') }}</a>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -65,20 +65,20 @@
             <div class="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300">
                 <span class="whitespace-nowrap">
                     <span class="font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $trackedCount }}</span>
-                    <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.tracked') }}</span>
+                    <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('drift-alerts::watch.tracked') }}</span>
                 </span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
                 <span class="whitespace-nowrap">
                     <span class="font-medium {{ $driftedUpCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">{{ $driftedUpCount }}</span>
-                    <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.crept_up') }}</span>
+                    <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('drift-alerts::watch.crept_up') }}</span>
                 </span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
                 <span class="whitespace-nowrap">
                     <span style="font-variant-numeric: tabular-nums;">{{ $fmt($monthlyTotal->minor, $monthlyTotal->currency) }}</span>
-                    <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.per_month_total') }}</span>
+                    <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('drift-alerts::watch.per_month_total') }}</span>
                 </span>
                 @if ($monthlyTotal->isPartial())
-                    <span class="text-slate-400 dark:text-slate-500" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $monthlyTotal->unconvertedList()]) }}</span>
+                    <span class="text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $monthlyTotal->unconvertedList()]) }}</span>
                 @endif
             </div>
         @endif
@@ -90,7 +90,7 @@
                  sentence, and the prop escapes its value. --}}
             <x-slot:body>
                 {{ Lang::get('drift-alerts::watch.empty_body') }}
-                <a href="{{ Destination::Recurring->url() }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_link') }}</a>.
+                <a href="{{ Destination::Recurring->url() }}" class="tap-link text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_link') }}</a>.
             </x-slot:body>
         </x-core::empty-state>
     @else
@@ -111,7 +111,7 @@
                                     class="tap-link min-w-0 font-medium text-slate-900 hover:underline underline-offset-2 dark:text-slate-100"
                                 ><span class="block truncate">{{ $row->name }}</span></a>
                                 @if ($row->hasOpenAlert)
-                                    <a href="{{ Destination::DriftAlerts->url() }}" class="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300" style="background: color-mix(in srgb, currentColor 14%, transparent);">{{ Lang::get('drift-alerts::watch.open_alert') }}</a>
+                                    <a href="{{ Destination::DriftAlerts->url() }}" class="tap-chip shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300" style="background: color-mix(in srgb, currentColor 14%, transparent);">{{ Lang::get('drift-alerts::watch.open_alert') }}</a>
                                 @endif
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">

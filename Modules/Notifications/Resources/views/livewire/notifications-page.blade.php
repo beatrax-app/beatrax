@@ -42,7 +42,7 @@
          aligning their tops left it floating above the heading it belongs to. --}}
     <header class="mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::inbox.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('notifications::inbox.heading') }}</x-core::page-heading>
         </div>
         <a
             href="{{ Destination::Settings->url() }}#notifications"

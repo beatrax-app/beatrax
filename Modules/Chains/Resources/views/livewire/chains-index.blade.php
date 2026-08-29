@@ -21,10 +21,10 @@
     $fmt = static fn ($money) => $money->format();
 @endphp
 
-<div class="mx-auto max-w-3xl px-4 py-10 sm:py-12">
+<div class="mx-auto max-w-3xl px-4 py-12">
     <header class="mb-8">
         <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('chains::index.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('chains::index.heading') }}</x-core::page-heading>
             <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                 <a
                     href="{{ route('chains.review') }}"
@@ -73,14 +73,20 @@
                                     <a
                                         href="{{ route('counterparties.profile', ['slug' => $settlement->counterpartySlug]) }}"
                                         wire:navigate
-                                        class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                        class="tap-link underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                         data-testid="chains-index-to-counterparty-link-{{ $settlement->transactionId }}"
                                     >{{ $settlement->counterparty ?: Lang::get('chains::index.no_counterparty') }}</a>
                                 @else
                                     <span data-testid="chains-index-to-counterparty-text-{{ $settlement->transactionId }}">{{ $settlement->counterparty ?: Lang::get('chains::index.no_counterparty') }}</span>
                                 @endif
                             </p>
-                            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                            {{-- No tap-link on the date: it sits 20px under the
+                                 counterparty name, and two 44px halos that close
+                                 together do not both fit. The later one paints over
+                                 the earlier, so a tap 16px left of the name's centre
+                                 opened the TRANSACTION rather than the counterparty.
+                                 The name is the primary target and keeps the halo. --}}
+                            <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
                                 <a
                                     href="{{ route('transactions.show', ['transactionId' => $settlement->transactionId]) }}"
                                     wire:navigate
@@ -114,7 +120,7 @@
                                         <a
                                             href="{{ route('counterparties.profile', ['slug' => $leg->fromCounterpartySlug]) }}"
                                             wire:navigate
-                                            class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                            class="tap-link underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                             data-testid="chains-index-from-counterparty-link-{{ $leg->chainLinkId }}"
                                         >{{ $leg->fromCounterparty ?: Lang::get('chains::index.no_counterparty') }}</a>
                                     @else

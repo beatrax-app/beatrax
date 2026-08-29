@@ -20,7 +20,7 @@
      UI-SPEC's generic "CAMT.053 or CSV" placeholder copy, which described
      the ASN bank-statement shape, not ICS). --}}
 <section id="ics-import" class="space-y-3" data-testid="open-banking-ics-import-card">
-    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
         {{ Lang::get('openbanking::messages.ics.section_label') }}
     </p>
 

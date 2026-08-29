@@ -41,7 +41,7 @@
 
 <fieldset class="space-y-3 rounded-md border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
     <legend class="sr-only">{{ Lang::get('forecasting::opening_balance.legend', ['name' => $accountName]) }}</legend>
-    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $accountName }}</h3>
+    <x-core::section-heading :title="$accountName" :level="3" />
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="space-y-1">
@@ -104,7 +104,7 @@
         <button
             type="button"
             wire:click="save"
-            class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+            class="inline-flex items-center rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:hover:bg-emerald-800 dark:bg-emerald-700"
         >{{ Lang::get('forecasting::opening_balance.save') }}</button>
 
         {{-- Only while there is something to take back. The same removal is

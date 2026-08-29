@@ -25,7 +25,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
             {{-- Worker heartbeat tile --}}
             <div data-testid="console-pane-heartbeat">
-                <div class="text-[11px] uppercase tracking-wide text-slate-400">{{ Lang::get('dev::overview.worker_heartbeat') }}</div>
+                <div class="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('dev::overview.worker_heartbeat') }}</div>
                 @if ($workerHeartbeat['secondsAgo'] === null)
                     <div class="mt-1 text-sm font-mono text-rose-300">{{ Lang::get('dev::overview.not_running') }}</div>
                 @else
@@ -49,29 +49,29 @@
 
             {{-- Queue counts tile --}}
             <div>
-                <div class="text-[11px] uppercase tracking-wide text-slate-400">{{ Lang::get('dev::overview.queue') }}</div>
+                <div class="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('dev::overview.queue') }}</div>
                 <div class="mt-1 flex items-baseline gap-3 font-mono text-sm">
                     <span data-testid="queue-tile-pending">
-                        <span class="text-[10px] text-slate-400">{{ Lang::get('dev::overview.pending') }}</span>
+                        <span class="text-[10px] text-slate-600 dark:text-slate-400">{{ Lang::get('dev::overview.pending') }}</span>
                         <span class="ml-1 text-[var(--color-text-inverse,_#f1f5f9)]" style="font-variant-numeric: tabular-nums;">{{ $queueCounts['pending'] }}</span>
                     </span>
                     <span data-testid="queue-tile-failed">
-                        <span class="text-[10px] text-slate-400">{{ Lang::get('dev::overview.failed') }}</span>
+                        <span class="text-[10px] text-slate-600 dark:text-slate-400">{{ Lang::get('dev::overview.failed') }}</span>
                         <span class="ml-1 {{ $queueCounts['failed'] > 0 ? 'text-rose-300' : '' }}" style="font-variant-numeric: tabular-nums;">{{ $queueCounts['failed'] }}</span>
                     </span>
                     <span data-testid="queue-tile-batches">
-                        <span class="text-[10px] text-slate-400">{{ Lang::get('dev::overview.batches') }}</span>
+                        <span class="text-[10px] text-slate-600 dark:text-slate-400">{{ Lang::get('dev::overview.batches') }}</span>
                         <span class="ml-1" style="font-variant-numeric: tabular-nums;">{{ $queueCounts['batches'] }}</span>
                     </span>
                 </div>
-                <div class="mt-2 text-[11px] text-slate-400">
+                <div class="mt-2 text-[11px] text-slate-600 dark:text-slate-400">
                     {{ Lang::get('dev::overview.queue_summary', ['failed' => Lang::choice('dev::overview.queue_summary_failed', $queueCounts['failed']), 'batches' => Lang::choice('dev::overview.queue_summary_batches', $queueCounts['batches'])]) }}
                 </div>
             </div>
 
             {{-- Last command tile --}}
             <div>
-                <div class="text-[11px] uppercase tracking-wide text-slate-400">{{ Lang::get('dev::overview.last_command') }}</div>
+                <div class="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('dev::overview.last_command') }}</div>
                 <div class="mt-1 text-sm font-mono truncate">
                     {{ $lastCommand ?? '—' }}
                 </div>
@@ -85,7 +85,7 @@
              lands on the source entry in context. --}}
         <div class="mt-4 space-y-1" data-testid="console-pane-tail">
             @if ($recentLogEntries === [])
-                <p class="text-xs text-slate-400">{{ Lang::get('dev::overview.waiting_for_logs') }}</p>
+                <p class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('dev::overview.waiting_for_logs') }}</p>
             @else
                 @foreach ($recentLogEntries as $entry)
                     @php
@@ -94,7 +94,7 @@
                             'WARNING' => 'text-amber-300',
                             'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY' => 'text-rose-300',
                             'NOTICE' => 'text-slate-200',
-                            default => 'text-slate-400',
+                            default => 'text-slate-600',
                         };
                     @endphp
                     <a
@@ -103,7 +103,7 @@
                         data-testid="recent-log-entry-row"
                         style="font-variant-numeric: tabular-nums;"
                     >
-                        <span class="text-slate-400 flex-shrink-0">{{ $entry['timestamp'] }}</span>
+                        <span class="text-slate-600 flex-shrink-0 dark:text-slate-400">{{ $entry['timestamp'] }}</span>
                         <span class="{{ $sevClass }} flex-shrink-0 uppercase">{{ $severity }}</span>
                         <span class="text-slate-200 truncate">{{ $entry['message'] }}</span>
                     </a>

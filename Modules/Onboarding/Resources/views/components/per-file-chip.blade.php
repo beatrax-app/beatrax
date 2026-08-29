@@ -21,6 +21,7 @@
                      `wire:click` so the parent can splice the right
                      entry out.
 --}}
+@use('Modules\Core\Public\Support\Fmt')
 @use('Modules\Core\Public\Support\Lang')
 @props([
     'filename',
@@ -37,9 +38,9 @@
     $bytesPerUnit = 1024;
     $bytesPerMib = $bytesPerUnit * $bytesPerUnit;
     $sizeLabel = match (true) {
-        $bytes >= $bytesPerMib => number_format($bytes / $bytesPerMib, 1).' MB',
-        $bytes >= $bytesPerUnit => number_format($bytes / $bytesPerUnit, 0).' KB',
-        default => $bytes.' B',
+        $bytes >= $bytesPerMib => Fmt::number($bytes / $bytesPerMib, 1).' MB',
+        $bytes >= $bytesPerUnit => Fmt::number($bytes / $bytesPerUnit).' KB',
+        default => Fmt::number($bytes).' B',
     };
 
     $stateClass = match ($state) {

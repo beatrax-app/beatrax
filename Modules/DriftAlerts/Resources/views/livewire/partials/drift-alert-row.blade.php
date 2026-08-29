@@ -64,7 +64,7 @@
                 <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.meta_threshold', ['percent' => $alert->thresholdPercentUsed]) }}</span>
                 @if ($alert->eurEquivalent !== null)
                     <span class="mx-1">·</span>
-                    <span class="text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.meta_eur_equiv', ['amount' => $fmt($alert->eurEquivalent)]) }}</span>
+                    <span class="text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.meta_eur_equiv', ['amount' => $fmt($alert->eurEquivalent)]) }}</span>
                 @endif
                 @if ($cancellationImpact !== null)
                     <span class="mx-1">·</span>
@@ -79,7 +79,7 @@
                     {{ Lang::get('drift-alerts::alerts.row.cadence_flipped') }}
                     <a
                         href="{{ route('recurring.review') }}"
-                        class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
+                        class="tap-link text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
                     >{{ Lang::get('drift-alerts::alerts.row.cadence_flipped_link') }}</a>
                 </p>
             @endif
@@ -99,7 +99,7 @@
                     aria-label="{{ Lang::get('drift-alerts::alerts.row.acknowledge_aria', ['id' => $alert->driftAlertId]) }}"
                     @class([
                         'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-                        'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600 dark:bg-emerald-500 dark:hover:bg-emerald-400' => $primaryAcknowledge,
+                        'bg-emerald-700 text-white hover:bg-emerald-800 focus-visible:ring-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800' => $primaryAcknowledge,
                         'bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700' => ! $primaryAcknowledge,
                     ])
                 >{{ Lang::get('drift-alerts::alerts.row.acknowledge') }}</button>

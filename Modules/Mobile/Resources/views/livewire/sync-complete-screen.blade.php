@@ -40,7 +40,7 @@
         </div>
 
         <div class="space-y-5">
-            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 {{ Lang::get('mobile::sync_complete.how_it_works') }}
             </h2>
 

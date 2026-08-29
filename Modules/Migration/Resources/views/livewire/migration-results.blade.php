@@ -24,9 +24,9 @@
 
 <div class="space-y-6">
     <header class="space-y-1">
-        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">
+        <x-core::page-heading>
             {{ $isReconciliation ? Lang::get('migration::results.heading_update') : Lang::get('migration::results.heading_complete') }}
-        </h1>
+        </x-core::page-heading>
     </header>
 
     <x-core::alert tone="positive" aria-live="polite" aria-atomic="true"

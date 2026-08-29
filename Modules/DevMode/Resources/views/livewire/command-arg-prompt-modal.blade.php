@@ -103,7 +103,7 @@
                                     wire:model.live="values.{{ $arg->name }}"
                                     @if ($arg->placeholder !== null) placeholder="{{ $arg->placeholder }}" @endif
                                     @if ($idx === 0) x-init="$nextTick(() => $el.focus())" x-on:keydown.enter.prevent="$wire.submit()" @endif
-                                    class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:ring-slate-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500"
+                                    class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-500 focus:ring-slate-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-400"
                                     data-testid="arg-input-{{ $arg->name }}"
                                 />
                             @endif

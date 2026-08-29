@@ -2216,6 +2216,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\DriftEvaluator',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\RevivedExpiredDriftSnoozesJob',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\StateMachines\\DriftAlertStateMachine',
+        'tests/Contracts/EveryAlertKindReadsInTheReadersLanguageArchTest.php -> Modules\\Core\\Internal\\Enums\\BackupAlertKind',
         'tests/Contracts/ForecastingProjectionContractTest.php -> Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
         'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\Detectors\\ExpenseSeriesDetector',
         'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\Detectors\\IncomeSeriesDetector',

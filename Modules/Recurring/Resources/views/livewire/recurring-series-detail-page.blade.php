@@ -37,12 +37,12 @@
     />
     <header class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="min-w-0 flex-1">
-            <h1 class="truncate text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $series->displayName() }}</h1>
+            <x-core::page-heading class="truncate">{{ $series->displayName() }}</x-core::page-heading>
             <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
                 <x-core::status-pill>{{ ucfirst($series->state) }}</x-core::status-pill>
                 <x-core::status-pill>{{ $series->cadence->label() }}</x-core::status-pill>
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($series->latestAmount) }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">·</span>
+                <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">·</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($series->monthlyEquivalent->toMinor()) }}/mo</span>
             </p>
             @if (! empty($counterpartyLink))
@@ -104,7 +104,7 @@
 
     <section class="mb-8 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
         <div class="mb-4 flex flex-wrap items-baseline justify-between">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::detail.amount_over_time') }}</h2>
+            <x-core::section-heading :title="Lang::get('recurring::detail.amount_over_time')" />
             <button
                 type="button"
                 wire:click="toggleAllPoints"

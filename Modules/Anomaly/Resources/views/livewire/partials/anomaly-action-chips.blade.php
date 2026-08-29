@@ -26,7 +26,7 @@
     @class([
         $base,
         $size,
-        'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600 dark:bg-emerald-500 dark:hover:bg-emerald-400' => $primaryAcknowledge,
+        'bg-emerald-700 text-white hover:bg-emerald-800 focus-visible:ring-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800' => $primaryAcknowledge,
         'bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700' => ! $primaryAcknowledge,
     ])
 >{{ Lang::get('anomaly::alerts.chips.acknowledge') }}</button>

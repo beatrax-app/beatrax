@@ -41,7 +41,7 @@
             />
 
             @if ($flashMessage !== '')
-                <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>
+                <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
             @endif
 
             <x-core::primary-button>

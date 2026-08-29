@@ -31,7 +31,7 @@ it('gives importing the dominant treatment', function (): void {
     // appears in the source at all — while what a reader sees is unchanged.
     $html = Livewire::test(MobileWelcomeScreen::class)->html();
 
-    $filled = strpos($html, 'bg-emerald-600');
+    $filled = strpos($html, 'bg-emerald-700');
     $import = strpos($html, Lang::get('mobile::welcome.import'));
     $create = strpos($html, Lang::get('mobile::welcome.create_account'));
 

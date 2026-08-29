@@ -17,8 +17,12 @@ use Modules\Core\Public\Enums\UpdateAlertKind;
 final class DemoSystemAlertsSeeder
 {
     /**
-     * @var list<array{kind: string, severity: string, message: string, ageHours: int, acknowledgedAgeHours: ?int, seedKey: string, latestVersion?: string}>
+     * @var list<array{kind: string, severity: string, message: string, ageHours: int, acknowledgedAgeHours: ?int, seedKey: string, metadata?: array<string, mixed>}>
      */
+    // Every kind here is one the app can actually raise. Two were not: a
+    // `doctor_warning` carrying the wal_mode_missing sentence, and a
+    // `force_password_change` for a rotation window this app has no feature
+    // for. Both fell through and printed English on a Dutch screen.
     private const ALERTS = [
         [
             'kind' => 'backup_corrupt',
@@ -29,12 +33,13 @@ final class DemoSystemAlertsSeeder
             'seedKey' => 'backup-corrupt-current',
         ],
         [
-            'kind' => 'doctor_warning',
+            'kind' => 'wal_mode_missing',
             'severity' => 'warning',
             'message' => 'SQLite `journal_mode` is set to DELETE; WAL mode is recommended for the background scanner.',
             'ageHours' => 36,
             'acknowledgedAgeHours' => null,
             'seedKey' => 'doctor-warning-current',
+            'metadata' => ['current_mode' => 'DELETE'],
         ],
         [
             'kind' => UpdateAlertKind::Available->value,
@@ -43,15 +48,16 @@ final class DemoSystemAlertsSeeder
             'ageHours' => 12,
             'acknowledgedAgeHours' => null,
             'seedKey' => 'update-available-current',
-            'latestVersion' => '0.1.0',
+            'metadata' => ['latestVersion' => '0.1.0'],
         ],
         [
-            'kind' => 'force_password_change',
+            'kind' => 'auth.recovery_code_failed',
             'severity' => 'critical',
-            'message' => 'Your account password is older than the configured rotation window. Please change it now.',
+            'message' => 'Failed recovery code attempt for demo-1.',
             'ageHours' => 8,
             'acknowledgedAgeHours' => null,
             'seedKey' => 'force-password-change-current',
+            'metadata' => ['username' => 'demo-1'],
         ],
         [
             'kind' => UpdateAlertKind::Available->value,
@@ -60,7 +66,7 @@ final class DemoSystemAlertsSeeder
             'ageHours' => 240,
             'acknowledgedAgeHours' => 200,
             'seedKey' => 'update-available-prior',
-            'latestVersion' => '0.0.9',
+            'metadata' => ['latestVersion' => '0.0.9'],
         ],
     ];
 
@@ -86,7 +92,7 @@ final class DemoSystemAlertsSeeder
     }
 
     /**
-     * @param  array{kind: string, severity: string, message: string, ageHours: int, acknowledgedAgeHours: ?int, seedKey: string, latestVersion?: string}  $row
+     * @param  array{kind: string, severity: string, message: string, ageHours: int, acknowledgedAgeHours: ?int, seedKey: string, metadata?: array<string, mixed>}  $row
      */
     private function upsertAlert(User $user, array $row): void
     {
@@ -112,13 +118,11 @@ final class DemoSystemAlertsSeeder
         $alert->kind = $row['kind'];
         $alert->severity = $row['severity'];
         $alert->message = $row['message'];
-        // The updater's own writer always records the version, and the banner's
-        // install, skip and release-notes actions all read it back; an alert
-        // without one renders two buttons that only dismiss.
-        $metadata = ['seed_key' => $row['seedKey']];
-        if (isset($row['latestVersion'])) {
-            $metadata['latestVersion'] = $row['latestVersion'];
-        }
+        // The banner renders by kind and reads its values out of metadata, so
+        // a demo row without them renders the fallback rather than the copy the
+        // reader would actually get: two buttons that only dismiss for an
+        // update, and English for everything else.
+        $metadata = array_merge(['seed_key' => $row['seedKey']], $row['metadata'] ?? []);
 
         $alert->metadata = $metadata;
         $alert->acknowledged_at = $acknowledgedAt;

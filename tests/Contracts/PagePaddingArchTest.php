@@ -24,7 +24,11 @@ function pageShellFiles(): array
         // px-6: at the reader's largest accessibility text that gutter was
         // 80px a side, and the note nested two boxes inside it was handed a
         // content width of zero.
+        // The components a page shell is built from count too: x-core::page-shell
+        // itself carried a bare px-8 through nineteen callers, and neither branch
+        // above reached it -- it is not under /livewire/ and it extends nothing.
         $isPageShell = str_contains($file->getPathname(), '/Resources/views/livewire/')
+            || str_contains($file->getPathname(), '/Resources/views/components/')
             || str_contains((string) file_get_contents($file->getPathname()), "@extends('layouts.app'");
 
         if (! $isPageShell) {

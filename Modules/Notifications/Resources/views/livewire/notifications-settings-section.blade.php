@@ -26,7 +26,7 @@
     <form wire:submit="save" class="space-y-6">
         {{-- ===== What to notify me about ===== --}}
         <div class="space-y-4">
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.what_heading') }}</h3>
+            <x-core::section-heading :title="Lang::get('notifications::settings.what_heading')" :level="3" />
 
             {{-- Payment reminders --}}
             <x-core::setting-row :label="Lang::get('notifications::settings.reminders.label')" :description="Lang::get('notifications::settings.reminders.help')">
@@ -90,7 +90,7 @@
 
         {{-- ===== When and how ===== --}}
         <div class="space-y-4 border-t border-slate-100 pt-6 dark:border-slate-800">
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.when_heading') }}</h3>
+            <x-core::section-heading :title="Lang::get('notifications::settings.when_heading')" :level="3" />
 
             {{-- Quiet hours --}}
             <x-core::setting-row :label="Lang::get('notifications::settings.quiet_hours.label')" :description="Lang::get('notifications::settings.quiet_hours.help')">
@@ -138,7 +138,7 @@
 
         <button
             type="submit"
-            class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+            class="inline-flex items-center rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
         >{{ Lang::get('notifications::settings.save') }}</button>
 
         @if ($saved)

@@ -31,7 +31,7 @@ it('renders the palette panel with explicit dark-mode utilities on every surface
     expect($html)->toContain('ring-slate-200 dark:ring-slate-700');
 
     expect($html)->toContain('border-slate-200 dark:border-slate-700');
-    expect($html)->toContain('placeholder:text-slate-400 dark:placeholder:text-slate-500');
+    expect($html)->toContain('placeholder:text-slate-500 dark:placeholder:text-slate-400');
 
     expect($html)->toContain('text-slate-500 dark:text-slate-400');
 });

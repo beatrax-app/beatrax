@@ -148,7 +148,7 @@ it('renders the page with the empty-state hero on the Open tab when no alerts ex
     $this->actingAs($this->user)
         ->get('/drift')
         ->assertOk()
-        ->assertSeeText('Drift Alerts')
+        ->assertSeeText('Drift alerts')
         ->assertSeeText('No open drift alerts')
         ->assertDontSeeText('Acknowledge');
 });
@@ -283,7 +283,7 @@ it('draws a snooze button for every window, wired the way the hand-written three
     expect($content)->not->toContain('snooze_1w');
 });
 
-// Two nav items land on this one page — "Drift Alerts" and "Unusual charges" —
+// Two nav items land on this one page — "Drift alerts" and "Unusual charges" —
 // and it carried a single name for both, so a reader who tapped the second
 // arrived at a screen headed with the first one's name. Measured on an iPhone:
 // /drift and /drift?type=anomaly were both titled "Afwijkingswaarschuwingen"
@@ -309,7 +309,7 @@ it('names whichever of its two screens the reader actually opened', function ():
     expect($driftHtml)->toBeString()->and($anomalyHtml)->toBeString();
 
     expect($nameOf($anomalyHtml))->toBe('Unusual charges')
-        ->and($nameOf($driftHtml))->toBe('Drift Alerts')
+        ->and($nameOf($driftHtml))->toBe('Drift alerts')
         ->and($nameOf($driftHtml))->not->toBe($nameOf($anomalyHtml))
         ->and($titleOf($driftHtml))->not->toBe($titleOf($anomalyHtml));
 

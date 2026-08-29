@@ -30,7 +30,7 @@ final class RecoveryCodeAuthenticator
 
     public function verify(string $usernameInput, string $codeInput): ?User
     {
-        /** @var list<array{userId: int, kind: string, severity: string, message: string}> $alerts */
+        /** @var list<array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>}> $alerts */
         $alerts = [];
 
         /** @var User|null $result */
@@ -66,7 +66,7 @@ final class RecoveryCodeAuthenticator
         // After commit: the alert is the owner's own row and has to reach
         // their other device, which only the writer arranges.
         foreach ($alerts as $alert) {
-            $this->alerts->raiseForUser($alert['userId'], $alert['kind'], $alert['severity'], $alert['message']);
+            $this->alerts->raiseForUser($alert['userId'], $alert['kind'], $alert['severity'], $alert['message'], $alert['metadata']);
         }
 
         return $result;
@@ -117,7 +117,7 @@ final class RecoveryCodeAuthenticator
         return implode('-', $groups);
     }
 
-    /** @return array{userId: int, kind: string, severity: string, message: string} */
+    /** @return array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>} */
     private static function successAlert(User $user): array
     {
         return [
@@ -125,10 +125,11 @@ final class RecoveryCodeAuthenticator
             'kind' => 'auth.recovery_code_consumed',
             'severity' => 'warning',
             'message' => "Recovery code used by {$user->username}.",
+            'metadata' => ['username' => $user->username],
         ];
     }
 
-    /** @return array{userId: int, kind: string, severity: string, message: string} */
+    /** @return array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>} */
     private static function failureAlert(User $user): array
     {
         return [
@@ -136,6 +137,7 @@ final class RecoveryCodeAuthenticator
             'kind' => 'auth.recovery_code_failed',
             'severity' => 'critical',
             'message' => "Failed recovery code attempt for {$user->username}.",
+            'metadata' => ['username' => $user->username],
         ];
     }
 }

@@ -18,7 +18,7 @@
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('chains::hints.heading') }}</h1>
+            <x-core::page-heading>{{ Lang::get('chains::hints.heading') }}</x-core::page-heading>
             <a
                 href="{{ route('chains.review') }}"
                 class="tap-link text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -70,7 +70,7 @@
                                     <a
                                         href="{{ route('counterparties.profile', ['slug' => $hint->fromCounterpartySlug]) }}"
                                         wire:navigate
-                                        class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                        class="tap-link underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                         data-testid="chain-hint-from-counterparty-link-{{ $hint->chainLinkId }}"
                                     >{{ $hint->fromCounterparty ?: Lang::get('chains::hints.no_counterparty') }}</a>
                                 @else

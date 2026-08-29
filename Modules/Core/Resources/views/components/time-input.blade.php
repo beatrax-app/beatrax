@@ -52,7 +52,7 @@
         <span @if ($fieldId !== null) id="{{ $fieldId }}-name" @endif class="sr-only">{{ $fieldLabel }}</span>
         <span @if ($fieldId !== null) id="{{ $fieldId }}-value" @endif class="sr-only" x-text="display || @js($emptyLabel)">{{ $emptyLabel }}</span>
         <span aria-hidden="true" x-text="display || '—'">—</span>
-        <span aria-hidden="true" class="text-slate-400">◷</span>
+        <span aria-hidden="true" class="text-slate-600 dark:text-slate-400">◷</span>
     </button>
 
     {{-- Named after the field, not after the control kind — the same reason,
@@ -70,7 +70,7 @@
                  is announced only after hydration is not announced at all if
                  hydration never happens. --}}
             <div class="flex-1">
-                <p class="mb-1 text-[11px] uppercase tracking-wide text-slate-400">{{ Lang::get('core::components.time.hour') }}</p>
+                <p class="mb-1 text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('core::components.time.hour') }}</p>
                 <div class="max-h-40 overflow-y-auto" role="listbox" aria-label="{{ Lang::get('core::components.time.hour') }}">
                     <template x-for="h in hours" :key="h.label">
                         <button
@@ -90,7 +90,7 @@
             </div>
 
             <div class="flex-1">
-                <p class="mb-1 text-[11px] uppercase tracking-wide text-slate-400">{{ Lang::get('core::components.time.minute') }}</p>
+                <p class="mb-1 text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('core::components.time.minute') }}</p>
                 <div class="max-h-40 overflow-y-auto" role="listbox" aria-label="{{ Lang::get('core::components.time.minute') }}">
                     <template x-for="m in minutes" :key="m">
                         <button

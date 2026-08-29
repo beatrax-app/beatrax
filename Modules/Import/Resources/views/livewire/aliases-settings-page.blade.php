@@ -13,10 +13,10 @@
      from layouts.app. --}}
 
 @use('Modules\Core\Public\Support\Lang')
-<div class="max-w-5xl mx-auto px-6 py-8 space-y-8" data-testid="aliases-settings-page">
+<div class="max-w-5xl mx-auto px-6 py-12 space-y-8" data-testid="aliases-settings-page">
 
     <header class="space-y-1">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('import::aliases.heading') }}</h1>
+        <x-core::page-heading>{{ Lang::get('import::aliases.heading') }}</x-core::page-heading>
         <p class="max-w-2xl text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('import::aliases.subtitle') }}
         </p>
@@ -87,7 +87,7 @@
                                         <input
                                             type="text"
                                             wire:model.live.debounce.400ms="editingPattern"
-                                            class="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:bg-slate-900 dark:border-slate-700"
+                                            class="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 dark:bg-slate-900 dark:border-slate-700"
                                             aria-label="{{ Lang::get('import::aliases.generalized_pattern_aria') }}"
                                             data-testid="editing-pattern-input"
                                         />
@@ -101,7 +101,7 @@
                                         <button
                                             type="button"
                                             wire:click="saveAlias({{ $alias->id }})"
-                                            class="rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+                                            class="rounded-md bg-emerald-700 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-800"
                                         >{{ Lang::get('import::aliases.save') }}</button>
                                         <button
                                             type="button"
@@ -215,7 +215,7 @@
                             <button
                                 type="button"
                                 wire:click="confirmImport"
-                                class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                                class="inline-flex items-center rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
                             >{{ Lang::get('import::aliases.confirm_import') }}</button>
                         </div>
                     @endif
@@ -245,7 +245,7 @@
                             @foreach ($previewResult['first5'] as $row)
                                 <li class="flex items-center justify-between gap-2">
                                     <span class="font-mono text-slate-700 dark:text-slate-300 truncate">{{ $row['description'] !== '' ? $row['description'] : $row['counterparty_name'] }}</span>
-                                    <span class="text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $row['booked_at'] }}</span>
+                                    <span class="text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $row['booked_at'] }}</span>
                                 </li>
                             @endforeach
                         </ul>
@@ -301,7 +301,7 @@
                         type="button"
                         wire:click="confirmMerge"
                         @disabled(trim($mergeFriendlyName) === '' || trim($mergeGeneralizedPattern) === '')
-                        class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >{{ Lang::get('import::aliases.confirm_merge') }}</button>
                 </div>
             </div>

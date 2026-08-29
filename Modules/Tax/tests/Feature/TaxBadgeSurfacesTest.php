@@ -706,6 +706,36 @@ it('draws the touch Tag action as the emoji action every sole icon action is', f
         ->assertDontSee('tax-badge--untagged', false);
 });
 
+// The phone card's action line is a row of status chips, and the emoji action is
+// a 36px bordered square among 20px capsules -- which the coarse-pointer floor
+// then took to 44 while the capsules beside it stayed at 20. A control that
+// belongs to its neighbours more than to the icon rule follows its neighbours.
+it('draws the untagged badge as a chip when its neighbours are chips', function (): void {
+    $html = $this->blade(
+        '<x-tax::tax-badge :transaction="$transaction" :showAlways="true" :chipRow="true" />',
+        ['transaction' => ['id' => 7, 'taxTagged' => false, 'taxCategoryShortName' => null]],
+    );
+
+    $html->assertSee('tax-badge--untagged', false)
+        ->assertSee('tax-badge--shown', false)
+        ->assertDontSee('emoji-action', false);
+});
+
+// A chip carries its word, so it is not an icon-only action and the emoji rule
+// never reaches it. Without this the branch could quietly become a lone glyph
+// again, which is the shape the rule exists to forbid.
+it('gives that chip the word rather than a lone glyph', function (): void {
+    $html = $this->blade(
+        '<x-tax::tax-badge :transaction="$transaction" :showAlways="true" :chipRow="true" />',
+        ['transaction' => ['id' => 7, 'taxTagged' => false, 'taxCategoryShortName' => null]],
+    );
+
+    // As the chip's own text, not merely somewhere in the markup: the emoji
+    // branch's "Tag as tax-relevant" aria-label contains the word too, which
+    // makes a plain assertSee pass on the shape this test exists to rule out.
+    $html->assertSee('>'.trans('tax::badge.tag').'</button>', false);
+});
+
 it('keeps the word on the hover-reveal surface, where there is room for it', function (): void {
     $html = $this->blade(
         '<x-tax::tax-badge :transaction="$transaction" :showAlways="false" />',

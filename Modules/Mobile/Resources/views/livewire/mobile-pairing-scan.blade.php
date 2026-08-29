@@ -244,7 +244,7 @@
                  WHICH two devices it connects. Both are part of the check. --}}
             <p class="mb-3 text-sm text-slate-700 dark:text-slate-300">
                 <span class="font-medium">{{ $selfDeviceName }}</span>
-                <span class="text-slate-400 dark:text-slate-500">&harr;</span>
+                <span class="text-slate-600 dark:text-slate-400">&harr;</span>
                 <span class="font-medium">{{ $peerDeviceName }}</span>
             </p>
 
@@ -310,7 +310,7 @@
     {{-- ===== Step: success ===== --}}
     @if ($wizardStep === PairingWizardStep::Success)
         <div class="space-y-3 text-center">
-            <svg class="mx-auto h-6 w-6 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <svg class="mx-auto h-6 w-6 text-emerald-700 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.success_heading') }}</h1>

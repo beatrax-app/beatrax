@@ -25,7 +25,7 @@ return [
         'counterparties' => 'Counterparties',
         'triage' => 'Triage',
         'chains' => 'Chains',
-        'drift_alerts' => 'Drift Alerts',
+        'drift_alerts' => 'Drift alerts',
         'unusual_charges' => 'Unusual charges',
         'notifications' => 'Notifications',
         'budgets' => 'Budgets',
@@ -41,7 +41,7 @@ return [
         'cashbook' => 'Cash book',
         'email' => 'Email',
         'categorization' => 'Categorization',
-        'data_devices' => 'Data & Devices',
+        'data_devices' => 'Data & devices',
         'settings' => 'Settings',
     ],
 

@@ -11,7 +11,7 @@
 
 <div class="space-y-6" data-testid="mystery-merchants-page">
     <header>
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('community::mystery.heading') }}</h1>
+        <x-core::page-heading>{{ Lang::get('community::mystery.heading') }}</x-core::page-heading>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('community::mystery.intro') }}
         </p>

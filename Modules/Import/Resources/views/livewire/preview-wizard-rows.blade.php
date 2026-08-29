@@ -41,7 +41,7 @@
                     wire:click="$dispatch('rename-counterparty:open', { raw: @js($row->description), rowIndex: {{ $row->rowIndex }} })"
                 >{{ $row->description }}</button>
             @else
-                <span class="text-slate-400">—</span>
+                <span class="text-slate-600 dark:text-slate-400">—</span>
             @endif
         </div>
     @endforeach

@@ -630,9 +630,19 @@ function copyToClipboard(text) {
  * update never touches, so choosing a theme in settings persisted the
  * preference and left the page exactly as it was.
  */
-document.addEventListener('theme-changed', (event) => {
+/**
+ * Paint the root from the reader's stored choice, whatever the OS is doing.
+ *
+ * `system` is the only value that defers to prefers-color-scheme; the other two
+ * are the reader saying otherwise. x-core::head-assets writes the choice onto
+ * the root, so this needs no storage — measured on a Galaxy S24 Ultra, the
+ * Android WebView came back from a night-mode change with localStorage empty,
+ * and Flux, which keeps its copy there, fell back to `system` and repainted the
+ * page dark under a Theme toggle still reading Light.
+ */
+function applyThemeChoice() {
     const root = document.documentElement;
-    const chosen = event?.detail?.theme ?? (Array.isArray(event?.detail) ? event.detail[0]?.theme : null);
+    const chosen = root.dataset.themeChoice ?? 'system';
 
     const prefersDark = window.matchMedia
         && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -641,6 +651,89 @@ document.addEventListener('theme-changed', (event) => {
 
     root.classList.toggle('dark', dark);
     root.classList.toggle('light', ! dark);
+
+    reportThemeToSystemBars();
+}
+
+document.addEventListener('theme-changed', (event) => {
+    const root = document.documentElement;
+    const chosen = event?.detail?.theme ?? (Array.isArray(event?.detail) ? event.detail[0]?.theme : null);
+
+    root.dataset.themeChoice = chosen ?? 'system';
+
+    // Flux keeps its own copy of the choice in localStorage and re-decides the
+    // theme from the OS whenever prefers-color-scheme changes and that copy
+    // says `system`. x-core::head-assets seeds it from the database, but only
+    // on a full page load — and choosing a theme in settings is a Livewire
+    // update. Measured on a Galaxy S24 Ultra: Light chosen, then the phone's
+    // own night mode flipped, and the page went dark under a toggle that still
+    // read Light. No request was made, so nothing server-side could correct it.
+    try {
+        if (chosen === 'light' || chosen === 'dark') {
+            window.localStorage.setItem('flux.appearance', chosen);
+        } else {
+            window.localStorage.removeItem('flux.appearance');
+        }
+    } catch (e) {
+        // A shell with storage denied still gets the repaint below.
+    }
+
+    applyThemeChoice();
+});
+
+/**
+ * Which way the page is actually painted, read off the pixel it paints.
+ *
+ * Not `classList.contains('dark')`: measured on a Galaxy S24 Ultra, after an OS
+ * night-mode change the root carried NEITHER class and the page was dark from
+ * `@media (prefers-color-scheme: dark)` alone — so the class said light while
+ * the reader was looking at a dark screen. The resolved background is the
+ * question the bars are asking, and it cannot drift from the stylesheet.
+ */
+function pageIsPaintedDark() {
+    for (const el of [document.documentElement, document.body]) {
+        const parts = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+        if (! parts || parts.length < 3) {
+            continue;
+        }
+
+        // Transparent means this element paints nothing; ask the next one.
+        if (parts.length > 3 && Number(parts[3]) === 0) {
+            continue;
+        }
+
+        const [r, g, b] = parts.map(Number);
+
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 128;
+    }
+
+    return false;
+}
+
+/**
+ * Tell the Android window which way the page is painted.
+ *
+ * The window is edge-to-edge, so the app draws the pixels behind the status and
+ * navigation bars but Android draws the clock and the nav glyphs on top of
+ * them, taking their colour from the OS night-mode setting. A reader whose app
+ * theme disagrees with their phone's got white glyphs on the app's own #f8fafc
+ * — 1.05:1, an invisible clock on every screen. `theme-color` cannot reach
+ * this: it applies to a browser's chrome, and a WebView has none.
+ *
+ * Absent everywhere but the Android app, hence the optional call.
+ */
+function reportThemeToSystemBars() {
+    window.AndroidBridge?.setSystemBarAppearance?.(pageIsPaintedDark());
+}
+
+reportThemeToSystemBars();
+
+// The OS theme changing under a reader who has chosen otherwise. Flux answers
+// the same event and re-adds `dark` from its own copy of the choice, so this
+// runs a frame later, after that has happened, and puts the reader's choice
+// back on top of it.
+window.matchMedia?.('(prefers-color-scheme: dark)')?.addEventListener?.('change', () => {
+    requestAnimationFrame(applyThemeChoice);
 });
 
 /**
@@ -738,11 +831,50 @@ document.addEventListener('alpine:init', () => {
             get blocking() { return this.names.length > 0; },
         });
 
+        // `isDrawer` tracks the same 1024px breakpoint the stylesheet uses to
+        // turn this panel from a drawer into the static desktop sidebar. The
+        // dialog semantics have to follow it: aria-modal on a permanently
+        // visible nav tells a screen reader the rest of the page is inert.
+        // The soft keyboard offsets the VISUAL viewport and leaves the layout
+        // viewport where it was. `interactive-widget=resizes-content` is meant
+        // to prevent that and is inert in the Android WebView (151.x), so the
+        // sticky top bar and the status-bar scrim sit above the visible area
+        // and the page draws its own content through the status bar. Measured
+        // on a Galaxy S24 Ultra: offsetTop 303 with innerHeight unchanged.
+        //
+        // The class gates the transform so nothing carries one at rest: a
+        // transform on .top-bar makes it the containing block for any fixed
+        // descendant, which is a change worth not making 100% of the time.
+        const viewport = window.visualViewport;
+
+        if (viewport) {
+            const syncKeyboardOffset = () => {
+                // Floor, not round: a fractional offsetTop rounded up puts the
+                // chrome that fraction too LOW and leaves a device-pixel row of
+                // the page showing above it. Measured at 302.93, that row was
+                // the budget card's border beside the clock. Floor covers.
+                const offset = Math.floor(viewport.offsetTop);
+                document.documentElement.style.setProperty('--vv-offset-top', offset + 'px');
+                document.documentElement.classList.toggle('kb-offset', offset > 0);
+            };
+
+            viewport.addEventListener('resize', syncKeyboardOffset);
+            viewport.addEventListener('scroll', syncKeyboardOffset);
+            syncKeyboardOffset();
+        }
+
+        const drawerBreakpoint = window.matchMedia('(max-width: 1023.98px)');
+
         window.Alpine.store('mobileNav', {
             drawerOpen: false,
+            isDrawer: drawerBreakpoint.matches,
             open() { this.drawerOpen = true; window.Alpine.store('overlay').add('drawer'); },
             close() { this.drawerOpen = false; window.Alpine.store('overlay').remove('drawer'); },
             toggle() { this.drawerOpen ? this.close() : this.open(); },
+        });
+
+        drawerBreakpoint.addEventListener('change', (event) => {
+            window.Alpine.store('mobileNav').isDrawer = event.matches;
         });
 
         // Alpine stores survive a wire:navigate page swap, so a drawer opened

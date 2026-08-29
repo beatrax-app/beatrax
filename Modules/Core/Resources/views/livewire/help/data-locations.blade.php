@@ -36,7 +36,7 @@
 @use('Modules\Core\Public\Support\Lang')
 <div class="help-locations" data-testid="help-data-locations">
     <header class="space-y-2">
-        <h1 class="text-2xl font-semibold text-[var(--color-text)]">{{ Lang::get('core::help.page_title') }}</h1>
+        <x-core::page-heading class="text-[var(--color-text)]">{{ Lang::get('core::help.page_title') }}</x-core::page-heading>
         <p class="text-[var(--color-text-muted)]">
             {{ Lang::get('core::help.intro') }}
         </p>
