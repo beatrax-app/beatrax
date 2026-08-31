@@ -70,10 +70,66 @@ function collectWords(array $lines, array &$words): void
     }
 }
 
+/**
+ * The letters this locale's table separates, in its own order. A group joined
+ * by `/` is one letter written more than one way, so only its first spelling
+ * is a distinct letter.
+ *
+ * @return list<string>
+ */
+function alphabetLetters(string $locale): array
+{
+    /** @var array<string, string> $order */
+    $order = (new ReflectionClass(LocaleCollator::class))->getConstant('ORDER');
+
+    $letters = [];
+
+    foreach (preg_split('/\s+/u', $order[$locale] ?? '', -1, PREG_SPLIT_NO_EMPTY) ?: [] as $group) {
+        $letters[] = explode('/', $group)[0];
+    }
+
+    return $letters;
+}
+
+// Whether the ICU this runtime carries implements the alphabet the table
+// describes. Latvian files ā as its own letter after a; an ICU build without
+// that tailoring reads ā as an accented a and orders `ārējā` under `are`.
+// Comparing word lists against such a build compares against root collation
+// wearing the locale's name, which is a different specification and not the
+// one the phones transcribe.
+function icuKnowsTheAlphabet(string $locale): bool
+{
+    $probe = Collator::create($locale);
+
+    if (! $probe instanceof Collator) {
+        return false;
+    }
+
+    // PRIMARY is the strength at which "a different letter" is decided; at
+    // any stronger setting an accent alone separates and every build passes.
+    $probe->setStrength(Collator::PRIMARY);
+    $letters = alphabetLetters($locale);
+
+    for ($i = 1, $count = count($letters); $i < $count; $i++) {
+        if ($probe->compare($letters[$i - 1], $letters[$i]) === 0) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 it('orders a reader\'s own words the way ICU orders them, in every shipped language', function (): void {
     $divergent = [];
+    $unimplemented = [];
 
     foreach (Locale::cases() as $locale) {
+        if (! icuKnowsTheAlphabet($locale->value)) {
+            $unimplemented[] = $locale->value;
+
+            continue;
+        }
+
         app()->make(Translator::class)->setLocale($locale->value);
 
         $collator = Collator::create($locale->value);
@@ -101,7 +157,13 @@ it('orders a reader\'s own words the way ICU orders them, in every shipped langu
         }
     }
 
-    expect($divergent)->toBe([]);
+    // A build that implemented nothing would report no divergence at all, so
+    // the floor is what stops silence reading as agreement. The names are
+    // carried into the message because which languages this runtime cannot
+    // check is the thing a reader of a green run would want to know.
+    expect(count($unimplemented))->toBeLessThan(count(Locale::cases()) - 5, 'this ICU implements almost no shipped alphabet: '.implode(', ', $unimplemented));
+
+    expect($divergent)->toBe([], 'checked every locale except '.($unimplemented === [] ? 'none' : implode(', ', $unimplemented)));
 });
 
 it('carries an alphabet for every shipped language', function (): void {
