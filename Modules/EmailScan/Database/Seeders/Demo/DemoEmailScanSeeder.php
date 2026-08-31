@@ -56,7 +56,7 @@ final class DemoEmailScanSeeder
         $this->upsertKnownSender($primary, 'subscriptions@spotify.com', 'Spotify subscriptions', $now);
         $this->upsertKnownSender($primary, 'noreply@bol.com', 'Bol.com receipts', $now);
 
-        $messageGmail1 = $this->upsertInboxMessage(
+        $this->upsertInboxMessage(
             $primary,
             $gmail,
             $now,
@@ -68,7 +68,7 @@ final class DemoEmailScanSeeder
                 ageHours: 6,
             ),
         );
-        $messageGmail2 = $this->upsertInboxMessage(
+        $this->upsertInboxMessage(
             $primary,
             $gmail,
             $now,
@@ -80,7 +80,7 @@ final class DemoEmailScanSeeder
                 ageHours: 30,
             ),
         );
-        $messageMs1 = $this->upsertInboxMessage(
+        $this->upsertInboxMessage(
             $primary,
             $microsoft,
             $now,

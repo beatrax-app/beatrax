@@ -178,10 +178,6 @@ final readonly class OpenBankingConnectController
             $host = substr($host, 0, -1);
         }
 
-        if ($host === '') {
-            return false;
-        }
-
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
             return filter_var(
                 $host,
@@ -190,7 +186,9 @@ final readonly class OpenBankingConnectController
             ) !== false;
         }
 
-        if (preg_match(self::HOSTNAME_PATTERN, $host) !== 1) {
+        // An empty host names nothing, and neither does anything the hostname
+        // pattern rejects: one answer for both.
+        if ($host === '' || preg_match(self::HOSTNAME_PATTERN, $host) !== 1) {
             return false;
         }
 

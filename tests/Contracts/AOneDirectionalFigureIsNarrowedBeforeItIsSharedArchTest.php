@@ -29,7 +29,7 @@ const DIRECTIONAL_SHARE_PINS = [
     ],
     'Modules/DriftAlerts/Internal/AmountMovement.php' => [
         'reason' => 'a ratio between two magnitudes of one series, refused outright when the baseline is nought or the pair flips sign, so neither end can be the wrong way round',
-        'proves' => '/\(\$priorMinor > 0\) !== \(\$latestMinor > 0\)/',
+        'proves' => '/\(\$priorMinor > 0\) === \(\$latestMinor > 0\)/',
     ],
     'Modules/Goals/Public/Services/GoalProjectionService.php' => [
         'reason' => 'days rather than a share: a remaining balance over a daily rate is how long the goal takes, and the answer leaves here as a date',

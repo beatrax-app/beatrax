@@ -61,18 +61,13 @@ final readonly class FtsHealthCheck
         // An index AHEAD of the table is the normal shape of the damage --
         // orphaned documents a delete never reaped -- and printing it as
         // "-364 behind table" told the reader the opposite of what happened.
-        if ($delta < 0) {
-            $orphaned = -$delta;
-
-            return [
-                'severity' => 'warning',
-                'message' => "FTS index: {$indexCount} rows — {$orphaned} ahead of table (orphaned documents)",
-            ];
-        }
+        $drift = $delta < 0
+            ? (-$delta).' ahead of table (orphaned documents)'
+            : $delta.' behind table';
 
         return [
             'severity' => 'warning',
-            'message' => "FTS index: {$indexCount} rows — {$delta} behind table",
+            'message' => "FTS index: {$indexCount} rows — {$drift}",
         ];
     }
 }

@@ -66,15 +66,15 @@ class OAuthScrubSet
         }
 
         $secrets = $this->loadedSet();
-        // A failed load is not "nothing to scrub": memoising it would keep
-        // redaction off for the rest of the process after the cause cleared.
-        if ($secrets === null) {
-            return null;
-        }
 
+        // An empty set is memoised; a failed load is not. Memoising the failure
+        // would keep redaction off for the rest of the process after whatever
+        // caused it had cleared.
         if ($secrets === []) {
             $this->compiled = self::NOTHING_TO_SCRUB;
+        }
 
+        if ($secrets === null || $secrets === []) {
             return null;
         }
 

@@ -261,18 +261,18 @@ final readonly class IncomeSeriesDetector implements SeriesDetector
         // Rejection covers the whole (counterparty, currency) pair across every
         // cadence variant. Refreshing a snoozed row would change the amount the
         // user paused on; the next sweep's expiry pass unpauses it first.
-        if (in_array($existing->state, [RecurringSeriesState::Rejected->value, RecurringSeriesState::Snoozed->value], true)) {
-            return true;
-        }
+        $paused = in_array($existing->state, [RecurringSeriesState::Rejected->value, RecurringSeriesState::Snoozed->value], true);
 
-        $this->refresher->refresh(
-            $existing,
-            $counterpartyKey,
-            $detected,
-            $user,
-            Direction::Income->value,
-            $this->merchantNames->healed($existing->detected_name, $user->id, $counterpartyNormalized),
-        );
+        if (! $paused) {
+            $this->refresher->refresh(
+                $existing,
+                $counterpartyKey,
+                $detected,
+                $user,
+                Direction::Income->value,
+                $this->merchantNames->healed($existing->detected_name, $user->id, $counterpartyNormalized),
+            );
+        }
 
         return true;
     }

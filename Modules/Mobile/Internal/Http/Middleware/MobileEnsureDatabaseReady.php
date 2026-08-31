@@ -62,23 +62,18 @@ final readonly class MobileEnsureDatabaseReady
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($this->isExempt($request)) {
-            /** @var Response $response */
-            $response = $next($request);
+        if (! $this->isExempt($request)) {
+            // Ahead of the fresh-install check: a run that died partway still
+            // created `users`, so an empty table reads as "new phone" and the
+            // welcome screen opens over a schema missing everything after it.
+            // A marker, not a question to the migrator — this runs every request.
+            if (SchemaCompletionMarker::isRaised()) {
+                return new RedirectResponse($this->urls->route('mobile.database-incomplete'));
+            }
 
-            return $response;
-        }
-
-        // Ahead of the fresh-install check: a run that died partway still
-        // created `users`, so an empty table reads as "new phone" and the
-        // welcome screen opens over a schema missing everything after it.
-        // A marker, not a question to the migrator — this runs every request.
-        if (SchemaCompletionMarker::isRaised()) {
-            return new RedirectResponse($this->urls->route('mobile.database-incomplete'));
-        }
-
-        if ($this->bootstrap->isFreshInstall()) {
-            return new RedirectResponse($this->urls->route('mobile.welcome'));
+            if ($this->bootstrap->isFreshInstall()) {
+                return new RedirectResponse($this->urls->route('mobile.welcome'));
+            }
         }
 
         /** @var Response $response */

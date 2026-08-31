@@ -120,19 +120,23 @@ final class BudgetsPage extends Component
         $this->periodStartStr = $resolved->isoDate;
         $period = $resolved->period;
 
+        $refused = false;
+
         try {
             $writer->setAssigned($currentUser->user(), $categoryId, $period->start, $minor);
         } catch (InvalidArgumentException $e) {
             $this->toast($e->getMessage());
-
-            return;
+            $refused = true;
         } catch (IdReadBackFailedException) {
             // The write rolled back with the read that could not name its own
             // row, so the cell is reseeded from what is actually stored rather
             // than left showing a figure nothing holds.
             unset($this->assignedInputs[$categoryId]);
             $this->toast(Lang::get('core::errors.not_saved'));
+            $refused = true;
+        }
 
+        if ($refused) {
             return;
         }
 

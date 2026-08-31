@@ -248,7 +248,13 @@ final readonly class IcsSettlementResolver
         $postedAt = self::toString($transfer->posted_at ?? null);
 
         $statement = $this->findCandidateStatement($accountId, $postedAt, $user);
-        if ($statement === null) {
+        $statementCurrency = $statement === null ? null : self::currencyOrDefault($statement->currency ?? null);
+
+        // No candidate and a candidate in another currency are one refusal.
+        // Every term of the delta below is a bare minor unit, so they have to
+        // be one currency or the sum is arithmetic on unlike quantities: a
+        // USD 500.00 payment closed a EUR 500.00 statement to zero.
+        if ($statement === null || $settledCurrency !== $statementCurrency) {
             return;
         }
 
@@ -256,15 +262,6 @@ final readonly class IcsSettlementResolver
         $statementTotal = self::toInt($statement->total_amount_minor ?? null);
         $periodStart = self::toString($statement->period_start ?? null);
         $periodEnd = self::toString($statement->period_end ?? null);
-        $statementCurrency = self::currencyOrDefault($statement->currency ?? null);
-
-        // Every term of the delta below is a bare minor unit, so they have to
-        // be one currency or the sum is arithmetic on unlike quantities: a
-        // USD 500.00 payment closed a EUR 500.00 statement to zero and
-        // recorded an unaccounted delta of nothing.
-        if ($settledCurrency !== $statementCurrency) {
-            return;
-        }
 
         $expenses = $this->pullExpenses($accountId, $periodStart, $periodEnd, $statementCurrency, $user);
         $priorCredits = $this->priorCreditsMinor($statementId, $statementCurrency, $user);

@@ -17,6 +17,10 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 // real UploadedFile back, so nothing behind it can tell the two apart.
 final class EncodedUploadTransport
 {
+    // Every way staging can fail reads the same to the caller: the file did
+    // not reach the parser. What went wrong is for the log, not the response.
+    private const string STAGING_FAILED_MESSAGE = 'The upload could not be staged for parsing.';
+
     public const string FIELD = '_beatrax_transport';
 
     public const string MARKER = 'base64';
@@ -146,7 +150,7 @@ final class EncodedUploadTransport
         $path = tempnam($dir, 'beatrax-upload-');
 
         if ($path === false) {
-            throw new HttpException(500, 'The upload could not be staged for parsing.');
+            throw new HttpException(500, self::STAGING_FAILED_MESSAGE);
         }
 
         [$written, $digest] = $this->decodeInto($content, $path);
@@ -176,7 +180,7 @@ final class EncodedUploadTransport
         $handle = fopen($path, 'wb');
 
         if ($handle === false) {
-            throw new HttpException(500, 'The upload could not be staged for parsing.');
+            throw new HttpException(500, self::STAGING_FAILED_MESSAGE);
         }
 
         $hash = hash_init('sha256');
@@ -199,7 +203,7 @@ final class EncodedUploadTransport
                 $written += strlen($bytes);
 
                 if (fwrite($handle, $bytes) === false) {
-                    throw new HttpException(500, 'The upload could not be staged for parsing.');
+                    throw new HttpException(500, self::STAGING_FAILED_MESSAGE);
                 }
             }
         } finally {

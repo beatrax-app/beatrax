@@ -98,44 +98,47 @@ final readonly class EnvelopeWriter
             ->where('period_start', $periodDate)
             ->first(['id', 'assigned_minor', 'currency']);
 
-        if ($minor === 0) {
-            if ($existing === null) {
-                return null;
-            }
+        // The currency is half the amount. A reader who switched their reporting
+        // currency and re-typed the figure the grid showed them sent the same
+        // minor under a different sign, and dropping that as "unchanged" left
+        // the row denominated in the old one.
+        $unchanged = $existing !== null
+            && self::toInt($existing->assigned_minor) === $minor
+            && self::toString($existing->currency) === $currency;
 
-            $id = self::toInt($existing->id);
-            $connection->table('envelope_assignments')->where('id', $id)->delete();
-
-            return new EnvelopeAssignmentMutated(
-                assignmentId: $id,
-                userId: $user->id,
-                mutationType: 'delete',
-            );
+        // Clearing a row that is not there writes nothing, and neither does
+        // re-sending the figure already stored.
+        if ($unchanged || ($minor === 0 && $existing === null)) {
+            return null;
         }
 
         if ($existing !== null) {
             $id = self::toInt($existing->id);
 
-            // The currency is half the amount. A reader who switched their
-            // reporting currency and re-typed the figure the grid showed them
-            // sent the same minor under a different sign, and dropping it as
-            // "unchanged" left the row denominated in the old one.
-            if (self::toInt($existing->assigned_minor) === $minor && self::toString($existing->currency) === $currency) {
-                return null;
+            if ($minor === 0) {
+                $connection->table('envelope_assignments')->where('id', $id)->delete();
+
+                $mutation = new EnvelopeAssignmentMutated(
+                    assignmentId: $id,
+                    userId: $user->id,
+                    mutationType: 'delete',
+                );
+            } else {
+                $connection->table('envelope_assignments')->where('id', $id)->update([
+                    'assigned_minor' => $minor,
+                    'currency' => $currency,
+                    'updated_at' => $this->clock->now(),
+                ]);
+
+                $mutation = new EnvelopeAssignmentMutated(
+                    assignmentId: $id,
+                    userId: $user->id,
+                    mutationType: 'edit',
+                    dirtyFields: ['assigned_minor' => $minor, 'currency' => $currency],
+                );
             }
 
-            $connection->table('envelope_assignments')->where('id', $id)->update([
-                'assigned_minor' => $minor,
-                'currency' => $currency,
-                'updated_at' => $this->clock->now(),
-            ]);
-
-            return new EnvelopeAssignmentMutated(
-                assignmentId: $id,
-                userId: $user->id,
-                mutationType: 'edit',
-                dirtyFields: ['assigned_minor' => $minor, 'currency' => $currency],
-            );
+            return $mutation;
         }
 
         $now = $this->clock->now();

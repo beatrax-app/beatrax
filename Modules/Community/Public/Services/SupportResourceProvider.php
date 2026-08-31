@@ -37,21 +37,15 @@ final class SupportResourceProvider
         // Own country first, then shared, then everyone else: Sanitas is both
         // a Swiss health insurer and a Spanish provider, and the
         // alphabetically-later file used to win for every user.
-        if ($code !== null && isset($byCountry[$code])) {
-            $own = $this->bestIn($byCountry[$code], $needle, $type);
-            if ($own !== null) {
-                return $own;
-            }
-        }
+        $preferred = $code !== null && isset($byCountry[$code])
+            ? $this->bestIn($byCountry[$code], $needle, $type)
+            : null;
 
-        if (isset($byCountry[self::SHARED])) {
-            $shared = $this->bestIn($byCountry[self::SHARED], $needle, $type);
-            if ($shared !== null) {
-                return $shared;
-            }
-        }
+        $preferred ??= isset($byCountry[self::SHARED])
+            ? $this->bestIn($byCountry[self::SHARED], $needle, $type)
+            : null;
 
-        return $this->undisputedForeign($byCountry, $code, $needle, $type);
+        return $preferred ?? $this->undisputedForeign($byCountry, $code, $needle, $type);
     }
 
     // The word key a name is filed and matched under. Public because the corpus

@@ -291,13 +291,11 @@ trait HandlesTaxTagging
         $this->batchSuggestion = null;
         $this->batchSuggestionDismissed = true;
 
-        if ($count === 0) {
-            $this->toast(Lang::get('tax::messages.batch_none_reconciled'));
-
-            return;
-        }
-
-        $this->toast(Lang::choice('tax::messages.batch_tagged', $count));
+        // Nothing written is still an answer: every candidate was reconciled,
+        // and a banner that closed in silence reads as a tag that happened.
+        $this->toast($count === 0
+            ? Lang::get('tax::messages.batch_none_reconciled')
+            : Lang::choice('tax::messages.batch_tagged', $count));
     }
 
     /**

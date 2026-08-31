@@ -534,11 +534,11 @@ final class PromoteStagingToDomain
                     'uncategorized' => CopyParam::line('ledger::common.uncategorized'),
                 ],
             ));
-
-            return false;
         }
 
-        if (count($legs) < 2) {
+        // Fewer than two legs is not a split, and a leg that lost its category
+        // has already been reported above; both leave the parent uncarried.
+        if ($withoutCategory > 0 || count($legs) < 2) {
             return false;
         }
 

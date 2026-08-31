@@ -48,22 +48,24 @@ final readonly class InitialSyncPuller
         // a peer problem told the reader a healthy device had removed them —
         // terminal copy for a screen a PIN entry would have cleared. Asked only
         // once load() has already answered null, so an unlocked tick pays nothing.
-        if ($identity === null && $this->identityLoader->state($userId, $session) === DeviceIdentityState::Locked) {
-            return [...$this->progress($userId), 'blocked' => SyncBlockedReason::Locked];
-        }
+        $locked = $identity === null
+            && $this->identityLoader->state($userId, $session) === DeviceIdentityState::Locked;
 
         $peerDeviceId = $identity === null
             ? null
             : $this->resolvePeerDeviceId($userId, $identity->deviceId);
 
-        if ($peerDeviceId === null) {
+        if ($locked || $peerDeviceId === null) {
             // A peer that once confirmed and withdrew it reads identically to
             // one that never paired, and calling that "waiting for the other
             // device" left the screen turning on a pairing that cannot return.
-            return [
-                ...$this->progress($userId),
-                'blocked' => $this->peerRevokedUs($userId) ? SyncBlockedReason::Revoked : SyncBlockedReason::NoPeer,
-            ];
+            $blocked = match (true) {
+                $locked => SyncBlockedReason::Locked,
+                $this->peerRevokedUs($userId) => SyncBlockedReason::Revoked,
+                default => SyncBlockedReason::NoPeer,
+            };
+
+            return [...$this->progress($userId), 'blocked' => $blocked];
         }
 
         $cursor = $this->loadOrCreateCursor($userId, $peerDeviceId);

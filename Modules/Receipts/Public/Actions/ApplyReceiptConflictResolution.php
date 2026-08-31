@@ -164,20 +164,20 @@ final readonly class ApplyReceiptConflictResolution
             ->lockForUpdate()
             ->first(self::LOCKED_ROW_COLUMNS);
 
-        if ($txRow === null) {
-            return [];
-        }
-
         // A reconcile freezes the row, so the frozen value stands whatever the
         // policy says — and the pending row still clears in resolveRow(), or a
         // conflict no policy can ever resolve would raise the toast on every
         // render with nothing the reader could press to be rid of it.
-        if (TransactionStatusQuery::locksEdits($txRow->status)) {
+        $frozen = $txRow !== null && TransactionStatusQuery::locksEdits($txRow->status);
+
+        if ($frozen) {
             $this->logger->debug('Receipt conflict cleared without a write: the transaction is reconciled', [
                 'transaction_id' => $transactionId,
                 'field' => $field->value,
             ]);
+        }
 
+        if ($txRow === null || $frozen) {
             return [];
         }
 

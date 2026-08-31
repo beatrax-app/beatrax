@@ -328,57 +328,26 @@ final class GoalsPage extends Component
             return;
         }
 
-        if ($e instanceof InvalidGoalNameException) {
-            $this->errorName = Lang::get('goals::messages.errors.name');
+        $message = static fn (string $key): string => Lang::get('goals::messages.errors.'.$key);
 
-            return;
-        }
-
-        if ($e instanceof InvalidGoalAmountException) {
-            $this->errorAmount = Lang::get('goals::messages.errors.amount');
-
-            return;
-        }
-
-        // Narrower first: a real date the goal simply starts after is not the
-        // unparseable one its parent reports, and "Choose a real date." was an
-        // answer to a question the reader had not asked.
-        if ($e instanceof GoalTargetDateBeforeStartException) {
-            $this->errorDate = Lang::get('goals::messages.errors.date_before_start');
-
-            return;
-        }
-
-        if ($e instanceof InvalidGoalTargetDateException) {
-            $this->errorDate = Lang::get('goals::messages.errors.date_invalid');
-
-            return;
-        }
-
-        if ($e instanceof PotLinkedToCategoryException) {
-            $this->errorLinkedPot = Lang::get('goals::messages.errors.pot_linked_category');
-
-            return;
-        }
-
-        if ($e instanceof PotAlreadyLinkedException) {
-            $this->errorLinkedPot = Lang::get('goals::messages.errors.pot_already_linked');
-
-            return;
-        }
-
-        // The picker is built in render(), so a pot archived on the Pots page
-        // after this modal opened is still on offer. Which of "no such pot" and
-        // "not yours" it was stays unsaid — see PotNotFoundException.
-        if ($e instanceof PotNotFoundException) {
-            $this->errorLinkedPot = Lang::get('goals::messages.errors.pot_missing');
-
-            return;
-        }
-
-        // The message of an exception the app threw is written for a developer
-        // and exists in one language. It also has nothing to do with the linked
-        // pot, which is the field it was being printed under.
-        $this->errorLinkedPot = Lang::get('goals::messages.errors.generic');
+        // The default is deliberately not the exception's own message, which
+        // is written for a developer, exists in one language, and has nothing
+        // to do with the linked pot it was being printed under.
+        match (true) {
+            $e instanceof InvalidGoalNameException => $this->errorName = $message('name'),
+            $e instanceof InvalidGoalAmountException => $this->errorAmount = $message('amount'),
+            // Narrower first: a real date the goal simply starts after is not
+            // the unparseable one its parent reports, and "Choose a real date."
+            // answered a question the reader had not asked.
+            $e instanceof GoalTargetDateBeforeStartException => $this->errorDate = $message('date_before_start'),
+            $e instanceof InvalidGoalTargetDateException => $this->errorDate = $message('date_invalid'),
+            $e instanceof PotLinkedToCategoryException => $this->errorLinkedPot = $message('pot_linked_category'),
+            $e instanceof PotAlreadyLinkedException => $this->errorLinkedPot = $message('pot_already_linked'),
+            // The picker is built in render(), so a pot archived on the Pots
+            // page after this modal opened is still on offer. Which of "no such
+            // pot" and "not yours" it was stays unsaid.
+            $e instanceof PotNotFoundException => $this->errorLinkedPot = $message('pot_missing'),
+            default => $this->errorLinkedPot = $message('generic'),
+        };
     }
 }

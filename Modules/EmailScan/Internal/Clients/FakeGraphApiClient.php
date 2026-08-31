@@ -9,6 +9,10 @@ use Illuminate\Filesystem\Filesystem;
 
 final class FakeGraphApiClient implements GraphApiClientContract
 {
+    // The one sentence this fake gives a throttled caller, so a test asserting
+    // on it is asserting on the client's whole rate-limit story.
+    private const string RATE_LIMIT_MESSAGE = 'Microsoft Graph rate limit exceeded.';
+
     /** @var list<array{method: string, args: array<int|string, mixed>}> */
     private array $calls = [];
 
@@ -57,7 +61,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
         if ($this->queuedSenderPages !== []) {
             $queued = array_shift($this->queuedSenderPages);
             if (is_int($queued)) {
-                throw new RateLimitedException($queued, 'Microsoft Graph rate limit exceeded.');
+                throw new RateLimitedException($queued, self::RATE_LIMIT_MESSAGE);
             }
 
             return $queued;
@@ -113,7 +117,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
             $error = $payload['error'] ?? null;
             $message = is_array($error) && isset($error['message']) && is_string($error['message'])
                 ? $error['message']
-                : 'Microsoft Graph rate limit exceeded.';
+                : self::RATE_LIMIT_MESSAGE;
             throw new RateLimitedException($retryAfter, $message);
         }
 
@@ -264,7 +268,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
         $error = $payload['error'] ?? null;
         $message = is_array($error) && isset($error['message']) && is_string($error['message'])
             ? $error['message']
-            : 'Microsoft Graph rate limit exceeded.';
+            : self::RATE_LIMIT_MESSAGE;
         throw new RateLimitedException($retryAfter, $message);
     }
 

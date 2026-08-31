@@ -218,13 +218,13 @@ final class ReportBuilder extends Component
         // A shell whose WebView drops the download gets the OS share sheet and
         // a line saying so. The response it would have been sent goes nowhere,
         // which is exactly what the reader saw on the phone: nothing.
-        if ($shareSheet->replacesWebViewDownload()) {
-            $this->flashMessage = $shareSheet->export($filename, $exporter->export($user, $definition))->message();
+        $handedToTheShareSheet = $shareSheet->replacesWebViewDownload();
 
-            return null;
+        if ($handedToTheShareSheet) {
+            $this->flashMessage = $shareSheet->export($filename, $exporter->export($user, $definition))->message();
         }
 
-        return $responses->streamDownload(
+        return $handedToTheShareSheet ? null : $responses->streamDownload(
             static function () use ($exporter, $user, $definition): void {
                 echo $exporter->export($user, $definition);
             },

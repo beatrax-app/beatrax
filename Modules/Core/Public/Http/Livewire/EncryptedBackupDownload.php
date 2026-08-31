@@ -101,15 +101,19 @@ final class EncryptedBackupDownload extends Component
 
         $filename = 'beatrax-backup-'.$stamp.'.sqlite.enc';
 
+        // A shell that drops the download hands the file to the OS share sheet
+        // instead; both roads end in one response the caller returns.
         if ($shareSheet->replacesWebViewDownload()) {
-            return $this->handToShareSheet($shareSheet, $encPath, $filename);
+            $delivered = $this->handToShareSheet($shareSheet, $encPath, $filename);
+        } else {
+            $delivered = $responses->download(
+                $encPath,
+                $filename,
+                ['Content-Type' => 'application/octet-stream'],
+            )->deleteFileAfterSend();
         }
 
-        return $responses->download(
-            $encPath,
-            $filename,
-            ['Content-Type' => 'application/octet-stream'],
-        )->deleteFileAfterSend();
+        return $delivered;
     }
 
     // Nothing is sent back: the response a shell like this would have received

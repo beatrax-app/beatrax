@@ -33,6 +33,10 @@ final readonly class ThisPeriodAtAGlanceQuery
 {
     use CoercesScalars;
 
+    // The head of the three conditional sums below. They differ only in which
+    // types they count and which sign they count them with.
+    private const string SUM_OVER_TYPES_PREFIX = 'COALESCE(SUM(CASE WHEN type IN (';
+
     // 86400 = 24h: where a scan is scheduled, an inbox untouched longer than
     // that shows an amber dot. Inboxes past TILE_LINE_LIMIT collapse into a
     // "+N more" line.
@@ -186,9 +190,9 @@ final readonly class ThisPeriodAtAGlanceQuery
         $outflowTypes = MoneyFlow::Spend->types();
         $netTypes = MoneyFlow::Net->types();
 
-        $inflowSum = 'COALESCE(SUM(CASE WHEN type IN ('.self::binds($inflowTypes).') THEN settled_amount_minor ELSE 0 END), 0)';
-        $outflowSum = 'COALESCE(SUM(CASE WHEN type IN ('.self::binds($outflowTypes).') THEN -settled_amount_minor ELSE 0 END), 0)';
-        $netSum = 'COALESCE(SUM(CASE WHEN type IN ('.self::binds($netTypes).') THEN settled_amount_minor ELSE 0 END), 0)';
+        $inflowSum = self::SUM_OVER_TYPES_PREFIX.self::binds($inflowTypes).') THEN settled_amount_minor ELSE 0 END), 0)';
+        $outflowSum = self::SUM_OVER_TYPES_PREFIX.self::binds($outflowTypes).') THEN -settled_amount_minor ELSE 0 END), 0)';
+        $netSum = self::SUM_OVER_TYPES_PREFIX.self::binds($netTypes).') THEN settled_amount_minor ELSE 0 END), 0)';
 
         $rows = $this->db->connection()
             ->table('transactions')

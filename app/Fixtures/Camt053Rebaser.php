@@ -110,11 +110,11 @@ final class Camt053Rebaser implements RebasesStatementDates
             return $shifted->format(self::ISO_DAY);
         }
 
-        if (preg_match(self::DATE_TIME_BODY, $body, $parts) !== 1) {
-            return $body;
-        }
+        // A body that carries no date, and one whose date will not parse, are
+        // the same answer: it is left exactly as it arrived.
+        $matched = preg_match(self::DATE_TIME_BODY, $body, $parts) === 1;
+        $day = $matched ? $this->asDay($parts['day']) : null;
 
-        $day = $this->asDay($parts['day']);
         if (! $day instanceof CarbonImmutable) {
             return $body;
         }

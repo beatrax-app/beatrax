@@ -141,23 +141,21 @@ final readonly class ReportAggregator
 
         $rates = $this->fx->ratesTo([$readerCurrency], $currency);
 
-        $minMinor = $filters->amountMinMinor;
-        if ($minMinor !== null) {
-            $minMinor = $this->boundInCurrency($minMinor, $readerCurrency, $currency, $rates);
-            if ($minMinor === null) {
-                return null;
-            }
-        }
+        $minMinor = $filters->amountMinMinor === null
+            ? null
+            : $this->boundInCurrency($filters->amountMinMinor, $readerCurrency, $currency, $rates);
 
-        $maxMinor = $filters->amountMaxMinor;
-        if ($maxMinor !== null) {
-            $maxMinor = $this->boundInCurrency($maxMinor, $readerCurrency, $currency, $rates);
-            if ($maxMinor === null) {
-                return null;
-            }
-        }
+        $maxMinor = $filters->amountMaxMinor === null
+            ? null
+            : $this->boundInCurrency($filters->amountMaxMinor, $readerCurrency, $currency, $rates);
 
-        return $filters->withAmountBounds($minMinor, $maxMinor);
+        // A bound that had a value and lost it in conversion leaves the filter
+        // unanswerable. Reporting on the surviving side alone would silently
+        // widen the window the reader asked for.
+        $lost = ($filters->amountMinMinor !== null && $minMinor === null)
+            || ($filters->amountMaxMinor !== null && $maxMinor === null);
+
+        return $lost ? null : $filters->withAmountBounds($minMinor, $maxMinor);
     }
 
     /**

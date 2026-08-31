@@ -127,16 +127,14 @@ final class ArtisanRunnerPage extends Component
         // required arg would abort inside Symfony Console with nothing
         // surfaced to the operator.
         $missing = $this->missingRequiredArgs($spec->argsSchema, $args);
-        if ($missing !== []) {
-            $this->toast(
-                Lang::get('dev::runner.toast.missing_args', [
-                    'command' => $command,
-                    'noun' => Lang::choice('dev::runner.toast.arg', count($missing)),
-                    'list' => implode(', ', $missing),
-                ]),
-            );
+        $reason = null;
 
-            return true;
+        if ($missing !== []) {
+            $reason = Lang::get('dev::runner.toast.missing_args', [
+                'command' => $command,
+                'noun' => Lang::choice('dev::runner.toast.arg', count($missing)),
+                'list' => implode(', ', $missing),
+            ]);
         }
 
         // The same rules both HTTP spawn controllers run. Without them this
@@ -144,19 +142,21 @@ final class ArtisanRunnerPage extends Component
         // a 5000-character string against `max:255`, or a positional whose
         // leading `--` Symfony Console reads as an option.
         try {
-            $argValidator->assertValid($spec, $args);
+            if ($reason === null) {
+                $argValidator->assertValid($spec, $args);
+            }
         } catch (ValidationException $e) {
-            $this->toast(
-                Lang::get('dev::runner.toast.invalid_args', [
-                    'command' => $command,
-                    'reason' => $e->validator->errors()->first(),
-                ]),
-            );
-
-            return true;
+            $reason = Lang::get('dev::runner.toast.invalid_args', [
+                'command' => $command,
+                'reason' => $e->validator->errors()->first(),
+            ]);
         }
 
-        return false;
+        if ($reason !== null) {
+            $this->toast($reason);
+        }
+
+        return $reason !== null;
     }
 
     /**
@@ -208,17 +208,15 @@ final class ArtisanRunnerPage extends Component
         CommandSpawner $spawner,
         CurrentUser $user,
     ): void {
-        $record = $registry->find($runId);
-        if ($record === null) {
-            $this->toast(Lang::get('dev::runner.toast.run_expired'));
-
-            return;
-        }
-
         // The stream and cancel controllers both refuse another developer's
         // run; this one EXECUTES, and the audit row would name the caller.
-        if ($record->callerUserId !== $user->id()) {
-            $this->toast(Lang::get('dev::runner.toast.rerun_forbidden'));
+        $record = $registry->find($runId);
+        $mine = $record !== null && $record->callerUserId === $user->id();
+
+        if (! $mine) {
+            $this->toast(Lang::get($record === null
+                ? 'dev::runner.toast.run_expired'
+                : 'dev::runner.toast.rerun_forbidden'));
 
             return;
         }

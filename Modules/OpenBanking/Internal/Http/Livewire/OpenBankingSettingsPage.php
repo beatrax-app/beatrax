@@ -16,8 +16,10 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
+use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Enums\PreviewRowStatus;
+use Modules\OpenBanking\Internal\Dto\OpenBankingSyncOutcome;
 use Modules\OpenBanking\Internal\Enums\BankChoice;
 use Modules\OpenBanking\Internal\Enums\ConsentStatus;
 use Modules\OpenBanking\Internal\Enums\CuratedInstitution;
@@ -326,52 +328,38 @@ final class OpenBankingSettingsPage extends Component
             $this->syncFlashMessage = $outcome->isConsentFailure()
                 ? Lang::get('openbanking::messages.sync.consent_expired')
                 : Lang::get('openbanking::messages.sync.unavailable');
-
-            return;
         }
 
         $preview = $outcome->preview;
-        if ($preview === null) {
+
+        if ($outcome->failure !== null || $preview === null) {
             return;
         }
 
-        // Ahead of every count, because a press that filed nothing is not a
-        // quiet week and the sentence for a quiet week is what it used to get.
-        // The review link is the only place each row says which stage refused it.
-        if ($outcome->filedNothing()) {
-            $this->syncFlashTone = 'error';
-            $this->syncFlashMessage = Lang::get('openbanking::messages.sync.none_importable');
-            $this->syncReviewImportRunId = $preview->importRunId;
+        $this->flashPreviewOutcome($outcome, $preview);
+    }
 
-            return;
-        }
-
+    // Ahead of every count, because a press that filed nothing is not a quiet
+    // week and the sentence for a quiet week is what it used to get. The review
+    // link is the only place each row says which stage refused it.
+    private function flashPreviewOutcome(OpenBankingSyncOutcome $outcome, ImportPreviewResult $preview): void
+    {
         $newCount = count(array_filter(
             $preview->rows,
             static fn (PreviewRowDto $row): bool => $row->status === PreviewRowStatus::NewRow,
         ));
 
-        // Said before the count, and in the error tone: rows did arrive, but
-        // the reader is looking at part of a window and nothing has been
-        // recorded as read.
-        if ($outcome->isTruncated()) {
-            $this->syncFlashTone = 'error';
-            $this->syncFlashMessage = Lang::get('openbanking::messages.sync.truncated');
-            $this->syncReviewImportRunId = $newCount > 0 ? $preview->importRunId : null;
+        // Truncation is said before the count too, and in the error tone: rows
+        // did arrive, but the reader is looking at part of a window and nothing
+        // has been recorded as read.
+        [$this->syncFlashTone, $this->syncFlashMessage, $linked] = match (true) {
+            $outcome->filedNothing() => ['error', Lang::get('openbanking::messages.sync.none_importable'), true],
+            $outcome->isTruncated() => ['error', Lang::get('openbanking::messages.sync.truncated'), $newCount > 0],
+            $newCount > 0 => ['success', Lang::choice('openbanking::messages.sync.new_found', $newCount), true],
+            default => ['zero', Lang::get('openbanking::messages.sync.none'), false],
+        };
 
-            return;
-        }
-
-        if ($newCount > 0) {
-            $this->syncFlashTone = 'success';
-            $this->syncFlashMessage = Lang::choice('openbanking::messages.sync.new_found', $newCount);
-            $this->syncReviewImportRunId = $preview->importRunId;
-
-            return;
-        }
-
-        $this->syncFlashTone = 'zero';
-        $this->syncFlashMessage = Lang::get('openbanking::messages.sync.none');
+        $this->syncReviewImportRunId = $linked ? $preview->importRunId : null;
     }
 
     public function render(ViewFactory $views): View

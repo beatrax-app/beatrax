@@ -95,17 +95,18 @@ final class DemoDriftAlertsSeeder
     private function upsertAlertForUser(User $user, array $row): void
     {
         $series = $this->eligibleSeries($user, $row['seriesClusterKey']);
-        if ($series === null) {
-            return;
-        }
+        $step = $series === null ? null : $this->newestPriceStep($user, $series['id']);
 
-        $step = $this->newestPriceStep($user, $series['id']);
         if ($step === null) {
             return;
         }
 
         $latestMinor = $step['latest_amount_minor'];
         $priorMinor = $step['prior_amount_minor'];
+
+        // A zero prior has nothing to take a ratio against, and a move that
+        // crossed zero is a different event rather than a bigger one — the
+        // same pair AmountMovement refuses.
         if ($priorMinor === 0 || ($priorMinor > 0) !== ($latestMinor > 0)) {
             return;
         }
@@ -180,14 +181,15 @@ final class DemoDriftAlertsSeeder
             ->where('cluster_key', $clusterKey)
             ->first(['id', 'state', 'direction', 'cadence']);
 
-        if ($row === null || ! is_numeric($row->id)) {
-            return null;
-        }
-
         // A rejected or pending series is one the evaluator refuses by design,
         // and the demo carried an alert against a rejected one.
         $eligible = [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value];
-        if (! is_string($row->state) || ! in_array($row->state, $eligible, true)) {
+        $usable = $row !== null
+            && is_numeric($row->id)
+            && is_string($row->state)
+            && in_array($row->state, $eligible, true);
+
+        if (! $usable) {
             return null;
         }
 

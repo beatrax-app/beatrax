@@ -65,35 +65,21 @@ final class LivewireClientRefusal
 
     public static function refusal(Throwable $e): ?HttpException
     {
-        if ($e instanceof CannotUpdateLockedPropertyException) {
-            return new HttpException(self::REFUSED_BY_THE_LOCK, $e->getMessage(), $e);
-        }
+        // Status and body together, because the pair is the answer: only the
+        // lock and the missing reader leave the component's own path, and a
+        // Livewire message is safe to pass on where one exists.
+        $refusal = match (true) {
+            $e instanceof CannotUpdateLockedPropertyException => [self::REFUSED_BY_THE_LOCK, $e->getMessage()],
+            $e instanceof PublicPropertyNotFoundException,
+            $e instanceof MethodNotFoundException => [self::PATH_THE_COMPONENT_CANNOT_ACCEPT, $e->getMessage()],
+            self::isDescentIntoALeaf($e) => [self::PATH_THE_COMPONENT_CANNOT_ACCEPT, self::DESCENT_REFUSED],
+            self::isArgumentTheCallOmitted($e) => [self::PATH_THE_COMPONENT_CANNOT_ACCEPT, self::ARGUMENT_MISSING],
+            self::isArgumentTypeTheCallChose($e) => [self::PATH_THE_COMPONENT_CANNOT_ACCEPT, self::ARGUMENT_TYPE_REFUSED],
+            self::isCallWithNoAuthenticatedReader($e) => [self::NO_READER_THE_CALL_CAN_RUN_AS, self::NO_READER_REFUSED],
+            default => null,
+        };
 
-        if ($e instanceof PublicPropertyNotFoundException) {
-            return new HttpException(self::PATH_THE_COMPONENT_CANNOT_ACCEPT, $e->getMessage(), $e);
-        }
-
-        if ($e instanceof MethodNotFoundException) {
-            return new HttpException(self::PATH_THE_COMPONENT_CANNOT_ACCEPT, $e->getMessage(), $e);
-        }
-
-        if (self::isDescentIntoALeaf($e)) {
-            return new HttpException(self::PATH_THE_COMPONENT_CANNOT_ACCEPT, self::DESCENT_REFUSED, $e);
-        }
-
-        if (self::isArgumentTheCallOmitted($e)) {
-            return new HttpException(self::PATH_THE_COMPONENT_CANNOT_ACCEPT, self::ARGUMENT_MISSING, $e);
-        }
-
-        if (self::isArgumentTypeTheCallChose($e)) {
-            return new HttpException(self::PATH_THE_COMPONENT_CANNOT_ACCEPT, self::ARGUMENT_TYPE_REFUSED, $e);
-        }
-
-        if (self::isCallWithNoAuthenticatedReader($e)) {
-            return new HttpException(self::NO_READER_THE_CALL_CAN_RUN_AS, self::NO_READER_REFUSED, $e);
-        }
-
-        return null;
+        return $refusal === null ? null : new HttpException($refusal[0], $refusal[1], $e);
     }
 
     // The splat passes the payload's own `params` uncoerced, so the throw lands

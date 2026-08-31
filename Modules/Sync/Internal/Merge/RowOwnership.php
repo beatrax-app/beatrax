@@ -74,12 +74,17 @@ final class RowOwnership
     // process cannot attribute is not a row it may touch.
     public function scopeToUser(Builder $query, string $table, int $userId): Builder
     {
-        if ($this->isSelfScoped($table)) {
-            return $query->where('id', $userId);
-        }
+        // The column this table carries its owner in, where it carries one at
+        // all: the users table answers for itself by primary key, everything
+        // else that owns its rows directly does so by user_id.
+        $ownColumn = match (true) {
+            $this->isSelfScoped($table) => 'id',
+            $this->hasUserIdColumn($table) => 'user_id',
+            default => null,
+        };
 
-        if ($this->hasUserIdColumn($table)) {
-            return $query->where('user_id', $userId);
+        if ($ownColumn !== null) {
+            return $query->where($ownColumn, $userId);
         }
 
         $parent = self::PARENT_SCOPE[$table] ?? null;

@@ -21,6 +21,11 @@ use Normalizer;
  */
 final class LocaleCollator
 {
+    // The sort key packs four fields into one string; this parts them. NUL
+    // because no collation field can contain it, so a key can never be read
+    // as one field spilling into the next.
+    private const string KEY_FIELD_SEPARATOR = "\u{0000}";
+
     // Kept off the fold's own regex literal so the two spellings of "an
     // accent is not a letter" cannot drift: enclosing marks matter for the
     // Cyrillic and Greek names ICU would otherwise have ordered.
@@ -233,9 +238,9 @@ final class LocaleCollator
         }
 
         return implode("\u{0001}", $letters)
-            ."\u{0000}".implode("\u{0001}", $accents)
-            ."\u{0000}".implode('', array_column($folded, 2))
-            ."\u{0000}".implode('', array_column($folded, 0));
+            .self::KEY_FIELD_SEPARATOR.implode("\u{0001}", $accents)
+            .self::KEY_FIELD_SEPARATOR.implode('', array_column($folded, 2))
+            .self::KEY_FIELD_SEPARATOR.implode('', array_column($folded, 0));
     }
 
     /**
@@ -434,7 +439,14 @@ final class LocaleCollator
     {
         $out = [];
 
-        for ($index = 0; $index < count($folded); $index++) {
+        // A while rather than a for: a matched digraph consumes more than one
+        // position, and the step is the whole of what this loop decides.
+        $index = 0;
+        $count = count($folded);
+
+        while ($index < $count) {
+            $consumed = 0;
+
             for ($width = self::LONGEST_DIGRAPH; $folded[$index][1] === 0 && $width >= 2; $width--) {
                 $digraph = array_slice($folded, $index + 1, $width);
                 $spelled = implode('', array_column($digraph, 0));
@@ -443,13 +455,23 @@ final class LocaleCollator
                     && isset($ranks[$spelled])
                     && str_starts_with($spelled, $folded[$index][0])) {
                     $out = array_merge($out, $digraph, $digraph);
-                    $index += $width;
+                    $consumed = $width;
 
-                    continue 2;
+                    break;
                 }
             }
 
+            if ($consumed > 0) {
+                // The base character plus the digraph it opened. Written here
+                // rather than left to a loop step, which is where the two
+                // halves of it used to disagree.
+                $index += $consumed + 1;
+
+                continue;
+            }
+
             $out[] = $folded[$index];
+            $index++;
         }
 
         return $out;

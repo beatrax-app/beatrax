@@ -137,6 +137,7 @@ final class PotsPage extends Component
         // no longer creatable.
         $goalId = ($this->linkType === PotLinkType::Goal->value && $this->goalId !== '') ? (int) $this->goalId : null;
         $rawAmount = trim($this->amount) !== '' ? $this->amount : null;
+        $refused = false;
 
         try {
             $writer->save(
@@ -151,29 +152,13 @@ final class PotsPage extends Component
             // The same refusal fundPot() gives, with the same figure in it: one
             // rule may not read as two different messages.
             $this->refuseOverUnallocated($accountId, $currentUser, $query);
+            $refused = true;
+        } catch (\InvalidArgumentException $e) {
+            $this->applyCreateRefusal($e);
+            $refused = true;
+        }
 
-            return;
-        } catch (InvalidPotAmountException) {
-            // The initial amount has a box of its own, and its refusal used to
-            // arrive under the name as "check the fields".
-            $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
-
-            return;
-        } catch (GoalAlreadyLinkedException) {
-            // Above the InvalidArgumentException arm on purpose: it extends it,
-            // so a wider catch first would swallow every one of these.
-            $this->errorName = Lang::get('pots::messages.errors.goal_already_linked');
-
-            return;
-        } catch (AccountCannotHoldPotsException) {
-            $this->errorName = Lang::get('pots::messages.errors.account_cannot_hold_pots');
-
-            return;
-        } catch (\InvalidArgumentException) {
-            // Every other message here is written for a developer, and in one
-            // language only.
-            $this->errorName = Lang::get('pots::messages.errors.generic');
-
+        if ($refused) {
             return;
         }
 
@@ -272,6 +257,27 @@ final class PotsPage extends Component
         $this->toast(Lang::get('pots::messages.toast.pot_updated'));
     }
 
+    // Which box a refusal belongs under. Narrowest first: the three named
+    // arms all extend InvalidArgumentException, so testing the parent earlier
+    // would swallow every one of them. The default is deliberately not the
+    // exception's own message, which is written for a developer.
+    private function applyCreateRefusal(\InvalidArgumentException $e): void
+    {
+        // The initial amount has a box of its own, and its refusal used to
+        // arrive under the name as "check the fields".
+        if ($e instanceof InvalidPotAmountException) {
+            $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
+
+            return;
+        }
+
+        $this->errorName = Lang::get(match (true) {
+            $e instanceof GoalAlreadyLinkedException => 'pots::messages.errors.goal_already_linked',
+            $e instanceof AccountCannotHoldPotsException => 'pots::messages.errors.account_cannot_hold_pots',
+            default => 'pots::messages.errors.generic',
+        });
+    }
+
     public function fundPot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query, BaseCurrency $baseCurrency): void
     {
         $this->clearErrors();
@@ -281,6 +287,8 @@ final class PotsPage extends Component
         }
 
         $memo = trim($this->operationMemo) !== '' ? $this->operationMemo : null;
+
+        $refused = false;
 
         try {
             $writer->fund(
@@ -311,21 +319,21 @@ final class PotsPage extends Component
                 'pots::messages.errors.amount_exceeds_unallocated_available',
                 ['amount' => $availableFormatted],
             );
-
-            return;
+            $refused = true;
         } catch (InvalidPotAmountException) {
             $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
-
-            return;
+            $refused = true;
         } catch (PotNotFoundException) {
             $this->abandonOperation('pot-fund', Lang::get('pots::messages.errors.pot_missing'));
-
-            return;
+            $refused = true;
         } catch (\InvalidArgumentException) {
             // Nothing else reaches here: fund() distinguishes every refusal it
             // has. A backstop with no cause to name says only what it knows.
             $this->toast(Lang::get('pots::messages.errors.operation_failed'));
+            $refused = true;
+        }
 
+        if ($refused) {
             return;
         }
 
@@ -346,6 +354,8 @@ final class PotsPage extends Component
 
         $user = $currentUser->user();
         $pot = PotRow::withId($query->forUser($user), $this->operationPotId);
+
+        $refused = false;
 
         try {
             $writer->withdraw(
@@ -373,21 +383,21 @@ final class PotsPage extends Component
                 'pots::messages.errors.amount_exceeds_pot_balance',
                 ['name' => $potName, 'amount' => $availableFormatted],
             );
-
-            return;
+            $refused = true;
         } catch (InvalidPotAmountException) {
             $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
-
-            return;
+            $refused = true;
         } catch (PotNotFoundException) {
             $this->abandonOperation('pot-withdraw', Lang::get('pots::messages.errors.pot_missing'));
-
-            return;
+            $refused = true;
         } catch (\InvalidArgumentException) {
             // Nothing else reaches here: withdraw() distinguishes every refusal
             // it has. A backstop with no cause to name says only what it knows.
             $this->toast(Lang::get('pots::messages.errors.operation_failed'));
+            $refused = true;
+        }
 
+        if ($refused) {
             return;
         }
 
@@ -419,6 +429,8 @@ final class PotsPage extends Component
         $sourcePot = PotRow::withId($rows, $this->operationPotId);
         $targetPot = PotRow::withId($rows, (int) $this->transferTargetPotId);
 
+        $refused = false;
+
         try {
             $writer->transfer(
                 $user,
@@ -446,16 +458,13 @@ final class PotsPage extends Component
                 'pots::messages.errors.amount_exceeds_pot_balance',
                 ['name' => $potName, 'amount' => $availableFormatted],
             );
-
-            return;
+            $refused = true;
         } catch (InvalidPotAmountException) {
             $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
-
-            return;
+            $refused = true;
         } catch (SelfTransferException) {
             $this->errorTarget = Lang::get('pots::messages.errors.move_same_pot');
-
-            return;
+            $refused = true;
         } catch (CrossAccountTransferException) {
             // Every cross-currency move is one of these, and the reader was
             // sent back to fields that were all correct.
@@ -465,18 +474,19 @@ final class PotsPage extends Component
                     'account' => $targetPot->accountName,
                 ])
                 : Lang::get('pots::messages.errors.operation_failed');
-
-            return;
+            $refused = true;
         } catch (TargetPotNotFoundException) {
             // Above its parent: the source pot is the card the reader opened
             // and the target is the one they picked, and only one can be fixed
             // from this sheet.
             $this->errorTarget = Lang::get('pots::messages.errors.move_target_missing');
-
-            return;
+            $refused = true;
         } catch (PotNotFoundException) {
             $this->abandonOperation('pot-move', Lang::get('pots::messages.errors.pot_missing'));
+            $refused = true;
+        }
 
+        if ($refused) {
             return;
         }
 

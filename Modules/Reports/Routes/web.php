@@ -64,22 +64,24 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         if ($shareSheet->replacesWebViewDownload()) {
             $outcome = $shareSheet->export($filename, $exporter->export($user, $definition));
 
-            return $responses->make(
+            $delivered = $responses->make(
                 $outcome->message(),
                 $outcome === FileExportOutcome::Shared
                     ? SymfonyResponse::HTTP_OK
                     : SymfonyResponse::HTTP_SERVICE_UNAVAILABLE,
                 ['Content-Type' => 'text/plain; charset=UTF-8'],
             );
+        } else {
+            $delivered = $responses->streamDownload(
+                static function () use ($exporter, $user, $definition): void {
+                    echo $exporter->export($user, $definition);
+                },
+                $filename,
+                ['Content-Type' => 'text/csv; charset=UTF-8'],
+            );
         }
 
-        return $responses->streamDownload(
-            static function () use ($exporter, $user, $definition): void {
-                echo $exporter->export($user, $definition);
-            },
-            $filename,
-            ['Content-Type' => 'text/csv; charset=UTF-8'],
-        );
+        return $delivered;
     })->name('reports.export');
 
     // ?report={id} is resolved into a view variable here so the Blade view does

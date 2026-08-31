@@ -40,19 +40,17 @@ final readonly class LocalConfirmRecorder
         // An unknown token and a device that owns neither side are the same
         // refusal: this device has nothing it may confirm on this token.
         $side = $this->confirmableSideFor($tokenId, $userId, $confirmingDeviceId);
-        if ($side === null) {
-            return null;
-        }
 
         // The tap confirms the keys behind the words on screen, not whatever the
         // row says now: without this a responder rebinding between the reading
         // and the tap inherits a confirmation nobody gave it (see @link).
-        $comparedKeys = $this->keysBehindDigest($tokenId, $userId, $expectedSafetyDigest);
-        if ($comparedKeys === null) {
-            return null;
-        }
+        $comparedKeys = $side === null
+            ? null
+            : $this->keysBehindDigest($tokenId, $userId, $expectedSafetyDigest);
 
-        return $this->stampSideConfirmation($tokenId, $userId, $side, $comparedKeys);
+        return $side === null || $comparedKeys === null
+            ? null
+            : $this->stampSideConfirmation($tokenId, $userId, $side, $comparedKeys);
     }
 
     // Whether this token still names a ceremony a tap may finish: in flight and

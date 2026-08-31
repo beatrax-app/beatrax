@@ -21,17 +21,17 @@ final readonly class AmountMovement
 
     public static function between(Money $prior, Money $latest): ?self
     {
-        if ($prior->currency() !== $latest->currency()) {
-            return null;
-        }
-
         $priorMinor = $prior->toMinor();
-        if ($priorMinor === 0) {
-            return null;
-        }
-
         $latestMinor = $latest->toMinor();
-        if ($latestMinor !== 0 && ($priorMinor > 0) !== ($latestMinor > 0)) {
+
+        // A ratio needs one currency to compare in, a prior to divide by, and a
+        // move that did not cross zero: a sign flip is a different event, not a
+        // bigger version of this one.
+        $comparable = $prior->currency() === $latest->currency()
+            && $priorMinor !== 0
+            && ($latestMinor === 0 || ($priorMinor > 0) === ($latestMinor > 0));
+
+        if (! $comparable) {
             return null;
         }
 

@@ -121,11 +121,12 @@ final readonly class OwnAccountPrompt
 
     private function previewEntryFor(int $importRunId, CurrentUser $currentUser, string $ownIban): ?UnknownIban
     {
-        if (! $this->ownsRun($importRunId, $currentUser)) {
-            return null;
-        }
+        // A run that is not the caller's is read as a run with no preview: the
+        // two are one refusal, and neither may say which it was.
+        $preview = $this->ownsRun($importRunId, $currentUser)
+            ? $this->cache->getPreview($importRunId)
+            : null;
 
-        $preview = $this->cache->getPreview($importRunId);
         if ($preview === null) {
             return null;
         }

@@ -104,15 +104,12 @@ final class CommandArgPromptModal extends Component
 
         $this->submitError = '';
 
-        $spec = $this->spawnableSpec($registry);
-        if ($spec === null) {
-            return;
-        }
-
         // Null means a preflight refused the submission and has already put
         // its own message on $submitError.
-        $args = $this->acceptedArgs($spec, $validator);
-        if ($args === null) {
+        $spec = $this->spawnableSpec($registry);
+        $args = $spec === null ? null : $this->acceptedArgs($spec, $validator);
+
+        if ($spec === null || $args === null) {
             return;
         }
 

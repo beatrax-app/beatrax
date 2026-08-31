@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Sql;
 
-use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
@@ -71,7 +70,7 @@ class IsolatedSelectProcess
         }
 
         if (! $process->isSuccessful()) {
-            throw new RuntimeException($this->failureMessage($process));
+            throw new IsolatedSelectFailedException($this->failureMessage($process));
         }
 
         return $this->decode($process->getOutput());
@@ -91,7 +90,7 @@ class IsolatedSelectProcess
     {
         $decoded = json_decode($output, true);
         if (! is_array($decoded) || ! is_array($decoded['rows'] ?? null)) {
-            throw new RuntimeException('The read-only query process returned no readable result.');
+            throw new IsolatedSelectFailedException('The read-only query process returned no readable result.');
         }
 
         $rows = [];

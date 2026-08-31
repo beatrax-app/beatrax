@@ -235,16 +235,14 @@ final readonly class PreviewSummaryBuilder
         $beatraxId = $this->resolveBeatraxId($connection, $user, $sourceProduct, MigrationEntityType::Transaction->value, $sourceExternalId);
         $isAmount = $fieldName === 'amount_minor';
 
-        if ($beatraxId === null) {
-            return Lang::get($isAmount ? 'migration::unmapped.conflict.transaction_amount' : 'migration::unmapped.conflict.transaction_description');
-        }
-
         /** @var stdClass|null $txn */
-        $txn = $connection->table('transactions')
+        $txn = $beatraxId === null ? null : $connection->table('transactions')
             ->where('id', $beatraxId)
             ->where('user_id', $user->id)
             ->first(['counterparty_name', 'description', 'posted_at']);
 
+        // Never mapped and mapped-then-gone read the same to the reader: in
+        // neither case is there a transaction here to name.
         if ($txn === null) {
             return Lang::get($isAmount ? 'migration::unmapped.conflict.transaction_amount' : 'migration::unmapped.conflict.transaction_description');
         }

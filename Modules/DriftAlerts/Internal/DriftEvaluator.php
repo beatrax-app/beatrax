@@ -84,18 +84,15 @@ final readonly class DriftEvaluator
         $prior = $occurrences[1];
 
         $multiplier = self::cadenceMultiplierForYear($series->cadence);
-        if ($multiplier === 0) {
-            return null;
-        }
+        $movement = $multiplier === 0
+            ? null
+            : AmountMovement::between($prior->observedAmount, $latest->observedAmount);
 
-        $movement = AmountMovement::between($prior->observedAmount, $latest->observedAmount);
-        if ($movement === null) {
-            return null;
-        }
-
-        // The alert is denominated in the series currency, so a movement priced
-        // in anything else would be stamped with a currency it is not in.
-        if ($prior->observedAmount->currency() !== $series->latestAmount->currency()) {
+        // A cadence with no yearly multiplier, a pair that will not compare,
+        // and a movement priced outside the series currency all leave nothing
+        // to report: the alert is denominated in the series currency and would
+        // otherwise be stamped with one it is not in.
+        if ($movement === null || $prior->observedAmount->currency() !== $series->latestAmount->currency()) {
             return null;
         }
 

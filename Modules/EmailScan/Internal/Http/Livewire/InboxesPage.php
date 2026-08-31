@@ -246,20 +246,24 @@ final class InboxesPage extends Component
 
         $user = $currentUser->user();
         $health = $inboxQuery->findForUser($inboxId, $user);
+
         if ($health === null) {
             $this->toastGone();
 
             return;
         }
-        if (in_array($health->status, [InboxScanStatus::Backfilling->value, InboxScanStatus::Scanning->value], strict: true)) {
-            $this->toast(Lang::get('email-scan::inboxes.toast.scan_in_progress'));
 
-            return;
-        }
         // The job exits on its first status read for a revoked grant, so
-        // dispatching here would report a scan that never runs.
-        if ($health->status === InboxScanStatus::NeedsReauth->value) {
-            $this->toast(Lang::get('email-scan::inboxes.toast.reconnect_first'));
+        // dispatching here would report a scan that never runs; a scan already
+        // under way needs no second one.
+        $refusal = match (true) {
+            in_array($health->status, [InboxScanStatus::Backfilling->value, InboxScanStatus::Scanning->value], strict: true) => 'email-scan::inboxes.toast.scan_in_progress',
+            $health->status === InboxScanStatus::NeedsReauth->value => 'email-scan::inboxes.toast.reconnect_first',
+            default => null,
+        };
+
+        if ($refusal !== null) {
+            $this->toast(Lang::get($refusal));
 
             return;
         }

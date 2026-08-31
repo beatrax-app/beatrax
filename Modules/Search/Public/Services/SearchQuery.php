@@ -300,9 +300,11 @@ final readonly class SearchQuery
         if (preg_match('/^\d{4}-\d{2}$/', $trimmed) === 1) {
             $firstOfMonth = SafeDate::dayOrNull($trimmed.'-01');
 
-            return $firstOfMonth === null
-                ? null
-                : ($endOfMonth ? $firstOfMonth->endOfMonth() : $firstOfMonth)->toDateString();
+            if ($firstOfMonth === null) {
+                return null;
+            }
+
+            return ($endOfMonth ? $firstOfMonth->endOfMonth() : $firstOfMonth)->toDateString();
         }
 
         return SafeDate::dayOrNull($trimmed)?->toDateString();

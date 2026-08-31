@@ -35,11 +35,10 @@ final readonly class PairUnlinker implements UnpairsTransferLegs
             ->whereNull('pair_transaction_id')
             ->first(['type', 'amount_minor']);
 
-        if ($survivor === null) {
-            return null;
-        }
+        $newType = $survivor === null
+            ? null
+            : self::survivorTypeFor($survivor->type ?? null, self::toInt($survivor->amount_minor ?? null));
 
-        $newType = self::survivorTypeFor($survivor->type ?? null, self::toInt($survivor->amount_minor ?? null));
         if ($newType === null) {
             return null;
         }

@@ -10,6 +10,10 @@ use Monolog\Processor\ProcessorInterface;
 
 final readonly class RedactSecretsProcessor implements ProcessorInterface
 {
+    // What every rule here writes in place of what it matched. One spelling,
+    // because a reader greps for this string to check a log was scrubbed.
+    private const string REDACTED = '[REDACTED]';
+
     // Keys whose VALUE is a credential whatever it looks like. Guzzle and
     // Laravel log headers as ['Authorization' => 'Bearer ...'], and
     // scrubArray() visits each leaf on its own, so the header word and the
@@ -26,17 +30,17 @@ final readonly class RedactSecretsProcessor implements ProcessorInterface
     // so an ordinary log line is never touched.
     /** @var array<string, string> */
     private const array VALUE_PATTERNS = [
-        '/(Authorization:\s*)(Bearer|Basic)\s+\S+/i' => '$1$2 [REDACTED]',
+        '/(Authorization:\s*)(Bearer|Basic)\s+\S+/i' => '$1$2 '.self::REDACTED,
         // Without the header word a length floor keeps the English word
         // "bearer" followed by an ordinary word out of it.
-        '/\b(Bearer|Basic)\s+[A-Za-z0-9._~+\/=-]{8,}/i' => '$1 [REDACTED]',
-        '/\bya29\.[A-Za-z0-9._-]{10,}/' => '[REDACTED]',
-        '/\bgh[pousr]_[A-Za-z0-9]{20,}/' => '[REDACTED]',
-        '/\bsk_(?:live|test)_[A-Za-z0-9]{10,}/' => '[REDACTED]',
-        '/\bxox[baprs]-[A-Za-z0-9-]{10,}/' => '[REDACTED]',
+        '/\b(Bearer|Basic)\s+[A-Za-z0-9._~+\/=-]{8,}/i' => '$1 '.self::REDACTED,
+        '/\bya29\.[A-Za-z0-9._-]{10,}/' => self::REDACTED,
+        '/\bgh[pousr]_[A-Za-z0-9]{20,}/' => self::REDACTED,
+        '/\bsk_(?:live|test)_[A-Za-z0-9]{10,}/' => self::REDACTED,
+        '/\bxox[baprs]-[A-Za-z0-9-]{10,}/' => self::REDACTED,
         // A DSN carries its password in the userinfo segment,
         // scheme://user:password@host, which no key-name match reaches.
-        '/([a-z][a-z0-9+.-]*:\/\/)[^\/\s:@]+:[^\/\s@]+@/i' => '$1[REDACTED]@',
+        '/([a-z][a-z0-9+.-]*:\/\/)[^\/\s:@]+:[^\/\s@]+@/i' => '$1'.self::REDACTED.'@',
     ];
 
     // The signature of an HS256 JWT is 43 characters and its payload can be
@@ -73,7 +77,7 @@ final readonly class RedactSecretsProcessor implements ProcessorInterface
             if (is_array($value)) {
                 $out[$key] = $this->scrubArray($value);
             } elseif ($this->isSecretKey($key)) {
-                $out[$key] = '[REDACTED]';
+                $out[$key] = self::REDACTED;
             } elseif (is_string($value)) {
                 $out[$key] = $this->scrub($value);
             } else {

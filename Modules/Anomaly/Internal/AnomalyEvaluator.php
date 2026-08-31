@@ -126,15 +126,15 @@ final readonly class AnomalyEvaluator
             $reasons[] = AnomalyDetector::Duplicate;
         }
 
-        if ($reasons === []) {
-            return;
+        if ($reasons !== []) {
+            // Detection order varies by path; paired devices must store identical
+            // `reasons` JSON, so the list is canonicalised before it is encoded.
+            $reasons = AnomalyDetector::inCanonicalOrder($reasons);
+            $reasons = $this->filterSuppressed($txn, $user, $direction, $reasons, $largeFromMerchantBaseline);
         }
 
-        // Detection order varies by path; paired devices must store identical
-        // `reasons` JSON, so the list is canonicalised before it is encoded.
-        $reasons = AnomalyDetector::inCanonicalOrder($reasons);
-
-        $reasons = $this->filterSuppressed($txn, $user, $direction, $reasons, $largeFromMerchantBaseline);
+        // Nothing fired, or everything that fired was suppressed: either way
+        // there is no alert to open.
         if ($reasons === []) {
             return;
         }

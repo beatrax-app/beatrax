@@ -292,12 +292,13 @@ final class NativeZipReader implements ArchiveReader
             return is_dir($target) || @mkdir($target, self::DIRECTORY_MODE, true);
         }
 
+        // A parent that cannot be made and a file that cannot be opened are
+        // the same answer: there is nowhere to put this entry.
         $parent = dirname($target);
-        if (! is_dir($parent) && ! @mkdir($parent, self::DIRECTORY_MODE, true)) {
-            return false;
-        }
+        $out = is_dir($parent) || @mkdir($parent, self::DIRECTORY_MODE, true)
+            ? @fopen($target, 'wb')
+            : false;
 
-        $out = @fopen($target, 'wb');
         if ($out === false) {
             return false;
         }
@@ -340,9 +341,10 @@ final class NativeZipReader implements ArchiveReader
             $offset += strlen($chunk);
             $remaining -= strlen($chunk);
 
-            $plain = $inflate === null
-                ? $chunk
-                : (string) inflate_add($inflate, $chunk, $remaining === 0 ? ZLIB_FINISH : ZLIB_NO_FLUSH);
+            // The last chunk has to close the stream, or inflate_add holds
+            // back whatever the final block still owes the caller.
+            $flush = $remaining === 0 ? ZLIB_FINISH : ZLIB_NO_FLUSH;
+            $plain = $inflate === null ? $chunk : (string) inflate_add($inflate, $chunk, $flush);
 
             hash_update($checksum, $plain);
             $written += strlen($plain);

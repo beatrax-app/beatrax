@@ -66,15 +66,13 @@ final readonly class GoalProjectionService
         $remainingMinor = $goal->target_minor - $contributedMinor;
         $daysToFinish = ceil($remainingMinor / $dailyRateMinor);
 
-        if ($daysToFinish > (float) self::MAX_DATE_DAYS) {
-            return self::BEYOND_DATING;
-        }
-
-        return [
-            'date' => $today->addDays((int) $daysToFinish)->format('Y-m-d'),
-            'beyondHorizon' => $daysToFinish > (float) self::HORIZON_LIMIT_DAYS,
-            'stalled' => false,
-        ];
+        return $daysToFinish > (float) self::MAX_DATE_DAYS
+            ? self::BEYOND_DATING
+            : [
+                'date' => $today->addDays((int) $daysToFinish)->format('Y-m-d'),
+                'beyondHorizon' => $daysToFinish > (float) self::HORIZON_LIMIT_DAYS,
+                'stalled' => false,
+            ];
     }
 
     private function hasNoProjection(Goal $goal, int $contributedMinor, CarbonImmutable $today): bool

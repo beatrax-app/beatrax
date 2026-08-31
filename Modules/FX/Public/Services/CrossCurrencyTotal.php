@@ -122,14 +122,20 @@ final readonly class CrossCurrencyTotal
             $convertedPart = $money === null ? null : $this->convert($money, $targetCurrency, $rates);
 
             if ($convertedPart === null) {
-                return null;
+                // One part that will not convert makes the whole distribution
+                // unanswerable: a partial spread would not sum to the total.
+                $converted = null;
+
+                break;
             }
 
             $converted[$key] = $convertedPart->toMinor();
             $sumOfParts += $converted[$key];
         }
 
-        return self::spreadRemainder($converted, $partsMinor, $convertedSubtotal->toMinor() - $sumOfParts);
+        return $converted === null
+            ? null
+            : self::spreadRemainder($converted, $partsMinor, $convertedSubtotal->toMinor() - $sumOfParts);
     }
 
     // distribute() converts a whole it derives from the parts; this one splits

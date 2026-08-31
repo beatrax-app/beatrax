@@ -64,9 +64,11 @@ final readonly class ReportCsvExporter
 
             // Empty, never "0.00", for a row the other window has no
             // counterpart for -- the em dash the table prints in that cell.
-            $writer->insertOne($comparing
-                ? [...$record, $row->deltaMinor === null ? '' : MoneyInput::toDecimalString($row->deltaMinor, $row->currency)]
-                : $record);
+            $delta = $row->deltaMinor === null
+                ? ''
+                : MoneyInput::toDecimalString($row->deltaMinor, $row->currency);
+
+            $writer->insertOne($comparing ? [...$record, $delta] : $record);
         }
 
         return $writer->toString();

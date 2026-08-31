@@ -130,8 +130,13 @@ final class RebaseStatementFixtureCommand extends Command
         $rows = 0;
 
         try {
-            foreach ($this->adapters->for($format)->parse($path, $resolver) as $ignored) {
+            $parsed = $this->adapters->for($format)->parse($path, $resolver);
+
+            // Drained by hand rather than with foreach: the rows themselves
+            // are not wanted here, only how many arrived before it stopped.
+            while ($parsed->valid()) {
                 $rows++;
+                $parsed->next();
             }
 
             return ['rows' => $rows, 'stopped' => null];

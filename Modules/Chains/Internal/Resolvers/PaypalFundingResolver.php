@@ -196,13 +196,10 @@ final readonly class PaypalFundingResolver
     private function fundingEventLink(mixed $event, stdClass $row, User $user): ?array
     {
         $parsed = $this->fundingEventRow($event);
-        if ($parsed === null) {
-            return null;
-        }
-
-        $iban = $this->extractIbanFromEventRow($parsed['row']);
+        $iban = $parsed === null ? null : $this->extractIbanFromEventRow($parsed['row']);
         $accountId = $iban === null ? null : $this->signatureKey->accountIdForIban($iban, $user);
-        if ($accountId === null || $iban === null) {
+
+        if ($parsed === null || $accountId === null || $iban === null) {
             return null;
         }
 

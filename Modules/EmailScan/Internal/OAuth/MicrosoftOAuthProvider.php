@@ -234,7 +234,8 @@ class MicrosoftOAuthProvider
      */
     private static function decodeBody(mixed $body): array
     {
-        $text = is_string($body) ? $body : (is_object($body) && method_exists($body, '__toString') ? (string) $body : '');
+        $stringable = is_object($body) && method_exists($body, '__toString');
+        $text = is_string($body) ? $body : ($stringable ? (string) $body : '');
         if ($text === '') {
             return [];
         }

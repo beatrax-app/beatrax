@@ -33,25 +33,21 @@ final readonly class UpdateTransactionCategory implements UpdatesTransactionCate
 
         $currentCategoryId = is_numeric($row->category_id) ? (int) $row->category_id : null;
 
-        if ($categoryId !== null) {
-            $categoryVisible = $this->db->connection()
-                ->table('categories')
-                ->where('id', $categoryId)
-                ->where(static function (QueryBuilder $q) use ($user): void {
-                    $q->whereNull('user_id')->orWhere('user_id', $user->id);
-                })
-                ->exists();
-
-            if (! $categoryVisible) {
-                return 0;
-            }
-        }
+        // Clearing the category names none, so there is nothing to look up
+        // and the short circuit is what keeps that case free of a query.
+        $categoryVisible = $categoryId === null || $this->db->connection()
+            ->table('categories')
+            ->where('id', $categoryId)
+            ->where(static function (QueryBuilder $q) use ($user): void {
+                $q->whereNull('user_id')->orWhere('user_id', $user->id);
+            })
+            ->exists();
 
         // Write-only-on-change, like ReassignCounterparty. SQLite reports one
         // affected row for an UPDATE writing the value already there, and every
         // side effect is gated on that count: the memory tally the ranking
         // sorts on, an op every device replays, and a manual provenance stamp.
-        if ($currentCategoryId === $categoryId) {
+        if (! $categoryVisible || $currentCategoryId === $categoryId) {
             return 0;
         }
 

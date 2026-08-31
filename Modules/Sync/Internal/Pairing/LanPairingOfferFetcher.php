@@ -113,16 +113,14 @@ final readonly class LanPairingOfferFetcher
             return PairingOfferLookup::NoPeerReached;
         }
 
-        // The one refusal that is neither the code nor the network. Read off the
-        // same constant the handler answers with, so the two cannot drift.
-        if ($response->status() === PairingHttpStatus::TOO_MANY_REQUESTS) {
-            return PairingOfferLookup::RateLimited;
-        }
-
-        $identity = $this->identityFrom(self::offeredBody($response), $tokenHex);
+        // The rate limit is the one refusal that is neither the code nor the
+        // network. Read off the same constant the handler answers with, so
+        // the two cannot drift.
+        $rateLimited = $response->status() === PairingHttpStatus::TOO_MANY_REQUESTS;
+        $identity = $rateLimited ? null : $this->identityFrom(self::offeredBody($response), $tokenHex);
 
         if ($identity === null) {
-            return PairingOfferLookup::CodeNotAccepted;
+            return $rateLimited ? PairingOfferLookup::RateLimited : PairingOfferLookup::CodeNotAccepted;
         }
 
         // The endpoint this request actually reached, never the reply — the

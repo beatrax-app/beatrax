@@ -136,14 +136,20 @@ final readonly class MerchantMemoryWriter
             ->where('normalized_name', $normalized)
             ->value('id'));
 
-        if ($merchantId !== 0) {
-            return $merchantId;
+        if ($merchantId === 0) {
+            $merchantId = $this->createMerchant($event, $row, $normalized);
         }
 
-        // Nothing in production ever wrote this table -- only the demo seeder
-        // does, despite the doc naming NormalizeStage as its owner. Returning
-        // null here meant merchant_memories could never grow on a real install,
-        // so the classifier's documented second layer was dead code.
+        return $merchantId === 0 ? null : $merchantId;
+    }
+
+    // Nothing in production ever wrote this table -- only the demo seeder
+    // does, despite the doc naming NormalizeStage as its owner. Never creating
+    // one meant merchant_memories could never grow on a real install, so the
+    // classifier's documented second layer was dead code.
+    private function createMerchant(TransactionCategorized $event, ?\stdClass $row, string $normalized): int
+    {
+        $connection = $this->db->connection();
         $now = $this->clock->now()->toDateTimeString();
         $counterparty = self::toString($row->counterparty_name ?? null);
         $name = $counterparty === '' ? $normalized : $counterparty;
@@ -165,13 +171,9 @@ final readonly class MerchantMemoryWriter
             ->where('normalized_name', $normalized)
             ->value('id'));
 
-        if ($merchantId === 0) {
-            return null;
-        }
-
         // merchant_memories carries a NOT NULL FK to this row, so the peer
         // needs the merchant before the memory that points at it.
-        if ($inserted > 0) {
+        if ($merchantId !== 0 && $inserted > 0) {
             $this->events->dispatch(new EntityMutated(
                 table: 'merchants',
                 pk: $merchantId,

@@ -77,13 +77,10 @@ final class ConnectPaypalStep extends Component
         $originalFilename = UploadFilename::sanitise($this->activityCsv->getClientOriginalName(), '.csv');
 
         $result = $this->runPreview($importer, $tmp, $user, $originalFilename, $logger, $app);
-        if ($result === null) {
-            return;
-        }
 
         // A file nothing could read must not leave a durable wallet behind:
         // the account outlives the import, and nothing in the app deletes one.
-        if ($this->refuses($result, $originalFilename, $logger)) {
+        if ($result === null || $this->refuses($result, $originalFilename, $logger)) {
             return;
         }
 

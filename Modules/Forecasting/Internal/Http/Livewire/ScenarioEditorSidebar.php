@@ -143,17 +143,25 @@ final class ScenarioEditorSidebar extends Component
         if ($payload === null) {
             return;
         }
+        $refused = false;
+
         try {
             ($action)($this->scenarioId, $currentUser->user(), $this->selectedKind, $payload);
         } catch (NotFoundHttpException) {
             $this->formError = Lang::get('forecasting::scenario.errors.scenario_gone');
-
-            return;
+            $refused = true;
         } catch (\InvalidArgumentException $e) {
             $this->formError = $e->getMessage();
+            $refused = true;
+        }
 
+        // A local flag, never a re-read of $formError: that property is public
+        // and the client owns what it sends back, so a handler branching on it
+        // would let the browser decide whether the write happened.
+        if ($refused) {
             return;
         }
+
         $this->addingMutation = false;
         $this->selectedKind = null;
         $this->form = [];
@@ -202,17 +210,25 @@ final class ScenarioEditorSidebar extends Component
         if ($payload === null) {
             return;
         }
+        $refused = false;
+
         try {
             ($action)($this->editingMutationId, $currentUser->user(), $payload);
         } catch (NotFoundHttpException) {
             $this->formError = Lang::get('forecasting::scenario.errors.mutation_gone');
-
-            return;
+            $refused = true;
         } catch (\InvalidArgumentException $e) {
             $this->formError = $e->getMessage();
+            $refused = true;
+        }
 
+        // A local flag, never a re-read of $formError: that property is public
+        // and the client owns what it sends back, so a handler branching on it
+        // would let the browser decide whether the write happened.
+        if ($refused) {
             return;
         }
+
         $this->editingMutationId = null;
         $this->selectedKind = null;
         $this->form = [];

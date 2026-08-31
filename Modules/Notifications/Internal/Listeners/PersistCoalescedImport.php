@@ -75,28 +75,24 @@ final readonly class PersistCoalescedImport
      */
     private function announcement(TransactionBatchImported $event): array
     {
-        if (self::wholly($event, SourceFormat::receiptFormats())) {
-            return [
+        // Ordered, not exclusive: a batch wholly of receipts is also wholly
+        // imported, and the first arm that matches is the one that names it.
+        return match (true) {
+            self::wholly($event, SourceFormat::receiptFormats()) => [
                 NotificationTrigger::ReceiptsFound,
                 'notifications::copy.title.receipts',
                 'notifications::copy.body.receipts_matched',
                 'inbox',
                 Destination::Email->urlFrom($this->urls),
-            ];
-        }
-
-        if (self::wholly($event, [SyntheticSourceFormat::Manual->value])) {
-            return [
+            ],
+            self::wholly($event, [SyntheticSourceFormat::Manual->value]) => [
                 NotificationTrigger::ManualEntryRecorded,
                 'notifications::copy.title.manual_entry',
                 'notifications::copy.body.manual_entry',
                 'cash-book',
                 Destination::CashBook->urlFrom($this->urls),
-            ];
-        }
-
-        if (self::whollyMigrated($event)) {
-            return [
+            ],
+            self::whollyMigrated($event) => [
                 NotificationTrigger::MigrationFinished,
                 'notifications::copy.title.migration_finished',
                 'notifications::copy.body.migration_finished',
@@ -105,16 +101,15 @@ final readonly class PersistCoalescedImport
                 // /migrations is not a Destination. DeepLinkResolver names the
                 // same route when it re-derives the reader's own row.
                 $this->urls->route('migrations.index'),
-            ];
-        }
-
-        return [
-            NotificationTrigger::ImportFinished,
-            'notifications::copy.title.import_finished',
-            'notifications::copy.body.import_finished',
-            'import',
-            Destination::Imports->urlFrom($this->urls),
-        ];
+            ],
+            default => [
+                NotificationTrigger::ImportFinished,
+                'notifications::copy.title.import_finished',
+                'notifications::copy.body.import_finished',
+                'import',
+                Destination::Imports->urlFrom($this->urls),
+            ],
+        };
     }
 
     /**

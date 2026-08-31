@@ -26,6 +26,10 @@ final class TaxPage extends Component
 {
     use HoldsFlashMessage;
 
+    // The window title's tail, separated by a middle dot rather than a dash,
+    // which is what every other titled page here uses.
+    private const string TITLE_SUFFIX = ' · Beatrax';
+
     // 0 means "use the seasonal default", resolved in mount(). #[Url] keeps
     // ?year=2025 deep links and the back button working.
     #[Url(as: 'year', except: 0)]
@@ -129,11 +133,11 @@ final class TaxPage extends Component
                 'data' => null,
                 'availableYears' => [],
                 'hasCountry' => false,
-                'documentTitle' => Lang::get('tax::page.page_title').' · Beatrax',
+                'documentTitle' => Lang::get('tax::page.page_title').self::TITLE_SUFFIX,
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title').' · Beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title').self::TITLE_SUFFIX]);
 
             return $view;
         }
@@ -151,7 +155,7 @@ final class TaxPage extends Component
 
         // One string for both the layout's <title> and the blade's re-titling
         // hook, so a switched year cannot leave them naming different years.
-        $documentTitle = Lang::get('tax::page.page_title_year', ['year' => $this->year]).' · Beatrax';
+        $documentTitle = Lang::get('tax::page.page_title_year', ['year' => $this->year]).self::TITLE_SUFFIX;
 
         $view = $views->make('tax::livewire.tax-page', [
             'data' => $data,

@@ -134,14 +134,19 @@ final readonly class OAuthCallbackController
 
         try {
             return $oauth->exchangeAuthorizationCode($code, $this->loopback->forProvider($provider), $pkceVerifier);
-        } catch (InvalidGrantException $e) {
-            $logger->warning('OAuthCallbackController: the authorization grant was refused.', SafeExceptionContext::describe($e));
+        } catch (InvalidGrantException|OAuthExchangeFailed $e) {
+            // The provider refusing the grant and the exchange itself failing
+            // are different causes with the same shape: a line for the log and
+            // a line for the reader, neither of them the exception's own.
+            $refused = $e instanceof InvalidGrantException;
 
-            return Lang::get('email-scan::inboxes.oauth_grant_refused');
-        } catch (OAuthExchangeFailed $e) {
-            $logger->warning('OAuthCallbackController: the token exchange failed.', SafeExceptionContext::describe($e));
+            $logger->warning($refused
+                ? 'OAuthCallbackController: the authorization grant was refused.'
+                : 'OAuthCallbackController: the token exchange failed.', SafeExceptionContext::describe($e));
 
-            return Lang::get('email-scan::inboxes.oauth_exchange_failed');
+            return Lang::get($refused
+                ? 'email-scan::inboxes.oauth_grant_refused'
+                : 'email-scan::inboxes.oauth_exchange_failed');
         }
     }
 

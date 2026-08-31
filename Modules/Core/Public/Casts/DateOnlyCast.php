@@ -64,28 +64,28 @@ final class DateOnlyCast implements CastsAttributes, SerializesCastableAttribute
             return $value->format(self::FORMAT);
         }
 
-        if (is_string($value)) {
-            // A day-shaped string is judged as a day: sync writes these columns
-            // through the query builder rather than the model, so '2027-02-29'
-            // reached the column and came back out of here as 1 March. Anything
-            // longer is a stored timestamp whose time half is an artefact.
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($value)) === 1) {
-                $day = SafeDate::dayOrNull($value);
+        if (! is_string($value)) {
+            throw new InvalidArgumentException(sprintf(
+                '%s::$%s is a calendar date and takes a date, a DateTimeInterface or a date string, %s given.',
+                $model::class,
+                $key,
+                get_debug_type($value),
+            ));
+        }
 
-                return $day === null
-                    ? throw self::notADate($model, $key, $value)
-                    : $day->format(self::FORMAT);
-            }
-
+        // A day-shaped string is judged as a day: sync writes these columns
+        // through the query builder rather than the model, so '2027-02-29'
+        // reached the column and came back out of here as 1 March. Anything
+        // longer is a stored timestamp whose time half is an artefact.
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($value)) !== 1) {
             return CarbonImmutable::parse($value)->format(self::FORMAT);
         }
 
-        throw new InvalidArgumentException(sprintf(
-            '%s::$%s is a calendar date and takes a date, a DateTimeInterface or a date string, %s given.',
-            $model::class,
-            $key,
-            get_debug_type($value),
-        ));
+        $day = SafeDate::dayOrNull($value);
+
+        return $day === null
+            ? throw self::notADate($model, $key, $value)
+            : $day->format(self::FORMAT);
     }
 
     private static function notADate(Model $model, string $key, string $value): InvalidArgumentException

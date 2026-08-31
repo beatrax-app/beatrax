@@ -82,16 +82,13 @@ final readonly class OpLogBackfiller
                 continue;
             }
 
+            // Only the table the last run stopped inside resumes from a key;
+            // every table after it starts at its own beginning.
+            $resumePk = $index === $resumeIndex && $resumeFrom !== null ? $resumeFrom['pk'] : null;
+
             $captured += $table === self::SELF_SCOPED_TABLE
                 ? $this->captureUserSettings($connection, $userId, $writer)
-                : $this->captureTable(
-                    $connection,
-                    $table,
-                    $userId,
-                    $writer,
-                    $budget,
-                    $index === $resumeIndex && $resumeFrom !== null ? $resumeFrom['pk'] : null,
-                );
+                : $this->captureTable($connection, $table, $userId, $writer, $budget, $resumePk);
 
             if ($budget !== null && $budget->isSpent()) {
                 return $captured;
