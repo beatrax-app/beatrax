@@ -163,6 +163,12 @@
                  non-transfer types. Placed between the
                  money dl and Reclassify per §7.1 — category is the most
                  fundamental fact about a transaction after its amount. --}}
+            @php
+                // The write layer refuses every split change on a reconciled
+                // row. Offering the controls anyway walked the reader through
+                // a whole editor the app had already decided not to accept.
+                $splitLocked = ($clearedStatus ?? null) === ClearedStatus::Reconciled->value;
+            @endphp
             @if ($isSplittable ?? false)
                 <section
                     aria-labelledby="split-heading"
@@ -180,14 +186,16 @@
                                     {{ $currentCategoryName ?? '—' }}
                                 </p>
                             </div>
-                            <x-core::secondary-button
-                                size="sm"
-                                class="shadow-sm"
-                                wire:click="openSplitEditor"
-                                data-testid="split-open-button"
-                            >
-                                {{ Lang::get('ledger::detail.split.open') }}
-                            </x-core::secondary-button>
+                            @unless ($splitLocked)
+                                <x-core::secondary-button
+                                    size="sm"
+                                    class="shadow-sm"
+                                    wire:click="openSplitEditor"
+                                    data-testid="split-open-button"
+                                >
+                                    {{ Lang::get('ledger::detail.split.open') }}
+                                </x-core::secondary-button>
+                            @endunless
                         </div>
                     @else
                         {{-- §7.3 Editor — open state. --}}
@@ -219,6 +227,7 @@
                                         <label class="sr-only" for="split-leg-category-{{ $index }}">{{ Lang::get('ledger::detail.split.category') }}</label>
                                         <select
                                             wire:model.live="legs.{{ $index }}.categoryId"
+                                            @disabled($splitLocked)
                                             id="split-leg-category-{{ $index }}"
                                             class="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                             data-testid="split-leg-category-{{ $index }}"
@@ -242,6 +251,7 @@
                                             id="split-leg-amount-{{ $index }}"
                                             placeholder="{{ MoneyInput::formatAbsMinor(0, $transaction->settled_currency) }}"
                                             wire:model.live.debounce.300ms="legs.{{ $index }}.amount"
+                                            @disabled($splitLocked)
                                             data-testid="split-leg-amount-{{ $index }}"
                                         >
                                     </span>
@@ -253,6 +263,7 @@
                                             id="split-leg-note-{{ $index }}"
                                             placeholder="{{ Lang::get('ledger::detail.split.note_placeholder') }}"
                                             wire:model="legs.{{ $index }}.note"
+                                            @disabled($splitLocked)
                                             class="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                             data-testid="split-leg-note-{{ $index }}"
                                         >
@@ -275,26 +286,30 @@
                                         </span>
                                     </div>
 
-                                    <x-core::emoji-action
-                                        :label="Lang::get('ledger::detail.split.remove_leg_aria')"
-                                        :caption="Lang::get('ledger::detail.split.remove_leg_caption')"
-                                        tone="danger"
-                                        wire:click="removeLeg({{ $index }})"
-                                        data-testid="split-leg-remove-{{ $index }}"
-                                    >🗑️</x-core::emoji-action>
+                                    @unless ($splitLocked)
+                                        <x-core::emoji-action
+                                            :label="Lang::get('ledger::detail.split.remove_leg_aria')"
+                                            :caption="Lang::get('ledger::detail.split.remove_leg_caption')"
+                                            tone="danger"
+                                            wire:click="removeLeg({{ $index }})"
+                                            data-testid="split-leg-remove-{{ $index }}"
+                                        >🗑️</x-core::emoji-action>
+                                    @endunless
                                 </div>
                             @endforeach
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3">
-                            <button
-                                type="button"
-                                wire:click="addLeg"
-                                class="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                                data-testid="split-add-leg"
-                            >
-                                {{ Lang::get('ledger::detail.split.add_category') }}
-                            </button>
+                            @unless ($splitLocked)
+                                <button
+                                    type="button"
+                                    wire:click="addLeg"
+                                    class="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                                    data-testid="split-add-leg"
+                                >
+                                    {{ Lang::get('ledger::detail.split.add_category') }}
+                                </button>
+                            @endunless
 
                             @if (count($legs) >= 18)
                                 <span class="text-xs text-slate-600 dark:text-slate-400" data-testid="split-soft-cap-advisory">
@@ -321,29 +336,31 @@
                             @endif
                         </div>
 
-                        <div class="flex flex-wrap items-center gap-3">
-                            <x-core::neutral-button
-                                size="sm"
-                                class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
-                                :disabled="$remainingMinor !== 0 || count($legs) < 2"
-                                wire:click="saveSplit"
-                                wire:loading.attr="disabled"
-                                wire:target="saveSplit"
-                                data-testid="split-save-button"
-                            >
-                                <span wire:loading.remove wire:target="saveSplit">{{ Lang::get('ledger::detail.split.save') }}</span>
-                                <span wire:loading wire:target="saveSplit">{{ Lang::get('ledger::detail.split.saving') }}</span>
-                            </x-core::neutral-button>
+                        @unless ($splitLocked)
+                            <div class="flex flex-wrap items-center gap-3">
+                                <x-core::neutral-button
+                                    size="sm"
+                                    class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                                    :disabled="$remainingMinor !== 0 || count($legs) < 2"
+                                    wire:click="saveSplit"
+                                    wire:loading.attr="disabled"
+                                    wire:target="saveSplit"
+                                    data-testid="split-save-button"
+                                >
+                                    <span wire:loading.remove wire:target="saveSplit">{{ Lang::get('ledger::detail.split.save') }}</span>
+                                    <span wire:loading wire:target="saveSplit">{{ Lang::get('ledger::detail.split.saving') }}</span>
+                                </x-core::neutral-button>
 
-                            <button
-                                type="button"
-                                wire:click="unsplit"
-                                class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"
-                                data-testid="split-unsplit-link"
-                            >
-                                {{ Lang::get('ledger::detail.split.unsplit') }}
-                            </button>
-                        </div>
+                                <button
+                                    type="button"
+                                    wire:click="unsplit"
+                                    class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"
+                                    data-testid="split-unsplit-link"
+                                >
+                                    {{ Lang::get('ledger::detail.split.unsplit') }}
+                                </button>
+                            </div>
+                        @endunless
 
                         @if ($confirmRemoveToOne && $pendingRemoveIndex !== null && array_key_exists($pendingRemoveIndex === 0 ? 1 : 0, $legs))
                             @php
