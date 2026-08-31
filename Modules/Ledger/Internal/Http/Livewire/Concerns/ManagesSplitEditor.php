@@ -64,9 +64,18 @@ trait ManagesSplitEditor
     #[Locked]
     public string $splitCurrency = '';
 
-    public function openSplitEditor(CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): void
+    public function openSplitEditor(CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency, TransactionStatusQuery $statusQuery): void
     {
         if ($this->hasPersistedSplit) {
+            return;
+        }
+
+        // Warn-first, like every other write path: the save is refused anyway,
+        // and an editor that opens on a locked row answers the first mistake
+        // with "Amount can't be €0.00" — a field, not the reason.
+        if ($statusQuery->isReconciled($currentUser->user()->id, $this->transactionId)) {
+            $this->toast(Lang::get(self::RECONCILED_NOTICE_KEY));
+
             return;
         }
 
@@ -148,9 +157,18 @@ trait ManagesSplitEditor
         $this->toast(Lang::get('ledger::detail.toast.removed_one_remains'));
     }
 
-    public function unsplit(): void
+    public function unsplit(CurrentUser $currentUser, TransactionStatusQuery $statusQuery): void
     {
         if ($this->legs === []) {
+            return;
+        }
+
+        // Reached on a locked row that already carries a split, where the
+        // editor loads on mount. Without this the reader picks a survivor
+        // and confirms before anything says the split cannot change.
+        if ($statusQuery->isReconciled($currentUser->user()->id, $this->transactionId)) {
+            $this->toast(Lang::get(self::RECONCILED_NOTICE_KEY));
+
             return;
         }
 
