@@ -22,6 +22,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property int $splits_count
  * @property int $transfers_paired_count
  * @property int $counterparties_resolved_count
+ * @property int $budget_months_count
  * @property int $goals_created_count
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
@@ -44,6 +45,7 @@ final class MigrationRun extends Model
         'splits_count',
         'transfers_paired_count',
         'counterparties_resolved_count',
+        'budget_months_count',
         'goals_created_count',
     ];
 
