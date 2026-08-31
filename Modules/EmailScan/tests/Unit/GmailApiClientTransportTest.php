@@ -18,6 +18,7 @@ use Modules\EmailScan\Internal\Clients\GmailRawDecodeException;
 use Modules\EmailScan\Internal\Clients\MessageUnavailableException;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
+use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
@@ -235,6 +236,25 @@ it('surfaces a rate-limit sentinel when a discovery metadata fetch is throttled'
 
     expect(fn () => $client->listDiscoveryCandidates(1, ['invoice'], []))
         ->toThrow(RateLimitedException::class);
+});
+
+it('surfaces a 401 as the grant failure that stops the retry, not a bare SDK error', function (): void {
+    // The token is refreshed before the call, so a 401 is Google refusing one
+    // just minted. IncrementalScanJob re-throws what it does not recognise and
+    // the queue tries again; nothing a later attempt does clears this. Left
+    // generic it spent 78 failed jobs in a day on a credential that never works.
+    $client = ($this->makeClient)([
+        new Response(401, ['Content-Type' => 'application/json'], (string) json_encode([
+            'error' => [
+                'code' => 401,
+                'message' => 'Request had invalid authentication credentials.',
+                'status' => 'UNAUTHENTICATED',
+            ],
+        ])),
+    ]);
+
+    expect(fn () => $client->listDiscoveryCandidates(1, ['invoice'], []))
+        ->toThrow(InvalidGrantException::class);
 });
 
 // Reaching Google with no token comes back as a 401 the caller would mistake

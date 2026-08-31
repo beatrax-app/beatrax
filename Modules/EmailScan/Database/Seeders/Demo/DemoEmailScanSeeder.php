@@ -136,7 +136,10 @@ final class DemoEmailScanSeeder
             [
                 'provider' => $provider,
                 'backfill_window_months' => 6,
-                'backfill_progress' => ['fetched_count' => 42, 'total_estimated' => 100],
+                // Both demo inboxes are seeded idle, and progress counters are
+                // what the inboxes page reads as "a backfill is running". A
+                // seeded 42/100 put a frozen strip on a fresh install.
+                'backfill_progress' => null,
             ],
         );
     }

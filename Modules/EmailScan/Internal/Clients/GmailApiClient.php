@@ -11,6 +11,8 @@ use Google\Service\Gmail\ListHistoryResponse;
 use Google\Service\Gmail\Resource\UsersHistory;
 use Google\Service\Gmail\Resource\UsersMessages;
 use Modules\Core\Public\Support\Instant;
+use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
+use Modules\EmailScan\Internal\SafeMessage;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class GmailApiClient implements GmailApiClientContract
@@ -57,7 +59,7 @@ final readonly class GmailApiClient implements GmailApiClientContract
         try {
             $response = $resource->listUsersMessages('me', $params);
         } catch (GoogleServiceException $e) {
-            throw $this->mapRateLimit($e);
+            throw $this->mapProviderFailure($e);
         }
 
         $messages = [];
@@ -87,7 +89,7 @@ final readonly class GmailApiClient implements GmailApiClientContract
         try {
             $profile = $resource->getProfile('me');
         } catch (GoogleServiceException $e) {
-            throw $this->mapRateLimit($e);
+            throw $this->mapProviderFailure($e);
         }
 
         $historyId = $profile->getHistoryId();
@@ -107,7 +109,7 @@ final readonly class GmailApiClient implements GmailApiClientContract
                     previous: $e,
                 );
             }
-            throw $this->mapRateLimit($e);
+            throw $this->mapProviderFailure($e);
         }
 
         return self::base64UrlDecode($msg->getRaw());
@@ -182,7 +184,7 @@ final readonly class GmailApiClient implements GmailApiClientContract
         try {
             $response = $resource->listUsersMessages('me', $params);
         } catch (GoogleServiceException $e) {
-            throw $this->mapRateLimit($e);
+            throw $this->mapProviderFailure($e);
         }
 
         $messages = [];
@@ -280,7 +282,7 @@ final readonly class GmailApiClient implements GmailApiClientContract
             if ($e->getCode() === Response::HTTP_NOT_FOUND) {
                 throw CursorExpiredException::gmail();
             }
-            throw $this->mapRateLimit($e);
+            throw $this->mapProviderFailure($e);
         }
     }
 
@@ -320,7 +322,7 @@ final readonly class GmailApiClient implements GmailApiClientContract
                 'metadataHeaders' => ['From', 'Date'],
             ]);
         } catch (GoogleServiceException $e) {
-            throw $this->mapRateLimit($e);
+            throw $this->mapProviderFailure($e);
         }
 
         $fromAddress = '';
@@ -344,7 +346,11 @@ final readonly class GmailApiClient implements GmailApiClientContract
         ];
     }
 
-    private function mapRateLimit(GoogleServiceException $e): GoogleServiceException|RateLimitedException
+    // The one funnel every catch site throws through, so it decides for all of
+    // them whether the queue should try again. A 401 arrives behind a refreshed
+    // token, which makes it the provider refusing a credential no later attempt
+    // repairs — left generic it was re-thrown and retried forever.
+    private function mapProviderFailure(GoogleServiceException $e): GoogleServiceException|RateLimitedException|InvalidGrantException
     {
         $reason = self::throttlingReason($e);
         if ($reason !== null) {
@@ -352,6 +358,10 @@ final readonly class GmailApiClient implements GmailApiClientContract
                 retryAfterSeconds: 60,
                 message: 'Gmail rate limit exceeded ('.$reason.').',
             );
+        }
+
+        if ($e->getCode() === Response::HTTP_UNAUTHORIZED) {
+            return new InvalidGrantException('Gmail rejected the access token: '.SafeMessage::cap($e->getMessage()));
         }
 
         return $e;

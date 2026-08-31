@@ -77,7 +77,10 @@
                 </button>
             </div>
         </div>
-        @unless ($nothingImportableYet)
+        {{-- "Nothing is saved until you confirm" is a promise about work still
+             ahead. On an already-imported run it sat directly above the banner
+             saying the file was in the ledger already. --}}
+        @unless ($nothingImportableYet || $alreadyImported)
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.subtitle') }}</p>
         @endunless
     </header>

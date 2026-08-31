@@ -8,6 +8,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\Clients\CursorExpiredException;
 use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
+use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 beforeEach(function (): void {
@@ -20,6 +21,36 @@ beforeEach(function (): void {
     };
 
     $this->mapper = new GraphErrorMapper($this->clock);
+});
+
+it('maps a 401 to the grant failure that stops the retry, not a generic error', function (): void {
+    // The client calls ensureFreshAccessToken() before every request, so a 401
+    // is the provider refusing a token we just refreshed. transitionOnScanError
+    // re-throws anything it does not recognise, and only a condition a later
+    // attempt could clear may leave through it — this one never clears.
+    $response = new Response(
+        HttpResponse::HTTP_UNAUTHORIZED,
+        [],
+        (string) json_encode(['error' => ['message' => 'Access token is empty.']]),
+    );
+
+    $e = $this->mapper->mapErrorResponse($response, 'GET /me/messages');
+
+    expect($e)->toBeInstanceOf(InvalidGrantException::class)
+        ->and($e->getMessage())->toContain('Access token is empty.');
+});
+
+it('still treats a 500 as retryable, because a later attempt can clear it', function (): void {
+    $response = new Response(
+        HttpResponse::HTTP_INTERNAL_SERVER_ERROR,
+        [],
+        (string) json_encode(['error' => ['message' => 'backend hiccup']]),
+    );
+
+    $e = $this->mapper->mapErrorResponse($response, 'GET /me/messages');
+
+    expect($e)->not->toBeInstanceOf(InvalidGrantException::class)
+        ->and($e)->toBeInstanceOf(RuntimeException::class);
 });
 
 it('maps a null response to a runtime exception naming the context', function (): void {
