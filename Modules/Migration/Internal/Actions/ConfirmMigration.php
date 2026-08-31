@@ -53,6 +53,7 @@ final readonly class ConfirmMigration
                 transfersPaired: $run->transfers_paired_count,
                 counterpartiesResolved: $run->counterparties_resolved_count,
                 goalsCreated: $run->goals_created_count,
+                budgetMonthsWritten: $run->budget_months_count,
             );
         }
 
@@ -205,6 +206,7 @@ final readonly class ConfirmMigration
             'transfers_paired_count' => $promoteResult->transfersPaired,
             'counterparties_resolved_count' => $promoteResult->counterpartiesResolved,
             'goals_created_count' => $promoteResult->goalsCreated,
+            'budget_months_count' => $promoteResult->budgetMonthsWritten,
         ]);
 
         return new MigrationConfirmResult(
@@ -217,6 +219,7 @@ final readonly class ConfirmMigration
             transfersPaired: $promoteResult->transfersPaired,
             counterpartiesResolved: $promoteResult->counterpartiesResolved,
             goalsCreated: $promoteResult->goalsCreated,
+            budgetMonthsWritten: $promoteResult->budgetMonthsWritten,
         );
     }
 }

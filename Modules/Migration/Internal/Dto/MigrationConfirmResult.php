@@ -18,5 +18,6 @@ final class MigrationConfirmResult extends Data
         public readonly int $transfersPaired,
         public readonly int $counterpartiesResolved,
         public readonly int $goalsCreated,
+        public readonly int $budgetMonthsWritten,
     ) {}
 }

@@ -78,7 +78,7 @@ final class PromoteStagingToDomain
         $this->importRunId = null;
 
         $categories = $this->promoteCategories($runId, $user, $sourceProduct);
-        $this->budgetAssignments->promote($runId, $user, $sourceProduct, $categories['idMap'], $skipBudgetAssignmentKeys);
+        $budgetMonthsWritten = $this->budgetAssignments->promote($runId, $user, $sourceProduct, $categories['idMap'], $skipBudgetAssignmentKeys);
 
         $accounts = $this->promoteAccounts($runId, $user, $sourceProduct);
 
@@ -110,6 +110,7 @@ final class PromoteStagingToDomain
             transfersPaired: $transfersPaired,
             counterpartiesResolved: $transactions['counterparties'],
             goalsCreated: $goalsCreated,
+            budgetMonthsWritten: $budgetMonthsWritten,
         );
     }
 

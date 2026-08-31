@@ -39,8 +39,9 @@ final readonly class PromoteBudgetAssignments
      * @param  array<string, int>  $categoryIdMap
      * @param  list<string>  $skipKeys  `{categoryExternalId}|{period_start}` composite keys to leave
      *                                  untouched (reconciliation conflicts).
+     * @return int the months this actually wrote, which is what the results screen reports as imported
      */
-    public function promote(int $runId, User $user, string $sourceProduct, array $categoryIdMap, array $skipKeys = []): void
+    public function promote(int $runId, User $user, string $sourceProduct, array $categoryIdMap, array $skipKeys = []): int
     {
         $rows = $this->db->connection()->table('migration_staging_budget_assignments')
             ->where('user_id', $user->id)
@@ -51,6 +52,9 @@ final readonly class PromoteBudgetAssignments
 
         /** @var array<string, int> $foreignMonths */
         $foreignMonths = [];
+
+        /** @var array<string, true> $writtenMonths */
+        $writtenMonths = [];
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
@@ -90,9 +94,12 @@ final readonly class PromoteBudgetAssignments
             }
 
             $this->writeAssignment($user, $categoryId, $periodStart, $key, $minor, $mappedId);
+            $writtenMonths[$periodStart->toDateString()] = true;
         }
 
         $this->recordForeignBudgetCurrencies($runId, $user, $envelopeCurrency, $foreignMonths);
+
+        return count($writtenMonths);
     }
 
     /**

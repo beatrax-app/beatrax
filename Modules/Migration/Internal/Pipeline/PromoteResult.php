@@ -15,5 +15,6 @@ final readonly class PromoteResult
         public int $transfersPaired,
         public int $counterpartiesResolved,
         public int $goalsCreated,
+        public int $budgetMonthsWritten,
     ) {}
 }

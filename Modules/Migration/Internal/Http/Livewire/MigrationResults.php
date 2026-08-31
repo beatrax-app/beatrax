@@ -6,7 +6,6 @@ namespace Modules\Migration\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -30,7 +29,6 @@ final class MigrationResults extends Component
     public function render(
         ViewFactory $views,
         CurrentUser $currentUser,
-        DatabaseManager $db,
         PreviewSummaryBuilder $builder,
     ): View {
         $user = $currentUser->user();
@@ -40,12 +38,6 @@ final class MigrationResults extends Component
             ->where('id', $this->runId)
             ->where('user_id', $user->id)
             ->firstOrFail();
-
-        $budgetMonthsCount = $db->connection()->table('migration_staging_budget_assignments')
-            ->where('user_id', $user->id)
-            ->where('migration_run_id', $this->runId)
-            ->distinct()
-            ->count('period_start');
 
         $unmapped = null;
         try {
@@ -63,7 +55,6 @@ final class MigrationResults extends Component
 
         return $views->make('migration::livewire.migration-results', [
             'run' => $run,
-            'budgetMonthsCount' => $budgetMonthsCount,
             'unmapped' => $unmapped,
             'stillNeedsAttention' => $stillNeedsAttention,
             'isReconciliation' => $isReconciliation,
