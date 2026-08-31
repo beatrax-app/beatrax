@@ -42,6 +42,7 @@ final class DemoTransactionsSeeder
         private readonly CounterpartyKey $counterpartyKey,
         private readonly DemoPeriodWindow $window,
         private readonly Clock $clock,
+        private readonly IcsSettlementAligner $settlements,
     ) {}
 
     /**
@@ -67,6 +68,7 @@ final class DemoTransactionsSeeder
             $this->seedUser1JpyRows($user, $perUserAccounts['jpy-demo-1'], $windowStart);
 
             $this->linkUser1Transfers($user);
+            $this->settlements->align($user, $perUserAccounts['ics-demo-1']);
         }
 
         // The sparse second persona, so multi-user isolation has something
