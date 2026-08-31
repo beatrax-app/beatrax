@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Απόκρυψη από την προβολή (δεν τροποποιεί το αρχείο καταγραφής)',
     'dismiss_aria' => 'Απόκρυψη καταχώρισης καταγραφής από την προβολή',
     'totals' => [
-        'showing' => 'Εμφανίζονται',
-        'of' => 'από',
-        'received' => 'που ελήφθησαν (όριο buffer 10k)',
-        'lines_today' => 'γραμμές σήμερα',
+        'showing' => 'Εμφάνιση :shown από :count γραμμή που ελήφθη (όριο buffer :cap)|Εμφάνιση :shown από :count γραμμές που ελήφθησαν (όριο buffer :cap)',
+        'lines_today' => ':count γραμμή σήμερα|:count γραμμές σήμερα',
+        'lines_today_capped' => 'πάνω από :count γραμμή σήμερα|πάνω από :count γραμμές σήμερα',
         'today' => 'σήμερα',
-        'across' => 'σε',
-        'daily_files' => 'ημερήσια αρχεία',
+        'all_files' => ':size σε :count ημερήσιο αρχείο|:size σε :count ημερήσια αρχεία',
     ],
 
     'status' => [

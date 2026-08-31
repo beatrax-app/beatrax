@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Tax\Internal\Services\TaxYearQuery;
 use Modules\Tax\Public\Services\TaxTagQuery;
-use Modules\Tax\Public\Services\TaxYearQuery;
 
 function dcmUser(DatabaseManager $db, string $username): int
 {

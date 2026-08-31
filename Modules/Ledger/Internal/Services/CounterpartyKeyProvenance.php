@@ -22,7 +22,7 @@ use stdClass;
 /**
  * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
  */
-final class CounterpartyKeyProvenance implements BlindIndexProvenance
+final readonly class CounterpartyKeyProvenance implements BlindIndexProvenance
 {
     use CoercesScalars;
 
@@ -33,21 +33,15 @@ final class CounterpartyKeyProvenance implements BlindIndexProvenance
     private const int PROBE_ROWS = 25;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly BlindIndexCodec $blindIndex,
-        private readonly FingerprintComposer $fingerprints,
-        private readonly SensitiveColumnCodec $codec,
+        private DatabaseManager $db,
+        private BlindIndexCodec $blindIndex,
+        private FingerprintComposer $fingerprints,
+        private SensitiveColumnCodec $codec,
     ) {}
 
     public function reproducesAStoredDigest(int $userId, string $keyHex, Session $session): bool
     {
-        foreach ($this->probeRows($userId) as $row) {
-            if ($this->rowIsKeyedUnder($row, $userId, $keyHex, $session)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->probeRows($userId), fn (stdClass $row): bool => $this->rowIsKeyedUnder($row, $userId, $keyHex, $session));
     }
 
     // Rows that could carry either domain: a keyed counterparty name, or an

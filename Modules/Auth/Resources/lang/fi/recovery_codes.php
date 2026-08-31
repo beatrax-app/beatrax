@@ -23,5 +23,6 @@ return [
         'body' => 'Palautuskoodit ovat ainoa tapa päästä takaisin tilillesi, jos unohdat salasanasi.',
         'warning' => 'Ne tallennetaan tiivisteinä, joten niitä ei voi näyttää uudelleen. Uusi sarja mitätöi vanhan heti.',
         'regenerate' => 'Luo uudet koodit',
+        'regenerate_confirm' => 'Luodaanko uusi palautuskoodien sarja? Nykyinen sarja lakkaa toimimasta sillä hetkellä, kun uusi luodaan, eikä sitä voi näyttää uudelleen — tulostettu tai ylös kirjoitettu kopio muuttuu hyödyttömäksi. Tallenna uudet koodit, ennen kuin poistut tältä sivulta.',
     ],
 ];

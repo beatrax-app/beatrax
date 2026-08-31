@@ -13,11 +13,15 @@ use Modules\Ledger\Public\ValueObjects\MoneyInput;
 // loss sits orders of magnitude below display resolution.
 //
 // The sites relying on that boundary, so a reader can re-check it rather than
-// take it on trust. The three Reports charts now reach their coordinate through
-// Modules/Reports/Internal/Support/ChartAmount, which asks the money value
-// object for the currency's own scale instead of dividing by a hardcoded 100:
-//   Modules/Forecasting/Resources/views/livewire/partials/aggregate-line-chart.blade.php:22,27
+// take it on trust. Every chart in the repo now reaches its coordinate through
+// Money::majorUnits(), which asks the money value object for the currency's own
+// scale instead of dividing by a hardcoded 100 — a JPY row was drawn at a
+// hundredth of itself beside an axis already labelled in yen:
+//   Modules/Ledger/Public/ValueObjects/Money.php (majorUnits)
 //   Modules/Reports/Internal/Support/ChartAmount.php
+//   Modules/Forecasting/Internal/Support/ForecastChartView.php
+//   Modules/Forecasting/Resources/views/livewire/partials/aggregate-line-chart.blade.php
+//   Modules/Recurring/Internal/Http/Livewire/RecurringSeriesDetailPage.php
 //
 // The boundary holds only while the float stays a coordinate. It does here:
 // every one of those charts renders its LABELS through the currency formatter

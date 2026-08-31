@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-// recurring_series.snoozed_until, not the per-alert drift_alerts.snoozed_until:
-// the Recurring projection drops the series before the detector ever sees it.
+// A series-level snooze, not the per-alert drift_alerts.snoozed_until: the
+// series leaves the projectable set, so the evaluator never sees it. Written as
+// state 'approved' plus a flag, it described a row Recurring cannot produce and
+// the evaluator duly alerted on it.
 
 $transactions = [];
 $amounts = [-999, -999, -999, -1199, -1199, -1199];
@@ -28,8 +30,7 @@ for ($i = 0; $i < 6; $i++) {
 return [
     'transactions' => $transactions,
     'expected' => [
-        'series_state' => 'approved',
-        'series_snoozed' => true,
+        'series_state' => 'snoozed',
         'alerts' => [],
     ],
 ];

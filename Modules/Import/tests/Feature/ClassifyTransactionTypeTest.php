@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
-use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException;
+use Modules\Ingestion\Public\Exceptions\OrphanedPaypalChildRowException;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
@@ -57,7 +57,6 @@ function classifyCanonical(array $overrides = []): CanonicalTransaction
         'currency' => 'EUR',
         'settledAmountMinor' => -1299,
         'settledCurrency' => 'EUR',
-        'fxRateUsed' => null,
         'counterpartyName' => 'AH Amsterdam',
         'counterpartyIban' => null,
         'counterpartyNormalized' => 'ah amsterdam',
@@ -84,7 +83,6 @@ function classifyCanonical(array $overrides = []): CanonicalTransaction
         currency: $m['currency'],
         settledAmountMinor: $m['settledAmountMinor'],
         settledCurrency: $m['settledCurrency'],
-        fxRateUsed: $m['fxRateUsed'],
         counterpartyName: $m['counterpartyName'],
         counterpartyIban: $m['counterpartyIban'],
         counterpartyNormalized: $m['counterpartyNormalized'],
@@ -292,11 +290,11 @@ it('keeps a negative non-transfer row as expense (NormalizeStage default unchang
     expect($result->type)->toBe('expense');
 });
 
-it('re-throws MissingPaypalTransactionTypeMapException when transactionType() reports a code-internal inconsistency', function (): void {
-    // `Bankstorting naar PP-rekening` is in MAP as `child-fee` and deliberately
-    // has no TRANSACTION_TYPE row, so it reaches the narrower exception. The
-    // catch ordering must not let the supertype catch swallow it into the
-    // amount-sign default — a code-internal inconsistency has to be loud.
+it('re-throws OrphanedPaypalChildRowException when a promoted child row reaches transactionType()', function (): void {
+    // An FX leg is in MAP as a child and deliberately has no TRANSACTION_TYPE
+    // row, so it reaches the orphan exception. The catch ordering must not let
+    // the supertype catch swallow it into the amount-sign default — a row the
+    // reader has to act on cannot land as a silent expense.
     $tx = classifyCanonical([
         'accountId' => $this->asnAccount->id,
         'type' => 'expense',
@@ -307,12 +305,30 @@ it('re-throws MissingPaypalTransactionTypeMapException when transactionType() re
         'rawPayload' => [
             'format' => 'paypal-csv',
             'language' => 'nl',
-            'events' => [['type' => 'Bankstorting naar PP-rekening']],
+            'events' => [['type' => 'Algemene valutaomrekening']],
         ],
     ]);
 
     expect(fn () => $this->stage->run($tx, $this->primaryUser))
-        ->toThrow(MissingPaypalTransactionTypeMapException::class);
+        ->toThrow(OrphanedPaypalChildRowException::class);
+});
+
+it('types a per-purchase funding leg as transfer_in rather than folding it away', function (): void {
+    $tx = classifyCanonical([
+        'accountId' => $this->asnAccount->id,
+        'type' => 'income',
+        'amountMinor' => 1234,
+        'settledAmountMinor' => 1234,
+        'counterpartyIban' => null,
+        'sourceFormat' => 'paypal-csv',
+        'rawPayload' => [
+            'format' => 'paypal-csv',
+            'language' => 'nl',
+            'events' => [['type' => 'Bankstorting naar PP-rekening']],
+        ],
+    ]);
+
+    expect($this->stage->run($tx, $this->primaryUser)->type)->toBe('transfer_in');
 });
 
 it('still swallows UnknownPaypalEventTypeException and falls through to the subtractive default for an unmapped parent event type', function (): void {

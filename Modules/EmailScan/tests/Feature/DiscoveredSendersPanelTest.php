@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxesBadgeCount;
@@ -198,7 +199,7 @@ it('dismissSender transitions state to dismissed and writes no known_senders row
     Livewire::test(InboxesPage::class)->assertDontSee('spam@example.com', false);
 });
 
-it('promoteSender on a foreign user row raises cross-user 404', function (): void {
+it('promoteSender on a foreign user row leaves it alone and answers with a toast', function (): void {
     $alice = dspUser('alice@example.com');
     $bob = dspUser('bob@example.com');
     $bobInbox = dspSeedInbox($bob);
@@ -209,7 +210,8 @@ it('promoteSender on a foreign user row raises cross-user 404', function (): voi
 
     Livewire::test(InboxesPage::class)
         ->call('promoteSender', $bobsRowId)
-        ->assertStatus(404);
+        ->assertStatus(200)
+        ->assertDispatched('toast', message: Lang::get('core::errors.no_longer_here'));
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -218,7 +220,7 @@ it('promoteSender on a foreign user row raises cross-user 404', function (): voi
     expect($bobsRow->state)->toBe('candidate');
 });
 
-it('dismissSender on a foreign user row raises cross-user 404', function (): void {
+it('dismissSender on a foreign user row leaves it alone and answers with a toast', function (): void {
     $alice = dspUser('alice2@example.com');
     $bob = dspUser('bob2@example.com');
     $bobInbox = dspSeedInbox($bob);
@@ -229,7 +231,8 @@ it('dismissSender on a foreign user row raises cross-user 404', function (): voi
 
     Livewire::test(InboxesPage::class)
         ->call('dismissSender', $bobsRowId)
-        ->assertStatus(404);
+        ->assertStatus(200)
+        ->assertDispatched('toast', message: Lang::get('core::errors.no_longer_here'));
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);

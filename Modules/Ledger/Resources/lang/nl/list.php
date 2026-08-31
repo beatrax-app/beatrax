@@ -10,15 +10,14 @@ return [
     'subtitle_full' => 'Volledige historie.',
     'subtitle_recent' => 'Recente transacties (laatste 90 dagen).',
 
-    'currency_aria' => 'Valutaweergave',
-    'currency_eur' => 'Alleen :code',
-    'currency_original' => 'Oorspronkelijke valuta',
+    'currency_aria' => 'Getoond bedrag',
+    'currency_eur' => 'Verrekend bedrag',
+    'currency_original' => 'Oorspronkelijk bedrag',
 
     'show_recent' => 'Alleen recente tonen',
     'show_full' => 'Volledige historie tonen',
 
     'empty_period' => 'Niets in deze periode.',
-
 
     'empty_recent_has_older' => 'Niets in de laatste 90 dagen. Je oudere transacties staan er nog.',
 

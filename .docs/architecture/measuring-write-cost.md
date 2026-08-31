@@ -28,11 +28,10 @@ the same commit confirms 18,541 rows in **20 s** and 27,777 rows in **30 s**,
 fitting `t = 3.80s + 0.936 ms/row` at R² 0.966 across a 14× range. Flat, linear,
 no degradation.
 
-## Why this is worth a page
+## Why the trap is convincing
 
-The false quadratic survived eight controlled experiments before the device
-contradicted it. Every one of these was run, and every one came back "not the
-cause" — because the cause was the harness, which none of them varied:
+The false quadratic survives the obvious experiments. Each of these comes back
+"not the cause", because the cause is the harness, which none of them varies:
 
 | Hypothesis | Experiment | Result |
 | --- | --- | --- |
@@ -40,7 +39,7 @@ cause" — because the cause was the harness, which none of them varied:
 | Index maintenance | Dropped the seven non-unique indexes | Curve unchanged |
 | Table size | Pre-filled 18,000 rows first | Faster, not slower |
 | Per-row listeners | Faked `TransactionImported` | No change |
-| One long transaction | `RowChunk::DEFAULT_SIZE` is 500, so 37 commits | *This was the miss* |
+| One long transaction | `RowChunk::DEFAULT_SIZE` is 500, so 37 commits | *True of the code, false of the harness* |
 | Row size | Raw inserts with a 900-byte `raw_payload` | Flat at 0.10 ms |
 | Read/write interleaving | Two indexed `SELECT`s between every insert | Flat |
 | Statement-cache churn | Counted distinct `INSERT` SQL over a confirm | One shape |
@@ -65,14 +64,14 @@ of which are AEAD ciphertext.
   the signature of this trap rather than as a finding. It is what an
   ever-growing uncommitted transaction looks like from the outside.
 
-## What was actually fixed on this path
+## Why confirm streams its rows
 
 Confirming used to read the whole canonical row list into memory before handing
 it to a recorder that already buffers internally. On the phone's 128 MB ceiling
 that killed the app outright — zero rows written, nothing in the log, no failed
 job, the run still `previewed`, and the preview gone thirty minutes later.
 
-Rows now reach the recorder through a generator, chunk by chunk. On device,
+Rows reach the recorder through a generator, chunk by chunk. On device,
 confirming adds **nothing measurable to peak memory**: peak after commit equals
 peak after preview to the byte, on both an 18,541-row and a 27,777-row run.
 

@@ -24,6 +24,7 @@ return [
     'to' => 'ile',
     'text_placeholder' => 'ör. SPOTIFY',
     'remove_condition' => 'Koşulu kaldır',
+    'remove_condition_caption' => 'Kaldır',
     'add_condition' => '+ Koşul ekle',
 
     'then' => 'O zaman',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Sonuna ekle',
     'deduction_category_aria' => 'Eylem :number için vergi indirimi kategorisi',
     'remove_action' => 'Eylemi kaldır',
+    'remove_action_caption' => 'Kaldır',
     'add_action' => '+ Eylem ekle',
 
     'this_year_only' => 'Yalnızca bu yıl ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Vergi etiketi eylemleri, geçerli içe aktarmada değil, bir sonraki yeniden uygulamada geçerli olur.',
 
     'priority' => 'Öncelik',
-    'priority_help' => 'Küçük sayılar önce çalışır. Ortak alanı olmayan kurallar hiçbir zaman çakışmaz.',
+    'priority_help' => 'Kurallar en düşük numaradan yukarı doğru çalışır, bu yüzden ikisi aynı alanı ayarladığında en yüksek numara kazanır. Ortak alanı olmayan kurallar hiçbir zaman çakışmaz.',
 
     'cancel' => 'İptal',
     'save_changes' => 'Değişiklikleri kaydet',

@@ -101,3 +101,33 @@ it('reports an empty body and passes a non-JSON body through the safe-message ca
 it('caps and single-lines a message via safeMessage', function (): void {
     expect($this->mapper->safeMessage("line one\nline two"))->not->toContain("\n");
 });
+
+// Microsoft documents 503 Service Unavailable and 509 Bandwidth Limit
+// Exceeded as throttling responses carrying Retry-After. Landing them on the
+// default arm flips the inbox to `error` (a red badge, not "rate limited"),
+// never bumps retry_attempts, and throws the provider's own delay away.
+it('maps a documented Graph throttling status to the rate-limit sentinel', function (int $status): void {
+    $response = new Response(
+        $status,
+        ['Retry-After' => '45'],
+        (string) json_encode(['error' => ['message' => 'Application is over its quota.']]),
+    );
+
+    $e = $this->mapper->mapErrorResponse($response, 'GET /me/messages');
+
+    expect($e)->toBeInstanceOf(RateLimitedException::class)
+        ->and($e->retryAfterSeconds)->toBe(45)
+        ->and($e->getMessage())->toContain('over its quota');
+})->with([
+    'service unavailable' => [503],
+    'bandwidth limit exceeded' => [509],
+]);
+
+it('still reports an unrelated 5xx as a plain runtime failure', function (): void {
+    $response = new Response(500, [], (string) json_encode(['error' => ['message' => 'graph exploded']]));
+
+    $e = $this->mapper->mapErrorResponse($response, 'GET /me/messages');
+
+    expect($e)->toBeInstanceOf(RuntimeException::class)
+        ->and($e)->not->toBeInstanceOf(RateLimitedException::class);
+});

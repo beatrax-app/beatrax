@@ -10,17 +10,17 @@ use Native\Desktop\System;
 
 // Depends on the CONCRETE Native\Desktop\System rather than the facade, whose
 // PHPDoc wrongly types encrypt/decrypt as non-nullable.
-final class DesktopKeyCustodian implements KeyCustodian
+final readonly class DesktopKeyCustodian implements KeyCustodian
 {
     // Marks a handle this custodian actually encrypted, so a later read can
     // tell ciphertext it must open from a raw key an unavailable safeStorage
     // made store() hand straight back. Nothing else can tell them apart, and
     // guessing released the ciphertext as though it were the data key.
-    private const ENCRYPTED_PREFIX = 'nativephp:safestorage:v1:';
+    private const string ENCRYPTED_PREFIX = 'nativephp:safestorage:v1:';
 
     public function __construct(
-        private readonly ConfigRepository $config,
-        private readonly System $system,
+        private ConfigRepository $config,
+        private System $system,
     ) {}
 
     public function store(string $rawKey): string

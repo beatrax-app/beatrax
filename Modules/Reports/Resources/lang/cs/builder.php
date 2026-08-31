@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Bez kategorie',
+    'no_counterparty' => 'Bez protistrany',
+    'unavailable_counterparty' => 'Protistrana není v tomto zařízení',
     'title' => 'Sestavy',
     'page_title' => 'Sestavy · Beatrax',
     'subtitle' => 'Poskládej si sestavu ze své knihy.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Graf v měně :currency — :list se nezobrazuje',
+        'undrawn' => 'Není v prstenci — :amount jde opačným směrem',
         'bar_title' => 'Klikni na sloupec a zobraz jeho transakce',
         'line_title' => 'Klikni na bod a zobraz jeho transakce',
         'donut_title' => 'Klikni na segment a zobraz jeho transakce',

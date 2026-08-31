@@ -10,15 +10,14 @@ return [
     'subtitle_full' => 'Gesamte Historie.',
     'subtitle_recent' => 'Aktuelle Transaktionen (letzte 90 Tage).',
 
-    'currency_aria' => 'Währungsansicht',
-    'currency_eur' => 'Nur :code',
-    'currency_original' => 'Originalwährung',
+    'currency_aria' => 'Angezeigter Betrag',
+    'currency_eur' => 'Abgerechneter Betrag',
+    'currency_original' => 'Originalbetrag',
 
     'show_recent' => 'Nur aktuelle anzeigen',
     'show_full' => 'Gesamte Historie anzeigen',
 
     'empty_period' => 'Nichts in diesem Zeitraum.',
-
 
     'empty_recent_has_older' => 'Nichts in den letzten 90 Tagen. Ihre älteren Buchungen sind weiterhin da.',
 

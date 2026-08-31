@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Крок :current з :total',
 
-    'step_dot_aria' => 'Крок :number з :total',
-
     'back' => 'Назад',
     'back_aria' => 'Назад — повертає до попереднього кроку налаштування',
 

@@ -130,10 +130,6 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `Community` module.
-
-## Behavioral contracts
-
 - **`OpenExternalUrlAction` only opens `https://github.com/…` URLs.**
   Two-gate validation (HTTPS scheme + host allow-list); any other URL
   raises `InvalidArgumentException` before the shell contract is
@@ -186,9 +182,17 @@ The behavioural contract for the `Community` module.
   (`tests/Feature/TriageHelpOthersCtaTest.php`)
 - **"Use the shared merchant list" is readable by the consumer that
   gates on it.** The toggle is stored under the `CommunitySetting` enum's
-  key and read back through `CommunitySettings::usesSharedList()`; it was
-  written by the panel and read by nothing.
+  key and read back through `CommunitySettings::usesSharedList()`.
   (`tests/Feature/TheSharedListToggleNothingCouldReadTest.php`)
+- **The switch actually silences the corpus.** All three corpus tiers of
+  `Import`'s `MerchantNameResolver` answer `null` with the toggle off,
+  the reader's own aliases still answer, and a second reader's tiers are
+  untouched.
+  (`Modules/Import/tests/Feature/TheSharedListSwitchTheResolverNeverAskedTest.php`)
+- **No second module spells a toggle key for itself.** The key literals
+  appear as a subscript or an `array_key_exists` argument nowhere but the
+  enum that owns them.
+  (`tests/Contracts/ASettingKeyIsSpelledOnlyByItsEnumArchTest.php`)
 - **Correcting a suggestion keeps the date it was made.**
   `ContributionLog` upserts on `(user_id, pattern)` with `created_at`
   outside the update list.
@@ -236,9 +240,9 @@ The behavioural contract for the `Community` module.
 - **A user toggling an opt-in mid-session** — the triage page reflects
   "Offer to contribute" on the next render. "Use the shared merchant
   list" is a different toggle with a different consumer: it is stored
-  under the `CommunitySetting` enum's key and read through
-  `CommunitySettings`, and the corpus tail of `MerchantNameResolver` is
-  what has to honour it.
+  under the `CommunitySetting` enum's key, read through
+  `CommunitySettings` per call rather than memoised, and honoured by the
+  corpus tail of `MerchantNameResolver` from the next `resolve()` on.
 - **A corpus row whose `generalized_pattern` collides with another
   row's `pattern`** — the exact match wins, because
   `MerchantNameResolver::resolve` chains the three corpus lookups with

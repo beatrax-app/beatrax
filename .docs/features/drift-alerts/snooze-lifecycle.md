@@ -80,8 +80,15 @@ The browser sends the chosen ISO string back, and
 
 - an unparseable string returns silently, never a 500;
 - the target must be strictly after `now`;
-- the target must be no later than `now + DriftPage::MAX_UNTIL_MONTHS`
+- the target must be no later than `now + SnoozeUntil::MAX_MONTHS`
   months, which is **6**.
+
+`Modules\Core\Public\Support\SnoozeUntil` is where that bound lives, for
+every queue that defers a row: the drift page and the recurring review page
+call `SnoozeUntil::tryFrom()` and drop what it refuses, and the three snooze
+actions behind them call `SnoozeUntil::from()`, which raises. The number used
+to be spelled out in three actions and missing from the fourth queue, where an
+unbounded target took a pending series out of review permanently.
 
 Nothing in the popover can produce a value outside that range, which is
 the point: a Livewire payload is client-controlled, and without the
@@ -89,33 +96,32 @@ bound a tampered request could snooze an alert into the year 2400 and
 effectively delete it with no audit trail of a dismissal.
 
 `DriftPage::snoozeAlert()` serves both the drift and the anomaly streams,
-and the two are not symmetric behind it. `Anomaly`'s
-`SnoozeAnomalyAlert` repeats the same `(now, now + 6 months]` bound in
-the action itself and throws `InvalidArgumentException` outside it, so
-every caller of that action is protected. `SnoozeDriftAlert` does not:
-it validates ownership and idempotency but accepts any `$until` it is
-handed. For a drift alert the Livewire component is therefore the only
-bound, and any future caller of `SnoozeDriftAlert` — a queued job, a
-sync op replay, a second UI surface — has to carry its own.
+and both actions behind it carry the bound themselves. `Anomaly`'s
+`SnoozeAnomalyAlert` and `DriftAlerts`' `SnoozeDriftAlert` each call
+`SnoozeUntil::from()` after the ownership 404 and before any write, so an
+out-of-range target raises rather than lands — for a queued job, a sync op
+replay or a second UI surface just as much as for the popover. The component's
+own `SnoozeUntil::tryFrom()` is the drop-it-quietly layer in front of that, not
+the only one.
 
-## Why the idempotency check compares epoch seconds
+## Why the idempotency check compares the stored form
 
 `SnoozeDriftAlert` no-ops when the alert is already snoozed to the same
 target, so that a double-submitted click writes one audit row rather
 than two. The comparison is:
 
 ```php
-$alert->snoozed_until->getTimestamp() === $until->getTimestamp()
+$alert->snoozed_until?->toDateTimeString() === $bounded->toDateTimeString()
 ```
 
-Not the formatted datetime strings. `drift_alerts.snoozed_until` casts
-as `immutable_datetime`, which Eloquent hydrates **in the application
-timezone**, while `$until` was parsed from an ISO-8601 string that
-carries whatever offset its source wrote. The two can describe the same
-instant and still format differently. Comparing epoch seconds is
-offset-independent; comparing strings would classify an identical
-re-snooze as a change and write a spurious transition into the audit
-log.
+Both sides through the same round-trip the stored value took.
+`drift_alerts.snoozed_until` is written as a `toDateTimeString()`, which
+drops sub-second precision and the source offset, and casts back as
+`immutable_datetime` hydrated **in the application timezone** — while
+`$until` was parsed from an ISO-8601 string carrying whatever offset its
+source wrote. Comparing raw timestamps across that boundary misses an
+identical re-snooze whose ISO string happened to carry milliseconds, and
+writes a spurious transition into the audit log.
 
 ## The atomic write
 
@@ -135,15 +141,16 @@ rather than a sequence of anonymous flips.
 
 ## Cursor pagination across the tabs
 
-The drift tabs page on `id DESC`. `drift_alerts.id` is a SQLite
-autoincrementing surrogate, so a newer alert always has a larger id, and
-the cursor stays consistent even when several alerts share an exact
-`detected_at` second — which the revival sweep and the detector listener
-both produce, each writing a batch inside one scheduler tick. The
-anomaly stream on the same page cannot do this: its ids are derived from
-the alert's own columns so that two devices agree on them, which means
-they sort in hash order, so it pages on `(detected_at, id)` and keeps
-its own cursor properties.
+Both streams on this page order on `(detected_at, id)`. Neither id ascends with
+insertion any more: each is derived from the alert's own columns so that two
+devices agree on it, which means it sorts in hash order and can only break ties
+within one `detected_at` second — which the revival sweep and the detector
+listener both produce, each writing a batch inside one scheduler tick. Both
+`DriftAlertQuery` and `AnomalyAlertQuery` offer a keyset cursor on that pair. `DriftPage` does
+not follow it: "Load more" is a growing window read from the top for both
+streams, because following the cursor replaced the rendered list with the next
+page — twenty-five rows vanished per press, with nothing on the screen to get
+them back.
 
 ## See also
 

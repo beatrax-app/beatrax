@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Porównanie z punktem odniesienia powyżej',
 
+    'run_failed' => 'Nie udało się obliczyć tej prognozy. Linia poniżej pokazuje tylko to, co już zaksięgowano.',
+
     'scenario_editor_aria' => 'Edytor scenariusza',
     'series_confidence' => 'Pewność serii',
     'no_series_contribute' => 'Żadna seria nie wpływa jeszcze na prognozę tego konta.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Aktualizowanie',
     'chart_noscript' => 'Wykres wymaga JavaScriptu. Zakres obejmuje :days dzień.|Wykres wymaga JavaScriptu. Zakres obejmuje :days dni.|Wykres wymaga JavaScriptu. Zakres obejmuje :days dni.',
     'total_balance' => 'Saldo łączne',
+    'projection_range' => 'Zakres prognozy',
+    'point_estimate' => 'Estymacja punktowa',
 
     'per_month_suffix' => '/mies.',
     'confidence_chip_aria' => ':name, pewność :confidence — zakres prognozy to :percent procent estymacji punktowej',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Najniższe saldo w ciągu 30 dni',
     'next_ics' => 'Następne rozliczenie ICS: :amount dnia :date',
     'ics_overdue' => 'Rozliczenie ICS po terminie: :amount, termin minął :date',
+
+    'stale_run' => 'Prognoza z :date — od tego czasu nieodświeżona.',
+
+    'confidence' => [
+        'high' => 'Wysoka',
+        'medium' => 'Średnia',
+        'low' => 'Niska',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Kwota jest wymagana.',
+        'amount_decimals' => 'Kwota musi być liczbą z maksymalnie :decimals miejscem dziesiętnym.|Kwota musi być liczbą z maksymalnie :decimals miejscami dziesiętnymi.|Kwota musi być liczbą z maksymalnie :decimals miejscami dziesiętnymi.',
+        'amount_whole' => 'Kwota musi być liczbą całkowitą — ta waluta nie ma mniejszej jednostki.',
+        'amount_non_negative' => 'Kwota musi być zerowa lub dodatnia.',
+        'amount_non_zero' => 'Kwota nie może być zerowa.',
+        'field_required' => 'Pole :field jest wymagane.',
+    ],
 ];

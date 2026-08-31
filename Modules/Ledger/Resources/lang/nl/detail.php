@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transactie',
     'heading' => 'Transactie',
+    'booked_on' => 'Geboekt op :date',
 
     'counterparty' => 'Tegenpartij',
     'description' => 'Omschrijving',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Notitie (optioneel)',
         'tax_deductible' => 'Fiscaal aftrekbaar',
         'remove_leg_aria' => 'Deze categorie verwijderen',
+        'remove_leg_caption' => 'Verwijderen',
         'add_category' => '+ Categorie toevoegen',
         'soft_cap' => ':count van ~20 categorieën — overweeg kleine bedragen te groeperen.',
         'remaining_zero' => 'Resterend :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Transactie verwijderen',
         'help' => 'Verwijdert deze transactie permanent. Deze actie kan niet ongedaan worden gemaakt.',
         'button' => 'Verwijderen',
-        'confirm_prompt' => 'Weet je het zeker?',
+        'confirm_prompt' => 'Deze transactie verwijderen? De notitie, splitsing en fiscale labels verdwijnen mee.',
         'confirm' => 'Ja, verwijderen',
         'cancel' => 'Annuleren',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Reeks bekijken',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Afgestemd en vergrendeld',
+        'help' => 'Een voltooide afstemming heeft deze transactie vergrendeld. De categorie, notitie, splitsing en fiscale labels blijven zoals ze zijn tot je hem ontgrendelt.',
+        'button' => 'Ontgrendelen om te bewerken',
+        'confirm_question' => 'Deze transactie ontgrendelen om te bewerken? Er verandert niets aan de transactie, en een volgende voltooide afstemming vergrendelt hem opnieuw.',
+        'cancel' => 'Vergrendeld laten',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Deze transactie is afgestemd. Hef de afstemming op om wijzigingen te maken.',
         'reclassified_pair_removed' => 'Geherclassificeerd naar :type — koppeling verwijderd',
         'reclassified' => 'Geherclassificeerd naar :type',
         'note_saved' => 'Notitie opgeslagen',
         'unreconciled' => 'Afstemming opgeheven — je kunt deze transactie weer bewerken.',
+        'note_too_long' => 'Een notitie is maximaal :max teken.|Een notitie is maximaal :max tekens.',
         'counterparty_updated' => 'Tegenpartij bijgewerkt',
         'goal_attributed' => 'Telt mee voor dit doel',
         'goal_attribution_removed' => 'Telt niet meer mee voor dit doel',

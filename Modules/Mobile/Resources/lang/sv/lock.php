@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Lås upp',
 
-    'digits_entered' => 'siffror angivna',
+    'digits_entered' => ':count siffra angiven|:count siffror angivna',
     'pin_pad' => 'PIN-knappsats',
     'digit' => 'Siffra :digit',
     'backspace' => 'Backsteg',

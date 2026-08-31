@@ -10,15 +10,14 @@ return [
     'subtitle_full' => 'Historique complet.',
     'subtitle_recent' => 'Transactions récentes (90 derniers jours).',
 
-    'currency_aria' => 'Affichage des devises',
-    'currency_eur' => ':code uniquement',
-    'currency_original' => 'Devise d\'origine',
+    'currency_aria' => 'Montant affiché',
+    'currency_eur' => 'Montant réglé',
+    'currency_original' => 'Montant d\'origine',
 
     'show_recent' => 'Afficher seulement les récentes',
     'show_full' => 'Afficher tout l\'historique',
 
     'empty_period' => 'Rien à afficher pour cette période.',
-
 
     'empty_recent_has_older' => 'Rien sur les 90 derniers jours. Vos opérations plus anciennes sont toujours là.',
 

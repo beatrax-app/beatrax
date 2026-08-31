@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Recovery;
 
-use Modules\Auth\Internal\Support\Username;
+use Modules\Auth\Public\Support\Username;
 
 final class RecoveryCodeFormatter
 {

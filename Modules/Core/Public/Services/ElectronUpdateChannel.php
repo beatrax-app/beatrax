@@ -21,7 +21,7 @@ use SodiumException;
  */
 final readonly class ElectronUpdateChannel
 {
-    private const STALE_THRESHOLD_DAYS = 30;
+    private const int STALE_THRESHOLD_DAYS = 30;
 
     public function __construct(
         private DatabaseManager $db,

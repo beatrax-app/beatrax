@@ -7,16 +7,17 @@ namespace Modules\Mobile\Internal\Pairing;
 use Illuminate\Contracts\Session\Session;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Public\Services\PairingGateway;
+use Modules\Sync\Public\Services\SyncPorts;
 use Native\Mobile\Scanner;
 
-final class QrScanBridge
+final readonly class QrScanBridge
 {
     // The pairing envelope is only ever carried in a QR code, so the
     // scanner is narrowed to that symbology rather than the plugin's
     // default barcode set.
-    private const SCAN_FORMAT = 'qr';
+    private const string SCAN_FORMAT = 'qr';
 
-    public function __construct(private readonly PairingGateway $gateway) {}
+    public function __construct(private PairingGateway $gateway) {}
 
     // Safe to call unconditionally; never touches the native class when
     // either guard fails.
@@ -92,7 +93,29 @@ final class QrScanBridge
     // branch, to seed a local pairing_tokens row on a fresh device),
     // plus the optional relay/rtok params for relay auto-configuration.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: ?string, relayAuthToken: ?string, relayPin: ?string}|null
+     * @param  array<array-key, mixed>  $query  As parse_str() fills it, so the
+     *                                          keys and values are whatever the
+     *                                          scanned string held.
+     * @return array{lanHost: string, lanPort: int}|null
+     */
+    private static function lanAddressFrom(array $query): ?array
+    {
+        $host = $query['host'] ?? null;
+        $port = $query['port'] ?? null;
+
+        if (! is_string($host) || trim($host) === '' || ! is_string($port) || ! ctype_digit($port)) {
+            return null;
+        }
+
+        // A port outside the range names no listener, and half an address is
+        // not one: both halves travel together or neither does.
+        return (int) $port >= 1 && (int) $port <= SyncPorts::MAX
+            ? ['lanHost' => trim($host), 'lanPort' => (int) $port]
+            : null;
+    }
+
+    /**
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: ?string, relayAuthToken: ?string, relayPin: ?string, lanHost?: string, lanPort?: int}|null
      */
     public function extractIdentity(string $decodedPayload): ?array
     {
@@ -133,7 +156,7 @@ final class QrScanBridge
         $rpin = $query['rpin'] ?? null;
         $relayPin = $relayEndpoint !== null && is_string($rpin) && $rpin !== '' ? $rpin : null;
 
-        return [
+        $identity = [
             'token' => $token,
             'deviceId' => $deviceId,
             'ed25519PubHex' => $ed,
@@ -143,5 +166,12 @@ final class QrScanBridge
             'relayAuthToken' => $relayAuthToken,
             'relayPin' => $relayPin,
         ];
+
+        // Where the initiator says it can be dialled. Unauthenticated like
+        // every other scanned field: it decides which machine is asked, never
+        // which one is trusted, and the safety number still settles that.
+        $lan = self::lanAddressFrom($query);
+
+        return $lan === null ? $identity : [...$identity, ...$lan];
     }
 }

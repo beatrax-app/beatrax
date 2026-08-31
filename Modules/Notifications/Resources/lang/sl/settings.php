@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'O čem naj te obveščam',
+    'background_note' => 'Beatrax jih pripravi, ko je aplikacija odprta. Načrtovani zagon v ozadju tega ne zmore — zaklep aplikacije hrani edini ključ — zato se čakajoča prevzamejo, medtem ko aplikacijo uporabljaš naprej.',
+    'background_note_phone' => 'Beatrax jih pripravi, ko je aplikacija odprta. V ozadju to ne gre — zaklep aplikacije hrani edini ključ — zato čakajoča prispejo, ko aplikacijo naslednjič odpreš.',
 
     'reminders' => [
         'label' => 'Opomniki za plačila',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Skrij podrobnosti v obvestilih',
-        'help' => 'Zneske in imena trgovcev prikaži kar v pasici obvestila. Izklopi, če bi tvoj zaslon lahko videli drugi.',
+        'help' => 'Zneske in imena trgovcev skrij kar v pasici obvestila. Vklopi, če bi tvoj zaslon lahko videli drugi.',
     ],
 
     'save' => 'Shrani nastavitve obvestil',

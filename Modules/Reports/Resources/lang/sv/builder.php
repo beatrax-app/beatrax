@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Okategoriserat',
+    'no_counterparty' => 'Ingen motpart',
+    'unavailable_counterparty' => 'Motparten finns inte på den här enheten',
     'title' => 'Rapporter',
     'page_title' => 'Rapporter · Beatrax',
     'subtitle' => 'Sätt ihop en rapport utifrån dina transaktioner.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Diagram i :currency — :list visas inte',
+        'undrawn' => 'Inte i ringen — :amount går åt andra hållet',
         'bar_title' => 'Klicka på en stapel för att visa dess transaktioner',
         'line_title' => 'Klicka på en punkt för att visa dess transaktioner',
         'donut_title' => 'Klicka på ett segment för att visa dess transaktioner',

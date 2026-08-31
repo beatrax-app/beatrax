@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Egyelőre semmi rejtélyes. Importálj néhány kivonatot, és a Beatrax itt hozza fel azokat a sorokat, amelyeket nem tudott azonosítani.',
 
+    'showing_capped' => 'A legfelső :shown látszik a következőből: :total.',
+
     'footer' => 'A megosztott lista egy a Beatraxszal együtt szállított YAML-fájl. A javaslat beküldése megnyitja a GitHubot a böngésződben; ezen kívül semmi nem hagyja el ezt az eszközt.',
 
     'card' => [

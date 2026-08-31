@@ -9,13 +9,14 @@ return [
     'step_3_of_3' => 'Schritt 3 von 3',
 
     'show_my_code' => 'Meinen Code anzeigen',
-    'show_my_code_help' => 'Zeigt den QR- und Wortcode dieses Geräts für das andere Gerät an.',
+    'show_my_code_help' => 'Zeigt den Code dieses Geräts an, damit das andere Gerät ihn lesen kann.',
     'enter_a_code' => 'Code eingeben',
     'safety_number_changed' => 'Das andere Gerät hat sich während des Vergleichs geändert. Prüfe die Wörter unten erneut, bevor du bestätigst.',
     'enter_a_code_help' => 'Tippe den Code vom anderen Gerät ein.',
 
     'show_this_code' => 'Diesen Code anzeigen',
     'enter_on_other' => 'Gib diesen Code auf dem anderen Gerät ein oder lass es den QR scannen.',
+    'scan_on_other' => 'Scanne diesen Code mit der Kamera des anderen Geräts. Ein Computer hat keine Kamera — zeige stattdessen dessen Code an und gib ihn hier ein.',
     'expires_in' => 'Läuft ab in',
     'code_expired' => 'Code abgelaufen.',
     'generate_new_code' => 'Neuen Code erzeugen',
@@ -37,4 +38,9 @@ return [
 
     'identity_locked' => 'Die Identität deines Geräts ist gesperrt. Entsperre die App und versuche es erneut.',
     'invalid_code' => 'Dieser Code ist ungültig oder abgelaufen. Lass das andere Gerät einen neuen erzeugen.',
+    'code_incomplete' => 'Das ist kein vollständiger Code. Vergleiche ihn mit dem anderen Gerät und gib ihn ganz ein.',
+    'code_not_accepted' => 'Kein Gerät in diesem Netzwerk hat den Code akzeptiert. Prüfe den Code und ob das andere Gerät ihn noch anzeigt.',
+    'no_peer_answered' => 'Nichts in diesem Netzwerk hat auf den Code geantwortet. Prüfe, ob die Synchronisierung auf dem anderen Gerät läuft.',
+    'no_peer_search' => 'Dieses Gerät konnte das Netzwerk nicht durchsuchen und den Code deshalb nicht prüfen. Zeige stattdessen den Code dieses Geräts an und gib ihn auf dem anderen ein.',
+    'rate_limited' => 'Zu viele Versuche. Warte eine Minute und versuche es erneut.',
 ];

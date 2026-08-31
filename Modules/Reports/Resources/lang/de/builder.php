@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Nicht kategorisiert',
+    'no_counterparty' => 'Kein Zahlungspartner',
+    'unavailable_counterparty' => 'Zahlungspartner nicht auf diesem Gerät',
     'title' => 'Berichte',
     'page_title' => 'Berichte · Beatrax',
     'subtitle' => 'Stelle einen Bericht aus deinem Hauptbuch zusammen.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Diagramm in :currency — :list nicht dargestellt',
+        'undrawn' => 'Nicht im Ring — :amount fließt in die andere Richtung',
         'bar_title' => 'Klicke auf einen Balken, um die zugehörigen Transaktionen zu sehen',
         'line_title' => 'Klicke auf einen Punkt, um die zugehörigen Transaktionen zu sehen',
         'donut_title' => 'Klicke auf ein Segment, um die zugehörigen Transaktionen zu sehen',

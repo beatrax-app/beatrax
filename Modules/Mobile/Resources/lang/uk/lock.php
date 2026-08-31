@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Розблокування',
 
-    'digits_entered' => 'введено цифр',
+    'digits_entered' => 'введено :count цифру|введено :count цифри|введено :count цифр',
     'pin_pad' => 'PIN-клавіатура',
     'digit' => 'Цифра :digit',
     'backspace' => 'Стерти',

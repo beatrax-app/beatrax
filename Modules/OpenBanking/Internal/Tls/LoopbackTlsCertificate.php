@@ -7,15 +7,15 @@ namespace Modules\OpenBanking\Internal\Tls;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Services\UserDataPathService;
 
-final class LoopbackTlsCertificate
+final readonly class LoopbackTlsCertificate
 {
-    private const VALID_DAYS = 825;
+    private const int VALID_DAYS = 825;
 
-    private const CERT_FILE = 'cert.pem';
+    private const string CERT_FILE = 'cert.pem';
 
-    private const KEY_FILE = 'key.pem';
+    private const string KEY_FILE = 'key.pem';
 
-    public function __construct(private readonly string $directory) {}
+    public function __construct(private string $directory) {}
 
     /**
      * @return array{cert: string, key: string}

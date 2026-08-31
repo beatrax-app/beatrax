@@ -1,0 +1,11 @@
+Account,Flag,"Check Number",Date,Payee,"Category Group/Category","Master Category","Sub Category",Memo,Outflow,Inflow,Cleared,"Running Balance"
+Checking,,,02/02/2026,"Albert Heijn","Frequent: Groceries",Frequent,Groceries,,45.00,0.00,R,955.00
+Checking,,,02/03/2026,Bakery,"Frequent: Groceries",Frequent,Groceries,,10.00,0.00,Reconciled,945.00
+Checking,,,02/04/2026,Cafe,"Frequent: Groceries",Frequent,Groceries,,5.00,0.00,C,940.00
+Checking,,,02/05/2026,Kiosk,"Frequent: Groceries",Frequent,Groceries,,3.00,0.00,U,937.00
+Checking,,,02/06/2026,Supermarket,"Frequent: Groceries",Frequent,Groceries,"Split (1/2)",20.00,0.00,C,917.00
+Checking,,,02/06/2026,Supermarket,"Frequent: Household",Frequent,Household,"Split (2/2)",10.00,0.00,C,907.00
+Checking,,,02/06/2026,Supermarket,"Frequent: Groceries",Frequent,Groceries,"Split (1/2)",5.00,0.00,C,902.00
+Checking,,,02/06/2026,Supermarket,"Frequent: Household",Frequent,Household,"Split (2/2)",7.00,0.00,C,895.00
+Checking,,,02/07/2026,Reclass,"Frequent: Groceries",Frequent,Groceries,"Split (1/2)",50.00,0.00,C,895.00
+Checking,,,02/07/2026,Reclass,"Frequent: Household",Frequent,Household,"Split (2/2)",0.00,50.00,C,895.00

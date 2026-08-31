@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Enums\ReportGranularity;
@@ -122,11 +123,14 @@ it('never adds a foreign currency row into the headline currency delta', functio
     $result = app(ReportAggregator::class)->run($user, hdrDefinition('spend', 'original'));
 
     // Summing the displayed rows' previousAmountMinor gave 60,00 EUR + 2000,00
-    // USD = 206000 and called it euros. Each window keeps its own currency.
+    // USD = 206000 and called it euros. Each window keeps its own currency, and
+    // the previous one headlines EUR: no rate is seeded here, so the 2000,00 USD
+    // subtotal is worth an unknown amount and cannot outrank a figure that is.
     expect($result->currency)->toBe('EUR')
         ->and($result->totalMinor)->toBe(100_00)
-        ->and($result->previousCurrency)->toBe('USD')
-        ->and($result->previousTotalMinor)->toBe(2000_00);
+        ->and($result->previousCurrency)->toBe('EUR')
+        ->and($result->previousTotalMinor)->toBe(60_00)
+        ->and($result->previousTotalMinor)->not->toBe(206_000);
 });
 
 it('says nothing rather than a number when the two windows headline different currencies', function (): void {
@@ -158,4 +162,65 @@ it('compares a net worth balance against the previous window balance, not agains
     // Net worth is a balance: August closes at 140,00 and July at 100,00.
     expect($result->totalMinor)->toBe(140_00)
         ->and($result->previousTotalMinor)->toBe(100_00);
+});
+
+// An empty previous window makes every bucket read "no counterpart", and the
+// footer under them then computed a full-value delta off a previous total of
+// zero: one screen, two contradictory claims about the same fact.
+it('says nothing about a previous period that produced nothing, exactly as its rows do', function (): void {
+    $user = hdrUser();
+    hdrMovement($user, 'expense', -100_00, '2026-08-05');
+
+    $definition = new ReportDefinition(
+        metric: 'spend',
+        dimension: 'time_bucket',
+        periodPreset: 'custom',
+        granularity: ReportGranularity::Monthly,
+        currencyMode: 'base',
+        viz: 'table',
+        customFrom: '2026-08-01',
+        customTo: '2026-08-31',
+        compare: true,
+    );
+
+    $result = app(ReportAggregator::class)->run($user, $definition);
+    $deltas = array_map(static fn ($row): ?int => $row->deltaMinor, $result->comparisonRows ?? []);
+
+    expect($deltas)->not->toBe([])
+        ->and(array_filter($deltas, static fn (?int $d): bool => $d !== null))->toBe([])
+        ->and($result->previousTotalMinor)->toBeNull();
+});
+
+it('still reads an absent group as zero, which for a category is what it was', function (): void {
+    $user = hdrUser();
+    hdrMovement($user, 'expense', -100_00, '2026-08-05');
+
+    $result = app(ReportAggregator::class)->run($user, hdrDefinition('spend'));
+
+    // Nobody spent on it, and that is a fact rather than a gap -- unlike a
+    // balance series, where zero would claim the reader had owned nothing.
+    expect($result->previousTotalMinor)->toBe(0)
+        ->and(($result->comparisonRows[0] ?? null)?->deltaMinor)->toBe(100_00);
+});
+
+it('leaves the footer an em dash when the previous window reached no bucket', function (): void {
+    $user = hdrUser();
+    hdrMovement($user, 'expense', -100_00, '2026-08-05');
+    test()->actingAs($user);
+
+    $html = Livewire::test(ReportBuilder::class)
+        ->set('dimension', 'time_bucket')
+        ->set('compare', true)
+        ->set('periodPreset', 'custom')
+        ->set('customFrom', '2026-08-01')
+        ->set('customTo', '2026-08-31')
+        ->html();
+
+    // The very figure the footer used to print, written by the formatter the
+    // page itself renders it with, so the assertion cannot go quietly vacuous.
+    $fullValueDelta = e(Money::ofMinor(100_00, 'EUR')->format());
+
+    expect($html)->toContain('vs. previous period')
+        ->and($html)->toContain($fullValueDelta)
+        ->and($html)->not->toContain('+'.$fullValueDelta);
 });

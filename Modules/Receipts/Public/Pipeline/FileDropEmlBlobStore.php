@@ -17,13 +17,13 @@ use Throwable;
 // (wizard upload + watched-folder path), separate from the EmailScan
 // inbox blob store. Partitioned per user_id/year/month; writes are
 // atomic via tmp + flock + fsync + chmod + rename.
-final class FileDropEmlBlobStore
+final readonly class FileDropEmlBlobStore
 {
-    private const MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._\-]{1,200}$/';
+    private const string MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._\-]{1,200}$/';
 
     public function __construct(
-        private readonly Filesystem $files,
-        private readonly Application $app,
+        private Filesystem $files,
+        private Application $app,
     ) {}
 
     public function pathFor(

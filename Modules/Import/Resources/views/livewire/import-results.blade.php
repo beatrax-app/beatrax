@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Enums\JobRunStatus')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Import\Internal\Enums\ImportIssueKind')
 {{-- UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
@@ -10,6 +11,29 @@
     <p class="text-sm text-slate-900 dark:text-slate-100">
         {{ Lang::choice('import::results.summary', $importRun->inserted_count) }}{{ Lang::choice('import::results.summary_duplicates', $importRun->duplicate_count) }}{{ $importRun->enriched_count > 0 ? Lang::get('import::results.summary_enriched', ['count' => $importRun->enriched_count]) : '' }}{{ $importRun->error_count > 0 ? Lang::choice('import::results.summary_errors', $importRun->error_count) : '' }}.
     </p>
+
+    {{-- Chain resolution is dispatched by the confirm, and the confirm lands
+         the reader here, so this is the screen that can watch it. It used to
+         be offered on the wizard, which is unmounted by the time the resolver
+         starts. A failed run is the dashboard's banner to raise, not a second
+         notice competing with it here. --}}
+    @if ($chainResolutionStatus === JobRunStatus::Pending || $chainResolutionStatus === JobRunStatus::Running)
+        <section
+            wire:poll.2s.keep-alive
+            aria-live="polite"
+            class="rounded-md border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700"
+        >
+            <x-core::section-heading :title="Lang::get('import::results.chain.heading')" />
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                @if ($chainResolutionStatus === JobRunStatus::Pending)
+                    {{ Lang::get('import::results.chain.pending') }}
+                @else
+                    {{ Lang::get('import::results.chain.running') }}
+                @endif
+            </p>
+            <span aria-hidden="true" class="mt-3 inline-block h-2 w-2 animate-pulse rounded-full bg-slate-400"></span>
+        </section>
+    @endif
 
     @if ($importRun->duplicate_count > 0)
         <details class="text-sm text-slate-500 dark:text-slate-400">

@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Nuskaityti ir peržiūrėti',
     'cancel_import' => 'Atšaukti importą',
 
-    'diff_new' => 'nauji,',
-    'diff_unchanged' => 'nepakitę,',
-    'diff_conflicts' => 'konfliktai.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count naujas|:count nauji|:count naujų',
+    'diff_unchanged' => ':count nepakitęs|:count nepakitę|:count nepakitusių',
+    'diff_conflicts' => ':count konfliktas|:count konfliktai|:count konfliktų',
 
     'conflicts_heading' => 'Konfliktai',
     'conflict_name' => 'pavadinimas — esamas: :existing → faile: :file',
@@ -54,8 +55,7 @@ return [
     'test_heading' => 'Išbandyti su mano operacijomis',
     'test_help' => 'Redaguok eilutės apibendrintą šabloną, kad pamatytum, kurias operacijas jis atitiktų.',
     'typing' => 'Rašoma…',
-    'matches_prefix' => 'Atitinka',
-    'matches_suffix' => 'operacijų tavo naujausioje istorijoje.',
+    'matches' => 'Atitinka :count operaciją tavo naujausioje istorijoje.|Atitinka :count operacijas tavo naujausioje istorijoje.|Atitinka :count operacijų tavo naujausioje istorijoje.',
 
     'merge_modal_title' => 'Sujungti :count alternatyvų pavadinimą|Sujungti :count alternatyvius pavadinimus|Sujungti :count alternatyvių pavadinimų',
 
@@ -84,5 +84,10 @@ return [
         'no_file' => 'Failas neįkeltas.',
         'unreadable' => 'Nepavyko perskaityti įkelto failo.',
         'too_short' => 'Šablonas per trumpas, kad būtų galima išbandyti.',
+        'file_not_yaml' => 'Šis failas nėra tinkamas YAML, todėl iš jo nepavyko nieko perskaityti. Iš naujo eksportuok savo alternatyvius pavadinimus ir įkelk gautą failą.',
+        'file_unreadable_as_yaml' => 'Šio failo nepavyko perskaityti kaip alternatyvių pavadinimų sąrašo. Iš naujo eksportuok savo alternatyvius pavadinimus ir įkelk gautą failą.',
+        'file_has_no_entries_list' => 'Šis failas neprasideda aukščiausio lygio entries: sąrašu, todėl jame nėra ką importuoti. Patikrink, ar pasirinkai tinkamą failą.',
+        'entry_is_not_a_mapping' => 'Įrašas :entry yra paprasta reikšmė ten, kur tikimasi šablono ir pavadinimo. Įrašyk abu laukus arba pašalink jį ir įkelk failą iš naujo.',
+        'entry_is_missing_a_field' => 'Įraše :entry trūksta šablono arba pavadinimo, o reikia abiejų. Užpildyk, ko trūksta, arba pašalink tą įrašą ir įkelk failą iš naujo.',
     ],
 ];

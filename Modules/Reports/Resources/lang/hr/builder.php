@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Bez kategorije',
+    'no_counterparty' => 'Nema protustranke',
+    'unavailable_counterparty' => 'Protustranke nema na ovom uređaju',
     'title' => 'Izvješća',
     'page_title' => 'Izvješća · Beatrax',
     'subtitle' => 'Sastavi izvješće iz svoje glavne knjige.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Grafikon u valuti :currency — :list nije prikazano',
+        'undrawn' => 'Nije u prstenu — :amount ide u suprotnom smjeru',
         'bar_title' => 'Klikni stupac za prikaz njegovih transakcija',
         'line_title' => 'Klikni točku za prikaz njezinih transakcija',
         'donut_title' => 'Klikni segment za prikaz njegovih transakcija',

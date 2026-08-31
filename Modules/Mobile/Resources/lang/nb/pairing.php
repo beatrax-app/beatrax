@@ -19,6 +19,8 @@ return [
 
     'enter_heading' => 'Skriv inn koden',
     'camera_off' => 'Kameratilgangen er av. Skriv inn koden fra den andre enheten i stedet.',
+    'camera_off_no_search' => 'Kameratilgangen er av, og å søke etter den andre enheten på nettverket virker ikke på iPhone ennå — en kode du skriver inn har dermed ingenting å finne den med. Slå kameratilgangen på igjen for Beatrax i innstillingene på enheten, og skann koden på den andre enheten.',
+    'no_search' => 'Å søke etter den andre enheten på nettverket virker ikke på iPhone ennå, så en kode du skriver inn har ingenting å finne. Skann koden med kameraet i stedet — kameraet trenger ikke å søke på nettverket.',
     'word_code_aria' => 'Skriv inn ordkoden fra den andre enheten',
     'submit_code' => 'Send koden',
     'cancel' => 'Avbryt',
@@ -36,10 +38,13 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Får ikke kontakt med den andre enheten. Sørg for at begge er på samme nettverk, og at synkronisering er slått på på datamaskinen.',
+        'no_road_home' => 'Denne enheten kan ikke søke på nettverket, og koden du skannet inneholder ingen adresse til den andre enheten. Be den vise en ny kode, og skann den i stedet.',
         'invalid_code' => 'Koden er ugyldig eller har utløpt. Be den andre enheten om å generere en ny.',
+        'code_incomplete' => 'Koden er ikke fullstendig. Sammenlign den med den andre enheten og skriv inn hele koden.',
         'code_not_accepted' => 'Ingen enhet på dette nettverket godtok koden. Sjekk koden, og at den andre enheten fortsatt viser den.',
         'no_peer_answered' => 'Ingenting på dette nettverket svarte på koden. Sjekk at synkronisering kjører på den andre enheten, eller skann koden dens med kameraet — kameraet trenger ikke å søke på nettverket.',
         'no_peer_answered_ios' => 'Ingenting på dette nettverket svarte på koden. Å søke etter den andre enheten på nettverket virker ikke på iPhone ennå, så skann koden dens med kameraet.',
+        'no_peer_answered_camera_off' => 'Ingenting på dette nettverket svarte på koden. Å søke etter den andre enheten på nettverket virker ikke på iPhone ennå, og kameratilgangen er av — slå derfor kameratilgangen på igjen for Beatrax i innstillingene på enheten, og skann koden på den andre enheten.',
         'rate_limited' => 'For mange forsøk. Vent ett minutt og prøv igjen.',
         'identity_locked' => 'Enhetsidentiteten din er låst. Lås opp appen og prøv igjen.',
         'identity_needs_lock' => 'Sett opp app-låsen først — den beskytter enhetens identitet.',

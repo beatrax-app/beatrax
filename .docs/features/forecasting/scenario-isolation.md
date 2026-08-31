@@ -115,28 +115,27 @@ worth being explicit about all of them:
   `change_series_amount` can rebuild a band. It never reads observed
   occurrences.
 - `accounts` — to pick a landing account for a one-off when the
-  baseline is empty, and to read the landing account's own currency.
-- `CrossCurrencyTotal::ratesTo` from [`FX`](../fx/architecture.md), and
-  a `recurring_series` existence check used only to decide whether to
+  baseline is empty.
+- A `recurring_series` existence check used only to decide whether to
   log a warning.
 
 Every one is a read. Nothing in the module writes to `transactions`,
 `recurring_series`, `card_statements`, `chain_links` or `drift_alerts`
 at all.
 
-The FX read is what keeps a one-off in a second currency from taking
-the whole projection down. A scenario contribution used to be emitted
-with `fxRateUsed: null` whatever currency the form was given, and
-`DailyFold` refuses to fold a cross-currency amount with no rate — by
-raising, which fails the run. The mutation persists, so every retry of
-the queued job re-crashed on it, and the reader was never told: a
-non-complete run falls through to `ForecastQuery`'s flat-line fallback,
-so the scenario chart drew a straight line forever. The applier now
-resolves the rate where it can still name the problem, skips and logs
-the mutation where no rate reaches the account, and `ForecastDto`
-carries `runFailed` so a failed run says so on screen instead of
-passing its fallback line off as a projection. The currency field
-itself is a select of the reader's own account currencies, and
+A one-off in a second currency used to take the whole projection down.
+The applier emitted it with a null rate whatever currency the form was
+given, and `DailyFold` refused to fold a cross-currency amount with no
+rate — by raising, which fails the run. The mutation persists, so every
+retry of the queued job re-crashed on it, and the reader was never told:
+a non-complete run falls through to `ForecastQuery`'s flat-line
+fallback, so the scenario chart drew a straight line forever. The
+applier now emits the contribution in the currency the form was given
+and leaves the rate to `DailyFold`, which resolves one per currency
+against the account it is folding into and names what it cannot price;
+`ForecastDto` carries `runFailed` so a failed run says so on screen
+instead of passing its fallback line off as a projection. The currency
+field itself is a select of the reader's own account currencies, and
 `ScenarioMutationPayload` folds the case and refuses a code that is not
 ISO-4217 — `usd` and `ZZZ` both used to persist unchecked.
 

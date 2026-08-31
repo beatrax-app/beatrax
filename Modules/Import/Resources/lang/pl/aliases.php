@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Wczytaj i pokaż podgląd',
     'cancel_import' => 'Anuluj import',
 
-    'diff_new' => 'nowe,',
-    'diff_unchanged' => 'bez zmian,',
-    'diff_conflicts' => 'konflikty.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count nowy|:count nowe|:count nowych',
+    'diff_unchanged' => ':count bez zmian|:count bez zmian|:count bez zmian',
+    'diff_conflicts' => ':count konflikt|:count konflikty|:count konfliktów',
 
     'conflicts_heading' => 'Konflikty',
     'conflict_name' => 'nazwa — istniejąca: :existing → plik: :file',
@@ -54,8 +55,7 @@ return [
     'test_heading' => 'Przetestuj na moich transakcjach',
     'test_help' => 'Edytuj uogólniony wzorzec w wierszu, aby zobaczyć, które transakcje zostaną dopasowane.',
     'typing' => 'Pisanie…',
-    'matches_prefix' => 'Pasuje do',
-    'matches_suffix' => 'transakcji w Twojej ostatniej historii.',
+    'matches' => 'Pasuje do :count transakcji w Twojej ostatniej historii.|Pasuje do :count transakcji w Twojej ostatniej historii.|Pasuje do :count transakcji w Twojej ostatniej historii.',
 
     'merge_modal_title' => 'Scal :count alias|Scal :count aliasy|Scal :count aliasów',
 
@@ -84,5 +84,10 @@ return [
         'no_file' => 'Nie wgrano pliku.',
         'unreadable' => 'Nie udało się odczytać wgranego pliku.',
         'too_short' => 'Wzorzec jest za krótki, aby go przetestować.',
+        'file_not_yaml' => 'Ten plik nie jest poprawnym YAML-em, więc nie dało się z niego nic odczytać. Wyeksportuj swoje aliasy ponownie i wgraj otrzymany plik.',
+        'file_unreadable_as_yaml' => 'Tego pliku nie udało się odczytać jako listy aliasów. Wyeksportuj swoje aliasy ponownie i wgraj otrzymany plik.',
+        'file_has_no_entries_list' => 'Ten plik nie zaczyna się od listy entries: na najwyższym poziomie, więc nie ma w nim aliasów do zaimportowania. Sprawdź, czy to właściwy plik.',
+        'entry_is_not_a_mapping' => 'Wpis :entry to zwykła wartość tam, gdzie oczekiwano wzorca i nazwy. Dodaj oba pola albo usuń ten wpis, i wgraj plik ponownie.',
+        'entry_is_missing_a_field' => 'We wpisie :entry brakuje wzorca lub nazwy, a alias potrzebuje obu. Uzupełnij brakujące pole albo usuń ten wpis, i wgraj plik ponownie.',
     ],
 ];

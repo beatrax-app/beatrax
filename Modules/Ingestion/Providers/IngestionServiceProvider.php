@@ -7,11 +7,12 @@ namespace Modules\Ingestion\Providers;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
 use Modules\Core\Public\Support\LoadsModuleResources;
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
+use Modules\Ingestion\Internal\Adapters\Banking\BankAmountParser;
 use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
 use Modules\Ingestion\Internal\Adapters\Banking\Mt940Adapter;
 use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAmountParser;
+use Modules\Ingestion\Internal\Adapters\Csv\PositionalCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvAdapter;
 use Modules\Ingestion\Public\Enums\SourceFormat;
@@ -32,7 +33,6 @@ final class IngestionServiceProvider extends ServiceProvider
             SourceAdapterRegistry::class,
             static function (Container $app): SourceAdapterRegistry {
                 $adapters = [
-                    SourceFormat::AsnCsv->value => $app->make(AsnCsvAdapter::class),
                     SourceFormat::Camt053->value => $app->make(Camt053Adapter::class),
                     SourceFormat::Mt940->value => $app->make(Mt940Adapter::class),
                     SourceFormat::IcsPdf->value => $app->make(IcsPdfAdapter::class),
@@ -44,6 +44,11 @@ final class IngestionServiceProvider extends ServiceProvider
                 $sniffer = $app->make(HeaderSniffer::class);
                 foreach ($presets->all() as $format => $preset) {
                     $adapters[$format] = new GenericCsvAdapter($preset, $amounts, $sniffer);
+                }
+
+                $bankAmounts = $app->make(BankAmountParser::class);
+                foreach ($presets->allPositional() as $format => $positional) {
+                    $adapters[$format] = new PositionalCsvAdapter($positional, $bankAmounts, $sniffer);
                 }
 
                 return new SourceAdapterRegistry($adapters);

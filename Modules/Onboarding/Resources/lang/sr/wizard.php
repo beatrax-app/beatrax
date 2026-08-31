@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Korak :current od :total',
 
-    'step_dot_aria' => 'Korak :number od :total',
-
     'back' => 'Nazad',
     'back_aria' => 'Nazad — vraća se na prethodni korak podešavanja',
 

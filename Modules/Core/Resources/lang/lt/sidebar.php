@@ -94,6 +94,7 @@ return [
         'heading' => 'Kūrėjas',
         'open_console' => 'Atverti kūrėjo pultą',
         'pulse' => 'Eilė :queue · Vykdytojas :worker',
+        'worker_ago' => 'prieš :count s|prieš :count s|prieš :count s',
     ],
 
     'account' => [

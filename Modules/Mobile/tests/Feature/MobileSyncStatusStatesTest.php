@@ -152,11 +152,11 @@ it('mounts cleanly with no progress cursor and no sessions (fresh device)', func
         ->assertSet('progressExpected', null);
 });
 
-it('the Sync now button invokes syncOnce() and re-fetches progress', function (): void {
+it('the Sync now button reaches the real trigger service and re-fetches progress', function (): void {
     $user = mobileSyncStatusUser('mobile-status-syncnow-'.bin2hex(random_bytes(4)));
     $this->actingAs($user);
 
-    // No device identity or KEK is set up for this fixture user, so syncOnce()
+    // No device identity or KEK is set up for this fixture user, so the burst
     // skips the tick. That is enough to prove the button reaches the real service
     // without a live LAN or relay round-trip.
     Livewire::test(SyncScreen::class)
@@ -225,4 +225,63 @@ it('shows what the setup poll is waiting on, and a way out when it cannot resolv
         expect(Lang::get('mobile::setup.blocked.'.$reason->value))
             ->not->toBe('mobile::setup.blocked.'.$reason->value, "no copy for {$reason->value}");
     }
+});
+
+// InitialSyncPuller writes records_expected as max(previous, applied), so the
+// column equals records_applied unless a genuine total was written over it. The
+// fixture above seeds a 100 the field never provides.
+
+it('shows a running bar rather than a full one when the cursor never learned a real total', function (): void {
+    $user = mobileSyncStatusUser('mobile-status-nototal-'.bin2hex(random_bytes(4)));
+    $this->actingAs($user);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $db->connection()->table('mobile_sync_progress')->insert([
+        'user_id' => $user->id,
+        'peer_device_id' => 'desktop-peer-dev',
+        // What persistCursor() actually writes: expected == applied.
+        'records_expected' => 40,
+        'records_applied' => 40,
+        'last_hlc_l' => 40,
+        'last_hlc_c' => 0,
+        'phase' => 'pulling',
+        'created_at' => '2026-07-11T09:55:00Z',
+        'updated_at' => '2026-07-11T10:00:00Z',
+    ]);
+
+    $html = (string) Livewire::test(SyncScreen::class)
+        ->assertSet('initialSyncInProgress', true)
+        ->assertSet('progressApplied', 40)
+        ->assertSet('progressMeasured', false)
+        ->assertSet('progressPercent', 0)
+        ->html();
+
+    // An indeterminate bar drops aria-valuenow, which is what tells a screen
+    // reader "running, position unknown" rather than the 100% it announced.
+    expect($html)->toContain('beatrax-indeterminate')
+        ->and($html)->not->toContain('aria-valuenow');
+});
+
+it('keeps the progress block on screen through the rebuild, the slowest step of the two', function (): void {
+    $user = mobileSyncStatusUser('mobile-status-rebuilding-'.bin2hex(random_bytes(4)));
+    $this->actingAs($user);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $db->connection()->table('mobile_sync_progress')->insert([
+        'user_id' => $user->id,
+        'peer_device_id' => 'desktop-peer-dev',
+        'records_expected' => 40,
+        'records_applied' => 40,
+        'last_hlc_l' => 40,
+        'last_hlc_c' => 0,
+        'phase' => 'rebuilding',
+        'created_at' => '2026-07-11T09:55:00Z',
+        'updated_at' => '2026-07-11T10:00:00Z',
+    ]);
+
+    Livewire::test(SyncScreen::class)
+        ->assertSet('initialSyncInProgress', true)
+        ->assertSee('Syncing');
 });

@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Kaip lengvai Beatrax laiko mokėjimą neįprastu šiam prekybininkui ar kategorijai, nuo 1 iki 100. Didesnė reikšmė pažymi daugiau.',
 
     'min_amount_label' => 'Mažiausia mokėjimo suma',
-    'min_amount_help' => 'Nepaisyti anomalijų mokėjimuose, mažesniuose už šią sumą. Saugoma centais (:symbol) — 1000 reiškia :example.',
+    'min_amount_help' => 'Nepaisyti anomalijų mokėjimuose, mažesniuose už šią sumą. Saugoma smulkiaisiais vienetais (:symbol) — :minor reiškia :example.',
 
     'save' => 'Išsaugoti anomalijų nustatymus',
     'saved' => 'Išsaugota.',

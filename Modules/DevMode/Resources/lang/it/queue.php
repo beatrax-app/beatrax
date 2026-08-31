@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Elimina :count job|Elimina :count job',
     'empty_pending' => 'La coda è vuota.',
     'empty_failed' => 'Nessun job fallito.',
-    'empty_batches' => 'Nessun batch attivo.',
+    'empty_batches' => 'Nessun batch.',
     'select_aria' => 'Seleziona',
     'select_row_aria' => 'Seleziona la riga :key',
     'col_id' => 'Id',
     'col_queue' => 'Coda',
     'col_attempts' => 'Tentativi',
+    'col_state' => 'Stato',
     'col_created' => 'Creato',
     'col_uuid' => 'UUID',
     'col_failed' => 'Fallito',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'In attesa',
     'col_actions' => 'Azioni',
     'delete_job' => 'Elimina job',
+    'worker_running' => 'Un worker la sta eseguendo',
     'delete_pending_confirm' => 'Eliminare il job in attesa #:key?',
     'retry_job' => 'Riprova job',
     'forget_confirm' => 'Rimuovere il job fallito :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'I job falliti selezionati verranno rimessi in coda perché il worker li riprovi.',
     'cancel' => 'Annulla',
 
+    'state' => [
+        'available' => 'Disponibile',
+        'reserved' => 'Riservata',
+        'scheduled' => 'Pianificata',
+    ],
+
     'tab' => [
         'pending' => 'In attesa',
         'failed' => 'Falliti',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Job in attesa eliminato',
+        'pending_already_gone' => 'Quel job non c’era più',
         'failed_requeued' => 'Job fallito rimesso in coda',
         'failed_removed' => 'Job fallito rimosso',
         'batch_cancelled' => 'Batch annullato',
         'batch_deleted' => 'Batch eliminato',
         'batch_failures_requeued' => 'Job falliti del batch rimessi in coda',
+        'batch_failures_none' => 'Nessun fallimento del batch da rimettere in coda',
         'failed_jobs_requeued' => 'Job falliti rimessi in coda',
+        'failed_jobs_none' => 'Nessun job fallito da rimettere in coda',
         'bulk_refused' => 'Eliminazione massiva rifiutata — :reason',
         'rows_deleted' => 'Righe selezionate eliminate',
     ],

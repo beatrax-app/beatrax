@@ -7,7 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Models\User;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingState;
@@ -71,7 +71,7 @@ function reqAwaitingPeer(int $userId, DeviceIdentityDto $self): void
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
-    $now = ZuluTimestamp::stamp(now()->toImmutable());
+    $now = Instant::zulu(now()->toImmutable());
 
     $db->connection()->table('pairing_tokens')->insert([
         'user_id' => $userId,
@@ -83,7 +83,7 @@ function reqAwaitingPeer(int $userId, DeviceIdentityDto $self): void
         'responder_ed25519_pub_hex' => str_repeat('c', 64),
         'responder_x25519_pub_hex' => str_repeat('d', 64),
         'state' => PairingState::AwaitingConfirm->value,
-        'expires_at' => ZuluTimestamp::stamp(now()->addMinutes(5)->toImmutable()),
+        'expires_at' => Instant::zulu(now()->addMinutes(5)->toImmutable()),
         'accepted_at' => $now,
         'initiator_confirmed_at' => $now,
         'created_at' => $now,

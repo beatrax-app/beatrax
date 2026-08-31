@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Supprimer :count job|Supprimer :count jobs',
     'empty_pending' => 'La file est vide.',
     'empty_failed' => 'Aucun job échoué.',
-    'empty_batches' => 'Aucun lot actif.',
+    'empty_batches' => 'Aucun lot.',
     'select_aria' => 'Sélectionner',
     'select_row_aria' => 'Sélectionner la ligne :key',
     'col_id' => 'Id',
     'col_queue' => 'File',
     'col_attempts' => 'Tentatives',
+    'col_state' => 'État',
     'col_created' => 'Créé',
     'col_uuid' => 'UUID',
     'col_failed' => 'Échoué',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'En attente',
     'col_actions' => 'Actions',
     'delete_job' => 'Supprimer le job',
+    'worker_running' => 'En cours dans un worker',
     'delete_pending_confirm' => 'Supprimer le job en attente #:key ?',
     'retry_job' => 'Relancer le job',
     'forget_confirm' => 'Retirer le job échoué :uuid ?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Les jobs échoués sélectionnés seront remis en file pour que le worker les relance.',
     'cancel' => 'Annuler',
 
+    'state' => [
+        'available' => 'Disponible',
+        'reserved' => 'Réservée',
+        'scheduled' => 'Planifiée',
+    ],
+
     'tab' => [
         'pending' => 'En attente',
         'failed' => 'Échoués',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Job en attente supprimé',
+        'pending_already_gone' => 'Cette tâche avait déjà disparu',
         'failed_requeued' => 'Job échoué remis en file',
         'failed_removed' => 'Job échoué retiré',
         'batch_cancelled' => 'Lot annulé',
         'batch_deleted' => 'Lot supprimé',
         'batch_failures_requeued' => 'Échecs du lot remis en file',
+        'batch_failures_none' => 'Plus aucun échec du lot à remettre en file',
         'failed_jobs_requeued' => 'Jobs échoués remis en file',
+        'failed_jobs_none' => 'Plus aucune tâche échouée à remettre en file',
         'bulk_refused' => 'Suppression en masse refusée — :reason',
         'rows_deleted' => 'Lignes sélectionnées supprimées',
     ],

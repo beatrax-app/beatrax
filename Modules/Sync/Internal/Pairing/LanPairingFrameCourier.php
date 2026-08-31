@@ -25,11 +25,19 @@ final readonly class LanPairingFrameCourier
     // relay and the holding space to try.
     /**
      * @param  array<string, mixed>  $frame
+     * @param  ?DiscoveredPeer  $known  An address learned out of band — from
+     *                                  the scanned QR — tried before any
+     *                                  browse, because a device that cannot
+     *                                  search the network has only this one.
      */
-    public function deliver(string $peerDeviceId, array $frame): bool
+    public function deliver(string $peerDeviceId, array $frame, ?DiscoveredPeer $known = null): bool
     {
         if ($peerDeviceId === '') {
             return false;
+        }
+
+        if ($known !== null && $known->isConnectable() && $this->deliverTo($known, $frame)) {
+            return true;
         }
 
         foreach ($this->peers->eachConnectablePeer(deviceId: $peerDeviceId) as $peer) {

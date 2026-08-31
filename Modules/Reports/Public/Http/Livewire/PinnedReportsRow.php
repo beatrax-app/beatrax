@@ -8,8 +8,10 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use Modules\Reports\Internal\Enums\ReportDimension;
 use Modules\Reports\Internal\Enums\ReportMetricSelection;
@@ -17,23 +19,23 @@ use Modules\Reports\Internal\Enums\ReportViz;
 use Modules\Reports\Internal\Exceptions\InvalidReportPeriod;
 use Modules\Reports\Internal\Services\PinnedReportsQuery;
 use Modules\Reports\Internal\Support\ChartAmount;
+use Modules\Reports\Internal\Support\ChartSeries;
+use Modules\Reports\Internal\Support\DonutPalette;
 
 final class PinnedReportsRow extends Component
 {
-    private const CHART_HEIGHT = 180;
+    private const int CHART_HEIGHT = 180;
 
-    private const DONUT_HEIGHT = 240;
+    private const int DONUT_HEIGHT = 240;
 
-    private const AXIS_LABEL_COLOUR = '#64748B';
-
-    /** @var list<string> */
-    private const DONUT_PALETTE = ['#0F172A', '#334155', '#64748B', '#94A3B8', '#0EA5E9', '#059669', '#B45309', '#BE123C', '#7C3AED', '#0891B2'];
+    private const string AXIS_LABEL_COLOUR = '#64748B';
 
     public function render(
         CurrentUser $currentUser,
         PinnedReportsQuery $query,
         ReportAggregator $aggregator,
         ViewFactory $views,
+        BaseCurrency $baseCurrency,
     ): View {
         if (! $currentUser->isAuthenticated()) {
             return $views->make('reports::livewire.pinned-reports-row', ['cards' => []]);
@@ -51,32 +53,29 @@ final class PinnedReportsRow extends Component
             // reports, and taking the dashboard down with it is never the right
             // trade -- the builder is where the range gets fixed, and it says so.
             try {
-                $rows = $aggregator->run($user, $definition)->rows;
+                $result = $aggregator->run($user, $definition);
             } catch (InvalidReportPeriod) {
-                $rows = [];
+                $result = new ReportResultDto(rows: [], totalMinor: 0, currency: $baseCurrency->forUser($user));
             }
 
             $cards[] = [
                 'id' => $pin['id'],
                 'name' => $pin['name'],
                 'chartElementId' => 'pinned-report-chart-'.$pin['id'],
-                'optionsJson' => $this->chartOptionsJson($definition, $rows),
+                'optionsJson' => $this->chartOptionsJson($definition, $result),
             ];
         }
 
         return $views->make('reports::livewire.pinned-reports-row', ['cards' => $cards]);
     }
 
-    /**
-     * @param  list<ReportResultRow>  $rows
-     */
-    private function chartOptionsJson(ReportDefinition $definition, array $rows): string
+    private function chartOptionsJson(ReportDefinition $definition, ReportResultDto $result): string
     {
         $chartType = $this->chartTypeFor($definition);
 
         $options = $chartType === ReportViz::Donut->value
-            ? $this->donutOptions($rows)
-            : $this->seriesOptions($chartType, $rows);
+            ? $this->donutOptions($result->rows, $result->totalMinor, $result->currency)
+            : $this->seriesOptions($chartType, $result->rows, $result->currency);
 
         $optionsJson = json_encode($options, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
@@ -102,9 +101,12 @@ final class PinnedReportsRow extends Component
      * @param  list<ReportResultRow>  $rows
      * @return array<string, mixed>
      */
-    private function seriesOptions(string $chartType, array $rows): array
+    private function seriesOptions(string $chartType, array $rows, string $currency): array
     {
-        $rows = self::withoutLeadingEmptyBuckets($rows);
+        // One axis, one currency: raw minor units of two of them share no
+        // scale, so a JPY row was plotted a hundredfold beside a EUR one.
+        $series = ChartSeries::for($chartType, $rows, [], $currency, 0);
+        $rows = self::withoutLeadingEmptyBuckets($series->rows);
 
         $categories = array_map(static fn (ReportResultRow $row): string => $row->groupLabel, $rows);
         $data = ChartAmount::series($rows);
@@ -124,6 +126,7 @@ final class PinnedReportsRow extends Component
             'stroke' => $chartType === ReportViz::Line->value ? ['curve' => 'straight', 'width' => 2] : ['width' => 0],
             'plotOptions' => $chartType === ReportViz::Bar->value ? ['bar' => ['borderRadius' => 2, 'columnWidth' => '55%']] : [],
             'colors' => ['#0F172A'],
+            'beatraxCurrency' => $series->currency,
             'dataLabels' => ['enabled' => false],
             // The bucket labels are this card's legend: without them the bars
             // name nothing, and hover is unavailable on a phone. Ticks and
@@ -157,14 +160,7 @@ final class PinnedReportsRow extends Component
         // The time-bucket query emits a row per bucket regardless, so a window
         // opening before the first transaction starts with a meaningless flat
         // run. Only the leading run goes: a zero between funded buckets is data.
-        $firstFunded = null;
-        foreach ($rows as $index => $row) {
-            if ($row->amountMinor !== 0) {
-                $firstFunded = $index;
-                break;
-            }
-        }
-
+        $firstFunded = array_find_key($rows, fn ($row): bool => $row->amountMinor !== 0);
         // With every bucket empty there is nothing to lead into: a flat line at
         // zero reads as "zero everywhere", an empty series as "no such report".
         if ($firstFunded === null) {
@@ -178,15 +174,13 @@ final class PinnedReportsRow extends Component
      * @param  list<ReportResultRow>  $rows
      * @return array<string, mixed>
      */
-    private function donutOptions(array $rows): array
+    private function donutOptions(array $rows, int $totalMinor = 0, string $currency = ''): array
     {
-        $labels = array_map(static fn (ReportResultRow $row): string => $row->groupLabel, $rows);
-        $series = ChartAmount::magnitudes($rows);
-
-        $colors = [];
-        foreach (array_keys($labels) as $i) {
-            $colors[] = self::DONUT_PALETTE[$i % count(self::DONUT_PALETTE)];
-        }
+        // Only the rows moving the way the total does: a ring is built from
+        // sizes, and abs() drew a refund as a slice of the spending it had
+        // already been subtracted from.
+        $series = ChartSeries::for(ReportViz::Donut->value, $rows, [], $currency, $totalMinor);
+        $labels = array_map(static fn (ReportResultRow $row): string => $row->groupLabel, $series->rows);
 
         return [
             'chart' => [
@@ -198,9 +192,10 @@ final class PinnedReportsRow extends Component
                 'toolbar' => ['show' => false],
                 'fontFamily' => 'Inter, system-ui, sans-serif',
             ],
-            'series' => $series,
+            'series' => ChartAmount::magnitudes($series->rows),
             'labels' => $labels,
-            'colors' => $colors,
+            'colors' => DonutPalette::forSlices(count($labels)),
+            'beatraxCurrency' => $series->currency,
             'dataLabels' => ['enabled' => false],
             // The bar and line cards carry meaning in the axis; a donut has
             // nowhere else to put it, and hover is unavailable on a phone.

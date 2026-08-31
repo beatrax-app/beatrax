@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Tvoja naprava je zavrnila shranjevanje ključa. Biometrično odklepanje ni na voljo.',
     'heading' => 'Zaklepanje aplikacije',
 
-    'moved_help' => 'Tvoj PIN, čas samodejnega zaklepanja in biometrično odklepanje so pri nastavitvah sinhronizacije te naprave.',
-    'moved_cta' => 'Odpri Sinhronizacijo in napravo',
-
     'toggle_label' => 'Zakleni aplikacijo s PIN-om',
     'toggle_description' => 'Vsakodnevno prijavo zamenja PIN. Seje ostanejo aktivne 30 dni.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Obdrži PIN',
 
     'error_pin_too_short' => 'PIN mora imeti vsaj 6 števke.',
-    'error_pin_digits' => 'PIN mora imeti 6 do 10 števk — samo številke.',
+    'error_pin_digits' => 'PIN mora imeti :min do :max števk — samo številke.',
     'error_pin_mismatch' => 'PIN-a se ne ujemata. Poskusi znova.',
     'error_pin_required' => 'Vnesi svoj PIN.',
     'error_pin_incorrect' => 'Napačen PIN.',

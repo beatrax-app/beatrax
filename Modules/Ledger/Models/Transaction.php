@@ -9,6 +9,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Core\Public\Casts\DateOnlyCast;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Import\Public\Enums\PaymentType;
@@ -57,7 +58,7 @@ final class Transaction extends Model
     // Unlike the transaction type, status has no DB-layer trigger guarding it;
     // this is what the write paths that take a raw string validate against.
     /** @var list<string> */
-    public const STATUSES = [
+    public const array STATUSES = [
         ClearedStatus::Uncleared->value,
         ClearedStatus::Cleared->value,
         ClearedStatus::Reconciled->value,
@@ -84,13 +85,9 @@ final class Transaction extends Model
     protected function casts(): array
     {
         return [
-            // Both columns are DATE and the pipeline writes them bare. Without
-            // the format the cast serialises with the model's Y-m-d H:i:s, so a
-            // row written through the model lands as "2026-08-23 00:00:00" and
-            // every query comparing posted_at <= "2026-08-23" drops that day.
-            'posted_at' => 'immutable_date:Y-m-d',
+            'posted_at' => DateOnlyCast::class,
             'booked_at' => 'immutable_datetime',
-            'value_date' => 'immutable_date:Y-m-d',
+            'value_date' => DateOnlyCast::class,
             'amount_minor' => 'integer',
             'settled_amount_minor' => 'integer',
             'normalization_version' => 'integer',

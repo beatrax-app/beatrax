@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Verrattuna yllä olevaan perustasoon',
 
+    'run_failed' => 'Tätä ennustetta ei voitu laskea. Alla oleva viiva näyttää vain sen, mikä on jo kirjattu.',
+
     'scenario_editor_aria' => 'Skenaarioeditori',
     'series_confidence' => 'Sarjan varmuus',
     'no_series_contribute' => 'Mikään sarja ei vielä vaikuta tämän tilin ennusteeseen.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Päivitetään',
     'chart_noscript' => 'Kaavio vaatii JavaScriptin. Jakso kattaa :days päivän.|Kaavio vaatii JavaScriptin. Jakso kattaa :days päivää.',
     'total_balance' => 'Kokonaissaldo',
+    'projection_range' => 'Ennusteen vaihteluväli',
+    'point_estimate' => 'Pistearvio',
 
     'per_month_suffix' => '/kk',
     'confidence_chip_aria' => ':name, varmuus :confidence — ennusteen vaihteluväli on :percent prosenttia pistearviosta',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Alin 30 päivän aikana',
     'next_ics' => 'Seuraava ICS-tilitys: :amount päivänä :date',
     'ics_overdue' => 'ICS-tilitys myöhässä: :amount, eräpäivä oli :date',
+
+    'stale_run' => 'Ennuste :date alkaen — ei päivitetty sen jälkeen.',
+
+    'confidence' => [
+        'high' => 'Korkea',
+        'medium' => 'Keskitaso',
+        'low' => 'Matala',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Summa on pakollinen.',
+        'amount_decimals' => 'Summan on oltava luku, jossa on enintään :decimals desimaali.|Summan on oltava luku, jossa on enintään :decimals desimaalia.',
+        'amount_whole' => 'Summan on oltava kokonaisluku — tällä valuutalla ei ole pienempää yksikköä.',
+        'amount_non_negative' => 'Summan on oltava nolla tai positiivinen.',
+        'amount_non_zero' => 'Summa ei saa olla nolla.',
+        'field_required' => 'Kenttä :field on pakollinen.',
+    ],
 ];

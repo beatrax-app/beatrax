@@ -10,12 +10,12 @@ use Native\Desktop\Contracts\MenuItem;
 // one: a role item has its submenu stripped by the shell, and a label item is
 // typed `normal`, which Electron renders as a dead entry rather than a menu.
 // See .docs/features/desktop/architecture.md — "Submenus never hang off a role".
-final class SubmenuItem implements MenuItem
+final readonly class SubmenuItem implements MenuItem
 {
     /** @var list<MenuItem> */
-    private readonly array $items;
+    private array $items;
 
-    public function __construct(private readonly string $label, MenuItem ...$items)
+    public function __construct(private string $label, MenuItem ...$items)
     {
         $this->items = array_values($items);
     }

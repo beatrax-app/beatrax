@@ -27,7 +27,7 @@ return [
     ],
 
     'progress' => [
-        'aria' => ':name: :pct% erreicht',
+        'aria' => ':name: :pct % erreicht',
     ],
 
     'card' => [
@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Füge Einzahlungen hinzu, um eine Prognose zu sehen',
         'not_enough_history' => 'Noch zu wenig Verlauf für ein Prognosedatum',
         'no_recent_contributions' => 'Keine aktuellen Einzahlungen, aus denen sich etwas prognostizieren lässt',
+        'too_far_to_date' => 'Bei diesem Tempo zu weit entfernt für ein Datum',
         'est' => 'Vsl. :date ·',
         'projection_note' => '(Prognose)',
         'projected' => 'Voraussichtlich: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Weitere Aktionen für :name',
         'mark_complete' => 'Als abgeschlossen markieren',
+        'mark_complete_caption' => 'Markieren',
         'archive' => 'Archivieren',
         'restore' => 'Wiederherstellen',
     ],
 
-    'archived_disclosure' => 'Archivierte Ziele (:count)',
+    'archived_disclosure' => 'Archiviertes Ziel (:count)|Archivierte Ziele (:count)',
 
     'form' => [
         'title_edit' => 'Ziel bearbeiten',
@@ -96,8 +98,11 @@ return [
         'name' => 'Gib deinem Ziel einen Namen.',
         'date' => 'Wähle ein Zieldatum.',
         'date_invalid' => 'Wählen Sie ein gültiges Datum.',
+        'date_before_start' => 'Wähle ein Datum am oder nach dem Start des Ziels.',
         'generic' => 'Das Ziel konnte nicht gespeichert werden. Prüfen Sie die Felder und versuchen Sie es erneut.',
         'amount' => 'Gib einen gültigen Betrag größer als null ein.',
         'pot_linked_category' => 'Diese Rücklage ist mit einer Kategorie verknüpft. Entferne diese Verknüpfung zuerst auf der Seite Rücklagen.',
+        'pot_already_linked' => 'Diese Rücklage spart bereits auf ein anderes Ziel. Löse die Verknüpfung dort zuerst.',
+        'pot_missing' => 'Diese Rücklage ist nicht mehr verfügbar. Wähle eine andere, oder lass dieses Ziel ohne Verknüpfung.',
     ],
 ];

@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Suma',
 
     'subtotal' => 'Medzisúčet',
+    'subtotal_income' => 'Medzisúčet príjmov',
 
     'footer' => 'Vygenerované v Beatraxe — osobné financie len lokálne — :year',
 ];

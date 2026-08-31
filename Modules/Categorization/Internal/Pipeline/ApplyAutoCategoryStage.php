@@ -21,16 +21,16 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class ApplyAutoCategoryStage implements AppliesAutoCategory
+final readonly class ApplyAutoCategoryStage implements AppliesAutoCategory
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly RuleEngine $ruleEngine,
-        private readonly RuleApplier $ruleApplier,
-        private readonly RuleEvaluator $evaluator,
-        private readonly LoggerInterface $logger,
-        private readonly DatabaseManager $db,
+        private RuleEngine $ruleEngine,
+        private RuleApplier $ruleApplier,
+        private RuleEvaluator $evaluator,
+        private LoggerInterface $logger,
+        private DatabaseManager $db,
     ) {}
 
     // Two methods only so this catch exists: categorisation is a convenience,

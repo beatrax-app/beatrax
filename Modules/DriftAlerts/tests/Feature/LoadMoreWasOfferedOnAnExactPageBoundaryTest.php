@@ -54,3 +54,35 @@ it('offers load more once a twenty-seventh alert exists', function (): void {
     expect($component->viewData('rows'))->toHaveCount(26);
     expect($component->viewData('hasMoreRows'))->toBeTrue();
 });
+
+// The Open tab renders one group per series, not the flat list, and it kept
+// the old gate: at exactly 26 series the control appeared and pressing it
+// re-read the same 26.
+it('hides load more when the open tab holds exactly one page of series', function (): void {
+    for ($i = 0; $i < 26; $i++) {
+        DriftAlertFixture::alert(test()->user);
+    }
+
+    $component = Livewire::test(DriftPage::class)
+        ->set('tab', DriftPageTab::Open->value);
+
+    expect($component->viewData('grouped'))->toHaveCount(26);
+    expect($component->viewData('hasMoreGrouped'))->toBeFalse();
+});
+
+it('offers load more on the open tab once a twenty-seventh series exists', function (): void {
+    for ($i = 0; $i < 27; $i++) {
+        DriftAlertFixture::alert(test()->user);
+    }
+
+    $component = Livewire::test(DriftPage::class)
+        ->set('tab', DriftPageTab::Open->value);
+
+    expect($component->viewData('grouped'))->toHaveCount(26);
+    expect($component->viewData('hasMoreGrouped'))->toBeTrue();
+
+    $component->call('loadMore');
+
+    expect($component->viewData('grouped'))->toHaveCount(27);
+    expect($component->viewData('hasMoreGrouped'))->toBeFalse();
+});

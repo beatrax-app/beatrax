@@ -104,7 +104,12 @@ walks negative `k` to fill in the part of a calendar month that already
 happened, and a chain of no-overflow steps cannot be run in reverse.
 
 `SeriesCadence::occurrenceAt()` holds that arithmetic for the whole app
-— the enum owns the cadence, so it owns the step. It matches without a
+— the enum owns the cadence, so it owns the step, and it takes the
+series' own `billing_day` so a step out of a short month restores the
+day the bill is actually charged on. Without it the anchor's day ruled:
+`next_expected_at` is itself clamped when it lands in February, so a
+31st bill projected the 28th for every month after, while the reminder
+— which re-infers from the observations — kept saying the 31st. It matches without a
 `default` arm, so a cadence added later fails loudly instead of
 silently taking a step nobody gave it. `CadenceWalk` is the forecasting
 side: it yields the occurrence dates falling between `asOf` and the
@@ -330,20 +335,36 @@ that account's anchor balance from `BalanceAnchorResolver`.
 
 ### Currency conversion happens here and only here
 
-A contribution carries its native currency and the FX rate captured
-when the series' latest amount was observed. The fold converts on the
-way in:
+A contribution carries its native currency and no rate. `DailyFold` is
+handed a `CrossCurrencyTotal::ratesTo()` map into the account's own
+currency and converts each bound through `Money` on the way in:
 
 ```
-converted = round(minor × fxRateUsed)      when currency != accountCurrency
-converted = minor                          when they match
+converted = Money(minor, currency) × rates[currency]   when currency != accountCurrency
+converted = minor                                      when they match
 ```
 
-A cross-currency contribution with a null `fxRateUsed` raises
-`InvalidArgumentException` rather than being folded at face value.
-That is the important part: silently treating 599 USD-minor as 599
-EUR-minor would leak a wrong number into a real balance and no test
-would notice. Failing the whole run is the cheaper outcome.
+The fold is where the rate belongs because it is the only stage that
+knows both sides of the pair. `RangeProjector` knows the series'
+currency but not the target: the router can still move a contribution
+onto a funder account denominated in something else, so a rate resolved
+before routing would be a rate into the wrong currency.
+
+The rate used is **today's**, which is the right one for an estimate of
+a charge that has not happened yet. The contrast worth holding on to is
+[drift detection](../drift-alerts/drift-detection.md), which refuses to
+convert an older occurrence at today's rate precisely because that would
+file the rate's movement as the merchant's. A projection wants the
+current rate; a comparison across time wants the rate of each moment.
+
+A contribution the rate table cannot price is **left out of the curve
+and named**, in `DailyFoldResult::$unconvertedCurrencies` and from there
+on `ForecastDto`, exactly as `DayBalanceDto` and `SpendTrend` name
+theirs. It used to raise instead, and since nothing in production ever
+wrote `recurring_series.latest_fx_rate_used`, every real dollar
+subscription raised: one foreign series took the whole projection down.
+What must never happen is the third option — folding 599 USD-minor in as
+599 EUR-minor, which leaks a wrong number into a real balance.
 
 No other stage converts. The router explicitly does not, which is why
 its funder-collapse aggregation assumes everything sharing an
@@ -437,7 +458,7 @@ to `(user_id, account_id, scenario_id, horizon_days)`. Every projection
 run fully replaces that account's shortfall picture *at its own
 horizon*, so a dip that has since been forecast away leaves no stale
 row behind. The horizon is part of the key because
-`ProjectForecastJob::HORIZON_DAYS` queues five runs per account and
+`ForecastHorizon::days()` queues one run per case per account and
 they complete in whatever order the worker takes them: without it each
 run deleted the other four's rows on its way in, and whichever finished
 last decided the shortfall band at every horizon. Every read filters on
@@ -456,13 +477,20 @@ written on a scenario's behalf in a table no scenario read ever filters
 
 | Value | Where | Notes |
 | --- | --- | --- |
-| `[30, 60, 90, 180, 365]` | `ProjectForecastJob::HORIZON_DAYS` | The horizons a run may be dispatched for; the constructor rejects anything else |
-| `30` | `ForecastHighlightsQuery::HORIZON_DAYS` | The dashboard tile and sidebar badge read the 30-day run only |
+| `[30, 60, 90, 180, 365]` | `ForecastHorizon` | The horizons a run may be dispatched for; `ProjectForecastJob`'s constructor rejects anything else |
+| `30` | `ForecastHighlightsQuery::TILE_HORIZON` | The dashboard tile and sidebar badge read the 30-day run only; derived from `ForecastHorizon::OneMonth`, never respelled |
+| `30` | `ForecastChartView::PANEL_TINT_HORIZON` / `ForecastPage::DEFAULT_HORIZON` | The nearest checkpoint the scenario panel tints on, and the horizon the page opens on; both derived from `ForecastHorizon::OneMonth` |
 | `40` | `RangeProjector::HIGH_VARIANCE_THRESHOLD_PERCENT` | Minimum declared tolerance to consider the percentile tier |
 | `6` | `RangeProjector::MIN_OCCURRENCES_FOR_PERCENTILE` | Minimum observed occurrences to actually use it |
 | `3` | `CadenceJitter::WINDOW_DAYS` | Half-width in days; the replica window is 7 days |
-| `0.95` / `1.05` | `ScenarioApplier::ONE_OFF_ENVELOPE_*_MULTIPLIER` | The fixed ±5% band for scenario-added amounts, which have no tolerance field |
+| `0.95` / `1.05` | `ScenarioApplier::ADD_RECURRING_ENVELOPE_LOW_MULTIPLIER` / `..._HIGH_MULTIPLIER` | The fixed ±5% band for a scenario-added recurring series, which has no tolerance field. An `add_one_off` carries no envelope at all: `low = point = high`, the same shape a booked row has |
 | `horizonDays + 1` | `DailyFold` | Points emitted per account per run |
+
+No day count in this column is written as a bare integer anywhere under
+`Modules/Forecasting`. `ForecastHorizon` owns them: the rail offers
+`ForecastHorizon::days()`, `ProjectForecastJob` refuses anything the enum does
+not hold, and the net-diff strip is keyed by the same list — so a literal `30`
+is a second horizon set that agrees only until a case is added or renamed.
 
 ## Integer arithmetic and rounding
 

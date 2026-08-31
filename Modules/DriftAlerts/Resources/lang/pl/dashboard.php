@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Alerty o odchyleniach',
-    'aria' => 'Alerty o odchyleniach — otwarte: :count, wpływ w skali roku: :amount',
+    'aria' => 'Alerty o odchyleniach — otwarte: :count, :impact',
     'open' => 'otwarte',
-    'annualized_impact' => 'wpływ w skali roku',
+    'impact_rising' => 'wpływ w skali roku: :amount',
+    'impact_flat' => 'brak dodatkowych kosztów rocznych',
 ];

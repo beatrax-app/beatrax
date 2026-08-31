@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Superficie operativa della Developer Console integrata.',
     'worker_heartbeat' => 'Heartbeat del worker',
     'not_running' => 'NON IN ESECUZIONE',
+    'heartbeat_age' => ':count s fa · ttl :ttl s|:count s fa · ttl :ttl s',
     'queue' => 'Coda',
     'pending' => 'in attesa',
     'failed' => 'falliti',

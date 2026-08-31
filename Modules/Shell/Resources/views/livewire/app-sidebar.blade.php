@@ -111,7 +111,7 @@
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Forecasts) }}</span>
         {{ AppNavigation::label(Destination::Forecasts) }}
         @if (($navCounts['forecast'] ?? 0) > 0)
-            <span role="img" class="side-badge alert" aria-label="{{ Lang::choice('core::sidebar.badge.forecast', $navCounts['forecast'], ['count' => $navCounts['forecast'], 'days' => ForecastHighlightsQuery::HORIZON_DAYS]) }}">{{ $navCount('forecast') }}</span>
+            <span role="img" class="side-badge alert" aria-label="{{ Lang::choice('core::sidebar.badge.forecast', $navCounts['forecast'], ['count' => $navCounts['forecast'], 'days' => ForecastHighlightsQuery::TILE_HORIZON]) }}">{{ $navCount('forecast') }}</span>
         @endif
     </a>
     <a href="{{ Destination::Calendar->url() }}" class="side-item {{ $isActive(Destination::Calendar->path()) }}">
@@ -388,7 +388,7 @@
                     The values still refresh on any page load.
                 --}}
                 <div class="dev-pulse" @if ($pollsLiveData) wire:poll.5s.keep-alive @endif>
-                    {{ Lang::get('core::sidebar.dev.pulse', ['queue' => $queueCount, 'worker' => $workerSecondsAgo !== null ? $workerSecondsAgo . 's ago' : '—']) }}
+                    {{ Lang::get('core::sidebar.dev.pulse', ['queue' => $queueCount, 'worker' => $workerSecondsAgo !== null ? Lang::choice('core::sidebar.dev.worker_ago', $workerSecondsAgo) : '—']) }}
                 </div>
             </div>
         @endif

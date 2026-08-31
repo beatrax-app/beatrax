@@ -17,9 +17,9 @@ use Spatie\Activitylog\Support\ActivityLogger;
 
 final readonly class SpatieAuditWriter implements AuditWriter
 {
-    private const AUDIT_TABLE = 'dev_mode_audit';
+    private const string AUDIT_TABLE = 'dev_mode_audit';
 
-    public const LOG_NAME = 'dev_mode';
+    public const string LOG_NAME = 'dev_mode';
 
     public function __construct(
         private CurrentUser $currentUser,

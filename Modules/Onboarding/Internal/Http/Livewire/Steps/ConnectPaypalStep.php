@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
@@ -72,39 +73,30 @@ final class ConnectPaypalStep extends Component
 
         $user = $currentUser->user();
 
-        // Before the preview, never after: the pipeline tags every row
-        // 'error' while AccountResolver still returns UnknownAccount, and
-        // that all-error preview is what gets cached.
-        ($ensurePaypalAccount)($user);
-
         $tmp = $this->activityCsv->getRealPath();
         $originalFilename = UploadFilename::sanitise($this->activityCsv->getClientOriginalName(), '.csv');
 
-        try {
-            $result = $importer->runFromUpload($tmp, $this->selectedFormat, $user, $originalFilename);
-        } catch (Throwable $e) {
-            $logger->error('ConnectPaypalStep: import preview failed.', [
-                'source_format' => $this->selectedFormat,
-                'filename' => $originalFilename,
-                ...SafeExceptionContext::describe($e),
-                'exception_trace' => SafeTrace::cap($e, $app->basePath()),
-            ]);
-            $this->uploadError = Lang::get('onboarding::connect_paypal.errors.unreadable');
-
+        $result = $this->runPreview($importer, $tmp, $user, $originalFilename, $logger, $app);
+        if ($result === null) {
             return;
         }
 
-        $fatalParseMessage = $this->fatalParseMessage($result);
-        if ($fatalParseMessage !== null) {
-            $logger->warning('ConnectPaypalStep: upload produced only error rows.', [
-                'source_format' => $this->selectedFormat,
-                'filename' => $originalFilename,
-                'import_run_id' => $result->importRunId,
-                'error_message' => $fatalParseMessage,
-            ]);
-            $this->uploadError = $fatalParseMessage;
-
+        // A file nothing could read must not leave a durable wallet behind:
+        // the account outlives the import, and nothing in the app deletes one.
+        if ($this->refuses($result, $originalFilename, $logger)) {
             return;
+        }
+
+        // After the preview, because only the export says which currency the
+        // wallet holds; opened before it, a euro balance was labelled in yen.
+        // The rows the first pass could not resolve are read again once the
+        // account exists, so the cache is never the all-error one.
+        if (($ensurePaypalAccount)($user, statementCurrency: self::walletCurrencyIn($result))) {
+            $result = $this->runPreview($importer, $tmp, $user, $originalFilename, $logger, $app) ?? $result;
+
+            if ($this->refuses($result, $originalFilename, $logger)) {
+                return;
+            }
         }
 
         $progress = WizardProgress::query()
@@ -129,6 +121,52 @@ final class ConnectPaypalStep extends Component
     public function render(ViewFactory $views): View
     {
         return $views->make('onboarding::livewire.steps.connect-paypal-step');
+    }
+
+    private function runPreview(RunsImports $importer, string $tmp, User $user, string $originalFilename, LoggerInterface $logger, Application $app): ?ImportPreviewResult
+    {
+        try {
+            return $importer->runFromUpload($tmp, $this->selectedFormat, $user, $originalFilename);
+        } catch (Throwable $e) {
+            $logger->error('ConnectPaypalStep: import preview failed.', [
+                'source_format' => $this->selectedFormat,
+                'filename' => $originalFilename,
+                ...SafeExceptionContext::describe($e),
+                'exception_trace' => SafeTrace::cap($e, $app->basePath()),
+            ]);
+            $this->uploadError = Lang::get('onboarding::connect_paypal.errors.unreadable');
+
+            return null;
+        }
+    }
+
+    private function refuses(ImportPreviewResult $result, string $originalFilename, LoggerInterface $logger): bool
+    {
+        $fatalParseMessage = $this->fatalParseMessage($result);
+        if ($fatalParseMessage === null) {
+            return false;
+        }
+
+        $logger->warning('ConnectPaypalStep: upload produced only error rows.', [
+            'source_format' => $this->selectedFormat,
+            'filename' => $originalFilename,
+            'import_run_id' => $result->importRunId,
+            'error_message' => $fatalParseMessage,
+        ]);
+        $this->uploadError = $fatalParseMessage;
+
+        return true;
+    }
+
+    private static function walletCurrencyIn(ImportPreviewResult $result): ?string
+    {
+        foreach ($result->accountsToName as $unknown) {
+            if ($unknown->iban === EnsurePaypalAccountAction::PAYPAL_OWN_IBAN) {
+                return $unknown->statementCurrency;
+            }
+        }
+
+        return null;
     }
 
     private function fatalParseMessage(ImportPreviewResult $result): ?string

@@ -10,9 +10,9 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use stdClass;
 
-final class RuleEvaluator
+final readonly class RuleEvaluator
 {
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db) {}
 
     // The JOIN matches on the derived `normalized_name` key, which is not a
     // sensitive column, so no decrypt is needed even for an encrypted user.

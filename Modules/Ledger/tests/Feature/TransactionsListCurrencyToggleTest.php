@@ -32,28 +32,36 @@ it('defaults the currency property to the user default_currency_view preference 
     $this->fixtureUser->update(['default_currency_view' => 'eur_only']);
 
     Livewire::test(TransactionsList::class)
-        ->assertSet('currency', 'eur');
+        ->assertSet('currency', 'eur_only');
 })->group('phase-3');
 
-// The toggle means "only rows already settled in my reporting currency", which
-// the component's own comment says and the label did not: it read "EUR only"
-// whatever the reader had chosen. A reader on USD was told EUR and shown USD —
-// which, on a euro-settled ledger, is nothing at all.
-it('names the readers own reporting currency on the base-currency toggle', function (): void {
+// The toggle picks which of a row's two amounts is printed and filters nothing,
+// so the reader's reporting currency has no business in its label: it once read
+// "EUR only" for a euro reader and "USD only" for a dollar one, and either was
+// contradicted the moment a row settled in something else.
+it('reads the same on the base-currency toggle whatever the reader reports in', function (): void {
+    $labelOf = static function (string $html): string {
+        preg_match('/<ui-radio\b[^>]*\bvalue="eur_only"[^>]*>(.*?)<\/ui-radio>/s', $html, $match);
+
+        return trim(strip_tags($match[1] ?? ''));
+    };
+
+    $euro = $labelOf(Livewire::test(TransactionsList::class)->html());
+
     $this->fixtureUser->update(['base_currency' => 'USD']);
 
-    $html = Livewire::test(TransactionsList::class)->html();
+    $dollar = $labelOf(Livewire::test(TransactionsList::class)->html());
 
-    expect($html)->toContain('USD only')
-        ->and($html)->not->toContain('EUR only');
+    expect($euro)->not->toBe('')
+        ->and($dollar)->toBe($euro);
 })->group('phase-3');
 
-it('overrides the user preference when ?currency=eur is present in the URL', function (): void {
+it('overrides the user preference when ?currency=eur_only is present in the URL', function (): void {
     $this->fixtureUser->update(['default_currency_view' => 'original']);
 
-    Livewire::withQueryParams(['currency' => 'eur'])
+    Livewire::withQueryParams(['currency' => 'eur_only'])
         ->test(TransactionsList::class)
-        ->assertSet('currency', 'eur');
+        ->assertSet('currency', 'eur_only');
 })->group('phase-3');
 
 it('overrides the user preference when ?currency=original is present in the URL', function (): void {
@@ -99,7 +107,7 @@ it('renders one line for a foreign-currency row in eur mode', function (): void 
     $settledEur = Money::ofMinor(-1207, 'EUR')->format();
 
     Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->assertSeeText($settledEur)
         ->assertDontSeeText($nativeUsd);
 })->group('phase-3');
@@ -150,6 +158,6 @@ it('keeps the URL clean when the toggle is on the default value', function (): v
 it('offers both currency-view tokens on the segmented toggle', function (): void {
     $html = Livewire::test(TransactionsList::class)->html();
 
-    expect($html)->toContain('value="eur"')
+    expect($html)->toContain('value="eur_only"')
         ->and($html)->toContain('value="original"');
 })->group('phase-3');

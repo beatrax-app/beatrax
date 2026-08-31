@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Conferma o rifiuta i collegamenti candidati che il risolutore delle catene non ha potuto confermare automaticamente.',
 
     'empty_heading' => 'Niente da rivedere',
-    'empty_body' => 'Ogni anello della catena è confermato o rifiutato. I nuovi candidati compariranno qui man mano che arrivano le importazioni.',
+    'empty_body' => 'Ogni collegamento che il resolver è riuscito ad abbinare è confermato o rifiutato. I nuovi candidati compariranno qui man mano che arrivano le importazioni.',
 
     'auto_confirm_nudge' => 'Ancora una conferma e i collegamenti simili si confermeranno da soli.',
 

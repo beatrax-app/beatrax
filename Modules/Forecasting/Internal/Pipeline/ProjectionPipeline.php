@@ -10,10 +10,15 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
+use Modules\Forecasting\Internal\Enums\ForecastPointSet;
 use Modules\Forecasting\Internal\Exceptions\ForecastResultEncodingException;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
+use Modules\Forecasting\Internal\Support\BufferFloor;
 use Modules\Forecasting\Models\ForecastRun;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 use Throwable;
@@ -35,6 +40,8 @@ final readonly class ProjectionPipeline
         private ScenarioApplier $scenarioApplier,
         private BaseCurrency $baseCurrency,
         private BookedRowProjector $bookedRows,
+        private CadenceJitter $jitter,
+        private CrossCurrencyTotal $fx,
     ) {}
 
     public function project(User $user, ?int $scenarioId, int $horizonDays): void
@@ -97,13 +104,13 @@ final readonly class ProjectionPipeline
     }
 
     /**
-     * @return array{as_of: string, horizon_days: int, accounts: array<int, array{account_id: int, account_name: string, default_currency: string, today_balance_minor: int, anchor_source: string, points: list<array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}>}>}
+     * @return array{as_of: string, horizon_days: int, accounts: array<int, array{account_id: int, account_name: string, default_currency: string, today_balance_minor: int, anchor_source: string, unconverted_currencies: list<string>, points: list<array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}>, points_by_funder: list<array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}>}>}
      */
     private function computeResult(User $user, ?int $scenarioId, CarbonImmutable $asOf, int $horizonDays): array
     {
         $allSeries = $this->seriesQuery->allApprovedForUser($user);
 
-        $seriesIds = array_map(static fn ($s): int => $s->seriesId, $allSeries);
+        $seriesIds = array_map(static fn (RecurringSeriesDto $s): int => $s->seriesId, $allSeries);
         $accountIdBySeriesId = $seriesIds === []
             ? []
             : $this->seriesQuery->accountIdsForSeriesIds($seriesIds, $user);
@@ -155,7 +162,6 @@ final readonly class ProjectionPipeline
         $routed = $this->router->route(
             contributions: $allContributions,
             user: $user,
-            viewByFunder: false,
         );
 
         // The isolation boundary: mutations fold onto the baseline in memory,
@@ -170,14 +176,26 @@ final readonly class ProjectionPipeline
             );
         }
 
-        /** @var array<int, list<ForecastContribution>> $byAccount */
-        $byAccount = [];
-        foreach ($routed as $contrib) {
-            $byAccount[$contrib->accountId] ??= [];
-            $byAccount[$contrib->accountId][] = $contrib;
-        }
+        // Jitter runs last. Every stage above this line selects occurrences —
+        // booked-row supersession, chain routing, each scenario mutation — and
+        // a replica is one seventh of an occurrence, not an occurrence of its
+        // own. Smearing earlier charged a series seven times over.
+        $routed = $this->jitter->apply($routed, $asOf, $asOf->addDays($horizonDays));
+
+        $byAccount = self::bucketByAccount($routed);
+        $byFunderAccount = self::bucketByAccount($this->router->collapseByFunder($routed));
 
         $accountsResult = [];
+
+        // Every contribution currency in the run, not this account's own: two
+        // accounts can share a target currency while holding different
+        // denominations, and a map memoised off the first would report the
+        // second's as unpriceable.
+        $contributionCurrencies = self::currenciesIn($routed);
+
+        // One lookup per (currency, target): ratesTo() reads the whole
+        // exchange_rates table per currency.
+        $ratesByTargetCurrency = [];
 
         foreach ($accounts as $account) {
             /** @var stdClass $account */
@@ -185,26 +203,43 @@ final readonly class ProjectionPipeline
             $anchor = $this->anchor->forAccount($accountId, $user);
             $defaultCurrency = $currencyByAccountId[$accountId];
 
-            $contributions = $byAccount[$accountId] ?? [];
+            $perSeries = $byAccount[$accountId] ?? [];
+            $byFunder = $byFunderAccount[$accountId] ?? [];
+            $rates = $ratesByTargetCurrency[$defaultCurrency]
+                ??= $this->fx->ratesTo($contributionCurrencies, $defaultCurrency);
 
-            $folded = $this->fold->fold(
+            $fold = $this->fold->fold(
                 openingBalanceMinor: $anchor->openingBalanceMinor,
-                contributions: $contributions,
+                contributions: $perSeries,
                 asOf: $asOf,
                 horizonDays: $horizonDays,
                 defaultCurrency: $defaultCurrency,
+                rates: $rates,
+            );
+            $funderFold = $this->fold->fold(
+                openingBalanceMinor: $anchor->openingBalanceMinor,
+                contributions: $byFunder,
+                asOf: $asOf,
+                horizonDays: $horizonDays,
+                defaultCurrency: $defaultCurrency,
+                rates: $rates,
+            );
+            $points = array_values($fold->points);
+
+            $effectiveBuffer = BufferFloor::forKind(
+                AccountKind::tryFrom(self::toString($account->kind ?? null)),
+                isset($account->forecast_min_buffer_minor) && is_numeric($account->forecast_min_buffer_minor)
+                    ? (int) $account->forecast_min_buffer_minor
+                    : null,
             );
 
-            $points = array_values($folded);
-
-            $effectiveBuffer = isset($account->forecast_min_buffer_minor) && is_numeric($account->forecast_min_buffer_minor)
-                ? (int) $account->forecast_min_buffer_minor
-                : null;
-
+            // The funder curve carries the same point estimates, so it would
+            // detect the same windows; only the band differs.
             $this->shortfall->detect(
                 dailyPoints: $points,
                 accountId: $accountId,
                 scenarioId: $scenarioId,
+                horizonDays: $horizonDays,
                 effectiveBufferMinor: $effectiveBuffer,
                 currency: $defaultCurrency,
                 user: $user,
@@ -216,7 +251,9 @@ final readonly class ProjectionPipeline
                 'default_currency' => $defaultCurrency,
                 'today_balance_minor' => $anchor->openingBalanceMinor,
                 'anchor_source' => $anchor->source,
-                'points' => $points,
+                'unconverted_currencies' => $fold->unconvertedCurrencies,
+                ForecastPointSet::PerSeries->value => $points,
+                ForecastPointSet::ByFunder->value => array_values($funderFold->points),
             ];
         }
 
@@ -225,5 +262,35 @@ final readonly class ProjectionPipeline
             'horizon_days' => $horizonDays,
             'accounts' => $accountsResult,
         ];
+    }
+
+    /**
+     * @param  list<ForecastContribution>  $contributions
+     * @return array<int, list<ForecastContribution>>
+     */
+    private static function bucketByAccount(array $contributions): array
+    {
+        /** @var array<int, list<ForecastContribution>> $byAccount */
+        $byAccount = [];
+        foreach ($contributions as $contribution) {
+            $byAccount[$contribution->accountId] ??= [];
+            $byAccount[$contribution->accountId][] = $contribution;
+        }
+
+        return $byAccount;
+    }
+
+    /**
+     * @param  list<ForecastContribution>  $contributions
+     * @return list<string>
+     */
+    private static function currenciesIn(array $contributions): array
+    {
+        $codes = [];
+        foreach ($contributions as $contribution) {
+            $codes[$contribution->currency] = true;
+        }
+
+        return array_keys($codes);
     }
 }

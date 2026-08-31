@@ -13,12 +13,12 @@ use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\DriftAlerts\Public\Events\DriftAlertAcknowledged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class AcknowledgeDriftAlert
+final readonly class AcknowledgeDriftAlert
 {
     public function __construct(
-        private readonly DriftAlertStateMachine $stateMachine,
-        private readonly Dispatcher $events,
-        private readonly Clock $clock,
+        private DriftAlertStateMachine $stateMachine,
+        private Dispatcher $events,
+        private Clock $clock,
     ) {}
 
     public function __invoke(int $alertId, User $user): void
@@ -33,7 +33,9 @@ final class AcknowledgeDriftAlert
             throw new NotFoundHttpException('Drift alert not found.');
         }
 
-        if ($alert->state === DriftAlertState::Acknowledged->value) {
+        // A second tab acting on a row the first already closed is a no-op,
+        // not a 500: dismissed_cancelled is terminal and has no successor.
+        if (! DriftAlertState::from($alert->state)->allows(DriftAlertState::Acknowledged)) {
             return;
         }
 

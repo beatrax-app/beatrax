@@ -21,23 +21,23 @@ use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Internal\Support\ConsentWindow;
 use RuntimeException;
 
-final class OpenBankingConnectController
+final readonly class OpenBankingConnectController
 {
     // Enable Banking resolves an ASPSP by name AND country, so a reader who has
     // named no country still needs one sent. The two banks the wizard curates
     // are Dutch, so that is the country to fall back to — never the one to
     // assume over a reader who has said otherwise.
-    private const FALLBACK_ASPSP_COUNTRY = 'NL';
+    private const string FALLBACK_ASPSP_COUNTRY = 'NL';
 
     public function __construct(
-        private readonly OpenBankingSecretsRepository $secrets,
-        private readonly EnableBankingHttpClient $client,
-        private readonly OpenBankingStateRepository $oauthState,
-        private readonly CurrentUser $currentUser,
-        private readonly UserCountry $countries,
-        private readonly Clock $clock,
-        private readonly Redirector $redirector,
-        private readonly LoopbackRedirectUri $loopback,
+        private OpenBankingSecretsRepository $secrets,
+        private EnableBankingHttpClient $client,
+        private OpenBankingStateRepository $oauthState,
+        private CurrentUser $currentUser,
+        private UserCountry $countries,
+        private Clock $clock,
+        private Redirector $redirector,
+        private LoopbackRedirectUri $loopback,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse
@@ -87,7 +87,7 @@ final class OpenBankingConnectController
             country: $this->aspspCountry(),
             redirectUrl: $redirectUri,
             scope: new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
-            validUntil: $this->clock->now()->addDays(ConsentWindow::VALID_FOR_DAYS),
+            validUntil: ConsentWindow::expiresAfter($this->clock->now()),
         );
 
         $consentUrl = $response['url'] ?? null;
@@ -157,12 +157,12 @@ final class OpenBankingConnectController
 
     // Special-use names that resolve inside the network rather than on the
     // public internet (RFC 6761/8375, plus the cloud metadata suffix).
-    private const RESERVED_SUFFIXES = ['.local', '.localhost', '.internal', '.home.arpa', '.invalid'];
+    private const array RESERVED_SUFFIXES = ['.local', '.localhost', '.internal', '.home.arpa', '.invalid'];
 
     // A strict LDH name of at least two labels whose last label is alphabetic.
     // The alphabetic TLD is what does the work: it is the one rule that
     // rejects every numeric notation at once.
-    private const HOSTNAME_PATTERN = '/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$/';
+    private const string HOSTNAME_PATTERN = '/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$/';
 
     // Fails CLOSED, like RelayConfig::isLanHost. Falling through to "contains
     // a dot" answered "public" for every notation FILTER_VALIDATE_IP cannot
@@ -194,12 +194,6 @@ final class OpenBankingConnectController
             return false;
         }
 
-        foreach (self::RESERVED_SUFFIXES as $suffix) {
-            if (str_ends_with($host, $suffix)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all(self::RESERVED_SUFFIXES, fn (string $suffix): bool => ! str_ends_with($host, $suffix));
     }
 }

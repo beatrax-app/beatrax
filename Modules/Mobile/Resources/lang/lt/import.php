@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Slaptažodžiai nesutampa.',
         'password_length' => 'Naudok bent 12 simbolių.',
         'pin_length' => 'PIN kodą turi sudaryti bent 6 skaitmenys.',
+        'pin_digits' => 'PIN kodą turi sudaryti nuo 6 iki 10 skaitmenų — tik skaitmenys.',
         'pins_mismatch' => 'PIN kodai nesutampa. Bandyk dar kartą.',
         'session_expired' => 'Tavo sesija baigėsi nespėjus užbaigti sąrankos. Iš naujo įvesk PIN kodą ir slaptažodį.',
         'retry_failed' => 'Šio įrenginio sąrankos vis tiek nepavyko užbaigti. Bandyk dar kartą.',

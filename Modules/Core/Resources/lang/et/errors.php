@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Tagasi Beatraxi',
 
+    'not_saved' => 'Midagi ei salvestatud. Sinu andmed on muutumatud — proovi uuesti.',
+
+    'no_longer_here' => 'Seda enam ei ole.',
+
     '404' => [
         'title' => 'Seda lehte ei ole',
         'body' => 'Link võib olla vana või leht on ümber nimetatud. Sinu andmetega on kõik korras.',

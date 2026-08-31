@@ -8,16 +8,16 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserCountryChanged;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Services\UserCountry;
-use Modules\Tax\Internal\Actions\TaxCategoryWriter;
+use Modules\Tax\Internal\Actions\TaxCategoryStore;
 
 // The country is chosen in four places now — signup, the phone's import
 // screen, settings and the setup wizard — and only this module knows a corpus
 // has to follow it there.
-final class SeedDeductionCategoriesForCountry
+final readonly class SeedDeductionCategoriesForCountry
 {
     public function __construct(
-        private readonly TaxCategoryWriter $writer,
-        private readonly UserCountry $countries,
+        private TaxCategoryStore $writer,
+        private UserCountry $countries,
     ) {}
 
     public function handle(UserCountryChanged $event): void

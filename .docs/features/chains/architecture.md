@@ -73,18 +73,21 @@ What the module explicitly does NOT do:
     hold, the upstream matcher produces an identical hint on the next
     import/chain pass, so an accidental dismiss just gets a fresh hint
     next time. Guards against being called on a concrete row (throws,
-    since Confirm/Reject own that path instead).
+    since Confirm/Reject own that path instead). `IcsSettlementResolver`
+    calls it too, for the hint whose gap has closed — see
+    [a hint does not outlive its gap](#a-hint-does-not-outlive-the-gap-it-described).
 - **DTOs/** — `ChainLinkRow`, `ChainLinkHintRow`, `ChainTree`,
   `ChainTreeNode`, `CardStatementForecastTile`, `StatementSettlement`,
   `NextSettlementDto`, `SeriesFunderLink`.
-- **Exceptions/** — `ChainLinkRequiresConcretePartnerException` (the
-  typed error `ConfirmChainLink` throws when a hint row cannot be
-  promoted because the `to` endpoint is still NULL).
 - **Services/** — `ChainLinkQuery` (review-queue + open-candidate
   count for the sidebar badge — the count and the queue share the
   NULL-endpoint filter, so a badge of one never leads to an empty
   page; `hintCount()` is the badge for those rows),
   `CardStatementQuery` (next-settlement + forecast-tile reads).
+
+  `allChainsForUser()` and `settlementTotalsForUser()` are the /chains
+  pair, and they are a pair for a reason — see
+  [the settlement-complete read](#the-chains-read-is-scoped-to-settlements-not-links).
 
 `Internal/` houses the resolvers and the lifecycle owners:
 
@@ -94,6 +97,9 @@ What the module explicitly does NOT do:
   `noCardStatementStateWritesOutsideMachine` keeps it sole.
 - **Internal/ChainLinkInsertHelper** — the single shared `chain_links`
   INSERT site that encodes evidence JSON consistently.
+- **Internal/Exceptions/ChainLinkRequiresConcretePartnerException** —
+  the typed error the Public `ConfirmChainLink` throws when a hint row
+  cannot be promoted because the `to` endpoint is still NULL.
 - **Internal/Resolvers/IcsSettlementResolver** — decomposes ASN→ICS
   bulk-iDEAL settlements into per-statement chain rows.
 - **Internal/Resolvers/PaypalFundingResolver** — three arms:
@@ -132,9 +138,10 @@ What the module explicitly does NOT do:
   which is redundant but harmless since chain resolution is
   idempotent.
 - `ResolveChainLinksJob` — for one user: flips the audit row to
-  `running` with `started_at`, runs the three resolvers in order
-  (`IcsSettlementResolver`, `PaypalFundingResolver`,
-  `RetypeByAliasResolver`), flips the audit row to `complete` with
+  `running` with `started_at`, runs the five passes in order
+  (`UpsertsCardStatements`, `RetypeByAliasResolver`,
+  `PairsTransferLegs`, `IcsSettlementResolver`,
+  `PaypalFundingResolver`), flips the audit row to `complete` with
   `linked_count`. A `JobFailed` listener registered in
   `ChainsServiceProvider::boot()` flips it to `failed` with a
   truncated `last_error` on final-retry exhaustion.
@@ -170,30 +177,36 @@ What the module explicitly does NOT do:
 ## CreateChainLinkFromHint — hint-type contract + safety
 
 Two hint types are handled: `funded_by_card` → `chain_links.kind =
-'funded_by_card_hint'` (an ICS receipt surfaced a card last-four; the
-candidate waits for a resolver to bind it once the funder lands), and
+'funded_by_card_hint'` (an ICS receipt surfaced a card last-four), and
 `refund_of` → `'refund_of_hint'` (a refund-shaped receipt surfaced the
-original-order reference id). No matcher currently emits `refund_of`
+original-order reference id).
+
+Neither is ever bound to a partner. `chain_links.to_transaction_id` is
+written on INSERT and nowhere else — no resolver, no action and no merge
+rule rewrites it — so a receipt hint leaves the queue only when the
+reader dismisses it. `/chains/hints` now says exactly that; the copy it
+replaced offered a pass that would resolve it, which no code performs. No matcher currently emits `refund_of`
 hints — the branch exists purely so the `ChainHintDetected` payload
 sum-type stays total for both cases. An unknown `hintType` is silently
 dropped, since the payload sum-type is closed and an unrecognized value
 means an unintegrated producer upstream.
 
-Cross-user safety mirrors `ChainLinkInsertHelper`: `chain_links.user_id`
-is written from `$event->userId` only, never inferred from session
-state, and `RecordReceipt` is the sole populator of that field.
-Idempotency also mirrors the helper — a pre-INSERT existence check on
-`(user_id, from_transaction_id, kind)` skips when any row already
-exists in any state, so a manually-rejected row stays rejected across
-repeated event dispatches.
+Cross-user safety and idempotency are `ChainLinkInsertHelper`'s, not a
+copy of them: the listener calls `insertIfNotExists()` and passes
+`$event->userId` as the row's owner, never inferring it from session
+state (`RecordReceipt` is the sole populator of that field). Hand-copied
+here once, the two guards drifted — the helper narrowed on
+`to_transaction_id` and the copy did not.
 
 ## ChainLinkInsertHelper — the shared idempotent write path
 
 `Internal/ChainLinkInsertHelper` is the single `chain_links` INSERT
-site both `IcsSettlementResolver` and `PaypalFundingResolver` call, so
-the `evidence` column is `json_encode`d byte-identically across
-resolvers (one `JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES`
-policy, not a per-resolver choice). It has two entry points over one
+site in the app: both resolvers, `CreateChainLinkFromHint` and
+`DemoChainsSeeder` write through it, so the `evidence` column is
+`json_encode`d byte-identically everywhere (one
+`JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES` policy, not a
+per-caller choice — the seeder's Eloquent `create()` through the
+`array` cast used the default flags). It has two entry points over one
 guard: `insertIfNotExists()` for a single proposed link, and
 `insertMissing()` for a list of them.
 
@@ -204,6 +217,12 @@ tuple regardless of state, the insert is skipped. This is what makes
 rejected-pair non-re-proposal work — a row the user manually rejected
 stays rejected because the guard refuses to write a fresh candidate
 for the same pair.
+
+That same tuple is now the row's primary key, folded through
+`DerivedRowId::for('chain_links', ...)`. The table has no UNIQUE, so this guard
+was the only statement anywhere of what makes a link the same link; making it
+the id is what lets two devices resolve one hint into one row instead of two.
+See [the sync architecture](../sync/architecture.md#capture-for-the-last-five-detector-driven-tables).
 
 When `to_transaction_id` is NULL (the exceeded-tolerance
 `ics_bulk_settle` candidate case the schema's NULL-endpoint trigger
@@ -275,6 +294,23 @@ where the resolvers iterate empty sets:
    retyped rows from pass 2 are the canonical case; older installs may
    also carry orphans predating this code.
 
+### A hint does not outlive the gap it described
+
+The exceeded-tolerance arm writes a NULL-endpoint candidate saying this
+settlement does not add up against the charges the ledger holds. Import
+the missing charges and it does: the next pass finds the transfer again
+(`candidateTransferIds()` excludes only a transfer carrying a *confirmed*
+link), lands inside tolerance, writes the per-expense links and settles
+the statement.
+
+Nothing cleared the hint. `/chains/hints` went on quoting a shortfall
+against a statement the same pass had just settled, and only a hand
+dismissal could remove it. `resolveOne()` now dismisses it in the same
+transaction as the links, through the Public `DismissChainLinkHint` the
+reader's own button uses — so the peer receives the same tombstone a hand
+dismissal sends. A hint whose gap is still open is untouched: that one is
+still the reader's to decide on.
+
 The user-promotion path:
 
 ```
@@ -293,6 +329,40 @@ The user-promotion path:
        → RejectChainLink($chainLinkId, $user)
             → state = rejected
 ```
+
+## The /chains read is scoped to settlements, not links
+
+`/chains` renders one card per settlement with the payments that fed it
+branching beneath. It used to read a flat page of the newest 100
+`chain_links` rows and group whatever came back — but a settled ICS
+statement covers 50 to 300 charges, so the cut fell **inside** a
+settlement. The card then stated a payment count and a leg total taken
+from the slice that happened to load, directly under a heading carrying
+the settlement's whole amount: 120 charges of EUR 10.00 rendered as
+"100 payments · EUR 1,000.00" beneath a EUR 1,200.00 charge.
+
+So the page chooses settlements. `ChainLinkQuery::allChainsForUser()`
+picks the newest `SETTLEMENTS_PER_PAGE` settlement transaction ids, then
+returns up to `LEGS_PER_SETTLEMENT` legs of each — a card lists a prefix,
+not the lot, because 300 rows is not a card.
+`ChainLinkQuery::settlementTotalsForUser()` is the other half: one
+aggregate over **every** leg per settlement, giving the count, the
+per-currency totals and whether any leg is still a candidate. The card
+states those, and shows a "+ N more" line whenever it is listing fewer
+legs than it counted. The candidate flag comes from the aggregate for the
+same reason: the leg that still needs a person to look at it need not be
+among the ones the card lists.
+
+Which endpoint is the settlement depends on the kind — `ics_bulk_settle`
+runs settlement → charge and every other kind runs payment → funder — so
+both queries ask each side separately rather than through a CASE the
+query builder would have to carry raw. Taking the newest N per side and
+merging is exact: the global newest N are a subset of that union.
+
+Row hydration is batched. Every endpoint on the page is read in one
+query, and `confirmsRemaining` is counted once per distinct signature
+rather than once per row; the per-row form spent three queries on each
+link, so a 30-leg card cost 91 queries.
 
 ## ChainLinkQuery — the bidirectional tree walk
 
@@ -317,14 +387,26 @@ accidental cycles. Only `confirmed`/`candidate` states are followed
 walker — those candidates still surface via `hintsForReview()` for the
 user to resolve separately.
 
+A node carries `postedAt`, read from `transactions.posted_at` — the day
+`/chains`, the transactions list and the detail page all print, so
+opening the drawer does not move a row's date under the reader. The
+settlement resolvers still match legs by `booked_at` proximity; nothing
+reads a node's day to decide anything, so matching and display are
+free to name different columns and the display one follows the rest of
+the app. Both builders of a node read that column:
+`ChainTreeWalker::makeNode()` for the tree and
+`ChainDrawer::makeChildNode()` for the fan-out children it collapses
+under their settlement.
+
 The confidence-tier mapping the tree and the review queue share:
 `state='confirmed' AND resolver='auto' AND confidence=1.0` →
 `Deterministic`; any other `confirmed` → `Confirmed`; `candidate` →
 `Candidate`. Those three are `ConfidenceTier`, and they are derived for
 display rather than stored — `Deterministic` has no `chain_links.state`
-counterpart at all. The capitalised backing value is the badge label
-`chain-node.blade.php` renders verbatim, which is the only reason this
-vocabulary is spelled differently from `ChainLinkState`.
+counterpart at all. The backing value is a lowercase key fragment:
+`chain-node.blade.php` renders `Lang::get($tier->labelKey())`, because
+the capitalised English it used to print verbatim sat next to an
+aria-label the other 25 locales had already translated.
 
 ## ChainDrawer — the chain drill-down side-drawer
 
@@ -335,8 +417,11 @@ Its Blade view is the project's first Flux flyout — it uses
 `<flux:modal flyout position="right">` to render the chain tree as a
 vertical waterfall (top = the clicked transaction, downward =
 funders). Flux owns open/close/escape/click-outside; the component
-owns the chain-tree data, the fan-out pagination cursor, and per-leg
-collapse state.
+owns the chain-tree data and the fan-out pagination cursor. It carried
+a `$collapsedLegs` map and a `toggleLeg()` action alongside them from
+the day it shipped; no view ever read the map and no control ever
+called the action, so both were removed rather than finished — the
+spec asks for a paginated fan-out, not a collapsible one.
 
 The `open()` listener sets `transactionId` before dispatching
 `modal-show` — the dispatch has to happen after the id is set, and
@@ -349,7 +434,14 @@ click before the tree loaded, so the flyout appeared to do nothing).
 `showMoreFanout()` call increments it; pagination is forward-only.
 Confirm/Reject chip actions delegate to the same `ConfirmChainLink` /
 `RejectChainLink` Public actions `/chains/review` uses, so one action
-class powers both surfaces.
+class powers both surfaces — and, since they are the same actions, they
+carry the same two-tab race. The drawer catches it into `$actionError`
+the way the queue does; unhandled, the action's `NotFoundHttpException`
+reached the browser as a 404 on a link the other tab had just decided.
+
+The fan-out's child nodes take the account-name map as an argument, for
+the reason `ChainTreeWalker` reads one: `MAX_DEPTH` caps how deep the
+walk goes and nothing caps how wide.
 
 ### Fan-out children reconstruction
 

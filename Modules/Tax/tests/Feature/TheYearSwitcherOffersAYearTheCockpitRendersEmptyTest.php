@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
-use Modules\Tax\Public\Services\TaxYearQuery;
+use Modules\Tax\Internal\Services\TaxYearQuery;
 
 function ysoUser(DatabaseManager $db, string $username): int
 {

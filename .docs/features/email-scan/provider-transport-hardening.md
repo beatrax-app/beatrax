@@ -143,8 +143,7 @@ of failing the scan.
 
 ## Graph query quirks worth knowing
 
-These are provider constraints, not choices, and each one has cost
-someone an afternoon:
+These are provider constraints, not choices:
 
 - Graph rejects `$filter contains(subject, ...)` on the messages
   collection, so `$search` is the only keyword match available.

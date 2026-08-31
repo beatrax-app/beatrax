@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Показани са :shown най-скорошни от :count.',
+
     'drawer_nav' => 'Навигация',
 
     'search_placeholder' => 'Търсене…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Искаш ли да виждаш данните си и на телефона?',
         'body' => 'Инсталирай Beatrax на телефона си за бърз достъп до финансите ти.',
         'dismiss_aria' => 'Отхвърли подсказката за инсталиране',
+        'dismiss_caption' => 'Отхвърли',
         'install_app' => 'Инсталирай приложението',
 
         'desktop_html' => 'Отвори Beatrax в браузъра на телефона си и докосни „Добавяне към началния екран“ — или докосни иконата <strong style="color: var(--color-text);">⚡</strong> в менюто за споделяне на Safari.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Избрани файлове: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Избери дата',
         'prev_month' => 'Предишен месец',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Минути',
         'empty' => 'няма избран час',
     ],
+
+    'toast_undo' => 'Отмени',
 
     'veil_locked' => 'Приложението е заключено',
 

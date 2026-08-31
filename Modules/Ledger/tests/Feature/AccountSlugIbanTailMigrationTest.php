@@ -43,6 +43,7 @@ function asitSlug(int $id): string
 }
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->owner = User::query()->create([
         'username' => 'asit-owner',
         'password' => 'fixture-password-12chars',

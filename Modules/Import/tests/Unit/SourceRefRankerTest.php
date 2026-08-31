@@ -36,6 +36,34 @@ it('ranks an eml or mbox receipt above the statement exports it enriches', funct
     expect($ranker->rank('ref', SourceFormat::Eml->value))->toBeLessThan($ranker->rank('ref', 'camt053'));
 });
 
+// The list lived here three times over — a const, and again in the match arms —
+// and this file's own comment records that omitting one broke every receipt.
+// SourceFormat::isReceiptFile() is the one answer; a new receipt transport must
+// be recognised here the moment the enum recognises it, with nothing to update.
+it('recognises exactly the transports SourceFormat itself calls receipt files', function (): void {
+    $ranker = new SourceRefRanker;
+
+    foreach (SourceFormat::cases() as $format) {
+        expect($ranker->isReceiptFormat($format->value))
+            ->toBe($format->isReceiptFile(), $format->value.' disagrees with SourceFormat::isReceiptFile().');
+    }
+});
+
+it('ranks every receipt transport in one band, so none can be forgotten out of it', function (): void {
+    $ranker = new SourceRefRanker;
+
+    $receiptRanks = [];
+    foreach (SourceFormat::cases() as $format) {
+        if ($format->isReceiptFile()) {
+            $receiptRanks[] = $ranker->rank('ref', $format->value);
+        }
+    }
+
+    expect($receiptRanks)->not->toBeEmpty();
+    expect(array_unique($receiptRanks))->toHaveCount(1);
+    expect($receiptRanks[0])->toBeGreaterThan($ranker->rank('ref', SourceFormat::IcsPdf->value));
+});
+
 it('does not mistake a receipt matcher key for a source format', function (): void {
     $ranker = new SourceRefRanker;
 

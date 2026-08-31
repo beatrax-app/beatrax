@@ -57,12 +57,6 @@ final class DeviceKeySigner
      */
     public function verifyAny(array $payloads, string $sigHex, string $publicKeyBin): bool
     {
-        foreach ($payloads as $payload) {
-            if ($this->verify($payload, $sigHex, $publicKeyBin)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($payloads, fn (string $payload): bool => $this->verify($payload, $sigHex, $publicKeyBin));
     }
 }

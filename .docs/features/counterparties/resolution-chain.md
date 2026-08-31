@@ -214,8 +214,17 @@ unless the reader has named a country:
 `CounterpartyResolverService::namesANationalInstitution()` reads an
 empty region and each step returns null before the provider is reached.
 Government hits record `metadata.matched_keyword`; bank-fee hits add
-`metadata.subcategory = 'fee'`, which is what the profile page branches
-on to render a fee row rather than an institution row.
+`metadata.subcategory = 'fee'`
+(`Internal\Enums\CounterpartySubcategory::Fee`, under
+`CounterpartyMetadataKey::Subcategory`), which is what the profile page
+branches on — `CounterpartyProfileDto::$isBankFee` — to render a fee
+panel rather than an institution one. The DTO carries the answer as a
+bool rather than the token: it is Public, and a Public class may not put
+an Internal type on the cross-module surface. Step 2's bridge lands on the same
+`type='bank'` and carries no such flag, and the two rows are not the
+same claim about the money: a PayPal settlement under a heading reading
+"Bank fees by category" tells the reader their bank charged them for
+their own purchase.
 
 These two run last among the matchers because a keyword hit is the
 weakest evidence in the chain. `KOSTEN` appears in plenty of
@@ -231,14 +240,22 @@ copy:
   `Gemeente`.
 - A **regex** pattern cannot be substring-checked and is not human
   copy, so it falls back to the rule's own name, then the transaction's
-  name, then the literal string `Government`. Nothing else would stop
+  name, then the app's own word `Government`. Nothing else would stop
   PCRE syntax from landing in both the UI and the slug.
+
+A bank-fee rule with no `name` falls back the same way, to the app's own
+`Bank fee`. Every entry in every shipped `bank-fees` file carries a name
+today, so that arm is a guard rather than a live path.
+
+Both of those, and step 7's `Unknown`, are the app's words rather than the
+file's — see [the app's own words](#the-apps-own-words-for-a-row-it-had-to-name)
+for why they are marked and re-resolved per reader.
 
 ### 7. Unresolved
 
 Everything left becomes `type = 'unknown'`, keeping the IBAN so the
 triage page can show recent activity on it. The display name is the
-counterparty name, or the IBAN, or the literal `Unknown`, in that
+counterparty name, or the IBAN, or the app's own word `Unknown`, in that
 order.
 
 The one case that produces no row at all is a transaction with no name,
@@ -248,6 +265,64 @@ there is simply nothing for triage to show.
 
 Unknown rows are the input to
 [triage suggestions](triage-suggestions.md).
+
+## The app's own words for a row it had to name
+
+Three of the arms above name a row with a word that came from the app rather
+than from the reader's file or the corpus: `Unknown` in step 7, `Government`
+for a regex government rule with no name, and `Bank fee` for a bank-fee rule
+with no name.
+
+A word like that stored in `display_name` is frozen in the language the import
+ran in. A phone set to Dutch showed "Onbekend" four times on `/counterparties`
+and "Unknown" once, on the counterparty row itself, because that one came out
+of the column while the other four came from
+`counterparties::components.type_chip.unknown`.
+
+`Modules\Counterparties\Public\Support\CounterpartyDefaultName` is the seam
+that fixes it, and it follows `Modules\Ledger\Public\Support\CategoryDisplayName`,
+which does the same job for `categories.name_is_default`:
+
+- The **English still goes in the column**. The slug derives from the display
+  name, so a translated name would fork the row per reader, and a reader whose
+  locale has no line for the token keeps something legible.
+- **`metadata.default_name` carries the token** — `unknown`, `government` or
+  `bank_fee`. This table already keeps its row flags in `metadata`
+  (`ignored`, `subcategory`) rather than in dedicated columns, so the mark
+  needs no schema change and travels with the row the way those two do.
+- **Every read site resolves through `CounterpartyDefaultName::resolve()`**:
+  `CounterpartyIndexQuery`, `CounterpartyProfileQuery`,
+  `CounterpartyDisplayName` (which is also what the transaction detail picker,
+  the rule form and the report builder read) and `CounterpartyTriageQueue`.
+  Three sites outside this module read the column too, and they resolve the
+  same way: `Modules\Tax\Internal\Services\TaxYearQuery` (the cockpit row, and
+  through it the CSV and PDF exports),
+  `Modules\Tax\Public\Services\TaxTagQuery` (the batch-tag banner) and
+  `Modules\Search\Internal\Services\EntityNameSearch` (the ⌘K palette).
+- **The palette matches on the reader's word as well as the stored one.**
+  Translating on the way out alone would leave a Dutch reader unable to *find*
+  a row their own screen calls "Onbekend". A category is matched by a SQL
+  predicate on `name_is_default` plus the slugs the term translates to, but a
+  counterparty's `display_name` is ciphertext at rest, so the palette has no
+  SQL name predicate to widen: it already reads the reader's own counterparties
+  whole and matches in PHP. Resolving the token in that same pass costs no
+  extra row and no extra statement, and works on an encrypted install where a
+  `metadata` predicate would still have to be paired with a name match SQL
+  cannot do. The stored English keeps matching beside the translation, the way
+  a default category's does.
+- **`LabelCounterparty` clears the mark.** Once the reader has named the row,
+  the words are theirs and stay verbatim in every language.
+- **`CounterpartySlugResolver` deliberately does not resolve.** It compares the
+  *stored* name to decide whether a slug is free; translating there would
+  fragment one counterparty into one row per language the reader has used.
+
+The mark is written with the name it belongs to and never re-asserted by the
+refresh pass, which leaves `display_name` alone for the same reason. Rows
+written before the seam existed are marked by
+`2026_08_30_000002_mark_the_counterparty_name_the_app_invented_as_its_own`,
+which recognises them by `type='unknown'` and `slug='unknown'` — both plaintext,
+so it reads the same on an encrypted install, and neither reachable for a row the
+reader labelled themselves.
 
 ## Writing the row
 
@@ -263,8 +338,11 @@ When the row already existed, `type`, `iban`, `merchant_name` and
 `metadata` are refreshed from the current resolution — a `null` from
 this pass means it knows less, not that the stored value is wrong, and
 a `type` of `unknown` never overwrites a known one. `display_name` is
-deliberately left alone: the slug is derived from it, so a different
-name is a different row. Without the refresh the returned DTO reported
+deliberately left alone *on this path*: an import re-reading the same
+row is not the reader renaming it, and the slug is derived from the
+name, so a different name here is a different row. The reader renaming
+it in triage is the other case, and there the slug moves with the name
+— see [triage suggestions](triage-suggestions.md#what-the-user-does-with-it). Without the refresh the returned DTO reported
 the fresh classification while the stored row kept the first pass's, so
 a row that landed `unknown` never left `CounterpartyTriageQueue` (which
 selects strictly `type='unknown'`) and a row that later resolved to a
@@ -292,31 +370,31 @@ from a console command that Artisan constructs merely to list it.
 `CounterpartySlugResolver::resolveUnique()` owns the `(user_id, slug)`
 UNIQUE constraint in application code.
 
-`slugify()` transliterates to ASCII (`iconv` with
-`ASCII//TRANSLIT//IGNORE`), lower-cases, collapses every run of
+`slugify()` folds to ASCII, lower-cases, collapses every run of
 non-alphanumerics to a single `-`, trims stray dashes, and falls back
 to the literal `counterparty` if nothing survives. The result is cut to
 128 characters — the width of the `slug` column that carries the
-UNIQUE.
+UNIQUE. The fold happens in PHP rather than through the C library, so
+two devices on different operating systems derive the same bytes from
+the same merchant name — see
+[`counterparties.slug` is a cross-platform key](slug-is-a-cross-platform-key.md).
 
 It is deliberately **not** `UniqueSlug::slugify()`, the shared
 `Str::slug()` helper that `AccountSlugResolver` and the migration
-promoter use. The two disagree, on ASCII alone and on every accented
-name: `Coolblue B.V.` slugs to `coolblue-b-v` here and `coolblue-bv`
-there, `Café Ambiance` to `caf-e-ambiance` against `cafe-ambiance`.
+promoter use. The two share only the transliteration half and disagree
+on ASCII alone: `Coolblue B.V.` slugs to `coolblue-b-v` here and
+`coolblue-bv` there, `Shop 24/7` to `shop-24-7` against `shop-247`.
 Because `upsert()` `firstOrCreate`s on `(user_id, slug)`, the slug is a
-stored identifier and not a formatting choice: swapping the
-transliterator would miss every already-stored non-ASCII merchant and
-fork it into a second row on the next import — the same fragmentation
-the decrypt-before-compare rule below exists to prevent.
-`CounterpartySlugifierIsFrozenTest` pins the difference so the swap
-cannot be made by accident.
+stored identifier and not a formatting choice: swapping the slugifier
+would miss every already-stored merchant whose name carries a separator
+the other one deletes and fork it into a second row on the next import
+— the same fragmentation the decrypt-before-compare rule below exists
+to prevent. `CounterpartySlugifierIsFrozenTest` pins the difference so
+the swap cannot be made by accident.
 
-`iconv`'s `//TRANSLIT` output is also platform-dependent (it is the C
-library's, not PHP's), so two devices on different operating systems can
-already derive different slugs from the same merchant name. Nothing here
-re-derives a slug for a row that has one, so this only reaches
-counterparties created for the first time.
+Resolution never re-derives a slug for a row that has one, so the
+slugifier reaches counterparties created for the first time and the one
+other caller that re-slugs deliberately: a triage rename.
 
 Collisions walk a numeric suffix: `bol`, then `bol-2`, `bol-3`, and so
 on until a free slug appears — `Modules\Core\Public\Support\UniqueSlug::walk()`,
@@ -324,6 +402,14 @@ shared with `AccountSlugResolver` and the migration promoter, which asks
 this class's own free-predicate rather than carrying one. A slug counts
 as free when no row holds it **or** when the row holding it is this same
 counterparty.
+
+"This same counterparty" is answered two ways, and `resolveUnique()`'s
+optional `$ownedBy` argument picks which. An import has no row yet, so
+it can only ask by name — the decrypt-before-compare rule below. A
+rename does have one, so it asks by id, and it has to: two rows may
+legitimately carry the same display name, and answering by name there
+walked one row straight onto another's slug and hit the
+`(user_id, slug)` UNIQUE.
 
 That second half is the load-bearing part. `display_name` is an
 encrypted column, and AEAD ciphertext never byte-equals its plaintext —
@@ -344,9 +430,11 @@ Every query in the chain carries an explicit
 `where('user_id', $user->id)` on the raw query builder. The
 `BelongsToUser` global scope on the `Counterparty` model is a secondary
 guard that only fires when an Eloquent query reaches the model inside
-an HTTP-bound request — and the resolver's primary callers are the
+an HTTP-bound request — and most of the resolver's callers are the
 import pipeline, queue workers, and console commands, where the scope
-is silent. The explicit filter is the real scope; the trait is defence
+is silent. `CashBook`'s `RecordManualTransaction` is the one that runs
+inside a request, and it carries the same explicit filter because the
+chain does. The explicit filter is the real scope; the trait is defence
 in depth.
 
 ## Related

@@ -14,14 +14,14 @@ use Modules\Core\Public\Support\QueryFailure;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Sync\Public\Events\EntityMutated;
 
-final class MerchantMemoryWriter
+final readonly class MerchantMemoryWriter
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
     ) {}
 
     public function handle(TransactionCategorized $event): void
@@ -145,7 +145,8 @@ final class MerchantMemoryWriter
         // null here meant merchant_memories could never grow on a real install,
         // so the classifier's documented second layer was dead code.
         $now = $this->clock->now()->toDateTimeString();
-        $name = self::toString($row->counterparty_name ?? null) ?: $normalized;
+        $counterparty = self::toString($row->counterparty_name ?? null);
+        $name = $counterparty === '' ? $normalized : $counterparty;
 
         // insertOrIgnore against the (user_id, normalized_name) UNIQUE, then
         // re-read: two categorizations of the same merchant in one burst must

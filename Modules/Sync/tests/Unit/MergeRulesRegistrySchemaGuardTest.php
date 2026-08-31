@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Internal\Merge\RowOwnership;
 
 uses(RefreshDatabase::class);
 
@@ -117,7 +118,16 @@ it('MergeRulesRegistry names every NOT-NULL-without-default column of every regi
     /** @var array<string, list<string>> $unlisted */
     $unlisted = [];
 
+    // The reader's own row is never inserted from the wire — RowOwnership
+    // refuses a create for it — so a required-column list there would describe
+    // an insert that cannot happen.
+    $ownership = app(RowOwnership::class);
+
     foreach (array_keys($registry->rules()) as $table) {
+        if ($ownership->isSelfScoped($table)) {
+            continue;
+        }
+
         /** @var list<string> $notNullWithoutDefault */
         $notNullWithoutDefault = collect($schemaBuilder->getColumns($table))
             ->reject(static fn (array $col): bool => (bool) $col['auto_increment'])

@@ -27,7 +27,7 @@ class OpenBankingSecretsRepository
 {
     // Relative to the storage/app root that UserDataPathService::appPath()
     // resolves (respecting NATIVEPHP_STORAGE_PATH) — no leading `app/`.
-    private const PATH_RELATIVE = 'secrets/open-banking.json';
+    private const string PATH_RELATIVE = 'secrets/open-banking.json';
 
     public function __construct(
         private readonly Filesystem $files,
@@ -229,7 +229,8 @@ class OpenBankingSecretsRepository
             );
         } catch (JsonException $e) {
             throw new SecretsWriteFailed(
-                "OpenBankingSecretsRepository: failed to encode payload for {$absolute} ({$e->getMessage()})."
+                "OpenBankingSecretsRepository: failed to encode payload for {$absolute} ({$e->getMessage()}).",
+                previous: $e,
             );
         }
     }
@@ -279,7 +280,8 @@ class OpenBankingSecretsRepository
                 throw $e;
             }
             throw new SecretsWriteFailed(
-                "OpenBankingSecretsRepository: unexpected failure writing {$tmp}."
+                "OpenBankingSecretsRepository: unexpected failure writing {$tmp}.",
+                previous: $e,
             );
         } finally {
             umask($prevUmask);

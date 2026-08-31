@@ -10,8 +10,9 @@
     lists show it; only the type scale around it differs.
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Goals\Public\Dto\GoalProgressRow')
 @if ($row->targetDate !== '')
     <p class="{{ $class }}">
-        {{ Lang::get('goals::messages.card.target_date', ['date' => \Carbon\CarbonImmutable::parse($row->targetDate)->isoFormat('D MMM YYYY')]) }}
+        {{ Lang::get('goals::messages.card.target_date', ['date' => \Carbon\CarbonImmutable::parse($row->targetDate)->isoFormat(GoalProgressRow::DATE_FORMAT)]) }}
     </p>
 @endif

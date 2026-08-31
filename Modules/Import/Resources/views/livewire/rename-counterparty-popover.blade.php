@@ -61,6 +61,9 @@
                         wire:model="generalized"
                         class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300"
                     />
+                    @error('generalized')
+                        <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="flex items-center justify-end gap-2 pt-2">

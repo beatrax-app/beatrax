@@ -12,17 +12,26 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  */
 final class TaggedRowScope
 {
-    public const TAGS = 'tax_transaction_tags AS tag';
+    public const string TAGS = 'tax_transaction_tags AS tag';
 
-    public const TRANSACTIONS = 'transactions AS t';
+    public const string TRANSACTIONS = 'transactions AS t';
 
-    public const LEGS = 'transaction_splits AS ts';
+    public const string LEGS = 'transaction_splits AS ts';
 
-    public const EFFECTIVE_YEAR = 'COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER))';
+    // The day the reader PAID, which for a card is the day it was swiped:
+    // `booked_at` is the issuer's own booking day, a clearing artefact that is
+    // a tax concept in none of the 33 countries whose corpus ships here, and a
+    // 31 December swipe books on 1 January.
+    /**
+     * @link ../../../../.docs/features/tax/tax-year-resolution.md#which-day-the-year-is-taken-from
+     */
+    public const string TRANSACTION_YEAR = 'CAST(strftime(\'%Y\', t.posted_at) AS INTEGER)';
+
+    public const string EFFECTIVE_YEAR = 'COALESCE(tag.tax_year_override, '.self::TRANSACTION_YEAR.')';
 
     // A whole-tx tag leaves every ts.* column NULL, which is what this falls
     // back through to reach the parent's own amount.
-    public const SETTLED_AMOUNT_MINOR = 'COALESCE(ts.settled_amount_minor, t.settled_amount_minor)';
+    public const string SETTLED_AMOUNT_MINOR = 'COALESCE(ts.settled_amount_minor, t.settled_amount_minor)';
 
     public static function joinLegs(QueryBuilder $query): void
     {

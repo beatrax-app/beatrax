@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Nascondi dalla vista (non modifica il file di log)',
     'dismiss_aria' => 'Nascondi la voce di log dalla vista',
     'totals' => [
-        'showing' => 'Mostrate',
-        'of' => 'di',
-        'received' => 'ricevute (buffer max 10k)',
-        'lines_today' => 'righe oggi',
+        'showing' => 'Visualizzazione di :shown su :count riga ricevuta (buffer max :cap)|Visualizzazione di :shown su :count righe ricevute (buffer max :cap)',
+        'lines_today' => ':count riga oggi|:count righe oggi',
+        'lines_today_capped' => 'oltre :count riga oggi|oltre :count righe oggi',
         'today' => 'oggi',
-        'across' => 'su',
-        'daily_files' => 'file giornalieri',
+        'all_files' => ':size su :count file giornaliero|:size su :count file giornalieri',
     ],
 
     'status' => [

@@ -1,4 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
+@use('Modules\Ledger\Public\ValueObjects\MoneyInput')
 {{--
     Per-kind scenario mutation inline form. One concrete form layout
     per kind:
@@ -10,6 +12,21 @@
       - shift_series_date: series dropdown + new next date + scope
         radio (next | all_subsequent)
 --}}
+@php
+    // The figure is read at the code the form carries -- the select beside it
+    // for a new entry, the chosen series' own for a change -- so the example
+    // and the keyboard hint have to be built from that same code.
+    $formCurrency = is_string($form['currency'] ?? null) && $form['currency'] !== ''
+        ? $form['currency']
+        : BaseCurrency::value();
+
+    $seriesCurrency = BaseCurrency::value();
+    foreach ($availableSeries as $seriesOption) {
+        if ((string) $seriesOption['id'] === (string) ($form['seriesId'] ?? '') && $seriesOption['currency'] !== '') {
+            $seriesCurrency = $seriesOption['currency'];
+        }
+    }
+@endphp
 <div class="space-y-2">
     @switch($kind)
         @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::CancelSeries->value)
@@ -28,10 +45,14 @@
                 <x-core::date-input class="mt-1" wire:model.live="form.date" :aria-label="Lang::get('forecasting::scenario.form.date')" />
             </div>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.amount') }}
-                <input type="text" wire:model.live="form.amount" placeholder="50,00" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
+                <input type="text" wire:model.live="form.amount" inputmode="{{ MoneyInput::decimalPlaces($formCurrency) === 0 ? 'numeric' : 'decimal' }}" placeholder="{{ MoneyInput::formatAbsMinor(5000, $formCurrency) }}" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.currency') }}
-                <input type="text" wire:model.live="form.currency" maxlength="3" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
+                <select wire:model.live="form.currency" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
+                    @foreach ($currencyOptions as $code)
+                        <option value="{{ $code }}">{{ $code }}</option>
+                    @endforeach
+                </select>
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.direction') }}
                 <select wire:model.live="form.direction" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
@@ -49,10 +70,14 @@
                 <x-core::date-input class="mt-1" wire:model.live="form.startDate" :aria-label="Lang::get('forecasting::scenario.form.start_date')" />
             </div>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.amount') }}
-                <input type="text" wire:model.live="form.amount" placeholder="15,00" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
+                <input type="text" wire:model.live="form.amount" inputmode="{{ MoneyInput::decimalPlaces($formCurrency) === 0 ? 'numeric' : 'decimal' }}" placeholder="{{ MoneyInput::formatAbsMinor(1500, $formCurrency) }}" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.currency') }}
-                <input type="text" wire:model.live="form.currency" maxlength="3" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
+                <select wire:model.live="form.currency" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
+                    @foreach ($currencyOptions as $code)
+                        <option value="{{ $code }}">{{ $code }}</option>
+                    @endforeach
+                </select>
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.direction') }}
                 <select wire:model.live="form.direction" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
@@ -80,7 +105,7 @@
                 </select>
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.new_amount') }}
-                <input type="text" wire:model.live="form.newAmount" placeholder="11,49" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
+                <input type="text" wire:model.live="form.newAmount" inputmode="{{ MoneyInput::decimalPlaces($seriesCurrency) === 0 ? 'numeric' : 'decimal' }}" placeholder="{{ MoneyInput::formatAbsMinor(1149, $seriesCurrency) }}" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
             @break
 

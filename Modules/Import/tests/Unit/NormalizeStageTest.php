@@ -32,7 +32,6 @@ function makeSourceDto(array $overrides = []): SourceTransactionDto
         'sourceRowIndex' => 0,
         'settledAmountMinor' => null,
         'settledCurrency' => null,
-        'fxRateUsed' => null,
     ];
 
     $merged = array_merge($defaults, $overrides);
@@ -52,7 +51,6 @@ function makeSourceDto(array $overrides = []): SourceTransactionDto
         sourceRowIndex: $merged['sourceRowIndex'],
         settledAmountMinor: $merged['settledAmountMinor'],
         settledCurrency: $merged['settledCurrency'],
-        fxRateUsed: $merged['fxRateUsed'],
     );
 }
 
@@ -156,7 +154,7 @@ it('mirrors native amount/currency to settled amount/currency by default', funct
 
     expect($canonical->settledAmountMinor)->toBe(-3999);
     expect($canonical->settledCurrency)->toBe('EUR');
-    expect($canonical->fxRateUsed)->toBeNull();
+    expect($canonical->amount()->fxRateUsed)->toBeNull();
 });
 
 it('mirrors settled = native and leaves fx_rate_used NULL when source omits the settled pair', function (): void {
@@ -171,7 +169,7 @@ it('mirrors settled = native and leaves fx_rate_used NULL when source omits the 
 
     expect($canonical->settledAmountMinor)->toBe(-1500);
     expect($canonical->settledCurrency)->toBe('EUR');
-    expect($canonical->fxRateUsed)->toBeNull();
+    expect($canonical->amount()->fxRateUsed)->toBeNull();
 })->group('phase-3');
 
 it('derives fx_rate_used when source supplies a different settled currency', function (): void {
@@ -190,7 +188,26 @@ it('derives fx_rate_used when source supplies a different settled currency', fun
     expect($canonical->settledAmountMinor)->toBe(1207);
     expect($canonical->settledCurrency)->toBe('EUR');
     // 1207 / 1299 = 0.92917628944... → 0.92917629 at scale 8 with HALF_UP.
-    expect($canonical->fxRateUsed)->toBe('0.92917629');
+    expect($canonical->amount()->fxRateUsed)->toBe('0.92917629');
+})->group('phase-3');
+
+it('refuses an adapter a settled leg that disagrees in sign with the native one', function (): void {
+    // The seam every import format and the receipts path reach the settled
+    // columns through: an adapter handing over a settled credit for a native
+    // debit gets the pair its native leg says it is, and a positive rate.
+    $stage = app(NormalizeStage::class);
+    $source = makeSourceDto([
+        'amountMinor' => -1299,
+        'currency' => 'USD',
+        'settledAmountMinor' => 1207,
+        'settledCurrency' => 'EUR',
+    ]);
+
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'paypal-csv');
+
+    expect($canonical->amountMinor)->toBe(-1299);
+    expect($canonical->settledAmountMinor)->toBe(-1207);
+    expect($canonical->amount()->fxRateUsed)->toBe('0.92917629');
 })->group('phase-3');
 
 it('leaves fx_rate_used NULL when source-supplied settled currency equals native currency', function (): void {
@@ -206,7 +223,7 @@ it('leaves fx_rate_used NULL when source-supplied settled currency equals native
 
     expect($canonical->settledAmountMinor)->toBe(1299);
     expect($canonical->settledCurrency)->toBe('EUR');
-    expect($canonical->fxRateUsed)->toBeNull();
+    expect($canonical->amount()->fxRateUsed)->toBeNull();
 })->group('phase-3');
 
 it('leaves fx_rate_used NULL when amountMinor is zero', function (): void {
@@ -222,7 +239,7 @@ it('leaves fx_rate_used NULL when amountMinor is zero', function (): void {
 
     expect($canonical->settledAmountMinor)->toBe(0);
     expect($canonical->settledCurrency)->toBe('EUR');
-    expect($canonical->fxRateUsed)->toBeNull();
+    expect($canonical->amount()->fxRateUsed)->toBeNull();
 })->group('phase-3');
 
 it('records the normalization version from the FingerprintComposer', function (): void {

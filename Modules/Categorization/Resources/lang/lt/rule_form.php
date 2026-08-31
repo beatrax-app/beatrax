@@ -24,6 +24,7 @@ return [
     'to' => 'iki',
     'text_placeholder' => 'pvz. SPOTIFY',
     'remove_condition' => 'Pašalinti sąlygą',
+    'remove_condition_caption' => 'Pašalinti',
     'add_condition' => '+ Pridėti sąlygą',
 
     'then' => 'Tada',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Pridėti gale',
     'deduction_category_aria' => 'Veiksmo :number lengvatos kategorija',
     'remove_action' => 'Pašalinti veiksmą',
+    'remove_action_caption' => 'Pašalinti',
     'add_action' => '+ Pridėti veiksmą',
 
     'this_year_only' => 'Tik šiais metais ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Mokesčių žymos veiksmai pritaikomi kitą kartą taikant taisykles iš naujo, o ne einamajam importui.',
 
     'priority' => 'Prioritetas',
-    'priority_help' => 'Mažesni skaičiai vykdomi pirmiau. Taisyklės, neturinčios bendrų laukų, niekada nekonfliktuoja.',
+    'priority_help' => 'Taisyklės vykdomos nuo mažiausio numerio aukštyn, todėl kai dvi nustato tą patį lauką, laimi didžiausias numeris. Taisyklės, neturinčios bendrų laukų, niekada nekonfliktuoja.',
 
     'cancel' => 'Atšaukti',
     'save_changes' => 'Išsaugoti pakeitimus',

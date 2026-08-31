@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Spese principali',
     'no_expenses' => 'Ancora nessuna spesa categorizzata.',
+    'top_spending_refunded' => 'Fuori classifica — :amount è tornato',
 
     'recent_transactions' => 'Transazioni recenti',
     'view_all' => 'Vedi tutto',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Categoria',
     'th_amount' => 'Importo',
     'uncategorized' => 'Senza categoria',
+
+    'jump_to_records' => [
+        'body' => "Non c'è nulla per questo periodo. I movimenti più recenti sono ancora qui.",
+        'action' => 'Mostra :period',
+    ],
 
     'reauth' => [
         'title' => 'Una casella deve essere ricollegata.',

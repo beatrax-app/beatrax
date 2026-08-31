@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Din enhet nekade att lagra nyckeln. Biometrisk upplåsning är inte tillgänglig.',
     'heading' => 'Applås',
 
-    'moved_help' => 'Din PIN-kod, tid för automatiskt lås och biometrisk upplåsning finns bland enhetens synkroniseringsinställningar.',
-    'moved_cta' => 'Öppna Synkronisering och enhet',
-
     'toggle_label' => 'Lås appen med PIN-kod',
     'toggle_description' => 'Ersätter daglig inloggning med en PIN-kod. Sessioner är aktiva i 30 dagar.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Behåll PIN-kod',
 
     'error_pin_too_short' => 'PIN-koden måste ha minst 6 siffror.',
-    'error_pin_digits' => 'PIN-koden måste ha 6 till 10 siffror — endast siffror.',
+    'error_pin_digits' => 'PIN-koden måste ha :min till :max siffror — endast siffror.',
     'error_pin_mismatch' => 'PIN-koderna stämmer inte överens. Försök igen.',
     'error_pin_required' => 'Ange din PIN-kod.',
     'error_pin_incorrect' => 'Fel PIN-kod.',

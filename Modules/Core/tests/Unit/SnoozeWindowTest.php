@@ -10,8 +10,8 @@ it('builds the same three targets the two review pages built by hand', function 
 
     expect(SnoozeWindow::targetsFrom($now))->toBe([
         '1w' => $now->addWeek()->toIso8601String(),
-        '1m' => $now->addMonth()->toIso8601String(),
-        '3m' => $now->addMonths(3)->toIso8601String(),
+        '1m' => $now->addMonthNoOverflow()->toIso8601String(),
+        '3m' => $now->addMonthsNoOverflow(3)->toIso8601String(),
     ]);
 });
 
@@ -20,15 +20,31 @@ it('measures every window from the same moment, never from the previous one', fu
     $targets = SnoozeWindow::targetsFrom($now);
 
     expect($targets['1w'])->toBe('2026-02-07T00:00:00+00:00');
-    expect($targets['1m'])->toBe('2026-03-03T00:00:00+00:00');
-    expect($targets['3m'])->toBe('2026-05-01T00:00:00+00:00');
+    expect($targets['1m'])->toBe('2026-02-28T00:00:00+00:00');
+    expect($targets['3m'])->toBe('2026-04-30T00:00:00+00:00');
 });
 
-it('carries Carbon month-end overflow through unchanged, as the hand-written map did', function (): void {
-    $now = CarbonImmutable::parse('2026-01-31T00:00:00+00:00');
+// A plain addMonth() off a day the target month does not have rolls FORWARD
+// past it: snoozed on 31 January, "one month" came back on 3 March, a third of
+// the way into the month after the one the reader was offered.
+it('clamps a month-end snooze onto the target month rather than past it', function (): void {
+    foreach (['2026-01-29', '2026-01-30', '2026-01-31', '2026-03-31', '2026-05-31', '2026-08-31'] as $from) {
+        $now = CarbonImmutable::parse($from.'T00:00:00+00:00');
 
-    expect(SnoozeWindow::OneMonth->targetFrom($now))->toBe($now->addMonth()->toIso8601String());
-    expect(SnoozeWindow::ThreeMonths->targetFrom($now))->toBe($now->addMonths(3)->toIso8601String());
+        expect(substr($now->addMonthNoOverflow()->toIso8601String(), 0, 7))
+            ->toBe(substr(SnoozeWindow::OneMonth->targetFrom($now), 0, 7), 'one month from '.$from)
+            ->and(substr($now->addMonthsNoOverflow(3)->toIso8601String(), 0, 7))
+            ->toBe(substr(SnoozeWindow::ThreeMonths->targetFrom($now), 0, 7), 'three months from '.$from);
+    }
+});
+
+it('leaves a mid-month snooze on the same day of the target month', function (): void {
+    $now = CarbonImmutable::parse('2026-01-15T00:00:00+00:00');
+    $targets = SnoozeWindow::targetsFrom($now);
+
+    expect($targets['1w'])->toBe('2026-01-22T00:00:00+00:00');
+    expect($targets['1m'])->toBe('2026-02-15T00:00:00+00:00');
+    expect($targets['3m'])->toBe('2026-04-15T00:00:00+00:00');
 });
 
 it('keys the map by the wire values the blades and the snooze methods exchange', function (): void {

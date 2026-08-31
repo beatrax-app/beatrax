@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Suelta aquí un mensaje de correo (.eml) o un archivo de buzón (.mbox). El emparejador reconoce los recibos de PayPal y los muestra como transacciones canónicas; los remitentes sin coincidencia se quedan en el registro de auditoría para clasificarlos.',
-    ],
-
     'conflict' => [
 
         'field' => [

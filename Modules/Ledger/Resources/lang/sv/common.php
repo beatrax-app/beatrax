@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Okategoriserat',
+    'unavailable_category' => 'Kategorin finns inte på den här enheten',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Bokförd',
         'uncleared' => 'Ej bokförd',

@@ -23,8 +23,19 @@ For hand-typing it is rendered by `WordCodeEncoder` as RFC 4648 base-32 (`A–Z`
 four-character dash-separated chunks. That alphabet has no `0`/`O` and no `1`/`I`, so a code
 read off one screen and typed into another does not depend on the reader telling those glyphs
 apart. Decoding strips dashes and spaces, upper-cases, and insists the result is exactly 16
-bytes — a truncated or over-long paste fails as "invalid code" instead of silently missing
-the lookup.
+bytes, instead of silently missing the lookup.
+
+### A code that will not decode has not expired
+
+16 bytes of base-32 is 26 characters, which `encode()` chunks into seven groups. The entry
+field's placeholder showed four — `XXXX-XXXX-XXXX-XXXX` — so a reader who typed exactly the
+shape they were shown produced a code the decoder could not read, and was answered with
+*"This code is invalid or has expired. Ask the other device to generate a new one."* A fresh
+code fixes nothing there: nothing was ever compared, and the reader has letters missing. The
+placeholder now carries the real shape, and a code that fails to decode is refused with
+`sync::pairing.code_incomplete` on the desktop and `mobile::pairing.errors.code_incomplete`
+on the phone. `invalid_code` — the one that asks for a new code — is kept for the case that
+actually calls for it: a complete code no live pairing row answers.
 
 `pairing_tokens` is a transient scratch table. The permanent trust store is
 `device_registry`, so `prune()` — which deletes every row past its TTL or already terminal —
@@ -35,7 +46,7 @@ accumulate.
 
 `expires_at` is a TEXT column compared **lexically** in SQL, by several writers and more
 readers. That is correct only while every value shares one zero-padded **Zulu** format, so
-`ZuluTimestamp::stamp()` is the single way any of them produces one: it converts to UTC *and*
+`Instant::zulu()` is the single way any of them produces one: it converts to UTC *and*
 asserts the shape, and throws rather than writing a value the comparison cannot order.
 
 The invariant used to be asserted in a comment instead, and the comment was wrong —
@@ -64,7 +75,7 @@ stamps — kept `toIso8601String()`, so one row carried a Zulu expiry beside a `
 confirmation and a reader could not tell from the value which rule it was written under. None
 of them is compared lexically *today*; the rule is that the table has one format, not that
 each column earns one the day something starts sorting it. Every writer goes through
-`ZuluTimestamp::stamp()`, and `PairingRowTimestampsAreZuluTest` pins each of them.
+`Instant::zulu()`, and `PairingRowTimestampsAreZuluTest` pins each of them.
 
 ## Two ways in, one shape
 
@@ -131,6 +142,51 @@ rather than a raw `SodiumException`, so the Livewire layer surfaces a generic "i
 flash instead of a 500 — and so the stored `*_pub_hex` columns are always well-formed by the
 time safety-number derivation reads them.
 
+### Both clients have to ask
+
+Seeding is a property of the **entry point**, not of the platform. Whichever device receives a
+typed code is a responder holding a token and no keys, and that is as true of a desktop as of
+a phone.
+
+For a while only one of them knew it. `MobilePairingScan` asked the LAN and seeded;
+`PairingFlowModal::submitCode()` decoded the word code and went straight to `accept()`, which
+weighs it against **this** device's `pairing_tokens` — the one table the issuing device's row
+has never been in. So the desktop arm could only ever accept a token this same device had
+issued, and answered every real code with *"This code is invalid or has expired. Ask the other
+device to generate a new one"* while the issuing screen showed that code with eight minutes
+left on it. Both halves of the sentence were false, and desktop-to-desktop typed pairing had
+never worked at all. `PairingFlowModalCrossDeviceTest` did not see it because its fixture
+hand-seeded the responder with `seedFromInitiator()` — the very step the field does not supply.
+
+Both surfaces now run the same three steps, and each reports the four `PairingOfferLookup`
+endings in its own copy: `CodeNotAccepted` (a peer answered and refused — it may simply be the
+wrong desktop), `CodeMalformed` (never asked, so no answer about the network can be true of
+it), `NoPeerReached`, and `RateLimited`. `NoPeerReached` splits again on
+`PeerDiscovery::reach()`: a silence where the question reached the network is a silence, and a
+silence where it never left the device is an unasked question, which is a different sentence.
+
+Accepting is not the end of the responder's turn. The initiator's row is on the initiator's
+machine and nothing the accept wrote is visible there, so a `PAIR_RESPONDER_ACCEPT` frame has
+to carry it across — otherwise the issuing device sits on its own show-code step until the
+token lapses, while the responder waits at a trust gate the peer has never been shown.
+
+### A phone can only be scanned
+
+Resolving a typed code means browsing for `MdnsAdvertiser::SERVICE_TYPE` (`_beatrax-sync._tcp`)
+and asking each answering peer for `PairingOfferRequestHandler::OFFER_PATH`. Both of those live
+inside `sync:serve`, which is started only by `Modules\Desktop\Internal\Native\SyncListenerProcess`
+and only when `Native\Desktop\Facades\ChildProcess` exists. No phone has that class, runs that
+daemon, or advertises that service, and on iOS it cannot even issue the browse
+([why](../mobile/ios-lan-discovery-entitlement.md)).
+
+So a word code minted on a phone names a row nothing on the network can look up — not from a
+desktop, and not from another phone. Fixing the desktop's own lookup does not change that; the
+code is unfindable because nobody is offering it. The QR carries the identity inline and needs
+no lookup at all, which is why it is the whole offer a phone can honestly make: `showMyCode()`
+mints no word code on a mobile runtime, and the step renders `scan_on_other` in place of
+`enter_on_other`. A computer has no camera, so the working route to a desktop is the other
+direction — show the desktop's code and read it here.
+
 ## The safety number
 
 `SafetyNumberDeriver::derive()` takes the two raw 32-byte Ed25519 public keys, **sorts them
@@ -192,7 +248,7 @@ minted — which the device that is merely waiting on a safety number never does
 sweeper, and on a phone there could not usefully be one.
 
 So the TTL lapse is derived wherever the row is read: `hasLiveHandshake()` and `inFlight()` do it
-with `expires_at > ZuluTimestamp::stamp(now)` in SQL, and `PairingTokenRowReader::state()` — the
+with `expires_at > Instant::zulu(now)` in SQL, and `PairingTokenRowReader::state()` — the
 one the responder's 3-second poll goes through — does it in PHP, returning `expired` for a row
 whose column still says `pending` or `awaiting_confirm`. Without it the phone's poll had the
 right branch and could never reach it: the screen said "waiting for the other device" for as
@@ -207,6 +263,17 @@ boundary would have seen.
 `confirm()` derives which side is confirming from the **caller's own device id**, never from
 a client-supplied string. A device can only ever confirm the side it actually owns; an
 unknown token and a device that owns neither side collapse to the same refusal.
+
+Before it asks any of that it asks whether the ceremony is still one a tap may finish:
+`ceremonyIsLive()` requires an in-flight `state` **and** `expires_at` in the future. It reads
+both because the two say different things — `expired` is what `expire()` and
+`expireUnfinished()` write when the reader cancels, and a lapsed `expires_at` is what the
+countdown running out looks like on a row nobody wrote to. For a while it read neither, so a
+ceremony the reader had cancelled could still be finished into a **confirmed** `device_registry`
+row minutes or years later: full Noise admission, Ed25519 op verification and GDK fan-out
+eligibility, for a pairing that had been called off. Accept-after-expiry, a second accept and a
+relayed peer-confirm-after-cancel were all already refused; this was the one door that was not,
+while `PairingState`'s own comment asserted that it was.
 
 ## The two frames
 
@@ -381,8 +448,7 @@ excludes the `|` delimiter used in the signing message.
 ## The two roads, and why the LAN one had to be built
 
 The frames above travelled one road: the relay. That is correct only for devices
-that cannot see each other, which is what this page said and what the
-implementation did not do — with no relay configured, two devices on one wifi
+that cannot see each other, and with no relay configured two devices on one wifi
 could not pair at all. The phone re-emitted its accept 86 times over four minutes
 against a `RelayRefusedException` and then stopped without saying so.
 
@@ -765,3 +831,39 @@ a growing queue behind it.
   newly confirmed device receives next.
 - [Removing a device](device-removal-and-epoch-rotation.md) — the reverse operation.
 - [Sync architecture](architecture.md).
+
+## The holding space holds a frame, not every copy of it
+
+`PairingPeerOutbox` caps a peer at `MAX_PENDING_PER_PEER = 16`, and its own
+comment says why that is generous: "A handshake puts at most two frames in
+flight per peer. The cap is a flood guard, not a working limit."
+
+The poll re-emits the responder-accept every three seconds, and each re-emit is
+byte-identical — same token hash, same keys, same name. Appending them filled
+the cap with sixteen copies of one frame in forty-eight seconds. Measured on a
+real iPhone: `relay_mailbox` held ids 1–16, all 388 bytes, all
+`PAIR_RESPONDER_ACCEPT`, all for the same recipient, stamped 22:54:04 through
+22:54:49, `delivered_at` null, `expires_at` a month out.
+
+Two consequences, and the second is the worse one:
+
+- The first sixteen failures were **silent**. `queueFor()` returned true, so
+  the poll cleared its flash and the screen showed nothing but the spinner.
+  Only the seventeenth attempt found the quota full, threw, and finally said
+  something — after forty-eight seconds of black-holing.
+- Every later frame to that peer was refused, including the `PAIR_CONFIRM` the
+  ceremony cannot finish without, until the duplicates expired thirty days on.
+  On a phone that is permanent: `PairingFramePullHandler` is the only drain and
+  is mounted solely by `sync:serve`, which no phone runs, so nothing can ever
+  come and collect them.
+
+`deliverIfUnderQuota()` takes `foldIdentical`, set only by the pairing outbox:
+an identical frame already waiting counts as stored and returns true without a
+row. Re-emission is unchanged; what stops is the duplication. The relay server
+passes the flag off, so nothing about relay delivery moves.
+
+One test moved with it. `PairingConfirmReEmitTest` proved re-emission by
+counting `relay_mailbox` rows, which folding makes flat, so it now counts POSTs
+to `PairingFrameRequestHandler::FRAME_PATH` instead — matched on the method and
+the whole path, because the poll also GETs `/pair/frames`, whose path contains
+`/pair/frame`.

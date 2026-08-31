@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Nog een afschrift uploaden',
 
+    'chain' => [
+        'heading' => 'Ketens oplossen…',
+        'pending' => 'In wachtrij. De keten-oplosser start zo dadelijk.',
+        'running' => 'Financieringsketens koppelen en afschriftverrekeningen ontleden.',
+    ],
+
     'issues' => [
         'row' => 'Regel :row: :reason',
         'file_stopped' => 'Het bestand kon niet verder worden gelezen dan regel :row. Alles na die regel is niet geïmporteerd.',

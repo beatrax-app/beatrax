@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Denne telefon kan ikke gemme en fil, appen rækker den, så den krypterede sikkerhedskopi laves i skrivebordsappen. Par denne enhed for at holde de to synkroniseret.',
+        'no_download_route' => 'Denne app kan ikke aflevere en fil til din enhed, så den krypterede sikkerhedskopi laves i computerappen i stedet. Par denne enhed for at holde de to synkroniseret.',
         'unavailable' => 'Krypterede sikkerhedskopier er tilgængelige i skrivebordsversionen (SQLite). På en serverdatabase bruger du databasens egne værktøjer til sikkerhedskopiering.',
         'intro' => 'Hent en kopi af hele din database krypteret med en adgangssætning — sikker at opbevare på et eksternt drev eller i skylageret, fordi den ikke kan læses uden adgangssætningen (kvantesikker XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Adgangssætning',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'Filen blev ikke uploadet færdig. Den er måske for stor til denne enhed — gendannelse i skrivebordsappen accepterer en større sikkerhedskopi.',
         'enter_passphrase' => 'Indtast den adgangssætning, sikkerhedskopien blev krypteret med.',
         'unreadable' => 'Den uploadede fil kunne ikke læses. Prøv igen.',
+        'restore_wrong_passphrase' => 'Den adgangssætning åbnede ikke denne sikkerhedskopi, og intet er ændret. Skriv den igen, og prøv på ny. Er den helt sikkert rigtig, er filen ændret siden den blev lavet — gendan så fra en anden kopi.',
+        'restore_not_a_backup' => 'Denne fil er ikke en krypteret Beatrax-sikkerhedskopi, så der er intet at gendanne, og intet er ændret. Vælg den .enc-fil, appen skrev, da du lavede sikkerhedskopien.',
+        'restore_contents_unreadable' => 'Sikkerhedskopien blev åbnet, men databasen i den er beskadiget, så den blev ikke gendannet, og intet er ændret. Gendan fra en tidligere sikkerhedskopi.',
+        'restore_could_not_read' => 'Sikkerhedskopifilen kunne ikke læses, så gendannelsen blev ikke kørt, og intet er ændret. Tjek at enheden har ledig plads, og prøv igen.',
+        'restore_not_supported' => 'Gendannelse virker i den udgave, der holder sine data i én fil, og det er denne ikke, så intet er ændret. Brug databasens egne gendannelsesværktøjer ved en serverdatabase.',
+        'restore_failed' => 'Gendannelsen blev ikke kørt, og intet er ændret. Prøv igen — bliver den ved med at fejle, noterer appens log, hvad der stoppede den.',
     ],
 ];

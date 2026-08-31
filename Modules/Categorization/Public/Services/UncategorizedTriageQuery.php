@@ -6,25 +6,26 @@ namespace Modules\Categorization\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Categorization\Public\Dto\TriageBatch;
 use Modules\Categorization\Public\Dto\TriageRow;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
-use Modules\Core\Public\Support\Fmt;
 use Modules\Ledger\Public\Services\TransactionCursor;
+use Modules\Ledger\Public\Support\LedgerDay;
 use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-final class UncategorizedTriageQuery
+final readonly class UncategorizedTriageQuery
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
     ) {}
 
     public function for(User $user, int $limit = 50, ?int $cursorId = null, ?string $cursorPostedAt = null): TriageBatch
@@ -34,11 +35,10 @@ final class UncategorizedTriageQuery
             ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
             ->where('transactions.user_id', $user->id)
             ->whereNull('transactions.category_id')
-            ->tap(static fn ($q) => SplitLegs::excludeParents($q))
+            ->tap(static fn ($q): Builder => SplitLegs::excludeParents($q))
             ->select([
                 'transactions.id',
                 'transactions.posted_at',
-                'transactions.booked_at',
                 'transactions.counterparty_name',
                 'transactions.amount_minor',
                 'transactions.currency',
@@ -73,7 +73,7 @@ final class UncategorizedTriageQuery
 
     private function mapRow(stdClass $row, int $userId): TriageRow
     {
-        $bookedAt = CarbonImmutable::parse(self::toString($row->booked_at));
+        $postedAt = CarbonImmutable::parse(self::toString($row->posted_at));
         $counterpartyName = $row->counterparty_name === null
             ? null
             : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, ($this->session)())['value'];
@@ -91,7 +91,7 @@ final class UncategorizedTriageQuery
 
         return new TriageRow(
             transactionId: self::toInt($row->id),
-            bookedAt: Fmt::shortDate($bookedAt),
+            postedAt: LedgerDay::shown($postedAt),
             counterpartyName: $counterpartyName,
             amountMinor: self::toInt($row->amount_minor),
             currency: self::toString($row->currency),

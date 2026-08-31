@@ -52,6 +52,43 @@ every write path.
 The consequence for anything touching the wire: a value that decodes to the string `"null"`
 is a legitimate string value, not a cleared field. Only SQL `NULL` clears.
 
+## A batch is not the set a strategy resolves over
+
+`SyncSession::receiveOps()` is called once per *frame*, and `TransportFramer` caps a frame at
+1024 ops or 64 KB — so a real history arrives as dozens of separate `replay()` calls. Nothing
+about that boundary is semantic. It falls wherever the packer ran out of bytes.
+
+Every strategy resolves over the list it is handed, so for as long as that list was the frame,
+the frame *was* the truth. A laptop edit at HLC 2000 already applied and already in the log,
+followed by a phone's offline edit at HLC 1000 arriving in a frame of its own, resolved to the
+phone's: the batch held no other candidate, so the oldest op in the log won. The same shape
+reset a G-Counter to the newest frame's single contribution, dropped every OR-Set element added
+in an earlier frame, and let a bare tombstone from HLC 1000 delete a row a HLC 3000 edit had
+kept — `tombstoneWins()` had nothing in the frame to lose to.
+
+`RowHistoryRehydration::augment()` closes it. `OpLogEntryVerifier` persists every accepted entry
+to `op_log_entries` **before** the merge runs, so by the time the applier is reached the durable
+log already holds both the arriving ops and every op this device ever accepted for the same
+rows. The rehydration reads them back for the `(table, pk)` pairs the batch names, de-duplicates
+against the batch on the log's own unique key, and hands the applier a set that is complete per
+row. The frame decides *which rows* are re-resolved; it no longer decides *what they say*.
+
+Entries read back this way are decrypted and nothing else: `op_log_entries` only ever holds
+entries that already passed the signature and cross-user gates, and re-verifying a row's whole
+history on every frame would pay for the same Ed25519 check thousands of times. One that will
+not decrypt is skipped rather than quarantined — it already has its audit row from the pass that
+first refused it, and quarantine writes are plain inserts, so recording it again on every frame
+that touched the row would grow the table without bound.
+
+`RowHistoryPolicy::AsGiven` opts out, and exactly two callers may use it: `OpLogRebuilder`,
+which passes the whole log, and `HistoryReprojector::replayQuarantined()`, whose
+`PersistedOpLogEntries::forRows()` has already fetched every op of every row it names. For
+anything else the boundary is arbitrary, and an arbitrary boundary is not a merge boundary.
+
+Buffering frames until `CATCH_UP_COMPLETE` would not have fixed this. The live loop has no such
+marker, and two ops of one row can land in two separate *sessions* days apart — the durable log
+is the only set with no boundary in it at all.
+
 ## One pass, three buckets
 
 After verification and HLC sorting, `OpLogEntryApplier::partitionByOpType()` makes a single
@@ -63,20 +100,45 @@ pass into three maps:
 | `creates` | `[table][pk][field]` | `CREATE_ROW` ops |
 | `candidatesByField` | `[table][pk][field]` | `SET` ops, still HLC-sorted |
 
-They are then applied in that order — creates, field merges, then bare tombstones — because a
-tombstone for a row that also has field ops is already handled by the field-merge pass, and
-applying it twice would delete a row a later create legitimately re-established.
+They are then applied in that order — creates, field merges, then the deletions both of the
+later passes collected — because a tombstone for a row that also has field ops is decided by
+the field-merge pass, and applying it twice would delete a row a later create legitimately
+re-established.
 
 Creates are re-ordered parents-first before insertion. HLC order says nothing about
 referential order: a transaction can be written before the account it points at, and SQLite
 rejects that outright. `CoveredTableOrder::insertionOrder()` supplies the topological order;
 tables it does not know about keep their original position rather than being dropped.
 
+### Deletions are one pass, children first
+
+Neither the field-merge pass nor the bare-tombstone pass deletes anything itself: each records
+what it decided into one `pendingDeletes` map, and `applyDeletions()` runs it in
+`CoveredTableOrder::deletionOrder()` — `insertionOrder()` reversed, so the same live foreign
+keys that order the inserts order the deletes.
+
+Deleting in whatever order HLC left the tables in is not a cosmetic problem. `import_runs` and
+`categories` hold `ON DELETE NO ACTION` children, so a parent tombstone that happens to sort
+first is refused outright by SQLite. Ordering within each pass would not have been enough
+either: the two passes ran one after the other, so a parent decided in the first and its child
+in the second were still parent-first.
+
+A delete the database still refuses after the whole pass is retried once — a cycle the
+topological order had to break can leave a child the first attempt had not reached. Refused
+again, it is recorded as `delete_blocked_by_reference` and logged, because the only rows that
+reach that point are ones this device holds and no op deletes: the two devices now disagree
+about a row, and that has to be visible on the sync-health screen rather than swallowed.
+
 ## Delete wins ties
 
 `tombstoneWins()` compares the tombstone's HLC against the **highest** field HLC for that row
 and returns true on `>=`. The `=` is the interesting half: an exact tie resolves in favour of
 the delete.
+
+"The highest field HLC for that row" means every field op the durable log holds for it, which
+is what the rehydration above supplies. Compared against one frame's worth, a bare tombstone
+from HLC 1000 arriving after an HLC 3000 edit had nothing left to lose to, and deleted a row
+the total order says survives.
 
 Any rule works as long as both devices apply the same one, but `>=` avoids the shape where a
 row is resurrected by a concurrent field write it never semantically survived. Both the
@@ -91,14 +153,17 @@ cannot drift.
 - **`g_counter`** — for fields like `merchant_memories.occurrence_count` where each device
   counts independently. The result is `sum(max(value) per device_id)`. This converges only
   because each device publishes its own **running total**, not a delta: re-replaying the same
-  ops therefore yields the same sum. `OpLogWriter::writeIncrement()` upholds that by reading
+  ops therefore yields the same sum. It converges over the **whole** set and no subset of it —
+  resolve a frame holding one device's ops and the answer is that device's total alone, which
+  is what the row-history rehydration above exists to prevent. `OpLogWriter::writeIncrement()` upholds that by reading
   back the highest total *this* device has already published and adding the delta to it —
   emitting the merged column value instead would re-count every other device's contribution
   as this device's own.
 - **`or_set`** — for set-valued fields such as `merchant_aliases.merged_from`. Each entry
   carries `{added: [{v, tag}], removed: [tag]}`; an element is live when its tag was added and
   never removed. Remove wins on tag identity, so a concurrent add and remove of the *same*
-  element (different tags) keeps the add.
+  element (different tags) keeps the add. Like the G-Counter it is a whole-set fold: a frame
+  carrying only the newest add resolves to a set of exactly one element.
 
 A malformed value in either non-LWW strategy throws a typed `UnexpectedValueException` rather
 than coercing. A non-integer G-Counter value silently coerced to `0` would *lower* a device's
@@ -210,8 +275,9 @@ Every failure mode is deliberately scoped to a single op:
   OR IGNORE silences NOT NULL as readily as it silences a duplicate, so a create whose ops
   straddled a frame boundary wrote no row, raised no quarantine and reported success.
 - A delete refused by an `ON DELETE NO ACTION` foreign key (`import_runs`, `categories`) is
-  swallowed. The tombstone is simply not applied yet; it re-applies once the children are
-  gone, which beats aborting every other op.
+  isolated rather than fatal, but never silent: it quarantines as
+  `delete_blocked_by_reference`. For as long as the catch block was empty, a parent survived a
+  delete both devices had agreed on and nothing anywhere said so.
 
 ## What runs inside the transaction, and what cannot
 
@@ -231,6 +297,31 @@ half-applied replay does not.
 writes are suppressed inside its transaction, and re-indexes afterwards. Skipping that second
 step left every rebuilt row without a search document, and search quietly stopped finding
 real transactions.
+
+### What a rebuild reindexes
+
+That second step then reindexed the wrong set: it plucked *every* transaction the reader
+owns and upserted them one at a time. A hundred-thousand-row ledger carrying a fifty-thousand
+op delta that named three thousand transactions therefore did a hundred thousand index
+rebuilds, at roughly five queries each — half a million queries, **91% of everything the
+whole re-projection ran**, and around a minute of it, inside a request a mobile setup screen
+drives on a two-second poll.
+
+The set it wants is the set the incremental path already uses: the rows the replay could
+have changed. An op names its row, and a row no op names was not touched, so its document is
+still true. `reindex()` reads the distinct `pk`s the op log names for `transactions` and
+works only those, chunked so one `id IN (…)` stays inside SQLite's bind ceiling.
+
+That chunk lookup answers a second question at the same time. A row the replay tombstoned is
+gone from `transactions`, and `upsertForTransaction()` returns silently on a row it cannot
+find — so a deleted transaction kept its search document and went on answering queries. Each
+chunk now learns which of its ids survived, and the ones that did not are `deleteForTransaction`
+rather than a silent no-op.
+
+The other half of a rebuild's cost is the log itself. `PersistedOpLogEntries::forUser()`
+streams the rows through a cursor instead of fetching them: the fetched form and the hydrated
+entries used to stand at the same time, which put twice the log in memory for the length of
+one query, on the device with the smallest ceiling of any that runs this.
 
 ## Self-referential columns are written last
 

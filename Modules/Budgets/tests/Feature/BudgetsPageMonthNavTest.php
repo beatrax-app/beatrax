@@ -49,7 +49,7 @@ beforeEach(function (): void {
     // and the stamp is three periods back rather than this month so the
     // previous-period walk below is never clamped to genesis.
     DB::table('users')->where('id', $this->user->id)->update([
-        'envelope_activated_at' => CarbonImmutable::now()->subMonths(3)->startOfMonth(),
+        'envelope_activated_at' => CarbonImmutable::now()->subMonthsNoOverflow(3)->startOfMonth(),
     ]);
 });
 

@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importa algunos extractos (banco, PayPal, tarjeta) y el resolutor mostrará aquí las cadenas entre cuentas automáticamente.',
 
     'no_counterparty' => '(sin contraparte)',
-    'open_from_row' => 'Abrir la fila de origen',
-    'open_to_row' => 'Abrir la fila de destino',
     'leg_count' => ':count pago|:count pagos',
+    'legs_more' => '+ :count más',
     'state_aria' => 'Estado: :state',
+
+    'state' => [
+        'candidate' => 'Candidata',
+        'confirmed' => 'Confirmada',
+        'rejected' => 'Rechazada',
+    ],
 
     'kind' => [
         'paypal_funding' => 'Financiación con PayPal',

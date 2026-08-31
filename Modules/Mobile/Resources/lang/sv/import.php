@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Lösenorden stämmer inte överens.',
         'password_length' => 'Använd minst 12 tecken.',
         'pin_length' => 'PIN-koden måste ha minst 6 siffror.',
+        'pin_digits' => 'PIN-koden måste ha 6 till 10 siffror — endast siffror.',
         'pins_mismatch' => 'PIN-koderna stämmer inte överens. Försök igen.',
         'session_expired' => 'Din session gick ut innan konfigurationen blev klar. Ange din PIN-kod och ditt lösenord igen.',
         'retry_failed' => 'Det gick fortfarande inte att slutföra konfigurationen av den här enheten. Försök igen.',

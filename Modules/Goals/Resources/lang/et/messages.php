@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Lisa sissemakseid, et näha prognoosi',
         'not_enough_history' => 'Ajalugu ei ole veel piisav kuupäeva prognoosimiseks',
         'no_recent_contributions' => 'Pole hiljutisi sissemakseid, mille põhjal prognoosida',
+        'too_far_to_date' => 'Selle tempoga liiga kaugel, et kuupäeva pakkuda',
         'est' => 'Hinnanguliselt :date ·',
         'projection_note' => '(prognoos)',
         'projected' => 'Prognoositud: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Rohkem toiminguid eesmärgi :name jaoks',
         'mark_complete' => 'Märgi lõpetatuks',
+        'mark_complete_caption' => 'Märgi',
         'archive' => 'Arhiveeri',
         'restore' => 'Taasta',
     ],
 
-    'archived_disclosure' => 'Arhiveeritud eesmärgid (:count)',
+    'archived_disclosure' => 'Arhiveeritud eesmärk (:count)|Arhiveeritud eesmärgid (:count)',
 
     'form' => [
         'title_edit' => 'Muuda eesmärki',
@@ -96,8 +98,11 @@ return [
         'name' => 'Sisesta oma eesmärgi nimi.',
         'date' => 'Vali sihtkuupäev.',
         'date_invalid' => 'Valige tegelik kuupäev.',
+        'date_before_start' => 'Vali kuupäev eesmärgi alguspäeval või hiljem.',
         'generic' => 'Eesmärki ei õnnestunud salvestada. Kontrollige välju ja proovige uuesti.',
         'amount' => 'Sisesta kehtiv nullist suurem summa.',
         'pot_linked_category' => 'See pott on seotud kategooriaga. Eemalda see seos kõigepealt kogumispottide lehel.',
+        'pot_already_linked' => 'See pott kogub juba teise eesmärgi jaoks. Eemalda kõigepealt seal see seos.',
+        'pot_missing' => 'See pott ei ole enam saadaval. Vali teine või jäta see eesmärk sidumata.',
     ],
 ];

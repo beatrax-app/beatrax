@@ -27,7 +27,7 @@ return [
     ],
 
     'progress' => [
-        'aria' => ':name: :pct% completado',
+        'aria' => ':name: :pct % completado',
     ],
 
     'card' => [
@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Añade aportaciones para ver una previsión',
         'not_enough_history' => 'Aún no hay suficiente historial para prever una fecha',
         'no_recent_contributions' => 'No hay aportaciones recientes con las que prever una fecha',
+        'too_far_to_date' => 'Demasiado lejos para poner fecha a este ritmo',
         'est' => 'Est. :date ·',
         'projection_note' => '(previsión)',
         'projected' => 'Previsto: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Más acciones para :name',
         'mark_complete' => 'Marcar como completado',
+        'mark_complete_caption' => 'Marcar',
         'archive' => 'Archivar',
         'restore' => 'Restaurar',
     ],
 
-    'archived_disclosure' => 'Objetivos archivados (:count)',
+    'archived_disclosure' => 'Objetivo archivado (:count)|Objetivos archivados (:count)',
 
     'form' => [
         'title_edit' => 'Editar objetivo',
@@ -96,8 +98,11 @@ return [
         'name' => 'Escribe un nombre para tu objetivo.',
         'date' => 'Elige una fecha objetivo.',
         'date_invalid' => 'Elige una fecha real.',
+        'date_before_start' => 'Elige una fecha igual o posterior al inicio del objetivo.',
         'generic' => 'No se pudo guardar el objetivo. Revisa los campos e inténtalo de nuevo.',
         'amount' => 'Introduce un importe válido mayor que cero.',
         'pot_linked_category' => 'Esta hucha está vinculada a una categoría. Quita primero ese vínculo en la página Huchas.',
+        'pot_already_linked' => 'Esta hucha ya financia otro objetivo. Quita primero ese vínculo allí.',
+        'pot_missing' => 'Esa hucha ya no está disponible. Elige otra, o deja este objetivo sin vincular.',
     ],
 ];

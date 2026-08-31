@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Jūsu kredītkarte (ICS)',
+    'eyebrow' => 'Jūsu kredītkarte',
     'h1' => 'Paņemiet mēneša konta izrakstu PDF failus',
-    'lede' => 'Ievelciet visus savus ICS mēneša PDF konta izrakstus — mēs tos apvienosim vienā priekšskatījumā.',
+    'lede' => 'Ievelciet visus savus mēneša PDF konta izrakstus — mēs tos apvienosim vienā priekšskatījumā.',
 
     'format_group_aria' => 'ICS eksportē tikai PDF formātā',
+    'issuer_note' => 'ICS pagaidām ir vienīgais karšu izdevējs, ko protam nolasīt, un tikai tā izrakstu nīderlandiešu valodā. Ja jūsu karte ir no cita izdevēja, izlaidiet šo soli.',
     'got_it_as' => 'Saņēmu kā:',
     'badge_only_format' => 'vienīgais formāts',
 

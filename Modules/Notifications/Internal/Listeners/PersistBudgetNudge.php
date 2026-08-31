@@ -7,31 +7,44 @@ namespace Modules\Notifications\Internal\Listeners;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Budgets\Public\Events\BudgetThresholdCrossed;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\CopyParam;
 use Modules\Core\Public\Support\SafeExceptionContext;
-use Modules\Notifications\Internal\Support\CopyLine;
-use Modules\Notifications\Internal\Support\CopyParam;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationCopySpec;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class PersistBudgetNudge
+final readonly class PersistBudgetNudge
 {
     public function __construct(
-        private readonly NotificationWriter $writer,
-        private readonly UrlGenerator $urls,
-        private readonly LoggerInterface $log,
-        private readonly NotificationCopyRenderer $copyRenderer,
+        private NotificationWriter $writer,
+        private UrlGenerator $urls,
+        private LoggerInterface $log,
+        private NotificationCopyRenderer $copyRenderer,
     ) {}
+
+    // The nudge fires on `spent >= threshold%` with no ceiling, the reader may
+    // set that threshold as high as 200%, and the occurrence is the period — so
+    // one large charge left "Budget nearly spent" standing over a body reading
+    // "250.00 of 100.00 spent".
+    private static function titleKey(BudgetThresholdCrossed $event): string
+    {
+        return match (true) {
+            $event->spentMinor > $event->budgetMinor => 'notifications::copy.title.budget_nudge_over',
+            $event->spentMinor === $event->budgetMinor => 'notifications::copy.title.budget_nudge_spent',
+            default => 'notifications::copy.title.budget_nudge',
+        };
+    }
 
     public function handle(BudgetThresholdCrossed $event): void
     {
         try {
             $copy = NotificationCopySpec::of(
-                CopyLine::of('notifications::copy.title.budget_nudge'),
+                CopyLine::of(self::titleKey($event)),
                 CopyLine::of('notifications::copy.body.budget_nudge', [
                     'category' => CopyParam::category(
                         $event->categoryName,
@@ -45,7 +58,7 @@ final class PersistBudgetNudge
 
             $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => NotificationDraft::fromCopy(
                 userId: $event->userId,
-                triggerType: DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE,
+                triggerType: NotificationTrigger::BudgetNudge,
                 subjectKey: (string) $event->categoryId,
                 // Occurrence = the budget period, which is what makes a
                 // second same-period crossing a silent no-op.

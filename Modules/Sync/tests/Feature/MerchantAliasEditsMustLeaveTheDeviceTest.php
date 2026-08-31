@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Import\Models\MerchantAlias;
+use Modules\Import\Public\Actions\CreateMerchantAlias;
 use Modules\Import\Public\Actions\MergeMerchantAliases;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
@@ -64,6 +65,33 @@ it('records an inline pattern edit in the op log instead of keeping it on one de
         && $event->pk === $alias->id
         && $event->mutationType === 'edit'
         && ($event->dirtyFields['generalized_pattern'] ?? null) === 'shell pieter');
+});
+
+// The rename popover on the preview screen, which is where most aliases are
+// actually made. It was the one merchant_aliases writer injecting no dispatcher
+// at all, and this file covered every other path.
+// Saving over a pattern the reader already named is an UPDATE, and a create op
+// naming a pk the peer already holds is the one its replayer drops, so the two
+// saves have to announce different things.
+it('records the alias the rename popover creates, then a second save of it as an edit', function (): void {
+    /** @var list<EntityMutated> $captured */
+    $captured = [];
+    Event::listen(EntityMutated::class, function (EntityMutated $event) use (&$captured): void {
+        $captured[] = $event;
+    });
+
+    $alias = app(CreateMerchantAlias::class)($this->user, 'ALBERT HEIJN 1234', null, 'Albert Heijn');
+    app(CreateMerchantAlias::class)($this->user, 'ALBERT HEIJN 1234', 'albert heijn', 'AH');
+
+    expect(aliasMutationTypes($captured))->toBe(['create', 'edit']);
+
+    expect($captured[0]->pk)->toBe($alias->id)
+        ->and($captured[0]->dirtyFields['pattern'] ?? null)->toBe('ALBERT HEIJN 1234')
+        ->and($captured[0]->dirtyFields['generalized_pattern'] ?? null)->toBe('albert heijn')
+        ->and($captured[0]->dirtyFields['friendly_name'] ?? null)->toBe('Albert Heijn');
+
+    expect($captured[1]->pk)->toBe($alias->id)
+        ->and($captured[1]->dirtyFields['friendly_name'] ?? null)->toBe('AH');
 });
 
 it('records an alias deletion in the op log instead of leaving the peer holding the row forever', function (): void {

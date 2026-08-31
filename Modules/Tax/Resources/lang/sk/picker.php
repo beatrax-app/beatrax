@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Označiť aj ďalšie (:count) od',
     'batch_after' => '?',
+    'batch_confirm' => 'Označiť všetky zostávajúce transakcie od :name ako daňovo odpočítateľné? Každá z nich dostane túto kategóriu a túto poznámku. Označenie sa potom dá odstrániť len po jednej transakcii.',
     'batch_tag_all' => 'Označiť všetky',
     'batch_dismiss' => 'Zamietnuť',
 ];

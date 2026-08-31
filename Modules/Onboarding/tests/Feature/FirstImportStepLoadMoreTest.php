@@ -5,10 +5,12 @@ declare(strict_types=1);
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Internal\Pipeline\PreviewCache;
+use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Enums\PreviewRowStatus;
@@ -16,6 +18,17 @@ use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\FirstImportStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
+
+// The value render() hands the blade, read from where the reader gets it. The
+// step used to expose an accessor for the same field, and anything public on a
+// Livewire component is reachable by a crafted request.
+function loadMorePreview(Testable $component): ConsolidatedPreviewBatch
+{
+    /** @var ConsolidatedPreviewBatch $preview */
+    $preview = $component->viewData('preview');
+
+    return $preview;
+}
 
 beforeEach(function (): void {
     // Freeze the clock so the 14-day stale window inside
@@ -72,11 +85,10 @@ function seedLoadMoreRunWithRows(int $userId, string $sourceFormat, int $newRowC
             rowIndex: $i,
             status: PreviewRowStatus::NewRow,
             accountId: 1,
-            bookedAt: '2026-05-10',
+            postedAt: '2026-05-10',
             counterpartyName: 'Fixture '.$i,
             counterpartyIban: null,
             description: 'fixture-row-'.$i,
-            categoryName: null,
             amountMinor: -1000 - $i,
             currency: 'EUR',
             error: null,
@@ -109,18 +121,16 @@ it('grows one section by 25 rows on each click of loadMoreRows', function (): vo
 
     $component = Livewire::test(FirstImportStep::class);
 
-    /** @var FirstImportStep $instance */
-    $instance = $component->instance();
-    expect($instance->currentPreview()->sections[0]->sampleRows)->toHaveCount(5);
+    expect(loadMorePreview($component)->sections[0]->sampleRows)->toHaveCount(5);
 
     $component->call('loadMoreRows', 'camt053');
-    expect($component->instance()->currentPreview()->sections[0]->sampleRows)->toHaveCount(30);
+    expect(loadMorePreview($component)->sections[0]->sampleRows)->toHaveCount(30);
 
     $component->call('loadMoreRows', 'camt053');
-    expect($component->instance()->currentPreview()->sections[0]->sampleRows)->toHaveCount(55);
+    expect(loadMorePreview($component)->sections[0]->sampleRows)->toHaveCount(55);
 
     $component->call('loadMoreRows', 'camt053');
-    expect($component->instance()->currentPreview()->sections[0]->sampleRows)->toHaveCount(60);
+    expect(loadMorePreview($component)->sections[0]->sampleRows)->toHaveCount(60);
 });
 
 it('isolates per-section row caps so expanding one section does not grow another', function (): void {
@@ -139,7 +149,7 @@ it('isolates per-section row caps so expanding one section does not grow another
 
     $component = Livewire::test(FirstImportStep::class);
 
-    $initial = $component->instance()->currentPreview()->sections;
+    $initial = loadMorePreview($component)->sections;
     $initialBySource = [];
     foreach ($initial as $section) {
         $initialBySource[$section->sourceFormat] = $section;
@@ -149,7 +159,7 @@ it('isolates per-section row caps so expanding one section does not grow another
 
     $component->call('loadMoreRows', 'camt053');
 
-    $afterClick = $component->instance()->currentPreview()->sections;
+    $afterClick = loadMorePreview($component)->sections;
     $afterBySource = [];
     foreach ($afterClick as $section) {
         $afterBySource[$section->sourceFormat] = $section;

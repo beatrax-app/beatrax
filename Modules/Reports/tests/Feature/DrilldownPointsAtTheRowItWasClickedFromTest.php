@@ -9,9 +9,9 @@ use Modules\Ledger\Models\Account;
 use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
 
 // build() was handed the report's whole Period for every row, so three monthly
-// rows linked to one identical full-range list, and no type or direction filter
-// was emitted at all: a `spend` row pointed at a list carrying salary income,
-// which cannot be reconciled against the figure it was clicked from.
+// rows linked to one identical full-range list, and no type filter was emitted
+// at all: a `spend` row pointed at a list carrying salary income, which cannot
+// be reconciled against the figure it was clicked from.
 
 function dpaUser(): User
 {
@@ -120,22 +120,15 @@ it('links a net-worth point to the bucket it was sampled at the end of', functio
         ->and(array_column($params, 'before'))->toBe(['2026-01-31', '2026-02-28', '2026-03-31']);
 });
 
-it('narrows a spend row to money going out, so salary income cannot land in the list', function (): void {
+it('adds no direction of its own to any metric, since the type set already narrows', function (): void {
     $user = dpaUser();
     test()->actingAs($user);
     dpaMovement($user, 'expense', -10_000, '2026-01-15');
     dpaMovement($user, 'income', 500_000, '2026-01-20');
 
-    expect(array_column(dpaUrlParams('spend', 'category'), 'amount_dir'))->toBe(['out'])
-        ->and(array_column(dpaUrlParams('income', 'category'), 'amount_dir'))->toBe(['in']);
-});
-
-it('leaves a net row undirected, since it counts both halves', function (): void {
-    $user = dpaUser();
-    test()->actingAs($user);
-    dpaMovement($user, 'expense', -10_000, '2026-01-15');
-
-    expect(dpaUrlParams('net', 'category')[0])->not->toHaveKey('amount_dir');
+    expect(dpaUrlParams('spend', 'category')[0])->not->toHaveKey('amount_dir')
+        ->and(dpaUrlParams('income', 'category')[0])->not->toHaveKey('amount_dir')
+        ->and(dpaUrlParams('net', 'category')[0])->not->toHaveKey('amount_dir');
 });
 
 // A category row's window is still the report's, since a category is not a

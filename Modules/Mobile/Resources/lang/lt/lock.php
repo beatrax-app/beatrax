@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Atrakinti',
 
-    'digits_entered' => 'įvesta skaitmenų',
+    'digits_entered' => 'įvestas :count skaitmuo|įvesti :count skaitmenys|įvesta :count skaitmenų',
     'pin_pad' => 'PIN kodo klaviatūra',
     'digit' => 'Skaitmuo :digit',
     'backspace' => 'Trinti paskutinį skaitmenį',

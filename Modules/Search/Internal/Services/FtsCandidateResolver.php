@@ -19,7 +19,7 @@ use stdClass;
 // id list via FTS5 MATCH, or — for queries too short for FTS5 — the
 // decrypt-then-substring LIKE fallback, plus the highlight/snippet load
 // that reuses the same MATCH expression.
-final class FtsCandidateResolver
+final readonly class FtsCandidateResolver
 {
     use CoercesScalars;
 
@@ -32,13 +32,13 @@ final class FtsCandidateResolver
     // Bounds the candidate window the <3-char LIKE fallback decrypts,
     // most-recent-first, so a short query never decrypts an entire
     // multi-year history on every keystroke.
-    public const LIKE_FALLBACK_CANDIDATE_CAP = 500;
+    public const int LIKE_FALLBACK_CANDIDATE_CAP = 500;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly EncryptionMigrationService $encryptionService,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private EncryptionMigrationService $encryptionService,
     ) {}
 
     // Returns null for the empty-text (filters-only) branch to signal
@@ -63,7 +63,7 @@ final class FtsCandidateResolver
         // exactly what "la place" did, the failure typed tokens were fixed for.
         $ftsWords = $this->significantFtsWords($searchable);
         $shortWords = $this->shortFtsWords($searchable);
-        if (mb_strlen($searchable) < 3 || $ftsWords === []) {
+        if (mb_strlen($searchable) < SearchDocumentBody::TRIGRAM_WIDTH || $ftsWords === []) {
             return $this->likeFallbackIds($user, $searchable, $applyFilters);
         }
 
@@ -79,7 +79,7 @@ final class FtsCandidateResolver
             ->where('transaction_search_docs.user_id', $user->id);
 
         foreach ($shortWords as $word) {
-            $query->where('transaction_search_docs.search_body', 'like', '%'.self::escapeLike($word).'%');
+            LikeNeedle::contains($query, 'transaction_search_docs.search_body', $word);
         }
 
         $rowids = $query->pluck('transaction_search_fts.rowid')->all();
@@ -215,7 +215,7 @@ final class FtsCandidateResolver
         // every other term down with it.
         return array_values(array_filter(
             explode(' ', trim($textQuery)),
-            static fn (string $w): bool => mb_strlen($w) >= 3,
+            static fn (string $w): bool => mb_strlen($w) >= SearchDocumentBody::TRIGRAM_WIDTH,
         ));
     }
 
@@ -226,13 +226,8 @@ final class FtsCandidateResolver
     {
         return array_values(array_filter(
             explode(' ', trim($textQuery)),
-            static fn (string $w): bool => $w !== '' && mb_strlen($w) < 3,
+            static fn (string $w): bool => $w !== '' && mb_strlen($w) < SearchDocumentBody::TRIGRAM_WIDTH,
         ));
-    }
-
-    private static function escapeLike(string $value): string
-    {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $value);
     }
 
     // The reader's text is a URL parameter, so it can carry bytes no keyboard

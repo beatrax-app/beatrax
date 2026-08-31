@@ -43,24 +43,28 @@ What the module explicitly does NOT do:
 
 - **Services/**
   - `ForecastQuery::forUser($accountId, $horizonDays, $scenarioId,
-    $user): ForecastDto` — one read, not two. The baseline and the
-    scenario-applied projection differ only in whether `$scenarioId`
-    is null, so they are the same query rather than a `baseline()`
-    and a `forScenario()` that had to be kept in step.
+    $user, $viewByFunder = false): ForecastDto` — one read, not two. The
+    baseline and the scenario-applied projection differ only in whether
+    `$scenarioId` is null, so they are the same query rather than a
+    `baseline()` and a `forScenario()` that had to be kept in step.
   - `ScenarioQuery::forUser($user)`, `find($scenarioId, $user)`,
     `mutationsFor($scenarioId, $user)` — scenario metadata reads.
   - `ForecastHighlightsQuery::activeShortfallCountForUser($user)` /
-    `tileFor($user)` — the dashboard tile + sidebar badge reads.
+    `forUser($user)` — the sidebar badge count and the dashboard tile.
 - **Actions/**
   - Scenario CRUD: `CreateScenario`, `RenameScenario`,
     `DeleteScenario`, `AddScenarioMutation`,
     `EditScenarioMutation`, `RemoveScenarioMutation`.
-  - Launchpad atomic actions:
-    `CreateCancellationScenarioForAlert` (from a drift alert),
-    `CreateCancellationScenarioForSeries`,
-    `CreateAmountChangeScenarioForSeries`. Each wraps a
+  - Launchpad atomic action: `CreateScenarioFromTemplate`, taking a
+    `ScenarioTemplate` (cancel or reprice) and a series id, plus
+    `forDriftAlert()` for the drift page, which holds an alert id and
+    may not name this module's template vocabulary. It wraps a
     `CreateScenario` + `AddScenarioMutation` pair in a DB
-    transaction.
+    transaction. The scenario's NAME is translated; its IDENTITY is
+    the mutation kind plus the series it targets, which is what
+    `ScenarioSeriesResolver::existingScenarioIdForTemplate()` looks a
+    second click up by — three separate actions used to key that on
+    the English name they built.
   - `SetAccountForecastBuffer::__invoke($accountId, $bufferMinor,
     $user)` — the per-account buffer the shortfall detector
     compares against.
@@ -78,8 +82,9 @@ What the module explicitly does NOT do:
   - `ForecastHighlightsDto`, `ShortfallWindowDto`,
     `SeriesConfidenceDto`, `BalanceAnchorDto`.
 - **Events/**
-  - `ForecastShortfallDetected` (`accountId, userId, windowStart,
-    windowEnd`). Consumed by `Desktop::DispatchOsNotification`.
+  - `ForecastShortfallDetected` (`userId, accountId, scenarioId, startsAt,
+    endsAt, lowestBalanceMinor, currency, bufferUsedMinor`). Consumed by
+    `Desktop::DispatchOsNotification`.
   - `ScenarioCreated`, `ScenarioMutated`, `ScenarioDeleted` —
     raised by the scenario CRUD actions; consumed by the
     `ProjectForecastOnScenarioChange` listener to re-run the
@@ -115,13 +120,14 @@ What the module explicitly does NOT do:
 - **Internal/Pipeline/ProjectionPipeline** — orchestrates the
   pipeline; the entry point the queued job calls.
 - **Internal/StateMachines/ForecastRunStateMachine** — SOLE
-  sanctioned mutator of `forecast_runs.state`.
+  sanctioned mutator of `forecast_runs.status`.
 - **Internal/Jobs/ProjectForecastJob** — per-`(user, scenario,
   horizon)` queued projection.
 - **Internal/Listeners/ProjectForecastOnRecurringChange** /
   `OnDriftDismissed` / `OnScenarioChange` — re-project triggers.
 - **Internal/Mapping/ForecastDtoMapper** — `forecast_runs` row →
-  `ForecastDto`.
+  `ForecastDto`, against a `ForecastWindow` (horizon, scenario, `asOf`)
+  the query and the mapper both read from.
 - **Internal/Http/Livewire/** — six SFCs (ForecastPage,
   AccountBufferEditor, ForecastHighlightsTile,
   ScenarioEditorSidebar, ModelWhatIfDropdown,
@@ -129,8 +135,9 @@ What the module explicitly does NOT do:
 
 ## Key services + events
 
-- `ProjectionPipeline::run($user, $scenarioId, $accountId,
-  $horizonDays)` — the orchestrator. Steps:
+- `ProjectionPipeline::project($user, $scenarioId, $horizonDays)` — the
+  orchestrator. It runs every account the user owns in one pass, so there is
+  no account id to pass. Steps:
   1. `BalanceAnchorResolver::forAccount` — pick the starting balance.
   2. `RangeProjector::project` — build `ForecastContribution`
      instances from recurring series + scheduled exceptions.
@@ -150,9 +157,9 @@ What the module explicitly does NOT do:
   8. Persist `forecast_runs.result_json` for the read-side query.
   9. Prune the runs this one supersedes — every row with a lower id
      sharing its `(user_id, scenario_id, horizon_days)`.
-- `ForecastRunStateMachine::transition($run, $next)` — the
-  `pending → running → complete | failed` lifecycle; the sole
-  writer of `forecast_runs.state`.
+- `ForecastRunStateMachine::start($run)` / `complete($run)` / `fail($run)` —
+  the `pending → running → complete | failed` lifecycle; the sole writer of
+  `forecast_runs.status`. There is no `transition()` and no `state` column.
 - `ProjectForecastOnRecurringChange::handle($event)` — fans out
   one `ProjectForecastJob` per `(user, scenario, horizon)` when
   Recurring metrics refresh.
@@ -180,7 +187,7 @@ The projection itself:
 ```
 ProjectForecastJob::handle()
   → ForecastRunStateMachine: pending → running
-  → ProjectionPipeline::run
+  → ProjectionPipeline::project
        → BalanceAnchorResolver
        → RangeProjector (percentile tier marks dateIsUncertain)
        → BookedRowProjector
@@ -201,20 +208,20 @@ The user-facing surface:
 /forecast
   → ForecastPage Livewire SFC
        → per-account tab + 30/60/90 horizon control
-       → ForecastQuery::baseline($user, $accountId, $horizon)
-       → ForecastQuery::forScenario(...) if user picked one
+       → ForecastQuery::forUser($accountId, $horizon, null, $user)
+       → the same call with a $scenarioId when the reader picked one
        → render rangeArea chart with P10/P50/P90 + shortfall band
 
 /forecast scenario editor sidebar
   → ScenarioEditorSidebar SFC
-       → ScenarioQuery::list($user)
+       → ScenarioQuery::forUser($user)
        → user adds / edits / removes mutations
             → Public Action → dispatch ScenarioMutated
                  → ProjectForecastOnScenarioChange re-runs projection
 
 dashboard
   → ForecastHighlightsTile SFC
-       → ForecastHighlightsQuery::tileFor($user)
+       → ForecastHighlightsQuery::forUser($user)
 sidebar badge
   → composer reads ForecastHighlightsQuery::activeShortfallCountForUser
 ```
@@ -225,8 +232,7 @@ A projection used to be built from **recurring series alone**. A ledger row
 whose `posted_at` is still ahead — a rent the bank has already booked for the
 first of next month — is not a series, so nothing emitted it: `/transactions`
 listed it, every balance query correctly left it out of today's figure, and no
-forward-looking surface knew it existed. Three device rounds filed the same
-€1,450.00 as missing from the curve and from the calendar.
+forward-looking surface knew it existed.
 
 `BookedRowProjector` reads those rows through `BookedFutureRowQuery` and turns
 each into a `ForecastContribution` with **`low = point = high`**. This widens
@@ -342,29 +348,35 @@ bounded below by the baseline's date and above by today on `posted_at` — the
 same column the calendar's past-day line sums, so the anchor and the line
 agree on which rows have landed and the line no longer steps on today.
 
-`accounts.kind` changes that for one kind only. An **ICS card** takes, in
-order, its most recent `card_statements` "open balance" (the absolute amount
-still owed, negated to a signed running-balance position since the user owes
-it to the card vendor), then the ledger balance when the account carries a
-baseline the reader confirmed — either column
-`AccountStartingBalanceQuery` reads, the Settings override
-`accounts.opening_balance_minor` or the `accounts.starting_balance_minor`
-the wizard asks every new user to confirm — then zero. A card with **no**
-baseline to open on must not take the ledger balance: summing its rows would
-double-count the historical billing events the projection is about to re-emit
-forward. Reading only the Settings override left a card whose balance the
-wizard had confirmed anchored at zero, and the all-accounts curve then stood
-that card's whole balance above the net worth on the dashboard one page away.
+`accounts.kind` changes that for one kind only. An **ICS card** takes its most
+recent `card_statements` "open balance" (the absolute amount still owed,
+negated to a signed running-balance position since the user owes it to the card
+vendor) plus whatever it has run up since that statement closed. With **no**
+statement it falls through to the ledger balance every other kind takes.
+
+It used to fall through to **zero** instead unless the account carried a
+baseline the reader had confirmed, on the argument that summing a card's own
+rows would double-count the billing events the projection is about to re-emit
+forward. That argument is false, and the statement arm above already relies on
+it being false: `RangeProjector` walks forward from `next_expected_at` and
+`BookedRowProjector` is bounded strictly after `asOf`, so a charge already
+posted is never re-emitted. The zero anchor simply removed the card's debt from
+the curve — one click apart, the all-accounts aggregate read €6,681.85 and the
+dashboard's net worth read €6,127.85, differing by exactly the €554.00 the card
+was carrying. The dashboard was right.
+
+There is no `ics_card_zero_anchor` source any more; `sum_of_transactions` and
+`ics_card_statement` are the two a card can report.
 
 A statement summary is no longer an anchor for any kind. It was, and a closing
-balance that had not moved since 11 April opened the round-6 desktop's forecast
+balance that had not moved since 11 April opened a forecast
 at €2,011.11 against €2,941.09 actually on the account — four months of
 imported rows simply absent, because nothing read the `asOfDate` that said how
 old the figure was. The summaries are still Ingestion's record of what a
 statement said; they are not a position.
 
 The returned `BalanceAnchorDto.source` label (`sum_of_transactions` /
-`ics_card_statement` / `ics_card_zero_anchor`) is a diagnostic ribbon carried
+`ics_card_statement`) is a diagnostic ribbon carried
 into `result_json` as `anchor_source`; no reader branches on it. There is no
 `asOfDate` on the DTO. There was, and nothing read it, which is how a statement
 four months stale came to be drawn as today's position — every path resolves to
@@ -391,7 +403,10 @@ Two properties are load-bearing:
   `ProjectionPipeline` calls it after chain routing, booked-row
   supersession and every scenario mutation, and hands it the walk's own
   `[asOf, asOf + horizonDays]` bounds so a replica dated past either end
-  lands on the boundary day instead of in a bucket nothing reads. See
+  lands on the boundary day instead of in a bucket nothing reads. The lower
+  boundary day is `asOf` itself, which the fold then treats as the anchor: a
+  replica clamped there is folded into the first projected day rather than
+  moving today's figure. See
   [Projection math — cadence jitter](projection-math.md#cadence-jitter)
   for what each of those two used to cost.
 
@@ -437,10 +452,14 @@ occurrence, in one of two tiers:
 Algorithm:
 
 1. For each contribution, look up
-   `ChainLinkQuery::confirmedAndDeterministicForSeries`. A confirmed or
-   deterministic chain link rewrites the contribution's `accountId` to the
-   funder account (point/low/high values are preserved — the funder is the
-   one whose balance dips).
+   `ChainLinkQuery::confirmedFundersForSeries`. Any confirmed chain link
+   rewrites the contribution's `accountId` to the funder account
+   (point/low/high values are preserved — the funder is the one whose
+   balance dips). Confirmed is the whole test: filtering on
+   `resolver='auto'` as well silently excluded every funder the
+   auto-promotion learning loop had confirmed, which writes `'rule'`.
+   The rows come back confidence-ordered, so the funder taken as
+   canonical is the same one on every run.
 2. Regardless of per-series chain links, synthesise the next ICS
    bulk-iDEAL settlement contribution onto the ASN funder account via
    `CardStatementQuery::nextSettlementForUser`. Past settlements are
@@ -457,16 +476,16 @@ Algorithm:
    series-tagged lines). It is public and `ProjectionPipeline` calls it
    after the jitter rather than inside `route()`, because collapsing by
    date before the dates are smeared would fold a replica into a bucket it
-   does not belong in. Its buckets are keyed by currency and FX rate as
+   does not belong in. Its buckets are keyed by currency as
    well as by (account, date): this router never converts — conversion
-   stays at the daily-fold boundary per RESEARCH Pitfall 6 — so summing
-   two denominations into one line under the first one's code, with the
-   rate that reached it dropped, would state a total in a currency the
-   money was never in.
+   stays at the daily-fold boundary — so summing
+   two denominations into one line under the first one's code would state
+   a total in a currency the money was never in.
 
    `ProjectionPipeline` folds both lists and writes both curves into
    `result_json` as `points` and `points_by_funder` (`ForecastPointSet`
-   owns the two keys). The "View by funder" toggle on /forecast chooses
+   owns the two keys), beside the `unconverted_currencies` the per-series
+   fold could not price. The "View by funder" toggle on /forecast chooses
    between them at read time through `ForecastQuery::forUser`; a run
    written before the second curve existed falls back to `points`. The
    toggle used to flip a Livewire property nothing downstream read, so
@@ -522,12 +541,32 @@ cycle), this under-estimates the combined spread. Every approved recurring
 series is treated as independent; the percentile tier sidesteps the
 assumption by reading the observed empirical distribution per series.
 Reference: Cornell 8.04 / MIT OCW 6.012. Cross-currency contributions are
-converted to the account's default currency at fold time using the
-contribution's stored `fxRateUsed`; a cross-currency contribution with no
-stored rate raises `InvalidArgumentException` rather than silently leaking
-a foreign-currency point into the running balance. Days without
+converted to the account's default currency at fold time, through a
+`CrossCurrencyTotal::ratesTo()` map `ProjectionPipeline` fetches once per
+target currency; a currency the rate table cannot reach is left out of the
+curve and named in `DailyFoldResult::$unconvertedCurrencies`, rather than
+silently leaking a foreign-currency point into the running balance. It used
+to raise instead, and because nothing ever wrote
+`recurring_series.latest_fx_rate_used`, one dollar subscription took down the
+whole projection. Days without
 contributions carry the previous day's spread forward unchanged so the
-chart band stays continuous.
+chart band stays continuous, and so does a day whose contributions are all
+**certain**: a booked row has `low = point = high`, and letting it restate the
+spread collapsed the band to a single line for the rest of the horizon —
+`/forecast` said "€5,084.64 – €5,084.64 on day 30" where the truth was ±€22.50.
+Only a day that carries uncertainty of its own restates the band.
+
+**Day 0 is the anchor, not a projected day.** The walk emits it at the opening
+balance and a contribution dated on or before `asOf` folds into the first
+projected day rather than moving a figure four other surfaces already agree on.
+Without that a single jitter replica clamped onto the boundary drew the chart's
+own day-0 point €25.71 under the header printing it, with a band that did not
+contain it.
+
+Cross-currency conversion runs through `Money`, which applies the major-unit
+rate **and** the scale change across the pair. Multiplying minor units by the
+rate alone is only right where both sides hold the same number of them, and a
+yen holds none: a ¥5,000 contribution reached a euro curve as €0.30.
 
 ## Scenario isolation boundary
 
@@ -550,6 +589,16 @@ through the Public Actions but could surface if a future seeder/Artisan
 command/admin tool skips the Action layer; the Applier logs a warning and
 continues with the silent skip.
 
+A mutation's date is bounded at write time by `ScenarioHorizonBounds`: an
+`add_one_off` or a `shift_series_date` dated before today, or either of those
+plus an `add_recurring` start dated past the LONGEST horizon, is refused with a
+reason rather than saved. Such a row was listed beside the ones that work and
+changed nothing at 30, 60, 90, 180 or 365 days — silently inert is the one
+outcome that leaves the reader nothing to read. The bound is the longest
+horizon, not the one the page opens on: a one-off 200 days out is inert at 30
+and real at 365. An `add_recurring` START may precede today, because the
+occurrence walk steps over the past ones and the later ones still land.
+
 The five mutation kinds:
 
 - `cancel_series` — filters out every contribution whose seriesId matches.
@@ -564,7 +613,11 @@ The five mutation kinds:
 - `shift_series_date` — shifts matching contributions by `(newNextDate -
   origNextDate)` days; `scope='next'` shifts only the first matching
   occurrence, `scope='all_subsequent'` shifts every one. Entries shifted
-  past the horizon end are dropped.
+  past the horizon end are dropped: the charge has left the window, and
+  saying so is the honest answer. Entries shifted **behind** `asOf` are
+  clamped to it, not dropped — the charge is still inside the window, and
+  letting it land in a bucket the fold's walk never reads deleted €25.00 and
+  left the scenario reading better off than the truth.
 
 `pickAccountIdForOneOff` (shared by `add_one_off`/`add_recurring`): one-off
 mutations are not bound to a recurring series and the UI does not ask the
@@ -581,8 +634,25 @@ returned; the caller skips the mutation rather than emitting a phantom row.
 
 `ShortfallDetector` walks the per-day folded balance and writes
 `forecast_shortfall_windows` rows when the running balance crosses below the
-effective per-account buffer (`accounts.forecast_min_buffer_minor` when set,
-else 0 — zero-crossing default). Audit honesty: the captured
+floor it is handed. `BufferFloor::forKind` decides that floor:
+`accounts.forecast_min_buffer_minor` when the reader set one, otherwise the
+zero-crossing default — **except on an ICS card, which gets no floor at all**.
+
+The zero-crossing default is a statement about cash. A card's balance is what
+is owed, so it is below zero for the card's whole life and every day of the
+horizon came back a shortfall: eight `ForecastShortfallDetected` events out of
+one baseline sweep on the shipped demo seed, captioned "below your €0.00
+buffer" beside a chip reading "Buffer: not set". A buffer the reader typed is
+still honoured on a card — "tell me when what I owe passes this figure" is a
+question this can answer.
+
+A `null` floor reaching `detect()` means no floor is in force. The previous
+rows are still deleted, so a floor the reader has just taken away does not
+leave its last run's windows standing, and none are written.
+
+The chart draws the band at the floor **in force**, not at the buffer the
+reader set: drawing it only for an explicit buffer left the zero-crossing
+default raising captions under a chart that never showed the line. Audit honesty: the captured
 `buffer_used_minor` is the buffer effective at detection time; a later
 buffer edit triggers a re-projection that writes NEW rows, and historical
 rows survive with the original buffer captured (mirrors the DriftAlerts
@@ -590,7 +660,7 @@ honest-audit pattern). Every `detect()` call deletes the previous
 `(user_id, account_id, scenario_id, horizon_days)` windows BEFORE inserting
 new ones, wrapped in a single DB transaction so a partial write never leaves
 the table inconsistent. The horizon belongs in that key because
-`ProjectForecastJob::HORIZON_DAYS` queues five runs per account in
+`ForecastHorizon::days()` queues one run per case per account in
 nondeterministic order; without it each run wiped the other four's rows and
 whichever finished last spoke for all of them. Emits
 `ForecastShortfallDetected` per new window **of a baseline run only** —
@@ -627,7 +697,7 @@ worker logs the stack trace). The result is serialized to
 `(user_id, scenario_id, horizon_days)`. Both readers — `ForecastQuery` and
 `ForecastHighlightsQuery` — take the newest row for that key and nothing holds
 a foreign key into the table, so a completed run deletes the rows it
-supersedes. Without that the table is append-only: a round-6 desktop reached
+supersedes. Without that the table is append-only: one desktop install reached
 1,305 rows and 54.6 MB of `result_json` in thirteen hours of ordinary use,
 taking the database from 9 MB to 62 MB — a weight every encrypted backup, and
 every restore, then carries.
@@ -643,6 +713,7 @@ every restore, then carries.
       "default_currency": "EUR",
       "today_balance_minor": 150000,
       "anchor_source": "sum_of_transactions",
+      "unconverted_currencies": [],
       "points": [{"date": "...", "low_minor": 0, "point_minor": 0, "high_minor": 0, "currency": "EUR"}]
     }
   }
@@ -671,6 +742,18 @@ cascade-on-delete FK. `ProjectForecastOnRecurringChange`/
 / `Modules\DriftAlerts\Public\Events` — never the sibling `Internal`
 namespace — enforced by `crossModuleAccessGoesThroughPublic`.
 
+A run opens on the day it was computed. `ForecastDto.isStale` is true where
+that day is behind today, and the page says so under the "today" line rather
+than drawing days already spent beneath the word. Every run was once stale:
+the sweep in `routes/console.php` walked a horizon-list constant on
+`ProjectForecastJob` that never existed, so `forecasting.daily-sweep`
+fatalled on the first user and no projection was ever queued by the scheduler.
+It reads `ForecastHorizon::days()` now, the one canonical list.
+`TheDailySweepDispatchesItsHorizonsTest` runs the sweep itself, which nothing in
+the suite did — which is why a fatal in a scheduler entry survived every other
+kind of test. The sweep is the `forecasting:project` artisan command now, so the
+test runs exactly what the desktop scheduler and a phone's WorkManager invoke.
+
 `ForecastQuery` never triggers a synchronous projection inside the request
 lifecycle (`noSynchronousForecastingInRequestLifecycle` blocks importing the
 heavy `ProjectionPipeline` class at this surface). When the latest run for a
@@ -684,7 +767,11 @@ now and the horizon end". The per-series confidence legend buckets on
 derives from `variance_tolerance_percent` (var=5% → 10%-wide band, var=10%
 → 20%-wide band); percentile-tier series still report the configured
 variance tolerance as their user-visible confidence signal even though the
-chart shows an empirical band.
+chart shows an empirical band. The bucket is the `SeriesConfidence` enum and
+the chip prints its translated label — it printed the backing value, so a
+Dutch reader got an English `low` inside otherwise Dutch copy. The figure
+beside it is `monthly_equivalent_minor`, because the line is suffixed "/mo":
+it printed the latest CHARGE, so a €120.00-a-year series read "€120,00/mnd".
 
 `ForecastHighlightsQuery` (dashboard tile + sidebar badge) counts shortfalls
 with a baseline-only filter (`scenario_id IS NULL`) — the dashboard and
@@ -692,6 +779,17 @@ the sidebar represent the user's CURRENT financial picture, and scenario
 shortfalls are "what-if" simulations that should not count toward the badge.
 A window is "active in the next 30 days" when `starts_at <= today + 30d`
 AND `ends_at >= today`.
+
+Its other half — the lowest projected balance printed above that count —
+races only the accounts that hold spendable money
+(`AccountKind::spendableValues()`; [which kinds hold
+money](../ledger/architecture.md#accountkind--which-kinds-hold-money)). A
+projection is written for **every** account, a card's is below zero for the
+card's whole life and a Play account's only descends, so an unfiltered minimum
+is won by one of those two and by nothing else. That is the same conclusion
+`BufferFloor::forKind()` reaches for the count beside it, and the opposite of
+the one `ForecastChartView`'s aggregate curve reaches, which is net worth over
+time and keeps the card.
 
 `ScenarioQuery::forUser` LEFT JOINs `forecast_scenarios` to a per-scenario
 mutation-count subquery — both Forecasting-owned tables, so this does NOT
@@ -712,24 +810,39 @@ per day: the service reads the whole `exchange_rates` table on every
 call, and a 365-day horizon would otherwise ask for the same pair 366
 times. A currency the rate table cannot reach is left out of the total
 rather than added at 1:1 — the same rule `NetWorthQuery` applies to a
-line it has no rate for. The buffer floor is the sum of every account's
+line it has no rate for — and the codes it left out are carried through to
+`core::money.not_converted` under the subtitle. "Combined balance across every
+account" was a claim the figure could not keep while the excluded account's own
+tab sat two lines above it. The buffer floor is the sum of every account's
 `forecast_min_buffer_minor` (NULL treated as 0), bucketed and converted
 the same way, because a buffer is denominated in its account's currency
 too.
 
 ## Net worth roll-up
 
-`NetWorthQuery` reads each account's current balance via the same
-`BalanceAnchorResolver` anchor the forecast uses as "today's balance" —
-already sign-correct (bank/PayPal positive, credit card negative), so net
+`NetWorthQuery` reads each account's current balance through
+`AccountBalanceQuery::currentBalanceAsOf` — the same reader
+`BalanceAnchorResolver` delegates to, not the resolver itself. The distinction
+matters: net worth asks where the account **stands**, the anchor asks where a
+projection **starts**, and while the card arm answered those differently the
+two surfaces disagreed by the card's whole balance
+(`NetWorthIsTodaysPositionTest` now calls both and pins them equal). The figure
+is already sign-correct (bank/PayPal positive, credit card negative), so net
 worth is simply the sum with no per-kind sign juggling. Non-base-currency
 accounts are converted via `ExchangeRateService`; each account line keeps
 its own original currency regardless. When no rate exists for a currency
 pair, that account is excluded from the total and flagged via
 `accountsWithoutRate`/`hasExcludedAccounts` (the no-rate fallback row still
 renders in the breakdown, just without a base equivalent).
-`paypal_funding` is an internal routing construct excluded from the
-roll-up entirely.
+Two kinds are left out of the roll-up entirely, and one deliberately is not.
+`paypal_funding` and `google_play` mirror a movement the paying account already
+carries, so counting either subtracts the same money twice; `ics_card` stays in,
+because a debt is part of what the reader owes even though it is not part of
+what they can spend. `AccountKind::mirrorsAnotherAccount()` is the one place
+that is decided — see
+[which kinds hold money](../ledger/architecture.md#accountkind--which-kinds-hold-money).
+The card exclusion belongs to the calendar's balance line alone and must not be
+copied here.
 
 ## Opening-balance editor soft-warning flow
 
@@ -744,8 +857,12 @@ popover-style `AccountBufferEditor`) mounted per account row in the
    the editor catches it, shows a soft-warning banner, and keeps the form
    open with `divergenceDiffMinor` set.
 4. The user clicks "Use my number" to commit with `allowDivergence=true`,
-   or "Use Beatrax's number" to replace the input with the computed
-   sum-of-transactions and manually re-save.
+   or "Use Beatrax's number" to replace the input with the computed position
+   and manually re-save. The banner names that figure, because the button
+   overwrites the box with it and the reader was being asked to accept it
+   unseen. What it is derived from, and the three things that were wrong with
+   the old derivation, are in
+   [opening-balance-suggestion.md](opening-balance-suggestion.md).
 
 An override is removable, and visibly so. The editor draws a "Remove
 opening balance" button whenever one is stored; `OpeningBalanceEditor::remove`
@@ -769,9 +886,17 @@ columns and skips the divergence check.
 
 ## Amount string parsing
 
-`AmountStringParser::toMinor` is a locale-aware money-input parser shared
-by every Forecasting Livewire surface that accepts a free-text amount
-field, using a "last-separator wins" heuristic: `"12.50"` → 1250,
+`AmountStringParser::toMinor($input, $currency, ...)` is a locale-aware
+money-input parser shared by every Forecasting Livewire surface that accepts a
+free-text amount field. The **currency is required**, and it decides the scale:
+the repo-wide two-decimal assumption is a property of the euro, never of the
+parser, and a field prefixed ¥ stored `5000` as ¥500,000 while rendering the
+saved value a hundredth of its size. Its messages are lang keys, and the
+"at most two decimals" one is chosen per currency — a yen has no decimal to
+allow — with the count coming from
+[`CurrencyScale`](../ledger/minor-units-and-zero-decimal-currencies.md#where-the-scale-comes-from),
+the one seam over Brick, rather than from a `log10` of its own. Within a two-decimal currency it uses a "last-separator wins"
+heuristic: `"12.50"` → 1250,
 `"12,50"` → 1250, `"1,234.56"` → 123456, `"1.234,56"` → 123456, `"1234"` →
 123400, `" 1 234,56"` → 123456 (spaces stripped), `"-12,50"` → -1250 (sign
 optional unless `$allowNegative` is false). It was centralised here because

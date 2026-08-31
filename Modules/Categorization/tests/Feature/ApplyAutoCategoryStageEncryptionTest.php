@@ -62,7 +62,6 @@ function autoCatEncCanonical(int $userId, int $accountId, int $importRunId): Can
         currency: 'EUR',
         settledAmountMinor: -1299,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'Spotify Premium',
         counterpartyIban: null,
         counterpartyNormalized: 'spotify premium',

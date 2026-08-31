@@ -35,6 +35,7 @@ function counterpartyKeyPassThroughs(): array
         'Modules/Migration/Internal/Pipeline/StagingWriter.php' => 'migration_staging_payees.normalized_name is a different column holding the raw payee name.',
         'Modules/Sync/Internal/Config/MergeRulesRegistry.php' => 'Names the column in a merge rule; supplies no value.',
         'Modules/Recurring/Internal/Detectors/SeriesRefresher.php' => 'Writes back the cluster key its caller produced; never derives one.',
+        'Modules/Recurring/Internal/Support/DerivedSeriesId.php' => 'Takes the key as an argument and hashes it into a row id; derives nothing and writes no column.',
     ];
 }
 

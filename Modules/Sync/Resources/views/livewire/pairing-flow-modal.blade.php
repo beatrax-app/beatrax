@@ -4,7 +4,8 @@
     <flux:modal>. A step-based bidirectional pairing flow:
 
       Step 1  choose_direction — two equal cards: Show my code / Enter a code
-      Step 2a show_code        — 240px QR + word-code + live countdown
+      Step 2a show_code        — 240px QR + live countdown, plus the word-code
+                                 on a surface a peer can look one up from
       Step 2b enter_code       — monospace uppercase input + inline error
       Step 3  confirm          — 6-word safety-number, mandatory both-screen
                                  confirmation; the sole gate to confirmed_at
@@ -95,12 +96,23 @@
                     <div class="h-[240px] w-[240px]">{!! $qrSvg !!}</div>
                 </div>
 
-                <p class="mt-4 select-all text-center font-mono text-sm uppercase tracking-widest text-slate-900 dark:text-slate-100">
-                    {{ $wordCode }}
-                </p>
-                <p class="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('sync::pairing.enter_on_other') }}
-                </p>
+                {{-- A typed code is recovered by asking the LAN for the
+                     pairing offer of the device that issued it, and only a
+                     device running the sync listener answers one. No phone
+                     runs one, so printing a code to type beside the QR over
+                     there offers a road that ends nowhere. --}}
+                @if ($offersATypedCode)
+                    <p class="mt-4 select-all text-center font-mono text-sm uppercase tracking-widest text-slate-900 dark:text-slate-100">
+                        {{ $wordCode }}
+                    </p>
+                    <p class="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
+                        {{ Lang::get('sync::pairing.enter_on_other') }}
+                    </p>
+                @else
+                    <p class="mt-4 text-center text-xs text-slate-500 dark:text-slate-400">
+                        {{ Lang::get('sync::pairing.scan_on_other') }}
+                    </p>
+                @endif
 
                 {{-- Live countdown (Alpine); aria-live only fires the expiry notice --}}
                 <p
@@ -175,7 +187,7 @@
                 spellcheck="false"
                 wire:model="wordCode"
                 x-on:input="format($event.target)"
-                placeholder="XXXX-XXXX-XXXX-XXXX"
+                placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XX"
                 aria-label="{{ Lang::get('sync::pairing.enter_code_aria') }}"
                 class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base font-mono uppercase tracking-widest text-slate-900
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2

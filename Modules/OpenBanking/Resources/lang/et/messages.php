@@ -20,6 +20,7 @@ return [
         'manage' => 'Halda pangaliidest',
         'not_connected' => 'Ühtegi panka pole ühendatud. Ühenda pank, et tehinguid automaatselt importida.',
         'expired' => 'Nõusolek on aegunud — vaja on uuesti ühendada.',
+        'revoked' => 'Sinu pank lõpetas ühenduse — ühenda uuesti.',
         'connected' => 'Ühendatud pangaga :bank Enable Bankingu kaudu. Viimati sünkroonitud :when.',
         'never' => 'mitte kunagi',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Aegunud — ühenda uuesti',
         'pill_expiring' => 'Aegub varsti',
         'pill_connected' => 'Ühendatud',
+        'pill_revoked' => 'Panga poolt lõpetatud — ühenda uuesti',
         'whats_fetched_label' => 'Mida tuuakse',
         'whats_fetched' => 'Kinnitatud tehingud ja jäägid, viimased 90 päeva',
         'last_successful_sync_label' => 'Viimane õnnestunud sünkroonimine',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — ebaõnnestus (:reason)',
         'reason_consent_expired' => 'nõusolek aegus',
         'reason_error' => 'viga',
+        'reason_truncated' => 'peatus varakult',
+        'reason_nothing_imported' => 'midagi ei õnnestunud kirjendada',
+        'reason_consent_revoked' => 'panga poolt lõpetatud',
         'disconnect_button' => 'Katkesta ühendus',
     ],
 
     'consent_banner' => [
         'heading' => 'Nõusolek on aegunud — ühenda uuesti',
+        'heading_revoked' => 'Sinu pank lõpetas ühenduse',
         'body' => 'Sinu viimane õnnestunud sünkroonimine oli :when. Ühenda uuesti, et automaatne sünkroonimine jätkuks.',
+        'body_revoked' => 'Sinu pank või Enable Banking võttis juurdepääsu tagasi, seega sünkroonimine peatus. Viimane õnnestunud sünkroonimine oli :when. Ühenda uuesti, et see jätkuks.',
         'never' => 'mitte kunagi',
         'reconnect' => 'Ühenda uuesti',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking pole ajutiselt saadaval. Proovi peagi uuesti.',
         'new_found' => 'Leiti :count uus tehing.|Leiti :count uut tehingut.',
         'none' => 'Uusi tehinguid pole.',
+        'none_importable' => 'Sinu pank saatis tehinguid, aga ühtegi neist ei õnnestunud kirjendada. Ava impordi ülevaatus, et näha miks.',
+        'in_progress' => 'Sünkroonimine juba käib. Proovi hetke pärast uuesti.',
+        'truncated' => 'Sinu pangal oli rohkem tehinguid, kui üks sünkroonimine tuua jõuab, seega see käivitus peatus varakult. Midagi ei märgitud sünkroonituks — järgmine sünkroonimine algab samast kohast.',
     ],
 
     'disconnect' => [
@@ -139,10 +149,6 @@ return [
             'save_application_id_failed' => 'Sinu rakenduse ID-d ei õnnestunud kettale salvestada — kontrolli saladuste kausta õigusi ja proovi uuesti.',
             'choose_bank' => 'Vali enne jätkamist pank.',
         ],
-    ],
-
-    'alert' => [
-        'reconsent' => 'Ühenda oma pank uuesti',
     ],
 
     'errors' => [

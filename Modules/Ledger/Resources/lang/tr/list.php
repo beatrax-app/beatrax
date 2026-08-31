@@ -10,15 +10,14 @@ return [
     'subtitle_full' => 'Tüm geçmiş.',
     'subtitle_recent' => 'Son işlemler (son 90 gün).',
 
-    'currency_aria' => 'Para birimi görünümü',
-    'currency_eur' => 'Yalnızca :code',
-    'currency_original' => 'Orijinal para birimi',
+    'currency_aria' => 'Gösterilen tutar',
+    'currency_eur' => 'Tahsil edilen tutar',
+    'currency_original' => 'Orijinal tutar',
 
     'show_recent' => 'Yalnızca son işlemleri göster',
     'show_full' => 'Tüm geçmişi göster',
 
     'empty_period' => 'Bu dönem için burada bir şey yok.',
-
 
     'empty_recent_has_older' => 'Son 90 günde bir şey yok. Daha eski işlemleriniz hâlâ burada.',
 

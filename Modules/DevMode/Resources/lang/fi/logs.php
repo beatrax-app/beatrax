@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Piilota näkymästä (ei muuta lokitiedostoa)',
     'dismiss_aria' => 'Piilota lokimerkintä näkymästä',
     'totals' => [
-        'showing' => 'Näytetään',
-        'of' => '/',
-        'received' => 'vastaanotettu (puskurin katto 10k)',
-        'lines_today' => 'riviä tänään',
+        'showing' => 'Näytetään :shown / :count vastaanotetusta rivistä (puskurin katto :cap)|Näytetään :shown / :count vastaanotetusta rivistä (puskurin katto :cap)',
+        'lines_today' => ':count rivi tänään|:count riviä tänään',
+        'lines_today_capped' => 'yli :count rivi tänään|yli :count riviä tänään',
         'today' => 'tänään',
-        'across' => 'yhteensä',
-        'daily_files' => 'päivätiedostossa',
+        'all_files' => ':size yhteensä :count päivätiedostossa|:size yhteensä :count päivätiedostossa',
     ],
 
     'status' => [

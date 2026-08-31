@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Enums\CurrencyView;
 use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 beforeEach(function (): void {
@@ -53,12 +54,15 @@ it('persists default_currency_view when changed via the toggle', function (): vo
         ->assertHasNoErrors()
         ->assertSet('saved', true);
 
-    expect($this->user->fresh()->default_currency_view)->toBe('original');
+    expect($this->user->fresh()->default_currency_view)->toBe(CurrencyView::Original);
 })->group('phase-3');
 
+// Two saves, because moving the day re-files every envelope row and the first
+// press only puts that question on the screen.
 it('persists period_start_day when changed', function (): void {
     Livewire::test(SettingsPage::class)
         ->set('periodStartDay', 25)
+        ->call('save')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -91,7 +95,7 @@ it('rejects default_currency_view outside {eur_only, original}', function (): vo
 
     expect($component->errors()->first('defaultCurrencyView'))->toBe('Pick one of the available options.');
 
-    expect($this->user->fresh()->default_currency_view)->toBe('eur_only');
+    expect($this->user->fresh()->default_currency_view)->toBe(CurrencyView::BaseOnly);
 })->group('phase-3');
 
 it('round-trips default_currency_view = original into the user row', function (): void {
@@ -99,10 +103,11 @@ it('round-trips default_currency_view = original into the user row', function ()
         ->set('defaultCurrencyView', 'original')
         ->set('periodStartDay', 25)
         ->call('save')
+        ->call('save')
         ->assertHasNoErrors();
 
     $this->user->refresh();
-    expect($this->user->default_currency_view)->toBe('original');
+    expect($this->user->default_currency_view)->toBe(CurrencyView::Original);
     expect($this->user->period_start_day)->toBe(25);
 })->group('phase-3');
 

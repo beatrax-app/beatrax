@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Abonnementer →',
     'disclaimer' => 'Offisielle lenker fra supportkorpuset — Beatrax sier aldri opp og bytter aldri noe for deg.',
     'dismiss_aria' => 'Lukk forslaget',
+    'dismiss_caption' => 'Lukk',
 
     'insight' => [
         'cheaper_message' => ':name har kanskje et billigere abonnement — du betaler :monthly/mnd.',

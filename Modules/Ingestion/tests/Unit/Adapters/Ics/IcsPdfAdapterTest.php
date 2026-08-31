@@ -6,6 +6,7 @@ use Modules\Ingestion\Internal\Adapters\Ics\IcsAmountParser;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsDateParser;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfHeaderProfile;
+use Modules\Ingestion\Internal\Adapters\Ics\IcsStatementHeader;
 use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
 use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
@@ -54,7 +55,7 @@ beforeEach(function (): void {
         new HeaderSniffer,
         $this->extractorDouble,
         new IcsAmountParser,
-        new IcsDateParser,
+        new IcsStatementHeader(new IcsDateParser),
     );
 });
 
@@ -143,7 +144,6 @@ it('yields native + settled pair for a foreign-currency row', function (): void 
     expect($augment->amountMinor)->toBe(-5000);
     expect($augment->settledAmountMinor)->toBe(-4371);
     expect($augment->settledCurrency)->toBe('EUR');
-    expect($augment->fxRateUsed)->toBeNull();
 })->group('phase-3');
 
 it('yields settledAmountMinor = null for an EUR-native row', function (): void {
@@ -155,7 +155,6 @@ it('yields settledAmountMinor = null for an EUR-native row', function (): void {
     expect($first->currency)->toBe('EUR');
     expect($first->settledAmountMinor)->toBeNull();
     expect($first->settledCurrency)->toBeNull();
-    expect($first->fxRateUsed)->toBeNull();
 })->group('phase-3');
 
 it('discards card-number text from the per-transaction block before writing rawPayload', function (): void {
@@ -211,6 +210,24 @@ it('parses the six empirical summary amounts column-by-column from the four-toke
     expect($extras['totalChargesMinor'])->toBe(-141650);
     expect($extras['creditLimitMinor'])->toBe(250000);
     expect($extras['minimumDueMinor'])->toBe(141650);
+})->group('phase-3');
+
+// Line 57 of the committed statement: "Het minimaal te betalen bedrag ad
+// EUR 1.416,50 verwachten wij voor 8 maart 2026". The app used to date this
+// statement 2026-02-17 -- period_end plus a constant grace -- nineteen days
+// before the day the issuer asked for.
+/**
+ * @link ../../../../../../.docs/conventions/invariants-from-shipped-failures.md#a-tolerance-calibrated-on-a-synthesised-fixture-while-a-real-one-disagrees
+ */
+it('reads the payment deadline the statement prints for itself', function (): void {
+    iterator_to_array($this->adapter->parse($this->tinyPdf, $this->resolver), false);
+
+    $metadata = $this->adapter->statementMetadata();
+
+    expect($metadata)->toBeInstanceOf(StatementSummaryData::class);
+    /** @var StatementSummaryData $metadata */
+    expect($metadata->paymentDueDate?->toDateString())->toBe('2026-03-08');
+    expect($metadata->periodEnd?->toDateString())->toBe('2026-02-12');
 })->group('phase-3');
 
 it('reads the statement sequence number from the Volgnummer column', function (): void {

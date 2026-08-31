@@ -13,7 +13,7 @@ use Modules\Sync\Internal\Exceptions\SecretFileException;
 // QR relay token, closing the cross-tenant drain/confirm metadata hole.
 final class RelayDrainRegistry
 {
-    private const REGISTRY_FILE = 'sync-relay-drain-registry.json';
+    private const string REGISTRY_FILE = 'sync-relay-drain-registry.json';
 
     // TOFU: the first token seen for a did is recorded and trusted; every later
     // drain must present one whose hash hash_equals it. Only the DRAIN path may

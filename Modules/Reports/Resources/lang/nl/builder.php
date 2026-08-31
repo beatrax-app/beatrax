@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Niet gecategoriseerd',
+    'no_counterparty' => 'Geen tegenpartij',
+    'unavailable_counterparty' => 'Tegenpartij niet op dit apparaat',
     'title' => 'Rapporten',
     'page_title' => 'Rapporten · Beatrax',
     'subtitle' => 'Stel een rapport samen uit je grootboek.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Grafiek in :currency — :list niet weergegeven',
+        'undrawn' => 'Niet in de ring — :amount gaat de andere kant op',
         'bar_title' => 'Klik op een staaf om de transacties te bekijken',
         'line_title' => 'Klik op een punt om de transacties te bekijken',
         'donut_title' => 'Klik op een segment om de transacties te bekijken',

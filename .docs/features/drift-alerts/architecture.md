@@ -111,11 +111,14 @@ downstream module listeners read a single canonical shape. Cross-user
 reads return an empty list (or zero on count aggregates); cross-user 404s
 are surfaced at the Public Action layer.
 
-Cursor pagination is keyed strictly on `id DESC` — `drift_alerts.id` is a
-SQLite autoincrementing surrogate, so newer alerts always have larger ids,
-which keeps the cursor consistent when multiple alerts share an exact
-`detected_at` second (the revival sweep and the detector listener can each
-batch several writes inside a single scheduler tick).
+Cursor pagination is keyed on `(detected_at, id)`. `drift_alerts.id` used to be
+a SQLite autoincrementing surrogate that ascended with insertion; it is now
+derived from `(recurring_series_id, latest_occurrence_id)` so that two devices
+name the same alert, which means it sorts in hash order and cannot lead. The id
+still breaks ties within one `detected_at` second — which the revival sweep and
+the detector listener both produce, each writing a batch inside one scheduler
+tick — and the cursor row's `detected_at` is read back scoped to the reader
+rather than carried on the wire.
 
 The open-tab projection (`openForUser`, `openCountForUser`,
 `openAnnualizedImpactByCurrencyForUser`, `openSeriesIdsForUser`,
@@ -149,10 +152,17 @@ N+1 that method exists to kill.
 ## `CancellationImpactQuery`, `SavingsInsightsQuery`, `SubscriptionDriftWatchQuery`
 
 **`CancellationImpactQuery`** projects savings if the user cancels a
-recurring series, computed from `recurring_series.monthly_equivalent_minor`
-exposed via `RecurringSeriesQuery` (cross-module access is exclusively
-through that Public surface so `noRecurringSeriesWritesFromDriftAlerts`
-and broader boundary discipline stay green). The returned currency is the
+recurring series, read via `RecurringSeriesQuery` (cross-module access is
+exclusively through that Public surface so
+`noRecurringSeriesWritesFromDriftAlerts` and broader boundary discipline stay
+green). The monthly figure is `recurring_series.monthly_equivalent_minor`; the
+**yearly** one is the series' own `latest_amount_minor` at its cadence's
+per-year rate, not that monthly integer multiplied back up. The monthly
+equivalent is rounded to a whole minor unit, so routing the year through it
+advertised "save EUR 109.92/yr" for a EUR 109.90 annual plan and EUR 571.44 for
+a EUR 571.48 one — on the same row as the alert's own correct annualisation.
+An `irregular` series bills at no rate, so there the monthly equivalent x 12 is
+all there is. The returned currency is the
 series's original currency (`recurring_series.latest_currency`), not
 necessarily EUR — a USD-billed series (Google Play, cross-currency ICS
 settlements) returns USD savings; the renderer owns any EUR shadow it
@@ -180,10 +190,12 @@ subscriptions/drift surface without a manual refresh.
 
 **`SubscriptionDriftWatchQuery`** builds the Subscription Drift Watch
 overview: every approved recurring EXPENSE series with at least two
-observed amounts, with its baseline → latest price, the cumulative
-drift, and the amount-history sparkline, sorted by the largest euro
-increase first. It is the subscription-centric counterpart to the
-alert-centric `/drift` page, reusing `RecurringSeriesQuery::amountTrendForSeries`
+observed amounts *whose first and last clear the same `AmountMovement`
+refusal the evaluator applies* — a zero baseline and a sign flip are dropped
+rather than rendered as a percentage of nothing and a refund read as a price
+rise — with its baseline → latest price, the cumulative drift, and the
+amount-history sparkline, sorted by the largest euro increase first. It is the subscription-centric counterpart to the
+alert-centric `/drift` page, reusing `RecurringOccurrenceQuery::amountTrendForSeries`
 and the `DriftAlerts` open-alert rows rather than introducing a new
 history store. It reads the full occurrence history (a 600-point ceiling
 covers any realistic subscription lifetime — 50 years monthly / 11 years
@@ -196,7 +208,12 @@ not just the most recent 24.
 `/drift` hosts a top-level TYPE switch ("Subscription drift" | "Unusual
 charges") that selects which alert stream is shown; under it the same
 three lifecycle tabs (Open / History / Dismissed) apply to whichever
-type is active. The drift stream reads `DriftAlertQuery`; the anomaly
+type is active. Every list on the page — the grouped Open tab, the flat
+History and Dismissed lists, and the anomaly stream — is one growing window:
+`pageSize` starts at 26, `loadMore()` adds 26, and each read asks for one row
+(or one series) past it so the extra row IS the evidence of more. Reading
+exactly a page and offering the control whenever it came back full put "Load
+more" under an exactly-full list, where pressing it changed nothing. The drift stream reads `DriftAlertQuery`; the anomaly
 stream reads the `Anomaly` module's Public `AnomalyAlertQuery` — a
 sanctioned Public crossing, since the page is owned by `DriftAlerts` but
 composes `Anomaly`'s read surface exactly as it already composes
@@ -237,11 +254,11 @@ distinct transition reason `user_dismissed_cancelled` (vs.
 "reviewed and accepted" from "I cancelled this series". It dispatches
 `DriftAlertDismissedCancelled` carrying `recurringSeriesId` so downstream
 listeners can exclude the series from their own projections without
-re-reading the row. `SnoozeDriftAlert` compares snooze idempotency via
-Unix timestamps (`getTimestamp()`) rather than formatted datetime strings,
-since the stored `snoozed_until` casts in the app timezone while the
-caller's timestamp may carry a different offset from its ISO source —
-comparing epoch seconds keeps the check timezone-independent.
+re-reading the row. `SnoozeDriftAlert` bounds the target through
+`SnoozeUntil::from()` before it writes, and compares snooze idempotency
+through the same `toDateTimeString()` round-trip the stored value took,
+since that form drops the sub-second precision and the source offset an
+ISO-8601 caller may carry.
 
 ## `DriftThresholdEditor` per-series threshold popover
 
@@ -357,7 +374,7 @@ letting Carbon raise a bare `InvalidFormatException` out of an unscoped
 
 - `DriftEvaluator::evaluateForSeries($seriesId, $user)` — the math. Reads
   the newest three occurrences through
-  `RecurringSeriesQuery::latestOccurrencesForSeries` — two for the
+  `RecurringOccurrenceQuery::latestOccurrencesForSeries` — two for the
   movement, a third for the interval the prior amount was billed over —
   computes
   `delta_minor`, applies the effective threshold (per-series override →
@@ -397,7 +414,7 @@ Recurring metrics refresh
 
 DetectDriftAlertsJob handle()
   → DriftEvaluator::evaluate($seriesId, $user)
-       → RecurringSeriesQuery::occurrencesForSeries($seriesId, $user)
+       → RecurringOccurrenceQuery::occurrencesForSeries($seriesId, $user)
        → compute delta_minor + ratio
        → effective threshold = perSeriesOverride
                                ?? userGlobal

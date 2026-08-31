@@ -76,7 +76,6 @@ function mecaSeedTransaction(
         currency: 'EUR',
         settledAmountMinor: $amountMinor,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: $plainName,
         counterpartyIban: $plainIban,
         counterpartyNormalized: $normalized,
@@ -211,7 +210,6 @@ it('applyTransactionAmount() recomputes the SAME fingerprint a plaintext re-impo
         currency: 'EUR',
         settledAmountMinor: $newAmountMinor,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: $plainName,
         counterpartyIban: $plainIban,
         counterpartyNormalized: $normalized,
@@ -233,7 +231,12 @@ it('applyTransactionAmount() recomputes the SAME fingerprint a plaintext re-impo
     expect((int) $updatedRow->amount_minor)->toBe($newAmountMinor);
     expect((string) $updatedRow->fingerprint)->toBe($expectedFingerprint);
 
-    // applyTransactionAmount writes only amount_minor/fingerprint.
+    // The whole amount moves, not just the leg the fingerprint is hashed over.
+    expect((int) $updatedRow->settled_amount_minor)->toBe($newAmountMinor);
+    expect((string) $updatedRow->settled_currency)->toBe('EUR');
+    expect($updatedRow->fx_rate_used)->toBeNull();
+
+    // The sealed columns are not in that set and stay sealed and readable.
     expect($updatedRow->counterparty_name)->not->toBe($plainName);
     expect($codec->decryptValue('transactions', 'counterparty_name', $updatedRow->counterparty_name, $user->id, $session)['value'])
         ->toBe($plainName);
@@ -268,7 +271,6 @@ it('applyTransactionAmount() recomputes the fingerprint unaffected by encryption
         currency: 'EUR',
         settledAmountMinor: $newAmountMinor,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: $plainName,
         counterpartyIban: $plainIban,
         counterpartyNormalized: $normalized,
@@ -286,4 +288,6 @@ it('applyTransactionAmount() recomputes the fingerprint unaffected by encryption
 
     $updatedRow = app(DatabaseManager::class)->connection()->table('transactions')->where('id', $transactionId)->first();
     expect((string) $updatedRow->fingerprint)->toBe($expectedFingerprint);
+    expect((int) $updatedRow->amount_minor)->toBe($newAmountMinor);
+    expect((int) $updatedRow->settled_amount_minor)->toBe($newAmountMinor);
 })->group('MigrationEntityChangeApplierEncryption');

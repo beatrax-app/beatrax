@@ -7,10 +7,10 @@ namespace Modules\Core\Public\Controllers;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\JsonResponse;
 
-final class HealthController
+final readonly class HealthController
 {
     public function __construct(
-        private readonly DatabaseManager $db,
+        private DatabaseManager $db,
     ) {}
 
     public function __invoke(): JsonResponse

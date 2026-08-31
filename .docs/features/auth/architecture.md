@@ -36,13 +36,18 @@ exposes a cross-user surface (a probe for another user's resources returns
 
 ## Module boundary
 
-`Public/` exports six action classes that are the only sanctioned write
-paths into the auth corpus:
+`Public/` exports six action classes — the only sanctioned write paths
+into the auth corpus — beside the recovery-code value types:
 
 - **Actions/** — `SignupAction`, `LoginAction`, `LogoutAction`,
   `AddUserAction`, `ResetPasswordAction`, `RegenerateRecoveryCodesAction`.
   Each is constructor-injectable, single-purpose, and runs the relevant
   database mutations inside one transaction.
+- **Recovery/** — `RecoveryCodeFormatter`, and `PendingRecoveryCodes`:
+  the one home for the session key holding the plaintext sheet between
+  minting it and showing it, and for how long that copy stays readable.
+  Both are `Public/` because `Mobile` runs the second of the two
+  ceremonies.
 
 `Internal/` is everything else:
 
@@ -50,10 +55,10 @@ paths into the auth corpus:
   rewires the upstream Fortify pipeline so the credential field is
   `username` (not `email`) and the only authentication views the framework
   resolves are the module's Livewire pages.
-- **Internal/Recovery/** — the five classes implementing the recovery-code
+- **Internal/Recovery/** — the four classes implementing the recovery-code
   ceremony: `RecoveryCodeGenerator` (cryptographic PRNG over a 31-character
   phone-readable alphabet), `RecoveryCodeMinter` (the single sanctioned
-  issue-a-sheet path), `RecoveryCodeFormatter`, `RecoveryCodeNormalizer`,
+  issue-a-sheet path), `RecoveryCodeNormalizer`,
   `RecoveryCodeAuthenticator` (the single sanctioned consume-on-success
   path).
 - **Internal/Http/Livewire/** — the Livewire pages (`LoginPage`,
@@ -70,8 +75,16 @@ paths into the auth corpus:
   `ForcePasswordChangeMiddleware` (pushed onto the `auth` middleware
   group; redirects any authenticated user whose
   `force_password_change_at_next_login` is true to `/change-password`,
-  exempting only that page and `/logout`), `RequireDeveloperMiddleware`
-  (gates the owner-only routes like `/settings/users/new`).
+  exempting only that page and `/logout` — and, on a Livewire update,
+  only the components that page is *for*, because `/change-password`
+  renders in `layouts.app` and the shell mounts nine others beside it),
+  `RequireDeveloperMiddleware` (gates the owner-only routes like
+  `/settings/users/new`), `ForgetsSpentRecoveryCodes` (registered on
+  the `web` group of *both* application roots; ends the one-time
+  recovery-codes ceremony from the outside, because neither the mobile
+  ceremony nor a reader who simply navigates away has an exit the
+  screen itself can see —
+  [the pending recovery codes live one request at a time](pending-recovery-codes-lifetime.md)).
 - **Internal/Console/** — three artisan commands: `ResetPasswordCommand`
   (the CLI escape hatch), `GrantDevCommand`, `RegenerateRecoveryCodesCommand`.
 
@@ -100,20 +113,49 @@ must keep that posture.
   Asserts the caller's
   `is_developer` flag and throws `NotFoundHttpException` (not 403) when it
   is false, so the probing surface stays hidden.
-- `ResetPasswordAction` — recovery-code-driven password reset. Verifies
-  the username + code through `RecoveryCodeAuthenticator` (which marks the
-  code consumed atomically), writes the new password hash, and clears the
-  forced-change flag. Never logs the user in; the reset flow ends at
-  `/login`.
+- `ResetPasswordAction` — recovery-code-driven password reset. Rate-limits
+  the attempt, verifies the username + code through
+  `RecoveryCodeAuthenticator` (which marks the code consumed atomically),
+  writes the new password hash, clears the forced-change flag, and severs
+  every session and the recaller. Never logs the user in; the reset flow
+  ends at `/login`.
 - `RecoveryCodeAuthenticator` — the sole sanctioned reader of
   `user_recovery_codes`. Hashes the typed code, finds the matching unused
   row, stamps `used_at` in one update, and returns the user. Constant-time
   message ("That username and recovery code do not match…") regardless of
   whether the username existed.
 
-The module listens for nothing — every reaction it needs (the default
-category seed, the wizard first-step priming) lives in a downstream
-listener for `UserInstalled`, which the module dispatches.
+The module listens for one thing: `Illuminate\Auth\Events\Login`, so that
+[a remember-me recaller starts locked](#the-login-that-primes-nothing-remember-me).
+Every reaction it *causes* (the default category seed, the wizard first-step
+priming) lives in a downstream listener for `UserInstalled`, which the module
+dispatches.
+
+## Changing a password severs what the old one held
+
+There are four ways the stored password changes, and all four are answering the
+same question: the account may be in somebody else's hands. So all four go
+through `Internal/Services/SessionRevoker`, which does two things and not one.
+
+Deleting the `sessions` rows is the obvious half and on its own it severs
+nothing. Laravel validates a recaller against `users.remember_token` alone —
+never against the password hash, and `AuthenticateSession` is not in this
+stack — so the cookie that was live before the reset is live after it, and the
+next request mints a fresh session from it. The old password stops working and
+whoever had the account still has it. `SessionRevoker` therefore rotates
+`remember_token` in the same call, the way `SessionGuard::logout()` already
+does on the way out.
+
+| Path | What it severs |
+|---|---|
+| `ChangePasswordPage::submit()` | Every session but the one finishing the redirect, and the recaller. |
+| `ResetPasswordAction` (recovery code) | Every session and the recaller; the caller is a guest with none to keep. |
+| `ManageUserPage::setPartnerPassword()` | Every session and the recaller **of the partner**; the owner's own are untouched. |
+| `ResetPasswordCommand` | Every session and the recaller. |
+
+The last two used to sever nothing at all, contained only by the
+`force_password_change_at_next_login` flag they set — which is a redirect, not
+a revocation, and was never the design.
 
 ## Recovery codes
 
@@ -133,10 +175,36 @@ in the identical shape it was stored in.
 `RecoveryCodeAuthenticator::verify()` runs the whole match-and-consume
 sequence inside one transaction with the candidate rows held under
 `lockForUpdate()`, so a concurrent redemption of the same code blocks on
-the row lock rather than racing — a code is consumed exactly once. Every
-attempt, success or failure, writes a `system_alerts` audit row; a
-failure against an unknown username still writes one, with a null
-`user_id`, so the audit trail cannot itself reveal which usernames exist.
+the row lock rather than racing — a code is consumed exactly once.
+
+### What a failed attempt is allowed to cost
+
+`/reset-password` is a **guest** route, so everything one attempt costs is
+spent by a caller who has proved nothing. Three things bound it, and each
+answers a different half of the same problem.
+
+A failure against an **unknown** username writes no alert at all. A row with a
+null `user_id` shows to every user, so recording one would hand an
+unauthenticated caller the whole household's banner. The audit trail therefore
+says nothing about a username nobody has, which is also why it reveals nothing
+about which usernames exist.
+
+A failure against a **known** username writes one `auth.recovery_code_failed`
+row and then stops: `SystemAlertWriter::raiseOnceForUser()` refuses a second
+while the first is unacknowledged. A redemption spends a code and so caps
+itself at ten; a *failure* spends nothing, and twenty-eight submissions used to
+mean twenty-eight `critical` rows. One open row says everything a hundred
+would, and the same dedupe is what stops a reader who mistypes their own
+recovery sheet from burying their own banner. Acknowledging it re-arms the
+kind, so the next break-in attempt still reaches them.
+
+`matchingCodeId()` costs a fixed ten bcrypt-12 hashes whatever the account
+state — roughly 3.3 s of CPU — because that is what keeps a missing username
+indistinguishable in timing from a wrong code. Lowering it would trade a
+user-enumeration oracle for a cheaper request, so it stays where it is and
+`ResetPasswordAction` bounds **how often** it can be spent instead: five
+attempts per minute, keyed on the username as typed (so an unknown one is
+metered exactly like a known one) and cleared on a successful redemption.
 
 ### Handing the codes over
 
@@ -165,12 +233,19 @@ manager can open and a reinstall destroys, which is exactly what
 `auth::recovery_codes.saved_native` says, down to telling the reader to use Copy
 codes if nothing appeared.
 
-`RecoveryCodesExportBridge` also hands that copy to `Share::file()`.
-nativephp/mobile 4.1.0 ships the PHP `Share` facade but registers `Share.File`
-in neither shell's bridge registry, and `NativePHPCall` returns nil for an
-unregistered function without raising — so on both platforms that call does
-nothing and reports nothing, which is what "no sheet, no error" was on iOS.
-Nothing on the iOS path depends on it any more.
+`ShareSheetExport` also hands that copy to `Share::file()`.
+nativephp/mobile 4.1.0 ships the PHP `Share` facade and registers `Share.File`
+in neither shell's bridge registry, so `scripts/nativephp_android_share_file.php`
+adds it to the generated Android shell; `NativePHPCall` returns nil for an
+unregistered function without raising, which is why the bridge asks
+`nativephp_can('Share.File')` before it claims anything. Nothing on the iOS path
+depends on it. That class is now the seam every download surface in the app
+reaches a phone through — see
+[a download the shell drops](../mobile/a-download-the-shell-drops.md).
+
+The owner's copy of a partner's regenerated codes on `/settings/users/<name>`
+takes the same fork: a `data:` URL on an `<a download>` where the WebView saves
+one, and `ManageUserPage::downloadCodes()` into the share sheet where it does not.
 
 Publishing the container instead was considered and rejected. `UIFileSharingEnabled`
 and `LSSupportsOpeningDocumentsInPlace` expose the app's whole `Documents`
@@ -416,6 +491,32 @@ the session starts locked instead and the PIN/biometric restores the key
 via the lock screen — never the incoherent unlocked/key-less state. This
 priming is a no-op when the lock is not enabled for the user.
 
+#### The login that primes nothing: remember-me
+
+A remember-me recaller reaches neither `LoginAction` nor Fortify's pipeline.
+`SessionGuard` resolves the user straight from the cookie into a **brand-new**
+session, where the lock flag is simply absent — so `AppLockMiddleware` took the
+unlocked branch, and re-locked only if the idle window had expired, which it had
+not. Nothing primed a data key either. That is precisely the state the priming
+above exists to prevent, arrived at through the one door it does not watch.
+
+It is not only reachable by lifting the cookie. `SESSION_LIFETIME` is 30 days
+and the recaller cookie is about five years, so an ordinary session expiry
+re-authenticates the reader into an unlocked, key-less session with no attacker
+anywhere.
+
+`Internal/Listeners/StartLockedOnLogin` closes it from the other side: every
+`Illuminate\Auth\Events\Login`, for an account with the lock enabled, starts
+**locked**. The password paths unwrap the data key and unlock a moment later —
+`$guard->login()` fires the event before `primeSessionAfterLogin()` runs, and
+`PrepareAuthenticatedSession`'s regenerate carries session attributes across —
+so the fail-closed default costs them nothing. What is left locked is the login
+that proved no key, which is the recaller and nothing else.
+
+Suppressing the remember cookie while the lock is on was the alternative. It
+was not taken: it withdraws a convenience that has nothing to do with the lock,
+and it would still leave any cookie already issued working.
+
 ### Lock screen (`LockScreen` Livewire page)
 
 The `/lock` route offers exactly three things to do — PIN pad, biometric
@@ -619,6 +720,12 @@ are gateway-specific rather than pure delegation:
   making cold-start unlock useless whenever idle timeout is enabled. The
   PIN path is immune because `PinVerificationService::verify()` already
   stamps activity on success; this is the biometric equivalent.
+- `markColdStartEnrolled()` and `isColdStartEnrolled()` delegate to
+  `ColdStartEnrolmentFlag`, which owns the `cold_start_biometric_enrolled`
+  column on its own. `MobileColdStartVault` takes that collaborator rather
+  than this gateway: the gateway is built from `AppLockProvisioner`, and the
+  provisioner forgets the cold-start vault on enable and disable, so a vault
+  that depended on the gateway would close a container cycle.
 - `pinFloorDue()` implements a periodic PIN-floor re-auth cadence
   (default 14 days, tunable) even though biometric is the everyday unlock
   root on mobile: due when there has never been a PIN unlock, or the last
@@ -651,7 +758,7 @@ by one Livewire POST is still present on every ordinary page load that follows
 it in the same worker — for the rest of the app's life. The effect was that
 after the first Livewire request of a session, `last_activity_at` stopped
 moving entirely: every page load looked like machine traffic and took the
-early return in `recordActivity()`. A reader was locked out five minutes after
+not-activity branch that skips `LockIdleClock::recordActivity()`. A reader was locked out five minutes after
 their last Livewire request no matter how much they used the app, and no
 navigation was ever remembered to return them to. Livewire's update endpoint
 always carries its route name (it renames a custom route to end with it, hence

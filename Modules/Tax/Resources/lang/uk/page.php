@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Експорт PDF',
     'export_pdf_aria' => 'Експорт PDF',
     'export_pdf_title' => 'Завантажити beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Відхилити',
 
     'country_prompt_heading' => 'У якій країні ти подаєш податкову декларацію?',
     'country_prompt_body' => 'Це можна будь-коли змінити в Налаштування → :section.',

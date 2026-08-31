@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\Enums\CurrencyView;
 
 /**
  * @property int $id
@@ -18,7 +19,7 @@ use Modules\Ledger\Public\Enums\Currency;
  * @property bool $force_password_change_at_next_login
  * @property string $password
  * @property int $period_start_day
- * @property string $default_currency_view
+ * @property CurrencyView $default_currency_view
  * @property ?string $base_currency
  * @property bool $fx_online_enabled
  * @property bool|null $auto_import_drop_folder
@@ -43,6 +44,11 @@ final class User extends Authenticatable
     use HasFactory;
 
     use Notifiable;
+
+    // Quoted back to the reader in the recurring-detection help text, which is
+    // why it is a named constant rather than a bare default: the copy reads it
+    // rather than restating it in twenty-six languages.
+    public const int DEFAULT_RECURRING_INCOME_MIN_AMOUNT_MINOR = 200000;
 
     /** @var list<string> */
     protected $fillable = [
@@ -76,12 +82,16 @@ final class User extends Authenticatable
      */
     protected $attributes = [
         'recurring_detection_window_months' => 2,
-        'recurring_income_min_amount_minor' => 200000,
+        'recurring_income_min_amount_minor' => self::DEFAULT_RECURRING_INCOME_MIN_AMOUNT_MINOR,
         'drift_alert_threshold_percent' => 5,
         'anomaly_sensitivity_percent' => 50,
         'anomaly_min_amount_minor' => 1000,
         'theme' => 'system',
         'base_currency' => Currency::Eur->value,
+        // create() does not read the row back, so without this a just-created
+        // model carries null where the column's DB default is BaseOnly, and
+        // every reader of the fresh instance saw the other view.
+        'default_currency_view' => CurrencyView::BaseOnly->value,
     ];
 
     /** @return array<string, string> */
@@ -92,7 +102,7 @@ final class User extends Authenticatable
             'is_developer' => 'boolean',
             'force_password_change_at_next_login' => 'boolean',
             'period_start_day' => 'integer',
-            'default_currency_view' => 'string',
+            'default_currency_view' => CurrencyView::class,
             'base_currency' => 'string',
             'fx_online_enabled' => 'boolean',
             'auto_import_drop_folder' => 'boolean',

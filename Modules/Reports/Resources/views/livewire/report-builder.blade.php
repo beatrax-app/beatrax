@@ -1,6 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Reports\Internal\Enums\ReportCurrencyMode')
 @use('Modules\Reports\Internal\Enums\ReportGranularity')
+@use('Modules\Reports\Internal\Enums\ReportGroupHeading')
 @use('Modules\Reports\Internal\Enums\ReportPeriodPreset')
 @use('Modules\Reports\Internal\Enums\ReportViz')
 {{--
@@ -13,6 +14,7 @@
     Variables in scope (Modules\Reports\Internal\Http\Livewire\ReportBuilder::render()):
       $result                 ReportResultDto
       $displayRows             list<ReportResultRow>  — comparisonRows when compare is on, else $result->rows
+      $chartSeries              ChartSeries              — the drawable subset, its currency, and what it left out
       $definition               ReportDefinition
       $drilldownUrls            list<string>            — parallel to $displayRows
       $periodError              string                   — '' unless the custom range cannot resolve
@@ -66,13 +68,11 @@
         ReportViz::Donut->value => Lang::get('reports::builder.viz.donut'),
     ];
 
-    $groupHeader = match ($definition->dimension) {
-        'category' => Lang::get('reports::builder.group_header.category'),
-        'counterparty' => Lang::get('reports::builder.group_header.counterparty'),
-        'account' => Lang::get('reports::builder.group_header.account'),
-        'time_bucket' => Lang::get('reports::builder.group_header.month'),
-        default => Lang::get('reports::builder.group_header.default'),
-    };
+    // Read from the definition as a whole, never the dimension alone: net_worth
+    // hides the picker but keeps whatever the URL last said, which headed a
+    // column of months with "Category" while the CSV of the same report said
+    // "Period".
+    $groupHeader = ReportGroupHeading::for($definition->metric, $definition->dimension)->label();
 
     $metricLabel = $metricLabels[$definition->metric] ?? Lang::get('reports::builder.metric.fallback');
 
@@ -304,18 +304,46 @@
                     $chartElementId = 'report-chart-'.$definition->viz;
                 @endphp
 
+                @php
+                    $chartArgs = [
+                        'chartElementId' => $chartElementId,
+                        'rows' => $chartSeries->rows,
+                        'drilldownUrls' => $chartSeries->drilldownUrls,
+                        'chartCurrency' => $chartSeries->currency,
+                        'metricLabel' => $metricLabel,
+                    ];
+                @endphp
+
                 @if ($viz === ReportViz::Bar->value)
-                    @include('reports::livewire.partials.report-bar-chart', ['chartElementId' => $chartElementId, 'rows' => $displayRows, 'drilldownUrls' => $drilldownUrls, 'metricLabel' => $metricLabel])
+                    @include('reports::livewire.partials.report-bar-chart', $chartArgs)
                 @elseif ($viz === ReportViz::Line->value)
-                    @include('reports::livewire.partials.report-line-chart', ['chartElementId' => $chartElementId, 'rows' => $displayRows, 'drilldownUrls' => $drilldownUrls, 'metricLabel' => $metricLabel])
+                    @include('reports::livewire.partials.report-line-chart', $chartArgs)
                 @elseif ($viz === ReportViz::Donut->value)
-                    @include('reports::livewire.partials.report-donut-chart', ['chartElementId' => $chartElementId, 'rows' => $displayRows, 'drilldownUrls' => $drilldownUrls, 'metricLabel' => $metricLabel])
+                    @include('reports::livewire.partials.report-donut-chart', $chartArgs)
+                @endif
+
+                {{-- What the chart could not draw, said where the chart is.
+                     One axis carries one currency and one ring one direction;
+                     the table below still lists every row. --}}
+                @if ($viz !== ReportViz::Table->value && $chartSeries->otherCurrencies !== [])
+                    <p class="text-xs" style="color: var(--color-text-muted);" data-chart-omission="currencies">
+                        {{ Lang::get('reports::builder.chart.other_currencies', ['currency' => $chartSeries->currency, 'list' => implode(', ', $chartSeries->otherCurrencies)]) }}
+                    </p>
+                @endif
+                @if ($viz === ReportViz::Donut->value && $chartSeries->undrawnMinor !== 0)
+                    <p class="text-xs" style="color: var(--color-text-muted);" data-chart-omission="undrawn">
+                        {{ Lang::get('reports::builder.chart.undrawn', ['amount' => $fmt(abs($chartSeries->undrawnMinor), $chartSeries->currency)]) }}
+                    </p>
                 @endif
 
                 {{-- Total + FX exclusion note + headline delta --}}
                 <div class="space-y-1">
                     <div class="flex flex-wrap items-baseline justify-between gap-4">
-                        <span class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('reports::builder.total_prefix') }} {{ strtolower($metricLabel) }}</span>
+                        {{-- The metric label is a translated noun, and strtolower() lowercased the
+                             German one while doing nothing at all to Greek or Cyrillic. CSS
+                             uppercases the line, so the damage only ever reached the DOM and
+                             the screen reader. --}}
+                        <span class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('reports::builder.total_prefix') }} {{ $metricLabel }}</span>
                         <span class="{{ $amountClass($result->totalMinor) }}" style="font-size: var(--text-3xl); font-weight: 600; font-variant-numeric: tabular-nums;">
                             {{ $fmt($result->totalMinor, $result->currency) }}
                         </span>
@@ -347,9 +375,18 @@
                             </span>
                         </div>
                     @endforeach
-                    @if ($result->hasExcludedAccounts)
+                    {{-- Currencies for a transaction metric, accounts for a
+                         balance: one counter used to say "1 account" over four
+                         unconvertible ARS accounts, because it was counting
+                         currencies and the sentence named accounts. --}}
+                    @if ($result->excludedCurrencies !== [])
+                        <p class="text-xs" style="color: var(--color-amber);" data-not-converted="true">
+                            {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $result->excludedCurrencies)]) }}
+                        </p>
+                    @endif
+                    @if ($result->excludedAccountIds !== [])
                         <p class="text-xs" style="color: var(--color-amber);">
-                            {{ Lang::choice('reports::builder.fx_excluded', $result->accountsWithoutRate, ['count' => $result->accountsWithoutRate]) }}
+                            {{ Lang::choice('reports::builder.fx_excluded', count($result->excludedAccountIds), ['count' => count($result->excludedAccountIds)]) }}
                         </p>
                     @endif
                 </div>

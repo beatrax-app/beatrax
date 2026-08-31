@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Forecasting\Public\Events;
 
-use Illuminate\Support\Carbon;
+use Carbon\CarbonImmutable;
 use Modules\Forecasting\Internal\Pipeline\ShortfallDetector;
 
 /**
@@ -16,8 +16,8 @@ final readonly class ForecastShortfallDetected
         public int $userId,
         public int $accountId,
         public ?int $scenarioId,
-        public Carbon $startsAt,
-        public Carbon $endsAt,
+        public CarbonImmutable $startsAt,
+        public CarbonImmutable $endsAt,
         public int $lowestBalanceMinor,
         public string $currency,
         public int $bufferUsedMinor,

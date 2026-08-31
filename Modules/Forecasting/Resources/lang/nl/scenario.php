@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'reeks',
 
+    'template' => [
+        'cancel' => 'Opzeggen :name',
+        'change_amount' => 'Bedrag van :name wijzigen',
+    ],
+
     'summary' => [
         'cancel' => 'Opzeggen :name',
         'series_fallback' => 'reeks #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenario hernoemd.',
         'mutation_added' => 'Mutatie toegevoegd.',
         'mutation_updated' => 'Mutatie bijgewerkt.',
-        'mutation_removed' => 'Mutatie verwijderd. Ongedaan maken',
+        'mutation_removed' => 'Mutatie verwijderd.',
     ],
 
     'errors' => [
         'name_empty' => 'Scenarionaam mag niet leeg zijn.',
         'name_too_long' => 'Scenarionaam mag maximaal :max teken bevatten.|Scenarionaam mag maximaal :max tekens bevatten.',
         'name_taken' => 'Er bestaat al een scenario met die naam.',
+        'date_out_of_range' => 'Die datum valt buiten elke prognosehorizon — van vandaag tot :days dag vooruit — dus dit scenario zou niets veranderen.|Die datum valt buiten elke prognosehorizon — van vandaag tot :days dagen vooruit — dus dit scenario zou niets veranderen.',
         'pick_kind_first' => 'Kies eerst een soort mutatie.',
         'amount_positive' => 'Bedrag moet een positief getal zijn.',
+        'scenario_gone' => 'Dit scenario bestaat niet meer — het is elders verwijderd. Kies een ander scenario of maak een nieuw.',
+        'mutation_gone' => 'Deze wijziging bestaat niet meer — ze is elders verwijderd. Sluit de editor en voeg haar opnieuw toe als je haar nog wilt.',
     ],
 ];

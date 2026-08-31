@@ -104,6 +104,59 @@ it('rejects out-of-range Argon2id parameters in the header (pre-auth DoS guard)'
     $p['cleanup']();
 });
 
+// The test above uses a value libsodium itself would refuse, which says
+// nothing about the range in between. SENSITIVE is a parameter set libsodium
+// will happily run — 12.3 s and a gigabyte of allocation it takes outside
+// PHP's memory_limit — and nothing here has ever written one.
+it('refuses header parameters libsodium would run but this application never writes', function (): void {
+    $p = backupTmpPaths();
+    file_put_contents($p['plain'], random_bytes(10_000));
+    $enc = new BackupEncryptor;
+    $enc->encrypt($p['plain'], $p['enc'], 'pw');
+
+    $bytes = (string) file_get_contents($p['enc']);
+    $sensitive = substr($bytes, 0, 24)
+        .pack('V', SODIUM_CRYPTO_PWHASH_OPSLIMIT_SENSITIVE)
+        .pack('P', SODIUM_CRYPTO_PWHASH_MEMLIMIT_SENSITIVE)
+        .substr($bytes, 36);
+    file_put_contents($p['enc'], $sensitive);
+
+    $started = microtime(true);
+
+    expect(fn () => $enc->decrypt($p['enc'], $p['dec'], 'pw'))
+        ->toThrow(BackupFormatException::class, 'outside the accepted range');
+
+    // Refused, not merely survived: deriving under those parameters takes
+    // seconds, so a fast refusal is what proves no allocation happened.
+    expect(microtime(true) - $started)->toBeLessThan(1.0);
+    expect(is_file($p['dec']))->toBeFalse();
+
+    $p['cleanup']();
+});
+
+// The bound is what this application WRITES, so both parameter sets it can
+// write have to keep opening: a bound that refused a real backup would be a
+// reader locked out of their own file.
+it('still opens both parameter sets it writes — a passphrase backup and a key-sealed file', function (): void {
+    $p = backupTmpPaths();
+    $plaintext = random_bytes(10_000);
+    file_put_contents($p['plain'], $plaintext);
+    $enc = new BackupEncryptor;
+
+    $enc->encrypt($p['plain'], $p['enc'], 'pw');
+    $enc->decrypt($p['enc'], $p['dec'], 'pw');
+    expect((string) file_get_contents($p['dec']))->toBe($plaintext);
+
+    @unlink($p['dec']);
+
+    $key = random_bytes(32);
+    $enc->encryptWithKey($p['plain'], $p['enc'], $key);
+    $enc->decrypt($p['enc'], $p['dec'], $key);
+    expect((string) file_get_contents($p['dec']))->toBe($plaintext);
+
+    $p['cleanup']();
+});
+
 it('detects a truncated backup (missing final tag)', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['plain'], random_bytes(200_000));

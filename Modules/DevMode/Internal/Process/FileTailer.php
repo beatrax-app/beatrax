@@ -6,7 +6,7 @@ namespace Modules\DevMode\Internal\Process;
 
 final readonly class FileTailer
 {
-    private const READ_CHUNK_BYTES = 65_536;
+    private const int READ_CHUNK_BYTES = 65_536;
 
     /**
      * @return array{chunk: string, newOffset: int}

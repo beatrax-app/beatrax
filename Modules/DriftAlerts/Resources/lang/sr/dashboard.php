@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Upozorenja o odstupanju',
-    'aria' => 'Upozorenja o odstupanju — otvorenih :count, godišnji uticaj :amount',
+    'aria' => 'Upozorenja o odstupanju — otvorenih :count, :impact',
     'open' => 'otvoreno',
-    'annualized_impact' => 'godišnji uticaj',
+    'impact_rising' => 'godišnji uticaj :amount',
+    'impact_flat' => 'bez dodatnog godišnjeg troška',
 ];

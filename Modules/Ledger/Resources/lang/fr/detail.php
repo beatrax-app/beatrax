@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transaction',
     'heading' => 'Transaction',
+    'booked_on' => 'Comptabilisé le :date',
 
     'counterparty' => 'Tiers',
     'description' => 'Description',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Note (facultatif)',
         'tax_deductible' => 'Déductible des impôts',
         'remove_leg_aria' => 'Supprimer cette catégorie',
+        'remove_leg_caption' => 'Supprimer',
         'add_category' => '+ Ajouter une catégorie',
         'soft_cap' => ':count sur ~20 catégories — pense à regrouper les petits montants.',
         'remaining_zero' => 'Restant :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Supprimer la transaction',
         'help' => 'Supprime définitivement cette transaction. Cette action est irréversible.',
         'button' => 'Supprimer',
-        'confirm_prompt' => 'Tu es sûr ?',
+        'confirm_prompt' => 'Supprimer cette transaction ? Sa note, sa ventilation et ses étiquettes fiscales partent avec elle.',
         'confirm' => 'Oui, supprimer',
         'cancel' => 'Annuler',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Voir la chaîne',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Rapprochée et verrouillée',
+        'help' => 'Un rapprochement terminé a verrouillé cette transaction. Sa catégorie, sa note, sa ventilation et ses étiquettes fiscales restent en l\'état jusqu\'à ce que tu la déverrouilles.',
+        'button' => 'Déverrouiller pour modifier',
+        'confirm_question' => 'Déverrouiller cette transaction pour la modifier ? Rien n\'y change, et le prochain rapprochement terminé la reverrouille.',
+        'cancel' => 'La laisser verrouillée',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Cette transaction est rapprochée. Annule le rapprochement pour la modifier.',
         'reclassified_pair_removed' => 'Reclassée en :type — appariement supprimé',
         'reclassified' => 'Reclassée en :type',
         'note_saved' => 'Note enregistrée',
         'unreconciled' => 'Rapprochement annulé — tu peux de nouveau modifier cette transaction.',
+        'note_too_long' => 'Une note fait au plus :max caractère.|Une note fait au plus :max caractères.',
         'counterparty_updated' => 'Tiers mis à jour',
         'goal_attributed' => 'Comptabilisé dans cet objectif',
         'goal_attribution_removed' => "N'est plus comptabilisé dans cet objectif",

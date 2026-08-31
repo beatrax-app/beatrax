@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Säästöpotit · Beatrax',
     'heading' => 'Säästöpotit',
-    'subtitle' => 'Virtuaalisia osasaldoja, joiden summa vastaa aina todellista tilisaldoasi.',
+    'subtitle' => 'Virtuaalisia osasaldoja, jotka on lohkaistu tilin todellisesta saldosta.',
     'add_pot' => 'Lisää potti',
 
     'pot_fallback' => 'potti',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Näytä historia ↓',
         'hide' => 'Piilota historia ↑',
+        'truncated' => 'Viimeisimmät tapahtumat: :shown / :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Nosto',
         'moved_from' => 'Siirretty potista :name',
         'moved_to' => 'Siirretty pottiin :name',
+        'unreadable' => 'Kirjattu Beatraxin uudemmalla versiolla',
+        'released_on_archive' => 'Vapautettu arkistoitaessa',
     ],
 
     'archived' => [
-        'toggle' => 'Arkistoidut potit (:count)',
+        'toggle' => 'Arkistoitu potti (:count)|Arkistoidut potit (:count)',
         'badge' => 'Arkistoitu',
     ],
 
@@ -119,12 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Anna tälle potille nimi.',
         'select_account' => 'Valitse tälle potille tili.',
-        'amount_exceeds_unallocated' => 'Summa ylittää jakamattoman saldon.',
         'amount_exceeds_unallocated_available' => 'Summa ylittää jakamattoman saldon (:amount käytettävissä).',
         'amount_exceeds_pot_balance' => 'Summa ylittää potin :name saldon (:amount käytettävissä).',
         'generic' => 'Potin tallennus ei onnistunut. Tarkista kentät ja yritä uudelleen.',
         'amount_invalid' => 'Anna nollaa suurempi summa.',
         'goal_already_linked' => 'Tällä tavoitteella on jo aktiivinen linkitetty potti. Arkistoi se ensin.',
+        'account_cannot_hold_pots' => 'Potti tarvitsee tilin, jolla on rahaa. Valitse toinen tili.',
+        'select_target_pot' => 'Valitse potti, johon siirretään.',
+        'move_target_missing' => 'Se potti ei ole enää käytettävissä. Valitse toinen.',
+        'move_same_pot' => 'Potti ei voi siirtää rahaa itseensä. Valitse toinen potti.',
+        'move_cross_account' => 'Potit vaihtavat rahaa vain saman tilin sisällä, ja :name on tilillä :account.',
+        'pot_missing' => 'Se potti ei ole enää käytettävissä.',
+        'operation_failed' => 'Tämä ei mennyt läpi. Rahaa ei siirretty — yritä uudelleen.',
     ],
 
     'toast' => [

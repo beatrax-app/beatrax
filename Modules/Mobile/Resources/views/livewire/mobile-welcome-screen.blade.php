@@ -2,7 +2,7 @@
 {{-- .safe-screen: the first screen of a fresh install renders signed out, and
      layouts.app draws no bar there — nothing else reserves the system bars. --}}
 <div class="safe-screen min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
-    <div class="w-full max-w-md mx-auto px-6 space-y-6 text-center">
+    <div class="w-full max-w-md mx-auto px-4 sm:px-6 space-y-6 text-center">
         <div class="flex justify-center">
             {{-- Brand mark — same surface the desktop welcome screen uses. --}}
             <x-core::app-mark :size="false" class="h-20 w-20" :decorative="false" />

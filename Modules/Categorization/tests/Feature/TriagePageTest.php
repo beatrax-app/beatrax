@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Livewire\Livewire;
+use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -197,7 +198,7 @@ it('stops counting a fully split transaction as work still to do', function (): 
     // provenance that locks it out of every future rule.
     $tx = makeTriagePageTx($this->user, $this->account, $this->run, 12, null, 'MediaMarkt');
 
-    expect(app(Modules\Categorization\Public\Services\UncategorizedTriageQuery::class)
+    expect(app(UncategorizedTriageQuery::class)
         ->for($this->user)->rows)->toHaveCount(1);
 
     DB::table('transaction_splits')->insert([
@@ -213,6 +214,6 @@ it('stops counting a fully split transaction as work still to do', function (): 
         ],
     ]);
 
-    expect(app(Modules\Categorization\Public\Services\UncategorizedTriageQuery::class)
+    expect(app(UncategorizedTriageQuery::class)
         ->for($this->user)->rows)->toHaveCount(0);
 });

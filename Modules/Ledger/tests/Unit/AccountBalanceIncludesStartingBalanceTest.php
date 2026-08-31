@@ -40,9 +40,6 @@ function sbbAccount(User $user, string $suffix, array $overrides = []): Account
     ], $overrides));
 }
 
-// Raw insert, not Eloquent: the immutable_date cast writes posted_at with a
-// midnight time component, and a date-only column holding "2026-05-10 00:00:00"
-// compares differently from the bare "2026-05-10" every import path stores.
 function sbbTransaction(User $user, Account $account, int $runId, string $postedAt, int $amountMinor, ClearedStatus $status = ClearedStatus::Cleared): void
 {
     static $sbbRow = 0;

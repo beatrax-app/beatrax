@@ -16,7 +16,9 @@ return [
         'budget' => 'Miesiące budżetowe',
     ],
 
-    'all_clean' => 'Wszystko zmapowane bez zastrzeżeń — nic nie wymaga Twojej uwagi przed potwierdzeniem.',
+    'all_clean' => 'Wszystko zmapowane bez zastrzeżeń — nie ma tu nic do rozstrzygnięcia.',
+
+    'nothing_staged' => 'Ten eksport nie zawierał niczego do zaimportowania — nie ma tu czego potwierdzać.',
 
     'groups' => [
         'conflict' => 'Wymaga Twojej decyzji',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Spowoduje to utworzenie lub aktualizację pokazanych wyżej pozycji w Twoich kategoriach, budżetach i księdze.',
     'discard_button' => 'Odrzuć import',
+    'discard_confirm' => 'Odrzucić ten import? Wszystko, co odczytano z Twojego pliku eksportu, zostanie tu usunięte, a odzyskanie tego oznacza ponowne wgranie i przetworzenie całego pliku. Do księgi nic jeszcze nie trafiło.',
     'confirm_button' => 'Potwierdź import',
 ];

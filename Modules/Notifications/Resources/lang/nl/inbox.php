@@ -31,7 +31,7 @@ return [
     ],
 
     'toast' => [
-        'dismissed' => 'Genegeerd — Ongedaan maken',
+        'dismissed' => 'Genegeerd',
         'restored' => 'Hersteld',
     ],
 ];

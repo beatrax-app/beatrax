@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Adgangskoderne er ikke ens.',
         'password_length' => 'Brug mindst 12 tegn.',
         'pin_length' => 'PIN-koden skal have mindst 6 cifre.',
+        'pin_digits' => 'PIN-koden skal have 6 til 10 cifre — kun tal.',
         'pins_mismatch' => 'PIN-koderne er ikke ens. Prøv igen.',
         'session_expired' => 'Din session udløb, før opsætningen blev færdig. Indtast din PIN-kode og adgangskode igen.',
         'retry_failed' => 'Opsætningen af denne enhed kunne stadig ikke gøres færdig. Prøv igen.',

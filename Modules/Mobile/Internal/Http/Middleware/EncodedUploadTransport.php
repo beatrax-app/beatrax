@@ -17,14 +17,31 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 // real UploadedFile back, so nothing behind it can tell the two apart.
 final class EncodedUploadTransport
 {
-    public const FIELD = '_beatrax_transport';
+    public const string FIELD = '_beatrax_transport';
 
-    public const MARKER = 'base64';
+    public const string MARKER = 'base64';
+
+    // The size the product advertises as its maximum, in three other places:
+    // resources/js/mobile-upload.js and the two shells' php.ini patches. This
+    // is where the promise is kept — a body past it is refused rather than
+    // decoded into a fatal the reader is never told about.
+    public const MAX_BYTES = 20 * 1024 * 1024;
+
+    // One file per pick on the client, so a body naming more than a handful is
+    // not a bigger upload but a different caller. post_max_size bounds the
+    // bytes; nothing bounded the count.
+    public const int MAX_FILES = 8;
 
     // Refuses rather than repairs. A statement that arrives short would import
     // as a truncated one, and a wrong number silently in the ledger is worse
     // than an upload the user can see failed and retry.
-    private const REJECTION = 422;
+    private const int REJECTION = 422;
+
+    // A multiple of 4, so every slice is a whole number of base64 quanta and
+    // decodes standalone.
+    private const DECODE_CHUNK = 1 << 19;
+
+    private const string ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
     /**
      * @param  Closure(Request): Response  $next
@@ -74,6 +91,10 @@ final class EncodedUploadTransport
             throw new HttpException(self::REJECTION, 'The upload carried no files.');
         }
 
+        if (count($files) > self::MAX_FILES) {
+            throw new HttpException(self::REJECTION, 'The upload carried more files than this transport accepts.');
+        }
+
         $entries = [];
 
         foreach ($files as $entry) {
@@ -97,22 +118,22 @@ final class EncodedUploadTransport
     private function write(array $entry): string
     {
         $content = $entry['content'] ?? null;
-        $decoded = is_string($content) ? base64_decode($content, true) : false;
 
-        if ($decoded === false) {
+        if (! is_string($content) || ! self::isBase64($content)) {
             throw new HttpException(self::REJECTION, 'The upload was not valid base64.');
         }
 
         $declaredSize = $entry['size'] ?? null;
 
-        if (! is_int($declaredSize) || strlen($decoded) !== $declaredSize) {
+        if (! is_int($declaredSize) || $declaredSize < 0) {
             throw new HttpException(self::REJECTION, 'The upload did not arrive whole.');
         }
 
-        $declaredDigest = $entry['sha256'] ?? null;
-
-        if (! is_string($declaredDigest) || ! hash_equals(hash('sha256', $decoded), $declaredDigest)) {
-            throw new HttpException(self::REJECTION, 'The upload did not survive the crossing intact.');
+        // Checked from the DECLARED size, before a byte is decoded. The
+        // decoded copy is what exhausts a phone's 128 MB ceiling, and an
+        // exhausted ceiling is E_ERROR — no 422, no log, no retry.
+        if ($declaredSize > self::MAX_BYTES) {
+            throw new HttpException(self::REJECTION, 'The upload is larger than this device accepts.');
         }
 
         // A 0700 directory under app storage, never sys_get_temp_dir(): these
@@ -124,11 +145,88 @@ final class EncodedUploadTransport
 
         $path = tempnam($dir, 'beatrax-upload-');
 
-        if ($path === false || file_put_contents($path, $decoded) === false) {
+        if ($path === false) {
             throw new HttpException(500, 'The upload could not be staged for parsing.');
         }
 
+        [$written, $digest] = $this->decodeInto($content, $path);
+
+        if ($written !== $declaredSize) {
+            throw new HttpException(self::REJECTION, 'The upload did not arrive whole.');
+        }
+
+        $declaredDigest = $entry['sha256'] ?? null;
+
+        if (! is_string($declaredDigest) || ! hash_equals($digest, $declaredDigest)) {
+            throw new HttpException(self::REJECTION, 'The upload did not survive the crossing intact.');
+        }
+
         return $path;
+    }
+
+    // Decoded a slice at a time straight onto disk. Holding the whole decoded
+    // copy alongside the raw body and the parsed base64 string cost about four
+    // times the file, and the supported 20 MB maximum fatalled on line one of
+    // the decode — at the size three other places in the product advertise.
+    /**
+     * @return array{0: int, 1: string} [bytes written, sha256 of what was written]
+     */
+    private function decodeInto(string $content, string $path): array
+    {
+        $handle = fopen($path, 'wb');
+
+        if ($handle === false) {
+            throw new HttpException(500, 'The upload could not be staged for parsing.');
+        }
+
+        $hash = hash_init('sha256');
+        $written = 0;
+        $length = strlen($content);
+
+        try {
+            for ($offset = 0; $offset < $length; $offset += self::DECODE_CHUNK) {
+                // isBase64() cleared the alphabet and the quantum alignment for
+                // the whole body, so strict re-walks a slice that cannot fail.
+                // The refusal is still written out: a decode that returns false
+                // is not repaired into whatever bytes survived it.
+                $bytes = base64_decode(substr($content, $offset, self::DECODE_CHUNK), true);
+
+                if ($bytes === false) {
+                    throw new HttpException(self::REJECTION, 'The upload did not survive the crossing intact.');
+                }
+
+                hash_update($hash, $bytes);
+                $written += strlen($bytes);
+
+                if (fwrite($handle, $bytes) === false) {
+                    throw new HttpException(500, 'The upload could not be staged for parsing.');
+                }
+            }
+        } finally {
+            fclose($handle);
+        }
+
+        return [$written, hash_final($hash)];
+    }
+
+    // Alphabet and quantum alignment in one linear pass and no allocation, so
+    // the per-slice decodes below can be trusted without each re-validating.
+    // Padding is only ever the last one or two characters.
+    private static function isBase64(string $content): bool
+    {
+        $length = strlen($content);
+
+        if ($length % 4 !== 0) {
+            return false;
+        }
+
+        $padding = 0;
+
+        while ($padding < 2 && $padding < $length && $content[$length - $padding - 1] === '=') {
+            $padding++;
+        }
+
+        return strspn($content, self::ALPHABET) === $length - $padding;
     }
 
     // `test: true` because no SAPI moved this file into place — the bytes came

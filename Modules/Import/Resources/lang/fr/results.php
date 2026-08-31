@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Envoyer un autre relevé',
 
+    'chain' => [
+        'heading' => 'Résolution des chaînes…',
+        'pending' => 'En file d\'attente. Le résolveur de chaînes va démarrer sous peu.',
+        'running' => 'Liaison des chaînes de financement et décomposition des règlements du relevé.',
+    ],
+
     'issues' => [
         'row' => 'Ligne :row : :reason',
         'file_stopped' => 'Le fichier n\'a pas pu être lu au-delà de la ligne :row. Rien après cette ligne n\'a été importé.',

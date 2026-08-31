@@ -17,7 +17,7 @@ use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 /**
  * @link ../../../../.docs/features/sync/gdk-epoch-wrap-delivery.md
  */
-final class GdkEpochDeliveryGateway
+final readonly class GdkEpochDeliveryGateway
 {
     // The wire vocabulary of the authenticated session, named on the public
     // surface so a transport in another module compares against a constant
@@ -36,9 +36,9 @@ final class GdkEpochDeliveryGateway
     public const int MAX_CATCHUP_FRAMES = 100_000;
 
     public function __construct(
-        private readonly InboundGdkWrapDrain $drain,
-        private readonly RelayMailbox $mailbox,
-        private readonly PendingMailboxScan $scan,
+        private InboundGdkWrapDrain $drain,
+        private RelayMailbox $mailbox,
+        private PendingMailboxScan $scan,
     ) {}
 
     public static function maxWrapsPerPass(): int

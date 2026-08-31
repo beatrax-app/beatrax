@@ -16,7 +16,9 @@ return [
         'budget' => 'Budjettikuukaudet',
     ],
 
-    'all_clean' => 'Kaikki kohdistui siististi — mikään ei vaadi huomiotasi ennen vahvistusta.',
+    'all_clean' => 'Kaikki kohdistui siististi — täällä ei ole mitään päätettävää.',
+
+    'nothing_staged' => 'Tässä viennissä ei ollut mitään tuotavaa — täällä ei ole mitään vahvistettavaa.',
 
     'groups' => [
         'conflict' => 'Vaatii päätöksesi',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Tämä luo tai päivittää yllä näkyvät määrät kategorioihisi, budjetteihisi ja tilikirjaasi.',
     'discard_button' => 'Hylkää tuonti',
+    'discard_confirm' => 'Hylätäänkö tämä tuonti? Kaikki vientitiedostostasi luettu poistetaan täältä, ja takaisin sen saa vain lataamalla ja jäsentämällä koko tiedoston uudelleen. Tilikirjaasi ei ole vielä päätynyt mitään.',
     'confirm_button' => 'Vahvista tuonti',
 ];

@@ -19,9 +19,10 @@ isolation.
 
 - **Location:** `Modules/Forecasting/tests/Feature/`
 - **What they test:**
-  - The eleven Public actions end-to-end, including the launchpad
-    atomic actions' transaction safety.
-  - The cross-user 404 posture on every action + Livewire mount.
+  - The nine Public actions end-to-end, including the launchpad
+    atomic action's transaction safety.
+  - The cross-user 404 posture on every action + Livewire mount, and the
+    soft reset the PAGE takes instead.
   - The scenario CRUD lifecycle + the matching events.
   - The chain-aware routing against multi-account fixtures.
   - The shortfall detector's window detection + `ForecastShortfallDetected`
@@ -32,6 +33,10 @@ isolation.
     `ForecastHighlightsTile`, `ScenarioEditorSidebar`,
     `ModelWhatIfDropdown`, `OpeningBalanceEditor`).
   - The sidebar badge composer's count query + memoisation.
+  - That the roll-ups count one movement once
+    (`AReceiptIsNotASecondChargeTest`): both legs of a Google Play
+    purchase land in the ledger, and the net-worth card and the
+    all-accounts curve each subtract it a single time.
 - **Setup:** every test uses `RefreshDatabase`. Tests that drive
   the queued projection use `Queue::fake()` or the in-memory
   worker for the listener-fan-out contracts.
@@ -44,7 +49,7 @@ isolation.
   `recurring_series`, or `chain_links`. The scenario substrate is
   walled off from the ledger.
 - `noForecastRunStateWritesOutsideMachine` — only
-  `ForecastRunStateMachine` may write `forecast_runs.state`.
+  `ForecastRunStateMachine` may write `forecast_runs.status`.
 
 ## How to run the suite for just this module
 
@@ -114,28 +119,25 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `Forecasting` module.
-
-## Behavioral contracts
-
 - **Scenarios never touch the transaction substrate.** The
   `noScenarioMutationsJoinedToTransactionQueries` arch invariant
   blocks any JOIN that couples `forecast_scenario_mutations` to
   `transactions`, `recurring_series`, or `chain_links`. Scenarios
   are an in-memory transform applied by `ScenarioApplier`.
 - **`ForecastRunStateMachine` is the SOLE sanctioned mutator of
-  `forecast_runs.state`.** Allowed transitions: `pending →
+  `forecast_runs.status`.** Allowed transitions: `pending →
   running → complete | failed`.
 - **Every scenario CRUD action raises exactly one event.**
   `ScenarioCreated`, `ScenarioMutated`, or `ScenarioDeleted`
   fires once per successful action; the `ProjectForecastOnScenarioChange`
   listener fans out the projection.
-- **Launchpad actions are atomic.**
-  `CreateCancellationScenarioForAlert`,
-  `CreateCancellationScenarioForSeries`, and
-  `CreateAmountChangeScenarioForSeries` each wrap a
-  `CreateScenario` + `AddScenarioMutation` pair in a DB
+- **The launchpad action is atomic.** `CreateScenarioFromTemplate`
+  wraps a `CreateScenario` + `AddScenarioMutation` pair in a DB
   transaction; a half-applied launchpad scenario can never land.
+- **A second click returns the first scenario, in any language.**
+  The lookup is `existingScenarioIdForTemplate()` — mutation kind plus
+  target series — never the translated name, which the reader may also
+  have renamed.
 - **Scenario names are unique per user.** UNIQUE
   `(user_id, name)`; the rename action has a deterministic conflict
   surface.
@@ -157,7 +159,11 @@ The behavioural contract for the `Forecasting` module.
   Rejected / MetricsRefreshed; `DriftAlerts`'
   DismissedCancelled; the three scenario lifecycle events.
 - **Cross-user reads / writes return 404.** Every action +
-  Livewire mount filters by `(id, user_id)`.
+  Livewire mount filters by `(id, user_id)`. `/forecast`'s own `?account=`
+  and `?scenarioId=` are the exception, and deliberately so: a page
+  answering "not yours" with a 404 and "nobody's" with a rendered page is an
+  existence oracle over the id space, so both soft-reset to the reader's own
+  view. See [url-parameters.md](url-parameters.md#one-answer-for-both-cases).
 - **`forecast_scenarios.user_id` is non-nullable + cascade-on-
   delete.** A NULL `user_id` cannot land; deleting the user wipes
   the scenarios cleanly.
@@ -214,7 +220,7 @@ The behavioural contract for the `Forecasting` module.
   - [`Chains`](../chains/how-to-test.md) —
     `CardStatementQuery::nextSettlementForUser` (the synthetic
     settlement contribution and the highlights tile) and
-    `ChainLinkQuery::confirmedAndDeterministicForSeries` (the
+    `ChainLinkQuery::confirmedFundersForSeries` (the
     funder account chain routing sends a series to).
 - **Depended on by**
   - [`Desktop`](../desktop/how-to-test.md) — subscribes to
@@ -231,7 +237,7 @@ The behavioural contract for the `Forecasting` module.
   the shortfall detector compares against.
 - `accounts.opening_balance_minor` — per-account user-set opening
   balance override.
-- The horizon options are fixed in `ProjectForecastJob::HORIZON_DAYS`
+- The horizon options are the cases of `ForecastHorizon`
   (30 / 60 / 90 / 180 / 365) and the rail offers exactly those; no
   config knob today.
 - `CadenceJitter`'s window is `WINDOW_DAYS = 3` and its share is

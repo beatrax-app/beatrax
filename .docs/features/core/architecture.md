@@ -151,12 +151,34 @@ What the module explicitly does NOT do:
     `Repository` is unreachable from a `uniqueVia()` body. The store
     name comes from `config('cache.locks_store')` — `database` in
     shipped builds, `redis` on a developer's local box.
-  - `SafeTrace` — rewrites every absolute filesystem path inside a
-    `Throwable::getTraceAsString()` output to a project-root-relative
-    path (raw traces leak the developer's home-directory layout to any
-    surface that can be screen-shared, e.g. the in-app `/dev/logs`
-    viewer — ASVS V7 Errors & Logging), and truncates the trace to a
+  - `QueryFailure::isUniqueViolation()` — the shared "was this write
+    refused because the row is already there?" seam, read by eight
+    actions across six modules that answer it by carrying on. It cannot
+    be decided from the SQLSTATE: SQLite answers UNIQUE, FOREIGN KEY,
+    NOT NULL and CHECK alike with 23000 and driver code 19, so treating
+    23000 as a duplicate reported a write that did NOT happen as an
+    idempotent no-op. It reads the DRIVER's own sentence
+    (`PDOException::$errorInfo[2]`) — not the exception message, to which
+    Laravel appends the statement and its bindings, where a stored value
+    quoting the driver would classify its own failed write. Postgres is
+    the one driver whose SQLSTATE already distinguishes them (23505).
+  - `SafeTrace` — assembles a trace from `Throwable::getTrace()` frame by
+    frame, rewriting every absolute filesystem path to a project-root-
+    relative one (raw traces leak the developer's home-directory layout
+    to any surface that can be screen-shared, e.g. the in-app
+    `/dev/logs` viewer — ASVS V7 Errors & Logging), and truncating to a
     configurable line count so a deep recursion cannot flood the log.
+    It does **not** render `getTraceAsString()`, which is where the
+    frames' arguments live: with `zend.exception_ignore_args` Off — the
+    interpreter's default, and the value every bundled runtime shipped —
+    that string carries the first 15 characters of every string
+    argument, so a parse frame put a row of the reader's bank statement
+    into the 0644 daily log, on the same line as the
+    `SafeExceptionContext` that exists to keep it out. The directive is
+    now also set in `NativeAppServiceProvider::phpIni()`, in the two
+    mobile shells' generated `php.ini`, and in `tools/test-php-ini`; the
+    code holds without any of them, because desktop, mobile and CI do
+    not share one `php.ini`.
 - **Events/**
   - `UserInstalled` — dispatched by `Modules\Auth\Public\Actions\SignupAction`
     after a successful install AND by `beatrax:install` on every re-run,
@@ -418,6 +440,27 @@ The 32-byte stream key is derived from the passphrase with Argon2id
 ops/mem limits are stored in the header so a future, stronger default
 can still decrypt today's backups.
 
+### The Argon2id parameters a backup header may ask for
+
+Those two header fields are attacker-controlled: they are read out of an
+unauthenticated header, before any key exists to authenticate it with, and
+handed straight to a key derivation that allocates whatever they name. The
+allocation is libsodium's, outside PHP's `memory_limit`, so nothing else in
+the process bounds it.
+
+The range check used to admit anything libsodium itself would run —
+`opslimit` up to 10 and `memlimit` up to `SENSITIVE`. Measured, that ceiling
+is **12.3 s and 1 GiB** for a single header. A phone's whole PHP budget is
+128 MB and the desktop serves one request at a time, so a file asking for it
+is a minute-scale outage on one machine and an out-of-memory kill on the
+other — before a single byte of the passphrase has been checked.
+
+The bound is now what this application can *write*, not what libsodium can
+run: `encrypt()` uses `MODERATE` (0.75 s, 256 MiB) and `encryptWithKey()` uses
+`(1, 8 KiB)`, and `encryptWithParams()` is private, so those two are the only
+headers Beatrax has ever produced. A header past `MODERATE` was not written
+here, and is refused as a format error rather than derived.
+
 Quantum safety: this scheme is post-quantum secure by construction
 because it is purely symmetric — there is no public-key/asymmetric
 step anywhere, so Shor's algorithm (which breaks RSA/ECC/DH key
@@ -608,6 +651,15 @@ consuming `BackupDatabaseCommand` reads the directory listing, hands
 the basenames in, then deletes the omitted entries, keeping the policy
 fully unit-testable and the command's I/O surface narrow.
 
+`BackupSidecar` is its sibling for the `.meta.json` file itself:
+`write()` does the umask + tmp + rename + chmod dance with every return
+checked, and `recordsDigest()` answers the smart-skip question by
+reading the newest sidecar in the directory. It is one class rather
+than three command methods because a missing, unparseable or
+unreadable sidecar has to mean "write another backup" on every one of
+those paths — a wrong skip writes no backup at all — and that rule is
+easier to hold in one place than to re-derive at three call sites.
+
 At-rest encryption migration (`EncryptionMigrationService`):
 
 The one-time, backup-first, atomic, rollback-on-failure migration that
@@ -697,6 +749,32 @@ written BEFORE encryption was ever turned on.
   only the columns `PROJECTION_COLUMNS` (or, for the op log, `value` and
   `gdk_epoch`) names for that table — a payload that decrypts to
   something else cannot reach an unrelated column.
+
+Toasts (`x-core::toast-host`, `DispatchesToast`):
+
+One host, mounted by the app layout and by the dev shell, listens for the
+window `toast` event. `DispatchesToast::toast()` raises a plain notice and
+`toastWithUndo()` raises one with an action behind it. The undo carries
+three things: the method name, its payload, and **the dispatching
+component's own id** — the browser event says nothing about where it came
+from, and the host is mounted by the layout rather than by the component
+that raised it, so `window.Livewire.find(id)` is the only route back. The
+key is `componentId`, never `component`: Livewire's own Event object uses
+that name for `->to()` targeting and answers with a ComponentNotFound. The
+host used to read `detail.message` and nothing else, which made every Undo
+in the app a word in a sentence with a live server-side method behind it
+that nothing could ever call. A module raising one must go through
+`toastWithUndo()`: a call site inventing its own param names is invisible
+to the host in exactly the same way.
+
+`x-core::install-hint` has exactly two arms: a `beforeinstallprompt` capture,
+which is Chromium-only, and an always-on desktop hint gated on a >=1024px
+media query. An iPhone matches neither, so the card never renders there. The
+component's own docblock, and a comment on the dashboard, both used to promise
+an iOS Safari "Tap Share, then Add to Home Screen" branch; no such branch and
+no copy for one has ever existed. Adding it is a copy job first: both strings
+the card renders are written in the desktop voice ("… on your phone"), so an
+iOS arm needs its own headline and instruction in all 26 locales.
 
 Chrome & navigation (`AppSidebar`, `Dashboard`):
 
@@ -854,9 +932,17 @@ Every property maps to a `users` column and validates via a Livewire
 `#[Validate]` attribute:
 
 - `defaultCurrencyView` — default `/transactions`/dashboard
-  presentation (EUR-only settled pair vs. Original currency native
-  pair + settled secondary line); the per-page `?currency=` toggle
-  overrides this default, which lives on the `users` row so it
+  presentation: which amount a row prints, never which rows it lists.
+  `eur_only` (labelled "Settled amount") draws the settled pair;
+  `original` (labelled "Original amount") draws the native pair with
+  the settled amount on a secondary line. The stored value keeps its
+  `eur_only` spelling — it is what `users.default_currency_view` holds
+  and what `?currency=` carries, so renaming it would reset every
+  reader's choice. Settings and the transactions list write this one
+  preference and take their labels from one wording per locale
+  (`ledger::list.currency_eur` / `currency_original`), so the two
+  surfaces cannot describe it differently. The per-page `?currency=`
+  toggle overrides this default, which lives on the `users` row so it
   survives across sessions and devices.
 - `periodStartDay` — day of month the "this period" window rolls
   over, numbered 1..28 so every calendar month including February has
@@ -875,11 +961,17 @@ Every property maps to a `users` column and validates via a Livewire
 - `baseCurrency` — ISO 4217 reporting currency for all roll-ups,
   validated against the seeded currencies table so arbitrary codes can
   never reach the DB.
-- `autoImportFromDropFolder` — when on, `ScanInboxDropFolderJob` runs
-  every 5 minutes importing `.eml`/`.mbox` files from
-  `storage/app/inbox-drop/{userId}/` through the same matcher pipeline
-  as the wizard upload path; off by default so the wizard remains the
-  documented primary entrypoint.
+- `autoImportFromDropFolder` — when on, `receipts:scan-drop-folder`
+  dispatches `ScanInboxDropFolderJob` every 5 minutes on the desktop,
+  importing `.eml`/`.mbox` files from `storage/app/inbox-drop/{userId}/`
+  through the same matcher pipeline as the wizard upload path:
+  `RecordReceipt` for the audit row, then `ReceiptLedgerBridge` for the
+  canonical write, which is the half the scan used to discard. On a
+  device the background runner clamps that to its fifteen-minute floor
+  and the OS decides when a registered task gets a turn, so
+  `AutoImportSettingsSection` renders a phone-shaped help line naming no
+  interval. Off by default so the wizard remains the documented primary
+  entrypoint.
 - `theme` — one of `light`/`dark`/`system` governing the `<html>`
   dark-mode class; instant-apply via `setTheme()`.
 - `locale` — the display language, or NULL for `LocaleNegotiator::SYSTEM`;
@@ -918,17 +1010,40 @@ Data & backup UI (`EncryptedBackupDownload`, `EncryptedBackupRestore`,
 `EncryptedBackupDownload` (Settings → Data & backup) snapshots the
 live SQLite DB via `VACUUM INTO`, encrypts it in place with
 `BackupEncryptor`, and streams it as a download; the passphrase never
-persists and is the only thing that can decrypt the file. The
+persists and is the only thing that can decrypt the file. On a shell
+whose WebView drops what it is sent, the encrypted file goes to the OS
+share sheet instead and the screen says which of the three things
+happened to it — see
+[a download the shell drops](../mobile/a-download-the-shell-drops.md). The
 plaintext snapshot stages inside a private 0700 directory under app
 storage (never `sys_get_temp_dir()`, which is world-traversable) and
 is chmod 0600'd as defense-in-depth on top of the directory permission;
 the plaintext is unlinked unconditionally in a `finally` block.
+The archive also carries the GDK keyring, because a database whose
+columns are sealed is ciphertext without it and the keys live in a file
+beside the database rather than inside it —
+[a backup of the database alone is a backup of ciphertext](../sync/sensitive-columns-at-rest.md#a-backup-of-the-database-alone-is-a-backup-of-ciphertext).
 SQLite-only — hidden on a server (Postgres/MySQL) build.
 `EncryptedBackupRestore` mirrors it in reverse: the destructive swap
 sits behind uploading the file, entering the passphrase, AND typing
 the literal confirmation phrase; `RestoreEncryptedBackup` only swaps
 the live DB after the upload decrypts and passes an integrity check,
-taking a pre-restore snapshot first.
+taking a pre-restore snapshot first, and installs the carried keyring
+before the swap so a failure there leaves the live DB untouched. What the
+reader is told when it refuses comes from `RestoreRefusal::forThrowable()`, one
+`core::backup.errors.restore_*` line per distinct piece of advice, and never
+from the exception's own message — those name phases and absolute paths, in one
+language ([why](../../conventions/invariants-from-shipped-failures.md#an-exception-message-rendered-as-if-it-were-copy)).
+`BackupContentsUnreadableException` exists for that mapping: a payload that
+decrypts and will not open as a database wants an earlier backup, where a
+`BackupFormatException` wants a different file.
+
+Both restore paths — `RestoreEncryptedBackup` and `db:restore` — write
+through `Modules\Core\Internal\Backup\LiveDatabaseTransplant`, which
+drops every connection naming the live file and then copies the source's
+pages INTO it via SQLite's backup API rather than over its file. A copy
+landed beside a surviving `-wal` is recovered away by the next reader,
+which is a restore that reports success and restores nothing.
 
 `HelpDataLocations` (`/help/data-locations`) makes the local-only
 privacy promise tangible by surfacing the three load-bearing on-disk

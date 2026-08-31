@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -19,6 +20,7 @@ use Modules\Auth\Internal\Lock\AppLockDisableResult;
 use Modules\Auth\Internal\Lock\AppLockKeyState;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
+use Modules\Auth\Internal\Lock\IdleTimeoutOptions;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Public\AppLockEvents;
 use Modules\Auth\Public\Contracts\ColdStartVault;
@@ -26,6 +28,7 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
@@ -39,6 +42,12 @@ final class AppLockSettingsSection extends Component
     // No #[Validate] on the PIN and password boxes below. The attribute only
     // runs where an action calls validate(), none of these do, and a rule that
     // never runs reads as a gate that is there. AppLockPinShape is the rule.
+
+    // Locked: setPin() refuses to run on an enabled lock because enable()
+    // re-provisions rather than re-wraps. Read off the wire, that refusal was
+    // the client's to waive — moving this to false rotated the salt, replaced
+    // the PIN hash and dropped every biometric enrolment.
+    #[Locked]
     public bool $lockEnabled = false;
 
     public bool $biometricEnrolled = false;
@@ -52,9 +61,9 @@ final class AppLockSettingsSection extends Component
     public string $deenrollPin = '';
 
     // Exempt from the PIN confirmation every other mutation here requires:
-    // narrowing the auto-lock window touches no key material.
-    #[Validate('required|integer|in:1,5,15,30')]
-    public int $idleTimeoutMinutes = 5;
+    // narrowing the auto-lock window touches no key material. The rule is in
+    // rules() because an attribute argument cannot read the options list.
+    public int $idleTimeoutMinutes = IdleTimeoutOptions::DEFAULT_MINUTES;
 
     public string $newPin = '';
 
@@ -101,19 +110,21 @@ final class AppLockSettingsSection extends Component
                 ['user_id' => $user->id],
                 [
                     'lock_enabled' => false,
-                    'idle_timeout_minutes' => 5,
+                    'idle_timeout_minutes' => IdleTimeoutOptions::DEFAULT_MINUTES,
                     'failed_attempts' => 0,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ],
             );
             $this->lockEnabled = false;
-            $this->idleTimeoutMinutes = 5;
+            $this->idleTimeoutMinutes = IdleTimeoutOptions::DEFAULT_MINUTES;
         } else {
             $this->lockEnabled = (bool) $row->lock_enabled;
             $idleRaw = $row->idle_timeout_minutes;
-            $idle = is_numeric($idleRaw) ? (int) $idleRaw : 5;
-            $this->idleTimeoutMinutes = in_array($idle, [1, 5, 15, 30], true) ? $idle : 5;
+            $idle = is_numeric($idleRaw) ? (int) $idleRaw : IdleTimeoutOptions::DEFAULT_MINUTES;
+            $this->idleTimeoutMinutes = in_array($idle, IdleTimeoutOptions::minutes(), true)
+                ? $idle
+                : IdleTimeoutOptions::DEFAULT_MINUTES;
         }
 
         $credentials = $biometricStore->findForUser($user->id);
@@ -251,7 +262,7 @@ final class AppLockSettingsSection extends Component
 
         $this->dispatch(
             'beatrax-idle-timeout-changed',
-            ms: $this->idleTimeoutMinutes * 60_000,
+            ms: $this->idleTimeoutMinutes * Duration::Minute->milliseconds(),
         );
 
         $this->toast(Lang::get('core::settings.saved'));
@@ -514,6 +525,16 @@ final class AppLockSettingsSection extends Component
         $this->confirmingDeenroll = false;
         $this->deenrollPin = '';
         $this->flashMessage = '';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function rules(): array
+    {
+        return [
+            'idleTimeoutMinutes' => 'required|integer|in:'.implode(',', IdleTimeoutOptions::minutes()),
+        ];
     }
 
     public function render(ViewFactory $views): View

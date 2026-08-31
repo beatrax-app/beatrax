@@ -21,6 +21,7 @@ use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -148,14 +149,15 @@ final class RulesPage extends Component
 
     // Amount conditions are stored in minor units, and the list printed them
     // raw: a rule the user entered as 10,00-25,00 read back as "1000 and
-    // 2500", which could be ten euros or a thousand.
+    // 2500", which could be ten euros or a thousand. At the reader's own
+    // scale, because a yen rule of 1250 is ¥1,250 and not 12,50 of anything.
     private static function readableValue(string $valueType, string $value): string
     {
         if ($valueType !== ConditionValueType::Amount->value || ! is_numeric($value)) {
             return $value;
         }
 
-        return MoneyInput::formatMinor((int) $value);
+        return MoneyInput::formatMinor((int) $value, BaseCurrency::value());
     }
 
     public static function actionChipLabel(RuleActionDto $action): string

@@ -27,7 +27,7 @@ return [
     ],
 
     'progress' => [
-        'aria' => ':name: :pct% fuldført',
+        'aria' => ':name: :pct % fuldført',
     ],
 
     'card' => [
@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Tilføj indbetalinger for at se en prognose',
         'not_enough_history' => 'Endnu ikke nok historik til at anslå en dato',
         'no_recent_contributions' => 'Ingen nylige indbetalinger at anslå ud fra',
+        'too_far_to_date' => 'For langt ude i fremtiden til en dato i dette tempo',
         'est' => 'Ca. :date ·',
         'projection_note' => '(prognose)',
         'projected' => 'Forventet: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Flere handlinger for :name',
         'mark_complete' => 'Markér som fuldført',
+        'mark_complete_caption' => 'Markér',
         'archive' => 'Arkivér',
         'restore' => 'Gendan',
     ],
 
-    'archived_disclosure' => 'Arkiverede mål (:count)',
+    'archived_disclosure' => 'Arkiveret mål (:count)|Arkiverede mål (:count)',
 
     'form' => [
         'title_edit' => 'Redigér mål',
@@ -96,8 +98,11 @@ return [
         'name' => 'Indtast et navn til dit mål.',
         'date' => 'Vælg en måldato.',
         'date_invalid' => 'Vælg en rigtig dato.',
+        'date_before_start' => 'Vælg en dato på eller efter målets startdato.',
         'generic' => 'Målet kunne ikke gemmes. Tjek felterne, og prøv igen.',
         'amount' => 'Indtast et gyldigt beløb større end nul.',
         'pot_linked_category' => 'Denne pulje er tilknyttet en kategori. Fjern den tilknytning på siden Opsparingspuljer først.',
+        'pot_already_linked' => 'Denne pulje sparer allerede op til et andet mål. Fjern tilknytningen der først.',
+        'pot_missing' => 'Den pulje er ikke længere tilgængelig. Vælg en anden, eller lad dette mål stå uden tilknytning.',
     ],
 ];

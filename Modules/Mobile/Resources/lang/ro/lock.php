@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Deblochează',
 
-    'digits_entered' => 'cifre introduse',
+    'digits_entered' => ':count cifră introdusă|:count cifre introduse|:count de cifre introduse',
     'pin_pad' => 'Tastatură PIN',
     'digit' => 'Cifra :digit',
     'backspace' => 'Ștergere înapoi',

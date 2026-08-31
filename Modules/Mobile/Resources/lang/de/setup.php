@@ -12,6 +12,7 @@ return [
         'locked' => 'Entsperre die App, um die Einrichtung fortzusetzen.',
         'revoked' => 'Dieses Gerät wurde auf Ihrem anderen Gerät entfernt. Koppeln Sie es erneut, um weiter zu synchronisieren.',
     ],
+    'unlock_cta' => 'Entsperre die App',
     'step' => [
         'connect' => 'Mit deinem anderen Gerät verbinden',
         'keys' => 'Verschlüsselungsschlüssel empfangen',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Deinen Verlauf neu aufbauen',
     ],
     'step_current' => 'aktueller Schritt',
-    'working' => [
-        'connect' => 'Dein anderes Gerät wird kontaktiert…',
-        'keys' => 'Deine Daten werden entsperrt…',
-        'transfer' => 'Dein Verlauf wird angefordert…',
-        'rebuild' => 'Dein Verlauf wird neu aufgebaut — das kann eine Minute dauern.',
-    ],
     'page_title' => 'Wird eingerichtet…',
     'resuming' => 'Einrichtung wird fortgesetzt…',
     'setting_up' => 'Dieses Gerät wird eingerichtet…',
     'progress_aria' => 'Fortschritt der Einrichtung',
     'records' => ':count Datensatz|:count Datensätze',
-    'records_preparing' => 'Warten auf das andere Gerät…',
 ];

@@ -204,3 +204,23 @@ it('throws NotFoundHttpException for a cross-user alert id', function (): void {
     $fresh = DriftAlert::query()->findOrFail($alert->id);
     expect($fresh->state)->toBe('open');
 });
+
+it('moves a lapsed snooze to a new date through the state machine, audit row and all', function (): void {
+    $alert = sdaAlert($this->user, 'snoozed', [
+        'snoozed_until' => CarbonImmutable::parse('2026-05-19 09:00:00'),
+    ]);
+
+    /** @var SnoozeDriftAlert $action */
+    $action = $this->app->make(SnoozeDriftAlert::class);
+    ($action)($alert->id, $this->user, CarbonImmutable::parse('2026-05-27 09:00:00'));
+
+    /** @var DriftAlert $fresh */
+    $fresh = DriftAlert::query()->findOrFail($alert->id);
+    expect($fresh->snoozed_until?->toDateTimeString())->toBe('2026-05-27 09:00:00');
+
+    $transitions = DriftAlertTransition::query()->where('drift_alert_id', $alert->id)->get();
+    expect($transitions)->toHaveCount(1);
+    expect($transitions[0]->from_state)->toBe('snoozed');
+    expect($transitions[0]->to_state)->toBe('snoozed');
+    expect($transitions[0]->notes)->toContain('snoozed_until=2026-05-27');
+});

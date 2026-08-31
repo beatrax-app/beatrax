@@ -11,6 +11,7 @@ use Modules\Ledger\Internal\Services\BackfillStartingBalanceFromStatementSummari
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\StatementSummary;
+use Modules\Ledger\Public\Enums\ImportRunStatus;
 
 uses(RefreshDatabase::class);
 
@@ -68,7 +69,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
         'raw_file_path' => '/tmp/a1.xml',
         'sha256' => str_repeat('a', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-03-01 12:00:00'),
-        'status' => 'previewed',
+        'status' => ImportRunStatus::Confirmed->value,
     ]);
 
     $runA2 = ImportRun::query()->create([
@@ -77,7 +78,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
         'raw_file_path' => '/tmp/a2.xml',
         'sha256' => str_repeat('b', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
-        'status' => 'previewed',
+        'status' => ImportRunStatus::Confirmed->value,
     ]);
 
     $runB = ImportRun::query()->create([
@@ -86,7 +87,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
         'raw_file_path' => '/tmp/b.940',
         'sha256' => str_repeat('c', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
-        'status' => 'previewed',
+        'status' => ImportRunStatus::Confirmed->value,
     ]);
 
     // Two summaries: the earlier opening_balance_date wins.
@@ -159,7 +160,7 @@ it('is idempotent — re-running the backfill does not overwrite a non-null star
         'raw_file_path' => '/tmp/idem.xml',
         'sha256' => str_repeat('d', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
-        'status' => 'previewed',
+        'status' => ImportRunStatus::Confirmed->value,
     ]);
 
     StatementSummary::query()->create([

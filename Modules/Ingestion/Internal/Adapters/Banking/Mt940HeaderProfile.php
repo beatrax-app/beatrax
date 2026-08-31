@@ -11,13 +11,13 @@ final class Mt940HeaderProfile
     public const FORMAT = SourceFormat::Mt940->value;
 
     /** @var list<string> */
-    public const FILE_EXTENSIONS = ['sta', 'mt940', '940', 'txt'];
+    public const array FILE_EXTENSIONS = ['sta', 'mt940', '940', 'txt'];
 
     // SWIFT block-4 envelope. The `-}` terminator tolerates whitespace: some
     // exporters put the EOM `-` on its own line and `}` on the next.
-    public const SWIFT_ENVELOPE_REGEX = '/\{4:\s*([\s\S]+?)\s*-\s*\}/';
+    public const string SWIFT_ENVELOPE_REGEX = '/\{4:\s*([\s\S]+?)\s*-\s*\}/';
 
-    public const SIGNATURE_REGEX = '/(?:^|[\r\n])\s*:20:/';
+    public const string SIGNATURE_REGEX = '/(?:^|[\r\n])\s*:20:/';
 
-    public const SOURCE_ENCODING = 'UTF-8';
+    public const string SOURCE_ENCODING = 'UTF-8';
 }

@@ -12,13 +12,13 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 /**
  * @link ../../../../../.docs/architecture/ingestion-pipeline.md#5-payment-type-classification-paymenttypeclassifierstage
  */
-final class PaymentTypeClassifierStage
+final readonly class PaymentTypeClassifierStage
 {
     /**
      * @param  iterable<PaymentTypeHinter>  $hinters  Hinters bound under the `import.payment_type_hinter` container tag, in registration order.
      */
     public function __construct(
-        private readonly iterable $hinters,
+        private iterable $hinters,
     ) {}
 
     public function run(CanonicalTransaction $tx, User $user, string $sourceFormat): CanonicalTransaction

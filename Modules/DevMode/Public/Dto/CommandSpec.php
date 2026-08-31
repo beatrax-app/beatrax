@@ -7,6 +7,9 @@ namespace Modules\DevMode\Public\Dto;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Spatie\LaravelData\Data;
 
+// `name` is the artisan identifier and stays English. The two visible strings
+// ride as KEYS: the registry is a container singleton, so a word resolved when
+// it was built would be whichever language got there first.
 final class CommandSpec extends Data
 {
     /**
@@ -14,9 +17,9 @@ final class CommandSpec extends Data
      */
     public function __construct(
         public readonly string $name,
-        public readonly string $label,
+        public readonly string $labelKey,
         public readonly CommandTier $tier,
         public readonly array $argsSchema,
-        public readonly ?string $description = null,
+        public readonly ?string $descriptionKey = null,
     ) {}
 }

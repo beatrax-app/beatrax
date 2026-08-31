@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Rediger skattemerking: :label',
     'tag' => 'Merk',
     'tag_aria' => 'Merk som skatterelevant',
+    'tag_caption' => 'Merk',
 ];

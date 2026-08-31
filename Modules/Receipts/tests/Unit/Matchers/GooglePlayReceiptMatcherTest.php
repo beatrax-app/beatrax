@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\GooglePlayReceiptMatcher;
+use Modules\Receipts\Internal\Matchers\ReceiptBodyText;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
@@ -12,7 +13,7 @@ use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function googlePlayMatcher(): GooglePlayReceiptMatcher
 {
-    return new GooglePlayReceiptMatcher(new EmlMimeReader);
+    return new GooglePlayReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
 }
 
 function googlePlayInbox(string $senderEmail, ?string $subject = null): InboxMessageDto
@@ -79,7 +80,6 @@ it('parses a current-generation Google Play receipt with the strict GPA order-id
     expect($dto?->ownIban)->toBe('GOOGLE-PLAY');
     expect($dto?->bookedAt->toDateString())->toBe('2026-05-17');
     expect($dto?->bookedAt->format('H:i:s'))->toBe('00:00:00');
-    expect($dto?->rawPayload['matcher_key'] ?? null)->toBe('google-play-receipt');
 });
 
 it('preserves both native USD and settled EUR legs for a foreign-currency receipt', function (): void {
@@ -155,4 +155,5 @@ it('routes a Google Play sender via MatcherRegistry to GooglePlayReceiptMatcher'
 
     expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed?->referenceId)->toBe('GPA.1234-5678-9012-34567');
+    expect($outcome->matcherKey)->toBe('google-play-receipt');
 });

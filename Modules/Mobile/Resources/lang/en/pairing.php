@@ -19,6 +19,8 @@ return [
 
     'enter_heading' => 'Enter the code',
     'camera_off' => 'Camera access is off. Enter the code from the other device instead.',
+    'camera_off_no_search' => 'Camera access is off, and searching the network for the other device does not work on iPhone yet — so a typed code has nothing to find it with. Turn camera access back on for Beatrax in your device settings, then scan the code shown on the other device.',
+    'no_search' => 'Searching the network for the other device does not work on iPhone yet, so a typed code has nothing to find. Scan the code with the camera instead — the camera needs no network search.',
     'word_code_aria' => 'Enter the word code from the other device',
     'submit_code' => 'Submit code',
     'cancel' => 'Cancel',
@@ -36,10 +38,13 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Cannot reach the other device. Make sure both are on the same network and sync is enabled on the desktop.',
+        'no_road_home' => 'This device cannot search the network, and the code you scanned carried no address to reach the other device with. Ask it to show a fresh code, then scan that one.',
         'invalid_code' => 'This code is invalid or has expired. Ask the other device to generate a new one.',
+        'code_incomplete' => 'That is not a complete code. Check it against the other device and type all of it.',
         'code_not_accepted' => 'No device on this network accepted that code. Check the code, and that the other device is still showing it.',
         'no_peer_answered' => 'Nothing on this network answered that code. Check that sync is running on the other device, or scan its code with the camera — the camera needs no network search.',
         'no_peer_answered_ios' => 'Nothing on this network answered that code. Searching the network for the other device does not work on iPhone yet, so scan its code with the camera instead.',
+        'no_peer_answered_camera_off' => 'Nothing on this network answered that code. Searching the network for the other device does not work on iPhone yet, and camera access is off — so turn camera access back on for Beatrax in your device settings, then scan the code shown on the other device.',
         'rate_limited' => 'Too many attempts. Wait a minute and try again.',
         'identity_locked' => 'Your device identity is locked. Unlock the app and try again.',
         'identity_needs_lock' => 'Set up the app lock first — your device identity is protected by it.',

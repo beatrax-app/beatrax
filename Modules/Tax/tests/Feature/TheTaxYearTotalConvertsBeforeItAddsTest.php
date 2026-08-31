@@ -10,8 +10,9 @@ use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
+use Modules\Tax\Internal\Services\TaxYearQuery;
+use Modules\Tax\Public\Http\Livewire\TaxSummaryCard;
 use Modules\Tax\Public\Services\TaxTagQuery;
-use Modules\Tax\Public\Services\TaxYearQuery;
 
 // A Revolut import carries a currency per row, so a tax year holds a euro
 // receipt beside a dollar one. Both totals took ABS(settled_amount_minor)
@@ -177,4 +178,17 @@ it('says on /tax which currency the year total could not reach', function (): vo
     $html = Livewire::test(TaxPage::class, ['year' => 2026])->html();
 
     expect($html)->toContain(Currency::Jpy->value.' not converted');
+});
+
+// TaxYearSummary has carried isPartial()/unconvertedList() since the cockpit
+// started naming what it left out; the tile that links to the cockpit called
+// neither, so the two screens stated different totals and only one said why.
+it('says on the dashboard tile which currency the total could not reach, as /tax does', function (): void {
+    tmcTaggedRow($this->db, $this->user->id, -10_000, Currency::Eur->value);
+    tmcTaggedRow($this->db, $this->user->id, -500_000, Currency::Jpy->value);
+
+    $html = Livewire::test(TaxSummaryCard::class)->html();
+
+    expect($html)->toContain('€100.00')
+        ->and($html)->toContain(Currency::Jpy->value.' not converted');
 });

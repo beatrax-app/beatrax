@@ -20,6 +20,7 @@ return [
         'manage' => 'Tvarkyti atvirąją bankininkystę',
         'not_connected' => 'Nė vienas bankas neprijungtas. Prijunk, kad operacijos būtų importuojamos automatiškai.',
         'expired' => 'Sutikimas nustojo galioti — reikia prisijungti iš naujo.',
+        'revoked' => 'Tavo bankas nutraukė ryšį — prisijunk iš naujo.',
         'connected' => 'Prisijungta prie :bank per Enable Banking. Paskutinis sinchronizavimas: :when.',
         'never' => 'niekada',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Nebegalioja — prisijunk iš naujo',
         'pill_expiring' => 'Netrukus nustos galioti',
         'pill_connected' => 'Prisijungta',
+        'pill_revoked' => 'Nutraukė tavo bankas — prisijunk iš naujo',
         'whats_fetched_label' => 'Kas atsiunčiama',
         'whats_fetched' => 'Įvykdytos operacijos ir likučiai, paskutinės 90 dienų',
         'last_successful_sync_label' => 'Paskutinis sėkmingas sinchronizavimas',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — nepavyko (:reason)',
         'reason_consent_expired' => 'sutikimas nustojo galioti',
         'reason_error' => 'klaida',
+        'reason_truncated' => 'sustabdyta anksti',
+        'reason_nothing_imported' => 'nepavyko nieko įrašyti',
+        'reason_consent_revoked' => 'nutraukė tavo bankas',
         'disconnect_button' => 'Atjungti',
     ],
 
     'consent_banner' => [
         'heading' => 'Sutikimas nustojo galioti — prisijunk iš naujo',
+        'heading_revoked' => 'Tavo bankas nutraukė ryšį',
         'body' => 'Paskutinis sėkmingas sinchronizavimas: :when. Prisijunk iš naujo, kad automatinis sinchronizavimas būtų atnaujintas.',
+        'body_revoked' => 'Tavo bankas arba Enable Banking atšaukė prieigą, todėl sinchronizavimas sustojo. Paskutinis sėkmingas sinchronizavimas buvo :when. Prisijunk iš naujo, kad jis tęstųsi.',
         'never' => 'niekada',
         'reconnect' => 'Prisijungti iš naujo',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking laikinai neprieinama. Netrukus bandyk dar kartą.',
         'new_found' => 'Rasta :count nauja operacija.|Rastos :count naujos operacijos.|Rasta :count naujų operacijų.',
         'none' => 'Naujų operacijų nėra.',
+        'none_importable' => 'Tavo bankas atsiuntė operacijų, bet nė vienos nepavyko įrašyti. Atverk importo peržiūrą, kad pamatytum kodėl.',
+        'in_progress' => 'Sinchronizavimas jau vyksta. Pabandykite dar kartą po akimirkos.',
+        'truncated' => 'Tavo banke buvo daugiau operacijų, nei vienas sinchronizavimas gali parsisiųsti, todėl šis paleidimas sustojo anksti. Niekas nebuvo įrašyta kaip sinchronizuota — kitas sinchronizavimas prasidės nuo to paties taško.',
     ],
 
     'disconnect' => [
@@ -139,10 +149,6 @@ return [
             'save_application_id_failed' => 'Nepavyko įrašyti programos ID į diską — patikrink paslapčių katalogo teises ir bandyk dar kartą.',
             'choose_bank' => 'Prieš tęsdamas pasirink banką.',
         ],
-    ],
-
-    'alert' => [
-        'reconsent' => 'Prijunk banką iš naujo',
     ],
 
     'errors' => [

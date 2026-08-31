@@ -10,15 +10,14 @@ return [
     'subtitle_full' => 'Pilna vēsture.',
     'subtitle_recent' => 'Nesenie darījumi (pēdējās 90 dienas).',
 
-    'currency_aria' => 'Valūtas skats',
-    'currency_eur' => 'Tikai :code',
-    'currency_original' => 'Sākotnējā valūta',
+    'currency_aria' => 'Rādītā summa',
+    'currency_eur' => 'Norēķina summa',
+    'currency_original' => 'Sākotnējā summa',
 
     'show_recent' => 'Rādīt tikai nesenos',
     'show_full' => 'Rādīt pilnu vēsturi',
 
     'empty_period' => 'Šajā periodā nekā nav.',
-
 
     'empty_recent_has_older' => 'Pēdējās 90 dienās nekā. Jūsu vecākie darījumi joprojām ir šeit.',
 

@@ -10,10 +10,11 @@ return [
 
     'bank_title' => 'Tavo bankas',
     'bank_desc' => 'Įkelk išrašo failą. Skaitome CSV, MT940 ir CAMT.053 iš daugumos Europos bankų.',
-    'card_title' => 'Tavo kredito kortelė (ICS)',
-    'card_desc' => 'Įkelk mėnesinį PDF išrašą iš Mijn ICS.',
+    'card_title' => 'Tavo kredito kortelė',
+    'card_desc' => 'Įkelk mėnesinius kortelės PDF išrašus. Kol kas mokame perskaityti išdavėją ICS.',
     'email_title' => 'Kvitai iš el. pašto',
     'email_desc' => 'Prijunk Gmail arba Outlook, kad pirkinių patvirtinimai būtų surenkami automatiškai.',
+    'email_desc_phone' => 'Pirkinių patvirtinimus surenka kompiuterio programa; šis telefonas per sinchronizavimą rodo, ką ji rado.',
 
     'continue' => 'Tęsti →',
 ];

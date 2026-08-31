@@ -13,11 +13,15 @@ use Modules\Community\Public\Services\CorpusPatternMatcher;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Services\UserCountry;
+use Modules\Core\Public\Support\IdReadBack;
+use Modules\Counterparties\Internal\Enums\CounterpartyMetadataKey;
+use Modules\Counterparties\Internal\Enums\CounterpartySubcategory;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Dto\CounterpartyResolutionDto;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Events\CounterpartyResolved;
+use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -29,9 +33,9 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 /**
  * @link ../../../../.docs/features/counterparties/resolution-chain.md
  */
-final class CounterpartyResolverService implements CounterpartyResolver
+final readonly class CounterpartyResolverService implements CounterpartyResolver
 {
-    private const MERCHANT_NAME_MARKERS = [
+    private const array MERCHANT_NAME_MARKERS = [
         'BV',
         'B.V.',
         'B.V',
@@ -57,19 +61,19 @@ final class CounterpartyResolverService implements CounterpartyResolver
     ];
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly ResolvesKnownCounterpartyIban $aliasBridge,
-        private readonly MerchantNameResolver $merchantResolver,
-        private readonly Dispatcher $events,
-        private readonly IbanValidator $ibanValidator,
-        private readonly ClassificationRuleProvider $ruleProvider,
-        private readonly CorpusPatternMatcher $matcher,
-        private readonly SensitiveColumnCodec $codec,
+        private DatabaseManager $db,
+        private ResolvesKnownCounterpartyIban $aliasBridge,
+        private MerchantNameResolver $merchantResolver,
+        private Dispatcher $events,
+        private IbanValidator $ibanValidator,
+        private ClassificationRuleProvider $ruleProvider,
+        private CorpusPatternMatcher $matcher,
+        private SensitiveColumnCodec $codec,
         // A factory, not the session: resolving a session builds the encrypter,
         // and Artisan constructs this class merely to list a console command.
-        private readonly SessionFactory $session,
-        private readonly CounterpartySlugResolver $slugResolver,
-        private readonly UserCountry $countries,
+        private SessionFactory $session,
+        private CounterpartySlugResolver $slugResolver,
+        private UserCountry $countries,
     ) {}
 
     public function resolve(CanonicalTransaction $tx, User $user): ?CounterpartyResolutionDto
@@ -253,10 +257,15 @@ final class CounterpartyResolverService implements CounterpartyResolver
             $userId,
             $this->ruleProvider->governmentRules($this->regionFor($userId)),
             CounterpartyType::Government->value,
-            fn (ClassificationRule $rule): array => [
-                $this->governmentDisplayName($rule, $tx),
-                ['matched_keyword' => $rule->pattern],
-            ],
+            function (ClassificationRule $rule) use ($tx): array {
+                [$displayName, $defaultName] = $this->governmentDisplayName($rule, $tx);
+
+                return [
+                    $displayName,
+                    ['matched_keyword' => $rule->pattern],
+                    $defaultName,
+                ];
+            },
         );
     }
 
@@ -271,16 +280,23 @@ final class CounterpartyResolverService implements CounterpartyResolver
             $userId,
             $this->ruleProvider->bankFeeRules($this->regionFor($userId)),
             CounterpartyType::Bank->value,
-            fn (ClassificationRule $rule): array => [
-                $rule->name ?? 'Bank fee',
-                ['subcategory' => 'fee', 'matched_keyword' => $rule->pattern],
+            static fn (ClassificationRule $rule): array => [
+                $rule->name ?? CounterpartyDefaultName::storedName(CounterpartyDefaultName::BANK_FEE),
+                [
+                    CounterpartyMetadataKey::Subcategory->value => CounterpartySubcategory::Fee->value,
+                    'matched_keyword' => $rule->pattern,
+                ],
+                $rule->name === null ? CounterpartyDefaultName::BANK_FEE : null,
             ],
         );
     }
 
+    // The third element is the app's own name for the row when the rule gave
+    // none, so the reader gets it in their language rather than in whichever
+    // one the import ran in.
     /**
      * @param  list<ClassificationRule>  $rules
-     * @param  callable(ClassificationRule): array{0: string, 1: array<string, mixed>}  $build
+     * @param  callable(ClassificationRule): array{0: string, 1: array<string, mixed>, 2: string|null}  $build
      */
     private function resolveByRules(
         CanonicalTransaction $tx,
@@ -299,7 +315,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
                 continue;
             }
 
-            [$displayName, $metadata] = $build($rule);
+            [$displayName, $metadata, $defaultName] = $build($rule);
 
             return $this->upsert(
                 userId: $userId,
@@ -308,6 +324,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
                 iban: $this->normaliseIban($tx->counterpartyIban),
                 merchantName: null,
                 metadata: $metadata,
+                defaultName: $defaultName,
             );
         }
 
@@ -330,12 +347,14 @@ final class CounterpartyResolverService implements CounterpartyResolver
             return null;
         }
 
+        $defaultName = null;
         if ($name !== null && trim($name) !== '') {
             $displayName = trim($name);
         } elseif ($iban !== null) {
             $displayName = $iban;
         } else {
-            $displayName = 'Unknown';
+            $defaultName = CounterpartyDefaultName::UNKNOWN;
+            $displayName = CounterpartyDefaultName::storedName($defaultName);
         }
 
         return $this->upsert(
@@ -345,9 +364,13 @@ final class CounterpartyResolverService implements CounterpartyResolver
             iban: $iban,
             merchantName: null,
             metadata: [],
+            defaultName: $defaultName,
         );
     }
 
+    // $defaultName names the app's own word when the row is one this pass had
+    // to name itself, and is written with the name it belongs to. The refresh
+    // branch never re-asserts it: that branch leaves display_name alone.
     /**
      * @param  array<string, mixed>  $metadata
      */
@@ -358,8 +381,10 @@ final class CounterpartyResolverService implements CounterpartyResolver
         ?string $iban,
         ?string $merchantName,
         array $metadata,
+        ?string $defaultName = null,
     ): CounterpartyResolutionDto {
         $slug = $this->slugResolver->resolveUnique($userId, $displayName);
+        $created = CounterpartyDefaultName::mark($metadata, $defaultName);
 
         // slug and type stay plaintext because they are the matching and
         // routing keys; only display_name/merchant_name/iban go through the
@@ -374,9 +399,17 @@ final class CounterpartyResolverService implements CounterpartyResolver
                 'display_name' => $displayName,
                 'iban' => $iban,
                 'merchant_name' => $merchantName,
-                'metadata' => $metadata === [] ? null : $metadata,
+                'metadata' => $created === [] ? null : $created,
             ], $userId, ($this->session)()),
         );
+
+        // The id of a row this call minted is read back by the (user_id, slug)
+        // UNIQUE, never carried out of firstOrCreate(): it ends in insertGetId(),
+        // lastInsertId() is per connection, and the badge listener writes a
+        // `cache` row from inside this INSERT's own event.
+        $counterpartyId = $row->wasRecentlyCreated
+            ? IdReadBack::of($this->db->connection(), 'counterparties', ['user_id' => $userId, 'slug' => $slug])
+            : $row->id;
 
         // Plaintext on purpose: OpLogWriter encrypts sensitive columns itself
         // under the GDK epoch, and the backfiller decrypts before handing them
@@ -385,7 +418,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
         if ($row->wasRecentlyCreated) {
             $this->events->dispatch(new EntityMutated(
                 table: 'counterparties',
-                pk: $row->id,
+                pk: $counterpartyId,
                 userId: $userId,
                 mutationType: 'create',
                 dirtyFields: [
@@ -395,16 +428,18 @@ final class CounterpartyResolverService implements CounterpartyResolver
                     'display_name' => $displayName,
                     'iban' => $iban,
                     'merchant_name' => $merchantName,
-                    // website and logo_url live in here and nowhere else, so
-                    // omitting it landed the counterparty on the peer with
-                    // both fields blank.
-                    'metadata' => $metadata === [] ? null : $metadata,
+                    // The ignored flag and the subcategory live in here and
+                    // nowhere else, so omitting it landed the counterparty on
+                    // the peer with both of them blank.
+                    'metadata' => $created === [] ? null : $created,
                 ],
             ));
+        } else {
+            $this->refreshStored($row, $userId, $type, $iban, $merchantName, $metadata);
         }
 
         $this->events->dispatch(new CounterpartyResolved(
-            counterpartyId: $row->id,
+            counterpartyId: $counterpartyId,
             userId: $userId,
             type: $type,
         ));
@@ -416,8 +451,65 @@ final class CounterpartyResolverService implements CounterpartyResolver
             iban: $iban,
             merchantName: $merchantName,
             metadata: $metadata,
-            counterpartyId: $row->id,
+            counterpartyId: $counterpartyId,
         );
+    }
+
+    // A row minted by an earlier, thinner pass keeps what that pass knew: an
+    // `unknown` CounterpartyTriageQueue then holds forever, and a NULL
+    // merchant_name the garbage collector prunes on. display_name is left
+    // alone — the slug derives from it, so a different name is a different row.
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function refreshStored(
+        Counterparty $row,
+        int $userId,
+        string $type,
+        ?string $iban,
+        ?string $merchantName,
+        array $metadata,
+    ): void {
+        $session = ($this->session)();
+        $stored = $this->codec->decryptRow('counterparties', [
+            'iban' => $row->iban,
+            'merchant_name' => $row->merchant_name,
+        ], $userId, $session);
+
+        $changed = [];
+        if ($type !== CounterpartyType::Unknown->value && $type !== $row->type) {
+            $changed['type'] = $type;
+        }
+        // A null here is this pass knowing less about the counterparty, not
+        // the stored value being wrong, so it never clears one.
+        if ($iban !== null && $iban !== $stored['iban']) {
+            $changed['iban'] = $iban;
+        }
+        if ($merchantName !== null && $merchantName !== $stored['merchant_name']) {
+            $changed['merchant_name'] = $merchantName;
+        }
+        $storedMetadata = is_array($row->metadata) ? $row->metadata : [];
+        $merged = CounterpartyDefaultName::carriedOver($storedMetadata, $metadata);
+        if ($merged !== [] && $merged !== $row->metadata) {
+            $changed['metadata'] = $merged;
+        }
+
+        if ($changed === []) {
+            return;
+        }
+
+        $row->forceFill($this->codec->encryptAttrs('counterparties', $changed, $userId, $session));
+        $row->save();
+
+        // Plaintext, for the same reason the create branch above passes
+        // plaintext: OpLogWriter seals it again under the GDK epoch.
+        $this->events->dispatch(new EntityMutated(
+            table: 'counterparties',
+            pk: $row->id,
+            userId: $userId,
+            mutationType: 'edit',
+            dirtyFields: $changed,
+        ));
     }
 
     private function normaliseIban(?string $iban): ?string
@@ -439,7 +531,13 @@ final class CounterpartyResolverService implements CounterpartyResolver
         return trim($description.' '.$name);
     }
 
-    private function governmentDisplayName(ClassificationRule $rule, CanonicalTransaction $tx): string
+    // The name, and the app's own word for it when the name came from nowhere
+    // but here. Only the generic label is the app's: the other four arms are
+    // the file's own words or the corpus's, which stay as they were written.
+    /**
+     * @return array{0: string, 1: string|null}
+     */
+    private function governmentDisplayName(ClassificationRule $rule, CanonicalTransaction $tx): array
     {
         $name = $tx->counterpartyName;
         $trimmedName = is_string($name) ? trim($name) : '';
@@ -450,11 +548,14 @@ final class CounterpartyResolverService implements CounterpartyResolver
         // substring-checked and is not human copy, so it falls back to a
         // generic label rather than leaking PCRE syntax into the UI and slug.
         return match (true) {
-            $trimmedName !== '' && ! $isRegex && stripos($trimmedName, $rule->pattern) !== false => $trimmedName,
-            $rule->name !== null => $rule->name,
-            $trimmedName !== '' => $trimmedName,
-            $isRegex => 'Government',
-            default => ucfirst(strtolower($rule->pattern)),
+            $trimmedName !== '' && ! $isRegex && stripos($trimmedName, $rule->pattern) !== false => [$trimmedName, null],
+            $rule->name !== null => [$rule->name, null],
+            $trimmedName !== '' => [$trimmedName, null],
+            $isRegex => [
+                CounterpartyDefaultName::storedName(CounterpartyDefaultName::GOVERNMENT),
+                CounterpartyDefaultName::GOVERNMENT,
+            ],
+            default => [ucfirst(strtolower($rule->pattern)), null],
         };
     }
 
@@ -478,12 +579,6 @@ final class CounterpartyResolverService implements CounterpartyResolver
      */
     private function containsMerchantMarker(array $tokens): bool
     {
-        foreach ($tokens as $token) {
-            if (in_array(trim($token, ','), self::MERCHANT_NAME_MARKERS, true)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($tokens, fn (string $token): bool => in_array(trim($token, ','), self::MERCHANT_NAME_MARKERS, true));
     }
 }

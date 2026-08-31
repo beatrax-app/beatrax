@@ -112,7 +112,7 @@ it('shows the goal picker for a pot that is linked to one', function (): void {
         'target_minor' => 100000,
         'target_currency' => 'EUR',
         'start_date' => CarbonImmutable::now()->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
     ]);
     $pot = ppaPot($this->user->id, $this->account->id, 'Holiday pot', 'active', $goal->id);
@@ -173,7 +173,7 @@ it('surfaces a rejected goal link as an inline error on the edit form', function
         'target_minor' => 100000,
         'target_currency' => 'EUR',
         'start_date' => CarbonImmutable::now()->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
     ]);
     ppaPot($this->user->id, $this->account->id, 'Holds it', 'active', $goal->id);

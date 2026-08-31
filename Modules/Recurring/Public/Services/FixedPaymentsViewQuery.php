@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Public\Services;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Public\Services\MerchantMemoryQuery;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Public\Dto\MonthlyEquivalentTotals;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
+use Modules\Recurring\Public\Support\SeriesDueWindow;
 use stdClass;
 
 final readonly class FixedPaymentsViewQuery
@@ -35,7 +36,7 @@ final readonly class FixedPaymentsViewQuery
      */
     public function viewForUser(User $user): array
     {
-        $rows = $this->approvedRows($user);
+        $rows = $this->projectableRows($user);
         if ($rows === []) {
             return ['expenses' => [], 'income' => [], 'transfers' => []];
         }
@@ -90,33 +91,22 @@ final readonly class FixedPaymentsViewQuery
     }
 
     /**
-     * @return list<RecurringSeriesDto> top approved series by absolute monthly equivalent,
+     * @return list<RecurringSeriesDto> top projectable series by absolute monthly equivalent,
      *                                  optionally filtered to those whose next-expected-charge falls inside
      *                                  [$monthStart, $monthEnd] (inclusive). Filtering at the read layer means the
      *                                  dashboard's "This month only" toggle returns up to $limit matching rows instead of
      *                                  "the subset of the top N that happen to fall in this month", which could
      *                                  legitimately produce zero rows even when many series are due
      */
-    public function topByMonthlyEquivalent(
-        User $user,
-        int $limit = 6,
-        ?CarbonImmutable $monthStart = null,
-        ?CarbonImmutable $monthEnd = null,
-    ): array {
+    public function topByMonthlyEquivalent(User $user, int $limit = 6, ?Period $dueWithin = null): array
+    {
         $sections = $this->viewForUser($user);
         $combined = array_merge($sections['expenses'], $sections['income']);
 
-        if ($monthStart !== null && $monthEnd !== null) {
-            $combined = array_values(array_filter(
-                $combined,
-                static function (RecurringSeriesDto $row) use ($monthStart, $monthEnd): bool {
-                    if ($row->nextExpectedAt === null) {
-                        return false;
-                    }
-
-                    return $row->nextExpectedAt->between($monthStart, $monthEnd);
-                },
-            ));
+        // The same predicate the position summary's "upcoming" list runs, so
+        // the two answers on one dashboard cannot part at a window edge.
+        if ($dueWithin !== null) {
+            $combined = SeriesDueWindow::dueWithin($combined, $dueWithin);
         }
 
         self::sortByAbsoluteMonthlyEquivalentDesc($combined);
@@ -132,7 +122,7 @@ final readonly class FixedPaymentsViewQuery
         $rows = $this->db->connection()
             ->table('recurring_series')
             ->where('user_id', $user->id)
-            ->where('state', RecurringSeriesState::Approved->value)
+            ->whereIn('state', RecurringSeriesState::projectableValues())
             ->groupBy('direction', 'latest_currency')
             ->selectRaw('direction, latest_currency, COALESCE(SUM(monthly_equivalent_minor), 0) AS bucket_minor')
             ->get();
@@ -173,7 +163,7 @@ final readonly class FixedPaymentsViewQuery
     /**
      * @return list<stdClass>
      */
-    private function approvedRows(User $user): array
+    private function projectableRows(User $user): array
     {
         $rows = $this->db->connection()
             ->table('recurring_series as rs')
@@ -191,7 +181,6 @@ final readonly class FixedPaymentsViewQuery
                 'rs.cadence',
                 'rs.latest_amount_minor',
                 'rs.latest_currency',
-                'rs.latest_fx_rate_used',
                 'rs.monthly_equivalent_minor',
                 'rs.variance_tolerance_percent',
                 'rs.latest_funding_chain_link_id',
@@ -211,7 +200,7 @@ final readonly class FixedPaymentsViewQuery
                 'latest_observed_at',
             )
             ->where('rs.user_id', $user->id)
-            ->where('rs.state', RecurringSeriesState::Approved->value)
+            ->whereIn('rs.state', RecurringSeriesState::projectableValues())
             ->orderByDesc('rs.monthly_equivalent_minor')
             ->orderByDesc('rs.id')
             ->get();

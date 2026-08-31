@@ -21,6 +21,7 @@ final readonly class SearchFilters
      * @param  ?string  $amountMin  Minimum absolute amount as decimal string (e.g. "10.00").
      * @param  ?string  $amountMax  Maximum absolute amount as decimal string (e.g. "500.00").
      * @param  list<string>  $types  transactions.type values to restrict to (empty = all).
+     * @param  bool  $uncategorized  Restrict to transactions carrying no category at all — a positive filter, not the absence of $categories, since "no category" is a bucket a report can group by and open.
      */
     public function __construct(
         public array $accounts = [],
@@ -32,6 +33,7 @@ final readonly class SearchFilters
         public ?string $amountMax = null,
         public string $amountDirection = AmountDirection::Both->value,
         public array $types = [],
+        public bool $uncategorized = false,
     ) {}
 
     public static function empty(): self
@@ -49,6 +51,7 @@ final readonly class SearchFilters
             || $this->amountMin !== null
             || $this->amountMax !== null
             || $this->amountDirection !== AmountDirection::Both->value
-            || $this->types !== [];
+            || $this->types !== []
+            || $this->uncategorized;
     }
 }

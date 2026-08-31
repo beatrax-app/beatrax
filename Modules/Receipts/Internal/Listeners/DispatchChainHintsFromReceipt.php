@@ -6,6 +6,7 @@ namespace Modules\Receipts\Internal\Listeners;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Import\Public\Events\TransactionImported;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
 use Modules\Receipts\Public\Enums\ChainHintType;
@@ -16,20 +17,19 @@ use Psr\Log\LoggerInterface;
 // cannot dispatch the hint event itself since the canonical
 // transactions row doesn't exist yet. Hints ride through
 // raw_payload['chain_hints'] until this listener re-hydrates them.
-final class DispatchChainHintsFromReceipt
+final readonly class DispatchChainHintsFromReceipt
 {
-    private const RECEIPT_FORMATS = ['eml', 'mbox'];
-
     public function __construct(
-        private readonly Dispatcher $events,
-        private readonly LoggerInterface $logger,
+        private Dispatcher $events,
+        private LoggerInterface $logger,
     ) {}
 
     public function handle(TransactionImported $event): void
     {
         $transaction = $event->transaction;
 
-        if (! in_array($transaction->source_format, self::RECEIPT_FORMATS, true)) {
+        $format = SourceFormat::tryFrom($transaction->source_format);
+        if ($format?->isReceiptFile() !== true) {
             return;
         }
 

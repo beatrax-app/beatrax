@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-<div class="mx-auto max-w-md px-4 py-12 space-y-12 sm:px-8">
+<div class="mx-auto max-w-md px-4 py-6 space-y-12 sm:px-8">
     <x-core::page-header
         :title="Lang::get('auth::add_user.title')"
         :subtitle="Lang::get('auth::add_user.subtitle')"

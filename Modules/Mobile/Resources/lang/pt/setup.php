@@ -12,6 +12,7 @@ return [
         'locked' => 'Desbloqueia a aplicação para continuar a configuração.',
         'revoked' => 'Este dispositivo foi removido a partir do outro dispositivo. Emparelhe novamente para retomar a sincronização.',
     ],
+    'unlock_cta' => 'Desbloqueia a aplicação',
     'step' => [
         'connect' => 'A ligar ao teu outro dispositivo',
         'keys' => 'A receber as chaves de encriptação',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'A reconstruir o teu histórico',
     ],
     'step_current' => 'passo atual',
-    'working' => [
-        'connect' => 'A contactar o teu outro dispositivo…',
-        'keys' => 'A desbloquear os teus dados…',
-        'transfer' => 'A pedir o teu histórico…',
-        'rebuild' => 'A reconstruir o teu histórico — pode demorar um minuto.',
-    ],
     'page_title' => 'A configurar…',
     'resuming' => 'A retomar a configuração…',
     'setting_up' => 'A configurar este dispositivo…',
     'progress_aria' => 'Progresso da configuração',
     'records' => ':count registo|:count registos',
-    'records_preparing' => 'À espera do outro dispositivo…',
 ];

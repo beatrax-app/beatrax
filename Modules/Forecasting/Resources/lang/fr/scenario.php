@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'série',
 
+    'template' => [
+        'cancel' => 'Annuler :name',
+        'change_amount' => 'Changer le montant de :name',
+    ],
+
     'summary' => [
         'cancel' => 'Annuler :name',
         'series_fallback' => 'série n° :id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scénario renommé.',
         'mutation_added' => 'Modification ajoutée.',
         'mutation_updated' => 'Modification mise à jour.',
-        'mutation_removed' => 'Modification supprimée. Annuler',
+        'mutation_removed' => 'Modification supprimée.',
     ],
 
     'errors' => [
         'name_empty' => 'Le nom du scénario ne peut pas être vide.',
         'name_too_long' => 'Le nom du scénario ne doit pas dépasser :max caractère.|Le nom du scénario ne doit pas dépasser :max caractères.',
         'name_taken' => 'Un scénario portant ce nom existe déjà.',
+        'date_out_of_range' => 'Cette date est hors de tout horizon de prévision — d’aujourd’hui à :days jour à l’avance — le scénario ne changerait donc rien.|Cette date est hors de tout horizon de prévision — d’aujourd’hui à :days jours à l’avance — le scénario ne changerait donc rien.',
         'pick_kind_first' => 'Choisis d\'abord un type de modification.',
         'amount_positive' => 'Le montant doit être un nombre positif.',
+        'scenario_gone' => "Ce scénario n'existe plus — il a été supprimé ailleurs. Choisis un autre scénario ou crées-en un nouveau.",
+        'mutation_gone' => "Cette modification n'existe plus — elle a été supprimée ailleurs. Ferme l'éditeur et rajoute-la si tu la veux encore.",
     ],
 ];

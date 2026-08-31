@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Nahrať ďalší výpis z účtu',
 
+    'chain' => [
+        'heading' => 'Riešia sa reťazce…',
+        'pending' => 'Vo fronte. Riešenie reťazcov sa čoskoro spustí.',
+        'running' => 'Prepájajú sa reťazce financovania a rozkladajú sa zúčtovania z výpisu z účtu.',
+    ],
+
     'issues' => [
         'row' => 'Riadok :row: :reason',
         'file_stopped' => 'Súbor sa nepodarilo načítať ďalej než po riadok :row. Nič za týmto riadkom nebolo importované.',

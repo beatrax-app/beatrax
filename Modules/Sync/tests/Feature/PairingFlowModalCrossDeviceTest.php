@@ -13,6 +13,7 @@ use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
@@ -96,7 +97,7 @@ it('checkPairingState() drains the phone\'s frames and confirmMatch() sends this
 
     $this->asDevice('phone', function () use ($desktopIdentity, $phoneIdentity, $plainToken, $tokenHash, $session): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(PFM_PHONE_USER_ID, $desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex, $plainToken);
+        $service->seedFromInitiator(PFM_PHONE_USER_ID, new PairingPeerIdentity($desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex), $plainToken);
         $service->accept($plainToken, PFM_PHONE_USER_ID, $phoneIdentity->deviceId, $phoneIdentity->ed25519PublicKeyHex, $phoneIdentity->x25519PublicKeyHex);
 
         app(PairingGateway::class)->sendResponderAccept(PFM_PHONE_USER_ID, $tokenHash, $desktopIdentity->deviceId, $session);

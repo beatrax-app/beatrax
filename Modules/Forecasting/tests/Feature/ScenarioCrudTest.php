@@ -62,11 +62,18 @@ function scSeriesId(DatabaseManager $db, int $userId, string $name = 'Netflix', 
 }
 
 beforeEach(function (): void {
+    // Every fixture below is dated in May 2026 and the write-side now refuses a
+    // date no horizon reaches, so the clock has to be where the fixtures are.
+    CarbonImmutable::setTestNow('2026-05-19 09:00:00');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
     $this->user = scUser('sc-user');
     $this->other = scUser('sc-other');
+});
+
+afterEach(function (): void {
+    CarbonImmutable::setTestNow(null);
 });
 
 it('1. CreateScenario happy path: returns the new id + persists row + dispatches ScenarioCreated', function (): void {
@@ -328,8 +335,8 @@ it('13. ScenarioApplier cancel_series: removes matching contributions, leaves ot
 
     $asOf = CarbonImmutable::parse('2026-05-19');
     $baseline = [
-        new ForecastContribution(date: $asOf->addDays(5), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', fxRateUsed: null, seriesId: $seriesA, accountId: 1),
-        new ForecastContribution(date: $asOf->addDays(10), pointMinor: -999, lowMinor: -1049, highMinor: -949, currency: 'EUR', fxRateUsed: null, seriesId: $seriesB, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(5), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', seriesId: $seriesA, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(10), pointMinor: -999, lowMinor: -1049, highMinor: -949, currency: 'EUR', seriesId: $seriesB, accountId: 1),
     ];
 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 30);
@@ -356,7 +363,7 @@ it('14. ScenarioApplier add_one_off: appends a new contribution inside the horiz
 
     $asOf = CarbonImmutable::parse('2026-05-19');
     $baseline = [
-        new ForecastContribution(date: $asOf->addDays(5), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', fxRateUsed: null, seriesId: 99, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(5), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', seriesId: 99, accountId: 1),
     ];
 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 30);
@@ -381,7 +388,7 @@ it('15. ScenarioApplier change_series_amount: rewrites low/point/high using new 
 
     $asOf = CarbonImmutable::parse('2026-05-19');
     $baseline = [
-        new ForecastContribution(date: $asOf->addDays(5), pointMinor: -999, lowMinor: -1049, highMinor: -949, currency: 'EUR', fxRateUsed: null, seriesId: $seriesId, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(5), pointMinor: -999, lowMinor: -1049, highMinor: -949, currency: 'EUR', seriesId: $seriesId, accountId: 1),
     ];
 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 30);
@@ -411,8 +418,8 @@ it('16. ScenarioApplier shift_series_date with scope=next: shifts only the first
 
     $asOf = CarbonImmutable::parse('2026-05-19');
     $baseline = [
-        new ForecastContribution(date: $asOf->addDays(6), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', fxRateUsed: null, seriesId: $seriesId, accountId: 1),
-        new ForecastContribution(date: $asOf->addDays(36), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', fxRateUsed: null, seriesId: $seriesId, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(6), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', seriesId: $seriesId, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(36), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', seriesId: $seriesId, accountId: 1),
     ];
 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 90);
@@ -440,8 +447,8 @@ it('17. ScenarioApplier shift_series_date with scope=all_subsequent: shifts ever
 
     $asOf = CarbonImmutable::parse('2026-05-19');
     $baseline = [
-        new ForecastContribution(date: $asOf->addDays(6), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', fxRateUsed: null, seriesId: $seriesId, accountId: 1),
-        new ForecastContribution(date: $asOf->addDays(36), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', fxRateUsed: null, seriesId: $seriesId, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(6), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', seriesId: $seriesId, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(36), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', seriesId: $seriesId, accountId: 1),
     ];
 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 90);
@@ -453,28 +460,33 @@ it('17. ScenarioApplier shift_series_date with scope=all_subsequent: shifts ever
 
 // CarbonImmutable::parse() answers NOW for a blank string rather than throwing,
 // so a shift payload carrying no date computed a delta against today and moved
-// the whole series there. A mutation with nothing to say must leave the
-// baseline exactly as it found it.
-it('17a. ScenarioApplier shift_series_date with a blank date moves nothing', function (): void {
+// the whole series there. The payload now refuses every string that is not a
+// calendar day, which is a stronger claim: the mutation cannot be built at all.
+it('17a. a shift payload refuses a date that is not a calendar day', function (string $newNextDate): void {
+    $seriesId = scSeriesId($this->db, $this->user->id);
+
+    expect(fn (): ShiftSeriesDatePayload => new ShiftSeriesDatePayload(
+        seriesId: $seriesId,
+        newNextDate: $newNextDate,
+        scope: 'all_subsequent',
+    ))->toThrow(InvalidArgumentException::class);
+})->with(['   ', '2027-02-29', 'tomorrow', '2026-6-1']);
+
+// Refused at the DTO, so nothing is stored and nothing is applied: the same
+// outcome the blank-date arm above used to assert from the other end.
+it('17b. ScenarioApplier leaves the baseline where a refused shift was never stored', function (): void {
     /** @var CreateScenario $create */
     $create = $this->app->make(CreateScenario::class);
-    /** @var AddScenarioMutation $add */
-    $add = $this->app->make(AddScenarioMutation::class);
     /** @var ScenarioApplier $applier */
     $applier = $this->app->make(ScenarioApplier::class);
 
     $seriesId = scSeriesId($this->db, $this->user->id);
     $scenarioId = ($create)($this->user, 'Shift nowhere');
-    ($add)($scenarioId, $this->user, 'shift_series_date', new ShiftSeriesDatePayload(
-        seriesId: $seriesId,
-        newNextDate: '   ',
-        scope: 'all_subsequent',
-    ));
 
     $asOf = CarbonImmutable::parse('2026-05-19');
     $baseline = [
-        new ForecastContribution(date: $asOf->addDays(6), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', fxRateUsed: null, seriesId: $seriesId, accountId: 1),
-        new ForecastContribution(date: $asOf->addDays(36), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', fxRateUsed: null, seriesId: $seriesId, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(6), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', seriesId: $seriesId, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(36), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', seriesId: $seriesId, accountId: 1),
     ];
 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 90);
@@ -549,8 +561,8 @@ it('20. ScenarioApplier pickAccountIdForOneOff: deterministic tie-break by accou
     // One contribution each, higher accountId fed first: the old arsort
     // tie-broke on insertion order and picked 42, the uksort picks 7.
     $baseline = [
-        new ForecastContribution(date: $asOf->addDays(5), pointMinor: -100, lowMinor: -100, highMinor: -100, currency: 'EUR', fxRateUsed: null, seriesId: 100, accountId: 42),
-        new ForecastContribution(date: $asOf->addDays(6), pointMinor: -100, lowMinor: -100, highMinor: -100, currency: 'EUR', fxRateUsed: null, seriesId: 101, accountId: 7),
+        new ForecastContribution(date: $asOf->addDays(5), pointMinor: -100, lowMinor: -100, highMinor: -100, currency: 'EUR', seriesId: 100, accountId: 42),
+        new ForecastContribution(date: $asOf->addDays(6), pointMinor: -100, lowMinor: -100, highMinor: -100, currency: 'EUR', seriesId: 101, accountId: 7),
     ];
 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 30);

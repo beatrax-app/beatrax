@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'Jagatud nimekirjast',
     'about_body' => 'Kaasas olev YAML-fail, mis seob krüptilised kontoväljavõtte koodid arusaadavate kaupmeeste nimedega. Sisselülitamine lubab Beatraxil nimekirja importimisel lugeda; ettepaneku saatmine avab brauseris GitHubi.',
 
-    'mappings' => 'Seosed',
-    'contributors' => 'Panustajad',
+    'mappings' => ':count seos|:count seost',
+    'contributors' => ':count panustaja|:count panustajat',
 
     'use_shared_list' => [
         'title' => 'Kasuta jagatud kaupmeeste nimekirja',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'Uuenda jagatud nimekirja koos rakendusega',
         'help' => 'Värskenda kaasas olevat nimekirja iga kord, kui Beatrax end uuendab.',
+        'help_phone' => 'Värskenda kaasas olevat nimekirja iga kord, kui App Store’ist või Google Playst paigaldatakse Beatraxi uus versioon.',
         'note' => 'Aktiveerub tulevase rakenduse uuendusega — praegust versiooni vaata jaotisest Seaded → Teave.',
     ],
 ];

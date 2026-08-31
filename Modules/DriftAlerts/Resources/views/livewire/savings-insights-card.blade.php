@@ -15,10 +15,23 @@
                 @foreach ($insights as $insight)
                     <li
                         wire:key="insight-{{ $insight->key }}"
-                        class="flex items-center justify-between gap-3 rounded-md border border-slate-100 px-3 py-2 dark:border-slate-800"
+                        class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-slate-100 px-3 py-2 dark:border-slate-800"
                     >
-                        <p class="min-w-0 flex-1 text-sm text-slate-700 dark:text-slate-300">{{ $insight->message }}</p>
-                        <div class="flex shrink-0 items-center gap-1">
+                        {{-- The action label is a translation: beside a
+                             zero-basis sentence, "Δες φθηνότερα προγράμματα"
+                             left the Greek message 6px of the row and painted
+                             the rest under the button. The basis is the width
+                             below which the sentence takes the row and the
+                             actions drop beneath it.
+
+                             The group shrinks rather than holding max-content,
+                             because the longest of the 26 labels — "Goedkopere
+                             abonnementen bekijken" — is 319px beside a 36px
+                             dismiss, wider than the row it wraps onto at 390.
+                             Shrinking wraps that label; .emoji-action is
+                             flex:none, so the dismiss keeps its own reach. --}}
+                        <p class="min-w-0 flex-1 basis-64 text-sm text-slate-700 dark:text-slate-300">{{ $insight->message }}</p>
+                        <div class="ml-auto flex min-w-0 items-center gap-1">
                             @php
                                 $href = $insight->actionUrl;
                                 $safe = str_starts_with($href, 'https://') || str_starts_with($href, 'http://');
@@ -27,13 +40,14 @@
                                 <x-core::secondary-button
                                     :href="$href"
                                     size="sm"
-                                    class="gap-1"
+                                    class="gap-1 text-center"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >{{ $insight->actionLabel }} <span aria-hidden="true" style="opacity:.6;">↗</span></x-core::secondary-button>
                             @endif
                             <x-core::emoji-action
                                 :label="Lang::get('drift-alerts::savings.dismiss_aria')"
+                                :caption="Lang::get('drift-alerts::savings.dismiss_caption')"
                                 wire:click="dismiss('{{ $insight->key }}')"
                             >✖️</x-core::emoji-action>
                         </div>

@@ -6,7 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
@@ -178,7 +178,7 @@ it('extends the token TTL when a relayed responder-accept arrives near the origi
     $accepted = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
 
     expect($accepted->expires_at)->not->toBe($issued->expires_at);
-    expect($accepted->expires_at)->toBe(ZuluTimestamp::stamp(CarbonImmutable::now()->addMinutes(5)));
+    expect($accepted->expires_at)->toBe(Instant::zulu(CarbonImmutable::now()->addMinutes(5)));
 });
 
 it('rejects an accept whose responder public key is not valid 64-char hex', function (): void {

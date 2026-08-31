@@ -6,7 +6,7 @@ use App\Models\User;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
-use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Internal\Services\StripAsnDescriptionDelimiters;
 use Modules\Ledger\Models\Account;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
@@ -47,7 +47,7 @@ beforeEach(function (): void {
 
     $this->importRun = $this->makeImportRun($this->user, str_repeat('f', 64));
 
-    $this->seedRow = function (string $description, string $sourceFormat = SourceFormat::AsnCsv->value): int {
+    $this->seedRow = function (string $description, string $sourceFormat = CsvPresetRegistry::ASN): int {
         $transaction = $this->makeTransaction($this->user, $this->account, $this->importRun, [
             'description' => $description,
             'source_format' => $sourceFormat,
@@ -123,7 +123,7 @@ beforeEach(function (): void {
         ->connection()
         ->table('transactions')
         ->where('user_id', (int) $this->user->id)
-        ->where('source_format', SourceFormat::AsnCsv->value)
+        ->where('source_format', CsvPresetRegistry::ASN)
         ->max('id');
 
     $this->queriesDuring = function (callable $work): array {

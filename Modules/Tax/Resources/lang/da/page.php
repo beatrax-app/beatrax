@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Eksportér PDF',
     'export_pdf_aria' => 'Eksportér PDF',
     'export_pdf_title' => 'Hent beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Luk',
 
     'country_prompt_heading' => 'Hvilket land betaler du skat i?',
     'country_prompt_body' => 'Du kan altid ændre det under Indstillinger → :section.',

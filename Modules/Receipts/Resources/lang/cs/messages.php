@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Přetáhni sem e-mailovou zprávu (.eml) nebo archiv schránky (.mbox). Párovač rozpozná účtenky z PayPalu a zobrazí je jako kanonické transakce; nerozpoznaní odesílatelé zůstanou v auditním logu ke třídění.',
-    ],
-
     'conflict' => [
 
         'field' => [

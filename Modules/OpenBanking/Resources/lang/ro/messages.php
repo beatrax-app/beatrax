@@ -20,6 +20,7 @@ return [
         'manage' => 'Gestionează open banking',
         'not_connected' => 'Nicio bancă conectată. Conectează una pentru a importa tranzacțiile automat.',
         'expired' => 'Consimțământul a expirat — este necesară reconectarea.',
+        'revoked' => 'Banca ta a încheiat conexiunea — reconectează-te.',
         'connected' => 'Conectat la :bank prin Enable Banking. Ultima sincronizare :when.',
         'never' => 'niciodată',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Expirat — reconectează-te',
         'pill_expiring' => 'Expiră în curând',
         'pill_connected' => 'Conectat',
+        'pill_revoked' => 'Încheiată de banca ta — reconectează-te',
         'whats_fetched_label' => 'Ce se preia',
         'whats_fetched' => 'Tranzacții înregistrate și solduri, ultimele 90 de zile',
         'last_successful_sync_label' => 'Ultima sincronizare reușită',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — eșuată (:reason)',
         'reason_consent_expired' => 'consimțământ expirat',
         'reason_error' => 'eroare',
+        'reason_truncated' => 'oprită devreme',
+        'reason_nothing_imported' => 'nu s-a putut înregistra nimic',
+        'reason_consent_revoked' => 'încheiată de banca ta',
         'disconnect_button' => 'Deconectează',
     ],
 
     'consent_banner' => [
         'heading' => 'Consimțământul a expirat — reconectează-te',
+        'heading_revoked' => 'Banca ta a încheiat conexiunea',
         'body' => 'Ultima sincronizare reușită a fost :when. Reconectează-te pentru a relua sincronizarea automată.',
+        'body_revoked' => 'Banca ta sau Enable Banking a retras accesul, așa că sincronizarea s-a oprit. Ultima sincronizare reușită a fost :when. Reconectează-te ca să reia.',
         'never' => 'niciodată',
         'reconnect' => 'Reconectează',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking este temporar indisponibil. Încearcă din nou în scurt timp.',
         'new_found' => ':count tranzacție nouă găsită.|:count tranzacții noi găsite.|:count de tranzacții noi găsite.',
         'none' => 'Nicio tranzacție nouă.',
+        'none_importable' => 'Banca ta a trimis tranzacții, dar niciuna nu a putut fi înregistrată. Deschide verificarea importului ca să vezi de ce.',
+        'in_progress' => 'O sincronizare este deja în curs. Încercați din nou peste o clipă.',
+        'truncated' => 'Banca ta avea mai multe tranzacții decât poate prelua o sincronizare, așa că această rulare s-a oprit devreme. Nimic nu a fost înregistrat ca sincronizat — următoarea sincronizare pornește din același punct.',
     ],
 
     'disconnect' => [
@@ -139,10 +149,6 @@ return [
             'save_application_id_failed' => 'ID-ul aplicației nu a putut fi salvat pe disc — verifică permisiunile directorului de secrete și încearcă din nou.',
             'choose_bank' => 'Alege o bancă înainte de a continua.',
         ],
-    ],
-
-    'alert' => [
-        'reconsent' => 'Reconectează-ți banca',
     ],
 
     'errors' => [

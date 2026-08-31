@@ -92,13 +92,24 @@ it('drilldown_filter_mapping: time_bucket dimension carries no group param, only
         ->and($params['before'])->toBe('2026-05-31');
 });
 
-it('drilldown_filter_mapping: a null groupKey (the "No X" aggregation bucket) omits the dimension filter entirely', function (): void {
+it('drilldown_filter_mapping: a null groupKey on the category dimension names the uncategorized bucket', function (): void {
     $url = app(DrilldownUrlBuilder::class)->build('category', null, dubPeriod(), dubDefinition('category'));
     $params = dubParseQuery($url);
 
+    // Emitting nothing at all opened the whole period: 32 transactions and
+    // 2,459.11 out under a row that read 85.00. "No category" is a filter.
     expect($params)->not->toHaveKey('category')
+        ->and($params['uncategorized'] ?? null)->toBe('1')
         ->and($params['after'])->toBe('2026-05-01');
 });
+
+it('drilldown_filter_mapping: a null groupKey on a dimension with no such bucket still emits nothing', function (string $dimension): void {
+    $url = app(DrilldownUrlBuilder::class)->build($dimension, null, dubPeriod(), dubDefinition($dimension));
+    $params = dubParseQuery($url);
+
+    expect($params)->not->toHaveKey('uncategorized')
+        ->and($params)->not->toHaveKey($dimension);
+})->with(['account', 'counterparty', 'time_bucket']);
 
 it('drilldown_filter_mapping: carries amount_min/amount_max/amount_dir through from the report definition', function (): void {
     $definition = dubDefinition('category', ['amountMin' => '10.00', 'amountMax' => '500.00', 'amountDirection' => 'out']);

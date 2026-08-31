@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
@@ -12,6 +13,18 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Services\TaxTagQuery;
+
+// The fixtures here book at an absolute date and TransactionsList queries a
+// rolling recent(daysBack: 90) off the real clock, so the pair has an expiry
+// date. TaxBadgeSurfacesTest reached its on 2026-08-31; this freezes the clock
+// before the same arithmetic reaches this one.
+beforeEach(function (): void {
+    CarbonImmutable::setTestNow('2026-06-20 10:00:00');
+});
+
+afterEach(function (): void {
+    CarbonImmutable::setTestNow();
+});
 
 function lsbUser(string $username): User
 {

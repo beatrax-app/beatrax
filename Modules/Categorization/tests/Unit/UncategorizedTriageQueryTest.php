@@ -8,6 +8,7 @@ use Modules\Categorization\Public\Dto\TriageBatch;
 use Modules\Categorization\Public\Dto\TriageRow;
 use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
@@ -98,7 +99,7 @@ it('returns only uncategorized transactions ordered newest-first', function (): 
 
     // The row carries the reader's own short date, so the expectation has to
     // name a locale — English writes it with slashes.
-    expect($batch->rows[0]->bookedAt)->toContain('15/05/2026');
+    expect($batch->rows[0]->postedAt)->toContain('15/05/2026');
 });
 
 it('writes the date the way the reader\'s language does', function (): void {
@@ -111,13 +112,13 @@ it('writes the date the way the reader\'s language does', function (): void {
     // reader's before the query runs. It used to be a fixed d-m-Y in every
     // language, which is the one separator no locale but Dutch writes.
     app()->setLocale('nl');
-    expect($q->for($this->user, limit: 50)->rows[0]->bookedAt)->toContain('15-05-2026');
+    expect($q->for($this->user, limit: 50)->rows[0]->postedAt)->toContain('15-05-2026');
 
     app()->setLocale('de');
-    expect($q->for($this->user, limit: 50)->rows[0]->bookedAt)->toContain('15.05.2026');
+    expect($q->for($this->user, limit: 50)->rows[0]->postedAt)->toContain('15.05.2026');
 
     app()->setLocale('en');
-    expect($q->for($this->user, limit: 50)->rows[0]->bookedAt)->toContain('15/05/2026');
+    expect($q->for($this->user, limit: 50)->rows[0]->postedAt)->toContain('15/05/2026');
 });
 
 it('paginates with cursors when there are more rows than the page limit', function (): void {
@@ -188,4 +189,36 @@ it('scopes results to the requested user only', function (): void {
     $batch = $q->for($this->user);
 
     expect($batch->rows)->toHaveCount(2);
+});
+
+// The inbox pages on TransactionCursor, which sorts (posted_at, id) descending.
+// The row used to print booked_at, which an ICS card writes a day later than
+// posted_at, so the dates in the inbox read out of order on a card statement.
+it('prints the day it sorted the row by, not the day the card booked it', function (): void {
+    Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'expense',
+        'posted_at' => '2026-05-05',
+        'booked_at' => '2026-05-06 12:00:00',
+        'value_date' => '2026-05-05',
+        'amount_minor' => -8000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -8000,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'KLM ROYAL DUTCH AIR',
+        'counterparty_normalized' => 'klm royal dutch air',
+        'normalization_version' => 1,
+        'category_id' => null,
+        'source_format' => 'ics-pdf',
+        'import_run_id' => $this->run->id,
+        'source_row_index' => 900,
+        'fingerprint' => str_pad('900', 64, '0', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+
+    /** @var UncategorizedTriageQuery $q */
+    $q = $this->app->make(UncategorizedTriageQuery::class);
+
+    expect($q->for($this->user, limit: 50)->rows[0]->postedAt)->toBe(Fmt::shortDate('2026-05-05'));
 });

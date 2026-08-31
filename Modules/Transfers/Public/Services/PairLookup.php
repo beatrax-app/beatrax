@@ -12,12 +12,12 @@ use Modules\Transfers\Public\Enums\CounterLegOrder;
 use Modules\Transfers\Public\Support\CounterLegMatch;
 use Modules\Transfers\Public\Support\CounterLegWindow;
 
-final class PairLookup
+final readonly class PairLookup
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
+        private DatabaseManager $db,
     ) {}
 
     public function isPaired(int $txId, User $user): bool

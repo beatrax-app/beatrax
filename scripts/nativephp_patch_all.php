@@ -28,7 +28,9 @@ $patches = [
     'nativephp_grant_webview_camera',
     'nativephp_android_file_chooser',
     'nativephp_android_share_file',
+    'nativephp_android_upload_limits',
     'nativephp_keep_webview_cookies',
+    'nativephp_android_single_content_type',
     'nativephp_exclude_data_from_backup',
     'nativephp_strip_unused_permissions',
     'nativephp_theme_native_shell',
@@ -40,9 +42,11 @@ $patches = [
     'nativephp_ios_request_body_stream',
     'nativephp_ios_upload_limits',
     'nativephp_ios_download_delegate',
+    'nativephp_ios_theme_native_shell',
     'nativephp_ios_local_network_discovery',
     'nativephp_ios_privacy_manifest',
     'nativephp_ios_export_compliance',
+    'nativephp_dedupe_background_task_identifiers',
 ];
 
 $failed = [];

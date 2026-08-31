@@ -40,8 +40,8 @@ keywords. See
 The four `Core` outbound edges that remain (`Auth`, `Desktop`, `Search`, `Sync`)
 are kernel services rather than screens — the encryption-migration service, the
 chrome resolver every layout calls, the doctor command's FTS probe, and the two
-writers that raise `EntityMutated`. Removing those is a different refactor and
-was deliberately not attempted here.
+writers that raise `EntityMutated`. They stay: removing them is a different
+refactor, on the kernel rather than on the shell.
 
 ## The names that did not change
 
@@ -92,3 +92,39 @@ with the file and line that names a view nothing renders. Two channels stay
 outside it — `x-<ns>::` component tags, which resolve through the Blade
 component resolver rather than the finder, and `$this->view()` on a NativePHP
 screen, which resolves against the mobile root.
+
+## The dashboard's empty period
+
+Every figure on the dashboard is scoped to one period, and a reader can be
+looking at a period they have no records in. That happens on the very first
+run: the setup wizard ends on an import, and a statement covering February to
+April, confirmed in August, drops the reader on a screen reading `IN €0.00 OUT
+€0.00 NET €0.00`, "No categorized expenses yet", "Nothing here for this
+period". Every one of those figures is correct. Together they say the import
+failed, immediately after the wizard said it worked — the only hint the data
+exists is a non-zero net worth, and the only way to reach it is the `‹` glyph
+pressed an unknown number of times.
+
+`Dashboard::render()` asks
+[`PopulatedPeriodQuery::latestWithRecords()`](../ledger/architecture.md#populatedperiodquery--where-the-records-actually-are)
+for the period worth offering, and the blade renders the notice only when the
+answer is not null. So it is an empty *state*, not a standing banner: a
+populated period draws nothing, and neither does an install with nothing
+imported, because that reader wants `/imports/new` and not a jump to nowhere.
+`goToLatestPeriod()` re-derives the target rather than trusting the anchor in
+the wire payload, and does nothing at all when the answer has since become
+null.
+
+This is deliberately the sibling of `/transactions`' "Nothing in the last 90
+days. Your older transactions are still here. **[Show full history]**" — the
+same shape (a control inside the empty case), the same voice (state the fact,
+then offer the way forward), and the same verb on the button.
+
+Two shapes here are load-bearing and easy to undo by accident. The block sits
+at `dashboard-phone-order-2`, above the tiles it explains, because every child
+of `.dashboard-main` must carry an order class — one without it falls back to
+`order: 0` and sorts above the header. And it deliberately does **not** carry
+`dashboard-tile`: that class hides a wrapper whose grandchild is missing, which
+is right for a Livewire tile that decided to render nothing and wrong here,
+where the children are a paragraph and a button holding text rather than
+elements.

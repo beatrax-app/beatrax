@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Név szerkesztése',
     'edit_name_aria' => 'A(z) :id ismétlődő sorozat átnevezése',
     'new_name_label' => 'A sorozat új neve',
+    'load_more' => 'Továbbiak betöltése',
     'save' => 'Mentés',
 
     'toast' => [

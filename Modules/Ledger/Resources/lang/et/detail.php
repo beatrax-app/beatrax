@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Tehing',
     'heading' => 'Tehing',
+    'booked_on' => 'Kirjendatud :date',
 
     'counterparty' => 'Vastaspool',
     'description' => 'Kirjeldus',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Märkus (valikuline)',
         'tax_deductible' => 'Maksust mahaarvatav',
         'remove_leg_aria' => 'Eemalda see kategooria',
+        'remove_leg_caption' => 'Eemalda',
         'add_category' => '+ Lisa kategooria',
         'soft_cap' => ':count kategooriat ~20-st — kaalu väikeste summade koondamist.',
         'remaining_zero' => 'Jääk :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Kustuta tehing',
         'help' => 'Eemaldab selle tehingu jäädavalt. Seda toimingut ei saa tagasi võtta.',
         'button' => 'Kustuta',
-        'confirm_prompt' => 'Kas oled kindel?',
+        'confirm_prompt' => 'Kas kustutada see tehing? Märkus, jaotus ja maksusildid kaovad koos sellega.',
         'confirm' => 'Jah, kustuta',
         'cancel' => 'Tühista',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Vaata ahelat',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Kooskõlastatud ja lukus',
+        'help' => 'Lõpetatud kooskõlastus lukustas selle tehingu. Selle kategooria, märkus, jaotus ja maksusildid jäävad samaks, kuni sa selle avad.',
+        'button' => 'Ava muutmiseks',
+        'confirm_question' => 'Kas avada see tehing muutmiseks? Sellel ei muutu midagi ja järgmine lõpetatud kooskõlastus lukustab selle uuesti.',
+        'cancel' => 'Jäta lukku',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'See tehing on kooskõlastatud. Muudatuste tegemiseks tühista kooskõlastus.',
         'reclassified_pair_removed' => 'Ümber liigitatud tüübiks :type — paar eemaldatud',
         'reclassified' => 'Ümber liigitatud tüübiks :type',
         'note_saved' => 'Märkus salvestatud',
         'unreconciled' => 'Kooskõlastus tühistatud — saad seda tehingut jälle muuta.',
+        'note_too_long' => 'Märkus on kuni :max märk.|Märkus on kuni :max märki.',
         'counterparty_updated' => 'Vastaspool uuendatud',
         'goal_attributed' => 'Arvestatakse selle eesmärgi hulka',
         'goal_attribution_removed' => 'Enam ei arvestata selle eesmärgi hulka',

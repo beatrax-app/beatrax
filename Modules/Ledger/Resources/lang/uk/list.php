@@ -10,15 +10,14 @@ return [
     'subtitle_full' => 'Повна історія.',
     'subtitle_recent' => 'Останні транзакції (за 90 днів).',
 
-    'currency_aria' => 'Вигляд валюти',
-    'currency_eur' => 'Лише :code',
-    'currency_original' => 'Оригінальна валюта',
+    'currency_aria' => 'Показана сума',
+    'currency_eur' => 'Розрахована сума',
+    'currency_original' => 'Оригінальна сума',
 
     'show_recent' => 'Показати лише останні',
     'show_full' => 'Показати повну історію',
 
     'empty_period' => 'За цей період нічого немає.',
-
 
     'empty_recent_has_older' => 'Нічого за останні 90 днів. Ваші давніші операції нікуди не зникли.',
 

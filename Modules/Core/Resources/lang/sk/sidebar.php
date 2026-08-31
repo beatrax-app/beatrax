@@ -94,6 +94,7 @@ return [
         'heading' => 'Vývojár',
         'open_console' => 'Otvoriť vývojársku konzolu',
         'pulse' => 'Queue :queue · Worker :worker',
+        'worker_ago' => 'pred :count s|pred :count s|pred :count s',
     ],
 
     'account' => [

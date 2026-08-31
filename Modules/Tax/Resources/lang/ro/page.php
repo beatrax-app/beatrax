@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Exportă PDF',
     'export_pdf_aria' => 'Exportă PDF',
     'export_pdf_title' => 'Descarcă beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Închide',
 
     'country_prompt_heading' => 'În ce țară îți depui declarația fiscală?',
     'country_prompt_body' => 'Poți schimba asta oricând din Setări → :section.',

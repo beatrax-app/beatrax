@@ -18,12 +18,14 @@ use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Dto\ImportPreviewResult;
+use Modules\Import\Public\Services\AccountDenomination;
 use Modules\Import\Public\Services\UploadFilename;
+use Modules\Ingestion\Public\Enums\SyntheticIban;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
-use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -32,12 +34,9 @@ final class ConnectCardStep extends Component
 {
     use WithFileUploads;
 
-    // Mirrors IcsPdfAdapter::ICS_OWN_IBAN. Neither module may import the other's
-    // Internal, so OneSpellingPerSyntheticIbanArchTest holds the four spellings
-    // of this literal together instead.
-    private const ICS_OWN_IBAN = 'ICS-CARD';
+    private const ICS_OWN_IBAN = SyntheticIban::IcsCard->value;
 
-    private const ICS_ACCOUNT_NAME = 'ICS card';
+    private const string ICS_ACCOUNT_NAME = 'ICS card';
 
     public string $selectedFormat = 'ics-pdf';
 
@@ -90,7 +89,7 @@ final class ConnectCardStep extends Component
         Application $app,
         DatabaseManager $db,
         AccountSlugResolver $slugs,
-        BaseCurrency $baseCurrency,
+        AccountDenomination $denomination,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -116,7 +115,7 @@ final class ConnectCardStep extends Component
         // parsed before the account existed, so the ICS rows only acquire an
         // account once one is created — and only then is a second pass worth
         // its cost.
-        if ($this->ensureIcsAccount($user, $db, $slugs, $baseCurrency)) {
+        if ($this->ensureIcsAccount($user, $db, $slugs, $denomination, $preview['statementCurrency'])) {
             foreach ($newRunIds as $runId) {
                 $this->repreview($runId, $user, $importer, $logger, $app);
             }
@@ -130,16 +129,20 @@ final class ConnectCardStep extends Component
     // A per-file failure is logged and skipped rather than raised: users
     // download a month per PDF, so one bad file must not waste the batch.
     /**
-     * @return array{ids: list<int>, firstError: ?string}
+     * @return array{ids: list<int>, firstError: ?string, statementCurrency: ?string}
      */
     private function runPreviews(RunsImports $importer, User $user, LoggerInterface $logger, Application $app): array
     {
         $ids = [];
         $firstError = null;
+        /** @var list<string|null> $currencies */
+        $currencies = [];
         foreach ($this->statements as $statement) {
             $originalFilename = UploadFilename::sanitise($statement->getClientOriginalName(), '.pdf');
             try {
-                $ids[] = $importer->runFromUpload($statement->getRealPath(), $this->selectedFormat, $user, $originalFilename)->importRunId;
+                $result = $importer->runFromUpload($statement->getRealPath(), $this->selectedFormat, $user, $originalFilename);
+                $ids[] = $result->importRunId;
+                $currencies[] = self::icsCurrencyIn($result);
             } catch (Throwable $e) {
                 $logger->error('ConnectCardStep: import preview failed.', [
                     'source_format' => $this->selectedFormat,
@@ -151,14 +154,41 @@ final class ConnectCardStep extends Component
             }
         }
 
-        return ['ids' => $ids, 'firstError' => $firstError];
+        return ['ids' => $ids, 'firstError' => $firstError, 'statementCurrency' => self::theOneCurrency($currencies)];
+    }
+
+    private static function icsCurrencyIn(ImportPreviewResult $result): ?string
+    {
+        foreach ($result->accountsToName as $unknown) {
+            if ($unknown->iban === self::ICS_OWN_IBAN) {
+                return $unknown->statementCurrency;
+            }
+        }
+
+        return null;
+    }
+
+    // A reader downloads a month per PDF, so several previews answer for one
+    // card. Two of them disagreeing leaves the denomination unanswered, on the
+    // same rule two rows of one file follow.
+    /**
+     * @param  list<string|null>  $seen
+     */
+    private static function theOneCurrency(array $seen): ?string
+    {
+        $distinct = array_values(array_unique(array_map(
+            static fn (?string $code): string => $code ?? '',
+            $seen,
+        )));
+
+        return count($distinct) === 1 && $distinct[0] !== '' ? $distinct[0] : null;
     }
 
     // Raw query builder rather than Account::query()->exists(), which trips
     // PHPStan strict-rules staticMethod.dynamicCall.
     // Answers whether it created one, because the caller's re-preview is only
     // worth running when the account it needs did not exist a moment ago.
-    private function ensureIcsAccount(User $user, DatabaseManager $db, AccountSlugResolver $slugs, BaseCurrency $baseCurrency): bool
+    private function ensureIcsAccount(User $user, DatabaseManager $db, AccountSlugResolver $slugs, AccountDenomination $denomination, ?string $statementCurrency): bool
     {
         $hasIcsAccount = $db->connection()
             ->table('accounts')
@@ -175,7 +205,7 @@ final class ConnectCardStep extends Component
             'slug' => $slugs->resolveUnique($user->id, self::ICS_ACCOUNT_NAME),
             'kind' => AccountKind::IcsCard->value,
             'iban' => self::ICS_OWN_IBAN,
-            'default_currency' => $baseCurrency->code(),
+            'default_currency' => $denomination->forStatement($statementCurrency),
         ]);
 
         return true;

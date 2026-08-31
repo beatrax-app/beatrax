@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Painel operacional da Dev Console integrada.',
     'worker_heartbeat' => 'Heartbeat do worker',
     'not_running' => 'PARADO',
+    'heartbeat_age' => 'há :count s · ttl :ttl s|há :count s · ttl :ttl s',
     'queue' => 'Fila',
     'pending' => 'pendentes',
     'failed' => 'falhados',

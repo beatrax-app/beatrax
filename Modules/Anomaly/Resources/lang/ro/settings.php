@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Cât de ușor consideră Beatrax o tranzacție neobișnuită pentru acel comerciant sau categorie, de la 1 la 100. Mai mare semnalează mai multe.',
 
     'min_amount_label' => 'Sumă minimă a plății',
-    'min_amount_help' => 'Ignoră anomaliile pentru plățile sub această sumă. Stocată în cenți (:symbol) — 1000 înseamnă :example.',
+    'min_amount_help' => 'Ignoră anomaliile pentru plățile sub această sumă. Stocată în unități minore (:symbol) — :minor înseamnă :example.',
 
     'save' => 'Salvează setările pentru anomalii',
     'saved' => 'Salvat.',

@@ -13,6 +13,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\ClearedStatus;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Events\TransactionMutated;
 
 trait HandlesClearedStatus
@@ -81,7 +82,7 @@ trait HandlesClearedStatus
             return;
         }
 
-        if ($current === ClearedStatus::Reconciled->value) {
+        if (TransactionStatusQuery::locksEdits($current)) {
             $this->toast(Lang::get('ledger::common.badge.reconciled_hint'));
 
             return;

@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Elrejtés a nézetből (nem módosítja a naplófájlt)',
     'dismiss_aria' => 'Naplóbejegyzés elvetése a nézetből',
     'totals' => [
-        'showing' => 'Megjelenítve',
-        'of' => '/',
-        'received' => 'fogadottból (puffer korlát 10k)',
-        'lines_today' => 'sor ma',
+        'showing' => 'Megjelenítve :shown / :count fogadott sorból (puffer korlát :cap)|Megjelenítve :shown / :count fogadott sorból (puffer korlát :cap)',
+        'lines_today' => ':count sor ma|:count sor ma',
+        'lines_today_capped' => 'több mint :count sor ma|több mint :count sor ma',
         'today' => 'ma',
-        'across' => 'összesen',
-        'daily_files' => 'napi fájlban',
+        'all_files' => ':size összesen :count napi fájlban|:size összesen :count napi fájlban',
     ],
 
     'status' => [

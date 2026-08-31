@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Regulile rămân pe acest dispozitiv. Nu sunt partajate cu celelalte dispozitive ale tale.',
 
     'reapply' => 'Reaplică regulile pe istoric',
+    'reapply_confirm' => 'Reaplici toate regulile pe tot istoricul tău? Fiecare categorie, contraparte, notă și etichetă fiscală pusă de o regulă este rescrisă. Ce ai setat manual rămâne, la fel și tot ce se află pe un extras reconciliat. Nimic nu aduce înapoi valorile vechi.',
     'reapplying' => 'Se reaplică…',
     'new_rule' => 'Regulă nouă',
 
-    'reapply_progress_lead' => 'Se reaplică regulile…',
-    'reapply_progress_of' => 'din',
-    'reapply_progress_trail' => 'tranzacții verificate',
+    'reapply_progress' => 'Se reaplică regulile… :checked din :count tranzacție verificată|Se reaplică regulile… :checked din :count tranzacții verificate|Se reaplică regulile… :checked din :count de tranzacții verificate',
 
     'empty_heading' => 'Încă nicio regulă',
     'empty_body' => 'Regulile potrivesc tranzacțiile pe baza mai multor condiții și aplică automat modificări de categorie, contraparte, notă și etichetă fiscală — la import și oricând le reaplici pe istoricul tău existent.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Creată',
     'col_row_actions' => 'Acțiuni',
     'inactive_badge' => 'Inactivă',
+    'combinator_all' => 'TOATE',
+    'combinator_any' => 'ORICARE',
     'inactive_title' => 'Această regulă nu rulează. O regulă se dezactivează când categoria sau contrapartida la care trimite este ștearsă.',
 
     'more_conditions' => '+:count în plus',

@@ -9,29 +9,38 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\InboxMessageStatus;
+use Modules\Core\Public\Support\Instant;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Receipts\Internal\MatcherRegistry;
+use Modules\Receipts\Public\Dto\CapturedReceipt;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
+use Modules\Receipts\Public\Support\ReceiptCaptureLog;
 use Throwable;
 
 // The single Public entry point for processing one raw RFC 822 message,
 // used by both the file-drop wizard path and the inbox handoff path.
 // Never writes to transactions itself — chain hints ride through
 // raw_payload and are re-emitted once the canonical row exists.
-final class RecordReceipt
+final readonly class RecordReceipt
 {
+    private const string FALLBACK_FILENAME = 'fallback.eml';
+
     public function __construct(
-        private readonly EmlMimeReader $reader,
-        private readonly MatcherRegistry $matchers,
-        private readonly FileDropEmlBlobStore $blobStore,
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private EmlMimeReader $reader,
+        private MatcherRegistry $matchers,
+        private FileDropEmlBlobStore $blobStore,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
-    public function __invoke(string $emlBytes, User $user, ?string $sourceFilename = null): MatchOutcomeDto
+    // $captures is how a caller learns WHAT was filed rather than only how the
+    // matchers answered. Nothing ties a file_imports row to the run that wrote
+    // it, so a screen reporting on a drop has no way to find these afterwards.
+    public function __invoke(string $emlBytes, User $user, ?string $sourceFilename = null, ?ReceiptCaptureLog $captures = null): MatchOutcomeDto
     {
         $parsed = $this->reader->read($emlBytes);
 
@@ -61,10 +70,10 @@ final class RecordReceipt
 
         $inserted = $connection->table('file_imports')->insertOrIgnore([
             'user_id' => $user->id,
-            'source_kind' => 'eml',
-            'source_filename' => $sourceFilename ?? 'fallback.eml',
+            'source_kind' => self::sourceKindOf($sourceFilename),
+            'source_filename' => $sourceFilename ?? self::FALLBACK_FILENAME,
             'provider_message_id' => $providerMessageId,
-            'internal_date' => $internalDate->format('Y-m-d H:i:s'),
+            'internal_date' => Instant::appLocal($internalDate),
             'sender_email' => $senderEmail,
             'sender_name' => null,
             'subject' => $subject,
@@ -85,11 +94,7 @@ final class RecordReceipt
         $rawId = $row->id;
         $fileImportId = is_numeric($rawId) ? (int) $rawId : 0;
 
-        if ($inserted === 0 && $row->status !== InboxMessageStatus::Fetched->value) {
-            // Already processed by a prior drop — never re-dispatch or
-            // yield a duplicate canonical row to the caller.
-            return MatchOutcomeDto::unmatched('duplicate_drop');
-        }
+        $alreadyRecorded = $inserted === 0 && $row->status !== InboxMessageStatus::Fetched->value;
 
         $input = new MatcherInputDto(
             id: $fileImportId,
@@ -104,18 +109,30 @@ final class RecordReceipt
         );
 
         $outcome = $this->matchers->dispatch($input, $emlBytes);
+
+        $captures?->record(new CapturedReceipt(
+            senderEmail: $senderEmail,
+            subject: $subject,
+            internalDate: Instant::appLocal($internalDate),
+            outcome: $outcome->kind,
+            matcherKey: $outcome->matcherKey,
+        ));
+
+        // A second pass over bytes already recorded still hands the caller its
+        // outcome. Returning nothing left the drop-folder scan's file
+        // unconfirmable through the wizard afterwards, with the money in
+        // neither place; FingerprintStage is what decides a duplicate.
+        if ($alreadyRecorded) {
+            return $outcome;
+        }
+
         $update = [
             'updated_at' => $this->clock->now()->toDateTimeString(),
+            'status' => $outcome->kind->toInboxStatus()->value,
         ];
 
-        if ($outcome->kind === MatchOutcomeKind::Parsed && $outcome->parsed !== null) {
-            $update['status'] = InboxMessageStatus::Parsed->value;
-            $rawKey = $outcome->parsed->rawPayload['matcher_key'] ?? null;
-            $update['matcher_key'] = is_string($rawKey) && $rawKey !== '' ? $rawKey : null;
-        } elseif ($outcome->kind === MatchOutcomeKind::Skipped) {
-            $update['status'] = InboxMessageStatus::Skipped->value;
-        } else {
-            $update['status'] = InboxMessageStatus::Unmatched->value;
+        if ($outcome->kind === MatchOutcomeKind::Parsed) {
+            $update['matcher_key'] = $outcome->matcherKey;
         }
 
         $connection->table('file_imports')
@@ -125,6 +142,22 @@ final class RecordReceipt
         return $outcome;
     }
 
+    // The transport the message arrived on, which is the archive's extension
+    // for every message carved out of one. Hard-coded 'eml' left 'mbox' — one
+    // of the two values the column's trigger allows — with no writer at all,
+    // and every mbox row's audit kind contradicting its own filename.
+    private static function sourceKindOf(?string $sourceFilename): string
+    {
+        $extension = strtolower(pathinfo($sourceFilename ?? self::FALLBACK_FILENAME, PATHINFO_EXTENSION));
+        $format = SourceFormat::tryFrom($extension);
+
+        return $format?->isReceiptFile() === true ? $format->value : SourceFormat::Eml->value;
+    }
+
+    // The RFC 822 Date: header carries the SENDER's offset. Everything
+    // downstream — the Y/m blob folder, the DATETIME column, the notification's
+    // occurrence day — is read back at the app's offset, so the instant is
+    // moved into that frame here, once, rather than at each of those three.
     private function parseInternalDate(string $dateRaw): DateTimeImmutable
     {
         if ($dateRaw === '') {
@@ -132,7 +165,7 @@ final class RecordReceipt
         }
 
         try {
-            return new DateTimeImmutable($dateRaw);
+            return Instant::inAppZone(new DateTimeImmutable($dateRaw));
         } catch (Throwable) {
             return $this->clock->now()->toDateTimeImmutable();
         }

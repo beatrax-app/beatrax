@@ -119,6 +119,17 @@ The setting is still per-user and can be raised back to 60 months from
 the settings page, which is how a yearly subscription becomes
 detectable: two yearly charges need a window wider than two years.
 
+Both ends of that range and the fallback itself are written once, in
+`Modules\Recurring\Public\Support\RecurringDetectionWindow`
+(`MINIMUM_MONTHS`, `MAXIMUM_MONTHS`), and both detectors open their window
+through `RecurringDetectionWindow::opensOn()` rather than computing it
+themselves. The floor and the fallback are the same number because they are
+the same fact — below two months a monthly series cannot show the two
+occurrences the gate needs — so a settings screen that widened alone would
+offer the reader a window that detects nothing, and a detector that fell back
+differently from its sibling would put a series in the merged set the other
+pass could not see the occurrences of.
+
 ### Why the variance filter uses the median, not the mean
 
 The filter computes the median of the cluster's absolute amounts and
@@ -224,7 +235,15 @@ least that, never less — and:
   month-end one, which is the 31st-of-the-month case.
 
 `SeriesEntryPlacer` then steps whole periods from `next_expected_at`
-rather than chaining single steps, for the same reason.
+rather than chaining single steps, for the same reason — and it hands
+`SeriesCadence::occurrenceAt()` the series' own `billing_day`, which is
+persisted alongside `next_expected_at` for exactly this. Stepping from
+the anchor alone is not enough, because the anchor is itself clamped
+whenever it lands in a short month: a 31st bill whose next date fell in
+February projected the 28th for every month after it on the calendar and
+the forecast curve, while the reminder — which re-infers from the
+postings each sweep — kept naming the 31st. The two surfaces named
+different days for the same charge.
 
 `confidence_low` is set when the interval standard deviation exceeds 5
 days. It does not change the cadence; it marks `next_expected_at` as a
@@ -245,6 +264,12 @@ twice under slightly different spellings does not spawn two parallel
 series. The key is the payload of the
 `(user_id, direction, cluster_key, latest_currency)` UNIQUE constraint,
 which is what makes re-running the whole sweep idempotent.
+
+It is deliberately NOT what the row's primary key is derived from. `cluster_key`
+moves — see the cadence note below — and a derived id has to come from columns
+that never do, so `DerivedSeriesId` folds
+`(user_id, direction, cluster_counterparty_key, latest_currency)` instead. See
+[the sync architecture](../sync/architecture.md#capture-for-the-last-five-detector-driven-tables).
 
 Because the cadence band is *part* of the key, a series whose cadence
 changes no longer matches its own old key. That is handled deliberately

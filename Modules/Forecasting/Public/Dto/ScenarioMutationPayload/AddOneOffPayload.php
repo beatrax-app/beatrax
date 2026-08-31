@@ -13,13 +13,19 @@ use Modules\Ledger\Public\Enums\Direction;
  */
 final class AddOneOffPayload extends ScenarioMutationPayload
 {
+    public readonly string $currency;
+
+    public readonly string $date;
+
     public function __construct(
-        public readonly string $date,
+        string $date,
         public readonly int $amountMinor,
-        public readonly string $currency,
+        string $currency,
         public readonly string $direction,
         public readonly ?string $note = null,
     ) {
+        $this->date = self::assertCalendarDay($date, 'date');
+        $this->currency = self::normalisedCurrency($currency);
         // ScenarioApplier reads any non-'income' direction as an expense sign flip,
         // so a corrupted row has to raise here rather than change the sign.
         if (Direction::tryFrom($direction) === null) {

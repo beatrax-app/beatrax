@@ -6,6 +6,7 @@ use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Bus;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 
 // The unique lock is plain string equality on the key, which is why null and a
@@ -65,9 +66,9 @@ it('still throws InvalidArgumentException for an off-list horizonDays=200', func
     expect($call)->toThrow(InvalidArgumentException::class);
 });
 
-it('uniqueFor returns 600 seconds', function (): void {
+it('uniqueFor holds the lock for the hour its two sibling jobs do', function (): void {
     $job = new ProjectForecastJob(userId: 1, scenarioId: null, horizonDays: 30);
-    expect($job->uniqueFor())->toBe(600);
+    expect($job->uniqueFor())->toBe(Duration::Hour->seconds());
 });
 
 it('uniqueVia returns a Cache Repository resolved through the LockStore helper', function (): void {

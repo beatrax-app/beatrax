@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Schema\Blueprint;
+use Modules\Auth\Internal\Lock\IdleTimeoutOptions;
 use Modules\Core\Database\Support\ModuleMigration;
 
 // Blob shapes the column types cannot carry: pin_hash is the self-describing
@@ -20,7 +21,7 @@ return new class extends ModuleMigration
             $table->text('pin_wrapped_key')->nullable();
             $table->text('password_wrapped_key')->nullable();
             $table->boolean('lock_enabled')->default(false);
-            $table->unsignedTinyInteger('idle_timeout_minutes')->default(5);
+            $table->unsignedTinyInteger('idle_timeout_minutes')->default(IdleTimeoutOptions::DEFAULT_MINUTES);
             $table->unsignedTinyInteger('failed_attempts')->default(0);
             $table->timestamp('locked_until')->nullable();
             $table->timestamp('last_activity_at')->nullable();

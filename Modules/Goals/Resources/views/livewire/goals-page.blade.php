@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Goals\Internal\Enums\GoalProgressState')
+@use('Modules\Goals\Public\Enums\GoalProgressState')
 {{--
     /goals page — list savings goals with 3-state progress bars and projected-
     date copy; Flux create/edit modal with inline field validation; Edit /
@@ -15,6 +15,7 @@
 
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
+    use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
         ->format();
@@ -42,7 +43,7 @@
       (x-core::bottom-sheet). Trigger buttons dispatch open-sheet at phone width.
     At >=768px (desktop): card grid + Flux modal unchanged.
 --}}
-<div class="mx-auto max-w-3xl px-4 py-12">
+<div class="mx-auto max-w-3xl px-4 py-6">
     {{-- Page header --}}
     <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -52,7 +53,7 @@
         {{-- Trigger: phone → dispatch open-sheet; desktop → $flux.modal().show() --}}
         <x-core::neutral-button
             class="shrink-0"
-            x-on:click="$wire.set('editGoalId', 0); if (window.innerWidth < 768) { $dispatch('open-sheet', { name: 'goal-form' }); } else { $flux.modal('goal-form').show(); }"
+            x-on:click="$wire.startCreate(); if (window.innerWidth < 768) { $dispatch('open-sheet', { name: 'goal-form' }); } else { $flux.modal('goal-form').show(); }"
         >{{ Lang::get('goals::messages.page.add_goal') }}</x-core::neutral-button>
     </header>
 
@@ -62,7 +63,7 @@
             :heading="Lang::get('goals::messages.empty.heading')"
             :body="Lang::get('goals::messages.empty.body')"
         >
-            <x-core::neutral-button x-on:click="$wire.set('editGoalId', 0); if (window.innerWidth < 768) { $dispatch('open-sheet', { name: 'goal-form' }); } else { $flux.modal('goal-form').show(); }">{{ Lang::get('goals::messages.empty.add_first') }}</x-core::neutral-button>
+            <x-core::neutral-button x-on:click="$wire.startCreate(); if (window.innerWidth < 768) { $dispatch('open-sheet', { name: 'goal-form' }); } else { $flux.modal('goal-form').show(); }">{{ Lang::get('goals::messages.empty.add_first') }}</x-core::neutral-button>
         </x-core::empty-state>
     @else
         {{-- Phone card list (hidden at >=768px via CSS .goals-phone-list display:none) --}}
@@ -82,8 +83,16 @@
                     $pct = $row->percentComplete();
                 @endphp
                 <li class="card-list-item">
-                    <div class="flex-1 min-w-0">
-                        <p class="primary truncate">{{ $row->name }}</p>
+                    {{-- Full width below sm so the goal name gets a line of its
+                         own: sharing the row with the percentage and the three
+                         actions left it 150px of the 390, and a 28-character
+                         Greek name lost its last third to the ellipsis while
+                         the target date under it wrapped freely. --}}
+                    <div class="w-full min-w-0 sm:w-auto sm:flex-1">
+                        <div class="flex items-baseline gap-3">
+                            <p class="primary min-w-0 flex-1">{{ $row->name }}</p>
+                            <span class="amount">{{ $pct }}%</span>
+                        </div>
                         <p class="secondary">
                             {{ $fmt($row->contributedMinor, $row->currency) }} / {{ $fmt($row->targetMinor, $row->currency) }}
                             @if ($row->progressState === GoalProgressState::Overdue->value)
@@ -96,6 +105,9 @@
                                 · <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.status.completed') }}</span>
                             @endif
                         </p>
+                        @if ($row->isPartial())
+                            <p class="secondary text-xs" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</p>
+                        @endif
 
                         {{-- A bar and a date are one line each and fit at 375pt.
                              Dropping them left the phone with a bare percentage
@@ -114,7 +126,6 @@
 
                         @include('goals::partials.goal-projection-line', ['row' => $row, 'class' => 'secondary mt-1 text-xs'])
                     </div>
-                    <span class="amount">{{ $pct }}%</span>
                     {{-- Row actions — always visible on phone. Drawn
                          as icons rather than the text characters they were:
                          a pencil, a tick and a box each carry their own
@@ -122,12 +133,11 @@
 
                          The three sit in their own shrink-0 group because the
                          row is flex-wrap: as three siblings they wrapped
-                         individually, and on a 411px phone Edit stayed up on
-                         the first line beside the percentage while Complete and
-                         Archive dropped to the next one 300px to the left,
-                         reading as one control belonging to the figure and two
-                         belonging to nothing. --}}
-                    <span class="flex shrink-0 items-center gap-1">
+                         individually and split across two lines, reading as
+                         one control belonging to the row above and two
+                         belonging to nothing. ml-auto keeps the group at the
+                         right edge of the line it wrapped onto. --}}
+                    <span class="ml-auto flex shrink-0 items-center gap-1">
                     <x-core::emoji-action
                         :label="Lang::get('goals::messages.row.edit')"
                         x-on:click="
@@ -145,6 +155,7 @@
                     @if (! $row->isCompleted())
                         <x-core::emoji-action
                             :label="Lang::get('goals::messages.actions.mark_complete')"
+                            :caption="Lang::get('goals::messages.actions.mark_complete_caption')"
                             wire:click="markComplete({{ $row->id }})"
                         >✅</x-core::emoji-action>
                     @endif
@@ -221,6 +232,13 @@
                         @include('goals::partials.goal-projection-line', ['row' => $row, 'class' => 'shrink-0 text-xs text-slate-500 dark:text-slate-400'])
                     </div>
 
+                    {{-- A goal funded in a currency the rate table cannot reach
+                         counts nothing from it. Every other money surface names
+                         what it left out; this bar used to just be short. --}}
+                    @if ($row->isPartial())
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</p>
+                    @endif
+
                     @include('goals::partials.goal-target-date', ['row' => $row, 'class' => 'mt-1 text-xs text-slate-500 dark:text-slate-400'])
 
                     {{-- Archive micro-confirm or footer actions --}}
@@ -278,7 +296,7 @@
                 wire:click="$toggle('showArchived')"
                 class="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
             >
-                <span>{{ Lang::get('goals::messages.archived_disclosure', ['count' => count($archived)]) }}</span>
+                <span>{{ Lang::choice('goals::messages.archived_disclosure', count($archived)) }}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 transition-transform {{ $showArchived ? 'rotate-180' : '' }}" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                 </svg>
@@ -299,6 +317,9 @@
                                     {{ $fmt($row->targetMinor, $row->currency) }}
                                 </p>
                             </div>
+                            @if ($row->isPartial())
+                                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</p>
+                            @endif
                             <div class="mt-3">
                                 <flux:dropdown>
                                     <flux:button
@@ -357,9 +378,9 @@
                     field-id="goal-amount-sheet"
                     :label="Lang::get('goals::messages.form.target_amount', ['currency' => $amountCurrency])"
                     size="base"
-                    inputmode="decimal"
+                    inputmode="{{ MoneyInput::decimalPlaces($amountCurrency) === 0 ? 'numeric' : 'decimal' }}"
                     wire:model="targetAmount"
-                    :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :placeholder="MoneyInput::formatAbsMinor(0, $amountCurrency)"
                     :aria-invalid="$errorAmount !== '' ? 'true' : null"
                     :aria-describedby="$errorAmount !== '' ? 'goal-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
@@ -426,7 +447,7 @@
     {{-- ------------------------------------------------------------------- --}}
     {{-- Flux create / edit modal (desktop, >=768px)                          --}}
     {{-- ------------------------------------------------------------------- --}}
-    <flux:modal name="goal-form" dismissible>
+    <flux:modal name="goal-form" dismissible @close="cancel">
         <div class="pt-[44px]" style="max-width: 520px;">
             <x-core::section-heading :title="$editGoalId ? Lang::get('goals::messages.form.title_edit') : Lang::get('goals::messages.form.title_create')" />
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -464,9 +485,9 @@
                         name="targetAmount"
                         field-id="goal-amount"
                         :label="Lang::get('goals::messages.form.target_amount', ['currency' => $amountCurrency])"
-                        inputmode="decimal"
+                        inputmode="{{ MoneyInput::decimalPlaces($amountCurrency) === 0 ? 'numeric' : 'decimal' }}"
                         wire:model="targetAmount"
-                        :placeholder="Lang::get('core::components.amount_placeholder')"
+                        :placeholder="MoneyInput::formatAbsMinor(0, $amountCurrency)"
                         :aria-invalid="$errorAmount !== '' ? 'true' : null"
                         :aria-describedby="$errorAmount !== '' ? 'goal-amount-error' : null"
                         style="font-variant-numeric: tabular-nums;"

@@ -20,6 +20,7 @@ return [
         'manage' => 'Administrer open banking',
         'not_connected' => 'Ingen bank tilkoblet. Koble til en for å importere transaksjoner automatisk.',
         'expired' => 'Samtykket er utløpt — du må koble til på nytt.',
+        'revoked' => 'Banken din har avsluttet tilkoblingen — koble til på nytt.',
         'connected' => 'Koblet til :bank via Enable Banking. Sist synkronisert :when.',
         'never' => 'aldri',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Utløpt — koble til på nytt',
         'pill_expiring' => 'Utløper snart',
         'pill_connected' => 'Tilkoblet',
+        'pill_revoked' => 'Avsluttet av banken din — koble til på nytt',
         'whats_fetched_label' => 'Hva som hentes',
         'whats_fetched' => 'Bokførte transaksjoner + saldoer, siste 90 dager',
         'last_successful_sync_label' => 'Siste vellykkede synkronisering',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — mislyktes (:reason)',
         'reason_consent_expired' => 'samtykket er utløpt',
         'reason_error' => 'feil',
+        'reason_truncated' => 'stoppet for tidlig',
+        'reason_nothing_imported' => 'ingenting kunne registreres',
+        'reason_consent_revoked' => 'avsluttet av banken din',
         'disconnect_button' => 'Koble fra',
     ],
 
     'consent_banner' => [
         'heading' => 'Samtykket er utløpt — koble til på nytt',
+        'heading_revoked' => 'Banken din har avsluttet tilkoblingen',
         'body' => 'Den siste vellykkede synkroniseringen din var :when. Koble til på nytt for å gjenoppta automatisk synkronisering.',
+        'body_revoked' => 'Banken din eller Enable Banking har trukket tilbake tilgangen, så synkroniseringen har stoppet. Din siste vellykkede synkronisering var :when. Koble til på nytt for å fortsette.',
         'never' => 'aldri',
         'reconnect' => 'Koble til på nytt',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking er midlertidig utilgjengelig. Prøv igjen om litt.',
         'new_found' => ':count ny transaksjon funnet.|:count nye transaksjoner funnet.',
         'none' => 'Ingen nye transaksjoner.',
+        'none_importable' => 'Banken din sendte transaksjoner, men ingen av dem kunne registreres. Åpne gjennomgangen av importen for å se hvorfor.',
+        'in_progress' => 'En synkronisering pågår allerede. Prøv igjen om et øyeblikk.',
+        'truncated' => 'Banken din hadde flere transaksjoner enn én synkronisering kan hente, så denne kjøringen stoppet for tidlig. Ingenting er registrert som synkronisert — neste synkronisering starter på samme sted.',
     ],
 
     'disconnect' => [
@@ -139,10 +149,6 @@ return [
             'save_application_id_failed' => 'Kunne ikke lagre applikasjons-ID-en din på disk — sjekk rettighetene til mappen med hemmeligheter og prøv igjen.',
             'choose_bank' => 'Velg en bank før du fortsetter.',
         ],
-    ],
-
-    'alert' => [
-        'reconsent' => 'Koble til banken din på nytt',
     ],
 
     'errors' => [

@@ -11,13 +11,17 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Services\AccountOwner;
+use Modules\Auth\Internal\Services\SessionRevoker;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
-use Modules\Auth\Public\Services\AccountOwner;
+use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
+use Modules\Auth\Public\Support\Username;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
+use Modules\Mobile\Public\Services\ShareSheetExport;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // A 404 and never a 403, so the route never reveals its own existence to a
@@ -43,7 +47,7 @@ final class ManageUserPage extends Component
             throw new NotFoundHttpException;
         }
 
-        $normalised = strtolower(trim($username));
+        $normalised = Username::normalize($username);
 
         $partner = User::query()->where('username', $normalised)->first();
 
@@ -60,6 +64,7 @@ final class ManageUserPage extends Component
         CurrentUser $currentUser,
         AppLockProvisioner $provisioner,
         AccountOwner $owner,
+        SessionRevoker $sessions,
     ): void {
         // The route middleware does not re-run on a Livewire update, so an
         // owner who is no longer the owner mid-session kept resetting passwords.
@@ -85,9 +90,11 @@ final class ManageUserPage extends Component
 
         // The owner sets this password without holding the old one, so the
         // partner's app-lock recovery wrap cannot be carried over — and the
-        // forced change at their next sign-in cannot carry it either.
+        // forced change at their next sign-in cannot carry it either. That
+        // flag is a redirect, so it never severed the partner's own sessions.
         if (is_numeric($partnerId)) {
             $provisioner->markRecoveryWrapStale((int) $partnerId);
+            $sessions->revokeAllFor((int) $partnerId);
         }
 
         $this->newPartnerPassword = '';
@@ -104,9 +111,28 @@ final class ManageUserPage extends Component
         $this->flashMessage = Lang::get('auth::manage_user.codes_regenerated', ['name' => $this->partnerUsername]);
     }
 
-    public function render(ViewFactory $views): View
+    // The <a download> this replaces is a data: URL, which the Android shell
+    // drops with no file and no error — so the codes an owner just regenerated
+    // for someone else would have gone nowhere at all.
+    public function downloadCodes(ShareSheetExport $shareSheet, RecoveryCodeFormatter $formatter): void
     {
-        $view = $views->make('auth::livewire.manage-user-page');
+        // Nothing to hand over until regenerateCodes() has run, and the button
+        // is only drawn once it has; a crafted call arrives here instead.
+        if ($this->regeneratedCodes === []) {
+            return;
+        }
+
+        $this->flashMessage = $shareSheet->export(
+            $formatter->filenameFor($this->partnerUsername),
+            $formatter->format($this->regeneratedCodes),
+        )->message();
+    }
+
+    public function render(ViewFactory $views, ShareSheetExport $shareSheet): View
+    {
+        $view = $views->make('auth::livewire.manage-user-page', [
+            'nativeExport' => $shareSheet->replacesWebViewDownload(),
+        ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('auth::manage_user.page_title', ['name' => $this->partnerUsername])]);

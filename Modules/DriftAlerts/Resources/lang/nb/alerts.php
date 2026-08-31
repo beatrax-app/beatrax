@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Avviksvarsler',
-    'heading' => 'Avviksvarsler',
     'intro_anomaly' => 'Enkeltbelastninger som ser uvanlige ut for deg.',
     'intro_drift' => 'Godkjente gjentakende serier der den siste belastningen havnet utenfor terskelen din.',
     'adjust_threshold' => 'Juster terskel →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/år',
         'meta_prior_now' => 'tidligere :prior → nå :now',
         'meta_detected' => 'oppdaget :date',
-        'meta_threshold' => 'terskel ±:percent%',
+        'meta_threshold' => 'terskel ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/år)',
         'cancel_impact' => 'Si opp denne → spar :amount/år',
         'cadence_flipped' => 'Intervallet er endret — vises også i',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Dette varselet finnes ikke lenger.',
         'acknowledged' => 'Bekreftet',
         'snoozed' => 'Utsatt',
         'dismissed' => 'Lukket',

@@ -42,7 +42,9 @@ function horizonGoal(User $user, int $targetMinor): Goal
 it('never answers a finish date earlier than today, however small the rate', function (): void {
     // A rate of a cent or two a day against a large target divides out past
     // PHP_INT_MAX. The int cast then wraps and addDays() walks backwards, so
-    // the card printed a finish date twenty years in the past.
+    // the card printed a finish date twenty years in the past. Clamping the
+    // walk to a century replaced that with a date the arithmetic never
+    // produced, printed under "Est." as though it had.
     $goal = horizonGoal($this->user, PHP_INT_MAX);
 
     $attributed = [
@@ -50,12 +52,27 @@ it('never answers a finish date earlier than today, however small the rate', fun
     ];
 
     $projection = app(GoalProjectionService::class)
-        ->project($goal, 0, $this->user, null, $attributed, []);
+        ->project($goal, 0, $this->user, null, $attributed, [], CarbonImmutable::today());
 
     expect($projection['stalled'])->toBeFalse();
     expect($projection['beyondHorizon'])->toBeTrue();
-    expect($projection['date'])->not->toBeNull();
-    expect($projection['date'])->toBeGreaterThan(CarbonImmutable::today()->toDateString());
+    expect($projection['date'])->toBeNull();
+});
+
+it('still dates a finish the calendar can actually hold', function (): void {
+    // Just inside the century bound, so the branch above is the far side of a
+    // real boundary rather than the only outcome this input can produce.
+    $goal = horizonGoal($this->user, 1_000_000);
+
+    $attributed = [
+        ['amountMinor' => 100_000, 'currency' => 'EUR', 'postedAt' => '2026-06-10'],
+    ];
+
+    $projection = app(GoalProjectionService::class)
+        ->project($goal, 0, $this->user, null, $attributed, [], CarbonImmutable::today());
+
+    expect($projection['date'])->not->toBeNull()
+        ->and($projection['date'])->toBeGreaterThan(CarbonImmutable::today()->toDateString());
 });
 
 it('refuses a target date that is not a calendar date', function (): void {

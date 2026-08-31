@@ -15,11 +15,11 @@ use LogicException;
 // needs an application key. Depending on this instead of on Session keeps a
 // constructor cheap enough for Artisan to build every command just to list
 // them — which is what `key:generate` has to survive to mint that key.
-final class SessionFactory
+final readonly class SessionFactory
 {
     private function __construct(
-        private readonly ?Container $container,
-        private readonly ?Session $session,
+        private ?Container $container,
+        private ?Session $session,
     ) {}
 
     // The autowired production path: the container resolves this wherever a

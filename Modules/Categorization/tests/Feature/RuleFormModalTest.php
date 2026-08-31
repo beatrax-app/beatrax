@@ -230,12 +230,14 @@ it('scales a human-entered Dutch-decimal amount condition to minor units and mat
         counterpartyName: 'Spotify',
         description: null,
         settledAmountMinor: 1250,
+        settledCurrency: 'EUR',
         postedAt: CarbonImmutable::parse('2026-01-01'),
     );
     $wrongAmountInput = new RuleMatchInput(
         counterpartyName: 'Spotify',
         description: null,
         settledAmountMinor: 1200,
+        settledCurrency: 'EUR',
         postedAt: CarbonImmutable::parse('2026-01-01'),
     );
 
@@ -269,12 +271,14 @@ it('scales a human-entered dot-decimal amount condition to minor units and match
         counterpartyName: 'Spotify',
         description: null,
         settledAmountMinor: 1250,
+        settledCurrency: 'EUR',
         postedAt: CarbonImmutable::parse('2026-01-01'),
     );
     $wrongAmountInput = new RuleMatchInput(
         counterpartyName: 'Spotify',
         description: null,
         settledAmountMinor: 1200,
+        settledCurrency: 'EUR',
         postedAt: CarbonImmutable::parse('2026-01-01'),
     );
 

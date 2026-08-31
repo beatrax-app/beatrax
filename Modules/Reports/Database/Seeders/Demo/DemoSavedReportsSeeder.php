@@ -57,7 +57,7 @@ final class DemoSavedReportsSeeder
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
             foreach (self::REPORTS as $row) {
                 $this->upsertReport($primary, $row);

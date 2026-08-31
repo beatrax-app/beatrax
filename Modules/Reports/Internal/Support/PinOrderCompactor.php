@@ -24,6 +24,7 @@ final class PinOrderCompactor
             ->where('user_id', $user->id)
             ->where('pinned', true)
             ->orderBy('pin_order')
+            ->orderBy('id')
             ->get(['id', 'pin_order']);
 
         $changed = [];

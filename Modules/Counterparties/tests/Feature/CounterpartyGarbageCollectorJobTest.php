@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Internal\Jobs\CounterpartyGarbageCollectorJob;
 
 uses(RefreshDatabase::class);
@@ -48,7 +49,7 @@ it('Test 1 — prunes a Counterparty with zero recent transactions AND zero merc
     expect(DB::table('counterparties')->where('id', $orphanId)->count())->toBe(1);
 
     $job = new CounterpartyGarbageCollectorJob($user->id);
-    $job->handle($this->app->make(DatabaseManager::class));
+    $job->handle($this->app->make(DatabaseManager::class), $this->app->make(Clock::class));
 
     expect(DB::table('counterparties')->where('id', $orphanId)->count())->toBe(0);
 });
@@ -114,7 +115,7 @@ it('Test 2 — does NOT prune a Counterparty with a transaction in the last 365 
     ]);
 
     $job = new CounterpartyGarbageCollectorJob($user->id);
-    $job->handle($this->app->make(DatabaseManager::class));
+    $job->handle($this->app->make(DatabaseManager::class), $this->app->make(Clock::class));
 
     expect(DB::table('counterparties')->where('id', $aliveId)->count())->toBe(1);
 });
@@ -140,7 +141,7 @@ it('Test 3 — does NOT prune a Counterparty whose merchant_name is referenced b
     ]);
 
     $job = new CounterpartyGarbageCollectorJob($user->id);
-    $job->handle($this->app->make(DatabaseManager::class));
+    $job->handle($this->app->make(DatabaseManager::class), $this->app->make(Clock::class));
 
     expect(DB::table('counterparties')->where('id', $aliasBackedId)->count())->toBe(1);
 });
@@ -156,7 +157,11 @@ it('Test 4 — declares ShouldBeUniqueUntilProcessing with uniqueId=userId, uniq
     expect($job->backoff)->toBe([60, 300, 900]);
 });
 
-it('Test 5 — registers a daily counterparties.gc schedule entry at 04:00 Europe/Amsterdam', function (): void {
+// 04:00 Europe/Amsterdam was "an hour after the backup, so a pruned set lands in
+// the next snapshot", which still holds when both run daily and the backup is
+// defined first. The hour had to go: the phone's runner takes only intervals.
+
+it('Test 5 — registers a daily counterparties.gc schedule entry running collect-garbage', function (): void {
     /** @var Schedule $schedule */
     $schedule = $this->app->make(Schedule::class);
 
@@ -170,7 +175,7 @@ it('Test 5 — registers a daily counterparties.gc schedule entry at 04:00 Europ
     }
 
     expect($matched)->not->toBeNull('Expected a registered schedule entry with description "counterparties.gc".');
-    expect($matched->expression)->toBe('0 4 * * *');
-    expect($matched->timezone)->toBe('Europe/Amsterdam');
+    expect($matched->expression)->toBe('0 0 * * *');
+    expect((string) $matched->command)->toContain('counterparties:collect-garbage');
     expect($matched->mutexName())->not->toBe('');
 });

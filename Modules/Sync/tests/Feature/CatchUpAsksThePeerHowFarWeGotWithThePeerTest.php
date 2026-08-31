@@ -9,13 +9,16 @@ use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Internal\Transport\PeerCatchUpWatermarks;
+use Psr\Log\NullLogger;
 
 uses(RefreshDatabase::class);
 
 // Device A writes at 10:00 and 10:10, device B writes at 10:01, and they meet.
 // A asked for "everything after my own last write" — 10:10 — so B's 10:01 op
-// was below the watermark and never sent. The watermark has to say how far
-// A has consumed of B's stream, which for a first meeting is: nothing.
+// was below the watermark and never sent. The watermark has to say how far A
+// has consumed of what B delivered, per AUTHOR: every fixture here therefore
+// keeps "delivered by" and "authored by" apart, because a peer relays what
+// other installs wrote and one scalar cannot describe two streams.
 
 function catchUpWatermarkUser(DatabaseManager $db): int
 {
@@ -61,6 +64,15 @@ function insertCatchUpOp(DatabaseManager $db, int $userId, string $deviceId, int
     ]);
 }
 
+function deliveredByPeer(int $userId, string $author, int $hlcL, int $hlcC): OpLogEntry
+{
+    return new OpLogEntry(
+        table: 'merchants', pk: 1, field: 'name', value: null,
+        hlcL: $hlcL, hlcC: $hlcC, deviceId: $author,
+        opType: OpType::Set, signature: 'sig', userId: $userId,
+    );
+}
+
 it('asks a peer for everything on a first meeting instead of only what postdates this device\'s own last write', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -77,35 +89,40 @@ it('asks a peer for everything on a first meeting instead of only what postdates
         'updated_at' => '2026-06-14 10:10:00',
     ]);
 
-    $request = (new PeerCatchUpExchanger($db, new TransportFramer))
+    $request = (new PeerCatchUpExchanger($db, new TransportFramer, new NullLogger))
         ->buildRequest($userId, 'device-a', 'device-b');
 
-    expect($request['hlc_l'])->toBe(0)
-        ->and($request['hlc_c'])->toBe(0)
+    expect($request['cursors'])->toBe([])
         ->and($request['device_id'])->toBe('device-a');
 });
 
-it('asks only for what postdates the last op this peer actually delivered', function (): void {
+it('asks only for what postdates the last op of THAT AUTHOR the peer actually delivered', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $userId = catchUpWatermarkUser($db);
 
     registerCatchUpDevice($db, $userId, 'device-a', 1);
     registerCatchUpDevice($db, $userId, 'device-b', 0);
+    registerCatchUpDevice($db, $userId, 'device-c', 0);
 
+    // device-b is the peer on the wire; device-c authored the op it relayed.
     (new PeerCatchUpWatermarks($db))->advance($userId, 'device-b', [
-        new OpLogEntry(
-            table: 'merchants', pk: 1, field: 'name', value: null,
-            hlcL: 1_000_060_000, hlcC: 4, deviceId: 'device-b',
-            opType: OpType::Set, signature: 'sig', userId: $userId,
-        ),
+        deliveredByPeer($userId, 'device-b', 1_000_060_000, 4),
+        deliveredByPeer($userId, 'device-c', 1_000_020_000, 1),
     ], '2026-06-14 10:01:00');
 
-    $request = (new PeerCatchUpExchanger($db, new TransportFramer))
+    $request = (new PeerCatchUpExchanger($db, new TransportFramer, new NullLogger))
         ->buildRequest($userId, 'device-a', 'device-b');
 
-    expect($request['hlc_l'])->toBe(1_000_060_000)
-        ->and($request['hlc_c'])->toBe(4);
+    $cursors = [];
+    foreach ($request['cursors'] as $cursor) {
+        $cursors[$cursor['device_id']] = [$cursor['hlc_l'], $cursor['hlc_c']];
+    }
+
+    expect($cursors)->toBe([
+        'device-b' => [1_000_060_000, 4],
+        'device-c' => [1_000_020_000, 1],
+    ]);
 });
 
 it('sends the op a peer wrote before this device\'s own last write once the watermark is per peer', function (): void {
@@ -120,11 +137,11 @@ it('sends the op a peer wrote before this device\'s own last write once the wate
     insertCatchUpOp($db, $userId, 'device-a', 1_000_600_000, '2');
     insertCatchUpOp($db, $userId, 'device-b', 1_000_060_000, '3');
 
-    $exchanger = new PeerCatchUpExchanger($db, new TransportFramer);
+    $exchanger = new PeerCatchUpExchanger($db, new TransportFramer, new NullLogger);
     $framer = new TransportFramer;
 
     $request = $exchanger->buildRequest($userId, 'device-b', 'device-a');
-    $frames = $exchanger->opsAfterWatermark($userId, $request['hlc_l'], $request['hlc_c']);
+    $frames = $exchanger->opsAfterWatermark($userId, $exchanger->cursorsFrom($request));
 
     $delivered = [];
     foreach ($frames as $frame) {
@@ -137,21 +154,34 @@ it('sends the op a peer wrote before this device\'s own last write once the wate
         ->and($delivered)->toContain(1_000_000_000);
 });
 
-it('never walks a peer watermark backwards when an older frame arrives late', function (): void {
+it('still asks for an author whose ops predate everything this peer has already delivered', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $userId = catchUpWatermarkUser($db);
 
+    registerCatchUpDevice($db, $userId, 'device-a', 1);
+    registerCatchUpDevice($db, $userId, 'device-b', 0);
+    registerCatchUpDevice($db, $userId, 'device-c', 0);
+
     $watermarks = new PeerCatchUpWatermarks($db);
 
-    $entryAt = static fn (int $hlcL): OpLogEntry => new OpLogEntry(
-        table: 'merchants', pk: 1, field: 'name', value: null,
-        hlcL: $hlcL, hlcC: 0, deviceId: 'device-b',
-        opType: OpType::Set, signature: 'sig', userId: $userId,
-    );
+    // The peer relayed device-c's op at 1000. Then device-c, offline until
+    // now, pushes an OLDER op into that same peer: walking one cursor over
+    // everything delivered would put it out of reach for good.
+    $watermarks->advance($userId, 'device-b', [deliveredByPeer($userId, 'device-c', 1000, 0)], '2026-06-14 10:00:00');
+    insertCatchUpOp($db, $userId, 'device-b', 900, '9');
 
-    $watermarks->advance($userId, 'device-b', [$entryAt(500)], '2026-06-14 10:00:00');
-    $watermarks->advance($userId, 'device-b', [$entryAt(100)], '2026-06-14 10:00:01');
+    $exchanger = new PeerCatchUpExchanger($db, new TransportFramer, new NullLogger);
+    $request = $exchanger->buildRequest($userId, 'device-a', 'device-b');
+    $frames = $exchanger->opsAfterWatermark($userId, $exchanger->cursorsFrom($request));
 
-    expect($watermarks->for($userId, 'device-b'))->toBe([500, 0]);
+    $framer = new TransportFramer;
+    $delivered = [];
+    foreach ($frames as $frame) {
+        foreach ($framer->decode($frame) as $entry) {
+            $delivered[] = $entry->hlcL;
+        }
+    }
+
+    expect($delivered)->toBe([900]);
 });

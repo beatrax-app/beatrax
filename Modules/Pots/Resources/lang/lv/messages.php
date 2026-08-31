@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Krājkases · Beatrax',
     'heading' => 'Krājkases',
-    'subtitle' => 'Virtuāli apakšatlikumi, kas kopā vienmēr veido jūsu reālo konta atlikumu.',
+    'subtitle' => 'Virtuāli apakšatlikumi, kas atdalīti no konta reālā atlikuma.',
     'add_pot' => 'Pievienot krājkasi',
 
     'pot_fallback' => 'krājkase',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Rādīt vēsturi ↓',
         'hide' => 'Slēpt vēsturi ↑',
+        'truncated' => 'Pēdējās kustības: :shown no :count',
     ],
 
     'movement' => [
@@ -64,10 +65,16 @@ return [
         'withdraw' => 'Izņemts',
         'moved_from' => 'Pārvietots no :name',
         'moved_to' => 'Pārvietots uz :name',
+        'unreadable' => 'Ierakstīts jaunākā Beatrax versijā',
+        'released_on_archive' => 'Atbrīvots pēc arhivēšanas',
     ],
 
     'archived' => [
-        'toggle' => 'Arhivētās krājkases (:count)',
+        // i18n-review: lv · archived.toggle — the zero segment is the genitive
+        // plural "krājkašu", and the singular is written indefinite against the
+        // definite "Arhivētās krājkases" the plural kept. One of the two is what
+        // Latvian readers expect for a count label; a native reader decides.
+        'toggle' => 'Arhivētu krājkašu (:count)|Arhivēta krājkase (:count)|Arhivētās krājkases (:count)',
         'badge' => 'Arhivēta',
     ],
 
@@ -119,12 +126,18 @@ return [
     'errors' => [
         'enter_name' => 'Ievadiet šīs krājkases nosaukumu.',
         'select_account' => 'Izvēlieties kontu šai krājkasei.',
-        'amount_exceeds_unallocated' => 'Summa pārsniedz nepiešķirto atlikumu.',
         'amount_exceeds_unallocated_available' => 'Summa pārsniedz nepiešķirto atlikumu (pieejams :amount).',
         'amount_exceeds_pot_balance' => 'Summa pārsniedz atlikumu krājkasē :name (pieejams :amount).',
         'generic' => 'Aploksni neizdevās saglabāt. Pārbaudiet laukus un mēģiniet vēlreiz.',
         'amount_invalid' => 'Ievadiet summu, kas lielāka par nulli.',
         'goal_already_linked' => 'Šim mērķim jau ir aktīva saistīta aploksne. Vispirms to arhivējiet.',
+        'account_cannot_hold_pots' => 'Krājkasei vajadzīgs konts, kurā glabājas nauda. Izvēlies citu kontu.',
+        'select_target_pot' => 'Izvēlieties krājkasi, uz kuru pārvietot.',
+        'move_target_missing' => 'Šī krājkase vairs nav pieejama. Izvēlieties citu.',
+        'move_same_pot' => 'Krājkase nevar pārvietot naudu pati sev. Izvēlieties citu krājkasi.',
+        'move_cross_account' => 'Krājkases apmainās ar naudu tikai viena konta ietvaros, un :name ir kontā :account.',
+        'pot_missing' => 'Šī krājkase vairs nav pieejama.',
+        'operation_failed' => 'Neizdevās. Nauda netika pārvietota — mēģiniet vēlreiz.',
     ],
 
     'toast' => [

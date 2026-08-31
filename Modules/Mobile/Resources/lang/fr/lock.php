@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Déverrouiller',
 
-    'digits_entered' => 'chiffres saisis',
+    'digits_entered' => ':count chiffre saisi|:count chiffres saisis',
     'pin_pad' => 'Pavé PIN',
     'digit' => 'Chiffre :digit',
     'backspace' => 'Retour arrière',

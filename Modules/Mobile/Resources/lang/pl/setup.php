@@ -12,6 +12,7 @@ return [
         'locked' => 'Odblokuj aplikację, aby kontynuować konfigurację.',
         'revoked' => 'To urządzenie zostało usunięte na drugim urządzeniu. Sparuj ponownie, aby wznowić synchronizację.',
     ],
+    'unlock_cta' => 'Odblokuj aplikację',
     'step' => [
         'connect' => 'Łączenie z drugim urządzeniem',
         'keys' => 'Odbieranie kluczy szyfrowania',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Odtwarzanie historii',
     ],
     'step_current' => 'bieżący krok',
-    'working' => [
-        'connect' => 'Nawiązywanie połączenia z drugim urządzeniem…',
-        'keys' => 'Odblokowywanie danych…',
-        'transfer' => 'Pobieranie historii…',
-        'rebuild' => 'Odtwarzanie historii — to może chwilę potrwać.',
-    ],
     'page_title' => 'Konfiguracja…',
     'resuming' => 'Wznawianie konfiguracji…',
     'setting_up' => 'Konfigurowanie tego urządzenia…',
     'progress_aria' => 'Postęp konfiguracji',
     'records' => ':count rekord|:count rekordy|:count rekordów',
-    'records_preparing' => 'Oczekiwanie na drugie urządzenie…',
 ];

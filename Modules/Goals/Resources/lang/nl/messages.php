@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Voeg bijdragen toe om een prognose te zien',
         'not_enough_history' => 'Nog te weinig historie voor een prognosedatum',
         'no_recent_contributions' => 'Geen recente inleg om een prognose op te baseren',
+        'too_far_to_date' => 'In dit tempo te ver weg voor een datum',
         'est' => 'Ca. :date ·',
         'projection_note' => '(prognose)',
         'projected' => 'Verwacht: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Meer acties voor :name',
         'mark_complete' => 'Markeren als voltooid',
+        'mark_complete_caption' => 'Markeren',
         'archive' => 'Archiveren',
         'restore' => 'Herstellen',
     ],
 
-    'archived_disclosure' => 'Gearchiveerde doelen (:count)',
+    'archived_disclosure' => 'Gearchiveerd doel (:count)|Gearchiveerde doelen (:count)',
 
     'form' => [
         'title_edit' => 'Doel bewerken',
@@ -96,8 +98,11 @@ return [
         'name' => 'Voer een naam voor je doel in.',
         'date' => 'Kies een streefdatum.',
         'date_invalid' => 'Kies een bestaande datum.',
+        'date_before_start' => 'Kies een datum op of na de startdatum van het doel.',
         'generic' => 'Dit doel kon niet worden opgeslagen. Controleer de velden en probeer het opnieuw.',
         'amount' => 'Voer een geldig bedrag groter dan nul in.',
         'pot_linked_category' => 'Deze pot is aan een categorie gekoppeld. Verwijder die koppeling eerst op de Potten-pagina.',
+        'pot_already_linked' => 'Dit potje spaart al voor een ander doel. Verwijder die koppeling daar eerst.',
+        'pot_missing' => 'Dat potje is niet meer beschikbaar. Kies een ander, of laat dit doel ongekoppeld.',
     ],
 ];

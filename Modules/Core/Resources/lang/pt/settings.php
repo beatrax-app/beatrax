@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Apresentação da moeda',
+        'heading' => 'Apresentação do montante',
         'label' => 'Vista predefinida na lista de transações',
-        'eur_only' => 'Apenas :code',
-        'original' => 'Moeda original',
+        'eur_only' => 'Montante liquidado',
+        'original' => 'Montante original',
         'help' => 'Podes na mesma alternar página a página a partir da lista de transações.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'São usadas as taxas incluídas na app. Nenhum dado sai deste dispositivo.',
         'fetch_aria' => 'Obter online as taxas de câmbio atuais',
         'refreshing' => 'A atualizar…',
-        'next_refresh' => 'Próxima atualização automática: diariamente às 09:00',
+        'next_refresh' => 'Atualização automática: uma vez por dia',
         'refresh_gave_up' => 'Não foi possível atualizar as taxas. Continuam a ser usadas as que já estão neste dispositivo.',
         'refresh_now' => 'Atualizar agora',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Período',
         'label' => 'O período começa no dia',
         'help' => 'Numerado de 1 a 28. A maioria dos utilizadores mantém 1 (mês de calendário). Usa 25 se o teu salário entra no dia 25 e consideras que o "teu mês" começa aí.',
+
+        'move_confirm' => 'Se o período começar no dia :day, todos os montantes dos envelopes são reorganizados e somados dois a dois onde dois meses se juntam num só. Voltar a mudar o dia não os separa de novo.',
+        'move_cancel' => 'Cancelar',
+        'move_apply' => 'Aplicar',
     ],
 
     'recurring' => [
         'heading' => 'Deteção de recorrências',
         'window_label' => 'Janela de deteção (meses)',
         'window_help' => 'Quantos meses de histórico analisar ao agrupar transações em padrões recorrentes.',
-        'income_label' => 'Rendimento mínimo (cêntimos)',
-        'income_help' => 'Os rendimentos abaixo deste limite não são agrupados automaticamente. Guardado em cêntimos — 200000 significa :example. Define 0 para desativar o limite.',
+        'income_label' => 'Rendimento mínimo (unidades menores)',
+        'income_help' => 'Os rendimentos abaixo deste limite não são agrupados automaticamente. Guardado em unidades menores — :minor significa :example. Define 0 para desativar o limite.',
     ],
 
     'drift' => [
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'A pasta de entrega está ativa. O Beatrax analisa <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> a cada 5 minutos à procura de ficheiros novos.',
         'inactive_html' => 'Quando está ativa, o Beatrax analisa <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> a cada 5 minutos à procura de ficheiros <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> e <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> e importa-os pelo mesmo pipeline de correspondência do assistente. Os ficheiros processados passam para <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> para nunca serem importados duas vezes.',
+        'active_phone_html' => 'A pasta de entrega está ativa. O Beatrax analisa <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> em segundo plano à procura de ficheiros novos. É o teu telemóvel que decide quando corre uma análise em segundo plano, por isso podem passar minutos ou horas.',
+        'inactive_phone_html' => 'Quando está ativa, o Beatrax analisa <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> em segundo plano à procura de ficheiros <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> e <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> e importa-os pelo mesmo pipeline de correspondência do assistente. É o teu telemóvel que decide quando corre uma análise em segundo plano, por isso podem passar minutos ou horas. Os ficheiros processados passam para <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> para nunca serem importados duas vezes.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Impostos',
-    'shared_merchant_heading' => 'Lista partilhada de comerciantes',
     'data_backup_heading' => 'Dados e cópia de segurança',
-    'install_heading' => 'Instalação',
 
     'about_updates' => [
         'heading' => 'Sobre as atualizações',
         'body' => 'O Beatrax atualiza-se sozinho depois de instalado. Depois de instalares a primeira versão, as versões seguintes chegam através de um aviso na app — não precisas de voltar ao GitHub. Se alguma atualização futura falhar, podes sempre transferir manualmente o instalador mais recente na página de lançamentos.',
+        'body_phone' => 'Aqui o Beatrax não se atualiza sozinho. As novas versões da app para telemóvel chegam pela App Store ou pelo Google Play, tal como as tuas outras apps. A página de lançamentos indica o que mudou em cada uma.',
         'open_releases' => 'Abrir a página de lançamentos →',
     ],
 
@@ -192,6 +197,7 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Não foi possível mover o mês de orçamento, por isso ficou onde estava.',
         'currency_required' => 'Escolhe uma moeda.',
         'window_months' => 'Escolhe entre 2 e 60 meses.',
         'threshold' => 'Escolhe um limite de 1%, 2%, 5%, 10%, 25% ou 50%.',

@@ -14,14 +14,20 @@ use Stringable;
 // on, so a rate gets its own type. Held as a decimal string end to end:
 // brick/math silently truncates a float argument to int, which is how a
 // stored 0.92917629 once rendered as 0.
-final class Rate implements Stringable
+final readonly class Rate implements Stringable
 {
     // The scale fx_rate_used is stored at. A derived pair is a ratio with no
     // terminating decimal — USD->EUR through a 1.08 base rate is 25/27 — so
     // every route into this type names the scale it lands on.
     public const int SCALE = 8;
 
-    private function __construct(private readonly BigDecimal $inner) {}
+    // What a rate reads at on a page: three decimals, or as many as it takes
+    // to keep three significant digits of a rate smaller than that.
+    public const int DISPLAY_SCALE = 3;
+
+    public const int DISPLAY_DIGITS = 3;
+
+    private function __construct(private BigDecimal $inner) {}
 
     // Null, never a guess, when the value is not a decimal — a rate column
     // read back as something unexpected must not abort the render.
@@ -47,8 +53,9 @@ final class Rate implements Stringable
     }
 
     // The effective rate between two legs of one transaction, e.g. a settled
-    // EUR amount over the native USD it paid. Both legs are integer minor
-    // units on one 1/100 scale, so their ratio is the major-unit ratio.
+    // EUR amount over the native JPY it paid. Divided in major units, because
+    // the legs need not share a minor-unit scale: 5800 euro cents over 10000
+    // yen is 0.58, a hundred times the rate the reader is owed.
     public static function between(Money $numerator, Money $denominator, int $scale = self::SCALE): ?self
     {
         if ($denominator->toMinor() === 0) {
@@ -57,8 +64,8 @@ final class Rate implements Stringable
 
         try {
             return new self(
-                BigDecimal::of((string) $numerator->toMinor())
-                    ->dividedBy(BigDecimal::of((string) $denominator->toMinor()), self::nonNegative($scale), RoundingMode::HalfUp),
+                BigDecimal::of($numerator->toMajorString())
+                    ->dividedBy(BigDecimal::of($denominator->toMajorString()), self::nonNegative($scale), RoundingMode::HalfUp),
             );
         } catch (MathException) {
             return null;
@@ -68,6 +75,30 @@ final class Rate implements Stringable
     public function toScale(int $scale): self
     {
         return new self($this->inner->toScale(self::nonNegative($scale), RoundingMode::HalfUp));
+    }
+
+    // Three decimals render a euro-per-dollar rate exactly and a euro-per-yen
+    // one as 0.006, three percent off the 0.0058 the card charged. The scale
+    // grows until DISPLAY_DIGITS significant ones survive it, and stops where
+    // the column's own scale does.
+    public function forDisplay(): string
+    {
+        [$whole, $fraction] = array_pad(
+            explode('.', (string) $this->inner->abs()->toScale(self::SCALE, RoundingMode::HalfUp)),
+            2,
+            '',
+        );
+
+        if ($whole !== '0') {
+            return (string) $this->toScale(self::DISPLAY_SCALE);
+        }
+
+        $leadingZeros = strlen($fraction) - strlen(ltrim($fraction, '0'));
+
+        return (string) $this->toScale(min(
+            self::SCALE,
+            max(self::DISPLAY_SCALE, $leadingZeros + self::DISPLAY_DIGITS),
+        ));
     }
 
     // brick/math reads a negative scale as "round to tens, hundreds", which is

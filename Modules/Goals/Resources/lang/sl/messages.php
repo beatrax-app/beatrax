@@ -27,7 +27,7 @@ return [
     ],
 
     'progress' => [
-        'aria' => ':name: dokončano :pct%',
+        'aria' => ':name: dokončano :pct %',
     ],
 
     'card' => [
@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Dodaj vplačila, da vidiš napoved',
         'not_enough_history' => 'Zaenkrat premalo zgodovine za napoved datuma',
         'no_recent_contributions' => 'Ni nedavnih vplačil, na katerih bi temeljila napoved',
+        'too_far_to_date' => 'Pri tem tempu predaleč za datum',
         'est' => 'Pred. :date ·',
         'projection_note' => '(napoved)',
         'projected' => 'Napoved: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Več dejanj za :name',
         'mark_complete' => 'Označi kot zaključeno',
+        'mark_complete_caption' => 'Označi',
         'archive' => 'Arhiviraj',
         'restore' => 'Obnovi',
     ],
 
-    'archived_disclosure' => 'Arhivirani cilji (:count)',
+    'archived_disclosure' => 'Arhiviran cilj (:count)|Arhivirana cilja (:count)|Arhivirani cilji (:count)|Arhiviranih ciljev (:count)',
 
     'form' => [
         'title_edit' => 'Uredi cilj',
@@ -96,8 +98,11 @@ return [
         'name' => 'Vnesi ime svojega cilja.',
         'date' => 'Izberi ciljni datum.',
         'date_invalid' => 'Izberite resničen datum.',
+        'date_before_start' => 'Izberi datum na dan začetka cilja ali pozneje.',
         'generic' => 'Cilja ni bilo mogoče shraniti. Preverite polja in poskusite znova.',
         'amount' => 'Vnesi veljaven znesek, večji od nič.',
         'pot_linked_category' => 'Ta hranilnik je povezan s kategorijo. Najprej odstrani to povezavo na strani Hranilniki.',
+        'pot_already_linked' => 'Ta hranilnik že financira drug cilj. Najprej tam odstrani povezavo.',
+        'pot_missing' => 'Ta hranilnik ni več na voljo. Izberi drugega ali pusti ta cilj brez povezave.',
     ],
 ];

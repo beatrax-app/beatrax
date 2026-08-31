@@ -11,9 +11,9 @@ use Modules\Ledger\Models\Account;
 // Lowest-id account wins when a user has several of one kind, so the
 // answer is deterministic. Cross-user isolation is the explicit
 // where('user_id', …): console and queued paths have no auth()->id().
-final class KnownCounterpartyIbanResolver implements ResolvesKnownCounterpartyIban
+final readonly class KnownCounterpartyIbanResolver implements ResolvesKnownCounterpartyIban
 {
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db) {}
 
     public function resolveAccount(string $iban, int $userId): ?Account
     {

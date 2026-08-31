@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Folosește cel puțin 12 caractere.',
     'error_wrong_code' => 'Numele de utilizator și codul de recuperare nu se potrivesc. Verifică atent codul — doar majuscule, fără zero, fără O, fără unu, fără L.',
+    'error_throttled' => 'Prea multe încercări — încearcă din nou peste :wait.',
 ];

@@ -29,6 +29,18 @@ final class PairingRowGuards
         );
     }
 
+    // The PEER side's device id: an initiator confirms toward the responder
+    // column and a responder toward the initiator column. The side arrives off
+    // the wire as a string, so a value that is neither reads as the responder —
+    // the same column it always did.
+    public static function peerDeviceIdOf(\stdClass $row, string $side): ?string
+    {
+        $peer = PairingSide::tryFrom($side) ?? PairingSide::Responder;
+        $peerDeviceId = $row->{$peer->peerPrefix().'device_id'};
+
+        return is_string($peerDeviceId) ? $peerDeviceId : null;
+    }
+
     // The same question asked without a row in hand — a resumed screen holds
     // the two ids but not the record they came from, and deriving the side a
     // second way is how the two derivations drift apart.

@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'serie',
 
+    'template' => [
+        'cancel' => 'Annulla :name',
+        'change_amount' => 'Cambia l\'importo di :name',
+    ],
+
     'summary' => [
         'cancel' => 'Annulla :name',
         'series_fallback' => 'serie n. :id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenario rinominato.',
         'mutation_added' => 'Variazione aggiunta.',
         'mutation_updated' => 'Variazione aggiornata.',
-        'mutation_removed' => 'Variazione rimossa. Annulla',
+        'mutation_removed' => 'Variazione rimossa.',
     ],
 
     'errors' => [
         'name_empty' => 'Il nome dello scenario non può essere vuoto.',
         'name_too_long' => 'Il nome dello scenario deve avere al massimo :max carattere.|Il nome dello scenario deve avere al massimo :max caratteri.',
         'name_taken' => 'Esiste già uno scenario con questo nome.',
+        'date_out_of_range' => 'Quella data è fuori da ogni orizzonte di previsione — da oggi a :days giorno in avanti — quindi lo scenario non cambierebbe nulla.|Quella data è fuori da ogni orizzonte di previsione — da oggi a :days giorni in avanti — quindi lo scenario non cambierebbe nulla.',
         'pick_kind_first' => 'Scegli prima un tipo di variazione.',
         'amount_positive' => "L'importo deve essere un numero positivo.",
+        'scenario_gone' => 'Questo scenario non esiste più: è stato eliminato altrove. Scegline un altro o creane uno nuovo.',
+        'mutation_gone' => "Questa modifica non esiste più: è stata rimossa altrove. Chiudi l'editor e riaggiungila se la vuoi ancora.",
     ],
 ];

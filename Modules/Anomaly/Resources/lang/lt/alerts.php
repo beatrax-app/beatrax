@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'bazinis :baseline → faktinis: :actual',
+    'charged' => 'nuskaityta :actual',
     'detected' => 'aptikta :date',
     'sensitivity' => 'jautrumas :percent iš 100',
 

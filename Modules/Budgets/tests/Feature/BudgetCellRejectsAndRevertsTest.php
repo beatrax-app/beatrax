@@ -46,7 +46,7 @@ it('leaves no trace of a rejected amount in the cell', function (): void {
 
     $component->assertDispatched('toast');
 
-    expect(DB::table('category_budgets')->where('user_id', $this->user->id)->count())->toBe(0);
+    expect(DB::table('envelope_assignments')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
 it('keeps an accepted amount in the cell', function (): void {

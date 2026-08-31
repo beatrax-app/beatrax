@@ -13,7 +13,7 @@ whether to consult the corpus and whether to broadcast suggestions.
 
 A single bank-statement line like `IDEAL BCA*BOLDKING-37261` is
 meaningless until a human knows what it is. The brand owners do not
-self-identify on their statement strings, so every diederik user faces
+self-identify on their statement strings, so every Beatrax user faces
 the same long-tail of unfamiliar charges. The community corpus closes
 that loop once per merchant: one user identifies "Boldking shaving
 subscription" and that mapping ships to every other user on the next
@@ -358,12 +358,13 @@ protecting the column from a forged Livewire call while the live-update
 mechanism itself waits on a future app update. Toggle state lives in the
 `users.community_settings` JSON column under the keys the `CommunitySetting`
 enum names, and is read back through `CommunitySettings`; a key spelled as a
-literal on the reading side is a toggle that silently stops working.
-`useSharedList` was written by the panel and read by nothing at all — the
-resolver consulted the corpus whichever way the switch stood, while the
-sibling toggle WAS honoured, so the panel looked like it worked. The community
-tail of `Import`'s `MerchantNameResolver` is the consumer that has to call
-`CommunitySettings::usesSharedList($userId)` before its three corpus arms.
+literal on the reading side is a toggle that silently stops working, which is
+what `ASettingKeyIsSpelledOnlyByItsEnumArchTest` pins. Both the enum and the
+reader are `Public/`, because a gate parked in `Internal/` is one the module
+boundary forbids every consumer from reaching. `useSharedList`'s only consumer
+is the community tail of `Import`'s `MerchantNameResolver`, which asks
+`CommunitySettings::usesSharedList($userId)` before its three corpus arms and
+answers `null` from all three when the switch is off.
 
 The per-row "Help others identify this" CTA lives in Categorization's
 triage view and is gated SERVER-SIDE on the same `offerToContribute` toggle:
@@ -414,13 +415,20 @@ real browser.
 
 ## Demo seeding
 
-`DemoCommunityMappingsSeeder` materialises three per-user override rows
-(`user_id = $primary->id`) for the primary demo user, deliberately choosing
-patterns that do NOT collide with the bundled global corpus — the
+`DemoCommunityMappingsSeeder` materialises three patterns twice: once in the
+shared tier (`user_id IS NULL`), which every lookup and the headline count on
+`/community` read, and once as a per-user override for the primary demo user,
+which is what "Your contributions" counts. Written to the user tier alone,
+they reached neither lookup nor count and the shared list headlined nought.
+The patterns deliberately do NOT collide with the bundled global corpus — the
 `(user_id, pattern)` UNIQUE lets a global row and a per-user row share the
 same pattern, and the seeder exercises that per-user-override branch of the
 resolver on purpose. It is idempotent via `updateOrCreate` keyed on
 `(user_id, pattern)`, matching the table's UNIQUE constraint.
+
+The bundled corpus reaches a demo install because `DemoUsersSeeder` dispatches
+`UserInstalled` — the event signup fires, and the one `SeedCommunityCorpus`
+hangs off. Nothing else in `demo:seed` loads the shared tier.
 
 ## NativePHP Shell binding
 

@@ -177,7 +177,8 @@ class OAuthSecretsRepository
             $row->save();
         } catch (Throwable $e) {
             throw new SecretsWriteFailed(
-                "OAuthSecretsRepository: failed to persist the {$row->provider} credential row ({$e->getMessage()})."
+                "OAuthSecretsRepository: failed to persist the {$row->provider} credential row ({$e->getMessage()}).",
+                previous: $e,
             );
         }
     }

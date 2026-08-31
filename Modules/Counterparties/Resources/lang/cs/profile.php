@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— u osobních kontaktů žádné řetězce financování',
     'tab_note_bank' => '— protistrana pro bankovní poplatky řetězce financování netvoří',
+    'tab_note_bank_institution' => '— u institucionálních protistran žádné řetězce financování',
     'tab_note_government' => '— u úřadů žádné řetězce financování',
 
     'recent_activity' => 'Nedávná aktivita',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Bankovní poplatky podle kategorie',
+        'activity_heading' => 'Aktivita podle kategorie',
         'no_fees' => 'U této protistrany zatím nejsou zaznamenané žádné poplatky.',
     ],
 

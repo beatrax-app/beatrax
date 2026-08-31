@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Adım :current / :total',
 
-    'step_dot_aria' => 'Adım :number / :total',
-
     'back' => 'Geri',
     'back_aria' => 'Geri — önceki kurulum adımına döner',
 

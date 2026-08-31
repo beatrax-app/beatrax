@@ -30,7 +30,7 @@ afterEach(function (): void {
 it('returns an empty list when the user has no categorised spend', function (): void {
     $period = $this->periods->current();
 
-    expect($this->query->for($this->user, $period))->toBe([]);
+    expect($this->query->for($this->user, $period)->rows)->toBe([]);
 });
 
 it('ranks categories by spend descending, unsplit transactions unchanged', function (): void {
@@ -53,7 +53,7 @@ it('ranks categories by spend descending, unsplit transactions unchanged', funct
     ]);
 
     $period = $this->periods->current();
-    $rows = $this->query->for($this->user, $period);
+    $rows = $this->query->for($this->user, $period)->rows;
 
     expect($rows)->toHaveCount(2);
     expect($rows[0]->name)->toBe('Groceries');
@@ -84,7 +84,7 @@ it('counts a split transaction\'s legs individually, never the parent', function
     ]);
 
     $period = $this->periods->current();
-    $rows = $this->query->for($this->user, $period);
+    $rows = $this->query->for($this->user, $period)->rows;
 
     $byName = [];
     foreach ($rows as $row) {
@@ -97,4 +97,63 @@ it('counts a split transaction\'s legs individually, never the parent', function
 
     $total = array_sum(array_map(fn ($row) => $row->percentageOfTotal, $rows));
     expect(abs($total - 1.0))->toBeLessThan(0.0001);
+});
+
+it('leaves a category out of the ranking once its refunds outrun its spending, and names what came back', function (): void {
+    /** @var Category $groceries */
+    $groceries = Category::create(['user_id' => $this->user->id, 'name' => 'Groceries', 'slug' => 'tcbp-refund-groceries', 'kind' => 'expense', 'display_order' => 1]);
+    /** @var Category $electronics */
+    $electronics = Category::create(['user_id' => $this->user->id, 'name' => 'Electronics', 'slug' => 'tcbp-refund-electronics', 'kind' => 'expense', 'display_order' => 2]);
+
+    $this->makeTransaction($this->user, $this->account, $this->run, [
+        'amount_minor' => -8000, 'posted_at' => '2026-05-03', 'booked_at' => '2026-05-03 12:00:00', 'category_id' => $groceries->id,
+    ]);
+    $this->makeTransaction($this->user, $this->account, $this->run, [
+        'amount_minor' => -5000, 'posted_at' => '2026-05-04', 'booked_at' => '2026-05-04 12:00:00', 'category_id' => $electronics->id,
+    ]);
+    $this->makeTransaction($this->user, $this->account, $this->run, [
+        'amount_minor' => 40000, 'type' => 'refund', 'posted_at' => '2026-05-05', 'booked_at' => '2026-05-05 12:00:00', 'category_id' => $electronics->id,
+    ]);
+
+    $top = $this->query->for($this->user, $this->periods->current());
+
+    expect($top->rows)->toHaveCount(1);
+    expect($top->rows[0]->name)->toBe('Groceries');
+    expect($top->rows[0]->spend->toMinor())->toBe(8000);
+    expect($top->rows[0]->percentageOfTotal)->toBe(1.0);
+    expect($top->refunded->toMinor())->toBe(35000);
+    expect($top->refundedCategoryCount)->toBe(1);
+    expect($top->isEmpty())->toBeFalse();
+});
+
+it('keeps the share under one when a refund shrinks the total it is cut from', function (): void {
+    /** @var Category $groceries */
+    $groceries = Category::create(['user_id' => $this->user->id, 'name' => 'Groceries', 'slug' => 'tcbp-share-groceries', 'kind' => 'expense', 'display_order' => 1]);
+    /** @var Category $electronics */
+    $electronics = Category::create(['user_id' => $this->user->id, 'name' => 'Electronics', 'slug' => 'tcbp-share-electronics', 'kind' => 'expense', 'display_order' => 2]);
+
+    $this->makeTransaction($this->user, $this->account, $this->run, [
+        'amount_minor' => -8000, 'posted_at' => '2026-05-03', 'booked_at' => '2026-05-03 12:00:00', 'category_id' => $groceries->id,
+    ]);
+    $this->makeTransaction($this->user, $this->account, $this->run, [
+        'amount_minor' => -5000, 'posted_at' => '2026-05-04', 'booked_at' => '2026-05-04 12:00:00', 'category_id' => $electronics->id,
+    ]);
+    $this->makeTransaction($this->user, $this->account, $this->run, [
+        'amount_minor' => 12500, 'type' => 'refund', 'posted_at' => '2026-05-05', 'booked_at' => '2026-05-05 12:00:00', 'category_id' => $electronics->id,
+    ]);
+
+    $top = $this->query->for($this->user, $this->periods->current());
+
+    expect($top->rows)->toHaveCount(1);
+    expect($top->rows[0]->percentageOfTotal)->toBe(1.0);
+    expect($top->rows[0]->barWidth())->toBe(100);
+    expect($top->refunded->toMinor())->toBe(7500);
+});
+
+it('answers an empty ranking with nothing returned when the period is genuinely empty', function (): void {
+    $top = $this->query->for($this->user, $this->periods->current());
+
+    expect($top->isEmpty())->toBeTrue();
+    expect($top->hasRefundedCategories())->toBeFalse();
+    expect($top->refunded->toMinor())->toBe(0);
 });

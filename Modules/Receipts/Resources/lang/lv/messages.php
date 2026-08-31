@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Ievelciet e-pasta ziņojumu (.eml) vai pastkastes arhīvu (.mbox). Sistēma atpazīst PayPal čekus un parāda tos kā pilnvērtīgus darījumus; neatpazītie sūtītāji paliek audita žurnālā šķirošanai.',
-    ],
-
     'conflict' => [
 
         'field' => [

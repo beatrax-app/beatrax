@@ -7,8 +7,10 @@ namespace Modules\EmailScan\Internal\Jobs;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Instant;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\MimeHeaderParser;
+use Modules\EmailScan\Internal\ParsedMessageHeaders;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Throwable;
 
@@ -29,6 +31,32 @@ final readonly class InboxScanContext
         return $this->userId;
     }
 
+    // The walk's own resume point, read back through the same row the state
+    // machine writes it to.
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function backfillProgress(): ?array
+    {
+        $raw = $this->connection->table('inboxes')->where('id', $this->inboxId)->value('backfill_progress');
+        if (! is_string($raw) || $raw === '') {
+            return null;
+        }
+
+        /** @var mixed $decoded */
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        $out = [];
+        foreach ($decoded as $key => $value) {
+            $out[(string) $key] = $value;
+        }
+
+        return $out;
+    }
+
     public function alreadyIndexed(string $messageId): bool
     {
         // Checked before any provider call: the delta walk, an extended
@@ -40,32 +68,49 @@ final readonly class InboxScanContext
             ->exists();
     }
 
+    // Split from storeParsedMessage so a caller that has to gate on the
+    // sender (Gmail's history walk carries no from-address) can read the
+    // headers once, without paying for a second parse of the same bytes.
+    public function parseHeaders(string $rawEml, ?DateTimeImmutable $providerInternalDate): ParsedMessageHeaders
+    {
+        // Microsoft stamps an internal date, Gmail leaves only the in-body
+        // Date: header; the Clock fallback keeps frozen test time honoured.
+        $fallbackDate = $providerInternalDate ?? $this->clock->now()->toDateTimeImmutable();
+
+        return $this->mime->parseHeadersWithFallbackDate($rawEml, $fallbackDate);
+    }
+
     public function storeFetchedMessage(
         string $messageId,
         string $rawEml,
         ?DateTimeImmutable $providerInternalDate,
     ): void {
-        // Microsoft stamps an internal date, Gmail leaves only the in-body
-        // Date: header; the Clock fallback keeps frozen test time honoured.
-        $fallbackDate = $providerInternalDate ?? $this->clock->now()->toDateTimeImmutable();
-        $headers = $this->mime->parseHeadersWithFallbackDate($rawEml, $fallbackDate);
+        $this->storeParsedMessage($messageId, $rawEml, $this->parseHeaders($rawEml, $providerInternalDate));
+    }
+
+    public function storeParsedMessage(string $messageId, string $rawEml, ParsedMessageHeaders $headers): void
+    {
+        // The header's offset is the sender's, and the provider's is UTC.
+        // The blob's Y/m folder and the DATETIME column are both read back at
+        // the app's offset, so the instant is moved into that frame once here.
+        $internalDate = Instant::inAppZone($headers->internalDate);
 
         $emlPath = $this->blobStore->pathFor(
             $this->userId,
             $this->inboxId,
-            $headers->internalDate,
+            $internalDate,
             $messageId,
         );
         $this->blobStore->put($emlPath, $rawEml);
 
         try {
-            $this->connection->transaction(function () use ($messageId, $headers): void {
+            $this->connection->transaction(function () use ($messageId, $headers, $internalDate): void {
                 $now = $this->clock->now()->toDateTimeString();
                 $this->connection->table('inbox_messages')->insertOrIgnore([
                     'user_id' => $this->userId,
                     'inbox_id' => $this->inboxId,
                     'provider_message_id' => $messageId,
-                    'internal_date' => $headers->internalDate->format('Y-m-d H:i:s'),
+                    'internal_date' => Instant::appLocal($internalDate),
                     'sender_email' => $headers->senderEmail,
                     'sender_name' => $headers->senderName,
                     'subject' => $headers->subject,

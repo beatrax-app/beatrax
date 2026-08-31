@@ -15,15 +15,15 @@ use Modules\Core\Public\Contracts\Clock;
 /**
  * @link ../../../.docs/features/chains/card-statement-lifecycle.md
  */
-final class CardStatementStateMachine
+final readonly class CardStatementStateMachine
 {
     use CoercesScalars;
 
-    private const SETTLED_TOLERANCE_MINOR = 1;
+    private const int SETTLED_TOLERANCE_MINOR = 1;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     public function applySettlement(int $statementId, int $deltaMinor, User $user): StatementSettlement

@@ -9,25 +9,25 @@ namespace Modules\Anomaly\Internal\Support;
  */
 final class RobustStatistics
 {
-    public const WINDOW_MONTHS = 12;
+    public const int WINDOW_MONTHS = 12;
 
-    public const THIN_HISTORY_CUTOFF = 5;
+    public const int THIN_HISTORY_CUTOFF = 5;
 
-    public const MAD_CONSISTENCY = 1.4826;
+    public const float MAD_CONSISTENCY = 1.4826;
 
-    public const CATEGORY_PERCENTILE = 95.0;
+    public const float CATEGORY_PERCENTILE = 95.0;
 
-    public const K_BASE = 3.0;
+    public const float K_BASE = 3.0;
 
-    public const K_SLOPE = 0.04;
+    public const float K_SLOPE = 0.04;
 
-    public const K_PIVOT = 50.0;
+    public const float K_PIVOT = 50.0;
 
-    public const K_MIN = 1.5;
+    public const float K_MIN = 1.5;
 
-    public const K_MAX = 4.0;
+    public const float K_MAX = 4.0;
 
-    public const MAD_FLOOR_MINOR = 50;
+    public const int MAD_FLOOR_MINOR = 50;
 
     /**
      * @param  list<int|float>  $sample
@@ -134,9 +134,12 @@ final class RobustStatistics
         return abs((float) $x) >= $threshold;
     }
 
-    public static function kForSensitivity(int $sensitivityPercent): float
+    // Takes the value object, not a bare percent: the clamp below is a
+    // rounding guard, and it was doing duty as a range check it cannot
+    // perform — 500 arrived as k = -15 and left as MAXIMUM sensitivity.
+    public static function kForSensitivity(AnomalySensitivity $sensitivity): float
     {
-        $k = self::K_BASE - self::K_SLOPE * ((float) $sensitivityPercent - self::K_PIVOT);
+        $k = self::K_BASE - self::K_SLOPE * ((float) $sensitivity->percent - self::K_PIVOT);
 
         return min(self::K_MAX, max(self::K_MIN, $k));
     }

@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Ta carte de crédit (ICS)',
+    'eyebrow' => 'Ta carte de crédit',
     'h1' => 'Récupère les PDF de tes relevés mensuels',
-    'lede' => 'Dépose tous tes relevés mensuels ICS en PDF — nous les regroupons en un seul aperçu.',
+    'lede' => 'Dépose tous tes relevés mensuels en PDF — nous les regroupons en un seul aperçu.',
 
     'format_group_aria' => 'ICS exporte uniquement en PDF',
+    'issuer_note' => 'ICS est pour l’instant le seul émetteur de cartes que nous savons lire, et uniquement son relevé en néerlandais. Si ta carte vient d’un autre émetteur, passe cette étape.',
     'got_it_as' => 'Reçu au format :',
     'badge_only_format' => 'seul format',
 

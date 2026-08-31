@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Sporiace obálky · Beatrax',
     'heading' => 'Sporiace obálky',
-    'subtitle' => 'Virtuálne časti zostatku, ktoré vždy dajú dokopy skutočný zostatok účtu.',
+    'subtitle' => 'Virtuálne časti zostatku vyčlenené zo skutočného zostatku účtu.',
     'add_pot' => 'Pridať obálku',
 
     'pot_fallback' => 'obálka',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Zobraziť históriu ↓',
         'hide' => 'Skryť históriu ↑',
+        'truncated' => 'Posledné pohyby: :shown z :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Výber',
         'moved_from' => 'Presunuté z obálky: :name',
         'moved_to' => 'Presunuté do obálky: :name',
+        'unreadable' => 'Zaznamenané novšou verziou aplikácie Beatrax',
+        'released_on_archive' => 'Uvoľnené pri archivácii',
     ],
 
     'archived' => [
-        'toggle' => 'Archivované obálky (:count)',
+        'toggle' => 'Archivovaná obálka (:count)|Archivované obálky (:count)|Archivovaných obálok (:count)',
         'badge' => 'Archivované',
     ],
 
@@ -119,12 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Zadaj názov tejto obálky.',
         'select_account' => 'Vyber účet pre túto obálku.',
-        'amount_exceeds_unallocated' => 'Suma presahuje nepriradený zostatok.',
         'amount_exceeds_unallocated_available' => 'Suma presahuje nepriradený zostatok (k dispozícii :amount).',
         'amount_exceeds_pot_balance' => 'Suma presahuje zostatok v obálke „:name“ (k dispozícii :amount).',
         'generic' => 'Obálku sa nepodarilo uložiť. Skontrolujte polia a skúste to znova.',
         'amount_invalid' => 'Zadajte sumu väčšiu ako nula.',
         'goal_already_linked' => 'Tento cieľ už má aktívnu prepojenú obálku. Najprv ju archivujte.',
+        'account_cannot_hold_pots' => 'Obálka potrebuje účet, na ktorom ležia peniaze. Vyber iný účet.',
+        'select_target_pot' => 'Vyber obálku, do ktorej presunúť.',
+        'move_target_missing' => 'Táto obálka už nie je dostupná. Vyber inú.',
+        'move_same_pot' => 'Obálka nemôže presunúť peniaze sama do seba. Vyber inú obálku.',
+        'move_cross_account' => 'Obálky si vymieňajú peniaze len v rámci jedného účtu a :name je na účte :account.',
+        'pot_missing' => 'Táto obálka už nie je dostupná.',
+        'operation_failed' => 'Neprešlo to. Žiadne peniaze sa nepresunuli — skús to znova.',
     ],
 
     'toast' => [

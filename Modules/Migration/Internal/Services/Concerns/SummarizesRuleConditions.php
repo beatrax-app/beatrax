@@ -4,29 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Services\Concerns;
 
-use JsonException;
-
 trait SummarizesRuleConditions
 {
-    private const MAX_JSON_BYTES = 65536;
-
-    private const MAX_JSON_DEPTH = 20;
-
-    private function boundedJsonDecode(string $json): mixed
-    {
-        // The blob is untrusted source content, so decoding is bounded by size
-        // and depth and returns null rather than throwing.
-        if ($json === '' || strlen($json) > self::MAX_JSON_BYTES) {
-            return null;
-        }
-
-        try {
-            return json_decode($json, true, self::MAX_JSON_DEPTH, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            return null;
-        }
-    }
-
     private function summarizeConditions(mixed $decoded): string
     {
         $parts = [];

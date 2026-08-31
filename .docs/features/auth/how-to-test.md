@@ -26,10 +26,19 @@ Practical recipes for exercising the `Auth` module in isolation.
   contract end-to-end (`SignupActionTest`); the recovery-code
   authenticator's match-and-stamp atomicity
   (`RecoveryCodeAuthenticatorTest`); the forced-password-change
-  middleware's exempt-list (`ForcePasswordChangeMiddlewareTest`); the
+  middleware's exempt-list (`ForcePasswordChangeMiddlewareTest`) and the
+  exempt page's shell over the wire
+  (`AForcedPasswordChangeExemptsAPageNotItsWholeShellTest`); that turning
+  the app lock off drops the OS vault's own copy of the data key
+  (`TheOsVaultKeptTheKeyTheLockWasToldToForgetTest`); the
   three console commands (`ResetPasswordCommandTest`,
   `GrantDevCommandTest`, `RegenerateRecoveryCodesCommandTest`); the
-  cross-user 404 posture (`CrossUserIsolationTest`).
+  cross-user 404 posture (`CrossUserIsolationTest`); that a remember-me
+  recaller lands on the lock screen
+  (`ARememberedLoginComesBackLockedTest`); that every password write
+  severs the recaller too (`APasswordChangeSeversTheRememberCookieTest`);
+  and that a guest cannot flood the alert banner or the CPU through
+  `/reset-password` (`AFailedRecoveryCodeIsNotAnAlertFloodTest`).
 - **Setup:** every feature test uses `RefreshDatabase`. Tests that need a
   signed-in user typically run `SignupAction` first (to materialise the
   owner) and then sign in via Livewire's `actingAs($user)` helper.
@@ -74,6 +83,11 @@ composer test
   exempt list. The exempt list is intentionally narrow (`change-password`
   and `logout`); the fix is to make the destination handle the forced-
   change posture itself, not to widen the exemption.
+- **A component on `/change-password` stops answering for a flagged user**
+  — that is the guard working. The Livewire half of the exempt list is a
+  component allow-list, not a route one; anything added to the shared
+  layout that must keep running there has to be named in it, and only
+  something that reads nothing and writes nothing should be.
 - **Recovery-code typed in mixed case fails to match** — confirm the
   normaliser is being called before the hash compare. Pattern:
   `$normalised = $normalizer->normalize($input)` then hash. A test that
@@ -94,10 +108,6 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `Auth` module.
-
-## Behavioral contracts
-
 - **Signup is closed once the owner exists.** `FirstUserOnlyMiddleware`
   returns 404 from `/signup` the moment `users` has any row, and the
   inside-transaction count in `SignupAction` re-checks the same invariant
@@ -112,6 +122,13 @@ The behavioural contract for the `Auth` module.
   returned by `SignupAction` and stashed in the session under
   `auth.signup.recovery_codes_plain` so `RecoveryCodesDisplay` can show
   them once and then forget. (`tests/Feature/RecoveryCodesDisplayTest.php`)
+- **The plaintext does not outlive the screen that shows it.** Neither
+  ceremony has an exit the server sees, so `ForgetsSpentRecoveryCodes`
+  ends it from the outside: the first page load that does not renew the
+  codes drops them, whatever route it was for. Proved over real HTTP
+  requests, because a `Livewire::test()` round trip never reaches the
+  middleware.
+  (`Modules/Mobile/tests/Feature/TheRecoveryCodesDoNotOutliveTheScreenThatShowsThemTest.php`)
 - **A recovery code is consumed atomically on first match.**
   `RecoveryCodeAuthenticator` performs the match-and-stamp in one update;
   reusing the same code raises a mismatch. The constant-time mismatch
@@ -120,9 +137,30 @@ The behavioural contract for the `Auth` module.
   `tests/Feature/ResetPasswordPageTest.php`)
 - **The owner can reset the partner; the partner cannot reset the owner.**
   Every owner-only surface (`ManageUserPage`, `AddUserPage`,
-  `AddUserAction`) returns 404 to a non-developer caller — never 403, so
-  the surface stays hidden from probes. (`tests/Feature/AddUserPageTest.php`,
-  `tests/Feature/ManageUserPageTest.php`)
+  `AddUserAction`) returns 404 to a caller who is not the **owner** —
+  never 403, so the surface stays hidden from probes. The gate is
+  `AccountOwner`, lowest `users.id`, and never `is_developer`, which
+  `/settings` lets any user set on themselves; the fixtures are therefore
+  developers, so a swap to a developer check turns them red.
+  (`tests/Feature/AddUserPageTest.php`,
+  `tests/Feature/ManageUserPageTest.php`,
+  `tests/Feature/OnlyTheOwnerManagesTheHouseholdTest.php`)
+- **A login that proves no data key starts locked.** Every `Login` event
+  for a lock-enabled account locks the session; the password paths unlock
+  a moment later, and the remember-me recaller — which reaches neither
+  `LoginAction` nor Fortify's pipeline — does not.
+  (`tests/Feature/ARememberedLoginComesBackLockedTest.php`)
+- **A password change severs the recaller, not only the sessions rows.**
+  All four password-writing paths go through `SessionRevoker`, which
+  rotates `users.remember_token` alongside deleting the rows. Deleting the
+  rows alone leaves the cookie authenticating into a fresh session.
+  (`tests/Feature/APasswordChangeSeversTheRememberCookieTest.php`)
+- **A guest cannot flood the banner or the CPU through `/reset-password`.**
+  A failed attempt against a known username raises one
+  `auth.recovery_code_failed` row and no more while it is unacknowledged,
+  and five attempts a minute per username is the cap on the ten bcrypt-12
+  hashes each one costs.
+  (`tests/Feature/AFailedRecoveryCodeIsNotAnAlertFloodTest.php`)
 - **Owner-driven password resets force the partner to choose their own
   password on next sign-in.** `ManageUserPage::setPartnerPassword` writes
   `force_password_change_at_next_login = true`; the recovery-code-driven
@@ -134,6 +172,18 @@ The behavioural contract for the `Auth` module.
   `/change-password` page and `/logout` so a flagged user can always
   either fulfil the change or sign out.
   (`tests/Feature/ForcePasswordChangeMiddlewareTest.php`)
+- **The exemption covers that page's form, not that page's shell.**
+  `/change-password` renders inside `layouts.app`, which mounts nine other
+  Livewire components; on a Livewire update the exemption is read off the
+  component the payload names, so a flagged account cannot drive the
+  ledger search endpoint or the rule form from the one screen it is
+  allowed on.
+  (`tests/Feature/AForcedPasswordChangeExemptsAPageNotItsWholeShellTest.php`)
+- **No wrap of the data key outlives the lock that minted it.** Turning
+  the app lock off clears the OS cold-start vault as well as the row's own
+  two wraps, and turning it back on re-offers native unlock rather than
+  finding a stale enrolment in the way.
+  (`tests/Feature/TheOsVaultKeptTheKeyTheLockWasToldToForgetTest.php`)
 - **Cross-user reads / writes return 404, not 403.** A logged-in user
   probing any URL keyed by another user's id receives 404; the existence
   of partner accounts is never revealed.

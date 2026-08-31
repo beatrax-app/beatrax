@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importálj néhány kivonatot (bank, PayPal, kártya), és a feloldó itt automatikusan megjeleníti a számlák közti láncokat.',
 
     'no_counterparty' => '(nincs partner)',
-    'open_from_row' => 'Forrássor megnyitása',
-    'open_to_row' => 'Célsor megnyitása',
     'leg_count' => ':count fizetés|:count fizetés',
+    'legs_more' => '+ még :count',
     'state_aria' => 'Állapot: :state',
+
+    'state' => [
+        'candidate' => 'Jelölt',
+        'confirmed' => 'Megerősítve',
+        'rejected' => 'Elutasítva',
+    ],
 
     'kind' => [
         'paypal_funding' => 'PayPal-fedezet',

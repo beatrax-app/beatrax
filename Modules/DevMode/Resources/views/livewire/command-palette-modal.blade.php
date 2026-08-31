@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Search\Public\Enums\SearchEntityKind')
 @php
     /**
      * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, keywords: list<string>}> $registry
@@ -33,7 +34,9 @@
      *   - Server-backed Transactions + entity sections, gated on
      *     $searchAvailable (null-safe: palette works when Search unbound).
      *   - Token autocomplete overlay — srch-token-suggest CSS class.
-     *   - "See all N results →" row navigates to /transactions?q={query}.
+     *   - The "See all" row navigates to /transactions?q={query}. Its count is
+     *     known only in the browser, so the arms and the reader locale's
+     *     selection table are handed to Alpine by Lang::arms().
      *   - Recent transaction-search entries persisted via pickEntry path.
      *   - Footer kbd hint copy from the Copywriting Contract.
      */
@@ -42,7 +45,7 @@
 
 <div
     wire:ignore.self
-    x-data="palette({{ Js::from($registry) }}, {{ Js::from($recent) }})"
+    x-data="palette({{ Js::from($registry) }}, {{ Js::from($recent) }}, {{ Js::from(Lang::arms('dev::palette.see_all', 'dev::palette.results')) }})"
     x-on:palette:open.window="open()"
     x-on:palette:opened.window="open()"
     x-on:keydown.window="onKey($event)"
@@ -83,6 +86,7 @@
                          was a key the device does not have. --}}
                     <x-core::emoji-action
                         :label="Lang::get('dev::palette.close_aria')"
+                        :caption="Lang::get('dev::palette.close_caption')"
                         class="md:hidden order-last"
                         x-on:click="close()"
                         data-testid="palette-close"
@@ -157,6 +161,15 @@
                     <div class="flex-1 p-2 overflow-y-auto">
                         {{-- Server-backed sections — only rendered when Search module is wired and query >= 2 chars --}}
                         @if($searchAvailable)
+                        @php
+                            $counterpartyKind = SearchEntityKind::Counterparty->value;
+                            $categoryKind = SearchEntityKind::Category->value;
+                            $groupedKinds = [
+                                SearchEntityKind::Goal->value,
+                                SearchEntityKind::Pot->value,
+                                SearchEntityKind::Recurring->value,
+                            ];
+                        @endphp
                         <template x-if="query.length >= 2">
                             <div>
                                 {{-- Section 1: Transactions (UI-SPEC #6) --}}
@@ -217,24 +230,24 @@
                                             x-on:click="seeAllResults()"
                                         >
                                             <span class="w-5 text-center text-slate-600 dark:text-slate-400 shrink-0" aria-hidden="true">→</span>
-                                            <span class="text-sm" x-text="@js(Lang::get('dev::palette.see_all_prefix')) + serverTotalCount + @js(Lang::get('dev::palette.see_all_suffix'))"></span>
+                                            <span class="text-sm" x-text="$plural(arms, 'dev::palette.see_all', serverTotalCount)"></span>
                                         </button>
                                     </div>
                                 </template>
 
                                 <template x-if="serverTransactionHits.length === 0 && !serverLoading">
                                     <div class="px-4 py-2 text-sm text-slate-600 dark:text-slate-400"
-                                         x-text="@js(Lang::get('dev::palette.no_transactions_prefix')) + query + @js(Lang::get('dev::palette.no_transactions_suffix'))">
+                                         x-text="$line(@js(Lang::get('dev::palette.no_transactions')), { query })">
                                     </div>
                                 </template>
 
                                 {{-- Section 2: Counterparties --}}
-                                <template x-if="serverEntityHits.filter(e => e.type === 'counterparty').length > 0">
+                                <template x-if="serverEntityHits.filter(e => e.type === @js($counterpartyKind)).length > 0">
                                     <div>
                                         <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
                                             {{ Lang::get('dev::palette.section_counterparties') }}
                                         </div>
-                                        <template x-for="entity in serverEntityHits.filter(e => e.type === 'counterparty').slice(0, 3)" :key="entity.id + '-' + entity.type">
+                                        <template x-for="entity in serverEntityHits.filter(e => e.type === @js($counterpartyKind)).slice(0, 3)" :key="entity.id + '-' + entity.type">
                                             <button
                                                 type="button"
                                                 data-palette-row
@@ -250,12 +263,12 @@
                                 </template>
 
                                 {{-- Section 3: Categories --}}
-                                <template x-if="serverEntityHits.filter(e => e.type === 'category').length > 0">
+                                <template x-if="serverEntityHits.filter(e => e.type === @js($categoryKind)).length > 0">
                                     <div>
                                         <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
                                             {{ Lang::get('dev::palette.section_categories') }}
                                         </div>
-                                        <template x-for="entity in serverEntityHits.filter(e => e.type === 'category').slice(0, 3)" :key="entity.id + '-' + entity.type">
+                                        <template x-for="entity in serverEntityHits.filter(e => e.type === @js($categoryKind)).slice(0, 3)" :key="entity.id + '-' + entity.type">
                                             <button
                                                 type="button"
                                                 data-palette-row
@@ -271,12 +284,12 @@
                                 </template>
 
                                 {{-- Section 4: Goals / Pots / Recurring --}}
-                                <template x-if="serverEntityHits.filter(e => ['goal','pot','recurring'].includes(e.type)).length > 0">
+                                <template x-if="serverEntityHits.filter(e => @js($groupedKinds).includes(e.type)).length > 0">
                                     <div>
                                         <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
                                             {{ Lang::get('dev::palette.section_goals_recurring') }}
                                         </div>
-                                        <template x-for="entity in serverEntityHits.filter(e => ['goal','pot','recurring'].includes(e.type)).slice(0, 3)" :key="entity.id + '-' + entity.type">
+                                        <template x-for="entity in serverEntityHits.filter(e => @js($groupedKinds).includes(e.type)).slice(0, 3)" :key="entity.id + '-' + entity.type">
                                             <button
                                                 type="button"
                                                 data-palette-row
@@ -357,7 +370,7 @@
                     @if($searchAvailable)
                     <span class="hidden sm:inline text-slate-600 dark:text-slate-400">{{ Lang::get('dev::palette.foot_try') }} <span class="font-mono text-[10px]">account:</span> · <span class="font-mono text-[10px]">after:</span> · <span class="font-mono text-[10px]">amount:&gt;50</span></span>
                     @endif
-                    <span class="ml-auto" x-text="results.length + @js(Lang::get('dev::palette.results_suffix'))"></span>
+                    <span class="ml-auto" x-text="$plural(arms, 'dev::palette.results', results.length)"></span>
                 </div>
             </div>
         </div>

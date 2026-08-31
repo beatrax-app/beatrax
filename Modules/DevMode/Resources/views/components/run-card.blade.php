@@ -26,14 +26,14 @@
 
     $statusVariant = match ($status) {
         'running' => 'warn',
-        'done' => $exitCode === 0 ? 'ok' : 'fail',
+        'done' => 'ok',
         'cancelled' => 'muted',
         'failed' => 'fail',
         default => 'muted',
     };
     $statusLabel = match ($status) {
         'running' => Lang::get('dev::runner.status.running'),
-        'done' => $exitCode === 0 ? Lang::get('dev::runner.status.done') : Lang::get('dev::runner.status.failed'),
+        'done' => Lang::get('dev::runner.status.done'),
         'cancelled' => Lang::get('dev::runner.status.cancelled'),
         'failed' => Lang::get('dev::runner.status.failed'),
         default => ucfirst($status),

@@ -12,7 +12,6 @@ use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\ColdStartEnrollmentService;
@@ -24,7 +23,7 @@ uses(RefreshDatabase::class);
 // here and only the orchestration around it is exercised.
 function fakeEnclaveVault(): BiometricKeyVault
 {
-    return new class(app(BiometricKeyBlobCodec::class), app(CurrentUser::class), app(LoggerInterface::class)) extends BiometricKeyVault
+    return new class(app(BiometricKeyBlobCodec::class), app(LoggerInterface::class)) extends BiometricKeyVault
     {
         public bool $enrolled = false;
 
@@ -44,14 +43,14 @@ function fakeEnclaveVault(): BiometricKeyVault
             return 'Darwin';
         }
 
-        public function enroll(string $dataKey): bool
+        public function enroll(int $userId, string $dataKey): bool
         {
             $this->enrolled = true;
 
             return true;
         }
 
-        public function clear(): void
+        public function clear(int $userId): void
         {
             $this->cleared = true;
         }

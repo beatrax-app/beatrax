@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Henüz gizemli bir şey yok. Birkaç hesap ekstresi içe aktar, Beatrax tanımlayamadığı satırları burada gösterir.',
 
+    'showing_capped' => 'İlk :shown / :total gösteriliyor.',
+
     'footer' => "Paylaşılan liste, Beatrax ile birlikte gelen bir YAML dosyasıdır. Bir öneri göndermek tarayıcında GitHub'ı açar; bunun dışında hiçbir şey bu cihazdan çıkmaz.",
 
     'card' => [

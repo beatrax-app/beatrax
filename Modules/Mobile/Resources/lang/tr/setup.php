@@ -12,6 +12,7 @@ return [
         'locked' => 'Kuruluma devam etmek için uygulamanın kilidini aç.',
         'revoked' => 'Bu cihaz diğer cihazınızdan kaldırıldı. Eşitlemeye devam etmek için yeniden eşleştirin.',
     ],
+    'unlock_cta' => 'Uygulamanın kilidini aç',
     'step' => [
         'connect' => 'Diğer cihazına bağlanılıyor',
         'keys' => 'Şifreleme anahtarları alınıyor',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Geçmişin yeniden oluşturuluyor',
     ],
     'step_current' => 'geçerli adım',
-    'working' => [
-        'connect' => 'Diğer cihazına ulaşılıyor…',
-        'keys' => 'Verilerinin kilidi açılıyor…',
-        'transfer' => 'Geçmişin isteniyor…',
-        'rebuild' => 'Geçmişin yeniden oluşturuluyor — bu bir dakika sürebilir.',
-    ],
     'page_title' => 'Kuruluyor…',
     'resuming' => 'Kuruluma devam ediliyor…',
     'setting_up' => 'Bu cihaz kuruluyor…',
     'progress_aria' => 'Kurulum ilerlemesi',
     'records' => ':count kayıt',
-    'records_preparing' => 'Diğer cihaz bekleniyor…',
 ];

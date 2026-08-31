@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Appareil supprimé',
     'dismiss_peer' => 'Masquer cet appareil',
+    'dismiss_peer_caption' => 'Masquer',
     'dismiss_stale' => 'Effacer les appareils qui ne sont plus appairés',
     'not_synced_yet' => 'Pas encore synchronisé',
     'error' => 'Erreur de synchronisation sur un ou plusieurs appareils',

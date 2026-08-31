@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 return [
     'help_paypal' => 'PayPalin vienneissä ei ole saldorivejä, joten aseta tämä käsin.',
-    'help_asn' => 'Ankkuroitu automaattisesti viimeisimmästä tiliotteestasi. Korvaa vain, jos tiedät todellisen saldon poikkeavan.',
     'help_default' => 'Korvaa vain, jos tiedät nykyisen todellisen saldon poikkeavan siitä, minkä Beatrax laskee.',
 
     'legend' => 'Ennusteen alkusaldo tilille :name',
     'opening_label' => 'Alkusaldo',
-    'opening_placeholder' => 'esim. 1.250,00',
+    'opening_placeholder' => 'esim. :amount',
     'as_of_label' => 'Alkusaldon päivämäärä',
     'as_of_help' => 'Päivä, jolta yllä oleva luku pitää paikkansa.',
 
     'divergence' => 'Tämä poikkeaa yli :threshold siitä saldosta, jonka Beatrax laskee tuoduista tapahtumistasi. Oletko varma?',
+    'computed_is' => 'Beatrax laskee :amount.',
     'use_beatrax' => 'Käytä Beatraxin lukua',
     'use_mine' => 'Käytä omaa lukuani',
 

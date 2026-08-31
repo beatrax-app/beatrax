@@ -29,6 +29,7 @@ use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
@@ -264,7 +265,7 @@ it('keeps transaction-substrate row counts unchanged across the full scenario li
 
     $mutationIds['change'] = ($add)($scenarioId, $user, 'change_series_amount', new ChangeSeriesAmountPayload(
         seriesId: $seriesIds[1],
-        newAmountMinor: -2500,
+        newAmountMinor: 2500,
     ));
     sisAssertCounts($db, $user->id, $baseline, 'after change_series_amount add');
 
@@ -417,4 +418,54 @@ it('ensures ScenarioQuery is the only Public-API path to the mutations table', f
     expect($mutations)->toHaveCount(1);
     expect($mutations[0]->payload)->toBeInstanceOf(CancelSeriesPayload::class);
     expect($mutations[0]->payload->seriesId)->toBe($seed['seriesIds'][0]);
+});
+
+// Row counts are only half the boundary. "Absent from every other read"
+// includes the notification inbox, and a what-if dip used to raise a real
+// shortfall notice there — a row written on a scenario's behalf, in a table
+// the substrate check never looks at.
+it('keeps a scenario out of the notification inbox, not just out of the substrate', function (): void {
+    Bus::fake();
+    CarbonImmutable::setTestNow('2026-05-01 12:00:00');
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $seed = sisSeedSubstrate($db);
+    /** @var User $user */
+    $user = $seed['user'];
+
+    $create = $this->app->make(CreateScenario::class);
+    $scenarioId = ($create)($user, 'SIS inbox scenario');
+
+    $add = $this->app->make(AddScenarioMutation::class);
+    ($add)($scenarioId, $user, 'add_one_off', new AddOneOffPayload(
+        date: '2026-05-20',
+        amountMinor: -999999,
+        currency: 'EUR',
+        direction: 'expense',
+    ));
+
+    Bus::swap($this->app->make(Dispatcher::class));
+
+    /** @var SuppressionEvaluator $suppression */
+    $suppression = $this->app->make(SuppressionEvaluator::class);
+    $suppression->suppressDelivery(function () use ($user, $scenarioId): void {
+        Bus::dispatchSync(new ProjectForecastJob(userId: $user->id, scenarioId: $scenarioId, horizonDays: 30));
+    });
+
+    // The window itself is the scenario's own output and belongs to it, which
+    // is what makes the empty inbox below a real assertion rather than a run
+    // that simply found nothing.
+    expect($db->connection()->table('forecast_shortfall_windows')
+        ->where('user_id', $user->id)
+        ->where('scenario_id', $scenarioId)
+        ->count())->toBeGreaterThanOrEqual(1);
+
+    // Counted whole: this run raises nothing but shortfall events, and the
+    // trigger vocabulary is Notifications' own Internal surface.
+    expect($db->connection()->table('notifications')
+        ->where('user_id', $user->id)
+        ->count())->toBe(0);
+
+    CarbonImmutable::setTestNow();
 });

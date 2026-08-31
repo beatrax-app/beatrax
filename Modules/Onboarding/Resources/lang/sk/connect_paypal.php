@@ -6,7 +6,7 @@ return [
     'eyebrow' => 'Tvoj účet PayPal',
     'h1' => 'Prepoj svoj účet PayPal',
 
-    'lede_html' => 'Vlož export s podrobnosťami transakcií z PayPalu — v holandskom účte PayPal je uvedený ako <em lang="nl">Rapport Transactiegegevens</em>. Výkaz zostatku (<span lang="nl">Saldorapport</span>) nestačí — potrebujeme údaje o jednotlivých udalostiach.',
+    'lede_html' => 'Vlož export pohybov z PayPalu — jeden riadok na transakciu, nie súhrn zostatku. PayPal pomenúva svoje výkazy v jazyku tvojho účtu a zatiaľ čítame holandskú dvojicu: <em lang="nl">Rapport Transactiegegevens</em>, nie <span lang="nl">Saldorapport</span>. Ak ti vyjde v inom jazyku, pred stiahnutím prepni PayPal do holandčiny.',
 
     'format_group_aria' => 'PayPal exportuje len do CSV',
     'got_it_as' => 'Mám ho ako:',
@@ -20,7 +20,7 @@ return [
         'download_label' => 'Stiahni ako CSV',
     ],
 
-    'drop_lead' => 'Sem vlož CSV s podrobnosťami transakcií',
+    'drop_lead' => 'Vlož sem svoj export pohybov',
     'browse_file' => 'alebo vyhľadaj súbor',
 
     'file_ready' => '· ✓ pripravené',
@@ -29,9 +29,9 @@ return [
     'continue' => 'Pokračovať →',
 
     'errors' => [
-        'required' => 'Najprv vlož do poľa CSV súbor PayPal Rapport Transactiegegevens.',
-        'max' => 'Tento súbor je príliš veľký. Exporty PayPal Rapport Transactiegegevens majú zvyčajne výrazne menej ako 10 MB.',
-        'extensions' => 'Tento súbor nevyzerá ako CSV z PayPalu. Stiahni si z PayPalu report Rapport Transactiegegevens (nie výkaz zostatku Saldorapport) vo formáte CSV.',
+        'required' => 'Najprv vlož do poľa export pohybov z PayPalu.',
+        'max' => 'Tento súbor je príliš veľký. Export pohybov z PayPalu máva výrazne menej ako 10 MB.',
+        'extensions' => 'Tento súbor nevyzerá ako CSV z PayPalu. Stiahni si export pohybov — jeden riadok na transakciu, nie súhrn zostatku — vo formáte CSV.',
         'unreadable' => 'Tento súbor sa nepodarilo prečítať. Úplná chyba je v /dev/logs.',
     ],
 ];

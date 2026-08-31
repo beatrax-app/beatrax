@@ -10,6 +10,8 @@ use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\NetWorthSeriesQuery;
+use Modules\Reports\Internal\Aggregation\ReportAggregator;
+use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
@@ -128,4 +130,62 @@ it('fx_exclusion_never_1to1: an unconvertible account is excluded and counted, n
     // A 1:1 leak would have added the raw JPY minor amount into the EUR total.
     $wouldBeOneToOneTotal = 20_000 + 500_000;
     expect($point->totalMinor)->not->toBe($wouldBeOneToOneTotal);
+});
+
+// One unconvertible account in one unconvertible currency makes "1 currency" and
+// "1 account" the same number, so the counter and the sentence agreed by
+// coincidence. Four accounts sharing one currency tell them apart.
+it('names the currency a transaction report could not convert, and does not count accounts', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = fxeUser();
+
+    $eurAccount = fxeAccount($user, 'EUR');
+    fxeTransaction($db, $user, $eurAccount, ['amount_minor' => 20_000]);
+
+    foreach (range(1, 4) as $ignored) {
+        fxeTransaction($db, $user, fxeAccount($user, 'ARS'), ['amount_minor' => 57_500]);
+    }
+
+    $result = app(ReportAggregator::class)->run($user, new ReportDefinition(
+        metric: 'income',
+        dimension: 'account',
+        periodPreset: 'custom',
+        granularity: ReportGranularity::Monthly,
+        currencyMode: 'base',
+        viz: 'table',
+        customFrom: '2026-04-01',
+        customTo: '2026-04-30',
+    ));
+
+    expect($result->totalMinor)->toBe(20_000)
+        ->and($result->excludedCurrencies)->toBe(['ARS'])
+        // Not four, and not one either: this path has no account to count.
+        ->and($result->excludedAccountIds)->toBe([]);
+});
+
+it('counts accounts on the balance path, where four of them really are four', function (): void {
+    $user = fxeUser();
+
+    fxeAccount($user, 'EUR');
+    $arsAccounts = [];
+    foreach (range(1, 4) as $ignored) {
+        $arsAccounts[] = fxeAccount($user, 'ARS')->id;
+    }
+
+    $result = app(ReportAggregator::class)->run($user, new ReportDefinition(
+        metric: 'net_worth',
+        dimension: 'category',
+        periodPreset: 'custom',
+        granularity: ReportGranularity::Monthly,
+        currencyMode: 'base',
+        viz: 'table',
+        customFrom: '2026-04-01',
+        customTo: '2026-04-30',
+    ));
+
+    sort($arsAccounts);
+
+    expect($result->excludedAccountIds)->toBe($arsAccounts)
+        ->and($result->excludedCurrencies)->toBe([]);
 });

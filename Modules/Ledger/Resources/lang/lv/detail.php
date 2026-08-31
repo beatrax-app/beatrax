@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Darījums',
     'heading' => 'Darījums',
+    'booked_on' => 'Iegrāmatots :date',
 
     'counterparty' => 'Darījuma partneris',
     'description' => 'Apraksts',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Piezīme (neobligāti)',
         'tax_deductible' => 'Attaisnotie izdevumi',
         'remove_leg_aria' => 'Noņemt šo kategoriju',
+        'remove_leg_caption' => 'Noņemt',
         'add_category' => '+ Pievienot kategoriju',
         'soft_cap' => ':count no ~20 kategorijām — apsveriet mazo summu apvienošanu.',
         'remaining_zero' => 'Atlikums :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Dzēst darījumu',
         'help' => 'Neatgriezeniski dzēš šo darījumu. Šo darbību nevar atsaukt.',
         'button' => 'Dzēst',
-        'confirm_prompt' => 'Vai tiešām?',
+        'confirm_prompt' => 'Dzēst šo darījumu? Līdzi pazūd piezīme, sadalījums un nodokļu birkas.',
         'confirm' => 'Jā, dzēst',
         'cancel' => 'Atcelt',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Skatīt ķēdi',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Saskaņots un bloķēts',
+        'help' => 'Pabeigts saskaņojums bloķēja šo darījumu. Tā kategorija, piezīme, sadalījums un nodokļu birkas paliek nemainīgas, līdz to atbloķējat.',
+        'button' => 'Atbloķēt rediģēšanai',
+        'confirm_question' => 'Atbloķēt šo darījumu rediģēšanai? Tajā nekas nemainās, un nākamais pabeigtais saskaņojums to bloķēs atkal.',
+        'cancel' => 'Atstāt bloķētu',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Šis darījums ir saskaņots. Atceliet saskaņojumu, lai veiktu izmaiņas.',
         'reclassified_pair_removed' => 'Pārklasificēts uz :type — pārojums noņemts',
         'reclassified' => 'Pārklasificēts uz :type',
         'note_saved' => 'Piezīme saglabāta',
         'unreconciled' => 'Saskaņojums atcelts — varat atkal rediģēt šo darījumu.',
+        'note_too_long' => 'Piezīme ir ne vairāk kā :max rakstzīmju.|Piezīme ir ne vairāk kā :max rakstzīme.|Piezīme ir ne vairāk kā :max rakstzīmes.',
         'counterparty_updated' => 'Darījuma partneris atjaunināts',
         'goal_attributed' => 'Ieskaitīts šajā mērķī',
         'goal_attribution_removed' => 'Vairs netiek ieskaitīts šajā mērķī',

@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'sarja',
 
+    'template' => [
+        'cancel' => 'Irtisano :name',
+        'change_amount' => 'Muuta summaa: :name',
+    ],
+
     'summary' => [
         'cancel' => 'Irtisano :name',
         'series_fallback' => 'sarja #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Skenaario nimetty uudelleen.',
         'mutation_added' => 'Muutos lisätty.',
         'mutation_updated' => 'Muutos päivitetty.',
-        'mutation_removed' => 'Muutos poistettu. Kumoa',
+        'mutation_removed' => 'Muutos poistettu.',
     ],
 
     'errors' => [
         'name_empty' => 'Skenaarion nimi ei voi olla tyhjä.',
         'name_too_long' => 'Skenaarion nimessä saa olla enintään :max merkki.|Skenaarion nimessä saa olla enintään :max merkkiä.',
         'name_taken' => 'Samanniminen skenaario on jo olemassa.',
+        'date_out_of_range' => 'Päivämäärä on jokaisen ennustejakson ulkopuolella — tästä päivästä :days päivä eteenpäin — joten skenaario ei muuttaisi mitään.|Päivämäärä on jokaisen ennustejakson ulkopuolella — tästä päivästä :days päivää eteenpäin — joten skenaario ei muuttaisi mitään.',
         'pick_kind_first' => 'Valitse ensin muutoksen tyyppi.',
         'amount_positive' => 'Summan on oltava positiivinen luku.',
+        'scenario_gone' => 'Tätä skenaariota ei enää ole — se poistettiin muualla. Valitse toinen skenaario tai luo uusi.',
+        'mutation_gone' => 'Tätä muutosta ei enää ole — se poistettiin muualla. Sulje muokkain ja lisää se uudelleen, jos haluat sen yhä.',
     ],
 ];

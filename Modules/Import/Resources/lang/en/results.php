@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Upload another statement',
 
+    'chain' => [
+        'heading' => 'Resolving chains…',
+        'pending' => 'Queued. The chain resolver will start shortly.',
+        'running' => 'Linking funding chains and decomposing statement settlements.',
+    ],
+
     'issues' => [
         'row' => 'Row :row: :reason',
         'file_stopped' => 'The file could not be read past row :row. Nothing after that row was imported.',

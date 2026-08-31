@@ -12,17 +12,17 @@ use Modules\Core\Public\Support\SecretFileMode;
 use Modules\EmailScan\Public\Exceptions\EmlBlobWriteException;
 use Throwable;
 
-final class EmlBlobStore
+final readonly class EmlBlobStore
 {
     // Covers Gmail's short hex and Graph's URL-safe base64, whose
     // ImmutableId values carry `=` padding.
-    private const MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._%=+\-]{1,512}$/';
+    private const string MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._%=+\-]{1,512}$/';
 
-    private const MAX_PARENT_HOPS = 32;
+    private const int MAX_PARENT_HOPS = 32;
 
     public function __construct(
-        private readonly Filesystem $files,
-        private readonly UserDataPathService $paths,
+        private Filesystem $files,
+        private UserDataPathService $paths,
     ) {}
 
     public function pathFor(
@@ -126,6 +126,7 @@ final class EmlBlobStore
             }
             throw new EmlBlobWriteException(
                 "EmlBlobStore: unexpected failure writing {$absolutePath}.",
+                previous: $e,
             );
         } finally {
             umask($prevUmask);

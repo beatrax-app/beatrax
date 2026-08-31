@@ -12,11 +12,17 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Pots\Internal\Dto\StandingAmountRefusal;
 use Modules\Pots\Internal\Enums\PotLinkType;
+use Modules\Pots\Internal\Exceptions\AccountCannotHoldPotsException;
+use Modules\Pots\Public\Dto\PotRow;
+use Modules\Pots\Public\Exceptions\CrossAccountTransferException;
 use Modules\Pots\Public\Exceptions\GoalAlreadyLinkedException;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
 use Modules\Pots\Public\Exceptions\InvalidPotAmountException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
+use Modules\Pots\Public\Exceptions\SelfTransferException;
+use Modules\Pots\Public\Exceptions\TargetPotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 use Modules\Pots\Public\Services\PotWriter;
 
@@ -54,10 +60,20 @@ final class PotsPage extends Component
 
     public string $errorAmount = '';
 
+    // Its own slot rather than $errorAmount: the move's target refusals are not
+    // about the figure, and the re-test below clears $errorAmount the moment a
+    // readable amount is typed — which wiped a standing "pick another pot".
+    public string $errorTarget = '';
+
     // The ceiling the refusal quoted, so a corrected amount can be re-tested
     // against the same claim instead of dismissing it. Null where the refusal
     // was about the amount parsing at all rather than about a balance.
     public ?int $errorAmountLimitMinor = null;
+
+    // The ceiling's denomination, because the re-test parses the corrected
+    // figure to compare it: a yen pot's "13840" read at a hundredth was
+    // 100x the ceiling, so the refusal never cleared however it was retyped.
+    public string $errorAmountLimitCurrency = '';
 
     public bool $showArchived = false;
 
@@ -79,12 +95,20 @@ final class PotsPage extends Component
             return;
         }
 
+        if ($property === 'transferTargetPotId') {
+            $this->errorTarget = '';
+
+            return;
+        }
+
         if ($property !== 'amount' && $property !== 'operationAmount') {
             return;
         }
 
         $typed = $property === 'amount' ? $this->amount : $this->operationAmount;
-        if (! $this->amountStillRefused($typed, blankIsAllowed: $property === 'amount', writer: $writer)) {
+        $refusal = new StandingAmountRefusal($this->errorAmount, $this->errorAmountLimitMinor, $this->errorAmountLimitCurrency);
+
+        if (! $refusal->stillRefuses($typed, blankIsAllowed: $property === 'amount', writer: $writer)) {
             $this->clearAmountError();
         }
     }
@@ -123,17 +147,32 @@ final class PotsPage extends Component
                 $goalId,
                 null,
             );
-        } catch (InsufficientUnallocatedException|\InvalidArgumentException $e) {
-            if ($e instanceof InsufficientUnallocatedException) {
-                $this->errorAmount = Lang::get('pots::messages.errors.amount_exceeds_unallocated');
-                $this->errorAmountLimitMinor = max(0, $query->currentUnallocatedForAccount($accountId, $currentUser->user()));
-            } elseif ($e instanceof GoalAlreadyLinkedException) {
-                $this->errorName = Lang::get('pots::messages.errors.goal_already_linked');
-            } else {
-                // Every other message here is written for a developer, and in
-                // one language only.
-                $this->errorName = Lang::get('pots::messages.errors.generic');
-            }
+        } catch (InsufficientUnallocatedException) {
+            // The same refusal fundPot() gives, with the same figure in it: one
+            // rule may not read as two different messages.
+            $this->refuseOverUnallocated($accountId, $currentUser, $query);
+
+            return;
+        } catch (InvalidPotAmountException) {
+            // The initial amount has a box of its own, and its refusal used to
+            // arrive under the name as "check the fields".
+            $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
+
+            return;
+        } catch (GoalAlreadyLinkedException) {
+            // Above the InvalidArgumentException arm on purpose: it extends it,
+            // so a wider catch first would swallow every one of these.
+            $this->errorName = Lang::get('pots::messages.errors.goal_already_linked');
+
+            return;
+        } catch (AccountCannotHoldPotsException) {
+            $this->errorName = Lang::get('pots::messages.errors.account_cannot_hold_pots');
+
+            return;
+        } catch (\InvalidArgumentException) {
+            // Every other message here is written for a developer, and in one
+            // language only.
+            $this->errorName = Lang::get('pots::messages.errors.generic');
 
             return;
         }
@@ -141,6 +180,18 @@ final class PotsPage extends Component
         $this->resetForm();
         $this->dispatch('modal-close', name: 'pot-form');
         $this->toast(Lang::get('pots::messages.toast.pot_created'));
+    }
+
+    private function refuseOverUnallocated(int $accountId, CurrentUser $currentUser, PotBalanceQuery $query): void
+    {
+        $reconciliation = $query->reconciliationForAccount($accountId, $currentUser->user());
+
+        $this->errorAmountLimitMinor = max(0, $reconciliation->unallocatedMinor);
+        $this->errorAmountLimitCurrency = $reconciliation->currency;
+        $this->errorAmount = Lang::get(
+            'pots::messages.errors.amount_exceeds_unallocated_available',
+            ['amount' => Money::ofMinor($this->errorAmountLimitMinor, $reconciliation->currency)->format()],
+        );
     }
 
     public function openEdit(int $potId, PotBalanceQuery $query, CurrentUser $currentUser): void
@@ -240,21 +291,18 @@ final class PotsPage extends Component
             );
         } catch (InsufficientUnallocatedException) {
             $user = $currentUser->user();
-            $pot = null;
-            foreach ($query->forUser($user) as $p) {
-                if ($p->id === $this->operationPotId) {
-                    $pot = $p;
-                    break;
-                }
-            }
+            $pot = PotRow::withId($query->forUser($user), $this->operationPotId);
             $unallocated = 0;
             $currency = $baseCurrency->code();
             if ($pot !== null) {
-                $rec = $query->reconciliationForAccount($pot->accountId, $user);
-                $unallocated = $rec->unallocatedMinor;
+                // The pot's currency decides which line the ceiling is read
+                // from; quoting the account's line under the pot's sign is how
+                // a EUR 105.714 ceiling was refused as if it were ¥15.000.
                 $currency = $pot->currency;
+                $unallocated = $query->reconciliationForAccount($pot->accountId, $user, $currency)->unallocatedMinor;
             }
             $this->errorAmountLimitMinor = max(0, $unallocated);
+            $this->errorAmountLimitCurrency = $currency;
             $availableFormatted = Money::ofMinor(
                 $this->errorAmountLimitMinor,
                 $currency
@@ -269,8 +317,14 @@ final class PotsPage extends Component
             $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
 
             return;
+        } catch (PotNotFoundException) {
+            $this->abandonOperation('pot-fund', Lang::get('pots::messages.errors.pot_missing'));
+
+            return;
         } catch (\InvalidArgumentException) {
-            $this->errorAmount = Lang::get('pots::messages.errors.generic');
+            // Nothing else reaches here: fund() distinguishes every refusal it
+            // has. A backstop with no cause to name says only what it knows.
+            $this->toast(Lang::get('pots::messages.errors.operation_failed'));
 
             return;
         }
@@ -291,13 +345,7 @@ final class PotsPage extends Component
         $memo = trim($this->operationMemo) !== '' ? $this->operationMemo : null;
 
         $user = $currentUser->user();
-        $pot = null;
-        foreach ($query->forUser($user) as $p) {
-            if ($p->id === $this->operationPotId) {
-                $pot = $p;
-                break;
-            }
-        }
+        $pot = PotRow::withId($query->forUser($user), $this->operationPotId);
 
         try {
             $writer->withdraw(
@@ -316,6 +364,7 @@ final class PotsPage extends Component
                 $currency = $pot->currency;
             }
             $this->errorAmountLimitMinor = max(0, $balance);
+            $this->errorAmountLimitCurrency = $currency;
             $availableFormatted = Money::ofMinor(
                 $this->errorAmountLimitMinor,
                 $currency
@@ -330,8 +379,14 @@ final class PotsPage extends Component
             $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
 
             return;
+        } catch (PotNotFoundException) {
+            $this->abandonOperation('pot-withdraw', Lang::get('pots::messages.errors.pot_missing'));
+
+            return;
         } catch (\InvalidArgumentException) {
-            $this->errorAmount = Lang::get('pots::messages.errors.generic');
+            // Nothing else reaches here: withdraw() distinguishes every refusal
+            // it has. A backstop with no cause to name says only what it knows.
+            $this->toast(Lang::get('pots::messages.errors.operation_failed'));
 
             return;
         }
@@ -349,16 +404,20 @@ final class PotsPage extends Component
             return;
         }
 
+        // The select's placeholder is '', which casts to pot id 0. Left to the
+        // writer that reads as a pot that vanished, and nobody had picked one.
+        if (trim($this->transferTargetPotId) === '') {
+            $this->errorTarget = Lang::get('pots::messages.errors.select_target_pot');
+
+            return;
+        }
+
         $memo = trim($this->operationMemo) !== '' ? $this->operationMemo : null;
 
         $user = $currentUser->user();
-        $sourcePot = null;
-        foreach ($query->forUser($user) as $p) {
-            if ($p->id === $this->operationPotId) {
-                $sourcePot = $p;
-                break;
-            }
-        }
+        $rows = $query->forUser($user);
+        $sourcePot = PotRow::withId($rows, $this->operationPotId);
+        $targetPot = PotRow::withId($rows, (int) $this->transferTargetPotId);
 
         try {
             $writer->transfer(
@@ -378,6 +437,7 @@ final class PotsPage extends Component
                 $currency = $sourcePot->currency;
             }
             $this->errorAmountLimitMinor = max(0, $balance);
+            $this->errorAmountLimitCurrency = $currency;
             $availableFormatted = Money::ofMinor(
                 $this->errorAmountLimitMinor,
                 $currency
@@ -392,8 +452,30 @@ final class PotsPage extends Component
             $this->errorAmount = Lang::get('pots::messages.errors.amount_invalid');
 
             return;
-        } catch (\InvalidArgumentException) {
-            $this->errorAmount = Lang::get('pots::messages.errors.generic');
+        } catch (SelfTransferException) {
+            $this->errorTarget = Lang::get('pots::messages.errors.move_same_pot');
+
+            return;
+        } catch (CrossAccountTransferException) {
+            // Every cross-currency move is one of these, and the reader was
+            // sent back to fields that were all correct.
+            $this->errorTarget = $targetPot instanceof PotRow
+                ? Lang::get('pots::messages.errors.move_cross_account', [
+                    'name' => $targetPot->name,
+                    'account' => $targetPot->accountName,
+                ])
+                : Lang::get('pots::messages.errors.operation_failed');
+
+            return;
+        } catch (TargetPotNotFoundException) {
+            // Above its parent: the source pot is the card the reader opened
+            // and the target is the one they picked, and only one can be fixed
+            // from this sheet.
+            $this->errorTarget = Lang::get('pots::messages.errors.move_target_missing');
+
+            return;
+        } catch (PotNotFoundException) {
+            $this->abandonOperation('pot-move', Lang::get('pots::messages.errors.pot_missing'));
 
             return;
         }
@@ -480,9 +562,12 @@ final class PotsPage extends Component
             $groups[$pot->accountId][] = $pot;
         }
 
+        // One row per currency the account denominates or holds pots in, so a
+        // relabelled account reconciles all of them instead of printing one
+        // line's figure under another line's sign.
         $reconciliations = [];
         foreach (array_keys($groups) as $accountId) {
-            $reconciliations[$accountId] = $query->reconciliationForAccount($accountId, $user);
+            $reconciliations[$accountId] = $query->reconciliationsForAccount($accountId, $user);
         }
 
         $archived = $query->archivedForUser($user);
@@ -506,9 +591,20 @@ final class PotsPage extends Component
         return $view;
     }
 
+    // The pot the reader is operating on is gone, so the sheet is about
+    // nothing: it closes rather than standing open over a ghost. Which of "no
+    // such pot" and "not yours" it was stays unsaid — see PotNotFoundException.
+    private function abandonOperation(string $modal, string $message): void
+    {
+        $this->resetOperationModal();
+        $this->dispatch('modal-close', name: $modal);
+        $this->toast($message);
+    }
+
     private function clearErrors(): void
     {
         $this->errorName = '';
+        $this->errorTarget = '';
         $this->clearAmountError();
     }
 
@@ -516,22 +612,7 @@ final class PotsPage extends Component
     {
         $this->errorAmount = '';
         $this->errorAmountLimitMinor = null;
-    }
-
-    private function amountStillRefused(string $typed, bool $blankIsAllowed, PotWriter $writer): bool
-    {
-        if ($this->errorAmount === '') {
-            return false;
-        }
-
-        if (trim($typed) === '') {
-            return ! $blankIsAllowed;
-        }
-
-        $minor = $writer->parseAmount($typed);
-
-        return $minor === null
-            || ($this->errorAmountLimitMinor !== null && $minor > $this->errorAmountLimitMinor);
+        $this->errorAmountLimitCurrency = '';
     }
 
     private function resetForm(): void

@@ -24,4 +24,14 @@ final class SafeExceptionContext
 
         return ['reason' => $e::class, 'sqlstate' => $sqlstate];
     }
+
+    // The unqualified name, for a line a reader sees rather than a log. Same
+    // guarantee as describe(): it names the failure, never the row.
+    public static function shortName(Throwable $e): string
+    {
+        $fqcn = $e::class;
+        $lastSeparator = strrpos($fqcn, '\\');
+
+        return $lastSeparator === false ? $fqcn : substr($fqcn, $lastSeparator + 1);
+    }
 }

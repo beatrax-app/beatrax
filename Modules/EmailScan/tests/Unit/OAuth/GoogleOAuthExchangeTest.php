@@ -144,3 +144,40 @@ it('reads the account email from a standalone access token', function (): void {
 
     expect($provider->readEmail('access-token-abc'))->toBe('someone@example.com');
 });
+
+// The consent screen lets the user untick a scope. Recording what was ASKED
+// FOR leaves an inbox the app believes can read Gmail; the first scan then
+// 403s into a generic error rather than the actionable needs_reauth.
+it('records the scope the provider granted, not the one that was requested', function (): void {
+    $provider = googleProviderReturning([
+        googleTokenResponse(['scope' => 'https://www.googleapis.com/auth/userinfo.email']),
+        googleUserinfoResponse(),
+    ]);
+
+    $result = $provider->exchangeAuthorizationCode('auth-code-123', $this->redirect);
+
+    expect($result->scope)->toBe('https://www.googleapis.com/auth/userinfo.email');
+});
+
+it('falls back to the requested scope when the token response omits one', function (): void {
+    $provider = googleProviderReturning([
+        googleTokenResponse(),
+        googleUserinfoResponse(),
+    ]);
+
+    $result = $provider->exchangeAuthorizationCode('auth-code-123', $this->redirect);
+
+    expect($result->scope)->toBe(
+        'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email',
+    );
+});
+
+it('carries the granted scope through a refresh too', function (): void {
+    $provider = googleProviderReturning([
+        googleTokenResponse(['scope' => 'https://www.googleapis.com/auth/gmail.readonly']),
+    ]);
+
+    $result = $provider->refreshAccessToken('refresh-token-xyz');
+
+    expect($result->scope)->toBe('https://www.googleapis.com/auth/gmail.readonly');
+});

@@ -64,7 +64,6 @@ it('returns per-series contributions unchanged when viewByFunder is false', func
         lowMinor: -1100,
         highMinor: -900,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: 101,
         accountId: $asn->id,
     );
@@ -74,12 +73,11 @@ it('returns per-series contributions unchanged when viewByFunder is false', func
         lowMinor: -2200,
         highMinor: -1800,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: 202,
         accountId: $asn->id,
     );
 
-    $routed = $this->router->route([$a, $b], $this->user, viewByFunder: false);
+    $routed = $this->router->route([$a, $b], $this->user);
 
     expect($routed)->toHaveCount(2);
     expect($routed[0]->seriesId)->toBe(101);
@@ -95,7 +93,6 @@ it('aggregates per-day per-account contributions when viewByFunder is true', fun
         lowMinor: -1100,
         highMinor: -900,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: 101,
         accountId: $asn->id,
     );
@@ -105,12 +102,11 @@ it('aggregates per-day per-account contributions when viewByFunder is true', fun
         lowMinor: -2200,
         highMinor: -1800,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: 202,
         accountId: $asn->id,
     );
 
-    $routed = $this->router->route([$a, $b], $this->user, viewByFunder: true);
+    $routed = $this->router->collapseByFunder($this->router->route([$a, $b], $this->user));
 
     // Single (accountId, date) bucket — point/low/high are signed sums.
     expect($routed)->toHaveCount(1);
@@ -130,7 +126,6 @@ it('keeps contributions on distinct days as separate entries even when viewByFun
         lowMinor: -1100,
         highMinor: -900,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: 101,
         accountId: $asn->id,
     );
@@ -140,12 +135,11 @@ it('keeps contributions on distinct days as separate entries even when viewByFun
         lowMinor: -2200,
         highMinor: -1800,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: 101,
         accountId: $asn->id,
     );
 
-    $routed = $this->router->route([$a, $b], $this->user, viewByFunder: true);
+    $routed = $this->router->collapseByFunder($this->router->route([$a, $b], $this->user));
 
     expect($routed)->toHaveCount(2);
 });
@@ -237,7 +231,10 @@ it('collapses chain-resolved per-series contributions onto the funder ASN accoun
         'kind' => 'paypal_funding',
         'state' => 'confirmed',
         'confidence' => 1.0,
-        'resolver' => 'user',
+        // 'auto' is what the resolvers write and the only value
+        // ChainLinkQuery::confirmedFundersForSeries routes on; nothing
+        // in the app ever writes 'user'.
+        'resolver' => 'auto',
         'evidence' => json_encode(['signature_hash' => 'paypal-netflix']),
     ]);
 
@@ -247,12 +244,11 @@ it('collapses chain-resolved per-series contributions onto the funder ASN accoun
         lowMinor: -12600,
         highMinor: -11400,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: $series->id,
         accountId: $paypal->id, // Pre-routing, on the original account.
     );
 
-    $routed = $this->router->route([$contribA], $this->user, viewByFunder: true);
+    $routed = $this->router->collapseByFunder($this->router->route([$contribA], $this->user));
 
     // The collapse runs after the chain rewrite, so the entry it produces is
     // already on the ASN funder rather than on PayPal.
@@ -260,4 +256,41 @@ it('collapses chain-resolved per-series contributions onto the funder ASN accoun
     expect($routed[0]->accountId)->toBe($asn->id);
     expect($routed[0]->seriesId)->toBe(0);
     expect($routed[0]->pointMinor)->toBe(-12000);
+});
+
+it('keeps two currencies on one account and day apart instead of summing them under the first one', function (): void {
+    $asn = vbftAccount($this->user, 'bank', 'asn');
+
+    $euro = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-15'),
+        pointMinor: -1000,
+        lowMinor: -1100,
+        highMinor: -900,
+        currency: 'EUR',
+        seriesId: 101,
+        accountId: $asn->id,
+    );
+    $dollar = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-15'),
+        pointMinor: -2000,
+        lowMinor: -2200,
+        highMinor: -1800,
+        currency: 'USD',
+        seriesId: 202,
+        accountId: $asn->id,
+    );
+
+    $collapsed = $this->router->collapseByFunder([$euro, $dollar]);
+
+    // -3000 under 'EUR' is a total in a currency the money was never in: the
+    // dollars have not been through a rate yet, and only the fold applies one.
+    expect($collapsed)->toHaveCount(2);
+
+    $byCurrency = [];
+    foreach ($collapsed as $c) {
+        $byCurrency[$c->currency] = $c;
+    }
+    expect(array_keys($byCurrency))->toEqualCanonicalizing(['EUR', 'USD']);
+    expect($byCurrency['EUR']->pointMinor)->toBe(-1000);
+    expect($byCurrency['USD']->pointMinor)->toBe(-2000);
 });

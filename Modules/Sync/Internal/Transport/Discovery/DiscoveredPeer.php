@@ -13,10 +13,10 @@ final readonly class DiscoveredPeer
      * @param  DiscoveryMode  $discoveryMode  How this peer's address was learned.
      */
     public function __construct(
-        public readonly string $deviceId,
-        public readonly string $host,
-        public readonly int $port,
-        public readonly DiscoveryMode $discoveryMode,
+        public string $deviceId,
+        public string $host,
+        public int $port,
+        public DiscoveryMode $discoveryMode,
     ) {}
 
     // Intentionally emits plaintext ws:// (not wss://): the Noise IK/XX

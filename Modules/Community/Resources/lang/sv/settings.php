@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'Om den delade listan',
     'about_body' => 'En medföljande YAML-fil som kopplar kryptiska koder från kontoutdrag till begripliga handlarnamn. Slår du på den läser Beatrax listan när du importerar; när du skickar in ett förslag öppnas GitHub i din webbläsare.',
 
-    'mappings' => 'Kopplingar',
-    'contributors' => 'Bidragsgivare',
+    'mappings' => ':count koppling|:count kopplingar',
+    'contributors' => ':count bidragsgivare|:count bidragsgivare',
 
     'use_shared_list' => [
         'title' => 'Använd den delade handlarlistan',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'Uppdatera den delade listan vid appuppdateringar',
         'help' => 'Hämta den medföljande listan på nytt varje gång Beatrax uppdaterar sig själv.',
+        'help_phone' => 'Hämta den medföljande listan på nytt varje gång en ny version av Beatrax installeras från App Store eller Google Play.',
         'note' => 'Aktiveras med en framtida appuppdatering — se Inställningar → Om för aktuell version.',
     ],
 ];

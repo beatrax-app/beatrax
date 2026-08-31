@@ -6,7 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 uses(RefreshDatabase::class);
@@ -82,13 +82,13 @@ it('suppresses only payment_reminder when reminders are disabled', function (): 
     seedSelfDevice($this->db, $user->id);
     seedPrefs($this->db, $user->id, ['reminders_enabled' => false]);
 
-    $reminder = $this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, $this->at);
+    $reminder = $this->evaluator->shouldDeliver($user->id, NotificationTrigger::PaymentReminder, $this->at);
     expect($reminder->deliver)->toBeFalse();
     expect($reminder->reason)->toBe('trigger_disabled');
 
-    expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, $this->at)->deliver)->toBeTrue();
-    expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT, $this->at)->deliver)->toBeTrue();
-    expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST, $this->at)->deliver)->toBeTrue();
+    expect($this->evaluator->shouldDeliver($user->id, NotificationTrigger::BudgetNudge, $this->at)->deliver)->toBeTrue();
+    expect($this->evaluator->shouldDeliver($user->id, NotificationTrigger::SavingsPrompt, $this->at)->deliver)->toBeTrue();
+    expect($this->evaluator->shouldDeliver($user->id, NotificationTrigger::PositionDigest, $this->at)->deliver)->toBeTrue();
 });
 
 it('suppresses only budget_nudge when nudges are disabled', function (): void {
@@ -96,9 +96,9 @@ it('suppresses only budget_nudge when nudges are disabled', function (): void {
     seedSelfDevice($this->db, $user->id);
     seedPrefs($this->db, $user->id, ['budget_nudges_enabled' => false]);
 
-    expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, $this->at)->deliver)->toBeFalse();
-    expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, $this->at)->deliver)->toBeTrue();
-    expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT, $this->at)->deliver)->toBeTrue();
+    expect($this->evaluator->shouldDeliver($user->id, NotificationTrigger::BudgetNudge, $this->at)->deliver)->toBeFalse();
+    expect($this->evaluator->shouldDeliver($user->id, NotificationTrigger::PaymentReminder, $this->at)->deliver)->toBeTrue();
+    expect($this->evaluator->shouldDeliver($user->id, NotificationTrigger::SavingsPrompt, $this->at)->deliver)->toBeTrue();
 });
 
 it('suppresses only savings_prompt when savings prompts are disabled', function (): void {
@@ -106,9 +106,9 @@ it('suppresses only savings_prompt when savings prompts are disabled', function 
     seedSelfDevice($this->db, $user->id);
     seedPrefs($this->db, $user->id, ['savings_prompts_enabled' => false]);
 
-    expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT, $this->at)->deliver)->toBeFalse();
-    expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, $this->at)->deliver)->toBeTrue();
-    expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, $this->at)->deliver)->toBeTrue();
+    expect($this->evaluator->shouldDeliver($user->id, NotificationTrigger::SavingsPrompt, $this->at)->deliver)->toBeFalse();
+    expect($this->evaluator->shouldDeliver($user->id, NotificationTrigger::PaymentReminder, $this->at)->deliver)->toBeTrue();
+    expect($this->evaluator->shouldDeliver($user->id, NotificationTrigger::BudgetNudge, $this->at)->deliver)->toBeTrue();
 });
 
 it('suppresses position_digest when cadence is off', function (): void {
@@ -116,11 +116,11 @@ it('suppresses position_digest when cadence is off', function (): void {
     seedSelfDevice($this->db, $user->id);
     seedPrefs($this->db, $user->id, ['digest_cadence' => 'off']);
 
-    $digest = $this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST, $this->at);
+    $digest = $this->evaluator->shouldDeliver($user->id, NotificationTrigger::PositionDigest, $this->at);
     expect($digest->deliver)->toBeFalse();
     expect($digest->reason)->toBe('trigger_disabled');
 
-    expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, $this->at)->deliver)->toBeTrue();
+    expect($this->evaluator->shouldDeliver($user->id, NotificationTrigger::PaymentReminder, $this->at)->deliver)->toBeTrue();
 });
 
 it('delivers position_digest when cadence is daily or weekly', function (): void {
@@ -128,7 +128,7 @@ it('delivers position_digest when cadence is daily or weekly', function (): void
     seedSelfDevice($this->db, $user->id);
     seedPrefs($this->db, $user->id, ['digest_cadence' => 'daily']);
 
-    $decision = $this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST, $this->at);
+    $decision = $this->evaluator->shouldDeliver($user->id, NotificationTrigger::PositionDigest, $this->at);
     expect($decision->deliver)->toBeTrue();
     expect($decision->reason)->toBe('ok');
 });
@@ -146,10 +146,10 @@ it('always delivers the four reactive trigger types', function (): void {
     ]);
 
     foreach ([
-        DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
-        DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
-        DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
-        DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
+        NotificationTrigger::ImportFinished,
+        NotificationTrigger::ReceiptsFound,
+        NotificationTrigger::DriftChanged,
+        NotificationTrigger::ForecastShortfall,
     ] as $trigger) {
         $decision = $this->evaluator->shouldDeliver($user->id, $trigger, $this->at);
         expect($decision->deliver)->toBeTrue();
@@ -166,7 +166,7 @@ it('applies a wrap-around quiet window 22:00-08:00', function (): void {
         'quiet_hours_to' => '08:00',
     ]);
 
-    $trigger = DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER;
+    $trigger = NotificationTrigger::PaymentReminder;
     $day = '2026-07-17';
 
     $suppressedAt = static fn (string $hm) => CarbonImmutable::parse($day.' '.$hm);
@@ -188,7 +188,7 @@ it('applies a non-wrapping quiet window 09:00-17:00', function (): void {
         'quiet_hours_to' => '17:00',
     ]);
 
-    $trigger = DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER;
+    $trigger = NotificationTrigger::PaymentReminder;
     $day = '2026-07-17';
 
     expect($this->evaluator->shouldDeliver($user->id, $trigger, CarbonImmutable::parse($day.' 12:00'))->reason)->toBe('quiet_hours');
@@ -200,7 +200,7 @@ it('suppresses everything with reason seeding inside suppressDelivery() and rest
     seedSelfDevice($this->db, $user->id);
     seedPrefs($this->db, $user->id);
 
-    $trigger = DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED; // normally always delivers
+    $trigger = NotificationTrigger::ImportFinished; // normally always delivers
 
     $insideReason = $this->evaluator->suppressDelivery(function () use ($user, $trigger): string {
         return $this->evaluator->shouldDeliver($user->id, $trigger, $this->at)->reason;
@@ -227,21 +227,55 @@ it('reflects hideDetails in both delivered and suppressed outcomes', function ()
         'reminders_enabled' => false,
     ]);
 
-    $delivered = $this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED, $this->at);
+    $delivered = $this->evaluator->shouldDeliver($user->id, NotificationTrigger::ImportFinished, $this->at);
     expect($delivered->deliver)->toBeTrue();
     expect($delivered->hideDetails)->toBeTrue();
 
-    $suppressed = $this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, $this->at);
+    $suppressed = $this->evaluator->shouldDeliver($user->id, NotificationTrigger::PaymentReminder, $this->at);
     expect($suppressed->deliver)->toBeFalse();
     expect($suppressed->hideDetails)->toBeTrue();
 });
 
-it('suppresses an unknown trigger type rather than defaulting to deliver', function (): void {
-    $user = evalUser('eval-unknown');
+// The unknown trigger type is gone as a runtime case: the parameter is the
+// enum, so a slug outside it cannot be constructed and cannot be passed. What
+// remains to hold is that the enum answers for every case it names.
+it('delivers every trigger the enum says carries no toggle, whatever the preferences say', function (): void {
+    $user = evalUser('eval-untoggled');
     seedSelfDevice($this->db, $user->id);
-    seedPrefs($this->db, $user->id);
+    seedPrefs($this->db, $user->id, [
+        'reminders_enabled' => 0,
+        'budget_nudges_enabled' => 0,
+        'savings_prompts_enabled' => 0,
+        'digest_cadence' => 'off',
+    ]);
 
-    $decision = $this->evaluator->shouldDeliver($user->id, 'not_a_real_trigger', $this->at);
-    expect($decision->deliver)->toBeFalse();
-    expect($decision->reason)->toBe('trigger_disabled');
+    foreach (NotificationTrigger::cases() as $trigger) {
+        if ($trigger->requiresToggle()) {
+            continue;
+        }
+
+        expect($this->evaluator->shouldDeliver($user->id, $trigger, $this->at)->deliver)
+            ->toBeTrue($trigger->value.' carries no toggle and must still be delivered');
+    }
+});
+
+it('suppresses every trigger the enum says carries a toggle once that toggle is off', function (): void {
+    $user = evalUser('eval-toggled');
+    seedSelfDevice($this->db, $user->id);
+    seedPrefs($this->db, $user->id, [
+        'reminders_enabled' => 0,
+        'budget_nudges_enabled' => 0,
+        'savings_prompts_enabled' => 0,
+        'digest_cadence' => 'off',
+    ]);
+
+    foreach (NotificationTrigger::cases() as $trigger) {
+        if (! $trigger->requiresToggle()) {
+            continue;
+        }
+
+        $decision = $this->evaluator->shouldDeliver($user->id, $trigger, $this->at);
+        expect($decision->deliver)->toBeFalse($trigger->value.' carries a toggle and it is off')
+            ->and($decision->reason)->toBe('trigger_disabled');
+    }
 });

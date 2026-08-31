@@ -23,5 +23,6 @@ return [
         'body' => 'Záložné kódy sú jediná cesta späť do tvojho účtu, keď zabudneš heslo.',
         'warning' => 'Ukladajú sa zahashované, takže sa nedajú zobraziť znova. Vytvorením novej sady okamžite zneplatníš tú pôvodnú.',
         'regenerate' => 'Vytvoriť nové kódy',
+        'regenerate_confirm' => 'Vytvoriť novú sadu záložných kódov? Sada, ktorú máš teraz, prestane fungovať vo chvíli, keď vznikne nová, a znova sa už nedá zobraziť — vytlačená alebo odpísaná kópia je odvtedy na nič. Ulož si nové kódy, kým si ešte na tejto stránke.',
     ],
 ];

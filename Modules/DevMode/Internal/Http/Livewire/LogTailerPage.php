@@ -35,7 +35,7 @@ final class LogTailerPage extends Component
     // tell the client to zero its cursor.
     public function truncate(LogFileStats $stats): void
     {
-        $freed = $stats->truncateToday();
+        $freed = $stats->truncate();
 
         $this->dispatch(
             'toast',
@@ -55,7 +55,7 @@ final class LogTailerPage extends Component
 
         // Seeds first paint; the stats poll overwrites these on its first
         // response.
-        $today = $stats->forToday();
+        $today = $stats->current();
         $allFiles = $stats->allFiles();
 
         return $views->make('dev::livewire.log-tailer-page', [

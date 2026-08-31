@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 
 // The tailer returns a fixed 64 KiB window and redaction is a pattern match,
 // so a secret straddling the boundary matched in neither half and both halves
@@ -60,7 +61,7 @@ it('never emits either half of a secret that straddles the read window', functio
 });
 
 it('redacts a credential carried as a header array rather than a formatted line', function (): void {
-    $processor = new Modules\DevMode\Internal\Logging\RedactSecretsProcessor(null);
+    $processor = new RedactSecretsProcessor(null);
 
     $scrubbed = (new ReflectionMethod($processor, 'scrubArray'))->invoke($processor, [
         'headers' => ['Authorization' => 'Bearer a0S1dF2gH3jK4lZ5xC6vB7nM8qW9'],
@@ -71,4 +72,22 @@ it('redacts a credential carried as a header array rather than a formatted line'
     expect($scrubbed['headers']['Authorization'])->toBe('[REDACTED]');
     expect($scrubbed['query']['access_token'])->toBe('[REDACTED]');
     expect($scrubbed['note'])->toBe('ImportRun 42 finished');
+});
+
+it('redacts a vendor-shaped key sitting in a line no key name marks', function (): void {
+    $processor = new RedactSecretsProcessor(null);
+
+    // Assembled rather than written out: a fixture that spells a live-key
+    // prefix in full is read as a real credential by scanners that never run
+    // the test, and this one is about the pattern, not the prefix.
+    $key = 'sk_'.'test_'.'51H8xQ2Kj3nRtYuIoP0aSdFgHjKlZ';
+
+    $scrubbed = (new ReflectionMethod($processor, 'scrubArray'))->invoke($processor, [
+        'note' => 'charge failed for '.$key,
+    ]);
+
+    // The key-name list cannot help here: 'note' is not a secret key, so the
+    // value pattern is the only thing standing between this and the log.
+    expect($scrubbed['note'])->toBe('charge failed for [REDACTED]')
+        ->and($scrubbed['note'])->not->toContain('51H8xQ2Kj3nRtYuIoP0aSdFgHjKlZ');
 });

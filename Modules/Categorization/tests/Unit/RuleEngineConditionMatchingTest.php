@@ -59,11 +59,13 @@ function matchInput(
     ?string $description = 'Music subscription',
     int $settledAmountMinor = 1000,
     ?CarbonImmutable $postedAt = null,
+    string $settledCurrency = 'EUR',
 ): RuleMatchInput {
     return new RuleMatchInput(
         counterpartyName: $counterpartyName,
         description: $description,
         settledAmountMinor: $settledAmountMinor,
+        settledCurrency: $settledCurrency,
         postedAt: $postedAt ?? CarbonImmutable::parse('2026-02-01'),
     );
 }

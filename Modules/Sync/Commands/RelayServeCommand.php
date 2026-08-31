@@ -43,19 +43,19 @@ final class RelayServeCommand extends Command
     // of deliveries into one recipient could grow the SQLite file unbounded for
     // the 30-day undelivered TTL. 1000 is generous headroom above a realistic
     // personal multi-device backlog.
-    private const MAX_PENDING_PER_RECIPIENT = 1000;
+    private const int MAX_PENDING_PER_RECIPIENT = 1000;
 
     // Resource-exhaustion guard: an unbounded drain would force the server to
     // serialize (and the draining device to buffer) an entire mailbox backlog in
     // one JSON response. Callers loop drain -> confirm -> drain again until
     // fewer than this many rows come back.
-    private const DRAIN_PAGE_SIZE = 100;
+    private const int DRAIN_PAGE_SIZE = 100;
 
     // Device ids are UUID v4 strings, but this pattern is deliberately
     // format-agnostic beyond a safe, bounded character class (letters, digits,
     // -, _, :, .) capped at 128 bytes, rejecting control characters and
     // unbounded-length strings without coupling to one specific id scheme.
-    private const DID_PATTERN = '/^[A-Za-z0-9_:.-]{1,128}$/';
+    private const string DID_PATTERN = '/^[A-Za-z0-9_:.-]{1,128}$/';
 
     public function __construct(
         private readonly LoggerInterface $logger,

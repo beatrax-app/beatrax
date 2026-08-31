@@ -12,6 +12,7 @@ return [
         'locked' => 'Deblochează aplicația pentru a continua configurarea.',
         'revoked' => 'Acest dispozitiv a fost eliminat de pe celălalt dispozitiv. Asociați-l din nou pentru a relua sincronizarea.',
     ],
+    'unlock_cta' => 'Deblochează aplicația',
     'step' => [
         'connect' => 'Se conectează la celălalt dispozitiv',
         'keys' => 'Se primesc cheile de criptare',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Se reconstruiește istoricul tău',
     ],
     'step_current' => 'pasul curent',
-    'working' => [
-        'connect' => 'Se contactează celălalt dispozitiv…',
-        'keys' => 'Se deblochează datele tale…',
-        'transfer' => 'Se solicită istoricul tău…',
-        'rebuild' => 'Se reconstruiește istoricul tău — poate dura un minut.',
-    ],
     'page_title' => 'Se configurează…',
     'resuming' => 'Se reia configurarea…',
     'setting_up' => 'Se configurează acest dispozitiv…',
     'progress_aria' => 'Progresul configurării',
     'records' => ':count înregistrare|:count înregistrări|:count de înregistrări',
-    'records_preparing' => 'Se așteaptă celălalt dispozitiv…',
 ];

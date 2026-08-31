@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Enums\ConsentStatus;
 use Modules\OpenBanking\Internal\Services\OpenBankingConnectionQuery;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
@@ -112,7 +113,7 @@ it('reports no connection when no row matches the live session', function (): vo
     expect(obcqQuery()->current($user->id))->toBeNull();
 });
 
-it('reads the consent status from how much of the window is left', function (?string $expiresAt, string $expected): void {
+it('reads the consent status from how much of the window is left', function (?string $expiresAt, ConsentStatus $expected): void {
     $user = obcqUser('obcq-status-'.md5($expiresAt ?? 'null'));
     obcqSeedCredentials('ASNBNL21');
     obcqSeedConnection($user, 'ASNBNL21', $expiresAt);
@@ -123,13 +124,27 @@ it('reads the consent status from how much of the window is left', function (?st
         ->and($view->consentStatus)->toBe($expected);
 })->with([
     // An unknown expiry is not evidence of a live consent.
-    'never recorded' => [null, 'expired'],
-    'already past' => ['2026-07-18 06:00:00', 'expired'],
-    'exactly now' => ['2026-07-19 06:30:00', 'expired'],
-    'inside the 14-day window' => ['2026-07-25 06:00:00', 'expiring'],
-    'on the 14-day boundary' => ['2026-08-02 06:30:00', 'expiring'],
-    'beyond the window' => ['2026-10-19 00:00:00', 'connected'],
+    'never recorded' => [null, ConsentStatus::Expired],
+    'already past' => ['2026-07-18 06:00:00', ConsentStatus::Expired],
+    'exactly now' => ['2026-07-19 06:30:00', ConsentStatus::Expired],
+    'inside the 14-day window' => ['2026-07-25 06:00:00', ConsentStatus::Expiring],
+    'on the 14-day boundary' => ['2026-08-02 06:30:00', ConsentStatus::Expiring],
+    'beyond the window' => ['2026-10-19 00:00:00', ConsentStatus::Connected],
 ]);
+
+// The stored column is a string. '2026-08-02' compared as text against
+// '2026-08-02 06:30:00' sorts BEFORE it, which would put the boundary day on
+// the wrong side of the window; parsing to an instant is what prevents that.
+it('reads a date-only expiry as the whole boundary day, not as its midnight string', function (): void {
+    $user = obcqUser('obcq-date-only-expiry');
+    obcqSeedCredentials('ASNBNL21');
+    obcqSeedConnection($user, 'ASNBNL21', '2026-07-25');
+
+    $view = obcqQuery()->current($user->id);
+
+    expect($view)->not->toBeNull()
+        ->and($view->consentStatus)->toBe(ConsentStatus::Expiring);
+});
 
 // bank_display_name is a column the callback controller never populates, so an
 // unmapped institution has to fall back to its own id rather than render blank.

@@ -7,16 +7,18 @@ namespace Modules\Reports\Internal\Aggregation;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Services\CalendarSpan;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Reports\Internal\Enums\ReportPeriodPreset;
 use Modules\Reports\Internal\Exceptions\InvalidReportPeriod;
 
-final class PeriodPresetResolver
+final readonly class PeriodPresetResolver
 {
     public function __construct(
-        private readonly PeriodQuery $periodQuery,
-        private readonly Clock $clock,
+        private PeriodQuery $periodQuery,
+        private Clock $clock,
     ) {}
 
     public function resolve(string $preset, ?string $customFrom = null, ?string $customTo = null): Period
@@ -26,7 +28,8 @@ final class PeriodPresetResolver
             ReportPeriodPreset::Last3Months->value => $this->lastNMonths(3),
             ReportPeriodPreset::Last6Months->value => $this->lastNMonths(6),
             ReportPeriodPreset::Last12Months->value => $this->lastNMonths(12),
-            ReportPeriodPreset::Ytd->value, ReportPeriodPreset::ThisYear->value => $this->yearWindow($preset),
+            ReportPeriodPreset::Ytd->value => $this->yearToDate(),
+            ReportPeriodPreset::ThisYear->value => CalendarSpan::year($this->clock->now()),
             ReportPeriodPreset::Custom->value => $this->custom($customFrom, $customTo),
             default => throw new InvalidArgumentException("Unknown period preset: {$preset}"),
         };
@@ -50,17 +53,19 @@ final class PeriodPresetResolver
         );
     }
 
-    // 'ytd' and 'this_year' both resolve to startOfYear() -> now+1day, since a
-    // future date carries no transactions. Two keys purely for the picker's
-    // copy; the formula must not diverge between them.
-    private function yearWindow(string $preset): Period
+    // Stops at today because that is what "to date" means, and it is the only
+    // reason this differs from `this_year`. Both once shared this formula on a
+    // premise the ledger disproves: a future date DOES carry transactions, and
+    // BookedFutureRowQuery reads them. Only the end is a different question.
+    private function yearToDate(): Period
     {
         $now = $this->clock->now();
-        $start = $now->startOfYear()->startOfDay();
-        $endExclusive = $now->addDay()->startOfDay();
-        $label = $preset === ReportPeriodPreset::Ytd->value ? 'Year to date' : (string) $now->year;
 
-        return new Period(start: $start, endExclusive: $endExclusive, label: $label);
+        return new Period(
+            start: CalendarSpan::year($now)->start,
+            endExclusive: $now->addDay()->startOfDay(),
+            label: 'Year to date',
+        );
     }
 
     // The picked end date is inclusive but Period.endExclusive is half-open, so
@@ -88,22 +93,11 @@ final class PeriodPresetResolver
         );
     }
 
-    // The one spelling of "is this a Y-m-d date": the stored-definition factory
-    // asks it too, so a replayed blob and a typed date are judged alike.
-    // createFromFormat() normalizes an out-of-range day ("2026-02-30" becomes
-    // 2026-03-02), so the round-trip is compared back against the raw input.
+    // The stored-definition factory asks this too, so a replayed blob and a
+    // typed date are judged alike. The reading of "is this a day" itself is
+    // SafeDate's, which is where every other surface takes it from.
     public static function tryParseDate(?string $value): ?CarbonImmutable
     {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        try {
-            $parsed = CarbonImmutable::createFromFormat('Y-m-d', $value);
-        } catch (InvalidArgumentException) {
-            return null;
-        }
-
-        return $parsed !== null && $parsed->format('Y-m-d') === $value ? $parsed->startOfDay() : null;
+        return $value === null ? null : SafeDate::dayOrNull($value);
     }
 }

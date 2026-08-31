@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Doctor\ProbeOutputParser;
@@ -25,11 +26,18 @@ final class DoctorPanelPage extends Component
         ViewFactory $views,
         DatabaseManager $db,
         ProbeOutputParser $parser,
+        CurrentUser $user,
     ): View {
+        // Scoped to the caller like every other dev_mode_audit read: the probe
+        // output carries the filesystem paths of whoever ran it.
+        // The id tiebreak is load-bearing — the spawner's empty eager row and
+        // the finalized row share a created_at second, and it wins on ties.
         $latest = $db->connection()->table('dev_mode_audit')
             ->where('log_name', SpatieAuditWriter::LOG_NAME)
+            ->where('causer_id', $user->id())
             ->where('properties->command', self::COMMAND)
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->limit(1)
             ->first();
 

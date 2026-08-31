@@ -12,28 +12,38 @@ minting a row per reason.
 `AnomalyEvaluator::evaluate(int $transactionId, User $user)` is the single
 entry point shared by the reactive job, the full-history backfill, and the
 scheduled safety-net sweep. Its skeleton (idempotent insert, classified
-write-failure boundary, event dispatch, cross-module read discipline) began
-as a copy of `DriftEvaluator`'s; the math lives in three injected detectors
+write-failure boundary, event dispatch, cross-module read discipline)
+mirrors `DriftEvaluator`'s; the math lives in three injected detectors
 (`LargeVsTypicalDetector` / `FirstTimeMerchantDetector` /
 `DuplicateChargeDetector`). Steps:
 
 1. Load the transaction row (a sanctioned cross-module read of
    `transactions`; the evaluator never writes it).
-2. Load the user's anomaly settings (sensitivity + minimum floor).
-3. Run the three detectors, aggregating a canonically-ordered `reasons[]`
+2. Return immediately unless
+   [`TransactionType::isExternalMovementOf()`](../ledger/architecture.md#transactiontype--direction-is-not-the-question-anomaly-asks)
+   holds — see [what this module does not judge](#what-this-module-does-not-judge)
+   below.
+3. Load the user's anomaly settings (sensitivity + minimum floor).
+4. Run the three detectors, aggregating a canonically-ordered `reasons[]`
    of tripped `AnomalyDetector` cases — one alert per transaction,
    multi-reason.
-4. Drop any reason a matching `anomaly_suppression_rules` row suppresses,
+5. Drop any reason a matching `anomaly_suppression_rules` row suppresses,
    checked BEFORE insert; if no reason survives, return without inserting.
-5. Insert exactly one `anomaly_alerts` row carrying `reasons[]`, the
-   large-vs-typical baseline trio, `sensitivity_percent_used`, and
-   direction, under a DERIVED id (below). Only a `UNIQUE(transaction_id)`
+6. Insert exactly one `anomaly_alerts` row carrying `reasons[]`, the charge's
+   own settled amount and currency, the large-vs-typical baseline when one was
+   computed, `sensitivity_percent_used`, and direction, under a DERIVED id
+   (below). `latest_amount_minor` and `currency` are stamped whichever detector
+   fired — the charge is a fact every alert knows — while
+   `baseline_amount_minor` stays null when nothing compared against one. Read
+   surfaces branch on that null rather than hydrating it to zero: a
+   duplicate-only alert used to render `baseline EUR 0.00 -> actual: EUR 0.00`
+   over a real charge, under an arrow that could only point up. Only a `UNIQUE(transaction_id)`
    collision is a no-op, and it is confirmed by re-reading the row rather
    than by the SQLSTATE alone: SQLite reports a `RAISE(ABORT)` trigger under
    the same 23000 class a unique violation uses, so a code-only check
    swallowed every schema failure as "already evaluated". Anything else
    propagates.
-6. Dispatch `AnomalyAlertOpened` and `EntityMutated` after the insert
+7. Dispatch `AnomalyAlertOpened` and `EntityMutated` after the insert
    returns — outside the guard, so a throwing listener cannot cost the
    capture event that carries the row to the paired device.
 
@@ -48,6 +58,40 @@ when a brand-new merchant's charge is large vs the user's *overall* spend
 small/typical charge is noise, not signal). When the synthetic `large` is
 excluded from suppression-rule matching (see below), the per-merchant
 `large` band cannot mute a first-time merchant's own signal.
+
+## What this module does not judge
+
+Every question this module asks is behavioural — *was this unusual of you* —
+and moving your own money between your own accounts is not something you did
+to anyone. `AnomalyEvaluator` refuses a row whose type is not an
+[external movement](../ledger/architecture.md#transactiontype--direction-is-not-the-question-anomaly-asks):
+`transfer_out`, `transfer_in` and `adjustment` are never scored. `fee` is,
+deliberately — a surprise bank charge is the reader's money leaving to
+somebody else, which is exactly the thing worth surfacing — and so is
+`refund`, on the income side.
+
+The gate lives in the evaluator and not in the three detectors because it
+decides eligibility for the row, once, rather than the maths of one reason;
+every job path reaches it, because every one of them goes through `evaluate()`.
+
+The same distinction scopes the baselines. Before it, a `transfer_out` was in
+`Direction::Expense`, so every internal move sat in the sample the real charges
+were compared against, and a card settlement was both flagged as a `large`
+unusual charge and reported as a `first_time` merchant — the reader's own card
+issuer, for money the twenty-three charges on that statement had already been
+judged on individually. Six of the twenty-nine open alerts on the desktop
+database were the two legs of three such settlements.
+`2026_08_30_000001_drop_anomaly_alerts_raised_on_internal_moves` deletes the
+ones already written; it does not touch the reader's suppression rules, only
+nulls the alert each one names, because
+[a rule is identified by its own tuple and not by its provenance](#suppression).
+
+One question is deliberately left unscoped: `FirstTimeMerchantDetector`'s
+prior-contact half counts *every* row for the counterparty, transfers
+included. "Have I dealt with this party before" is about the relationship, not
+about the kind of money — and the narrower reading would raise `first_time` on
+a merchant the reader has already transferred money to, which is an alert too
+many rather than an alert missed.
 
 ## Detectors
 
@@ -77,7 +121,10 @@ excluded from suppression-rule matching (see below), the per-merchant
   cadence landing twice is not a duplicate.
 
 All three detectors share a minimum-amount floor that gates evaluation
-entirely, and read `transactions` directly without ever writing it.
+entirely, and read `transactions` directly without ever writing it. The floor
+is an amount in the reader's own currency, so `AnomalyEvaluator` restates it in
+the charge's settled currency once before handing it to any of them — see
+[the shared floor](detector-maths.md#the-shared-floor).
 
 ## Robust statistics
 
@@ -201,8 +248,8 @@ for every acknowledge, snooze, dismissal and revival.
 A derived id does not ascend with insertion, so `AnomalyAlertQuery` cannot order
 or page on it. The list orders `detected_at DESC` with the id breaking ties
 only, backed by the existing `(user_id, state, detected_at)` index, and its
-cursor carries both halves — `DriftPage` keeps a separate cursor for this tab
-because drift ids are still autoincrement and page on the id alone.
+cursor carries both halves. `DriftAlertQuery` has the same shape, so
+`DriftPage` reads both streams the same way.
 
 `AnomalyAlertQuery` resolves merchant display names via Counterparties'
 Public `identitiesForIds` (the table carries no `counterparty_id` column

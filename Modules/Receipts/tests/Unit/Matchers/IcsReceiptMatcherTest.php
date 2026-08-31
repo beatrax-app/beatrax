@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
+use Modules\Receipts\Internal\Matchers\ReceiptBodyText;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
@@ -13,7 +14,7 @@ use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function icsMatcher(): IcsReceiptMatcher
 {
-    return new IcsReceiptMatcher(new EmlMimeReader);
+    return new IcsReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
 }
 
 function icsInbox(string $senderEmail, ?string $subject = null): InboxMessageDto
@@ -80,7 +81,6 @@ it('parses a current-generation ICS receipt into a ParsedReceiptDto with a Funde
     expect($dto->ownIban)->toBe('ICS-CARD');
     expect($dto->bookedAt->toDateString())->toBe('2026-04-12');
     expect($dto->bookedAt->format('H:i:s'))->toBe('00:00:00');
-    expect($dto->rawPayload['matcher_key'] ?? null)->toBe('ics-receipt');
 
     // Chain-hint payload — exposes the extracted card last-four so the
     // RecordReceipt action can dispatch ChainHintDetected post-persistence.
@@ -151,4 +151,5 @@ it('routes an ICS sender via MatcherRegistry to IcsReceiptMatcher', function ():
 
     expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed?->merchantName)->toBe('SYNTHETIC ICS TINY');
+    expect($outcome->matcherKey)->toBe('ics-receipt');
 });

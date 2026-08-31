@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -17,21 +18,21 @@ use Modules\Tax\Public\Dto\BatchTagSuggestion;
 use Modules\Tax\Public\Dto\TaxTagData;
 use Modules\Tax\Public\Dto\TaxYearSummary;
 
-final class TaxTagQuery
+final readonly class TaxTagQuery
 {
     // short_name is optional and only the corpus fills it in, so a category the
     // reader added themselves has none; without the fall-through every badge on
     // such a category reads as the generic tax word instead of naming it.
-    private const CATEGORY_BADGE_LABEL = 'COALESCE(cat.short_name, cat.name) AS category_short_name';
+    private const string CATEGORY_BADGE_LABEL = 'COALESCE(cat.short_name, cat.name) AS category_short_name';
 
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly CrossCurrencyTotal $fx,
-        private readonly BaseCurrency $baseCurrency,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private CrossCurrencyTotal $fx,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     // Whole-transaction tags only; callers that need leg-aware state use
@@ -118,21 +119,22 @@ final class TaxTagQuery
         return $map;
     }
 
-    // Used by the tag picker to decide whether to render the
-    // year-assignment row (booked year != current tax year).
-    public function bookedYearFor(int $userId, int $transactionId): ?int
+    // Used by the tag picker to decide whether to render the year-assignment
+    // row (posted year != current tax year). The same day TaggedRowScope
+    // buckets on, or the picker offers to move a row off a year it is not on.
+    public function postedYearFor(int $userId, int $transactionId): ?int
     {
-        $bookedAt = $this->db->connection()
+        $postedAt = $this->db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $userId)
-            ->value('booked_at');
+            ->value('posted_at');
 
-        if (! is_string($bookedAt) || strlen($bookedAt) < 4) {
+        if (! is_string($postedAt) || strlen($postedAt) < 4) {
             return null;
         }
 
-        $year = (int) substr($bookedAt, 0, 4);
+        $year = (int) substr($postedAt, 0, 4);
 
         return $year > 0 ? $year : null;
     }
@@ -181,6 +183,9 @@ final class TaxTagQuery
 
     // Returns untaggedCount=0 when the transaction has no counterparty;
     // the count excludes the just-tagged transaction itself.
+    /**
+     * @link ../../../../.docs/features/counterparties/resolution-chain.md#the-apps-own-words-for-a-row-it-had-to-name
+     */
     public function untaggedCountForCounterparty(int $userId, int $transactionId, int $taxYear): BatchTagSuggestion
     {
         $connection = $this->db->connection();
@@ -204,10 +209,17 @@ final class TaxTagQuery
         $cpRow = $connection
             ->table('counterparties')
             ->where('id', $cpId)
-            ->first(['display_name']);
+            ->first(['display_name', 'metadata']);
 
+        // Decrypt first, then translate: the seam reads the plaintext name,
+        // and `metadata` is not a sensitive column. The banner names the
+        // counterparty inside a sentence, so a row the app named itself has to
+        // read in the same language as the rest of it.
         $cpName = $cpRow !== null && is_string($cpRow->display_name)
-            ? $this->codec->decryptValue('counterparties', 'display_name', $cpRow->display_name, $userId, ($this->session)())['value']
+            ? CounterpartyDefaultName::resolve(
+                $this->codec->decryptValue('counterparties', 'display_name', $cpRow->display_name, $userId, ($this->session)())['value'],
+                $cpRow->metadata,
+            )
             : '';
 
         $untaggedCount = $connection
@@ -221,7 +233,7 @@ final class TaxTagQuery
             ->where('t.counterparty_id', $cpId)
             ->where('t.id', '!=', $transactionId)
             ->whereRaw(
-                'CAST(strftime(\'%Y\', t.booked_at) AS INTEGER) = ?',
+                TaggedRowScope::TRANSACTION_YEAR.' = ?',
                 [$taxYear],
             )
             ->count();
@@ -248,7 +260,7 @@ final class TaxTagQuery
             ->where('t.user_id', $userId)
             ->where('t.counterparty_id', $counterpartyId)
             ->whereRaw(
-                'CAST(strftime(\'%Y\', t.booked_at) AS INTEGER) = ?',
+                TaggedRowScope::TRANSACTION_YEAR.' = ?',
                 [$taxYear],
             )
             ->pluck('t.id');

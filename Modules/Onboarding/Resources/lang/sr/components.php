@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Napredak podešavanja',
     'step_progress' => 'Korak :current od :total',
-    'step_dot_aria' => 'Korak :number od :total',
 
     'eyebrow_step' => 'Korak :number — ',
 ];

@@ -10,10 +10,11 @@ return [
 
     'bank_title' => 'Je bank',
     'bank_desc' => 'Zet een afschriftbestand neer. We lezen CSV, MT940 en CAMT.053 van de meeste Europese banken.',
-    'card_title' => 'Je creditcard (ICS)',
-    'card_desc' => 'Zet het maandelijkse PDF-afschrift van Mijn ICS neer.',
+    'card_title' => 'Je creditcard',
+    'card_desc' => 'Zet de maandelijkse PDF-afschriften van je kaart neer. Voorlopig kunnen we uitgever ICS lezen.',
     'email_title' => 'Bonnen uit e-mail',
     'email_desc' => 'Koppel Gmail of Outlook om aankoopbevestigingen automatisch vast te leggen.',
+    'email_desc_phone' => 'Aankoopbevestigingen worden vastgelegd door de desktop-app; deze telefoon laat via synchronisatie zien wat die vindt.',
 
     'continue' => 'Doorgaan →',
 ];

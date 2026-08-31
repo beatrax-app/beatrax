@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Millest sind teavitada',
+    'background_note' => 'Beatrax valmistab need ette, kui rakendus on avatud. Ajastatud käivitus taustal seda ei suuda — rakenduse lukk hoiab ainsat võtit — nii et ootel olevad võetakse üles, kui rakendust edasi kasutad.',
+    'background_note_phone' => 'Beatrax valmistab need ette, kui rakendus on avatud. Taustal see ei saa — rakenduse lukk hoiab ainsat võtit — nii et ootel olevad jõuavad kohale, kui rakenduse järgmine kord avad.',
 
     'reminders' => [
         'label' => 'Maksemeeldetuletused',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Peida teavitustes üksikasjad',
-        'help' => 'Näita summasid ja kaupmeeste nimesid teavitusribal endal. Lülita välja, kui sinu ekraan võib olla teistele nähtav.',
+        'help' => 'Peida summad ja kaupmeeste nimed teavitusribal endal. Lülita sisse, kui sinu ekraan võib olla teistele nähtav.',
     ],
 
     'save' => 'Salvesta teavituste seaded',

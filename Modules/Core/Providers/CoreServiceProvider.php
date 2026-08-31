@@ -6,6 +6,9 @@ namespace Modules\Core\Providers;
 
 use App\Models\User;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\Events\MigrationsEnded;
+use Illuminate\Database\Events\MigrationsStarted;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
@@ -18,9 +21,12 @@ use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Console\RestoreDatabaseCommand;
 use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Internal\Http\Livewire\HelpDataLocations;
+use Modules\Core\Internal\Http\Livewire\SafeEnumSynth;
 use Modules\Core\Internal\Listeners\ClearGuardBetweenJobs;
+use Modules\Core\Internal\Listeners\ForgetNavCountsOnWrite;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
+use Modules\Core\Internal\Support\MigrationWindow;
 use Modules\Core\Models\User as CoreUser;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Actions\WriteUserPreference;
@@ -46,10 +52,12 @@ use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\RegistersScheduledCommands;
 
 final class CoreServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
+    use RegistersScheduledCommands;
 
     public function register(): void
     {
@@ -63,7 +71,7 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(FileEncryptor::class, BackupEncryptor::class);
         // Named constructor, so the class cannot be built with neither a
         // container nor a session.
-        $this->app->singleton(SessionFactory::class, fn () => SessionFactory::fromContainer($this->app));
+        $this->app->singleton(SessionFactory::class, fn (): SessionFactory => SessionFactory::fromContainer($this->app));
 
         $this->app->bind(CurrentUser::class, CurrentUserService::class);
 
@@ -85,6 +93,7 @@ final class CoreServiceProvider extends ServiceProvider
         // freshness probe all inject this service to resolve the backups dir.
         $this->app->singleton(UserDataPathService::class);
         $this->app->singleton(NavCountsService::class);
+        $this->app->singleton(MigrationWindow::class);
         $this->app->singleton(RestoreEncryptedBackup::class);
 
         // The backup-first atomic encryption migration depends on
@@ -113,10 +122,34 @@ final class CoreServiceProvider extends ServiceProvider
         // rather than left to each job's own discipline: a job that forgets is
         // indistinguishable from one that succeeds, and the damage lands on
         // the NEXT job, scoped to the wrong user.
-        $this->app->make(Dispatcher::class)->listen(JobProcessing::class, ClearGuardBetweenJobs::class);
+        $app = $this->app;
+        $dispatcher = $app->make(Dispatcher::class);
+        $dispatcher->listen(JobProcessing::class, ClearGuardBetweenJobs::class);
+
+        // Same reasoning one layer down: the sidebar badge invalidation is
+        // taken from the statement, because the eight modules that write those
+        // tables are eight places that could forget and seven of them had.
+        $dispatcher->listen(QueryExecuted::class, ForgetNavCountsOnWrite::class);
+
+        // Mobile has no `sqlite3` binary, so its first launch cannot load the
+        // squashed schema and runs every migration from the first one. The
+        // window tells the listener above which statements are that run's.
+        $dispatcher->listen(MigrationsStarted::class, static function () use ($app): void {
+            $app->make(MigrationWindow::class)->open();
+        });
+        $dispatcher->listen(MigrationsEnded::class, static function () use ($app): void {
+            $app->make(MigrationWindow::class)->close();
+        });
 
         $this->loadModuleResources('core');
+
+        $this->registerScheduledCommands([BackupDatabaseCommand::class]);
+
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
+
+        // Ahead of every component registration below, so no component can be
+        // resolved through the framework's own enum synth first.
+        $livewire->propertySynthesizer(SafeEnumSynth::class);
 
         $livewire->component('core.auto-import-settings-section', AutoImportSettingsSection::class);
         $livewire->component('core.encrypted-backup-download', EncryptedBackupDownload::class);
@@ -128,7 +161,6 @@ final class CoreServiceProvider extends ServiceProvider
             $this->commands([
                 InstallCommand::class,
                 DoctorCommand::class,
-                BackupDatabaseCommand::class,
                 RestoreDatabaseCommand::class,
                 FailedJobsCommand::class,
             ]);

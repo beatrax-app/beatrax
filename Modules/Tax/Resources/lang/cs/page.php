@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Exportovat PDF',
     'export_pdf_aria' => 'Exportovat PDF',
     'export_pdf_title' => 'Stáhnout beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Zamítnout',
 
     'country_prompt_heading' => 'Ve které zemi platíš daně?',
     'country_prompt_body' => 'Kdykoli to změníš v Nastavení → :section.',

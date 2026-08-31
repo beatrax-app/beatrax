@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Questo telefono non può salvare un file che l’app gli consegna, quindi il backup cifrato si crea nell’app desktop. Abbina questo dispositivo per tenerli sincronizzati.',
+        'no_download_route' => 'Questa app non può consegnare un file al tuo dispositivo, quindi il backup cifrato si crea nell’app desktop. Abbina questo dispositivo per tenerli sincronizzati.',
         'unavailable' => 'I backup crittografati sono disponibili nella build desktop (SQLite). Su un database server, usa gli strumenti di backup del database stesso.',
         'intro' => 'Scarica una copia crittografata con passphrase di tutto il tuo database — puoi conservarla senza rischi su un disco esterno o nel cloud, perché è illeggibile senza la passphrase (XChaCha20-Poly1305 + Argon2id, sicuri contro il calcolo quantistico).',
         'passphrase' => 'Passphrase',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'Il file non ha completato il caricamento. Potrebbe essere troppo grande per questo dispositivo: il ripristino nell’app desktop accetta un backup più grande.',
         'enter_passphrase' => 'Inserisci la passphrase con cui è stato crittografato il backup.',
         'unreadable' => 'Non è stato possibile leggere il file caricato. Riprova.',
+        'restore_wrong_passphrase' => "Questa passphrase non ha aperto il backup e non è stato modificato nulla. Riscrivila e riprova. Se è certamente quella giusta, il file è stato alterato dopo la creazione: ripristina un'altra copia.",
+        'restore_not_a_backup' => "Questo file non è un backup cifrato di Beatrax, quindi non c'è nulla da ripristinare e non è stato modificato nulla. Scegli il file .enc che l'app ha scritto quando hai fatto il backup.",
+        'restore_contents_unreadable' => 'Il backup si è aperto, ma il database al suo interno è danneggiato: non è stato ripristinato e non è stato modificato nulla. Ripristina un backup precedente.',
+        'restore_could_not_read' => 'Non è stato possibile leggere il file di backup, quindi il ripristino non è stato eseguito e non è stato modificato nulla. Verifica che il dispositivo abbia spazio libero e riprova.',
+        'restore_not_supported' => 'Il ripristino funziona sulla versione che tiene i dati in un unico file, e questa non lo è, quindi non è stato modificato nulla. Su un database server, usa gli strumenti di ripristino di quel database.',
+        'restore_failed' => "Il ripristino non è stato eseguito e non è stato modificato nulla. Riprova — se continua a fallire, il log dell'app registra che cosa lo ha bloccato.",
     ],
 ];

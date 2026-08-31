@@ -167,9 +167,14 @@ function bfrSeries(
  */
 function bfrPointOn(array $points, string $date): int
 {
+    return bfrPointDto($points, $date)->pointMinor;
+}
+
+function bfrPointDto(array $points, string $date): ForecastPointDto
+{
     foreach ($points as $point) {
         if ($point->date === $date) {
-            return $point->pointMinor;
+            return $point;
         }
     }
 
@@ -219,7 +224,50 @@ it('steps the curve on the booked row\'s own date by exactly its amount', functi
 
     $dayBefore = CarbonImmutable::parse(BFR_RENT_DATE)->subDay()->toDateString();
 
-    expect(bfrPointOn($points, BFR_RENT_DATE) - bfrPointOn($points, $dayBefore))->toBe(BFR_RENT_MINOR);
+    $before = bfrPointDto($points, $dayBefore);
+    $on = bfrPointDto($points, BFR_RENT_DATE);
+
+    // A booked row is not an estimate of a charge, it IS the charge, so it
+    // carries low = point = high and moves all three edges by the same amount.
+    // Asserting the line alone said nothing about the band, and the band is
+    // what the chart draws.
+    expect($on->pointMinor - $before->pointMinor)->toBe(BFR_RENT_MINOR)
+        ->and($on->lowMinor - $before->lowMinor)->toBe(BFR_RENT_MINOR)
+        ->and($on->highMinor - $before->highMinor)->toBe(BFR_RENT_MINOR)
+        ->and($on->highMinor - $on->lowMinor)->toBe($before->highMinor - $before->lowMinor);
+});
+
+// The band a booked row leaves behind is the one the day before it carried:
+// the row adds no uncertainty of its own, and it must not take away the
+// uncertainty a still-pending estimate put there. A zero-width contribution
+// used to overwrite the spread, drawing "EUR5,084.64 - EUR5,084.64 on day 30".
+it('leaves the band it found rather than flattening it to a single line', function (): void {
+    $accountId = bfrAccount($this->db, $this->user->id);
+
+    // An unrelated estimate four days out, wide enough to draw a band. Its own
+    // counterparty key keeps the booked rent from superseding it.
+    bfrSeries(
+        $this->db,
+        $this->user->id,
+        '2026-08-27',
+        SeriesCadence::Monthly,
+        -30_000,
+        'stadsverwarming',
+        varianceTolerancePercent: 20,
+    );
+    bfrTransaction($this->db, $this->user->id, $accountId, BFR_RENT_DATE, BFR_RENT_MINOR);
+
+    app(ProjectionPipeline::class)->project($this->user, null, BFR_HORIZON_DAYS);
+    $points = app(ForecastQuery::class)->forUser($accountId, BFR_HORIZON_DAYS, null, $this->user)->points;
+
+    $beforeRent = bfrPointDto($points, CarbonImmutable::parse(BFR_RENT_DATE)->subDay()->toDateString());
+    $onRent = bfrPointDto($points, BFR_RENT_DATE);
+    $horizonEnd = bfrPointDto($points, CarbonImmutable::parse(BFR_TODAY)->addDays(BFR_HORIZON_DAYS)->toDateString());
+
+    // The estimate's band is ±20% of EUR300.00, so 12000 wide.
+    expect($beforeRent->highMinor - $beforeRent->lowMinor)->toBe(12_000)
+        ->and($onRent->highMinor - $onRent->lowMinor)->toBe(12_000)
+        ->and($horizonEnd->highMinor - $horizonEnd->lowMinor)->toBeGreaterThan(0);
 });
 
 // It is money known, not money held. The five surfaces that agree on today

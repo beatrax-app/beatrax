@@ -14,6 +14,7 @@
     Blade default `{{ }}` escaping for every interpolation.
 --}}
 
+@use('Modules\Anomaly\Internal\Enums\AnomalyDetector')
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @php
@@ -21,17 +22,12 @@
     // duplicate", showing only the non-zero detector counts (UI-SPEC §4). Each
     // part carries its own numeral so the locale, not this file, decides how
     // the two agree.
-    $detectors = [
-        'large' => 'anomaly::dashboard.detectors.large',
-        'first_time' => 'anomaly::dashboard.detectors.first_time',
-        'duplicate' => 'anomaly::dashboard.detectors.duplicate',
-    ];
     $openPhrase = Lang::choice('anomaly::dashboard.open', $openCount);
     $parts = [$openPhrase];
-    foreach ($detectors as $key => $line) {
-        $n = (int) ($breakdown[$key] ?? 0);
+    foreach (AnomalyDetector::cases() as $detector) {
+        $n = (int) ($breakdown[$detector->value] ?? 0);
         if ($n > 0) {
-            $parts[] = Lang::choice($line, $n);
+            $parts[] = Lang::choice($detector->labelKey('anomaly::dashboard.detectors'), $n);
         }
     }
     $helper = implode(' · ', $parts);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Aggregation;
 
 use InvalidArgumentException;
+use Modules\Ledger\Public\Enums\MoneyFlow;
 use Modules\Ledger\Public\Enums\TransactionType;
 
 // The report vocabulary also has `net_worth`, but that is a balance series the
@@ -31,19 +32,23 @@ enum ReportMetric: string
         return self::tryFrom($metric) ?? throw new InvalidArgumentException("Unknown report metric: {$metric}");
     }
 
-    // A refund is a reversal of an expense, never income of its own: counting it
-    // in both would make `income - spend` and `net` disagree about it. Nothing
-    // outside these three plus DISCLOSED_TYPES is money the reader moved --
-    // transfer_in/transfer_out are the two halves of one internal move.
+    // Which types each metric counts is MoneyFlow's, not this enum's: the
+    // dashboard rollups read the same rule from there, and a second copy of it
+    // here is how the two came to disagree about a refund.
     /**
      * @return list<string>
      */
     public function types(): array
     {
+        return $this->flow()->types();
+    }
+
+    private function flow(): MoneyFlow
+    {
         return match ($this) {
-            self::Spend => [TransactionType::Expense->value, TransactionType::Refund->value],
-            self::Income => [TransactionType::Income->value],
-            self::Net => [TransactionType::Expense->value, TransactionType::Income->value, TransactionType::Refund->value],
+            self::Spend => MoneyFlow::Spend,
+            self::Income => MoneyFlow::Income,
+            self::Net => MoneyFlow::Net,
         };
     }
 

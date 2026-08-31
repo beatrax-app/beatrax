@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Fremdrift i oppsettet',
     'step_progress' => 'Trinn :current av :total',
-    'step_dot_aria' => 'Trinn :number av :total',
 
     'eyebrow_step' => 'Trinn :number — ',
 ];

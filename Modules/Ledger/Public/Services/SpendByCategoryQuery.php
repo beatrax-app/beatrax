@@ -7,26 +7,27 @@ namespace Modules\Ledger\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Enums\MoneyFlow;
 
 /**
  * @link ../../../../.docs/features/ledger/architecture.md#spendbycategoryquery--the-split-aware-spend-read-model
  */
-final class SpendByCategoryQuery
+final readonly class SpendByCategoryQuery
 {
-    // Spend is `type = expense`, never the amount's sign: a transfer to the
-    // reader's own card is negative and is not money spent. Same rule as
-    // ThisPeriodAtAGlanceQuery's outflow and Reports' spend metric.
-    private const TRANSACTIONS_ALIAS = 'transactions as t';
+    private const string TRANSACTIONS_ALIAS = 'transactions as t';
 
     use CoercesScalars;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db) {}
 
+    // Never a single reporting currency: handing this one and filtering on it
+    // dropped every row settled elsewhere, and the trend card read EUR 1,602.45
+    // under an OUT tile reading EUR 1,608.74 one card away. Callers get every
+    // bucket and convert, which is ConvertedSpendByCategory's job.
     /**
-     * @return array<int, int> category_id => spend minor (positive), for one currency
+     * @return array<string, int> "categoryId|currency" => spend minor (positive)
      */
-    public function forUserAndPeriod(int $userId, Period $period, string $currency, bool $includeUncategorized = false): array
+    public function forUserAndPeriodByCurrency(int $userId, Period $period, bool $includeUncategorized = false): array
     {
         $connection = $this->db->connection();
         $map = [];
@@ -36,9 +37,7 @@ final class SpendByCategoryQuery
         $unsplitQuery = $connection->table(self::TRANSACTIONS_ALIAS)
             ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
-            ->where('t.type', TransactionType::Expense->value)
-            ->where('t.settled_currency', $currency)
-            ->where('t.settled_amount_minor', '<', 0)
+            ->whereIn('t.type', MoneyFlow::Spend->types())
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString());
 
@@ -47,55 +46,6 @@ final class SpendByCategoryQuery
         }
 
         $unsplit = $unsplitQuery
-            ->groupBy('t.category_id')
-            ->get(['t.category_id', $connection->raw('SUM(-t.settled_amount_minor) AS spend_minor')]);
-
-        foreach ($unsplit as $row) {
-            $categoryId = self::toInt($row->category_id);
-            $map[$categoryId] = ($map[$categoryId] ?? 0) + self::toInt($row->spend_minor);
-        }
-
-        // Split legs, joined through the parent for user_id/posted_at
-        // (legs carry neither). Legs always carry a required
-        // category_id, so includeUncategorized has no bearing here.
-        $legs = $connection->table('transaction_splits as ts')
-            ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'ts.transaction_id')
-            ->where('t.user_id', $userId)
-            ->where('t.type', TransactionType::Expense->value)
-            ->where('ts.settled_currency', $currency)
-            ->where('ts.settled_amount_minor', '<', 0)
-            ->where('t.posted_at', '>=', $period->start->toDateString())
-            ->where('t.posted_at', '<', $period->endExclusive->toDateString())
-            // Only attribute legs when the split is internally
-            // consistent; broken splits fall back to the parent above.
-            ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
-            ->groupBy('ts.category_id')
-            ->get(['ts.category_id', $connection->raw('SUM(-ts.settled_amount_minor) AS spend_minor')]);
-
-        foreach ($legs as $row) {
-            $categoryId = self::toInt($row->category_id);
-            $map[$categoryId] = ($map[$categoryId] ?? 0) + self::toInt($row->spend_minor);
-        }
-
-        return $map;
-    }
-
-    /**
-     * @return array<string, int> "categoryId|currency" => spend minor (positive)
-     */
-    public function forUserAndPeriodByCurrency(int $userId, Period $period): array
-    {
-        $connection = $this->db->connection();
-        $map = [];
-
-        $unsplit = $connection->table(self::TRANSACTIONS_ALIAS)
-            ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
-            ->where('t.user_id', $userId)
-            ->where('t.type', TransactionType::Expense->value)
-            ->where('t.settled_amount_minor', '<', 0)
-            ->where('t.posted_at', '>=', $period->start->toDateString())
-            ->where('t.posted_at', '<', $period->endExclusive->toDateString())
-            ->whereNotNull('t.category_id')
             ->groupBy('t.category_id', 't.settled_currency')
             ->get(['t.category_id', 't.settled_currency', $connection->raw('SUM(-t.settled_amount_minor) AS spend_minor')]);
 
@@ -104,13 +54,17 @@ final class SpendByCategoryQuery
             $map[$key] = ($map[$key] ?? 0) + self::toInt($row->spend_minor);
         }
 
+        // Split legs, joined through the parent for user_id/posted_at
+        // (legs carry neither). Legs always carry a required
+        // category_id, so includeUncategorized has no bearing here.
         $legs = $connection->table('transaction_splits as ts')
             ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'ts.transaction_id')
             ->where('t.user_id', $userId)
-            ->where('t.type', TransactionType::Expense->value)
-            ->where('ts.settled_amount_minor', '<', 0)
+            ->whereIn('t.type', MoneyFlow::Spend->types())
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
+            // Only attribute legs when the split is internally
+            // consistent; broken splits fall back to the parent above.
             ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
             ->groupBy('ts.category_id', 'ts.settled_currency')
             ->get(['ts.category_id', 'ts.settled_currency', $connection->raw('SUM(-ts.settled_amount_minor) AS spend_minor')]);
@@ -138,8 +92,7 @@ final class SpendByCategoryQuery
         $unsplit = $connection->table(self::TRANSACTIONS_ALIAS)
             ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
-            ->where('t.type', TransactionType::Expense->value)
-            ->where('t.settled_amount_minor', '<', 0)
+            ->whereIn('t.type', MoneyFlow::Spend->types())
             ->where('t.posted_at', '>=', $span->start->toDateString())
             ->where('t.posted_at', '<', $span->endExclusive->toDateString())
             ->whereNotNull('t.category_id')
@@ -155,8 +108,7 @@ final class SpendByCategoryQuery
         $legs = $connection->table('transaction_splits as ts')
             ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'ts.transaction_id')
             ->where('t.user_id', $userId)
-            ->where('t.type', TransactionType::Expense->value)
-            ->where('ts.settled_amount_minor', '<', 0)
+            ->whereIn('t.type', MoneyFlow::Spend->types())
             ->where('t.posted_at', '>=', $span->start->toDateString())
             ->where('t.posted_at', '<', $span->endExclusive->toDateString())
             ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')

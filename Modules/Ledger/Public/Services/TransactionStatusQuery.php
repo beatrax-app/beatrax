@@ -7,10 +7,10 @@ namespace Modules\Ledger\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 
-final class TransactionStatusQuery
+final readonly class TransactionStatusQuery
 {
     public function __construct(
-        private readonly DatabaseManager $db,
+        private DatabaseManager $db,
     ) {}
 
     // A missing or cross-user id returns false, so callers treat an
@@ -18,11 +18,21 @@ final class TransactionStatusQuery
     // itself the authoritative ownership gate.
     public function isReconciled(int $userId, int $transactionId): bool
     {
-        return $this->db->connection()
-            ->table('transactions')
-            ->where('id', $transactionId)
-            ->where('user_id', $userId)
-            ->value('status') === ClearedStatus::Reconciled->value;
+        return self::locksEdits(
+            $this->db->connection()
+                ->table('transactions')
+                ->where('id', $transactionId)
+                ->where('user_id', $userId)
+                ->value('status'),
+        );
+    }
+
+    // The one comparison of a stored status against the edit-lock state. A
+    // caller that already holds the row asks here rather than re-reading it,
+    // which is what kept thirteen copies of the literal in step with each other.
+    public static function locksEdits(mixed $status): bool
+    {
+        return is_string($status) && ClearedStatus::tryFrom($status) === ClearedStatus::Reconciled;
     }
 
     /**

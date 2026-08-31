@@ -22,7 +22,7 @@ final readonly class DeepLinkResolver
 {
     // Kinds with no deletable per-user row behind them, so they can never
     // resolve to a dead link.
-    private const ALWAYS_LIVE_KINDS = ['dashboard', 'forecast', 'inbox', 'import', 'ics-import'];
+    private const array ALWAYS_LIVE_KINDS = ['dashboard', 'forecast', 'inbox', 'import', 'ics-import', 'cash-book', 'migration'];
 
     public function __construct(
         private DatabaseManager $db,
@@ -39,9 +39,11 @@ final readonly class DeepLinkResolver
         [$targetKind, $targetId] = $this->readTarget($dto->id, $user);
         [$url, $disabled] = $this->resolveTarget($targetKind, $targetId, $user);
 
-        // Defensive fallback so a malformed/unrecognised target never
-        // renders a blank "This  no longer exists." sentence.
-        $renderedTargetKind = $targetKind ?? ($disabled ? 'item' : null);
+        // A row that never carried a target and a row whose target was deleted
+        // are the same non-link and a different sentence: only the second has
+        // anything that could have gone. Null is what tells the row partial to
+        // say nothing rather than name an item that never existed.
+        $renderedTargetKind = self::renderedKind($targetKind);
 
         return new NotificationDto(
             id: $dto->id,
@@ -59,6 +61,22 @@ final readonly class DeepLinkResolver
             typeWord: $dto->typeWord,
             unreadable: $dto->unreadable,
         );
+    }
+
+    // Every kind the resolver can name back to a reader. The row partial builds
+    // a translation key on this value, so one this build does not know degrades
+    // to the neutral kind rather than putting a raw payload where a key goes.
+    private const array NAMEABLE_KINDS = ['series', 'budget', 'counterparty', 'transaction'];
+
+    private const string UNNAMEABLE_KIND = 'item';
+
+    private static function renderedKind(?string $targetKind): ?string
+    {
+        if ($targetKind === null) {
+            return null;
+        }
+
+        return in_array($targetKind, self::NAMEABLE_KINDS, true) ? $targetKind : self::UNNAMEABLE_KIND;
     }
 
     /**
@@ -153,6 +171,11 @@ final readonly class DeepLinkResolver
                 'forecast' => Destination::Forecasts->urlFrom($this->urls),
                 'inbox' => Destination::Email->urlFrom($this->urls),
                 'import' => Destination::Imports->urlFrom($this->urls),
+                'cash-book' => Destination::CashBook->urlFrom($this->urls),
+                // Must match the deepLinkRoute PersistCoalescedImport stamps
+                // on the OS push; /migrations holds no sidebar row, so there
+                // is no Destination to name it once for both.
+                'migration' => $this->urls->route('migrations.index'),
                 // Must match the deepLinkRoute PersistIcsStatementReady
                 // stamps on the OS push.
                 'ics-import' => $this->urls->route('settings.open-banking').'#ics-import',

@@ -77,6 +77,7 @@ function tnfsSeedShortfall(User $user, Account $account, int $count = 1): void
         'user_id' => $user->id,
         'account_id' => $account->id,
         'scenario_id' => null,
+        'horizon_days' => ForecastHighlightsQuery::TILE_HORIZON,
         'starts_at' => CarbonImmutable::now()->toDateString(),
         'ends_at' => CarbonImmutable::now()->addDays(7)->toDateString(),
         'lowest_balance_minor' => -10000,
@@ -104,7 +105,7 @@ function tnfsBadge(int $count, string $label): string
 {
     $aria = Lang::choice('core::sidebar.badge.forecast', $count, [
         'count' => $count,
-        'days' => ForecastHighlightsQuery::HORIZON_DAYS,
+        'days' => ForecastHighlightsQuery::TILE_HORIZON,
     ]);
 
     return '<span role="img" class="side-badge alert" aria-label="'.$aria.'">'.$label.'</span>';

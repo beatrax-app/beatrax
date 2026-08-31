@@ -32,6 +32,7 @@ use Modules\DriftAlerts\Public\Enums\DriftPageType;
 use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
 use Modules\Forecasting\Public\Actions\CreateScenarioFromTemplate;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * @link ../../../../../.docs/features/drift-alerts/snooze-lifecycle.md
@@ -58,17 +59,13 @@ final class DriftPage extends Component
     #[Locked]
     public int $pageSize = self::PAGE_SIZE;
 
-    public ?string $anomalyCursorDetectedAt = null;
-
-    public ?string $anomalyCursorId = null;
-
     public function setTab(string $tab): void
     {
         if (DriftPageTab::tryFrom($tab) === null) {
             return;
         }
         $this->tab = $tab;
-        $this->resetCursors();
+        $this->resetPaging();
     }
 
     public function setType(string $type): void
@@ -77,7 +74,7 @@ final class DriftPage extends Component
             return;
         }
         $this->type = $type;
-        $this->resetCursors();
+        $this->resetPaging();
     }
 
     private function activeTab(): DriftPageTab
@@ -88,12 +85,6 @@ final class DriftPage extends Component
     private function activeType(): DriftPageType
     {
         return DriftPageType::tryFrom($this->type) ?? DriftPageType::Drift;
-    }
-
-    public function loadMoreAnomalies(string $detectedAt, int|string $alertId): void
-    {
-        $this->anomalyCursorDetectedAt = $detectedAt;
-        $this->anomalyCursorId = (string) $alertId;
     }
 
     // A derived anomaly id is a 63-bit integer, and every value crossing this
@@ -110,11 +101,9 @@ final class DriftPage extends Component
         $this->pageSize += self::PAGE_SIZE;
     }
 
-    private function resetCursors(): void
+    private function resetPaging(): void
     {
         $this->pageSize = self::PAGE_SIZE;
-        $this->anomalyCursorDetectedAt = null;
-        $this->anomalyCursorId = null;
     }
 
     public function acknowledgeAnomaly(int|string $alertId, CurrentUser $currentUser, AcknowledgeAnomalyAlert $action): void
@@ -129,13 +118,20 @@ final class DriftPage extends Component
 
     public function dismissAnomaly(int|string $alertId, CurrentUser $currentUser, DismissAnomalyAlert $action): void
     {
-        ($action)(self::anomalyId($alertId), $currentUser->user());
+        if (! $this->apply(fn () => ($action)(self::anomalyId($alertId), $currentUser->user()))) {
+            return;
+        }
         $this->toast(Lang::get('drift-alerts::alerts.toasts.dismissed'));
     }
 
     public function markAnomalyExpected(int|string $alertId, CurrentUser $currentUser, DismissAnomalyAlertAsExpected $action): void
     {
-        $ruleWritten = ($action)(self::anomalyId($alertId), $currentUser->user());
+        $ruleWritten = false;
+        if (! $this->apply(function () use ($alertId, $currentUser, $action, &$ruleWritten): void {
+            $ruleWritten = ($action)(self::anomalyId($alertId), $currentUser->user());
+        })) {
+            return;
+        }
 
         if ($ruleWritten) {
             $this->toastWithUndo(
@@ -154,7 +150,9 @@ final class DriftPage extends Component
 
     public function undoAnomalySuppression(int|string $alertId, CurrentUser $currentUser, RemoveAnomalySuppressionRule $action): void
     {
-        $action->undoSuppression(self::anomalyId($alertId), $currentUser->user());
+        if (! $this->apply(fn () => $action->undoSuppression(self::anomalyId($alertId), $currentUser->user()))) {
+            return;
+        }
         $this->toast(Lang::get('drift-alerts::alerts.toasts.reopened'));
     }
 
@@ -170,8 +168,34 @@ final class DriftPage extends Component
 
     private function acknowledgeAlert(int $alertId, CurrentUser $currentUser, callable $action): void
     {
-        $action($alertId, $currentUser->user());
+        $write = function () use ($action, $alertId, $currentUser): void {
+            $action($alertId, $currentUser->user());
+        };
+
+        if (! $this->apply($write)) {
+            return;
+        }
         $this->toast(Lang::get('drift-alerts::alerts.toasts.acknowledged'));
+    }
+
+    // A row the reader is looking at can already be gone — actioned in another
+    // tab, swept, or replayed away by the paired device. False means nothing
+    // was written, so the caller raises no success toast and the reader is
+    // told calmly instead of being handed a 404 page.
+    /**
+     * @param  callable(): void  $write
+     */
+    private function apply(callable $write): bool
+    {
+        try {
+            $write();
+
+            return true;
+        } catch (NotFoundHttpException) {
+            $this->toast(Lang::get('drift-alerts::alerts.toasts.gone'));
+
+            return false;
+        }
     }
 
     // A malformed or out-of-range date is dropped before it reaches an action.
@@ -184,13 +208,21 @@ final class DriftPage extends Component
             return;
         }
 
-        $action($alertId, $currentUser->user(), $until);
+        $write = function () use ($action, $alertId, $currentUser, $until): void {
+            $action($alertId, $currentUser->user(), $until);
+        };
+
+        if (! $this->apply($write)) {
+            return;
+        }
         $this->toast(Lang::get('drift-alerts::alerts.toasts.snoozed'));
     }
 
     public function dismissAsCancelled(int $alertId, CurrentUser $currentUser, DismissDriftAlertAsCancelled $action): void
     {
-        ($action)($alertId, $currentUser->user());
+        if (! $this->apply(fn () => ($action)($alertId, $currentUser->user()))) {
+            return;
+        }
         $this->toast(Lang::get('drift-alerts::alerts.toasts.dismissed_cancelled'));
     }
 
@@ -200,7 +232,12 @@ final class DriftPage extends Component
         CreateScenarioFromTemplate $action,
         Redirector $redirector,
     ): mixed {
-        $newId = $action->forDriftAlert($alertId, $currentUser->user());
+        $newId = 0;
+        if (! $this->apply(function () use ($alertId, $currentUser, $action, &$newId): void {
+            $newId = $action->forDriftAlert($alertId, $currentUser->user());
+        })) {
+            return null;
+        }
 
         return $redirector->to('/forecast?scenarioId='.$newId);
     }
@@ -218,19 +255,21 @@ final class DriftPage extends Component
         $snoozeTargets = SnoozeWindow::targetsFrom($clock->now());
 
         if ($this->activeType() === DriftPageType::Anomaly) {
-            $anomalyCursorId = $this->anomalyCursorId === null ? null : self::anomalyId($this->anomalyCursorId);
+            // A growing window read from the top, not a cursor: following the
+            // cursor replaced the list with the next page, so every press
+            // dropped the rows already shown and offered no way back.
+            $anomalyLookahead = $this->pageSize + 1;
 
             $anomalyRows = match ($this->activeTab()) {
-                DriftPageTab::History => $anomalyQuery->historyForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
-                DriftPageTab::Dismissed => $anomalyQuery->dismissedForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
-                DriftPageTab::Open => $anomalyQuery->openForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
+                DriftPageTab::History => $anomalyQuery->historyForUser($user, null, null, $anomalyLookahead),
+                DriftPageTab::Dismissed => $anomalyQuery->dismissedForUser($user, null, null, $anomalyLookahead),
+                DriftPageTab::Open => $anomalyQuery->openForUser($user, null, null, $anomalyLookahead),
             };
 
-            // The query reads a lookahead row; rendering it too offered "Load
-            // more" on an exact page boundary and landed the reader on an
-            // empty inbox with no control back.
-            $hasMoreAnomalies = count($anomalyRows) >= AnomalyAlertQuery::PAGE_SIZE_WITH_LOOKAHEAD;
-            $anomalyRows = array_slice($anomalyRows, 0, AnomalyAlertQuery::PAGE_SIZE_WITH_LOOKAHEAD - 1);
+            // Read one row long and rendered short, so the extra row IS the
+            // evidence of more rather than a full page being read as one.
+            $hasMoreAnomalies = count($anomalyRows) > $this->pageSize;
+            $anomalyRows = array_slice($anomalyRows, 0, $this->pageSize);
 
             $view = $views->make('drift-alerts::livewire.drift-page', [
                 'pageType' => DriftPageType::Anomaly,
@@ -239,6 +278,7 @@ final class DriftPage extends Component
                 'anomalyRows' => $anomalyRows,
                 'hasMoreAnomalies' => $hasMoreAnomalies,
                 'hasMoreRows' => false,
+                'hasMoreGrouped' => false,
                 'snoozeTargets' => $snoozeTargets,
                 'rows' => [],
                 'grouped' => [],
@@ -267,9 +307,14 @@ final class DriftPage extends Component
         $hasMoreRows = count($rows) > $this->pageSize;
         $rows = array_slice($rows, 0, $this->pageSize);
 
+        // Same lookahead as the flat lists: reading exactly pageSize series and
+        // offering "Load more" whenever it came back full put the control under
+        // an exactly-full page, where pressing it changed nothing.
         $grouped = $this->activeTab() === DriftPageTab::Open
-            ? $query->groupedBySeriesForUser($user, $this->pageSize)
+            ? $query->groupedBySeriesForUser($user, $lookahead)
             : [];
+        $hasMoreGrouped = count($grouped) > $this->pageSize;
+        $grouped = array_slice($grouped, 0, $this->pageSize, true);
 
         $seriesIds = [];
         foreach ($rows as $alert) {
@@ -309,6 +354,7 @@ final class DriftPage extends Component
             'anomalyRows' => [],
             'pageSize' => $this->pageSize,
             'hasMoreRows' => $hasMoreRows,
+            'hasMoreGrouped' => $hasMoreGrouped,
             'hasMoreAnomalies' => false,
         ]);
 

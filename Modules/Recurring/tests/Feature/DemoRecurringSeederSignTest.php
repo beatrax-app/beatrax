@@ -12,7 +12,7 @@ uses(RefreshDatabase::class);
 
 function demoSeededUser(): User
 {
-    return User::query()->where('username', 'demo-1@beatrax.local')->firstOrFail();
+    return User::query()->where('username', 'demo-1')->firstOrFail();
 }
 
 it('seeds every demo expense series with the signed amount the detector writes', function (): void {

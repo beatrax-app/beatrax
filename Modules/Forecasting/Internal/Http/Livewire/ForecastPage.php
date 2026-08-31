@@ -12,11 +12,11 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
-use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Internal\Support\ForecastChartView;
 use Modules\Forecasting\Public\Actions\CreateScenario;
 use Modules\Forecasting\Public\Actions\DeleteScenario;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -34,10 +34,10 @@ final class ForecastPage extends Component
     #[Url(as: 'account', except: self::ALL_ACCOUNTS)]
     public string $account = self::ALL_ACCOUNTS;
 
-    // The rail offers only ProjectForecastJob::HORIZON_DAYS; this is the one it
+    // The rail offers only ForecastHorizon::days(); this is the one it
     // opens on, named once so the property, the URL default and the fallback
     // for an unlisted ?horizon= cannot drift apart.
-    private const DEFAULT_HORIZON = 30;
+    private const int DEFAULT_HORIZON = ForecastHorizon::OneMonth->value;
 
     #[Url(as: 'horizon', except: self::DEFAULT_HORIZON)]
     public int $horizon = self::DEFAULT_HORIZON;
@@ -65,7 +65,7 @@ final class ForecastPage extends Component
 
     public function setHorizon(int $days): void
     {
-        if (! in_array($days, ProjectForecastJob::HORIZON_DAYS, true)) {
+        if (! in_array($days, ForecastHorizon::days(), true)) {
             return;
         }
         $this->horizon = $days;
@@ -165,13 +165,7 @@ final class ForecastPage extends Component
         // $scenarioId is browser-supplied. Re-checking it against the user's
         // own set 404s a foreign id without confirming it exists.
         $user = $currentUser->user();
-        $owns = false;
-        foreach ($scenarioQuery->forUser($user) as $s) {
-            if ($s->id === $scenarioId) {
-                $owns = true;
-                break;
-            }
-        }
+        $owns = array_any($scenarioQuery->forUser($user), fn (ScenarioDto $s): bool => $s->id === $scenarioId);
         if (! $owns) {
             $this->confirmingDeleteForScenarioId = null;
 
@@ -231,22 +225,22 @@ final class ForecastPage extends Component
         // setHorizon() refuses an unlisted value, but the address bar reaches the
         // property directly: ?horizon=999 rendered a 999-day projection with no
         // chip lit and no way back to a horizon the rail offers.
-        if (! in_array($this->horizon, ProjectForecastJob::HORIZON_DAYS, true)) {
+        if (! in_array($this->horizon, ForecastHorizon::days(), true)) {
             $this->horizon = self::DEFAULT_HORIZON;
         }
 
         $accountList = $charts->accountList($user);
-        $selectedAccountId = $this->normaliseAndResolveAccount($accountList);
+        $selectedAccountId = $this->resolveAccount($accountList);
         $isAllAccountsView = $this->account === self::ALL_ACCOUNTS;
         $isEmpty = $accountList === [];
 
         $scenarios = $scenarioQuery->forUser($user);
-        $this->assertScenarioOwnership($scenarios);
+        $this->dropUnknownScenario($scenarios);
 
         $viewData = array_merge(
-            $charts->selectedAccount($selectedAccountId, $this->horizon, $this->scenarioId, $user, $baseCurrency->code()),
+            $charts->selectedAccount($selectedAccountId, $this->horizon, $this->scenarioId, $user, $baseCurrency->code(), $this->viewByFunder),
             $isAllAccountsView && ! $isEmpty
-                ? $charts->aggregate($accountList, $this->horizon, $user, $baseCurrency->code())
+                ? $charts->aggregate($accountList, $this->horizon, $user, $baseCurrency->code(), $this->scenarioId, $this->viewByFunder)
                 : ForecastChartView::noAggregate($baseCurrency->code()),
             [
                 'accounts' => $accountList,
@@ -274,9 +268,11 @@ final class ForecastPage extends Component
     }
 
     /**
+     * @link ../../../../../.docs/features/forecasting/url-parameters.md#one-answer-for-both-cases
+     *
      * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
      */
-    private function normaliseAndResolveAccount(array $accountList): ?int
+    private function resolveAccount(array $accountList): ?int
     {
         // A tampered or stale ?account= falls back to the aggregate tab rather
         // than rendering a blank page with no error.
@@ -294,13 +290,21 @@ final class ForecastPage extends Component
             }
         }
 
-        throw new NotFoundHttpException('Account not found.');
+        // One answer for "not yours" and "nobody's". Answering them apart made
+        // the id space probeable: a 404 said the row exists somewhere and a
+        // rendered page said it does not.
+        $this->account = self::ALL_ACCOUNTS;
+
+        return null;
     }
 
     /**
      * @param  list<ScenarioDto>  $scenarios
      */
-    private function assertScenarioOwnership(array $scenarios): void
+    // A scenario deleted in another tab, one the launchpad redirected to and
+    // something else then removed, and one belonging to somebody else all read
+    // as the baseline. The horizon above takes the same soft reset.
+    private function dropUnknownScenario(array $scenarios): void
     {
         if ($this->scenarioId === null) {
             return;
@@ -311,6 +315,6 @@ final class ForecastPage extends Component
             }
         }
 
-        throw new NotFoundHttpException('Scenario not found.');
+        $this->scenarioId = null;
     }
 }

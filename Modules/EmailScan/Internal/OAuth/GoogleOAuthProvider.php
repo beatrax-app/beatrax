@@ -9,6 +9,7 @@ use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use League\OAuth2\Client\Provider\Google;
 use League\OAuth2\Client\Provider\GoogleUser;
 use League\OAuth2\Client\Token\AccessToken;
+use League\OAuth2\Client\Token\AccessTokenInterface;
 use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\SafeMessage;
 use Modules\EmailScan\Public\Enums\MailProvider;
@@ -18,9 +19,11 @@ use Throwable;
 
 class GoogleOAuthProvider
 {
-    private const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+    private const string GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 
-    private const USERINFO_EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
+    private const string USERINFO_EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
+
+    private const string REQUESTED_SCOPE_STRING = self::GMAIL_READONLY_SCOPE.' '.self::USERINFO_EMAIL_SCOPE;
 
     public function __construct(
         private readonly OAuthSecretsRepository $secrets,
@@ -64,6 +67,7 @@ class GoogleOAuthProvider
         } catch (Throwable $e) {
             throw new OAuthExchangeFailed(
                 'Google OAuth token exchange failed: '.$this->safeMessage($e),
+                previous: $e,
             );
         }
 
@@ -82,9 +86,7 @@ class GoogleOAuthProvider
             accessToken: $accessTokenString,
             refreshToken: is_string($refreshToken) && $refreshToken !== '' ? $refreshToken : null,
             expiresAt: $expiresAt,
-            // The full scope set, not just gmail.readonly: an out-of-band
-            // revoke of userinfo then surfaces as needs_reauth.
-            scope: self::GMAIL_READONLY_SCOPE.' '.self::USERINFO_EMAIL_SCOPE,
+            scope: self::grantedScope($token),
             email: $email,
         );
     }
@@ -111,6 +113,7 @@ class GoogleOAuthProvider
         } catch (Throwable $e) {
             throw new OAuthExchangeFailed(
                 'Google OAuth refresh failed: '.$this->safeMessage($e),
+                previous: $e,
             );
         }
 
@@ -126,9 +129,7 @@ class GoogleOAuthProvider
             accessToken: $token->getToken(),
             refreshToken: is_string($newRefresh) && $newRefresh !== '' ? $newRefresh : null,
             expiresAt: $expiresAt,
-            // Mirrors exchangeAuthorizationCode so the recorded scope string
-            // stays identical across refreshes.
-            scope: self::GMAIL_READONLY_SCOPE.' '.self::USERINFO_EMAIL_SCOPE,
+            scope: self::grantedScope($token),
             email: '',
         );
     }
@@ -171,6 +172,7 @@ class GoogleOAuthProvider
         } catch (Throwable $e) {
             throw new OAuthExchangeFailed(
                 'Google userinfo read failed: '.$this->safeMessage($e),
+                previous: $e,
             );
         }
     }
@@ -196,5 +198,16 @@ class GoogleOAuthProvider
     private function safeMessage(Throwable $e): string
     {
         return SafeMessage::cap($e->getMessage());
+    }
+
+    // What the user actually consented to, never what was asked for: a scope
+    // unticked on the consent screen otherwise leaves an inbox the app
+    // believes can read Gmail, and the first scan 403s into a generic error
+    // rather than the actionable needs_reauth.
+    private static function grantedScope(AccessTokenInterface $token): string
+    {
+        $granted = $token->getValues()['scope'] ?? null;
+
+        return is_string($granted) && $granted !== '' ? $granted : self::REQUESTED_SCOPE_STRING;
     }
 }

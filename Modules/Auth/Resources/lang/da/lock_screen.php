@@ -16,7 +16,7 @@ return [
     'ok_aria' => 'OK — bekræft PIN-kode',
     'ok' => 'OK',
 
-    'error_too_short' => 'PIN-koden skal have mindst 6 cifre.',
+    'error_pin_shape' => 'PIN-koden skal have :min til :max cifre — kun tal.',
 
     'error_backoff' => 'For mange forsøg — prøv igen om :wait.',
 

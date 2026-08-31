@@ -16,7 +16,7 @@ use Modules\FX\Public\Enums\FxRefreshFailureReason;
 /**
  * @link ../../../../.docs/features/fx/architecture.md
  */
-final class FxRefreshStatus
+final readonly class FxRefreshStatus
 {
     private const string KEY_PREFIX = 'fx.refresh.';
 
@@ -24,7 +24,7 @@ final class FxRefreshStatus
 
     private const int RETENTION_DAYS = 30;
 
-    public function __construct(private readonly Repository $cache) {}
+    public function __construct(private Repository $cache) {}
 
     public function recordFailure(int $userId, FxRefreshFailureReason $reason): void
     {

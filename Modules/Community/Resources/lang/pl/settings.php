@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'O wspólnej liście',
     'about_body' => 'Dołączony plik YAML, który przypisuje zagadkowym kodom z wyciągów bankowych czytelne nazwy sprzedawców. Włączenie pozwala aplikacji Beatrax czytać tę listę podczas importu; wysłanie propozycji otwiera GitHub w przeglądarce.',
 
-    'mappings' => 'Przypisania',
-    'contributors' => 'Współtwórcy',
+    'mappings' => ':count przypisanie|:count przypisania|:count przypisań',
+    'contributors' => ':count współtwórca|:count współtwórcy|:count współtwórców',
 
     'use_shared_list' => [
         'title' => 'Używaj wspólnej listy sprzedawców',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'Aktualizuj wspólną listę przy aktualizacjach aplikacji',
         'help' => 'Odświeżaj dołączoną listę przy każdej aktualizacji aplikacji Beatrax.',
+        'help_phone' => 'Odświeżaj dołączoną listę za każdym razem, gdy z App Store lub Google Play zostanie zainstalowana nowa wersja Beatraxa.',
         'note' => 'Zadziała po przyszłej aktualizacji aplikacji — obecną wersję znajdziesz w Ustawienia → O aplikacji.',
     ],
 ];

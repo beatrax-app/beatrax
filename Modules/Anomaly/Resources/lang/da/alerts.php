@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'normalt :baseline → faktisk: :actual',
+    'charged' => 'debiteret :actual',
     'detected' => 'opdaget :date',
     'sensitivity' => 'følsomhed :percent af 100',
 

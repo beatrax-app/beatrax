@@ -10,10 +10,13 @@ use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
+use Modules\Receipts\Internal\Matchers\ReceiptBodyText;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
@@ -21,13 +24,14 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 // A CSV row and its .eml receipt have to hash to the same fingerprint: the
 // ENRICHED disposition in FingerprintStage::classify is what makes cross-format
 // dedup work, and without parity every receipt import silently duplicates the
-// CSV rows it matches.
+// CSV rows it matches. Only a matcher with a twin ingestion format can be
+// paired; the arm that had none is asserted below rather than declared here and
+// skipped, which is how a third of this contract came to never execute.
 dataset('fingerprintParityPairs', [
     'paypal' => [
         'emlPath' => __DIR__.'/../fixtures/paypal/current-receipt.eml',
         'csvPath' => __DIR__.'/../fixtures/paypal/paired-csv-row.csv',
         'matcherKey' => 'paypal-receipt',
-        'wave' => 1,
     ],
     'ics' => [
         'emlPath' => __DIR__.'/../fixtures/ics/current-receipt.eml',
@@ -36,13 +40,6 @@ dataset('fingerprintParityPairs', [
         // app boots, where base_path() does not exist yet.
         'csvPath' => __DIR__.'/../../../Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf',
         'matcherKey' => 'ics-receipt',
-        'wave' => 2,
-    ],
-    'google-play' => [
-        'emlPath' => __DIR__.'/../fixtures/googleplay/wave2-fingerprint-pair.eml',
-        'csvPath' => __DIR__.'/../fixtures/googleplay/wave2-fingerprint-pair.csv',
-        'matcherKey' => 'google-play-receipt',
-        'wave' => 2,
     ],
 ]);
 
@@ -70,29 +67,33 @@ final class FixedIcsAccountResolver implements AccountResolver
     }
 }
 
+// A declared pair whose fixtures are absent is a contract that never runs, so
+// the absence fails here rather than skipping quietly.
+it('ships both fixtures for every declared parity pair', function (string $emlPath, string $csvPath, string $matcherKey): void {
+    expect(file_exists($emlPath))->toBeTrue("Missing receipt fixture for '{$matcherKey}': ".basename($emlPath));
+    expect(file_exists($csvPath))->toBeTrue("Missing twin-source fixture for '{$matcherKey}': ".basename($csvPath));
+})->with('fingerprintParityPairs');
+
+// Google Play issues receipts and no statement export, so there is no second
+// format for its rows to be deduplicated against and no pair to declare. Stated
+// as an assertion, because the arm that used to claim one skipped itself twice
+// over and read as covered.
+it('declares a parity pair for exactly the matchers that have a twin ingestion format', function (): void {
+    /** @var MatcherRegistry $registry */
+    $registry = $this->app->make(MatcherRegistry::class);
+
+    expect($registry->supportedKeys())->toContain('google-play-receipt');
+    expect(array_map(
+        static fn (SourceFormat $format): string => $format->value,
+        SourceFormat::cases(),
+    ))->not->toContain('google-play-csv', 'google-play-pdf');
+});
+
 it('produces equivalent fingerprints from receipt and CSV for the same logical transaction', function (
     string $emlPath,
     string $csvPath,
     string $matcherKey,
-    int $wave,
 ): void {
-    if (! file_exists($emlPath) || ! file_exists($csvPath)) {
-        $this->markTestSkipped(
-            "Fingerprint-parity fixture for matcher '{$matcherKey}' is missing. "
-            ."Wave {$wave} must land: ".basename($emlPath).' + '.basename($csvPath)
-            .'. Test scaffold ships in Wave 0; the gate activates the moment '
-            .'both fixtures exist.'
-        );
-    }
-
-    if ($matcherKey === 'google-play-receipt') {
-        $this->markTestSkipped(
-            "Matcher '{$matcherKey}' has no twin ingestion path in v1 — "
-            .'parity covered by GooglePlayReceiptMatcherTest + the shared '
-            .'NormalizeStage exercised by paypal + ics arms.'
-        );
-    }
-
     $seeded = $this->seedFixtureUserAndAccount();
     /** @var User $user */
     $user = $seeded['user'];
@@ -104,7 +105,7 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
         $accountId = $seeded['paypalAccount']->id;
         $accounts = new FixedPaypalAccountResolver($accountId);
 
-        $matcher = new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class));
+        $matcher = new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class), new ReceiptBodyText);
         $rawEml = (string) file_get_contents($emlPath);
         $matchOutcome = $matcher->match($rawEml);
         expect($matchOutcome->kind)->toBe(MatchOutcomeKind::Parsed);
@@ -143,7 +144,7 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
     $accountId = $seeded['icsAccount']->id;
     $accounts = new FixedIcsAccountResolver($accountId);
 
-    $matcher = new IcsReceiptMatcher(new EmlMimeReader);
+    $matcher = new IcsReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
     $rawEml = (string) file_get_contents($emlPath);
     $matchOutcome = $matcher->match($rawEml);
     expect($matchOutcome->kind)->toBe(MatchOutcomeKind::Parsed);

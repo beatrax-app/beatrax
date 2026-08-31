@@ -96,9 +96,8 @@ composer test
   above the actual ratio.
 - **The corpus fixture passes in isolation but the evaluator fails
   in production** — every fixture must mirror a real-world shape;
-  manually-injected unrealistic rows are forbidden (a lesson from an
-  earlier wave on `Chains`). Inspect the failing input vs the
-  fixture for shape drift.
+  manually-injected unrealistic rows are forbidden. Inspect the
+  failing input vs the fixture for shape drift.
 - **`DriftAlertOpened` not firing on a new alert** — confirm the
   evaluator returned a fresh insert (not a unique-constraint
   no-op). The event dispatch is gated on the insert returning a
@@ -123,10 +122,6 @@ Each contract below names the test that proves it. The requirement it
 serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
-
-The behavioural contract for the `DriftAlerts` module.
-
-## Behavioral contracts
 
 - **The evaluator never imports `Recurring`'s internals.** Every
   read of a recurring series flows through

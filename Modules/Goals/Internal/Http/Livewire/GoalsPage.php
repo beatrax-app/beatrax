@@ -8,21 +8,26 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
+use Modules\Goals\Internal\Exceptions\GoalTargetDateBeforeStartException;
+use Modules\Goals\Internal\Services\GoalPotLinkWriter;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
+use Modules\Goals\Public\Exceptions\InvalidGoalNameException;
 use Modules\Goals\Public\Exceptions\InvalidGoalTargetDateException;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Goals\Public\Services\GoalWriter;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Pots\Public\Enums\PotStatus;
+use Modules\Pots\Public\Exceptions\PotAlreadyLinkedException;
+use Modules\Pots\Public\Exceptions\PotLinkedToCategoryException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
-use Modules\Pots\Public\Services\PotWriter;
 
 final class GoalsPage extends Component
 {
@@ -36,6 +41,11 @@ final class GoalsPage extends Component
 
     public string $linkedPotId = '';
 
+    // Locked because editGoal() is the only writer and the Blade only reads it:
+    // it names the row updateGoal() saves the form over. Unlocked, opening goal
+    // A's sheet and naming goal B in the same payload wrote A's name, amount,
+    // date and linked pot over B. PotsPage::$editPotId is the opposite case.
+    #[Locked]
     public int $editGoalId = 0;
 
     public string $errorName = '';
@@ -50,7 +60,16 @@ final class GoalsPage extends Component
 
     public bool $showArchived = false;
 
-    public function createGoal(CurrentUser $currentUser, GoalWriter $writer, DatabaseManager $db, PotWriter $potWriter): void
+    // The modal is dismissible and the sheet closes on the client, so a form
+    // abandoned mid-edit keeps every field it was filled with. "Add goal" only
+    // cleared editGoalId, so it re-opened the edited goal's own values and saved
+    // them as a second goal -- taking the first goal's linked pot with it.
+    public function startCreate(): void
+    {
+        $this->resetForm();
+    }
+
+    public function createGoal(CurrentUser $currentUser, GoalPotLinkWriter $writer): void
     {
         $this->clearErrors();
 
@@ -58,21 +77,14 @@ final class GoalsPage extends Component
             return;
         }
 
-        // One transaction so a failed pot link rolls back the goal: no orphan
-        // goal, no duplicate on resubmit.
         try {
-            $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter): void {
-                $goal = $writer->save(
-                    $currentUser->user(),
-                    $this->name,
-                    $this->targetAmount,
-                    $this->targetDate,
-                );
-
-                if ($this->linkedPotId !== '') {
-                    $this->linkPotToGoal($currentUser, $db, $potWriter, (int) $this->linkedPotId, $goal->id);
-                }
-            });
+            $writer->create(
+                $currentUser->user(),
+                $this->name,
+                $this->targetAmount,
+                $this->targetDate,
+                $this->linkedPotId !== '' ? (int) $this->linkedPotId : null,
+            );
 
             $this->resetForm();
             $this->dispatch('modal-close', name: 'goal-form');
@@ -94,8 +106,9 @@ final class GoalsPage extends Component
                 $this->editGoalId = $goalId;
                 $this->name = $row->name;
                 // The shared formatter emits the comma-decimal form the
-                // placeholder shows and tryToMinor() parses back.
-                $this->targetAmount = MoneyInput::formatMinor($row->targetMinor);
+                // placeholder shows and tryToMinor() parses back, at the
+                // goal's own scale so a yen target is not shown as a hundredth.
+                $this->targetAmount = MoneyInput::formatMinor($row->targetMinor, $row->currency);
                 $this->targetDate = $row->targetDate;
                 $linkedPotId = $potBalance->linkedPotIdForGoal($goalId, $currentUser->user());
                 $this->linkedPotId = $linkedPotId !== null ? (string) $linkedPotId : '';
@@ -109,7 +122,7 @@ final class GoalsPage extends Component
         }
     }
 
-    public function updateGoal(CurrentUser $currentUser, GoalWriter $writer, PotBalanceQuery $potBalance, DatabaseManager $db, PotWriter $potWriter): void
+    public function updateGoal(CurrentUser $currentUser, GoalPotLinkWriter $writer, PotBalanceQuery $potBalance): void
     {
         $this->clearErrors();
 
@@ -117,23 +130,16 @@ final class GoalsPage extends Component
             return;
         }
 
-        $newPotId = $this->linkedPotId !== '' ? (int) $this->linkedPotId : null;
-        $prevPotId = $potBalance->linkedPotIdForGoal($this->editGoalId, $currentUser->user());
-
-        // One transaction so a failed relink rolls the update back with it, and
-        // the existing goal-pot link is never silently lost.
         try {
-            $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $newPotId, $prevPotId): void {
-                $writer->update(
-                    $currentUser->user(),
-                    $this->editGoalId,
-                    $this->name,
-                    $this->targetAmount,
-                    $this->targetDate,
-                );
-
-                $this->applyPotRelink($currentUser, $db, $potWriter, $newPotId, $prevPotId);
-            });
+            $writer->update(
+                $currentUser->user(),
+                $this->editGoalId,
+                $this->name,
+                $this->targetAmount,
+                $this->targetDate,
+                $this->linkedPotId !== '' ? (int) $this->linkedPotId : null,
+                $potBalance->linkedPotIdForGoal($this->editGoalId, $currentUser->user()),
+            );
 
             $this->resetForm();
             $this->dispatch('modal-close', name: 'goal-form');
@@ -150,7 +156,12 @@ final class GoalsPage extends Component
         }
 
         $writer->markComplete($currentUser->user(), $goalId);
-        $this->toast(Lang::get('goals::messages.notices.goal_marked_complete'));
+
+        // Undo rather than a prompt: the row drops the tick, the progress bar
+        // and the target date the moment this lands, and restore() already
+        // exists as archive's way back. A confirm on every completion would
+        // charge the ordinary case for the mis-tap.
+        $this->toastWithUndo(Lang::get('goals::messages.notices.goal_marked_complete'), undoAction: 'restore', undoPayload: $goalId);
     }
 
     public function confirmArchive(CurrentUser $currentUser, int $goalId): void
@@ -317,8 +328,23 @@ final class GoalsPage extends Component
             return;
         }
 
+        if ($e instanceof InvalidGoalNameException) {
+            $this->errorName = Lang::get('goals::messages.errors.name');
+
+            return;
+        }
+
         if ($e instanceof InvalidGoalAmountException) {
             $this->errorAmount = Lang::get('goals::messages.errors.amount');
+
+            return;
+        }
+
+        // Narrower first: a real date the goal simply starts after is not the
+        // unparseable one its parent reports, and "Choose a real date." was an
+        // answer to a question the reader had not asked.
+        if ($e instanceof GoalTargetDateBeforeStartException) {
+            $this->errorDate = Lang::get('goals::messages.errors.date_before_start');
 
             return;
         }
@@ -329,83 +355,30 @@ final class GoalsPage extends Component
             return;
         }
 
-        // The message of an exception the app threw is written for a developer
-        // and exists in one language. It also has nothing to do with the linked
-        // pot, which is the field it was being printed under.
-        $this->errorLinkedPot = Lang::get('goals::messages.errors.generic');
-    }
-
-    private function applyPotRelink(
-        CurrentUser $currentUser,
-        DatabaseManager $db,
-        PotWriter $potWriter,
-        ?int $newPotId,
-        ?int $prevPotId,
-    ): void {
-        if ($newPotId !== null && $newPotId !== $prevPotId) {
-            if ($prevPotId !== null) {
-                $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
-            }
-
-            $this->linkPotToGoal($currentUser, $db, $potWriter, $newPotId, $this->editGoalId);
+        if ($e instanceof PotLinkedToCategoryException) {
+            $this->errorLinkedPot = Lang::get('goals::messages.errors.pot_linked_category');
 
             return;
         }
 
-        if ($newPotId === null && $prevPotId !== null) {
-            $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
-        }
-    }
+        if ($e instanceof PotAlreadyLinkedException) {
+            $this->errorLinkedPot = Lang::get('goals::messages.errors.pot_already_linked');
 
-    /**
-     * @throws \InvalidArgumentException on one-pot-per-goal violation or category-linked pot
-     * @throws PotNotFoundException on cross-user pot id
-     */
-    private function linkPotToGoal(
-        CurrentUser $currentUser,
-        DatabaseManager $db,
-        PotWriter $potWriter,
-        int $potId,
-        int $goalId,
-    ): void {
-        $user = $currentUser->user();
-
-        $row = $db->connection()
-            ->table('pots')
-            ->where('user_id', $user->id)
-            ->where('id', $potId)
-            ->first(['name', 'category_id']);
-
-        // PotWriter::update would null out category_id and destroy the user's
-        // category link. The picker excludes these; a stale id would not.
-        if ($row !== null && $row->category_id !== null) {
-            throw new \InvalidArgumentException(
-                Lang::get('goals::messages.errors.pot_linked_category')
-            );
+            return;
         }
 
-        $name = ($row !== null && is_string($row->name)) ? $row->name : '';
-        $potWriter->update($user, $potId, $name, $goalId, null);
-    }
+        // The picker is built in render(), so a pot archived on the Pots page
+        // after this modal opened is still on offer. Which of "no such pot" and
+        // "not yours" it was stays unsaid — see PotNotFoundException.
+        if ($e instanceof PotNotFoundException) {
+            $this->errorLinkedPot = Lang::get('goals::messages.errors.pot_missing');
 
-    /**
-     * @throws PotNotFoundException on cross-user pot id
-     */
-    private function clearPotGoalLink(
-        CurrentUser $currentUser,
-        DatabaseManager $db,
-        PotWriter $potWriter,
-        int $potId,
-    ): void {
-        $user = $currentUser->user();
+            return;
+        }
 
-        $row = $db->connection()
-            ->table('pots')
-            ->where('user_id', $user->id)
-            ->where('id', $potId)
-            ->first(['name']);
-
-        $name = ($row !== null && is_string($row->name)) ? $row->name : '';
-        $potWriter->update($user, $potId, $name, null, null);
+        // The message of an exception the app threw is written for a developer
+        // and exists in one language. It also has nothing to do with the linked
+        // pot, which is the field it was being printed under.
+        $this->errorLinkedPot = Lang::get('goals::messages.errors.generic');
     }
 }

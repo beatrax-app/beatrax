@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Avaa lukitus',
 
-    'digits_entered' => 'numeroa syötetty',
+    'digits_entered' => 'syötetty :count numero|syötetty :count numeroa',
     'pin_pad' => 'PIN-näppäimistö',
     'digit' => 'Numero :digit',
     'backspace' => 'Askelpalautin',

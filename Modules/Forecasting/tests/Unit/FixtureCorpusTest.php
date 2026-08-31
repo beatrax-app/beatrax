@@ -221,13 +221,16 @@ it('ics-settlement-chain declares the chain_state payload', function (): void {
     expect($fixture['chain_state'])->toHaveKey('next_settlement_amount_minor');
 });
 
-it('fx-only-usd-subscription preserves the non-EUR primary currency on its series', function (): void {
-    /** @var array{series: list<array{latest_currency: string, latest_fx_rate_used: ?float}>} $fixture */
+// The fixture used to hand the pipeline a rate on the series row, which no
+// production writer has ever put there. Six green tests sat on a path that
+// raised on the first real dollar subscription.
+it('fx-only-usd-subscription keeps a non-EUR series and supplies no rate of its own', function (): void {
+    /** @var array{series: list<array<string, mixed>>} $fixture */
     $fixture = require ForecastCorpus::path('fx-only-usd-subscription');
 
     $usdSeries = array_filter($fixture['series'], static fn (array $s): bool => $s['latest_currency'] === 'USD');
     expect($usdSeries)->not->toBe([]);
-    foreach ($usdSeries as $row) {
-        expect($row['latest_fx_rate_used'])->not->toBeNull();
+    foreach ($fixture['series'] as $row) {
+        expect($row)->not->toHaveKey('latest_fx_rate_used');
     }
 });

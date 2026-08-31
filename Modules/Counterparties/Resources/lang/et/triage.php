@@ -6,7 +6,7 @@ return [
     'page_title' => 'Vastaspoolte sortimine',
     'heading' => 'Sordi tundmatud vastaspooled',
 
-    'progress' => ':seen / :total · :percent % · ~:minutes min jäänud',
+    'progress' => ':seen / :total · :percent% · ~:minutes min jäänud',
     'progress_aria' => 'Sortimise edenemine',
 
     'all_caught_aria' => 'Kõik vastaspooled on sildistatud',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'Ühtegi tehingut pole veel kirjas.',
 
     'label_manually' => 'Või sildista käsitsi',
+    'label_question' => 'Mis vastaspool see on?',
     'display_name_label' => 'Kuvatav nimi',
-    'display_name_placeholder' => 'Kuvatav nimi…',
     'type_label' => 'Tüüp',
     'type_merchant' => 'Kaupmees',
     'type_personal' => 'Eraisik',
     'type_bank' => 'Pank',
     'type_government' => 'Riik',
     'save_label' => 'Salvesta silt',
+    'name_required' => 'Anna sellele vastaspoolele kõigepealt nimi.',
+    'draft_kept' => 'See, mida kirjutad, jääb alles, kui järjekorras edasi liigud.',
 
     'skip' => 'Jäta praegu vahele',
-    'mark_ignored' => 'Märgi eiratuks',
+    'mark_ignored' => 'Ära seda enam küsi',
+    'not_now_note' => 'Kumbki ei muuda vastaspoolt — saad selle hiljem vastaspoolte lehel sildistada.',
     'previous' => 'Eelmine tundmatu',
-    'next' => 'Järgmine',
 
     'kbd_yes' => 'jah',
     'kbd_no' => 'ei',

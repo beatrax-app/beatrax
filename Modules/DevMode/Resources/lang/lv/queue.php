@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Dzēst :count uzdevumu|Dzēst :count uzdevumu|Dzēst :count uzdevumus',
     'empty_pending' => 'Rinda ir tukša.',
     'empty_failed' => 'Nav neizdevušos uzdevumu.',
-    'empty_batches' => 'Nav aktīvu partiju.',
+    'empty_batches' => 'Nav partiju.',
     'select_aria' => 'Atlasīt',
     'select_row_aria' => 'Atlasīt rindu :key',
     'col_id' => 'Id',
     'col_queue' => 'Rinda',
     'col_attempts' => 'Mēģinājumi',
+    'col_state' => 'Statuss',
     'col_created' => 'Izveidots',
     'col_uuid' => 'UUID',
     'col_failed' => 'Neizdevās',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Gaida',
     'col_actions' => 'Darbības',
     'delete_job' => 'Dzēst uzdevumu',
+    'worker_running' => 'Izpilda worker',
     'delete_pending_confirm' => 'Dzēst gaidošo uzdevumu #:key?',
     'retry_job' => 'Atkārtot uzdevumu',
     'forget_confirm' => 'Noņemt neizdevušos uzdevumu :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Atlasītie neizdevušies uzdevumi tiks atgriezti rindā, lai darbinieks tos mēģinātu vēlreiz.',
     'cancel' => 'Atcelt',
 
+    'state' => [
+        'available' => 'Gatava',
+        'reserved' => 'Rezervēta',
+        'scheduled' => 'Ieplānota',
+    ],
+
     'tab' => [
         'pending' => 'Gaidošie',
         'failed' => 'Neizdevušies',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Gaidošais uzdevums dzēsts',
+        'pending_already_gone' => 'Šī darba vairs nebija',
         'failed_requeued' => 'Neizdevies uzdevums atgriezts rindā',
         'failed_removed' => 'Neizdevies uzdevums noņemts',
         'batch_cancelled' => 'Partija atcelta',
         'batch_deleted' => 'Partija dzēsta',
         'batch_failures_requeued' => 'Partijas neizdevušies uzdevumi atgriezti rindā',
+        'batch_failures_none' => 'Partijā vairs nav kļūdu, ko atgriezt rindā',
         'failed_jobs_requeued' => 'Neizdevušies uzdevumi atgriezti rindā',
+        'failed_jobs_none' => 'Vairs nav neizdevušos darbu, ko atgriezt rindā',
         'bulk_refused' => 'Masveida dzēšana atteikta — :reason',
         'rows_deleted' => 'Atlasītās rindas dzēstas',
     ],

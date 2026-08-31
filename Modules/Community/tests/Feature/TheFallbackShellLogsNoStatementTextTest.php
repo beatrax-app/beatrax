@@ -16,7 +16,7 @@ function recordingLogger(): object
         /** @var list<array{string, array<string, mixed>}> */
         public array $lines = [];
 
-        public function log($level, \Stringable|string $message, array $context = []): void
+        public function log($level, Stringable|string $message, array $context = []): void
         {
             $this->lines[] = [(string) $message, $context];
         }

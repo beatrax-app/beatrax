@@ -7,7 +7,6 @@ namespace Modules\Calendar\Internal\Services;
 use Carbon\CarbonImmutable;
 use Modules\Calendar\Internal\Dto\CalendarEntryDto;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Dto\BookedFutureRowDto;
@@ -15,11 +14,11 @@ use Modules\Ledger\Public\Services\BookedFutureRowQuery;
 use Modules\Recurring\Public\Services\TransactionSeriesMembershipQuery;
 use Modules\Recurring\Public\Support\OccurrenceSupersession;
 
-// A payment the ledger already holds, dated ahead. SeriesEntryPlacer answers
-// what a cadence expects; this answers what is already booked, and where both
+// A payment the ledger holds, on any day of the grid. SeriesEntryPlacer answers
+// what a cadence expects; this answers what is actually booked, and where both
 // answer for the same payment the booked one is the one that happens.
 /**
- * @link ../../../../.docs/features/calendar/architecture.md#booked-rows-dated-ahead
+ * @link ../../../../.docs/features/calendar/architecture.md#booked-rows-and-the-cadences-that-predicted-them
  */
 final readonly class BookedEntryPlacer
 {
@@ -27,7 +26,6 @@ final readonly class BookedEntryPlacer
         private BookedFutureRowQuery $bookedRows,
         private TransactionSeriesMembershipQuery $seriesMembership,
         private AccountResolver $accountResolver,
-        private Clock $clock,
     ) {}
 
     /**
@@ -38,39 +36,50 @@ final readonly class BookedEntryPlacer
     public function mergeInto(
         array $seriesEntries,
         User $user,
-        CarbonImmutable $monthStart,
-        CarbonImmutable $monthEnd,
+        CarbonImmutable $gridStart,
+        CarbonImmutable $gridEnd,
         ?array $effectiveVisible,
     ): array {
         if ($effectiveVisible === []) {
             return $seriesEntries;
         }
 
-        $today = $this->clock->now()->startOfDay();
-        // A past day already draws its entries against what was actually
-        // observed, so a booked row behind today is a payment the paid/missed
-        // pass has covered and would be listed twice here.
-        $from = $monthStart->subDay()->greaterThan($today) ? $monthStart->subDay() : $today;
-
-        $rows = $this->bookedRows->between($user, $from, $monthEnd, $effectiveVisible);
+        // BookedFutureRowQuery::between() takes an EXCLUSIVE lower bound, so
+        // the first grid cell is asked for as the day before it — that
+        // subtraction is compensation for the exclusivity, not a wider reach,
+        // and anything wider reaches a cell SeriesEntryPlacer cannot.
+        $rows = $this->bookedRows->between($user, $gridStart->subDay(), $gridEnd, $effectiveVisible);
         if ($rows === []) {
             return $seriesEntries;
         }
 
-        $entries = $this->withoutSuperseded($seriesEntries, $rows, $user, $today);
+        $seriesByTransaction = $this->seriesMembership->seriesIdsForTransactionIds(
+            array_map(static fn (BookedFutureRowDto $row): int => $row->transactionId, $rows),
+            $user,
+        );
+
+        ['entries' => $entries, 'retired' => $retired]
+            = $this->withoutSuperseded($seriesEntries, $rows, $seriesByTransaction);
         $accountNames = $this->accountResolver->accountNamesForUser($user);
 
         foreach ($rows as $row) {
+            $seriesId = $seriesByTransaction[$row->transactionId] ?? null;
+            $estimate = $seriesId === null ? null : ($retired[$seriesId] ?? null);
+
             $entries[$row->postedAt->toDateString()][] = new CalendarEntryDto(
-                seriesId: null,
-                name: $row->counterpartyName ?? Lang::get('calendar::messages.entry.booked_unnamed'),
+                // The estimate this row retired is the same payment under the
+                // reader's own name for it, so the survivor keeps that name and
+                // its series drill-through: a bare counterparty string in their
+                // place loses information the grid was already showing.
+                seriesId: $estimate?->seriesId,
+                name: $estimate->name ?? $row->counterpartyName ?? Lang::get('calendar::messages.entry.booked_unnamed'),
                 amountMinor: $row->settled->toMinor(),
                 currency: $row->settled->currency(),
                 direction: $row->direction->value,
                 accountId: $row->accountId,
                 accountName: $accountNames[$row->accountId] ?? '',
-                counterpartyId: null,
-                counterpartySlug: $row->counterpartySlug,
+                counterpartyId: $estimate?->counterpartyId,
+                counterpartySlug: $row->counterpartySlug ?? $estimate?->counterpartySlug,
                 isPaid: false,
                 isMissed: false,
                 isApproximate: false,
@@ -84,16 +93,13 @@ final readonly class BookedEntryPlacer
     /**
      * @param  array<string, list<CalendarEntryDto>>  $seriesEntries
      * @param  list<BookedFutureRowDto>  $rows
-     * @return array<string, list<CalendarEntryDto>>
+     * @param  array<int, int>  $seriesByTransaction
+     * @return array{entries: array<string, list<CalendarEntryDto>>, retired: array<int, CalendarEntryDto>}
      */
-    private function withoutSuperseded(array $seriesEntries, array $rows, User $user, CarbonImmutable $today): array
+    private function withoutSuperseded(array $seriesEntries, array $rows, array $seriesByTransaction): array
     {
-        $seriesByTransaction = $this->seriesMembership->seriesIdsForTransactionIds(
-            array_map(static fn (BookedFutureRowDto $row): int => $row->transactionId, $rows),
-            $user,
-        );
         if ($seriesByTransaction === []) {
-            return $seriesEntries;
+            return ['entries' => $seriesEntries, 'retired' => []];
         }
 
         /** @var array<int, list<CarbonImmutable>> $bookedDatesBySeries */
@@ -105,25 +111,30 @@ final readonly class BookedEntryPlacer
             }
         }
         if ($bookedDatesBySeries === []) {
-            return $seriesEntries;
+            return ['entries' => $seriesEntries, 'retired' => []];
         }
 
-        $superseded = $this->supersededDatesBySeries($seriesEntries, $bookedDatesBySeries, $today);
+        $superseded = $this->supersededDatesBySeries($seriesEntries, $bookedDatesBySeries);
 
         $kept = [];
+        $retired = [];
         foreach ($seriesEntries as $dateStr => $entries) {
-            $survivors = array_values(array_filter(
-                $entries,
-                static fn (CalendarEntryDto $entry): bool => $entry->seriesId === null
-                    || ! isset($superseded[$entry->seriesId][$dateStr]),
-            ));
+            $survivors = [];
+            foreach ($entries as $entry) {
+                if ($entry->seriesId !== null && isset($superseded[$entry->seriesId][$dateStr])) {
+                    $retired[$entry->seriesId] ??= $entry;
+
+                    continue;
+                }
+                $survivors[] = $entry;
+            }
 
             if ($survivors !== []) {
                 $kept[$dateStr] = $survivors;
             }
         }
 
-        return $kept;
+        return ['entries' => $kept, 'retired' => $retired];
     }
 
     /**
@@ -131,17 +142,13 @@ final readonly class BookedEntryPlacer
      * @param  array<int, list<CarbonImmutable>>  $bookedDatesBySeries
      * @return array<int, array<string, true>>
      */
-    private function supersededDatesBySeries(array $seriesEntries, array $bookedDatesBySeries, CarbonImmutable $today): array
+    private function supersededDatesBySeries(array $seriesEntries, array $bookedDatesBySeries): array
     {
         /** @var array<int, array<string, CarbonImmutable>> $expectedBySeries */
         $expectedBySeries = [];
         foreach ($seriesEntries as $dateStr => $entries) {
-            $date = SafeDate::parseDayOrNull($dateStr);
-            // Only ahead of today: the window reaches back a week, and a day
-            // behind today owes the reader its paid-or-missed verdict rather
-            // than a row silently removed from it. Withholding those days from
-            // the pairing is also what stops one spending a booked row.
-            if ($date === null || $date->lessThanOrEqualTo($today)) {
+            $date = SafeDate::normalisedDayOrNull($dateStr);
+            if ($date === null) {
                 continue;
             }
 

@@ -23,5 +23,6 @@ return [
         'body' => 'Kodovi za oporavak su jedini način da se vratiš na svoj nalog ako zaboraviš lozinku.',
         'warning' => 'Čuvaju se heširani pa ne mogu ponovo da se prikažu. Novi set odmah poništava stari.',
         'regenerate' => 'Napravi nove kodove',
+        'regenerate_confirm' => 'Napraviti novi set kodova za oporavak? Set koji sada imaš prestaje da važi u trenutku kada nastane novi i više ne može da se prikaže — odštampana ili prepisana kopija postaje beskorisna. Sačuvaj nove kodove pre nego što napustiš ovu stranicu.',
     ],
 ];

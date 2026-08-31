@@ -131,13 +131,16 @@ it('fx_exclusion_never_1to1_transactions: an unconvertible-currency row is exclu
 
     // A fabricated 1:1 fallback would have added the raw 500_000 JPY here.
     expect($spend->totalMinor)->toBe(10_000);
-    expect($spend->hasExcludedAccounts)->toBeTrue();
-    expect($spend->accountsWithoutRate)->toBeGreaterThanOrEqual(1);
+    expect($spend->hasExclusions())->toBeTrue();
+    // The CURRENCY, named. A count alone read as a number of accounts on the
+    // page that renders it, and it was never counting those.
+    expect($spend->excludedCurrencies)->toBe(['JPY']);
+    expect($spend->excludedAccountIds)->toBe([]);
 
     $income = app(ReportAggregator::class)->run($user, cmeDefinition('income'));
     expect($income->totalMinor)->toBe(30_000);
-    expect($income->hasExcludedAccounts)->toBeTrue();
-    expect($income->accountsWithoutRate)->toBeGreaterThanOrEqual(1);
+    expect($income->hasExclusions())->toBeTrue();
+    expect($income->excludedCurrencies)->toBe(['JPY']);
 });
 
 it('currencyMode=original never triggers exclusion — each currency reports its own native total', function (): void {
@@ -161,8 +164,8 @@ it('currencyMode=original never triggers exclusion — each currency reports its
 
     $spend = app(ReportAggregator::class)->run($user, $definition);
 
-    expect($spend->hasExcludedAccounts)->toBeFalse();
-    expect($spend->accountsWithoutRate)->toBe(0);
+    expect($spend->hasExclusions())->toBeFalse();
+    expect($spend->excludedCurrencies)->toBe([]);
 });
 
 it('currencyMode=original with an account filter reports the correct currency/total, never $0.00 next to non-empty rows', function (): void {

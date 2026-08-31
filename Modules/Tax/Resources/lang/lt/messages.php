@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Kategorijos pavadinimas negali būti tuščias.',
         'name_duplicate' => 'Kategorija tokiu pavadinimu jau yra.',
+        'category_not_saved' => 'Šios kategorijos išsaugoti nepavyko. Bandykite dar kartą.',
+        'tag_refused' => 'Šios žymos išsaugoti nepavyko. Uždarykite pasirinkimą ir bandykite dar kartą.',
     ],
 ];

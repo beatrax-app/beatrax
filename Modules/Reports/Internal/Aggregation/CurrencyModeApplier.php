@@ -16,17 +16,17 @@ use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use Modules\Reports\Internal\Enums\ReportCurrencyMode;
 
-final class CurrencyModeApplier
+final readonly class CurrencyModeApplier
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly CrossCurrencyTotal $fx,
-        private readonly BaseCurrency $baseCurrency,
+        private DatabaseManager $db,
+        private CrossCurrencyTotal $fx,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     /**
      * @param  string  $metric  'spend' | 'income' | 'net'
-     * @param  callable(string $currency): list<ReportResultRow>  $queryForCurrency  Re-runs the caller's chosen dimension query, scoped to one settled_currency at a time.
+     * @param  callable(string $currency): ?list<ReportResultRow>  $queryForCurrency  Re-runs the caller's chosen dimension query, scoped to one settled_currency at a time. Null means the report cannot be answered in that currency at all — an amount bound the reader typed in their own currency that no rate reaches this one — which is an exclusion to disclose, never rows to drop quietly.
      * @param  SpendQueryFilters  $filters  the same accounts/categories/counterparties filters the dimension query itself applies, threaded into discoverCurrencies() too, so a filtered report only discovers currencies that can actually produce rows
      * @param  array<string, int>  $otherTotalsByCurrency  fees and adjustments per settled currency; carried through the same currency decision the rows get so the figure beside the total is denominated the same way
      */
@@ -104,7 +104,7 @@ final class CurrencyModeApplier
 
     /**
      * @param  list<string>  $currencies
-     * @param  callable(string $currency): list<ReportResultRow>  $queryForCurrency
+     * @param  callable(string $currency): ?list<ReportResultRow>  $queryForCurrency
      * @param  array<string, int>  $otherTotalsByCurrency
      */
     private function applyBase(User $user, array $currencies, callable $queryForCurrency, array $otherTotalsByCurrency = []): ReportResultDto
@@ -126,8 +126,14 @@ final class CurrencyModeApplier
         $excludedCurrencies = [];
 
         foreach ($currencies as $currency) {
-            /** @var list<ReportResultRow> $rows */
             $rows = $queryForCurrency($currency);
+
+            if ($rows === null) {
+                $excludedCurrencies[$currency] = true;
+
+                continue;
+            }
+
             if ($rows === []) {
                 continue;
             }
@@ -175,16 +181,15 @@ final class CurrencyModeApplier
             rows: $resultRows,
             totalMinor: $total,
             currency: $baseCurrency,
-            hasExcludedAccounts: $excludedCurrencies !== [],
-            accountsWithoutRate: count($excludedCurrencies),
+            excludedCurrencies: self::sortedCodes($excludedCurrencies),
             otherMovementsByCurrency: $fees->minor === 0 ? [] : [$baseCurrency => $fees->minor],
         );
     }
 
-    // Rounding each group's conversion on its own drifts by up to half a minor
-    // unit per group, which put one report at 8942.01 by category and 8942.04 by
-    // counterparty. The currency's own subtotal converts once and the remainder
-    // is handed back to the rows, so the total cannot depend on the grouping.
+    // The currency's own subtotal converts once and the remainder is handed back
+    // to the rows, so the total cannot depend on the grouping. The arithmetic
+    // itself is CrossCurrencyTotal's, shared with the dashboard rollups that
+    // used to drift a cent away from this very report.
     /**
      * @param  list<ReportResultRow>  $rows  all denominated in $currency
      * @param  array<string, string>  $rates
@@ -192,64 +197,21 @@ final class CurrencyModeApplier
      */
     private function convertRowsOfOneCurrency(array $rows, string $currency, string $baseCurrency, array $rates): ?array
     {
-        $rawTotal = 0;
-        foreach ($rows as $row) {
-            $rawTotal += $row->amountMinor;
-        }
+        $converted = $this->fx->distribute(
+            array_map(static fn (ReportResultRow $row): int => $row->amountMinor, $rows),
+            $currency,
+            $baseCurrency,
+            $rates,
+        );
 
-        $subtotal = Money::tryOfMinor($rawTotal, $currency);
-        $convertedSubtotal = $subtotal === null ? null : $this->fx->convert($subtotal, $baseCurrency, $rates);
-
-        if ($convertedSubtotal === null) {
-            return null;
-        }
-
-        $converted = [];
-        $sumOfRows = 0;
-        foreach ($rows as $index => $row) {
-            $money = Money::tryOfMinor($row->amountMinor, $currency);
-            $rowConverted = $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates);
-
-            if ($rowConverted === null) {
-                return null;
-            }
-
-            $converted[$index] = $rowConverted->toMinor();
-            $sumOfRows += $converted[$index];
-        }
-
-        return self::spreadRemainder($converted, $rows, $convertedSubtotal->toMinor() - $sumOfRows);
+        return $converted === null ? null : array_values($converted);
     }
 
-    // Largest magnitude first, ties broken by position, so the same report
-    // always lands the same cents on the same rows.
-    /**
-     * @param  list<int>  $converted
-     * @param  list<ReportResultRow>  $rows
-     * @return list<int>
-     */
-    private static function spreadRemainder(array $converted, array $rows, int $remainder): array
-    {
-        if ($remainder === 0 || $converted === []) {
-            return $converted;
-        }
-
-        $order = array_keys($converted);
-        usort($order, static fn (int $a, int $b): int => abs($rows[$b]->amountMinor) <=> abs($rows[$a]->amountMinor) ?: $a <=> $b);
-
-        $step = $remainder > 0 ? 1 : -1;
-        for ($i = 0; $i < abs($remainder); $i++) {
-            $converted[$order[$i % count($order)]] += $step;
-        }
-
-        return array_values($converted);
-    }
-
-    // No conversion. currency/totalMinor go to whichever currency has the largest
-    // absolute total in the actual rows, never a first-discovered guess.
+    // No conversion. currency/totalMinor go to whichever currency's subtotal is
+    // WORTH the most, never to whichever carries the largest raw number.
     /**
      * @param  list<string>  $currencies
-     * @param  callable(string $currency): list<ReportResultRow>  $queryForCurrency
+     * @param  callable(string $currency): ?list<ReportResultRow>  $queryForCurrency
      * @param  array<string, int>  $otherTotalsByCurrency
      */
     private function applyOriginal(User $user, array $currencies, callable $queryForCurrency, array $otherTotalsByCurrency = []): ReportResultDto
@@ -257,10 +219,18 @@ final class CurrencyModeApplier
         $resultRows = [];
         /** @var array<string, int> $totalsByCurrency */
         $totalsByCurrency = [];
+        /** @var array<string, true> $excludedCurrencies */
+        $excludedCurrencies = [];
 
         foreach ($currencies as $currency) {
-            /** @var list<ReportResultRow> $rows */
             $rows = $queryForCurrency($currency);
+
+            if ($rows === null) {
+                $excludedCurrencies[$currency] = true;
+
+                continue;
+            }
+
             $currencyTotal = 0;
             foreach ($rows as $row) {
                 $resultRows[] = $row;
@@ -269,29 +239,66 @@ final class CurrencyModeApplier
             $totalsByCurrency[$currency] = ($totalsByCurrency[$currency] ?? 0) + $currencyTotal;
         }
 
-        $primaryCurrency = $currencies[0] ?? $this->baseCurrency->forUser($user);
-        $total = 0;
-        $bestAbsTotal = -1;
-        foreach ($totalsByCurrency as $currency => $currencyTotal) {
-            if (abs($currencyTotal) > $bestAbsTotal) {
-                $bestAbsTotal = abs($currencyTotal);
-                $primaryCurrency = $currency;
-                $total = $currencyTotal;
-            }
-        }
+        $headline = $this->headlineCurrency($user, $totalsByCurrency);
 
         return new ReportResultDto(
             rows: $resultRows,
-            totalMinor: $total,
-            currency: $primaryCurrency,
-            hasExcludedAccounts: false,
-            accountsWithoutRate: 0,
+            totalMinor: $totalsByCurrency[$headline] ?? 0,
+            currency: $headline,
+            excludedCurrencies: self::sortedCodes($excludedCurrencies),
             // Every currency, not just the headline one: nothing is converted
             // here, so a fee bucket outside it has no other line to appear on
             // and used to vanish -- a total that omits money reading as all of
             // it, which is the one thing this disclosure exists to prevent.
             otherMovementsByCurrency: array_filter($otherTotalsByCurrency, static fn (int $minor): bool => $minor !== 0),
         );
+    }
+
+    // Minor units of different currencies are not comparable: ARS 2,300.00 is
+    // 230 000 of them and EUR 1,049.94 is 104 994, so the bigger NUMBER headlined
+    // a report whose largest row was the euro one. Ranked by what each subtotal
+    // is worth; a currency with no rate can never outrank one that has.
+    /**
+     * @param  array<string, int>  $totalsByCurrency
+     */
+    private function headlineCurrency(User $user, array $totalsByCurrency): string
+    {
+        $baseCurrency = $this->baseCurrency->forUser($user);
+
+        if ($totalsByCurrency === []) {
+            return $baseCurrency;
+        }
+
+        $rates = $this->fx->ratesTo(array_keys($totalsByCurrency), $baseCurrency);
+
+        $headline = $baseCurrency;
+        $best = null;
+        foreach ($totalsByCurrency as $currency => $currencyTotal) {
+            $money = Money::tryOfMinor($currencyTotal, $currency);
+            $worth = $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates)?->toMinor();
+            // Ties go to the first currency discovered, which is ordered by
+            // code, so the same report always headlines the same one.
+            $rank = [$worth === null ? 0 : 1, abs($worth ?? $currencyTotal)];
+
+            if ($best === null || $rank > $best) {
+                $best = $rank;
+                $headline = $currency;
+            }
+        }
+
+        return $headline;
+    }
+
+    /**
+     * @param  array<string, true>  $set
+     * @return list<string>
+     */
+    private static function sortedCodes(array $set): array
+    {
+        $codes = array_keys($set);
+        sort($codes);
+
+        return $codes;
     }
 
     private static function rowKey(ReportResultRow $row): string

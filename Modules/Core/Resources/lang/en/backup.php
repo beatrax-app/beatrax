@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'This phone cannot save a file the app hands it, so the encrypted backup is made on the desktop app instead. Pair this device to keep the two in sync.',
+        'no_download_route' => 'This app cannot pass a file to your device, so the encrypted backup is made in the desktop app instead. Pair this device to keep the two in sync.',
         'unavailable' => "Encrypted backups are available on the desktop (SQLite) build. On a server database, use your database's own backup tooling.",
         'intro' => 'Download a passphrase-encrypted copy of your whole database — safe to keep on an external drive or in cloud storage, because it is unreadable without the passphrase (quantum-safe XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Passphrase',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'The file did not finish uploading. It may be too large for this device — restoring in the desktop app accepts a bigger backup.',
         'enter_passphrase' => 'Enter the passphrase the backup was encrypted with.',
         'unreadable' => 'The uploaded file could not be read. Try again.',
+        'restore_wrong_passphrase' => 'That passphrase did not open this backup, and nothing has been changed. Retype it and try again. If it is definitely right, the file has been altered since it was made, so restore from another copy.',
+        'restore_not_a_backup' => 'This file is not a Beatrax encrypted backup, so there is nothing in it to restore and nothing has been changed. Pick the .enc file the app wrote when you made the backup.',
+        'restore_contents_unreadable' => 'The backup opened, but the database inside it is damaged, so it was not restored and nothing has been changed. Restore from an earlier backup.',
+        'restore_could_not_read' => 'The backup file could not be read, so the restore did not run and nothing has been changed. Check that this device has free space, then try again.',
+        'restore_not_supported' => "Restoring works on the build that keeps its data in a single file, which this one is not, so nothing has been changed. On a server database, use that database's own restore tooling.",
+        'restore_failed' => 'The restore did not run, and nothing has been changed. Try again — if it keeps failing, the app log records what stopped it.',
     ],
 ];

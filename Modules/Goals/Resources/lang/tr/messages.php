@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Tahmin görmek için katkı ekle',
         'not_enough_history' => 'Tarih tahmini için henüz yeterli geçmiş yok',
         'no_recent_contributions' => 'Tahmin yapılacak yakın tarihli katkı yok',
+        'too_far_to_date' => 'Bu hızla tarih vermek için çok uzak',
         'est' => 'Tahmini :date ·',
         'projection_note' => '(tahmin)',
         'projected' => 'Öngörülen: :date',
@@ -55,6 +56,7 @@ return [
     'actions' => [
         'more_aria' => ':name için diğer eylemler',
         'mark_complete' => 'Tamamlandı olarak işaretle',
+        'mark_complete_caption' => 'işaretle',
         'archive' => 'Arşivle',
         'restore' => 'Geri yükle',
     ],
@@ -96,8 +98,11 @@ return [
         'name' => 'Hedefin için bir ad gir.',
         'date' => 'Bir son tarih seç.',
         'date_invalid' => 'Gerçek bir tarih seçin.',
+        'date_before_start' => 'Hedefin başlangıç tarihinde veya sonrasında bir tarih seç.',
         'generic' => 'Hedef kaydedilemedi. Alanları kontrol edip yeniden deneyin.',
         'amount' => 'Sıfırdan büyük geçerli bir tutar gir.',
         'pot_linked_category' => 'Bu kumbara bir kategoriye bağlı. Önce Kumbaralar sayfasında bu bağlantıyı kaldır.',
+        'pot_already_linked' => 'Bu kumbara zaten başka bir hedefi besliyor. Önce oradaki bağlantıyı kaldır.',
+        'pot_missing' => 'O kumbara artık kullanılamıyor. Başka birini seç ya da bu hedefi bağlantısız bırak.',
     ],
 ];

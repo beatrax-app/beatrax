@@ -10,10 +10,10 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class UnRejectRecurringSeries
+final readonly class UnRejectRecurringSeries
 {
     public function __construct(
-        private readonly RecurringSeriesStateMachine $stateMachine,
+        private RecurringSeriesStateMachine $stateMachine,
     ) {}
 
     public function __invoke(int $seriesId, User $user): void

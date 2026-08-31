@@ -135,7 +135,7 @@ final class SyncStatusSection extends Component
     /**
      * @var list<array{needles: list<string>, label: string}>
      */
-    private const ERROR_LABELS = [
+    private const array ERROR_LABELS = [
         ['needles' => ['relay'], 'label' => 'sync::status.labels.relay_unreachable'],
         // 'authentication' is deliberately absent: it contains 'auth', so a
         // needle for it could never match anything the shorter one missed.

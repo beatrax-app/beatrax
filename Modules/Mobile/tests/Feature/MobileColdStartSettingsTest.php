@@ -8,7 +8,6 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Http\Livewire\ColdStartBiometricSettingsSection;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Psr\Log\LoggerInterface;
@@ -19,15 +18,14 @@ uses(RefreshDatabase::class);
 // the orchestration and component wiring are exercised.
 function settingsVault(bool $available = true): BiometricKeyVault
 {
-    return new class($available, app(BiometricKeyBlobCodec::class), app(CurrentUser::class), app(LoggerInterface::class)) extends BiometricKeyVault
+    return new class($available, app(BiometricKeyBlobCodec::class), app(LoggerInterface::class)) extends BiometricKeyVault
     {
         public function __construct(
             private readonly bool $avail,
             BiometricKeyBlobCodec $codec,
-            CurrentUser $currentUser,
             LoggerInterface $log,
         ) {
-            parent::__construct($codec, $currentUser, $log);
+            parent::__construct($codec, $log);
         }
 
         protected function runtimeAvailable(): bool
@@ -44,12 +42,12 @@ function settingsVault(bool $available = true): BiometricKeyVault
             return 'Darwin';
         }
 
-        public function enroll(string $dataKey): bool
+        public function enroll(int $userId, string $dataKey): bool
         {
             return true;
         }
 
-        public function clear(): void {}
+        public function clear(int $userId): void {}
     };
 }
 

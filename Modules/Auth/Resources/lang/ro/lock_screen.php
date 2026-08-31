@@ -16,7 +16,7 @@ return [
     'ok_aria' => 'OK — confirmă codul PIN',
     'ok' => 'OK',
 
-    'error_too_short' => 'Codul PIN trebuie să aibă cel puțin 6 cifre.',
+    'error_pin_shape' => 'Codul PIN trebuie să aibă între :min și :max cifre — doar cifre.',
 
     'error_backoff' => 'Prea multe încercări — încearcă din nou peste :wait.',
 

@@ -7,12 +7,13 @@ The file-level map for the module.
 ```
 Modules/Forecasting/
 ├── Public/
-│   ├── Actions/             (11 Public actions — scenario CRUD,
+│   ├── Actions/             (9 Public actions — scenario CRUD,
 │   │                          launchpad, buffer, opening balance)
-│   ├── Dto/                 (7 DTOs + 5 ScenarioMutationPayload
+│   ├── Dto/                 (10 DTOs + 5 ScenarioMutationPayload
 │   │                          variants)
-│   ├── Enums/               (ScenarioMutationKind, ShiftScope,
-│   │                          ForecastPointSet)
+│   ├── Enums/               (ForecastHorizon, ScenarioMutationKind,
+│   │                          ShiftScope, SeriesConfidence;
+│   │                          ForecastPointSet is Internal)
 │   ├── Events/              (4 events)
 │   ├── Exceptions/
 │   │   └── OpeningBalanceDivergenceWarning.php
@@ -41,13 +42,18 @@ Modules/Forecasting/
 │   │   ├── ProjectForecastOnDriftDismissed.php
 │   │   └── ProjectForecastOnScenarioChange.php
 │   ├── Mapping/
-│   │   └── ForecastDtoMapper.php
+│   │   ├── ForecastDtoMapper.php
+│   │   └── ForecastWindow.php
 │   ├── Casts/
 │   │   └── ScenarioMutationPayloadCast.php
 │   ├── Exceptions/
 │   │   └── InvalidForecastRunTransitionException.php
 │   ├── Support/
-│   │   └── AmountStringParser.php
+│   │   ├── AmountStringParser.php
+│   │   ├── BufferFloor.php
+│   │   ├── ForecastChartView.php
+│   │   ├── ScenarioHorizonBounds.php
+│   │   └── ScenarioSeriesResolver.php
 │   └── Http/Livewire/       (6 SFCs)
 ├── Models/
 │   ├── ForecastRun.php
@@ -69,7 +75,7 @@ Modules/Forecasting/
 
 - **Services/**
   - `ForecastQuery::forUser($accountId, $horizonDays, $scenarioId,
-    $user): ForecastDto` — the projection. A null `$scenarioId` is
+    $user, $viewByFunder = false): ForecastDto` — the projection. A null `$scenarioId` is
     the baseline; a non-null one is the scenario-applied run. Throws
     `NotFoundHttpException` for an account the user does not own.
   - `ScenarioQuery::forUser($user): list<ScenarioDto>`,
@@ -77,32 +83,42 @@ Modules/Forecasting/
     `mutationsFor($scenarioId, $user)`.
   - `ForecastHighlightsQuery::activeShortfallCountForUser($user)`
     — the sidebar badge query (single COUNT).
-  - `ForecastHighlightsQuery::tileFor($user):
-    ForecastHighlightsDto`.
+  - `ForecastHighlightsQuery::forUser($user):
+    ForecastHighlightsDto` — the dashboard tile read.
 - **Actions/**
   - Scenario CRUD: `CreateScenario`, `RenameScenario`,
     `DeleteScenario`, `AddScenarioMutation`,
     `EditScenarioMutation`, `RemoveScenarioMutation`.
-  - Launchpad atomic actions:
-    `CreateCancellationScenarioForAlert`,
-    `CreateCancellationScenarioForSeries`,
-    `CreateAmountChangeScenarioForSeries`. Each wraps a
-    `CreateScenario` + `AddScenarioMutation` pair in a DB
-    transaction.
-  - `SetAccountForecastBuffer`, `SetAccountOpeningBalance`.
+  - Launchpad atomic action: `CreateScenarioFromTemplate`, over the
+    `ScenarioTemplate` vocabulary. It wraps a `CreateScenario` +
+    `AddScenarioMutation` pair in a DB transaction.
+  - `SetAccountForecastBuffer`, `SetAccountOpeningBalance` (whose
+    `positionOn()` also answers the editor's suggestion chip — see
+    [opening-balance-suggestion.md](opening-balance-suggestion.md)).
 - **DTOs/**
-  - `ForecastDto` — `(accountId, horizonDays, points,
-    shortfallWindows, anchor, generatedAt)`.
-  - `ForecastPointDto` — `(date, balanceMinor, p10, p50, p90)`.
+  - `ForecastDto` — `(accountId, accountName, defaultCurrency,
+    horizonDays, scenarioId, asOf, todayBalanceMinor, points,
+    seriesConfidence, isComputing, runFailed, isStale,
+    unconvertedCurrencies)`. The last names the currencies left out
+    of the curve for want of a rate, the same way the calendar day
+    panel and the trend card name theirs. There is no
+    `shortfallWindows` on it: the windows are their own read, keyed by
+    horizon, and `ForecastChartView` fetches them beside the curve.
+  - `ForecastPointDto` — `(date, lowMinor, pointMinor, highMinor,
+    currency)`. The band is a low/point/high triple, not a percentile
+    triple: the percentiles are consumed inside `RangeProjector` and never
+    reach the read side.
   - `ScenarioDto`, `ScenarioMutationDto`.
   - `ScenarioMutationPayload/` — five payload variants
     (`AddOneOff`, `AddRecurring`, `CancelSeries`,
     `ChangeSeriesAmount`, `ShiftSeriesDate`).
   - `ForecastHighlightsDto`, `ShortfallWindowDto`,
-    `BalanceAnchorDto`, `SeriesConfidenceDto`.
+    `BalanceAnchorDto`, `SeriesConfidenceDto` — the last carrying a
+    `SeriesConfidence` enum and a `monthlyEquivalentMinor`, because the
+    legend line is suffixed "/mo".
 - **Events/**
-  - `ForecastShortfallDetected` — `(accountId, userId, windowStart,
-    windowEnd, minBalanceMinor)`.
+  - `ForecastShortfallDetected` — `(userId, accountId, scenarioId,
+    startsAt, endsAt, lowestBalanceMinor, currency, bufferUsedMinor)`.
   - `ScenarioCreated`, `ScenarioMutated`, `ScenarioDeleted` —
     each carrying the scenario id + user id.
 - **Exceptions/**
@@ -123,27 +139,34 @@ Modules/Forecasting/
   contributions through chain links.
 - `Internal/Pipeline/ScenarioApplier::apply($contributions,
   $mutations)` — in-memory transform.
-- `Internal/Pipeline/DailyFold::fold($contributions, $anchor)` —
-  collapses contributions into a daily curve with P10/P50/P90
-  bands.
+- `Internal/Pipeline/DailyFold::fold($openingBalanceMinor,
+  $contributions, $asOf, $horizonDays, $defaultCurrency, $rates):
+  DailyFoldResult` — collapses contributions into a daily curve with
+  P10/P50/P90 bands, converting each non-matching currency through
+  `$rates` (a `CrossCurrencyTotal::ratesTo()` map the pipeline fetches
+  once per target currency). `DailyFoldResult` carries the day map and
+  the currency codes no rate reached.
 - `Internal/Pipeline/CadenceJitter::apply($contributions,
   $windowStart, $windowEnd, $jitterDays)` — replaces each
   date-uncertain contribution with `2 × jitterDays + 1` replicas,
   clamped into the fold's own walk.
-- `Internal/Pipeline/ShortfallDetector::detect($curve, $accountId,
-  $scenarioId, $horizonDays, $buffer, $currency, $user)` — finds
-  windows below buffer; writes `forecast_shortfall_windows` rows keyed
-  by horizon, and dispatches `ForecastShortfallDetected` for a baseline
-  run only.
+- `Internal/Pipeline/ShortfallDetector::detect($dailyPoints, $accountId,
+  $scenarioId, $horizonDays, $effectiveBufferMinor, $currency, $user)` —
+  finds windows below the floor; writes `forecast_shortfall_windows` rows
+  keyed by horizon, and dispatches `ForecastShortfallDetected` for a
+  baseline run only. A **null** `$effectiveBufferMinor` means no floor is in
+  force: the previous rows are still cleared and none are written.
+  `Internal/Support/BufferFloor` decides which accounts get one.
 - `Internal/Pipeline/Percentile::p10($values)` / `p50(...)` /
   `p90(...)` — the percentile fan. Three named methods over a closed
   set, not a `compute($values, $level)` that would accept a level the
   bands have no meaning for; the interpolating maths is private.
   Throws `InvalidArgumentException` on an empty list.
-- `Internal/Pipeline/ProjectionPipeline::run($user, $scenarioId,
-  $accountId, $horizonDays)` — orchestrator.
-- `Internal/StateMachines/ForecastRunStateMachine::transition` —
-  SOLE sanctioned mutator of `forecast_runs.state`.
+- `Internal/Pipeline/ProjectionPipeline::project($user, $scenarioId,
+  $horizonDays)` — orchestrator. Every account the user owns is projected in
+  one pass, so it takes no account id.
+- `Internal/StateMachines/ForecastRunStateMachine::start` / `complete` /
+  `fail` — SOLE sanctioned mutator of `forecast_runs.status`.
 - `Internal/Jobs/ProjectForecastJob` — per-`(user, scenario,
   horizon)` projection. Constructor positional
   `(userId, scenarioId, horizonDays)` — dispatched, not container-
@@ -152,11 +175,21 @@ Modules/Forecasting/
   `OnDriftDismissed` / `OnScenarioChange` — re-project triggers.
 - `Internal/Mapping/ForecastDtoMapper` — `forecast_runs` row →
   `ForecastDto`.
+- `Internal/Mapping/ForecastWindow` — horizon, scenario and `asOf` as one
+  value, so a mapped run, a flat-line fallback and a computing sentinel
+  cannot be built from three different runs' worth of them.
 - `Internal/Casts/ScenarioMutationPayloadCast` — Eloquent cast
   that JSON-encodes / decodes the typed payload classes.
-- `Internal/Support/AmountStringParser` — parses user-typed
-  amount strings (with locale-aware decimal separators) into
-  minor units.
+- `Internal/Support/AmountStringParser::toMinor($input, $currency,
+  $allowNegative, $requireNonZero)` — parses user-typed amount strings into
+  minor units at the CURRENCY'S own scale, with locale-aware decimal
+  separators. The currency is required: a yen has no minor unit, and the
+  repo-wide two decimals stored ¥5,000 as ¥500,000.
+- `Internal/Support/ScenarioHorizonBounds::assertReachable($payload)` —
+  refuses a mutation dated where no horizon reaches, rather than saving one
+  that is listed as active and changes nothing.
+- `Internal/Support/BufferFloor::forKind($kind, $explicitMinor)` — the floor
+  a projected balance is judged against, or null for none.
 
 ## Models + migrations
 
@@ -164,9 +197,10 @@ Modules/Forecasting/
 - `Models/ForecastScenarioMutation` — `(scenario_id, type,
   payload)` with the typed-payload cast.
 - `Models/ForecastShortfallWindow` — per-detected shortfall.
-- `Models/ForecastRun` — `(user_id, scenario_id, account_id,
-  horizon_days, state, result_json, ...)`. State enforced by
-  paired triggers; state machine is the sole mutator.
+- `Models/ForecastRun` — `(user_id, scenario_id, horizon_days,
+  status, result_json, ...)`. One run holds every account, so there is no
+  `account_id`, and the column is `status`. The state machine is its sole
+  mutator.
 
 Migrations:
 

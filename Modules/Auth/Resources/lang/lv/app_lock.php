@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Ierīce atteicās saglabāt atslēgu. Biometriskā atbloķēšana nav pieejama.',
     'heading' => 'Lietotnes bloķēšana',
 
-    'moved_help' => 'Jūsu PIN kods, automātiskās bloķēšanas laiks un biometriskā atbloķēšana atrodas šīs ierīces sinhronizācijas iestatījumos.',
-    'moved_cta' => 'Atvērt sinhronizāciju un ierīci',
-
     'toggle_label' => 'Bloķēt lietotni ar PIN kodu',
     'toggle_description' => 'Aizstāj ikdienas pieteikšanos ar PIN kodu. Sesijas paliek aktīvas 30 dienas.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Paturēt PIN kodu',
 
     'error_pin_too_short' => 'PIN kodā jābūt vismaz 6 cipariem.',
-    'error_pin_digits' => 'PIN kodā jābūt 6 līdz 10 cipariem — tikai cipari.',
+    'error_pin_digits' => 'PIN kodā jābūt :min līdz :max cipariem — tikai cipari.',
     'error_pin_mismatch' => 'PIN kodi nesakrīt. Mēģiniet vēlreiz.',
     'error_pin_required' => 'Ievadiet savu PIN kodu.',
     'error_pin_incorrect' => 'Nepareizs PIN kods.',

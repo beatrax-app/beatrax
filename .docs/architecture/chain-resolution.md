@@ -9,8 +9,8 @@ them.
 
 This document describes the two chain shapes the resolver handles
 (PayPal funding chains and ICS bulk-iDEAL settlement chains), the resolver
-modules involved, the read-mostly contract the resolver respects, and how
-the `pair_transaction_id` column links transactions across the chain.
+modules involved, the read-mostly contract the resolver respects, and the
+order the passes run in.
 
 ## The two chain shapes
 
@@ -48,7 +48,7 @@ first that matches:
    `Bankstorting` / `Transfer to bank` events whose memo cells carry an
    IBAN matching one of the user's accounts. When an equal-and-opposite
    `transfer_in` in the same currency exists on that account within
-   ±`DATE_WINDOW_DAYS` (3), writes a chain_link: confirmed at 1.000 when
+   ±`CounterLegWindow::DEFAULT_DAYS` (3), writes a chain_link: confirmed at 1.000 when
    that row is the only such row in the window, candidate at 0.900 when
    it is not. The export names the destination ACCOUNT and nothing about
    the row on it, so a second incoming row of the same size is a second
@@ -71,7 +71,11 @@ first that matches:
    directly against an ASN-side `transfer_out` whose
    `counterparty_iban` alias-resolves (via `known_counterparty_ibans`,
    `target_account_kind = 'paypal'`) to one of the user's PayPal
-   accounts, on equal settled amount within the same date window. Since
+   accounts, on equal settled amount **in the same settled currency**
+   within the same date window. The currency predicate is the one the
+   deterministic arm above carries and for the same reason: both sides
+   are compared as bare minor units, so USD 13.99 answered EUR 13.99 and
+   was written confirmed at 1.000. Since
    `counterparty_iban` is encrypted, the query narrows on plaintext
    dimensions (user/type/amount/date, capped at 20 candidates) and then
    decrypts + matches each candidate's IBAN against the (small,
@@ -90,7 +94,10 @@ first that matches:
    nothing and "Netflix International BV" scored 0.625 against
    "Nationale Nederlanden". It carries the ASN arm's already-claimed
    exclusion too, so two PayPal expenses cannot both name one funding
-   leg. The date bounds are DATE strings, matching the DATE column they
+   leg. The candidate amount band carries the currency predicate the
+   other two arms carry, because a 2% band over bare minor units
+   otherwise straddles two currencies at once. The date bounds are DATE
+   strings, matching the DATE column they
    compare against — datetime bounds cut the window to [-2, +3] days.
    The best score at or above 0.6 surfaces as a
    candidate with confidence in `[0.6, 0.99]` — the ceiling is
@@ -140,20 +147,47 @@ ICS-side leg of an ASN→ICS iDEAL settlement exists only as a
 statement-level `card_statements` row — the Mijn ICS PDF carries no
 per-row settlement entry, only a single ASN-side `transfer_out`
 against the ICS institution's IBAN. The resolver therefore iterates
-ASN-side `transfer_out` rows and uses the alias bridge
-(`ResolvesKnownCounterpartyIban`) to find the matching ICS account,
-then matches against that account's open `card_statements`:
+ASN-side `transfer_out` rows and names the matching ICS account two
+ways, then matches against that account's open `card_statements`:
 
-For each unresolved ASN-side `transfer_out` T whose `counterparty_iban`
-resolves to an `ics_card`-kind Account A:
+A card answers to two names and a settlement may carry either. The alias
+bridge (`ResolvesKnownCounterpartyIban`) maps the institution's real
+IBAN onto the card's kind, and a card whose statement arrives as a PDF
+carries a synthetic literal (`ICS-CARD`) in its own `accounts.iban`
+column instead. The resolver tries the alias first and falls back to the
+user's own account carrying that IBAN — the same two arms
+`ClassifyTransactionType` and `TransferPairer` already read. Reading
+only the alias left every PDF-imported card unsettleable: the payment
+was in the ledger, `chain_links` was empty, and the dashboard reported
+the statement overdue.
+
+For each unresolved `transfer_out` T — on any account of the user's
+except the card itself, because a statement can be paid from anywhere —
+whose `counterparty_iban` names an `ics_card`-kind Account A:
 
 1. Find a candidate `open`/`partially_settled` `card_statements` row S
-   on A within ±`PERIOD_WINDOW_DAYS` (10) of T's `posted_at`, choosing
-   the row whose `period_end` is closest by seconds-precision distance
-   (not integer days — day-truncation previously let `orderBy('id')`
-   pick an older row over one that was actually closer).
-2. Pull every `expense` row on A inside S's period that doesn't yet
-   carry a confirmed `ics_bulk_settle` chain_link.
+   on A within ±`StatementDueDate::MATCH_WINDOW_DAYS` (10) of T's
+   `posted_at`, measured against the day S is **due**, choosing the row
+   whose due day is closest by seconds-precision distance (not integer
+   days — day-truncation previously let `orderBy('id')` pick an older
+   row over one that was actually closer). S's due day is the one its
+   issuer printed where it printed one, and `period_end +
+   StatementDueDate::GRACE_DAYS` where it did not; measured against
+   `period_end` alone the window missed the committed real ICS
+   statement's own deadline by fourteen days. If T's
+   `settled_currency` is not S's currency the pass stops here: every
+   term of the delta below is a bare minor unit, so a USD 500.00
+   payment closed a EUR 500.00 statement and recorded an unaccounted
+   delta of nothing, while the USD 543.00 that actually covered it was
+   refused and left the statement open for good.
+2. Pull every `expense` row on A inside S's period, denominated in S's
+   own currency, that doesn't yet carry a confirmed `ics_bulk_settle`
+   chain_link. "Inside the period" is tested on `posted_at`, which is
+   the column S's own boundaries are derived from — while they were
+   derived from `booked_at` instead, every ICS statement opened after
+   the earliest charge it billed and none of them could ever settle
+   ([a period derived from one column and tested on
+   another](../conventions/invariants-from-shipped-failures.md#a-period-derived-from-one-column-and-tested-on-another)).
 3. Subtract any prior credit already carried into S from
    `card_statement_credits`.
 4. Compute the unaccounted delta: `sum(expenses) + prior_credits +
@@ -164,9 +198,14 @@ resolves to an `ics_card`-kind Account A:
    denominated in the statement's own currency are summed.
 5. If `|delta|` is within tolerance (max of ±€5 absolute or ±2% of the
    statement total, from `SettlementTolerance` — the forecast's booked-row
-   dedup reads the same figures) **and at least one expense is covered** —
+   dedup reads the same figures; the floor is a EUR figure spent against
+   whatever currency the statement is in, a known limit this module cannot
+   close without an FX seam) **and at least one expense is covered** —
    write one confirmed `chain_links` row per expense and call
-   `CardStatementStateMachine::applySettlement()`. If the resulting state
+   `CardStatementStateMachine::applySettlement()` with the payment **plus
+   the credits step 3 counted** — the delta above has already spent them,
+   so the machine told the payment alone left a statement nobody owed
+   anything on reading `partially_settled`. If the resulting state
    is `overpaid`, emit a `card_statement_credits` row with
    `reason = 'overpayment'`. Covering no expense writes nothing at all:
    the candidate query excludes only a transfer that carries a confirmed
@@ -190,8 +229,10 @@ entries — only the bulk-settlement entry is absent.
 between statements: `from_statement_id` is the source (the one that
 went overpaid or accepted a refund after close); `to_statement_id` is
 the destination, nullable because a surplus may exist before the next
-statement period rolls in — a follow-up resolver pass sets the pointer
-once that statement lands. Only two `reason` values are allowed:
+statement period rolls in — `IcsSettlementResolver::attachDanglingCredits()`
+runs ahead of the main pass and sets the pointer once that statement
+lands, so the run that finds it is the run `priorCreditsMinor()` counts
+the surplus in. Only two `reason` values are allowed:
 `overpayment` and `refund_after_close` (a DB-layer trigger pair rejects
 anything else).
 
@@ -205,32 +246,31 @@ column; the resolver decrypts it before handing it to
 `ResolvesKnownCounterpartyIban`, which compares against the plaintext
 `known_counterparty_ibans.real_iban` column.
 
-## The pair_transaction_id column
+## The pair_transaction_id column, which Chains never writes
 
-`transactions.pair_transaction_id` is the load-bearing FK that lets a
-single line on the ledger answer "what's the other end of this chain?".
-It is nullable (most transactions have no pair) and points to another
-`transactions.id`. The convention:
+`transactions.pair_transaction_id` is the FK that lets a single line on
+the ledger answer "what is the other leg of this transfer?". It is
+nullable (most transactions have no pair) and points to another
+`transactions.id`. It pairs the two legs of a self-transfer between the
+user's own accounts, and nothing else. A chain is not a pair: it is a
+`chain_links` row carrying a kind, a state, a confidence and its
+evidence, and one settlement fans out to every charge it covered, which
+a single FK column cannot express at all.
 
-- For PayPal funding chains: the PayPal-side row's
-  `pair_transaction_id` points to the ASN-side row's `id`.
-- For ICS bulk-iDEAL settlement: each ICS line's
-  `pair_transaction_id` points to the ASN-settlement row's `id`.
-- For self-transfers between user accounts (handled by `Modules/Transfers/`,
-  not the chain resolver): each leg's `pair_transaction_id` points to
-  the other leg.
-
-The column is set only by:
-
-- The chain resolver, for chain links.
-- The transfer-detection job, for self-transfers.
+The column has one writer,
+`Modules\Transfers\Internal\Services\TransferPairer`, reached two ways:
+the per-row `TransactionImported` listener, and the orphan sweep
+`PairsTransferLegs::pairOrphansForUser` that `ResolveChainLinksJob`
+calls as its third healing pass. Chains calls that Transfers contract
+and writes nothing itself — `grep -rn pair_transaction_id
+Modules/Chains` returns only test assertions about transfer legs.
 
 Direct writes from anywhere else are caught by the repo-wide
 `crossModuleRawTableWrites` invariant: every write a module makes to a
 table another module owns is pinned to an allow-list by file, line, and
-table, so a new one is a decision rather than a diff. Within the
-resolver, `pair_transaction_id` is the only column of the row it may
-touch — amount, currency, and description belong to the ledger.
+table, so a new one is a decision rather than a diff. The single entry
+Chains has there is `RetypeByAliasResolver`'s retype of
+`transactions.type`.
 
 ## RetypeByAliasResolver — the wizard-order healing pass
 
@@ -294,24 +334,33 @@ table on every resolution attempt.
 ## The resolver job
 
 Chain resolution runs as a Laravel job:
-`Modules\Chains\Internal\Jobs\ResolveChainsForUser`. The job is
+`Modules\Chains\Internal\Jobs\ResolveChainLinksJob`. The job is
 scheduled per user after every successful import. It is
 `ShouldBeUniqueUntilProcessing` — the per-user lock prevents two
 concurrent resolutions for the same user from racing each other.
 
-The job runs through three resolver passes in sequence:
+The job runs five passes, in this order:
 
-1. `PaypalFundingResolver` — pairs PayPal-side transactions to their
-   funding-side counterparts.
-2. `IcsSettlementResolver` — pairs ASN bulk-iDEAL settlements to their
+1. `UpsertsCardStatements::upsertForUser` — promotes every ICS-kind
+   `statement_summaries` row for the user into a `card_statements` row.
+2. `RetypeByAliasResolver` — re-types the `expense`/`income` rows the
+   alias table now resolves to one of the user's own accounts.
+3. `PairsTransferLegs::pairOrphansForUser` — Transfers' orphan sweep,
+   closing `pair_transaction_id` on the legs pass 2 just produced.
+4. `IcsSettlementResolver` — pairs ASN bulk-iDEAL settlements to their
    ICS card-statement rows + decomposes into per-line links.
-3. `RetypeByAliasResolver` — re-walks unresolved candidates against the
-   `known_counterparty_ibans` aliases learnt from prior runs.
+5. `PaypalFundingResolver` — pairs PayPal-side transactions to their
+   funding-side counterparts.
 
-Each pass populates `chain_links` rows (the durable record of the
-match) and sets `pair_transaction_id` on the affected transactions
-(the fast lookup index). The job also produces a `chain_resolution_runs`
-row recording the per-run metrics — number of links created, number of
+The retype leading the resolvers is load-bearing, for the reason its own
+section above gives: both chain resolvers iterate `transfer_out` rows,
+so a row still carrying the amount-sign default when they run is a row
+they never look at. Running it last would leave every retyped row
+waiting a whole import for its chain.
+
+Each resolver pass populates `chain_links` rows, the durable record of
+the match. The job also produces a `chain_resolution_runs` row
+recording the per-run metrics — number of links created, number of
 candidates flagged for review.
 
 A self-healing variant of the job runs from the wizard when the
@@ -324,7 +373,7 @@ scheduling path.
 When the resolver finds two transactions that match on amount and
 currency but not strongly enough on counterparty + date proximity, it
 flags them as a candidate rather than auto-linking. The candidates
-surface in `/chains/triage`; the user confirms or rejects each one. A
+surface in `/chains/review`; the user confirms or rejects each one. A
 confirmed candidate creates the `chain_links` row AND inserts an alias
 row into `known_counterparty_ibans` so subsequent runs match
 automatically.
@@ -346,8 +395,8 @@ the canonical ledger:
 - **`crossModuleRawTableWrites`** — every write `Modules/Chains/`
   makes to a table it does not own is pinned by file, line, and table.
   Today that is the single `RetypeByAliasResolver` retype of
-  `transactions.type`; the resolver job's `pair_transaction_id` write
-  goes through the Ledger model.
+  `transactions.type`, and nothing else: the `pair_transaction_id`
+  closing is Transfers' own write, behind the contract this job calls.
 - The Chains module writes only to its own tables:
   `chain_links`, `chain_resolution_runs`,
   `known_counterparty_ibans`, `community_merchant_mappings` (when
@@ -356,10 +405,10 @@ the canonical ledger:
   `statement_summaries`.
 
 The contract matters because it makes chain resolution safe to re-run.
-A second run of the resolver against the same transactions produces
-the same `chain_links` rows; no transactions are modified except the
-`pair_transaction_id` index update, which is itself idempotent (the
-column either already points to the correct pair or gets set to it).
+A second run of the resolver against the same transactions produces the
+same `chain_links` rows and modifies no transaction at all — the retype
+leaves the `expense`/`income` set on its first pass and is never a
+candidate again.
 
 ## Where to look in the code
 
@@ -369,7 +418,7 @@ column either already points to the correct pair or gets set to it).
   the ICS bulk-iDEAL decomposition logic.
 - `Modules/Chains/Internal/Resolvers/RetypeByAliasResolver.php` —
   the alias-bridge re-walk.
-- `Modules/Chains/Internal/Jobs/ResolveChainsForUser.php` — the
+- `Modules/Chains/Internal/Jobs/ResolveChainLinksJob.php` — the
   per-user resolver job.
 - `Modules/Chains/Models/ChainLink.php` — the chain-link ledger.
 - `Modules/Counterparties/Internal/Resolver/CounterpartyResolverService.php`

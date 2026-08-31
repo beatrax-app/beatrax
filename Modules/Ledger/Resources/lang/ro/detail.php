@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Tranzacție',
     'heading' => 'Tranzacție',
+    'booked_on' => 'Înregistrat la :date',
 
     'counterparty' => 'Contraparte',
     'description' => 'Descriere',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Notă (opțional)',
         'tax_deductible' => 'Deductibil fiscal',
         'remove_leg_aria' => 'Elimină această categorie',
+        'remove_leg_caption' => 'Elimină',
         'add_category' => '+ Adaugă categorie',
         'soft_cap' => ':count din ~20 de categorii — ia în calcul gruparea sumelor mici.',
         'remaining_zero' => 'Rămas :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Șterge tranzacția',
         'help' => 'Elimină definitiv această tranzacție. Acțiunea nu poate fi anulată.',
         'button' => 'Șterge',
-        'confirm_prompt' => 'Sigur?',
+        'confirm_prompt' => 'Ștergi această tranzacție? Nota, împărțirea și etichetele fiscale dispar odată cu ea.',
         'confirm' => 'Da, șterge',
         'cancel' => 'Anulează',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Vezi lanțul',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Reconciliată și blocată',
+        'help' => 'O reconciliere finalizată a blocat această tranzacție. Categoria, nota, împărțirea și etichetele fiscale rămân neschimbate până o deblochezi.',
+        'button' => 'Deblochează pentru editare',
+        'confirm_question' => 'Deblochezi această tranzacție pentru editare? Nimic din ea nu se schimbă, iar următoarea reconciliere finalizată o blochează din nou.',
+        'cancel' => 'Las-o blocată',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Această tranzacție este reconciliată. Anulează reconcilierea pentru a face modificări.',
         'reclassified_pair_removed' => 'Reclasificată ca :type — împerechere eliminată',
         'reclassified' => 'Reclasificată ca :type',
         'note_saved' => 'Notă salvată',
         'unreconciled' => 'Reconciliere anulată — poți edita din nou această tranzacție.',
+        'note_too_long' => 'O notă are cel mult :max caracter.|O notă are cel mult :max caractere.|O notă are cel mult :max de caractere.',
         'counterparty_updated' => 'Contraparte actualizată',
         'goal_attributed' => 'Contorizată în acest obiectiv',
         'goal_attribution_removed' => 'Nu mai este contorizată în acest obiectiv',

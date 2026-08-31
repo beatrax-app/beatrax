@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Alertas de desvio',
-    'aria' => 'Alertas de desvio — :count em aberto, :amount de impacto anualizado',
+    'aria' => 'Alertas de desvio — :count em aberto, :impact',
     'open' => 'em aberto',
-    'annualized_impact' => 'impacto anualizado',
+    'impact_rising' => ':amount de impacto anualizado',
+    'impact_flat' => 'sem custo anual adicional',
 ];

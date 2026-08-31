@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Parse & preview',
     'cancel_import' => 'Cancel import',
 
-    'diff_new' => 'new,',
-    'diff_unchanged' => 'unchanged,',
-    'diff_conflicts' => 'conflicts.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count new|:count new',
+    'diff_unchanged' => ':count unchanged|:count unchanged',
+    'diff_conflicts' => ':count conflict|:count conflicts',
 
     'conflicts_heading' => 'Conflicts',
     'conflict_name' => 'name — existing: :existing → file: :file',
@@ -54,8 +55,7 @@ return [
     'test_heading' => 'Test against my transactions',
     'test_help' => "Edit a row's generalized pattern to see which transactions it would match.",
     'typing' => 'Typing…',
-    'matches_prefix' => 'Matches',
-    'matches_suffix' => 'transactions in your recent history.',
+    'matches' => 'Matches :count transaction in your recent history.|Matches :count transactions in your recent history.',
 
     'merge_modal_title' => 'Merge :count alias|Merge :count aliases',
 
@@ -84,5 +84,10 @@ return [
         'no_file' => 'No file uploaded.',
         'unreadable' => 'Could not read the uploaded file.',
         'too_short' => 'Pattern is too short to test.',
+        'file_not_yaml' => 'This file is not valid YAML, so nothing in it could be read. Export your aliases again and upload the file you get.',
+        'file_unreadable_as_yaml' => 'This file could not be read as an alias list. Export your aliases again and upload the file you get.',
+        'file_has_no_entries_list' => 'This file does not start with a top-level entries: list, so there are no aliases in it to import. Check you picked the right file.',
+        'entry_is_not_a_mapping' => 'Entry :entry is a plain value where a pattern and a name were expected. Give it both fields, or remove it, and upload the file again.',
+        'entry_is_missing_a_field' => 'Entry :entry is missing its pattern or its name, and an alias needs both. Fill in what is missing, or remove that entry, and upload the file again.',
     ],
 ];

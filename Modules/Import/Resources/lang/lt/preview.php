@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Pavadink šią sąskaitą.',
 
     'ics' => [
+        'name' => 'ICS kortelė',
         'heading' => 'Pavadink savo ICS kortelės sąskaitą.',
         'help' => 'ICS duomenis importuoji pirmą kartą. Suteik šiai kortelei pavadinimą, kad ji visoje programėlėje būtų rodoma vienodai.',
         'placeholder' => 'pvz. ICS kortelė',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Pavadink savo PayPal sąskaitą.',
         'help' => 'PayPal duomenis importuoji pirmą kartą. Suteik šiai piniginei pavadinimą, kad ji visoje programėlėje būtų rodoma vienodai.',
         'placeholder' => 'pvz. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Pavadink savo Google Play paskyrą.',
+        'help' => 'Google Play kvitą importuoji pirmą kartą. Suteik šiai paskyrai pavadinimą, kad ji visoje programėlėje būtų rodoma vienodai.',
+        'placeholder' => 'pvz. Google Play',
     ],
 
     'col_date' => 'Data',
@@ -53,28 +62,41 @@ return [
         'error' => 'Klaida',
     ],
 
-    'chain' => [
-        'heading' => 'Nustatomos grandinės…',
-        'pending' => 'Eilėje. Grandinių nustatymas netrukus prasidės.',
-        'running' => 'Siejamos lėšų grandinės ir skaidomi išrašo atsiskaitymai.',
-        'failed_prefix' => 'Grandinių nustatyti nepavyko:',
-        'failed_detail' => 'išsamesnė informacija yra užduočių žurnale',
-        'open_horizon' => 'Atidaryti Horizon',
-        'failed_suffix' => 'ir pakartok arba patikrink.',
-    ],
-
     'rows_shown' => 'Rodomos eilutės: :shown iš :total',
 
     'show_more' => 'Rodyti daugiau eilučių',
 
     'errors' => [
         'app_locked' => 'Atrakinkite programėlę, kad importuotumėte: šifravimo raktų negalima naudoti, kol ji užrakinta.',
+        'archive_holds_one_message' => 'Šis failas yra vienas el. laiškas, o ne pašto dėžutės archyvas, tad perskaitytas kaip archyvas jis nieko neturi. Įkelk jį dar kartą su formatu El. laiškas.',
+        'email_file_is_an_archive' => 'Šis failas yra pašto dėžutės archyvas: jame daugiau nei vienas laiškas, o perskaitytas kaip vienas laiškas jis paimtų tik pirmąjį. Įkelk jį dar kartą su formatu Pašto dėžutės archyvas.',
         'file_stopped_short' => 'Antraštės eilutė atitiko, tad formatas teisingas. Skaitymas sustojo nepasiekęs failo pabaigos. Taip nutinka dėl vienos neperskaitomos eilutės arba dėl šiam įrenginiui per didelio failo. Pabandyk trumpesnį laikotarpį.',
         'file_unreadable' => 'Šio failo nepavyko perskaityti.',
+        'file_unreadable_detail' => 'Programai nepavyko perskaityti šio failo (:code). Visa informacija yra programos žurnale; pranešdami apie problemą nurodykite šį kodą.',
         'iban_not_in_preview' => 'Šis IBAN nėra dabartinės peržiūros dalis.',
-        'pdf_reader_unavailable' => 'PDF išrašams reikia programos pdftotext, kuri čia neįdiegta. Importuok šį failą kompiuteryje, kuriame ji yra, arba naudok banko CSV eksportą.',
+        'not_an_email_file' => 'Šis failas nėra nei el. laiškas, nei pašto dėžutės archyvas, tad jame nėra ko skaityti kaip kvito. Pasirink importo tipą ir formatą, atitinkančius tavo failą.',
+        'pdf_has_no_text_layer' => 'Šiame PDF nėra teksto — tai išrašo nuskaitymas arba nuotrauka, tad jame nėra ko skaityti. Atsisiųsk patį išrašą iš savo banko arba naudok CSV eksportą.',
+        'pdf_password_protected' => 'Šis PDF apsaugotas slaptažodžiu, tad jo neatidarys nė viena skaityklė. Savo PDF peržiūros programoje išsaugok neapsaugotą kopiją ir importuok ją.',
+        'pdf_reader_unavailable' => 'Ši programos versija visai neturi PDF skaitytuvo, todėl PDF išrašo čia atidaryti nepavyks. Importuok šį failą kitame įrenginyje arba naudok banko CSV eksportą.',
+        'row_belongs_to_another_statement' => 'Ši eilutė priklauso operacijai kitame išrašo faile. Importuokite ir tą išrašą — abu skaitomi kartu.',
         'row_unreadable' => 'Šios eilutės nepavyko perskaityti.',
+        'row_unreadable_detail' => 'Programai nepavyko perskaityti šios eilutės (:code). Visa informacija yra programos žurnale; pranešdami apie problemą nurodykite šį kodą.',
         'unknown_account' => 'Ši eilutė priklauso sąskaitai, kuriai dar nesuteikei pavadinimo.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Šis failas perskaitytas kaip el. laiškas',
+        'saved' => 'Kas jame buvo, surašyta žemiau, o kiekvienas laiškas išsaugotas.',
+        'none_imported' => 'Nė vienas iš jų netapo operacija, todėl į didžiąją knygą nieko neįrašyta.',
+        'shown' => 'Rodomi laiškai: :shown iš :total',
+        'no_subject' => 'Be temos',
+
+        'state' => [
+            'read' => 'Perskaityta kaip mokėjimas — patvirtink šį importą, kad jis patektų į didžiąją knygą.',
+            'not_a_payment' => 'Tai ne mokėjimas. Šis laiškas apie kažką praneša, o ne patvirtina mokėjimą.',
+            'unreadable' => 'Išsaugota. Programa skaito šio siuntėjo kvitus, bet šiame laiške nerado nei sumos, nei prekybininko, nei nuorodos.',
+            'unknown_sender' => 'Išsaugota. Programa neskaito šio siuntėjo kvitų, todėl iš laiško nieko nepaėmė.',
+        ],
     ],
 
     'failed' => [

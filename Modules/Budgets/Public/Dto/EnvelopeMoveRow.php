@@ -4,16 +4,22 @@ declare(strict_types=1);
 
 namespace Modules\Budgets\Public\Dto;
 
+use Modules\Budgets\Public\Enums\EnvelopeMoveKind;
 use Spatie\LaravelData\Data;
 
-// direction and amountMinor carry the same fact twice: 'in' always pairs
-// with a positive amountMinor, 'out' with a negative one.
 final class EnvelopeMoveRow extends Data
 {
     public function __construct(
         public readonly int $id,
-        public readonly string $direction,
+        // Null for a kind this build has no case for. `envelope_moves.kind` is
+        // an unconstrained string a peer on a newer version writes verbatim,
+        // and the history line takes its direction from this field — so a
+        // guess here would show the reader the wrong side of a real move.
+        public readonly ?EnvelopeMoveKind $kind,
         public readonly int $amountMinor,
+        // What $amountMinor is denominated in: the reader's own currency once
+        // the rate table can reach the row's, and the row's own when it cannot.
+        public readonly string $currency,
         public readonly int $counterpartCategoryId,
         public readonly string $counterpartCategoryName,
         public readonly ?string $memo,

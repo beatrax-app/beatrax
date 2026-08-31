@@ -10,11 +10,12 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGroupHeading;
 
-final class ReportCsvExporter
+final readonly class ReportCsvExporter
 {
     public function __construct(
-        private readonly ReportAggregator $aggregator,
+        private ReportAggregator $aggregator,
     ) {}
 
     public function export(User $user, ReportDefinition $definition): string
@@ -32,21 +33,25 @@ final class ReportCsvExporter
             return $record;
         });
 
-        // net_worth ignores the dimension entirely -- the builder even hides
-        // the picker -- so a stale value in the URL used to head a column of
-        // months with "Counterparty".
-        $groupHeader = $definition->metric === 'net_worth' ? 'Period' : match ($definition->dimension) {
-            'category' => 'Category',
-            'counterparty' => 'Counterparty',
-            'account' => 'Account',
-            'time_bucket' => 'Period',
-            default => 'Group',
-        };
-        $writer->insertOne([$groupHeader, 'Metric', 'Amount', 'Currency']);
-
         $result = $this->aggregator->run($user, $definition);
-        foreach ($result->rows as $row) {
-            $writer->insertOne([
+
+        // The same rows the screen renders: with comparison on that is the
+        // union of both windows' groups. Exporting ->rows dropped every group
+        // that had fallen to zero -- rows the reader could see -- and the whole
+        // column they had turned comparison on to get.
+        $comparing = $definition->compare && $result->comparisonRows !== null;
+        $rows = $comparing ? $result->comparisonRows ?? [] : $result->rows;
+
+        $header = [
+            ReportGroupHeading::for($definition->metric, $definition->dimension)->value,
+            'Metric',
+            'Amount',
+            'Currency',
+        ];
+        $writer->insertOne($comparing ? [...$header, 'Delta'] : $header);
+
+        foreach ($rows as $row) {
+            $record = [
                 $row->groupLabel,
                 $definition->metric,
                 // Signed, like the screen. A `net` row is negative when more
@@ -55,7 +60,13 @@ final class ReportCsvExporter
                 // and put it at odds with the table it is documented to match.
                 MoneyInput::toDecimalString($row->amountMinor, $row->currency),
                 $row->currency,
-            ]);
+            ];
+
+            // Empty, never "0.00", for a row the other window has no
+            // counterpart for -- the em dash the table prints in that cell.
+            $writer->insertOne($comparing
+                ? [...$record, $row->deltaMinor === null ? '' : MoneyInput::toDecimalString($row->deltaMinor, $row->currency)]
+                : $record);
         }
 
         return $writer->toString();

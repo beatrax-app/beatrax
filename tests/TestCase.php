@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Foundation\Vite;
 use Modules\Ledger\Models\Account;
@@ -75,8 +76,22 @@ abstract class TestCase extends BaseTestCase
         );
     }
 
+    // The day after the newest row in any shipped statement fixture. Those files
+    // carry absolute 2026 dates, so a test that imports one and then reads
+    // anything now-relative is measuring the wall clock until this pins it.
+    public const string STATEMENT_FIXTURE_NOW = '2026-05-16 09:00:00';
+
+    public function freezeClockOnTheStatementFixtureWindow(): void
+    {
+        CarbonImmutable::setTestNow(self::STATEMENT_FIXTURE_NOW);
+    }
+
     protected function tearDown(): void
     {
+        // The framework does not undo a frozen clock, so one test forgetting to
+        // clear it dated every later test in the same worker.
+        CarbonImmutable::setTestNow();
+
         putenv('NATIVEPHP_STORAGE_PATH');
 
         if (is_string($this->isolatedStorageRoot)) {

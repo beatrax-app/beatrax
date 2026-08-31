@@ -19,9 +19,9 @@ use ValueError;
 // nl 1.234,5). Amounts stay with Money, which carries the currency too.
 final class Fmt
 {
-    private const FALLBACK_DATE_PATTERN = 'DD-MM-YYYY';
+    private const string FALLBACK_DATE_PATTERN = 'DD-MM-YYYY';
 
-    private const COMPACT_FROM = 1000;
+    private const int COMPACT_FROM = 1000;
 
     public static function number(int|float $value, int $decimals = 0): string
     {
@@ -37,13 +37,25 @@ final class Fmt
             $formatted = false;
         }
 
-        if ($formatted !== false) {
-            return $formatted;
-        }
+        return $formatted === false ? self::numberWithoutIcu($value, $decimals) : $formatted;
+    }
 
-        $marks = Locale::tryFrom($locale) ?? Locale::En;
+    // Public for the reason Money::formatWithoutIcu() is: this is the arm both
+    // phones take, and it is unreachable on a host with full ICU data, so
+    // nothing would otherwise assert that it reads the same as the desktop.
+    public static function numberWithoutIcu(int|float $value, int $decimals = 0): string
+    {
+        $marks = Locale::tryFrom(self::locale()) ?? Locale::En;
 
-        return number_format($value, $decimals, $marks->decimalMark(), $marks->groupMark());
+        // ICU rounds a half to even and keeps the sign of a figure that rounds
+        // away to zero; number_format() rounds a half away from zero and drops
+        // that sign, so 1280 bytes read "1,2 KB" on a desktop and "1,3 KB" on
+        // the phone beside it.
+        $rounded = is_int($value) ? $value : round($value, $decimals, \RoundingMode::HalfEven);
+        $digits = number_format($rounded, $decimals, $marks->decimalMark(), $marks->groupMark());
+        $negative = is_float($rounded) ? fdiv(1.0, $rounded) < 0 : $rounded < 0;
+
+        return $negative ? $marks->minusSign().ltrim($digits, '-') : $digits;
     }
 
     // The locale's own short-date pattern, corrected where it writes the month

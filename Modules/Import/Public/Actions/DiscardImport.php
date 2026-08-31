@@ -13,9 +13,9 @@ use Modules\Ledger\Public\Enums\ImportRunStatus;
 // Discarding a confirmed run would orphan the ledger rows it created. The
 // wizard hides Discard after confirm, but this action is Public and
 // reachable programmatically, so the guard lives here.
-final class DiscardImport
+final readonly class DiscardImport
 {
-    public function __construct(private readonly PreviewCache $cache) {}
+    public function __construct(private PreviewCache $cache) {}
 
     public function __invoke(int $importRunId, User $user): void
     {

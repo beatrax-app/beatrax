@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— pas de chaînes de financement pour les contacts personnels',
     'tab_note_bank' => '— un tiers de frais bancaires ne génère pas de chaînes de financement',
+    'tab_note_bank_institution' => '— pas de chaînes de financement pour les tiers institutionnels',
     'tab_note_government' => '— pas de chaînes de financement pour les tiers administratifs',
 
     'recent_activity' => 'Activité récente',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Frais bancaires par catégorie',
+        'activity_heading' => 'Activité par catégorie',
         'no_fees' => 'Aucun frais enregistré sur ce tiers pour l\'instant.',
     ],
 

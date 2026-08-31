@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Uncategorized',
+    'no_counterparty' => 'No counterparty',
+    'unavailable_counterparty' => 'Counterparty not on this device',
     'title' => 'Reports',
     'page_title' => 'Reports · Beatrax',
     'subtitle' => 'Compose a report from your ledger.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Chart drawn in :currency — :list not plotted',
+        'undrawn' => 'Not in the ring — :amount moves the other way',
         'bar_title' => 'Click a bar to view its transactions',
         'line_title' => 'Click a point to view its transactions',
         'donut_title' => 'Click a segment to view its transactions',

@@ -14,16 +14,16 @@ use Psr\Log\LoggerInterface;
 /**
  * @link ../../../../.docs/features/sync/pairing-handshake.md#a-pairing-outlives-the-lock-that-interrupts-it
  */
-final class HoldPairingCeremonyOpenOnUnlock
+final readonly class HoldPairingCeremonyOpenOnUnlock
 {
     // PairingGateway is resolved on demand, never injected. Taking it here built
     // the whole pairing graph on the FIRST unlock, and those are singletons: a
     // relay configured later in the same run — exactly what a scanned QR does —
     // was then invisible to the frozen courier.
     public function __construct(
-        private readonly Container $container,
-        private readonly CurrentUser $currentUser,
-        private readonly LoggerInterface $log,
+        private Container $container,
+        private CurrentUser $currentUser,
+        private LoggerInterface $log,
     ) {}
 
     public function handle(AppLockUnlocked $event): void

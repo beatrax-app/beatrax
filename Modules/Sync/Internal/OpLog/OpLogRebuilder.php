@@ -10,9 +10,14 @@ use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Exceptions\RebuildInProgressException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
+use Modules\Sync\Internal\Merge\RowHistoryPolicy;
 
 final class OpLogRebuilder
 {
+    // One `id IN (...)` per chunk, sized to stay well inside SQLite's bind
+    // ceiling — the same reason PersistedOpLogEntries chunks its pk lookups.
+    private const int REINDEX_CHUNK = 400;
+
     /** @var list<string> */
     private readonly array $coveredTables;
 
@@ -74,10 +79,11 @@ final class OpLogRebuilder
                 $this->dropTriggers($triggerSnapshots);
                 $this->deleteReplayableRows($userId);
 
-                // Replay via the production replayer so rebuild equals
-                // incremental; injected without a SearchIndexWriterContract
-                // so FTS writes are suppressed inside this transaction.
-                $this->replayer->replay($this->loadEntries($userId), $userId);
+                // The production replayer, so rebuild equals incremental —
+                // injected without a SearchIndexWriterContract so FTS writes
+                // are suppressed here, and handed the whole log, which is
+                // already every op of every row it names.
+                $this->replayer->replay($this->loadEntries($userId), $userId, RowHistoryPolicy::AsGiven);
 
                 $this->restoreTriggers($triggerSnapshots);
             });
@@ -91,33 +97,93 @@ final class OpLogRebuilder
         }
     }
 
-    // Re-derives the full-text index for the rows the rebuild just replayed.
-    // Never throws: a stale index is recoverable and must not turn a finished
-    // rebuild into a failed one.
+    // Re-derives the full-text index for the rows the rebuild just replayed —
+    // the rows the op log NAMES, not every transaction the reader owns. A
+    // ledger of a hundred thousand rows reindexed all of them for a delta
+    // naming three thousand, and that sweep was 91% of the rebuild's queries.
+    /**
+     * @link ../../../../.docs/features/sync/op-log-merge-rules.md#what-a-rebuild-reindexes
+     */
     private function reindex(int $userId): void
     {
         if ($this->searchWriter === null) {
             return;
         }
 
-        $transactionIds = $this->db->connection()
-            ->table('transactions')
-            ->where('user_id', $userId)
-            ->orderBy('id')
-            ->pluck('id');
+        foreach (array_chunk($this->replayedTransactionIds($userId), self::REINDEX_CHUNK) as $chunk) {
+            $surviving = $this->survivingIds($userId, $chunk);
 
-        foreach ($transactionIds as $transactionId) {
-            if (! is_numeric($transactionId)) {
-                continue;
-            }
-
-            try {
-                $this->searchWriter->upsertForTransaction((int) $transactionId, $userId);
-            } catch (\Throwable) {
-                // One unindexable row must not stop the rest being indexed:
-                // a stale index recovers, a half-indexed sweep does not.
+            foreach ($chunk as $transactionId) {
+                // A row the replay tombstoned is gone from `transactions`, and
+                // upsertForTransaction() returns silently on a missing row —
+                // so its search doc outlived it and kept answering queries.
+                $this->reindexOne($transactionId, $userId, isset($surviving[$transactionId]));
             }
         }
+    }
+
+    private function reindexOne(int $transactionId, int $userId, bool $survives): void
+    {
+        if ($this->searchWriter === null) {
+            return;
+        }
+
+        try {
+            if ($survives) {
+                $this->searchWriter->upsertForTransaction($transactionId, $userId);
+
+                return;
+            }
+
+            $this->searchWriter->deleteForTransaction($transactionId, $userId);
+        } catch (\Throwable) {
+            // One unindexable row must not stop the rest being indexed:
+            // a stale index recovers, a half-indexed sweep does not.
+        }
+    }
+
+    // Every transaction the replay could have changed: an op names its row,
+    // and a row no op names was not touched, so its doc is still true.
+    /**
+     * @return list<int>
+     */
+    private function replayedTransactionIds(int $userId): array
+    {
+        $named = $this->db->connection()
+            ->table('op_log_entries')
+            ->where('user_id', $userId)
+            ->where('table_name', 'transactions')
+            ->distinct()
+            ->pluck('pk');
+
+        $ids = [];
+
+        foreach ($named as $pk) {
+            if (is_numeric($pk)) {
+                $ids[] = (int) $pk;
+            }
+        }
+
+        sort($ids);
+
+        return $ids;
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return array<int, true>
+     */
+    private function survivingIds(int $userId, array $ids): array
+    {
+        $surviving = [];
+
+        foreach ($this->db->connection()->table('transactions')->where('user_id', $userId)->whereIn('id', $ids)->pluck('id') as $id) {
+            if (is_numeric($id)) {
+                $surviving[(int) $id] = true;
+            }
+        }
+
+        return $surviving;
     }
 
     /**
@@ -268,7 +334,7 @@ final class OpLogRebuilder
      */
     private function acquireMaintenanceLock(int $userId): void
     {
-        if (isset($this->heldLocks[$userId]) && $this->heldLocks[$userId] === true) {
+        if (isset($this->heldLocks[$userId]) && $this->heldLocks[$userId]) {
             throw RebuildInProgressException::forUser($userId);
         }
 

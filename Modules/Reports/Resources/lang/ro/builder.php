@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Necategorizat',
+    'no_counterparty' => 'Fără contraparte',
+    'unavailable_counterparty' => 'Contrapartea nu există pe acest dispozitiv',
     'title' => 'Rapoarte',
     'page_title' => 'Rapoarte · Beatrax',
     'subtitle' => 'Compune un raport din registrul tău.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Grafic în :currency — :list nu este reprezentat',
+        'undrawn' => 'În afara inelului — :amount merge în sens invers',
         'bar_title' => 'Dă clic pe o bară pentru a vedea tranzacțiile ei',
         'line_title' => 'Dă clic pe un punct pentru a vedea tranzacțiile lui',
         'donut_title' => 'Dă clic pe un segment pentru a vedea tranzacțiile lui',

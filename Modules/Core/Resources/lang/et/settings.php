@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Valuuta kuvamine',
+        'heading' => 'Summa kuvamine',
         'label' => 'Vaikevaade tehingute loendis',
-        'eur_only' => 'Ainult :code',
-        'original' => 'Algne valuuta',
+        'eur_only' => 'Arveldatud summa',
+        'original' => 'Algne summa',
         'help' => 'Tehingute loendis saad seda igal lehel endiselt vahetada.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Kasutusel on kaasas olevad kursid. Andmed ei lahku sellest seadmest.',
         'fetch_aria' => 'Tõmba ajakohased vahetuskursid veebist',
         'refreshing' => 'Värskendan…',
-        'next_refresh' => 'Järgmine automaatne värskendus: iga päev kell 09.00',
+        'next_refresh' => 'Automaatne värskendus: kord päevas',
         'refresh_gave_up' => 'Kursse ei õnnestunud värskendada. Kasutusel on endiselt seadmes olevad kursid.',
         'refresh_now' => 'Värskenda kohe',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Periood',
         'label' => 'Periood algab päeval',
         'help' => 'Numbrid 1 kuni 28. Enamik kasutajaid jätab siia 1 (kalendrikuu). Kasuta 25, kui palk laekub 25. kuupäeval ja mõtled „oma kuust“ sealt alates.',
+
+        'move_confirm' => 'Kui periood algab päeval :day, paigutatakse kõik ümbrikute summad ümber ja liidetakse kokku seal, kus kaks kuud langevad üheks kokku. Päeva tagasi muutmine neid enam ei lahuta.',
+        'move_cancel' => 'Tühista',
+        'move_apply' => 'Rakenda',
     ],
 
     'recurring' => [
         'heading' => 'Korduvmaksete tuvastamine',
         'window_label' => 'Tuvastamise aken (kuudes)',
         'window_help' => 'Kui mitme kuu ajalugu skannitakse, kui tehinguid korduvateks mustriteks rühmitatakse.',
-        'income_label' => 'Tulu miinimum (sentides)',
-        'income_help' => 'Sellest lävest väiksemaid tulusid automaatselt ei rühmitata. Salvestatakse sentides — 200000 tähendab :example. Läve väljalülitamiseks pane 0.',
+        'income_label' => 'Tulu miinimum (väikseimates ühikutes)',
+        'income_help' => 'Sellest lävest väiksemaid tulusid automaatselt ei rühmitata. Salvestatakse väikseimates ühikutes — :minor tähendab :example. Läve väljalülitamiseks pane 0.',
     ],
 
     'drift' => [
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Jälgitav kaust on aktiivne. Beatrax kontrollib uute failide osas kausta <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> iga 5 minuti järel.',
         'inactive_html' => 'Sisselülitatuna kontrollib Beatrax kausta <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> iga 5 minuti järel failide <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> ja <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> osas ning impordib need sama sobitamise konveieri kaudu nagu viisard. Töödeldud failid liiguvad kausta <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, nii et neid ei impordita kunagi kaks korda.',
+        'active_phone_html' => 'Jälgitav kaust on aktiivne. Beatrax kontrollib uute failide osas kausta <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> taustal. Millal taustakontroll käivitub, otsustab sinu telefon, nii et see võib võtta minuteid või tunde.',
+        'inactive_phone_html' => 'Sisselülitatuna kontrollib Beatrax kausta <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> taustal failide <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> ja <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> osas ning impordib need sama sobitamise konveieri kaudu nagu viisard. Millal taustakontroll käivitub, otsustab sinu telefon, nii et see võib võtta minuteid või tunde. Töödeldud failid liiguvad kausta <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, nii et neid ei impordita kunagi kaks korda.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Maksud',
-    'shared_merchant_heading' => 'Jagatud kaupmeeste nimekiri',
     'data_backup_heading' => 'Andmed ja varundus',
-    'install_heading' => 'Paigaldamine',
 
     'about_updates' => [
         'heading' => 'Uuendustest',
         'body' => 'Pärast paigaldamist uuendab Beatrax end automaatselt. Kui oled kõige esimese versiooni paigaldanud, saabuvad edaspidised versioonid rakendusesisese ribana — GitHubi pole vaja uuesti külastada. Kui mõni tulevane uuendus peaks rakendumata jääma, saad uusima paigaldusfaili alati väljalasete lehelt käsitsi uuesti alla laadida.',
+        'body_phone' => 'Siin Beatrax end ise ei uuenda. Telefonirakenduse uued versioonid saabuvad App Store’i või Google Play kaudu, nagu su teisedki rakendused. Väljalasete leht näitab, mis igas versioonis muutus.',
         'open_releases' => 'Ava väljalasete leht →',
     ],
 
@@ -192,6 +197,7 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Eelarvekuud ei õnnestunud nihutada, seega jäi see sinna, kus oli.',
         'currency_required' => 'Vali valuuta.',
         'window_months' => 'Vali vahemikus 2 kuni 60 kuud.',
         'threshold' => 'Vali lävi: 1%, 2%, 5%, 10%, 25% või 50%.',

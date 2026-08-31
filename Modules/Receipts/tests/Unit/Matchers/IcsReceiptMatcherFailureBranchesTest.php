@@ -3,12 +3,13 @@
 declare(strict_types=1);
 
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
+use Modules\Receipts\Internal\Matchers\ReceiptBodyText;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function icsFailMatcher(): IcsReceiptMatcher
 {
-    return new IcsReceiptMatcher(new EmlMimeReader);
+    return new IcsReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
 }
 
 function icsEml(string $contentType, string $body): string

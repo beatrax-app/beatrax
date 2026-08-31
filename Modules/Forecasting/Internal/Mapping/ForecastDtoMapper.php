@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Internal\Mapping;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Forecasting\Internal\Enums\ForecastPointSet;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
@@ -24,13 +25,17 @@ final readonly class ForecastDtoMapper
      */
     public function mapForecast(
         array $accountResult,
-        int $horizonDays,
-        ?int $scenarioId,
-        CarbonImmutable $asOf,
+        ForecastWindow $window,
         bool $isComputing,
         array $seriesConfidence = [],
+        ForecastPointSet $pointSet = ForecastPointSet::PerSeries,
+        bool $isStale = false,
     ): ForecastDto {
-        $pointsRaw = $accountResult['points'] ?? [];
+        // A run written before the funder curve existed carries only the
+        // per-series one, and falling back to it beats drawing nothing.
+        $pointsRaw = $accountResult[$pointSet->value]
+            ?? $accountResult[ForecastPointSet::PerSeries->value]
+            ?? [];
         if (! is_array($pointsRaw)) {
             $pointsRaw = [];
         }
@@ -47,14 +52,35 @@ final readonly class ForecastDtoMapper
             accountId: self::toInt($accountResult['account_id'] ?? null),
             accountName: self::toString($accountResult['account_name'] ?? null),
             defaultCurrency: self::toString($accountResult['default_currency'] ?? null),
-            horizonDays: $horizonDays,
-            scenarioId: $scenarioId,
-            asOf: $asOf,
+            horizonDays: $window->horizonDays,
+            scenarioId: $window->scenarioId,
+            asOf: $window->asOf,
             todayBalanceMinor: self::toInt($accountResult['today_balance_minor'] ?? null),
             points: $points,
             seriesConfidence: $seriesConfidence,
             isComputing: $isComputing,
+            isStale: $isStale,
+            unconvertedCurrencies: self::stringList($accountResult['unconverted_currencies'] ?? null),
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function stringList(mixed $raw): array
+    {
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $codes = [];
+        foreach ($raw as $code) {
+            if (is_string($code) && $code !== '') {
+                $codes[] = $code;
+            }
+        }
+
+        return $codes;
     }
 
     /**

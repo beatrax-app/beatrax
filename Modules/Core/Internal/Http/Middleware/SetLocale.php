@@ -15,11 +15,11 @@ use Symfony\Component\HttpFoundation\Response;
 // renders, so downstream Lang::get lookups and the layout's <html lang>
 // read the same language. The three signals are gathered here and handed
 // to the negotiator, which owns the precedence rule.
-final class SetLocale
+final readonly class SetLocale
 {
     public function __construct(
-        private readonly CurrentUser $currentUser,
-        private readonly LocaleNegotiator $negotiator,
+        private CurrentUser $currentUser,
+        private LocaleNegotiator $negotiator,
     ) {}
 
     public function handle(Request $request, Closure $next): Response

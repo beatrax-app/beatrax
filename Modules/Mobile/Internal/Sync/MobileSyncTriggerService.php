@@ -7,28 +7,28 @@ namespace Modules\Mobile\Internal\Sync;
 use Illuminate\Contracts\Session\Session;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\Identity\DeviceIdentityState;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class MobileSyncTriggerService
+final readonly class MobileSyncTriggerService
 {
     public function __construct(
-        private readonly DeviceIdentityLoader $identityLoader,
-        private readonly NetworkPolicyResolver $networkPolicy,
-        private readonly LanSyncClient $lanSyncClient,
-        private readonly RelayClient $relayClient,
-        private readonly RelayConfig $relayConfig,
-        private readonly GdkEpochDeliveryGateway $epochDelivery,
-        private readonly ?LoggerInterface $logger = null,
+        private DeviceIdentityLoader $identityLoader,
+        private NetworkPolicyResolver $networkPolicy,
+        private LanSyncClient $lanSyncClient,
+        private RelayClient $relayClient,
+        private RelayConfig $relayConfig,
+        private GdkEpochDeliveryGateway $epochDelivery,
+        private ?LoggerInterface $logger = null,
     ) {}
 
-    // Headless-safe - container-resolved with no dependency on a
-    // request-scoped global (only the explicit $session argument), so a
-    // background artisan command can call it directly outside any HTTP
-    // request lifecycle.
+    // The narrow answer, kept for the callers that only branch on it. A skip
+    // and a failed dial are both `null` here, which is why a screen reporting
+    // to a reader asks attempt() instead.
     /**
      * @param  string|null  $lanHost  The desktop peer's LAN host, when
      *                                already known/discovered by the
@@ -48,25 +48,53 @@ final class MobileSyncTriggerService
         ?string $lanHost = null,
         ?int $lanPort = null,
     ): ?bool {
-        $identity = $this->identityLoader->load($userId, $session);
-
-        // Two reasons to skip the tick, each keeping its own log line. No
-        // identity means locked, no key, or sync never enabled — data stays
-        // encrypted and no key is cached outside the session. The gate means
-        // pause-on-cellular is ON and the link is confirmed expensive.
-        $skip = match (true) {
-            $identity === null => 'no usable device identity',
-            ! $this->networkPolicy->shouldSyncNow() => 'pause-on-cellular gate',
+        return match ($this->attempt($userId, $session, $lanHost, $lanPort)) {
+            SyncAttemptOutcome::Synced => true,
+            SyncAttemptOutcome::Unreachable => false,
             default => null,
         };
+    }
 
-        // The null identity is re-tested rather than left to $skip so the
-        // narrowing survives to dialLanWithBoundedRetry() below; $skip alone
-        // does not tell the analyser that $identity is set.
-        if ($identity === null || $skip !== null) {
-            $this->logger?->info('MobileSyncTriggerService: '.$skip.' — skipping tick.');
+    // Headless-safe - container-resolved with no dependency on a
+    // request-scoped global (only the explicit $session argument), so a
+    // background artisan command can call it directly outside any HTTP
+    // request lifecycle.
+    /**
+     * @param  string|null  $lanHost  The desktop peer's LAN host, when
+     *                                already known/discovered by the
+     *                                caller. Peer discovery itself is out
+     *                                of scope here.
+     * @param  int|null  $lanPort  The desktop's `sync:serve` port.
+     */
+    public function attempt(
+        int $userId,
+        Session $session,
+        ?string $lanHost = null,
+        ?int $lanPort = null,
+    ): SyncAttemptOutcome {
+        [$state, $identity] = $this->identityLoader->loadWithState($userId, $session);
 
-            return null;
+        // The first of two reasons to skip, keeping its own log line. No
+        // identity means locked, no key, or sync never enabled — data stays
+        // encrypted and no key is cached outside the session — and which of
+        // the three it is decides what the reader is told.
+        if ($identity === null) {
+            $this->logger?->info('MobileSyncTriggerService: no usable device identity — skipping tick.');
+
+            return match ($state) {
+                DeviceIdentityState::Absent => SyncAttemptOutcome::NotEnabled,
+                DeviceIdentityState::Unreadable => SyncAttemptOutcome::Unreadable,
+                default => SyncAttemptOutcome::Locked,
+            };
+        }
+
+        // The second: pause-on-cellular is ON and the link is confirmed
+        // expensive. Asked only once an identity opened, so an unpaired
+        // device reports what it actually lacks.
+        if (! $this->networkPolicy->shouldSyncNow()) {
+            $this->logger?->info('MobileSyncTriggerService: pause-on-cellular gate — skipping tick.');
+
+            return SyncAttemptOutcome::PausedOnCellular;
         }
 
         // ALWAYS drain the relay, never only as a LAN fallback. A working
@@ -84,7 +112,9 @@ final class MobileSyncTriggerService
         // wrap an earlier, locked one had to leave in the mailbox.
         $this->epochDelivery->drainInbox($userId, $identity->deviceId, $session);
 
-        return $lanReached || $relayReached;
+        return $lanReached || $relayReached
+            ? SyncAttemptOutcome::Synced
+            : SyncAttemptOutcome::Unreachable;
     }
 
     // Re-drives exactly ONCE on a retryable outcome (the iOS Local

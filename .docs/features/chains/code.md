@@ -28,8 +28,7 @@ Modules/Chains/
 │   │   ├── CardStatementState.php
 │   │   ├── ChainLinkKind.php
 │   │   ├── ChainLinkState.php
-│   │   ├── ConfidenceTier.php
-│   │   └── SettlementToleranceUsed.php
+│   │   └── ConfidenceTier.php
 │   ├── Support/
 │   │   └── SettlementTolerance.php
 │   ├── Http/Livewire/
@@ -38,15 +37,23 @@ Modules/Chains/
 │       ├── ChainLinkQuery.php
 │       └── CardStatementQuery.php
 ├── Internal/
+│   ├── AutoPromotion.php
 │   ├── CardStatementStateMachine.php
 │   ├── ChainLinkInsertHelper.php
 │   ├── ChainTreeWalker.php
+│   ├── ConfidenceScale.php
+│   ├── PaypalFundingSignatureKey.php
+│   ├── Enums/
+│   │   ├── ChainLinkResolver.php
+│   │   └── SettlementToleranceUsed.php
 │   ├── Exceptions/
 │   │   ├── CardStatementNotFoundException.php
 │   │   ├── ChainLinkNotDismissableException.php
 │   │   ├── ChainLinkRequiresConcretePartnerException.php
 │   │   └── EvidenceEncodingFailedException.php
 │   ├── Presentation/
+│   │   ├── ChainLinkRowFactory.php
+│   │   ├── CounterpartyDisplay.php
 │   │   ├── HintEvidenceSummary.php
 │   │   ├── SettlementGroup.php
 │   │   └── SettlementLeg.php
@@ -126,11 +133,22 @@ Modules/Chains/
     $cursorConfidence, $limit)` — the keyset-paged review queue,
     `ChainLinkQuery::openCandidateCount($user)` (sidebar badge),
     `ChainLinkQuery::forTransaction($transactionId, $user)` — the
-    `ChainTree` walk. Also `allChainsForUser`,
-    `hasChainForTransaction`, `confirmedAndDeterministicForSeries`
+    `ChainTree` walk. Also `allChainsForUser` +
+    `settlementTotalsForUser` (the /chains pair — the first picks the
+    newest settlements and a prefix of each one's legs, the second counts
+    and totals every leg so the card does not state the prefix's figures),
+    `hasChainForTransaction`, `confirmedFundersForSeries`
     (what `Forecasting` routes on), `hintsForReview` and `hintCount`.
   - `CardStatementQuery::nextSettlementForUser($user)`,
-    `CardStatementQuery::openForAccount($accountId, $user)`.
+    `CardStatementQuery::openForAccount($accountId, $user)`. The first
+    names the payer by reading a confirmed `ics_bulk_settle` link's
+    **`from`** side, which is the settlement — the `to` side is a charge
+    on the card. Read the other way round the payer filter matched no
+    settlement at all, and matched the refund-after-close links instead,
+    where both legs sit on the card. The amount it states is
+    `open_balance_minor` less the same-currency credits already pointed at
+    the statement, floored at zero: that is the payment the resolver will
+    settle it with.
 
 ## Internal services
 
@@ -138,22 +156,47 @@ Modules/Chains/
   `card_statements.state`. Encodes the allowed transitions: `open →
   partially_settled → settled / overpaid`. Other writes are forbidden
   by `noCardStatementStateWritesOutsideMachine`.
-- `Internal/ChainLinkInsertHelper` — shared `chain_links` INSERT site
-  used by every resolver. Centralises evidence JSON encoding so two
-  callers cannot drift on whitespace / key order. The hash that backs
-  the auto-promotion learning loop is computed against this canonical
-  JSON.
+- `Internal/ChainLinkInsertHelper` — the `chain_links` INSERT site.
+  Every writer goes through it — both resolvers, the hint listener and
+  the demo seeder — so no two callers can drift on evidence whitespace,
+  key order, or on the pair-uniqueness guard. The hash that backs the
+  auto-promotion learning loop is computed against this canonical JSON.
+  `idFor()` folds the same pair-uniqueness tuple into the row's id, so
+  two devices resolving one hint write one row; both entry points emit
+  the `EntityMutated` create.
+- `Internal/AutoPromotion` — the learning loop's confirmation
+  threshold, and the countdown the review queue renders from it.
+- `Internal/ConfidenceScale` — the DECIMAL(4,3) spelling both resolvers
+  write `chain_links.confidence` at.
+- `Internal/Enums/ChainLinkResolver` — the `resolver` column's
+  vocabulary (`auto`, `rule`, `user`) in an 8-character column.
+- `Internal/Presentation/ChainLinkRowFactory` — the rows a screen renders,
+  built from the `chain_links` rows a query handed it. Both shapes — the
+  reviewable link and the endpoint-only hint — read one set of endpoint
+  summaries and share the empty one a transaction the reader does not own
+  falls back to.
+- `Internal/PaypalFundingSignatureKey` — which account a PayPal funding row
+  names, and the key standing for it in `evidence.matched_iban`: the IBAN, or
+  the account id where the account has none.
+- `Internal/Presentation/CounterpartyDisplay` — the decrypt + slug pair
+  every chain read path renders a transactions row with, and the
+  `counterparties` select expression they join it in by.
 - `Internal/Resolvers/IcsSettlementResolver` — decomposes ASN→ICS
-  bulk-iDEAL settlements. Uses the `ResolvesKnownCounterpartyIban`
-  contract from `Import` to map IBAN aliases (the ICS institution's
-  fixed IBAN `NL08ABNA0526650664` to the user's ICS account). Inserts
-  per-statement `chain_links` rows; the state machine drives the
-  attached `card_statements` row through its lifecycle.
+  bulk-iDEAL settlements. Names the card two ways, because a card
+  answers to two: the `ResolvesKnownCounterpartyIban` contract from
+  `Import` maps the ICS institution's fixed IBAN
+  `NL08ABNA0526650664` onto the user's ICS account, and a card
+  imported from a PDF instead carries the synthetic `ICS-CARD`
+  literal in its own `accounts.iban` column. Alias first, own IBAN
+  second — the same two arms `ClassifyTransactionType` and
+  `TransferPairer` read. Inserts per-statement `chain_links` rows;
+  the state machine drives the attached `card_statements` row
+  through its lifecycle.
 - `Internal/Resolvers/PaypalFundingResolver` — three arms:
   - Deterministic — inspects the PayPal row's stored raw payload for
     `Bankstorting` / `General Withdrawal` / `Transfer to bank` events
     with an IBAN match. Equal-and-opposite `transfer_in` within
-    ±`DATE_WINDOW_DAYS` ⇒ confidence 1.0. The counter-leg query is
+    ±`CounterLegWindow::DEFAULT_DAYS` ⇒ confidence 1.0. The counter-leg query is
     [`Transfers`](../transfers/code.md)'s
     `PairLookup::counterLegOnAccount`, called with this resolver's
     own window, direction and ordering

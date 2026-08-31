@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Töötle ja eelvaata',
     'cancel_import' => 'Tühista import',
 
-    'diff_new' => 'uut,',
-    'diff_unchanged' => 'muutmata,',
-    'diff_conflicts' => 'vastuolu.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count uus|:count uut',
+    'diff_unchanged' => ':count muutmata|:count muutmata',
+    'diff_conflicts' => ':count vastuolu|:count vastuolu',
 
     'conflicts_heading' => 'Vastuolud',
     'conflict_name' => 'nimi — olemasolev: :existing → fail: :file',
@@ -54,8 +55,7 @@ return [
     'test_heading' => 'Testi oma tehingute vastu',
     'test_help' => 'Muuda rea üldistatud mustrit, et näha, millised tehingud sellega sobiksid.',
     'typing' => 'Tipin…',
-    'matches_prefix' => 'Sobib',
-    'matches_suffix' => 'tehinguga sinu hiljutises ajaloos.',
+    'matches' => 'Sobib :count tehinguga sinu hiljutises ajaloos.|Sobib :count tehinguga sinu hiljutises ajaloos.',
 
     'merge_modal_title' => 'Ühenda :count alias|Ühenda :count aliast',
 
@@ -84,5 +84,10 @@ return [
         'no_file' => 'Ühtegi faili ei laaditud üles.',
         'unreadable' => 'Üleslaaditud faili ei õnnestunud lugeda.',
         'too_short' => 'Muster on testimiseks liiga lühike.',
+        'file_not_yaml' => 'See fail ei ole korrektne YAML, seega ei õnnestunud sellest midagi lugeda. Ekspordi oma aliased uuesti ja laadi saadud fail üles.',
+        'file_unreadable_as_yaml' => 'Seda faili ei õnnestunud lugeda aliaste loendina. Ekspordi oma aliased uuesti ja laadi saadud fail üles.',
+        'file_has_no_entries_list' => 'See fail ei alga ülemise taseme entries:-loendiga, seega pole selles ühtegi aliast, mida importida. Kontrolli, kas valisid õige faili.',
+        'entry_is_not_a_mapping' => 'Kirje :entry on lihtne väärtus seal, kus oodati mustrit ja nime. Anna sellele mõlemad väljad või eemalda see, ja laadi fail uuesti üles.',
+        'entry_is_missing_a_field' => 'Kirjel :entry puudub muster või nimi, aga alias vajab mõlemat. Täida puuduv või eemalda see kirje, ja laadi fail uuesti üles.',
     ],
 ];

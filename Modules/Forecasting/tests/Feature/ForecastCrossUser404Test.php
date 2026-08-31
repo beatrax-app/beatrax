@@ -48,10 +48,33 @@ beforeEach(function (): void {
     $this->accountB = fc404Account($this->db, $this->userB->id);
 });
 
-it('returns 404 when user A requests /forecast with an account id owned by user B', function (): void {
-    $this->actingAs($this->userA)
-        ->get('/forecast?account='.$this->accountB)
-        ->assertNotFound();
+// The two cases a caller can ask about have to be answered the same way.
+// A 404 for "exists, but not yours" and a rendered page for "exists for
+// nobody" made the id space probeable: walking ?account= told an outsider
+// exactly which ids another household owns.
+it('answers an account id owned by user B exactly as it answers one owned by nobody', function (): void {
+    $neverExisted = $this->accountA + $this->accountB + 1_000;
+
+    $foreign = $this->actingAs($this->userA)->get('/forecast?account='.$this->accountB);
+    $absent = $this->actingAs($this->userA)->get('/forecast?account='.$neverExisted);
+
+    expect($foreign->getStatusCode())->toBe($absent->getStatusCode())
+        ->and($foreign->getStatusCode())->toBe(200);
+});
+
+// The rendered page must not become the leak the 404 was: it answers with the
+// reader's own aggregate and none of the neighbour's rows. The panel names the
+// tab it belongs to, and that name is the only thing on the page the ownership
+// walk decides — the tab strip itself is built from the reader's own accounts.
+it('renders user A\'s own view rather than anything belonging to user B', function (): void {
+    $response = $this->actingAs($this->userA)->get('/forecast?account='.$this->accountB);
+    $content = (string) $response->getContent();
+
+    $response->assertOk();
+
+    expect($content)->toContain('aria-labelledby="forecast-account-tab-all"')
+        ->and($content)->toContain('forecast-account-tab-'.$this->accountA)
+        ->and($content)->not->toContain('forecast-account-tab-'.$this->accountB);
 });
 
 it('returns 200 when user A requests /forecast with their own account id', function (): void {

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Reservas · Beatrax',
     'heading' => 'Reservas',
-    'subtitle' => 'Subsaldos virtuais que somam sempre o saldo real da tua conta.',
+    'subtitle' => 'Subsaldos virtuais separados do saldo real da conta.',
     'add_pot' => 'Adicionar reserva',
 
     'pot_fallback' => 'reserva',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Mostrar o histórico ↓',
         'hide' => 'Ocultar o histórico ↑',
+        'truncated' => 'Movimentos recentes: :shown de :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Levantamento',
         'moved_from' => 'Movido de :name',
         'moved_to' => 'Movido para :name',
+        'unreadable' => 'Registado por uma versão mais recente do Beatrax',
+        'released_on_archive' => 'Libertado ao arquivar',
     ],
 
     'archived' => [
-        'toggle' => 'Reservas arquivadas (:count)',
+        'toggle' => 'Reserva arquivada (:count)|Reservas arquivadas (:count)',
         'badge' => 'Arquivada',
     ],
 
@@ -119,12 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Introduz um nome para esta reserva.',
         'select_account' => 'Seleciona uma conta para esta reserva.',
-        'amount_exceeds_unallocated' => 'O montante excede o saldo não alocado.',
         'amount_exceeds_unallocated_available' => 'O montante excede o saldo não alocado (:amount disponível).',
         'amount_exceeds_pot_balance' => 'O montante excede o saldo em :name (:amount disponível).',
         'generic' => 'Não foi possível guardar o mealheiro. Verifique os campos e tente novamente.',
         'amount_invalid' => 'Introduza um valor maior que zero.',
         'goal_already_linked' => 'Este objetivo já tem um mealheiro associado ativo. Arquive-o primeiro.',
+        'account_cannot_hold_pots' => 'Uma reserva precisa de uma conta com dinheiro. Escolhe outra conta.',
+        'select_target_pot' => 'Seleciona uma reserva para onde mover.',
+        'move_target_missing' => 'Essa reserva já não está disponível. Escolhe outra.',
+        'move_same_pot' => 'Uma reserva não pode mover dinheiro para si própria. Escolhe outra reserva.',
+        'move_cross_account' => 'As reservas só trocam dinheiro dentro da mesma conta, e :name está em :account.',
+        'pot_missing' => 'Essa reserva já não está disponível.',
+        'operation_failed' => 'Não foi concluído. Não se moveu dinheiro — tenta novamente.',
     ],
 
     'toast' => [

@@ -12,6 +12,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -28,6 +29,7 @@ use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxQuery;
+use Modules\EmailScan\Public\Services\InboxScanSchedule;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -36,8 +38,6 @@ use Throwable;
 final class InboxesPage extends Component
 {
     use DispatchesToast;
-
-    private const INBOX_NOT_FOUND = 'Inbox not found.';
 
     public ?int $openBackfillForInboxId = null;
 
@@ -50,12 +50,24 @@ final class InboxesPage extends Component
     #[Url(as: 'reconnect', except: null)]
     public ?int $reconnectInboxId = null;
 
+    // The five schedule entries that drive this screen are Schedule::call()
+    // closures, so no device manifest carries them and no phone ever scans a
+    // mailbox. The copy branches here rather than averaging the two platforms.
+    #[Locked]
+    public bool $onPhone = false;
+
     public function mount(
         Request $request,
         CurrentUser $currentUser,
         InboxQuery $inboxQuery,
         LoggerInterface $logger,
     ): void {
+        // The seam that decides whether a scan runs here, rather than the
+        // platform it is derived from: the copy and the controls below both
+        // mean "no scan runs on this device", which is this and not "is a
+        // phone". A phone that gains the scan retires both by one line.
+        $this->onPhone = ! InboxScanSchedule::runsOnThisDevice();
+
         // hasSession() guards a direct Livewire test harness that boots
         // without a bound session.
         if ($request->hasSession()) {
@@ -183,6 +195,9 @@ final class InboxesPage extends Component
         return $ids;
     }
 
+    // The ownership read stays; what changes is the answer when it comes back
+    // empty. This page polls, so the row a second tab retired is still on
+    // screen here — a toast and a re-render, never a 404 over the list.
     public function editWindow(
         int $inboxId,
         CurrentUser $currentUser,
@@ -191,13 +206,20 @@ final class InboxesPage extends Component
         $user = $currentUser->user();
         $health = $inboxQuery->findForUser($inboxId, $user);
         if ($health === null) {
-            throw new NotFoundHttpException(self::INBOX_NOT_FOUND);
+            $this->toastGone();
+
+            return;
         }
         $this->dispatch(
             'backfill-window:open',
             inboxId: $inboxId,
             currentWindow: $health->backfillWindowMonths,
         );
+    }
+
+    private function toastGone(): void
+    {
+        $this->toast(Lang::get('core::errors.no_longer_here'));
     }
 
     // Intentionally a no-op: Livewire's re-render on each wire:poll tick
@@ -212,13 +234,32 @@ final class InboxesPage extends Component
         InboxQuery $inboxQuery,
         Dispatcher $bus,
     ): void {
+        // Asked before anything is dispatched: the job moves last_scan_at on
+        // its way to failing, so a tap here overwrote the desktop's real "3h
+        // ago" with "22s ago" and left the row in Error advising a reconnect
+        // that cannot help, under a banner saying this device does not scan.
+        if (! InboxScanSchedule::runsOnThisDevice()) {
+            $this->toast(Lang::get('email-scan::inboxes.intro_phone'));
+
+            return;
+        }
+
         $user = $currentUser->user();
         $health = $inboxQuery->findForUser($inboxId, $user);
         if ($health === null) {
-            throw new NotFoundHttpException(self::INBOX_NOT_FOUND);
+            $this->toastGone();
+
+            return;
         }
         if (in_array($health->status, [InboxScanStatus::Backfilling->value, InboxScanStatus::Scanning->value], strict: true)) {
             $this->toast(Lang::get('email-scan::inboxes.toast.scan_in_progress'));
+
+            return;
+        }
+        // The job exits on its first status read for a revoked grant, so
+        // dispatching here would report a scan that never runs.
+        if ($health->status === InboxScanStatus::NeedsReauth->value) {
+            $this->toast(Lang::get('email-scan::inboxes.toast.reconnect_first'));
 
             return;
         }
@@ -237,7 +278,9 @@ final class InboxesPage extends Component
         $user = $currentUser->user();
         $health = $inboxQuery->findForUser($inboxId, $user);
         if ($health === null) {
-            throw new NotFoundHttpException(self::INBOX_NOT_FOUND);
+            $this->toastGone();
+
+            return null;
         }
 
         $target = $urls->route('oauth.connect', [
@@ -255,17 +298,28 @@ final class InboxesPage extends Component
         CurrentUser $currentUser,
         DisconnectInbox $disconnect,
     ): void {
-        ($disconnect)($inboxId, $currentUser->user());
+        try {
+            ($disconnect)($inboxId, $currentUser->user());
+        } catch (NotFoundHttpException) {
+            $this->toastGone();
+        }
     }
 
     // PromoteDiscoveredSender is idempotent — an already promoted or
-    // dismissed row is a silent no-op.
+    // dismissed row is a silent no-op. A row that is gone outright is not,
+    // and reporting it as added would be a claim about work never done.
     public function promoteSender(
         int $discoveredSenderId,
         CurrentUser $currentUser,
         PromoteDiscoveredSender $promote,
     ): void {
-        ($promote)($discoveredSenderId, $currentUser->user());
+        try {
+            ($promote)($discoveredSenderId, $currentUser->user());
+        } catch (NotFoundHttpException) {
+            $this->toastGone();
+
+            return;
+        }
         $this->toast(Lang::get('email-scan::inboxes.toast.sender_added'));
     }
 
@@ -274,7 +328,13 @@ final class InboxesPage extends Component
         CurrentUser $currentUser,
         DismissDiscoveredSender $dismiss,
     ): void {
-        ($dismiss)($discoveredSenderId, $currentUser->user());
+        try {
+            ($dismiss)($discoveredSenderId, $currentUser->user());
+        } catch (NotFoundHttpException) {
+            $this->toastGone();
+
+            return;
+        }
         $this->toast(Lang::get('email-scan::inboxes.toast.sender_dismissed'));
     }
 
@@ -318,6 +378,7 @@ final class InboxesPage extends Component
             'openBackfillForInboxId' => $this->openBackfillForInboxId,
             'oauthCanceledMessage' => $this->oauthCanceledMessage,
             'oauthFailedMessage' => $this->oauthFailedMessage,
+            'onPhone' => $this->onPhone,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

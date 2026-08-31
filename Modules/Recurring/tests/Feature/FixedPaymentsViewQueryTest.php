@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Public\Dto\Period;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
@@ -121,9 +122,10 @@ it('returns empty sections for a user with no approved series (cross-user empty)
     expect($sections['transfers'])->toBe([]);
 })->group('cross-user-empty');
 
-it('omits non-approved series — pending / rejected / snoozed / cadence_changed never appear in viewForUser', function (): void {
+it('omits pending / rejected / snoozed series from viewForUser', function (): void {
     fpvSeries($this->user, 'expense', 'pending-thing', ['state' => 'pending']);
     fpvSeries($this->user, 'expense', 'rejected-thing', ['state' => 'rejected', 'cluster_key' => 'expense::rejected-thing::eur::monthly']);
+    fpvSeries($this->user, 'expense', 'snoozed-thing', ['state' => 'snoozed', 'cluster_key' => 'expense::snoozed-thing::eur::monthly']);
     fpvSeries($this->user, 'expense', 'approved-thing', ['state' => 'approved', 'cluster_key' => 'expense::approved-thing::eur::monthly']);
 
     /** @var FixedPaymentsViewQuery $query */
@@ -133,6 +135,35 @@ it('omits non-approved series — pending / rejected / snoozed / cadence_changed
     expect($sections['expenses'])->toHaveCount(1);
     expect($sections['expenses'][0]->detectedName)->toBe('approved-thing');
 })->group('only-approved-series-surface');
+
+it('keeps a cadence-changed series on /recurring instead of dropping it out from under the sidebar badge', function (): void {
+    fpvSeries($this->user, 'expense', 'flipped-thing', [
+        'state' => 'cadence_changed',
+        'cluster_key' => 'expense::flipped-thing::eur::monthly',
+    ]);
+
+    /** @var FixedPaymentsViewQuery $query */
+    $query = $this->app->make(FixedPaymentsViewQuery::class);
+
+    expect($query->viewForUser($this->user)['expenses'])->toHaveCount(1);
+});
+
+it('counts a cadence-changed series in the monthly totals Forecasting already projects', function (): void {
+    fpvSeries($this->user, 'expense', 'approved-thing', [
+        'monthly_equivalent_minor' => -1099,
+        'cluster_key' => 'expense::approved-thing::eur::monthly',
+    ]);
+    fpvSeries($this->user, 'expense', 'flipped-thing', [
+        'state' => 'cadence_changed',
+        'monthly_equivalent_minor' => -2500,
+        'cluster_key' => 'expense::flipped-thing::eur::monthly',
+    ]);
+
+    /** @var FixedPaymentsViewQuery $query */
+    $query = $this->app->make(FixedPaymentsViewQuery::class);
+
+    expect($query->monthlyEquivalentTotals($this->user)->expense->toMinor())->toBe(-3599);
+});
 
 it('runs viewForUser in ≤ 3 queries for N=12 series (N+1 budget)', function (): void {
     for ($i = 0; $i < 12; $i++) {
@@ -212,8 +243,11 @@ it('topByMonthlyEquivalent applies the month-window filter BEFORE the limit so t
     $top = $query->topByMonthlyEquivalent(
         $this->user,
         6,
-        CarbonImmutable::parse('2026-05-01'),
-        CarbonImmutable::parse('2026-05-31 23:59:59'),
+        new Period(
+            start: CarbonImmutable::parse('2026-05-01'),
+            endExclusive: CarbonImmutable::parse('2026-06-01'),
+            label: 'May 2026',
+        ),
     );
 
     expect($top)->toHaveCount(1);

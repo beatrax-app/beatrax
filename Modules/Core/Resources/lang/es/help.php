@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => 'Sobre :subject',
+        'close' => 'Cerrar',
+    ],
+
     'page_title' => '¿Dónde están mis datos?',
     'intro' => 'Beatrax lo guarda todo en este dispositivo. No se envía nada a ningún servidor, nada se sincroniza con la nube y nada sale de este dispositivo si no lo exportas tú.',
 

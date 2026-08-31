@@ -6,10 +6,12 @@ namespace Modules\Calendar\Internal\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Calendar\Internal\Dto\DayBalanceDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Services\ForecastQuery;
+use Modules\FX\Public\Dto\ConvertedTotal;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -22,8 +24,6 @@ final readonly class DailyBalanceAggregator
 {
     use CoercesScalars;
 
-    private const int FORECAST_HORIZON_DAYS = 365;
-
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -33,49 +33,72 @@ final readonly class DailyBalanceAggregator
         private BaseCurrency $baseCurrencies,
     ) {}
 
+    // A currency the rate table cannot reach is left OFF the line rather than
+    // counted at par, and each day names its own codes: a caller that renders
+    // the line without them shows a partial balance as a whole one.
     /**
      * @param  list<int>  $effectiveBalance
-     * @return array{map: array<string, array{0: int, 1: bool}>, todayAnchorMinor: int|null}
+     * @return array{map: array<string, DayBalanceDto>, todayAnchorMinor: int|null, gridStartOpening: DayBalanceDto|null}
      */
     public function buildBalanceMap(
         array $effectiveBalance,
         User $user,
-        CarbonImmutable $monthStart,
-        CarbonImmutable $monthEnd,
+        CarbonImmutable $gridStart,
+        CarbonImmutable $gridEnd,
     ): array {
         if ($effectiveBalance === []) {
-            return ['map' => $this->emptyComputingMap($monthStart, $monthEnd), 'todayAnchorMinor' => null];
+            return [
+                'map' => $this->emptyComputingMap($gridStart, $gridEnd),
+                'todayAnchorMinor' => null,
+                'gridStartOpening' => null,
+            ];
         }
 
         $baseCurrency = $this->baseCurrencies->forUser($user);
         ['byDateCurrency' => $byDateCurrency, 'isComputingAny' => $isComputingAny, 'anchorByCurrency' => $anchorByCurrency, 'hasAnchor' => $hasAnchor]
             = $this->collectForecastBuckets($effectiveBalance, $user);
-        $overlay = $this->collectOverlayBuckets($effectiveBalance, $user, $monthStart, $monthEnd);
+        $overlay = $this->collectOverlayBuckets($effectiveBalance, $user, $gridStart, $gridEnd);
 
-        // Every bucket the whole month will convert, priced in one pass: the
-        // rate a day needs is the rate every other day needs, and the service
-        // behind it reads the entire exchange_rates table per call.
-        $rates = $this->fx->ratesTo(self::currenciesIn([
+        $sourceCurrencies = self::currenciesIn([
             ...array_values($byDateCurrency),
             $anchorByCurrency,
             ...($overlay === null ? [] : [$overlay['cumByCurrency'], ...array_values($overlay['deltaByDateCurrency'])]),
-        ]), $baseCurrency);
+        ]);
+
+        // Every bucket the whole grid will convert, priced in one pass: the
+        // rate a day needs is the rate every other day needs, and the service
+        // behind it reads the entire exchange_rates table per call.
+        $rates = $this->fx->ratesTo($sourceCurrencies, $baseCurrency);
 
         $map = $this->bucketsToBalanceMap($byDateCurrency, $baseCurrency, $rates, $isComputingAny);
 
         if ($isComputingAny) {
-            $map = $this->applyComputingSentinel($map, $monthStart, $monthEnd);
+            $map = $this->applyComputingSentinel($map, $gridStart, $gridEnd);
         }
 
         if ($overlay !== null) {
             $map = $this->overlayActualBalances($map, $overlay, $baseCurrency, $rates);
         }
 
-        $todayAnchorMinor = $hasAnchor
-            ? $this->fx->withRates($anchorByCurrency, $baseCurrency, $rates)->minor
-            : null;
+        // Today's start-of-day chains off the anchor, so the anchor answers on
+        // the same terms every other day does: the priced part where there is
+        // one, and no figure at all where there is not.
+        $anchor = self::dayBalance($this->fx->withRates($anchorByCurrency, $baseCurrency, $rates), $anchorByCurrency, false);
+        $todayAnchorMinor = $hasAnchor && $anchor->isKnown() ? $anchor->minor : null;
 
-        return ['map' => $map, 'todayAnchorMinor' => $isComputingAny ? null : $todayAnchorMinor];
+        return [
+            'map' => $map,
+            'todayAnchorMinor' => $isComputingAny ? null : $todayAnchorMinor,
+            // What the first grid day opened on. cumulativeBalanceBefore() is
+            // already exactly that figure — it seeds the overlay's running
+            // total — and the grid's first cell had no predecessor to chain
+            // from, so it reported unknown for a balance held right here.
+            'gridStartOpening' => $overlay === null ? null : self::dayBalance(
+                $this->fx->withRates($overlay['cumByCurrency'], $baseCurrency, $rates),
+                $overlay['cumByCurrency'],
+                false,
+            ),
+        ];
     }
 
     /**
@@ -95,18 +118,47 @@ final readonly class DailyBalanceAggregator
     }
 
     /**
-     * @return array<string, array{0: int, 1: bool}>
+     * @return array<string, DayBalanceDto>
      */
-    private function emptyComputingMap(CarbonImmutable $monthStart, CarbonImmutable $monthEnd): array
+    private function emptyComputingMap(CarbonImmutable $gridStart, CarbonImmutable $gridEnd): array
     {
         $map = [];
-        $cursor = $monthStart;
-        while ($cursor->lte($monthEnd)) {
-            $map[$cursor->toDateString()] = [0, true];
+        $cursor = $gridStart;
+        while ($cursor->lte($gridEnd)) {
+            $map[$cursor->toDateString()] = new DayBalanceDto(minor: 0, isComputing: true, hasFigure: false);
             $cursor = $cursor->addDay();
         }
 
         return $map;
+    }
+
+    // The converted figure plus what conversion left out, so a reader of one
+    // day can tell "the line is zero" from "the line is unknown". An unpriced
+    // bucket that is itself negative is an overdraft whatever it is worth, and
+    // it is invisible in $total->minor, which that bucket never reached.
+    /**
+     * @param  array<string, int>  $byCurrency
+     */
+    private static function dayBalance(ConvertedTotal $total, array $byCurrency, bool $isComputing): DayBalanceDto
+    {
+        $priced = array_diff_key($byCurrency, array_flip($total->unconverted));
+
+        return new DayBalanceDto(
+            minor: $total->minor,
+            isComputing: $isComputing,
+            unconvertedCurrencies: $total->unconverted,
+            isNegative: $total->minor < 0 || self::anyUnpricedOverdraft($byCurrency, $total->unconverted),
+            hasFigure: $priced !== [],
+        );
+    }
+
+    /**
+     * @param  array<string, int>  $byCurrency
+     * @param  list<string>  $unconverted
+     */
+    private static function anyUnpricedOverdraft(array $byCurrency, array $unconverted): bool
+    {
+        return array_any($unconverted, fn (string $currency): bool => ($byCurrency[$currency] ?? 0) < 0);
     }
 
     /**
@@ -123,7 +175,7 @@ final readonly class DailyBalanceAggregator
         $hasAnchor = false;
 
         foreach ($effectiveBalance as $accountId) {
-            $dto = $this->forecastQuery->forUser($accountId, self::FORECAST_HORIZON_DAYS, null, $user);
+            $dto = $this->forecastQuery->forUser($accountId, CalendarMonthWindow::PROJECTION->value, null, $user);
 
             if ($dto->isComputing) {
                 $isComputingAny = true;
@@ -154,28 +206,39 @@ final readonly class DailyBalanceAggregator
     /**
      * @param  array<string, array<string, int>>  $byDateCurrency
      * @param  array<string, string>  $rates
-     * @return array<string, array{0: int, 1: bool}>
+     * @return array<string, DayBalanceDto>
      */
     private function bucketsToBalanceMap(array $byDateCurrency, string $baseCurrency, array $rates, bool $isComputingAny): array
     {
         $map = [];
         foreach ($byDateCurrency as $dateStr => $byCurrency) {
-            $map[$dateStr] = [$this->fx->withRates($byCurrency, $baseCurrency, $rates)->minor, $isComputingAny];
+            $map[$dateStr] = self::dayBalance(
+                $this->fx->withRates($byCurrency, $baseCurrency, $rates),
+                $byCurrency,
+                $isComputingAny,
+            );
         }
 
         return $map;
     }
 
     /**
-     * @param  array<string, array{0: int, 1: bool}>  $map
-     * @return array<string, array{0: int, 1: bool}>
+     * @param  array<string, DayBalanceDto>  $map
+     * @return array<string, DayBalanceDto>
      */
-    private function applyComputingSentinel(array $map, CarbonImmutable $monthStart, CarbonImmutable $monthEnd): array
+    private function applyComputingSentinel(array $map, CarbonImmutable $gridStart, CarbonImmutable $gridEnd): array
     {
-        $cur = $monthStart;
-        while ($cur->lte($monthEnd)) {
+        $cur = $gridStart;
+        while ($cur->lte($gridEnd)) {
             $dateStr = $cur->toDateString();
-            $map[$dateStr] = [$map[$dateStr][0] ?? 0, true];
+            $known = $map[$dateStr] ?? null;
+            $map[$dateStr] = new DayBalanceDto(
+                minor: $known->minor ?? 0,
+                isComputing: true,
+                unconvertedCurrencies: $known->unconvertedCurrencies ?? [],
+                isNegative: $known->isNegative ?? false,
+                hasFigure: $known->hasFigure ?? false,
+            );
             $cur = $cur->addDay();
         }
 
@@ -189,13 +252,13 @@ final readonly class DailyBalanceAggregator
     private function collectOverlayBuckets(
         array $effectiveBalance,
         User $user,
-        CarbonImmutable $monthStart,
-        CarbonImmutable $monthEnd,
+        CarbonImmutable $gridStart,
+        CarbonImmutable $gridEnd,
     ): ?array {
-        $today = $this->clock->now()->startOfDay();
-        $gridStart = $monthStart->startOfWeek(CarbonImmutable::MONDAY);
-        $gridEnd = $monthEnd->startOfDay()->endOfWeek(CarbonImmutable::SUNDAY)->startOfDay();
-        $yesterday = $today->subDay();
+        // The caller owns the range. Widening it to a Mon–Sun week here was a
+        // second answer to where the grid starts, and two answers is how the
+        // edge cells came to disagree with the entries drawn on them.
+        $yesterday = $this->clock->now()->startOfDay()->subDay();
         $pastEnd = $gridEnd->lt($yesterday) ? $gridEnd : $yesterday;
 
         if ($pastEnd->lt($gridStart)) {
@@ -211,10 +274,10 @@ final readonly class DailyBalanceAggregator
     }
 
     /**
-     * @param  array<string, array{0: int, 1: bool}>  $map
+     * @param  array<string, DayBalanceDto>  $map
      * @param  array{cumByCurrency: array<string, int>, deltaByDateCurrency: array<string, array<string, int>>, gridStart: CarbonImmutable, pastEnd: CarbonImmutable}  $overlay
      * @param  array<string, string>  $rates
-     * @return array<string, array{0: int, 1: bool}>
+     * @return array<string, DayBalanceDto>
      */
     private function overlayActualBalances(array $map, array $overlay, string $baseCurrency, array $rates): array
     {
@@ -227,7 +290,11 @@ final readonly class DailyBalanceAggregator
             foreach ($overlay['deltaByDateCurrency'][$dateStr] ?? [] as $currency => $deltaMinor) {
                 $cumByCurrency[$currency] = ($cumByCurrency[$currency] ?? 0) + $deltaMinor;
             }
-            $map[$dateStr] = [$this->fx->withRates($cumByCurrency, $baseCurrency, $rates)->minor, false];
+            $map[$dateStr] = self::dayBalance(
+                $this->fx->withRates($cumByCurrency, $baseCurrency, $rates),
+                $cumByCurrency,
+                false,
+            );
             $cursor = $cursor->addDay();
         }
 

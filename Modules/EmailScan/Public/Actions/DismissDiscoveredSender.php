@@ -10,11 +10,11 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class DismissDiscoveredSender
+final readonly class DismissDiscoveredSender
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     public function __invoke(int $discoveredSenderId, User $user): void

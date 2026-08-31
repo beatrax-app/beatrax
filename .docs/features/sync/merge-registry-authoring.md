@@ -15,18 +15,20 @@ to bring a new table under sync. There is no engine change.
 
 ```php
 'goals' => [
-    'name'            => ['strategy' => 'lww', 'nullable' => false],
-    'target_minor'    => ['strategy' => 'lww', 'nullable' => false],
+    'name'            => ['nullable' => false],
+    'target_minor'    => ['nullable' => false],
     '_delete_wins'    => true,
     '_create_required' => ['name', 'target_minor'],
 ],
 ```
 
-**Strategies.** `lww` (last writer wins, per field), `g_counter` (a grow-only
-counter that sums rather than overwrites — `merchant_memories.occurrence_count`
-is the one that needs it), and `or_set` (an observed-remove set, for a
-`{v, tag}`-shaped collection). An unregistered table or field falls back to
-`lww`.
+**Strategies.** The `MergeStrategy` enum names three: `Lww` (last writer wins,
+per field), `GCounter` (a grow-only counter that sums rather than overwrites —
+`merchant_memories.occurrence_count` is the one that needs it), and `OrSet` (an
+observed-remove set, for a `{v, tag}`-shaped collection). **Lww is the default
+and is never written out**: a field entry carries a `'strategy'` key only where
+it is one of the other two. An unregistered table or field falls back to Lww
+the same way.
 
 **`_delete_wins`** decides the tie: when a tombstone and an edit carry the same
 HLC, does the row die? Default true.
@@ -176,8 +178,8 @@ would guess:
   column, and its identity string is `slug`.
 - `merchant_aliases.pattern` is the immutable first-seen raw description and
   the per-user identity column.
-- The per-envelope notify threshold lives on `envelope_settings`, not on the
-  write-dead `category_budgets`.
+- The per-envelope notify threshold lives on `envelope_settings`, which is
+  the only table that has ever carried one.
 - `tax_transaction_tags.transaction_split_id` must replay, or a per-leg
   deduction collapses into a whole-transaction tag and corrupts exported tax
   amounts.
@@ -193,6 +195,15 @@ would guess:
   `SuppressionEvaluator`, not in the registry.
 - `system_alerts` rows with a NULL `user_id` are system-wide and belong to no
   one; the backfill scopes on `user_id` and never captures them, deliberately.
+- `users` is the one covered table with no `user_id` column: its own primary
+  key IS the owner. `RowOwnership` self-scopes it, the wire pk is ignored (two
+  devices mint different autoincrements for one reader), and a create or a
+  tombstone for it is refused — a peer may edit the reader's settings, never
+  mint or remove the reader. The row is also the one that is not all one
+  thing, so the registry carries two extra lists beside the field map:
+  `DEVICE_LOCAL_COLUMNS` (password, theme, the developer gate) and
+  `ASKED_OF_EVERY_JOINER` (`country_code`). `EveryUserColumnIsPlacedTest`
+  refuses a new column that lands in none of the three.
 
 ## See also
 

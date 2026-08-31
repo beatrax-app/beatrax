@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Kategorinavnet kan ikke være tomt.',
         'name_duplicate' => 'Det finnes allerede en kategori med dette navnet.',
+        'category_not_saved' => 'Denne kategorien kunne ikke lagres. Prøv igjen.',
+        'tag_refused' => 'Denne merkingen kunne ikke lagres. Lukk velgeren og prøv igjen.',
     ],
 ];

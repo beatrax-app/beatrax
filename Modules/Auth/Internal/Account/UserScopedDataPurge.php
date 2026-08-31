@@ -18,11 +18,11 @@ use Modules\Auth\Internal\Exceptions\AccountPurgeException;
 // deleting by it would corrupt a household member's log.
 final readonly class UserScopedDataPurge
 {
-    private const OWNERSHIP_COLUMN = 'user_id';
+    private const string OWNERSHIP_COLUMN = 'user_id';
 
     // Children with no user_id of their own. The FK cascades, but only while
     // foreign keys are enforced, and a purge resting on a PRAGMA fails quietly.
-    private const ORPHANED_CHILDREN = [
+    private const array ORPHANED_CHILDREN = [
         'rule_actions' => ['rule_id', 'categorization_rules'],
         'rule_conditions' => ['rule_id', 'categorization_rules'],
     ];

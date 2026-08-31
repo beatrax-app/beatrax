@@ -11,7 +11,7 @@ canonical tables.
 
 ## What this module is for
 
-The Phase 1 deliverable: "see my ASN month" lives here. Every later
+"See my ASN month" lives here. Every downstream
 module — `Chains`, `Recurring`, `Forecasting`, `DriftAlerts`,
 `Counterparties` — reads from this module's tables; every adapter in
 `Ingestion` and every parser in `Import` ultimately funnels through
@@ -27,6 +27,16 @@ the reader sees a per-locale translation
 ([category display names](category-display-names.md)). Read the second
 before writing any query that matches, sorts, or groups on a category
 name.
+
+How many minor units make one major unit is the currency's own business
+rather than a constant: JPY has no subdivision, so `1000` is ¥1,000 and
+not ¥10.00. Every ÷100 in a query, a parse, a chart coordinate or an
+input placeholder answers to
+[minor units and zero-decimal currencies](minor-units-and-zero-decimal-currencies.md).
+
+Every balance this module reports starts from an account's baseline, and where
+that baseline comes from decides whether `/reconcile` can reach zero at all —
+[reconcile needs an anchor](reconcile-needs-an-anchor.md).
 
 The "this period at a glance" query is the dashboard's load-bearing
 read: aggregate totals across the user's period-start-day window
@@ -98,6 +108,9 @@ What the module explicitly does NOT do:
     binding (depends on per-request CurrentUser).
   - `ThisPeriodAtAGlanceQuery::for($user)` — dashboard
     aggregate.
+  - `PopulatedPeriodQuery::latestWithRecords($user, $inView)` —
+    the period to offer a reader stranded on an empty one, or
+    null when there is nowhere to send them.
   - `TopCategoriesByPeriodQuery::for($user, $period)` — top
     categories within a period.
   - `TransactionListQuery::recent($user, $daysBack, $cursorId,
@@ -107,9 +120,11 @@ What the module explicitly does NOT do:
     each returning a `TransactionListPage`. There is no
     `page()` taking a filter bag and a page number: the list is
     KEYSET-paginated, so the caller carries an opaque
-    `(postedAt, id)` cursor forward rather than an offset, and
-    the only filter the query itself applies is the display
-    currency. The two methods differ only in the date floor —
+    `(postedAt, id)` cursor forward rather than an offset. The
+    query filters nothing at all: `$currency` picks which amount
+    each row projects, not which rows come back — a non-null
+    value selects the settled pair over the native one. The two
+    methods differ only in the date floor —
     `recent()` cuts at `$daysBack`, `fullHistory()` does not
     cut at all.
   - `StatementSummaryWriter` (impl. `RecordsStatementSummary`).
@@ -234,6 +249,42 @@ Mechanics:
   strips on `/transactions` and `/community/mystery-merchants` render
   with full diversity on a fresh demo install.
 
+### Three subscriptions step price, and three do not
+
+A drift alert is a claim that a recurring charge **changed price**, so
+the demo ledger has to contain the change. It did not: Spotify,
+Netflix, Sport City and KPN were each charged the same amount in all
+three months, and the prior price on all four shipped alerts was the
+one figure no transaction corroborated. A reader who opened the
+transaction list found every charge identical.
+
+`seedMonthlySeries()` takes an optional `priorAmountMinor` +
+`priorMonths` pair: the oldest `priorMonths` charges are billed at the
+old price and the rest at `amountMinor`. Three subscriptions carry one:
+
+| Subscription | Charges, oldest first | Alert |
+|---|---|---|
+| Spotify Premium | 9.99, 9.99, **10.99** | open — the step is on the newest charge, so it is the fresh one |
+| Netflix | 13.99, **14.99**, 14.99 | acknowledged — the demo's `recurring_series_transitions` row already asserted this exact step |
+| Sport City | 22.50, **25.00**, 25.00 | dismissed as cancelled — a gym rise is what a reader cancels over |
+
+**KPN is charged EUR 45.00 in all three months on purpose.** It is the
+drift-eligible series with no alert, and it is what stops the demo
+teaching that `/drift` lists a reader's subscriptions rather than
+filters them. NRC (snoozed) and NordVPN (rejected) are refused by the
+evaluator on state, so they are not that control. Three alerts is also
+the floor: `DemoSeederTest` requires `open`, `acknowledged` and
+`dismissed_cancelled` to each carry a row.
+
+Nothing downstream restates those figures. `DemoRecurringSeeder` reads
+each occurrence's amount off its own charge, and `DemoDriftAlertsSeeder`
+takes prior, latest, delta, currency and `detected_at` from the newest
+adjacent pair of occurrences whose amounts differ — so a series with a
+flat history gets no alert at all rather than an invented one.
+`TheDemoLedgerNeverContainedTheStepItsAlertsClaimedTest` re-runs the
+shipped `DriftEvaluator` over the seeded occurrences, rewound to the
+moment each step landed, and demands the same row back.
+
 The window anchor is a calendar-month boundary rather than a rolling
 cursor: `subMonthsNoOverflow($span - 1)->startOfMonth()` for the start
 and `endOfMonth()` for the end. A rolling `today->subDays(89)` cursor
@@ -264,6 +315,33 @@ by the same `posted_at <= statementDate` window that
 spurious discrepancy for a past statement date whenever a cleared row
 posts after it.
 
+**The statement figure is read and written at the account's own scale.**
+A printed statement carries one denomination, the account's, and the page
+already labels the field and the difference with that currency's symbol —
+so the pre-fill formats and the typed target parses at that currency's
+minor-unit count, never the repo-wide hundredth. A yen has no minor unit:
+parsed at a hundredth, a reader typing the `-5000` their statement showed
+was told the account was `-JPY4,950.00` out, and no amount of toggling
+could ever close it.
+
+**Without a statement date the screen answers nothing.** The date field is
+`x-core::date-input`, whose calendar carries a Clear button, and Clear writes
+the empty string back through `wire:model.live`. Every figure here is bounded
+by `posted_at <= statementDate`, so with no readable date there is no window
+to sum over: `render()` passes `clearedBalanceMinor` as **null** rather than
+zero, the panel draws `—` for it, and the difference pill reads
+`pill.choose_date`. Reporting zero was a figure printed under "cleared
+balance" for an account that holds money, and the null difference reached the
+view's `$fmt(int $minor)` closure, which is a 500 on the page itself.
+
+**A refusal is dropped as soon as its cause is.** `confirmReconcile()` writes
+`$error` above the panel, and the panel recomputes on every keystroke while
+the line did not — so a reader who closed the gap read "does not match the
+cleared balance yet" above a pill saying matched. A component-wide `updated()`
+hook clears it, and `$error` is `#[Locked]`: nothing in the view binds it, so
+a payload that could set it would put the app's own error styling around a
+sentence the app never wrote.
+
 Statement pre-fill sourcing by account kind:
 
 - `asn` accounts — latest `statement_summaries.closing_balance_minor`
@@ -275,11 +353,74 @@ Statement pre-fill sourcing by account kind:
 - Any other kind (paypal, generic CSV, cash book) — no statement
   source; fields stay blank for manual entry.
 
+**Both pre-fills take confirmed import runs only.** `ImportPipeline` writes a
+statement summary while it is building the *preview*, so a file the reader
+discarded leaves one behind. The summary branch joins `import_runs` for that
+reason; the card branch needs the same predicate because
+`CardStatementUpserter` promotes **every** ICS summary it can see into
+`card_statements` — `upsertForUser()`, the healing pass at the top of
+`ResolveChainLinksJob`, has no run-status filter at all, and that job runs on
+the next confirm of any unrelated import. The card join is a LEFT join
+tolerating a NULL `import_run_id`, because that column is `nullOnDelete` and a
+statement that outlived its run is history the ledger already holds.
+`ReconcileDoesNotPrefillFromADiscardedCardStatementTest` pins both halves.
+Chains itself still promotes the discarded summary into `card_statements`,
+where `IcsSettlementResolver` can match a real bank settlement against it —
+that is a Chains defect, not a reconcile one, and it is open.
+
 IDOR: `$accountId` is a client-controllable, URL-bound property. Every
 read re-validates account ownership by `user_id` before touching
 `statement_summaries` / `card_statements` / `AccountBalanceQuery`, and
 `ReconciliationWriter::completeReconcile()` re-scopes by `user_id`
 again on the write side. A foreign `accountId` shows and does nothing.
+
+**A completed reconcile records nothing but the rows.** There is no
+reconciliation table: the statement balance and date the reader typed live on
+the Livewire component for the length of the request and are never persisted,
+and completing writes `status` and `updated_at` on the matched rows and
+nothing else. That is what makes un-reconciling one row from the detail page
+safe for this page — `clearedBalanceAsOf()` counts `cleared` **and**
+`reconciled`, so a row moving between the two does not shift the balance this
+page matches against, and the difference still reads zero afterwards. The
+unlocked row simply becomes a candidate again the next time Complete runs.
+
+**The screen states the reconcile the account has already had.** Because
+nothing is persisted about the reconcile itself, the page held the fact only in
+the rows — and drew it nowhere. An account reconciled through 14/05 rendered
+byte-identical to one that had never been reconciled: the same matched pill,
+the same enabled Complete. `reconciledThrough()` reads the day back off the
+locked rows — `max(posted_at)` over this account's `reconciled` ones,
+deliberately unbounded by the statement date on screen, since it states what
+the account *is* rather than what the field currently says — and the view draws
+it as `pill.reconciled_through` beside the account select. It sits with the
+account rather than in the difference cell because it is a property of the
+account, not an outcome of this statement's arithmetic.
+
+Because nothing persists the statement date, that day can only **under-state**:
+a reconcile run to 14/05 whose latest cleared row posted on the 12th reports the
+12th. That is the direction to err in — the pill may not name a day the ledger
+has no locked row to stand behind, the same way `zeroIsReachableByToggling()`
+over-states reachability rather than calling a closable gap unclosable.
+
+**Complete is offered only when it has something to lock.** `lockableCount()`
+asks `completeReconcile()`'s own candidate question — `cleared` rows with
+`posted_at <= statementDate` — so the disabled gate is now `! $isMatched ||
+$lockableCount === 0`, and that predicate is the fourth thing bound by the same
+window as the difference, the match check and the write. A matched target over
+an empty candidate set used to leave Complete standing as the enabled primary
+action for a write whose only possible answer was
+`toast.nothing_to_lock`; the reader learned that by pressing it. The reason now
+renders as `complete_unavailable` **above** the button row, because a
+`disabled` control is out of the tab order and the sentence has to be reachable
+before the control it explains — the button points at it with
+`aria-describedby`.
+
+The gate is on the candidate count, never on "has this account been reconciled
+before". Both legitimate repeats keep working: a later statement brings rows
+past the last locked day, and a row unlocked from the detail page becomes a
+candidate again under the same statement date. `confirmReconcile()` keeps its
+`nothing_to_lock` toast regardless — the method stays a public endpoint that a
+forged or raced call can reach, and it still owes that call a truthful answer.
 
 ## `/transactions/{transactionId}` — detail page
 
@@ -290,6 +431,22 @@ split editor. DI-only: no constructor; service collaborators arrive as
 parameters on `mount()`, `render()`, and action methods. Every query
 carries an explicit `where('user_id', ...)` predicate; a foreign
 transaction resolves to 404 in `mount()` before any data is exposed.
+
+**Reconciled and locked.** The panel that carries the escape hatch, drawn
+directly under the header — beside the lock badge that announces the state —
+and only while `clearedStatus` is `reconciled`. It states what the lock
+covers and offers one action, `startUnreconcile()`, which swaps itself for an
+`x-core::confirm-strip` asking `cancelUnreconcile` / `unreconcile`.
+
+It asks because there is no single-row inverse: `completeReconcile()` locks a
+whole account up to a statement date and only when the statement balance
+matches, so getting one row back means re-running that. It asks *lightly* —
+the inline strip rather than `wire:confirm`'s blocking dialog — because
+nothing is lost: `unreconcile()` writes one column, and every amount,
+category, note, split and tax tag on the row survives untouched. The question
+therefore names the effect ("this unlocks the transaction for editing") and
+the way back, never a loss. See
+[Which actions ask before they act](../../conventions/which-actions-ask-before-they-act.md).
 
 **Reclassify.** A single-click type override that atomically breaks
 the `pair_transaction_id` relationship on both sides when the new type
@@ -302,24 +459,34 @@ roll-up. The split is collapsed first, through the sole mutator, so
 leg-delete tombstones emit before the type leaves the splittable set;
 the first leg's (user-scoped) category becomes the surviving category.
 
-**Reconciled lock.** Every mutating action (`reclassify`,
-`reclassifyCategory`, `saveNote`, `reassignCounterparty`,
-`deleteTransaction`, `toggleLegTax`) reads the transaction's `status`
+**Reconciled lock.** Every mutating action (`reclassify`, `saveNote`,
+`reassignCounterparty`, `deleteTransaction`, `toggleLegTax`,
+`saveSplit`) reads the transaction's `status`
 in the same user-scoped query used for its ownership check, and warns
-(no write) when the row is `reconciled`. `unreconcile()` is the escape
+(no write) when the row is `reconciled`. The comparison itself is made in
+exactly one place, `TransactionStatusQuery` — `isReconciled()` for a caller
+that only needs the answer, and the static `locksEdits()` for one that
+already holds the row. The check used to be spelled out at every call site;
+the Tax tag/untag actions did not spell it out at all, so the rule engine and a
+replay wrote a tax tag onto a reconciled row. `unreconcile()` is the escape
 hatch every warn-toast points to, delegating to
 `ReconciliationWriter::unreconcile()` — the sole mutator that reverts
-a `reconciled` row back to `cleared`.
+a `reconciled` row back to `cleared`. It is reached from the **Reconciled
+and locked** panel described above; before that panel existed it was reachable
+from nothing at all, so the toast named an escape hatch the page did not draw.
 
-**Category correction-divergence bridge.** `reclassifyCategory()`
-reads the row's prior `auto_category_provenance` before invoking
-`AssignsCategory`, then re-emits a Livewire-local
-`correction-divergence:fire` event carrying the same fields as the
-framework `CategorizationDiverged` event so the globally-mounted toast
-surfaces the "Update rule / Keep current rule" choice within the same
-request lifecycle. The dual-channel pattern keeps the framework event
-reusable by non-UI consumers (audit-log, analytics) while the local
-event drives the toast without a redirect or broadcaster.
+**No category mutator of its own.** The page changes a category
+through the split editor, which is headed "Category" and shows the
+current one — `openSplitEditor()` then `saveSplit()`, routed at
+`SaveTransactionSplit`. It also carried a `reclassifyCategory()`
+action that called `AssignsCategory` directly and re-emitted a
+Livewire-local `correction-divergence:fire` event for a toast mounted
+in `layouts.app`. No control ever called it: the Reclassify section
+binds `reclassifyType`, which is the transaction *type*. It was the
+only dispatcher of that event, so the toast it fed has been retired
+along with it — see
+[One surface for the divergence conversation](../categorization/architecture.md#one-surface-for-the-divergence-conversation)
+for what serves that conversation now.
 
 **Split editor.** In-memory leg rows (session-local until `saveSplit()`
 persists them — opening the editor or editing a field never touches
@@ -331,6 +498,14 @@ leg's category; a never-persisted editor collapses purely in memory
 (no mutator call, no op-log entry) since there is nothing to reverse.
 Tax tagging is leg-aware and requires a persisted leg id.
 
+Every leg amount is formatted and parsed at the PARENT's
+`settled_currency`, carried on the `#[Locked] $splitCurrency` property
+the editor's two entry points set from the parent row. The repo-wide
+hundredth prefilled a JPY 1,000 charge as `10,00` under a total line
+reading `¥1.000` two rows above it, and refused `600` + `400` as
+over-allocated by ¥99,000 — a yen split could only be typed by writing
+`6,00` and `4,00`.
+
 **Savings-goal attribution.** `attributeToGoal()` / `removeGoalAttribution()`
 write the `goal_contributions` pivot through Goals'
 `GoalContributionWriter`, which re-asserts ownership of both the goal and
@@ -339,12 +514,23 @@ mutating action on the page NOT behind the reconciled lock: it writes a
 separate row and leaves the reconciled transaction untouched, and a
 reconciled row is exactly the confirmed money a goal wants to count.
 
-**Delete.** Emits a `delete` tombstone for the parent transaction plus
-one `TransactionSplitMutated` delete tombstone per leg (read before the
-delete, since the DB FK cascade removes the leg rows locally) — sync
-convergence must not rely on the peer's replay connection having FK
-cascade active; each deletion is an explicit, first-class op in the
-log.
+**Delete.** `DeletesTransaction` / `Public\Actions\DeleteTransaction`, the
+same contract-behind-an-action shape the other four mutators use. The row,
+its leg rows, its search-index shadow and the retype of a transfer's
+surviving partner are one `DB::transaction`, and every event is dispatched
+only after it commits: the parent's `delete` tombstone, one
+`TransactionSplitMutated` delete tombstone per leg (read before the delete,
+since the DB FK cascade removes the leg rows locally — sync convergence must
+not rely on the peer's replay connection having FK cascade active), and an
+`edit` for the survivor when one was retyped. Each deletion is an explicit,
+first-class op in the log.
+
+Deleting one leg of a transfer pair retypes the other: a `transfer_out`
+whose partner is gone becomes `income`, a `transfer_in` becomes `expense`.
+That rule has one home, `Transfers`' `UnpairsTransferLegs`, which the delete
+action and the Sync merge replay both call. It used to exist only in the
+replay path, so on a single-device install the survivor kept its transfer
+type with a null pair and the dashboard went on netting it out.
 
 **Sensitive-column decrypt.** The note, leg notes, headline
 `counterparty_name`, and the counterparty picker's `display_name` are
@@ -367,9 +553,20 @@ HMAC-verified by Livewire and cannot be tampered with by the browser.
 
 `$currency` is URL-bound and falls back to the user's
 `default_currency_view` preference when no `?currency=` parameter is
-present: `'eur'` projects the settled-EUR pair (one line per row);
-`'original'` projects the native pair with a settled-EUR secondary
-line on foreign-currency rows.
+present: `'eur_only'` projects the settled pair (one line per row);
+`'original'` projects the native pair with a settled secondary line on
+rows whose two pairs differ.
+
+The segmented control over it is labelled **"Settled amount"** and
+**"Original amount"** (`ledger::list.currency_eur` /
+`currency_original`, group name `currency_aria`), never with a currency
+code. It filters nothing, so a label naming a currency is a promise
+about every visible row that one account denominated outside the base
+currency falsifies — which is what shipped, and what
+[the invariants page](../../conventions/invariants-from-shipped-failures.md)
+records. The `eur_only` token behind the first option is a stored value
+in `users.default_currency_view` and in `?currency=`; it is frozen for
+that reason and says nothing about what the option is called.
 
 **Phone infinite scroll.** `$accumulatedRows` stores a flat scalar
 array of rows accumulated across all `loadMore()` calls, since `Money`
@@ -480,7 +677,16 @@ from inside the open transaction closure.
 
 `unsplit()` deletes every leg row and restores a single `category_id`
 on the parent; the surviving category must be one of the split's
-current leg categories (enforced when the split is non-empty).
+current leg categories (enforced when the split is non-empty). That
+write also stamps `field_provenance['category_id'] = 'manual'`, in the
+same transaction. No rule ever writes a leg category — the re-apply job
+excludes split parents outright — so a surviving leg category is always
+one the reader picked, and `'manual'` is the only value
+`RuleApplier::applyAtReapply()` skips. Without the stamp, a reader who
+picked the survivor in the unsplit dialog had that choice silently
+overwritten by the next "re-apply to history", while the same choice made
+through Reclassify (which goes through `AssignCategory`, and does stamp)
+survived it.
 
 ## `CanonicalTransaction` field semantics
 
@@ -497,7 +703,7 @@ transaction row takes as it flows through Ingestion/Import; only
   [Which columns are encrypted at rest](../sync/sensitive-columns-at-rest.md).
 - `autoCategoryProvenance` is a nullable `{source: 'rule'|'memory',
   rule_id?, memory_id?, category_id}` shape stamped by
-  `ApplyAutoCategoryStage`; the correction-divergence flow reads it to
+  `ApplyAutoCategoryStage`; `CategorizationProvenancePanel` reads it to
   know whether a suggestion came from an explicit rule or learned
   merchant memory.
 - `paymentType` is the classifier stage's resolved enum value, mirrored
@@ -542,6 +748,70 @@ value is computed server-side and validated against
 `Transaction::STATUSES` before the write — the client never supplies
 the target string. A `reconciled` current status short-circuits with a
 toast and no write, before any read of the "next" value.
+
+## `AccountKind` — which kinds hold money
+
+Three roll-ups sum a reader's accounts and each asks a slightly different
+question, so for a while each kept its own list of kinds. They drifted, and one
+of them handed the reader back money their bank had already paid out.
+`AccountKind` now answers all three, and every exclusion is decided once.
+
+**`mirrorsAnotherAccount()`** — `paypal_funding` and `google_play`. A row on
+either restates a movement the paying account already carries:
+
+- `paypal_funding` names a transfer that is posted on **both** real accounts it
+  sits between. Nothing in the app ever writes an account of this kind — the
+  resolver that owns the name writes `chain_links.kind = 'paypal_funding'`, a
+  relationship between two transactions, not an account. The kind is the
+  account-side vestige of that idea.
+- `google_play` is the synthetic account a parsed Play receipt lands on, because
+  Google publishes receipts and no statement. The purchase itself was charged to
+  a card or a wallet, which carries it as `GOOGLE*WORKSPACE` or `Google Payment
+  Ireland Ltd.` — both shapes are in this repo's own fixtures. `ChainLinkKind::
+  FundedByCardHint` exists precisely to name that pairing, and naming it does not
+  remove either row.
+
+A Play account is also **only ever debited**: `GooglePlayReceiptMatcher` negates
+every amount and skips a refund rather than crediting one. Its balance is a
+cumulative spend tally, not a holding and not a debt, so a total that counted it
+would walk downwards for as long as the reader kept buying with nothing on the
+other side to walk it back. That is why the exclusion is not conditional on the
+funding leg having been imported.
+
+**`isLiability()`** — `ics_card`. A card balance is what is **owed**. It belongs
+in the position and not in the cash.
+
+**`holdsSpendableBalance()`** — everything that is neither, so `bank`, `paypal`
+and `cash`. Money the reader holds and can spend.
+
+| Consumer | Question | Predicate |
+|---|---|---|
+| `Forecasting::NetWorthQuery` | What do I hold and owe? | not `mirrorsAnotherAccount()` |
+| `Reports::NetWorthSeriesQuery` | The same, plotted over time | not `mirrorsAnotherAccount()` |
+| `Calendar::AccountResolver` | What can I spend, today and ahead? | `holdsSpendableBalance()` |
+| `Forecasting::ForecastHighlightsQuery` | How low does my cash get in 30 days? | `holdsSpendableBalance()` |
+| `Pots::PotBalanceQuery` / `PotWriter` | What can a pot be carved out of? | `holdsSpendableBalance()` |
+
+The "lowest projected balance" tile sits on the cash side and not the position
+side, though it is a Forecasting surface and its neighbour on the same page is
+not: `ForecastChartView`'s aggregate curve is net worth over time and keeps the
+card, while the tile is a forward-cash line that the reader reads as "how low do
+I get". `BufferFloor::forKind()` had already reached that conclusion for the
+shortfall count printed beneath the figure — it gives an `ics_card` no floor at
+all, because a card is below zero every day of the horizon. The figure above it
+raced the card anyway, and a card always wins.
+
+The net-worth pair and the calendar **legitimately** differ by the liability, and
+that difference must not be flattened: a credit-card debt belongs in net worth
+while being unspendable, and a forward balance line that summed it would subtract
+the settlement once when the charge posted and again when the bank paid it. They
+must never differ by a mirror, because a mirror is a second copy of one movement
+and no total may count it.
+
+Both net-worth reads exclude with `whereNotIn`, never `whereIn`. A `kind` string
+this build has never heard of is far likelier to be an account the reader holds
+than a mirror of one, so the unknown case has to fall inside the total rather
+than vanish from it.
 
 ## `AccountBalanceQuery` — caveats shared by all four methods
 
@@ -702,7 +972,7 @@ or "keep the current code". It stays silent for an account with nothing
 to misread — no transactions and no non-zero baseline — which is the
 only case where the two labels describe the same position.
 
-**No migration was needed.** `default_currency` is `char(3) NOT NULL`
+**The picker needs no migration.** `default_currency` is `char(3) NOT NULL`
 with a database default of `EUR` since `create_accounts_table`, so every
 existing row already carries a value and the column's shape does not
 change. The picker writes the column that was always there.
@@ -745,6 +1015,15 @@ balance = starting_balance_minor + SUM(transactions bounded below by starting_ba
   exactly on the date lands on top of it. Using `>` would lose that row;
   dropping the bound entirely would count everything before the baseline
   date twice, since the baseline already holds it.
+- **The bound applies to the baseline's own currency only.** The amount is
+  denominated in the account's `default_currency` and says what the account
+  held *in that one*, so a row settled in another currency has no baseline
+  covering it and is counted wherever it is posted. Both spellings of the
+  bound carry this: `AccountBalanceQuery::sumFromBaseline()` in PHP and
+  `AT_OR_AFTER_BASELINE_SQL` in SQL. It was missing from the SQL one, so a
+  Revolut account with a euro baseline and a dollar row posted before its
+  date read EUR3,509.85 on the calendar's past-day line against the
+  EUR3,509.85 and -USD221.00 the accounts page reported for the same day.
 - **A date with no amount is not a baseline.** The reader returns the
   absent shape rather than honouring a bound that would drop earlier rows
   and add nothing back.
@@ -782,10 +1061,9 @@ summing would double-count the billing events the projection re-emits.
 provenance map (`{"<logical field>": "manual" | "rule"}`, canonical
 keys `category_id`, `note`, `counterparty_id`, `tax_tag`) consumed by
 the re-apply-rules manual-edit guard: a field the user has hand-edited
-must never be silently overwritten by a rule re-application. A third
-`"import"` state was originally documented but is never stamped by any
-writer — an absent key already means "not manually set", so the
-two-state contract is the actual one.
+must never be silently overwritten by a rule re-application. No writer
+ever stamps a third `"import"` state: an absent key already means "not
+manually set", so the contract is two-state.
 
 Every stamp is a single DB-side `json_set` UPDATE, never a PHP
 read-modify-write — two concurrent stamps to different keys both
@@ -823,6 +1101,21 @@ same-amount entries posted seconds apart never collide. `source_ref`
 is intentionally absent from the tuple: the same real-world transaction
 surfaces in CSV and CAMT.053 exports with different reference values,
 and the fingerprint must equate those.
+
+Second-resolution is enough for an import, whose rows carry their own
+times, and it is the *only* thing separating two hand-entered ones: a cash
+entry is stamped with the clock's second on the day the reader named, so six
+€2.50 coffees typed in a row are six writes of one tuple. `CashBook`'s
+`RecordManualTransaction` therefore asks the ledger which second this exact
+entry last occupied — same user, account, posted day, amount, currency and
+counterparty — and books at the one after it, clamped inside the day so an
+entry added before midnight is never nudged into the next tax year. It used
+to walk five seconds forward from *now* and give up, silently, on the sixth
+identical entry; the walk now starts past the collision instead of into it,
+and the action returns whether a row was written so the page can say so
+rather than toast "Cash entry added." over nothing. Two identical coffees on
+one day are two facts, and a dedup rule that cannot tell them apart is
+answering a question about imports with an answer about typing.
 
 `NORMALIZATION_VERSION` is bumped whenever the tuple shape or
 `normalize()`'s output changes; a stored row with a lower version
@@ -867,15 +1160,89 @@ closes the window: if the row no longer qualifies, the UPDATE matches
 zero rows, and the event dispatch is gated on that affected-row count
 so a lost race never fires a spurious event.
 
+## `TransactionType` — direction is not the question anomaly asks
+
+Two questions get asked of a transaction's type, and for a while one method
+answered both.
+
+**`direction()`** answers *which way did the money move* — the one signs,
+totals and same-side baselines depend on. `transfer_out` genuinely lowers a
+balance, so it is `Direction::Expense`, and moving it would corrupt every
+figure the app prints. That mapping is not negotiable.
+
+**`isExternalMovement()`** answers *is this something the reader did with
+someone else* — the question anomaly detection, "unusual charges" and
+first-time-merchant logic are actually asking. `expense`, `income`, `fee` and
+`refund` are yes; a fee is charged by a bank and a surprise one is exactly
+what a reader wants flagged. `transfer_out` and `transfer_in` are the two
+halves of one move between two of the reader's own accounts, and `adjustment`
+is written only where an import found an amount of zero — a reconciliation
+against nobody. All three are no.
+
+Answering both from `direction()` alone put every internal transfer inside the
+expense population twice over. A €225.00 card settlement was opened as a
+`large` unusual charge and the reader's own card issuer was reported as a
+`first_time` merchant, on both legs of the move; and every transfer sat in the
+baseline the *real* charges were judged against, so a month of savings
+transfers quietly raised the bar a genuine anomaly had to clear.
+
+`isExternalMovement()` is a `match` over the cases with **no `default` arm**,
+so a type added later cannot inherit an answer — it raises until someone
+states one. `externalMovementValuesFor(Direction)` derives the scan set from
+both predicates together, and there is deliberately no "every type facing this
+direction" sibling for a caller to reach for by mistake; a rollup asking about
+money movement wants [`MoneyFlow`](#moneyflow--the-one-definition-of-spend-income-and-net)
+instead.
+
+| Consumer | Question | Reads |
+|---|---|---|
+| `Anomaly::AnomalyEvaluator` | Is this row worth judging at all? | `isExternalMovementOf()` |
+| `Anomaly`'s three detectors | What is the baseline drawn from? | `externalMovementValuesFor()` |
+| `Recurring::TransactionSeriesMembershipQuery` | Does this row face the way its series does? | `directionOf()` |
+| `Transfers::TransferPairer` / `PairUnlinker` | Does this row have a second leg? | `transferValues()` / `isTransfer()` |
+
+`isExternalMovementOf()` coerces an unreadable `type` to **true**, the opposite
+default from `directionOf()`'s `Expense`, and for the same underlying reason:
+each falls back to what the caller did before the method existed. Judging a
+row of unknown shape is recoverable — the reader dismisses an alert — while
+abstaining on it is silent.
+
+## `MoneyFlow` — the one definition of spend, income and net
+
+`Public/Enums/MoneyFlow` answers a single question: which
+`transactions.type` values each of the three rollups counts. `Spend` is
+`expense` + `refund`, `Income` is `income` alone, and `Net` is all three.
+
+A refund reverses an expense, so it belongs in spend with the sign it
+already carries rather than in income: counted as income, `income -
+spend` and `net` would disagree about it. `transfer_in`/`transfer_out`
+are the two halves of one internal move and appear in no rollup;
+`fee`/`adjustment` are disclosed beside a total rather than folded into
+one (see `Reports`' `ReportMetric::disclosedTypes()`).
+
+Three surfaces read this: `SpendByCategoryQuery` (and through it the
+dashboard's "Top spending"), `ThisPeriodAtAGlanceQuery`'s
+inflow/outflow/net, and `Reports`' `ReportMetric`, which now delegates
+here rather than listing the types again.
+
+They did not agree. The dashboard counted `income`/`expense` only, so a
+EUR100.00 purchase with a EUR30.00 refund against it in the same month
+read Out EUR100.00, In EUR0.00, Net -EUR100.00 — for a month in which
+EUR70.00 left — and the refund appeared on no dashboard tile at all,
+while the Reports row for the same category read EUR70.00. Restating
+the rule in a comment in each reader is what let them drift; the comment
+in `SpendByCategoryQuery` asserted the agreement that was not there.
+
 ## `SpendByCategoryQuery` — the split-aware spend read model
 
-`Public/Services/SpendByCategoryQuery` selects `type = expense`, the
-same definition as `ThisPeriodAtAGlanceQuery`'s outflow and Reports'
-spend metric — never the amount's sign. A `transfer_out` to the reader's
-own card is negative and is not money spent; selecting on the sign put
-one in the dashboard's "Top spending" as EUR325.00 and made "this month
-vs last" read EUR2,818.11 against the EUR2,459.11 the OUT tile on the
-same page gave for the same month.
+`Public/Services/SpendByCategoryQuery` selects the types
+[`MoneyFlow::Spend`](#moneyflow--the-one-definition-of-spend-income-and-net)
+names — never the amount's sign, and no sign filter of its own, because a
+refund is signed the other way and is exactly what reduces the total. A
+`transfer_out` to the reader's own card is negative and is not money
+spent; selecting on the sign put one in the dashboard's "Top spending" as
+EUR325.00 and made "this month vs last" read EUR2,818.11 against the
+EUR2,459.11 the OUT tile on the same page gave for the same month.
 
 It is also the single place that
 decides how a split transaction's spend is attributed: a split parent
@@ -897,13 +1264,26 @@ attributing partial legs. The legs branch mirrors this with the
 opposite sense: legs are only attributed when the split is internally
 consistent, so the two branches never double-count nor drop spend.
 
-Two methods cover the two shapes existing call sites need: a
-single-currency map for `TopCategoriesByPeriodQuery`/
-`CategorySpendTrendQuery`, and an all-currencies-keyed map reproducing
-`BudgetProgressQuery`'s `(category_id, currency)` grouping (which
-always excludes uncategorized spend, since it cannot match a budget).
-Both compute in the codebase's established "group in SQL, merge in
-PHP" style rather than a raw SQL UNION, and both carry the same type
+Every method it exposes is keyed by currency, and none of them takes a
+reporting currency to filter on. `forUserAndPeriodByCurrency()` groups by
+`(category_id, currency)` for one period; `forUserAndSpanByCurrencyPerDay()`
+adds `posted_at` so the envelope fold pays two queries for a whole walk
+rather than two per period. `includeUncategorized` decides whether unsplit
+rows with a null `category_id` roll up under id 0 (the dashboard's trend
+wants them, so its total stays whole; the envelope fold does not, since
+uncategorized spend matches no envelope).
+
+There used to be a third method taking a single `$currency` and filtering
+`settled_currency` on it. Handing it the reader's DISPLAY currency is the
+one thing that must never happen: it drops every row settled elsewhere
+instead of converting it, and the trend card read EUR1,602.45 under an OUT
+tile reading EUR1,608.74 one card away — the difference being a single
+JPY1,000 row. Converting is
+[`ConvertedSpendByCategory`](#convertedspendbycategory--the-one-conversion-of-category-spend)'s
+job, and the filtering method is gone so no new caller can repeat it.
+
+All of them compute in the codebase's established "group in SQL, merge in
+PHP" style rather than a raw SQL UNION, and all carry the same type
 filter.
 
 ## `ThisPeriodAtAGlanceQuery` — the dashboard composer
@@ -913,8 +1293,9 @@ filter.
 inflow/outflow/net (integer SUM over the period window, scoped to one
 display currency), `topCategories` (delegated to
 `TopCategoriesByPeriodQuery`), `recentTransactions` (delegated to
-`TransactionListQuery::recent`, filtered to the same display currency
-so every dashboard panel agrees on the currency in view),
+`TransactionListQuery::recent`, which the display currency switches to
+the settled projection rather than filtering, so every dashboard panel
+agrees on the currency in view without losing rows),
 `uncategorizedCount` (lifetime count driving the nav badge), and
 `isFirstRun` (true when the user has zero transactions across all
 time — the route handler redirects to `/imports/new` until then).
@@ -923,17 +1304,24 @@ time — the route handler redirects to `/imports/new` until then).
 `transactions.type`, never by amount sign — a `transfer_in` row carries
 a positive amount but is an internal move between own accounts and
 must not inflate the income tile (symmetric on the expense side for
-`transfer_out`); refunds, fees, and adjustments are likewise excluded.
-`incomeForPeriod()` is the one canonical "subtractive income, transfers
-excluded" definition in the codebase (`for()` calls it internally, and
-`Modules\Budgets\CarryoverQuery` reuses it as its income source) — do
-not add a second `WHERE type = 'income'` anywhere else.
+`transfer_out`); fees and adjustments are likewise excluded. Which types
+each of the three sums counts comes from
+[`MoneyFlow`](#moneyflow--the-one-definition-of-spend-income-and-net), so
+a refund lands in outflow and net with the sign it carries and reduces
+both. `incomeForPeriod()` is the one canonical "subtractive income,
+transfers excluded" definition in the codebase (`for()` calls it
+internally, and `Modules\Budgets\CarryoverQuery` reuses it as its income
+source) — do not add a second `WHERE type = 'income'` anywhere else.
 
 **Currency scoping.** Money totals aggregate `settled_amount_minor`
-filtered by `settled_currency = $displayCurrency` — multi-currency
-users see a single-currency total rather than a silently summed mix.
-Money is composed only at the DTO boundary (`Money::ofMinor`); the SQL
-layer stays integer-pure to keep the query under the 50ms budget on 1k
+grouped by `settled_currency`, then convert each bucket through
+`CrossCurrencyTotal` — never summed across currencies, and never filtered
+down to one of them. A currency the rate table cannot reach is left out of
+the figure and named in `DashboardSummary::$unconvertedCurrencies`, which
+the Net tile renders beneath itself. `net` is subtracted after conversion
+rather than converted itself, so it cannot miss the two tiles above it by
+a cent. Money is composed only at the DTO boundary (`Money::ofMinor`); the
+SQL layer stays integer-pure to keep the query under the 50ms budget on 1k
 rows. The raw query builder is used directly rather than the Eloquent
 Builder because `phpstan-strict-rules`' `staticMethod.dynamicCall` rule
 forbids calls like `Builder::count()`/`Builder::orderByDesc()`.
@@ -945,33 +1333,112 @@ deterministic; zero-activity currencies are omitted by the `HAVING`
 clause. It applies the same type filter as `for()` so original-currency
 mode never double-counts internal transfers.
 
-**`nextIcsSettlement()`** returns the most-recent `open`/
-`partially_settled` `card_statements` row joined to an `ics_card`
-account: `amount = open_balance_minor` (the open balance is the
-forecast — no cadence inference), `dueDate = period_end + 5 calendar
-days` (constant forecast lag). Returns null when no such statement
-exists, which the Blade reads as "hide the tile entirely" (no "—"
-placeholder). The WHERE filters on `card_statements.user_id` before any
-account join, so a forged user_id cannot leak another user's statement.
+**`nextIcsSettlement()`** hands the whole read to
+`CardStatementQuery::forecastTileForUser()`, in the module that owns
+`card_statements`. It returns the most-recent `open`/`partially_settled`
+row joined to an `ics_card` account, and the amount is the open balance
+**less the credits carried into that statement**, floored at zero — not
+the raw open balance, for
+[the reason the write side gives](../chains/card-statement-lifecycle.md#credits-between-statements).
+`dueDate = StatementDueDate::of(due_date, period_end)`: the day the
+issuer printed where the statement printed one, and `period_end +
+StatementDueDate::GRACE_DAYS` where it did not (no cadence inference). Returns null when no such statement exists, which
+the Blade reads as "hide the tile entirely" (no "—" placeholder).
+
+Composed here instead, off a second query, it deducted no credits: a
+statement of €1,450.00 carrying a €200.00 credit was €1,250.00 on the
+forecast highlights and €1,450.00 on the position tile, both dated the
+same day. The date rule was already shared through one constant; the
+amount rule now is too. The WHERE filters on `card_statements.user_id`
+before any account join, so a forged user_id cannot leak another user's
+statement.
 
 **`emailScanHealth()`** returns up to three connected-inbox lines (in
-`created_at` order) plus an overall status: `'reauth'` when any inbox
-needs reauth, `'stale'` when no inbox needs reauth but at least one
-hasn't scanned successfully within 24 hours (or never), `'healthy'`
-otherwise. Returns null when zero inboxes are connected. The `LEFT
+`created_at` order) plus an overall status. A line is `'reauth'` when
+that inbox needs reauth and `'healthy'` when it scanned successfully
+within 24 hours; otherwise it is `'stale'` where a scan is scheduled
+and fell behind, and `'unscheduled'` on a device that schedules none —
+which is a phone, permanently and by design, so the amber dot there
+flagged the ordinary condition as a fault nothing could clear. The
+platform question goes through
+`InboxScanSchedule::runsOnThisDevice()`, which asks
+`MobileBackgroundSchedule::desktopOnly()` rather than the platform
+alone, so the day a phone gains the scan the answer follows the
+schedule (see
+[a device that schedules no scan cannot be behind one](../email-scan/architecture.md#a-device-that-schedules-no-scan-cannot-be-behind-one)).
+The overall status is the highest rank any line reached: reauth
+outranks stale outranks unscheduled outranks healthy. `'unscheduled'`
+sits above `'healthy'` because an unscanned inbox is not one the tile
+can vouch for, and below `'stale'` because nothing was late. Returns
+null when zero inboxes are connected. The `LEFT
 JOIN` on `inbox_scan_state` preserves rows whose scan-state hasn't been
 inserted yet (a transient window after the OAuth callback lands but
 before the background fetcher stamps the row); such rows render with
 `lastScanAt = null` treated as `'idle'`, matching `InboxQuery::makeDto()`.
 
+## `PopulatedPeriodQuery` — where the records actually are
+
+`Public/Services/PopulatedPeriodQuery::latestWithRecords($user,
+$inView)` answers one question for the dashboard's empty state: is there
+a period worth offering this reader, and which one. It returns the
+`Period` the reader's own most recent transaction falls in, or `null`
+when there is nowhere to go.
+
+`null` covers two different readers, and telling them apart is the whole
+point. A period that already holds records needs no offer. An install
+with nothing imported needs the import path — offering it a jump to
+nothing would be the same screen of zeros with a button on it. The
+`EXISTS` over the period window separates the first; a `MAX(posted_at)`
+that comes back empty separates the second.
+
+**One read, not a walk.** The target is derived from a single
+`MAX(posted_at)` on the `(user_id, posted_at)` index, never by stepping
+`PeriodQuery::previous()` and asking again until something answers. A
+reader whose last import was two years ago would pay two dozen
+round-trips for that walk, on a phone, to reach a screen that exists to
+say the walk is unnecessary. The `EXISTS` is asked first and is itself a
+bounded range scan, so a populated period — the common case — costs one
+query and the `MAX` is never issued.
+
+**The period is the reader's own.** The date the `MAX` returns is taken
+back to a period through
+`PeriodQuery::containingDateForDay($postedAt, $user->period_start_day)`,
+not `containing()` and not calendar-month arithmetic. On a 25th-to-24th
+calendar, 17 April belongs to the period that opened on 25 March; a
+month-based answer would land the reader on the empty period beside
+their records and read as a control that does not work.
+
+**Both directions, one destination.** The offer is the LATEST populated
+period whether the reader arrived from the future (a February–April
+statement viewed in August) or from the past (paged back before their
+earliest record). One target rather than "the nearest populated period
+in the direction you were heading": the reader who paged backwards is
+lost in the same way as the reader who never moved, and a control whose
+destination depends on how you got there is a control you cannot learn.
+
+**Scoping.** Both reads filter `transactions.user_id` directly. This is
+not only about reading another household member's rows — the offer's
+mere presence or absence dates their transactions, so an unscoped
+`EXISTS` leaks by staying silent just as an unscoped `MAX` leaks by
+speaking. `AnEmptyPeriodSaysWhereTheRecordsAreTest` pins both halves.
+
 ## `TopCategoriesByPeriodQuery` — breadcrumb category tree walk
 
 `Public/Services/TopCategoriesByPeriodQuery` delegates spend
-aggregation to `SpendByCategoryQuery::forUserAndPeriod()` (which
-returns an unordered map), then re-applies DESC-by-spend ordering and
-the limit in PHP. `percentageOfTotal` is each row's share of the
-panel's own total (not the user's overall outflow), so it sums to
-~1.0 for non-empty results.
+aggregation and conversion to `Internal/Services/ConvertedSpendByCategory`
+(which returns an unordered map of *signed* net spend), then hands that map
+to `Public/Support/OutwardSpend`, which is where the ordering, the limit,
+the whole and the share all come from. A category whose refunds outran its
+spending is not spending: it is not ranked, it is not in the denominator,
+and it is not what an empty ranking means. `percentageOfTotal` is each row's
+share of the panel's own ranked total (not the user's overall outflow), so
+it sums to ~1.0 for non-empty results and can never leave (0, 1].
+
+`for()` therefore answers a `Public/Dto/TopCategories`, not a bare list:
+`rows` is the ranking and `refunded`/`refundedCategoryCount` are what the
+narrowing left out, so the card can name it the way the report donut names
+`undrawnMinor`. `TopCategoryRow::barWidth()` answers for its own bar, which
+is what keeps the clamp out of the template.
 
 The breadcrumb itself is not this class's: it injects
 `Public/Services/CategoryAncestry`, which `Reports`'
@@ -996,6 +1463,53 @@ not enforce acyclicity) with both a `visited` set and a hard depth cap
 (`MAX_PARENT_DEPTH`), so corrupt data can never spin the walk forever.
 Both properties are pinned by
 [`CategoryAncestryTest`](../../../Modules/Ledger/tests/Feature/CategoryAncestryTest.php).
+
+## `ConvertedSpendByCategory` — the one conversion of category spend
+
+`Internal/Services/ConvertedSpendByCategory` is the single place category
+spend crosses currencies. It reads `SpendByCategoryQuery`'s
+currency-keyed map, converts each currency's parts, and returns a
+`ConvertedCategorySpend`: the map re-keyed by category id in the reader's
+display currency, plus the codes no rate reached. Two readers share it —
+`TopCategoriesByPeriodQuery` for the dashboard's "Top spending" and
+`CategorySpendTrendQuery` for "this month vs last" — so the two panels on
+one screen cannot answer the same question differently.
+
+`CategorySpendTrendQuery` asks for it with `includeUncategorized: true`
+and its total is therefore the same money the OUT tile counts, converted
+the same way. It unions the codes from both of its periods into
+`SpendTrend::$unconvertedCurrencies`, because a currency only last period
+held would otherwise go unnamed beside a figure that leaves it out, and
+`hasComparison()` stays true on that alone — spend nothing but an unpriced
+currency and both totals are zero, which used to hide the card and with it
+the only notice that anything had been left out.
+
+### Conversion is grouped by currency, not by category
+
+Spend arrives bucketed by the currency each row settled in, and reading
+only the buckets already in the reporting currency showed a reader whose
+accounts are denominated elsewhere no spend at all. So every bucket is
+converted — but the grouping matters. Converting each *category's* slice
+on its own rounds once per category, and the rounding is not free: the
+dashboard's own rows drifted a cent away from the "Out" tile directly
+above them (rows summing to EUR 1,132.21 under a tile reading EUR
+1,132.22), and the same category read `Groceries EUR 105.04` here and
+`EUR 105.05` on `/reports`.
+
+The query therefore groups by **currency** first and converts each
+currency's whole subtotal once through
+`CrossCurrencyTotal::distribute()`, which hands the difference between
+that subtotal and the sum of the separately-converted parts back to the
+parts, largest magnitude first and ties by position. `Reports`'
+`CurrencyModeApplier` calls the same method for the same reason, so the
+two surfaces cannot answer the same question differently — a second
+implementation of the redistribution is exactly how the drift came back
+the first time.
+
+A currency the rate table cannot reach yields `null` and is left out
+rather than counted at one to one, which is the same choice the tile
+above these rows makes about it — and, like the tile, the figure that
+leaves it out names it rather than simply being short.
 
 ## `TransactionStatusQuery` — cross-module reconciled-lock check
 
@@ -1053,6 +1567,18 @@ this cursor — `TransactionListQuery`, `SearchQuery`,
 `UncategorizedTriageQuery` and `FtsCandidateResolver` — all call it
 rather than spelling the pair out. A query that breaks the tie the
 other way pages past rows the comparison then skips.
+
+**The date a row shows is the date it is sorted by.** The row DTO field
+is `postedAt`, carrying `Fmt::shortDate(posted_at)` — the same column
+the cursor above orders and pages on. It used to carry `booked_at`,
+which is equal to `posted_at` from every adapter except `IcsPdfAdapter`
+and is a day later on every row of a real card statement, so the list
+printed a sequence that stepped back up wherever two sources shared a
+`posted_at`. `TriageRow` and `SearchRowDto` name the same field for the
+same reason. `booked_at` reaches a screen in one place now: the detail
+page draws a `Booked :date` line under the posted date, and only when
+the two name different days. See [A list sorted by a column it does not
+show](../../conventions/invariants-from-shipped-failures.md#a-list-sorted-by-a-column-it-does-not-show).
 
 **Counterparty slug.** An empty (not null) slug is treated as "no
 slug" so the Blade falls back to plain text instead of generating a

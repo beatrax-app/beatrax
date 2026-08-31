@@ -54,6 +54,38 @@ place, and they are different in kind:
 `enable()` also delays deleting the biometric credentials until it holds a key, so a refusal
 leaves the enrolments it would otherwise have destroyed on the way past.
 
+## The wrap the row does not hold
+
+Both wraps the invariant above names live in `user_app_lock_configs`, and both actions clear
+their own. The **cold-start vault** holds a third one and lives outside the row: on the
+desktop it is a safeStorage-encrypted file under `secrets/`, and `isEnrolled()` answers from
+that file rather than from any column. `enable()` and `disable()` reset
+`cold_start_biometric_enrolled` and delete the WebAuthn rows, and for a long time neither
+touched the file — so a wrap of the data key survived the disable that destroyed every other
+copy of it, and a later enable found the file still there.
+
+That second half is the part with no error message. `LockScreen::submit()` enrols the vault
+only when nothing is enrolled, so a stale file means the re-enabled lock never re-enrols,
+`cold_start_biometric_enrolled` never goes back to true, and the native-unlock option is
+simply not offered again — on a machine where it worked the day before.
+
+`AppLockProvisioner::enable()` and `disable()` therefore call `ColdStartVault::forget()`
+themselves, beside the WebAuthn delete each already did. It sits there rather than in the
+callers so that every way in is covered by construction — the settings screen, and
+`MobileLockGateway::enableAppLock()`, the first-run mobile import, which carried no forget of
+its own and was safe only because the mobile vault happens to answer `isEnrolled()` from the
+very column `enable()` resets. Change either side of that coincidence and the mobile path
+breaks exactly as silently as the desktop one did.
+
+That placement was not available at first, and the obstacle is worth naming because it is
+easy to re-create. `MobileColdStartVault` took `MobileLockGateway` whole — for two
+single-column reads of `cold_start_biometric_enrolled` — and the gateway is built from the
+provisioner, so a provisioner that named the vault back closed a loop the container answered
+by recursing until the process ran out of memory. `ColdStartEnrolmentFlag`
+(`Auth/Public/Services/`) is that column and nothing else, and is what the vault takes now;
+the gateway keeps `markColdStartEnrolled()` and `isColdStartEnrolled()` and delegates to the
+same collaborator, so nothing that called it had to change.
+
 ## Why "turn the lock off" is not offered instead of refused
 
 The alternative shape — keep `password_wrapped_key` through the disable, and re-prime the

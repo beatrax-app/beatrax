@@ -9,13 +9,13 @@ use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 use SimpleXMLElement;
 
-final class EcbRateProvider implements RateProvider
+final readonly class EcbRateProvider implements RateProvider
 {
     private const string URL = 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml';
 
     private const string NS = 'http://www.ecb.int/vocabulary/2002-08-01/eurofxref';
 
-    public function __construct(private readonly HttpFactory $http) {}
+    public function __construct(private HttpFactory $http) {}
 
     public function key(): string
     {

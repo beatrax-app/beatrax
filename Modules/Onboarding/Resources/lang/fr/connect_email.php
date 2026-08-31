@@ -6,6 +6,8 @@ return [
     'eyebrow' => 'Reçus par e-mail (facultatif)',
     'h1' => 'Laisse Beatrax surveiller tes e-mails d\'achat',
     'lede' => 'Connecte Gmail ou Outlook pour que les confirmations de commande et les reçus d\'abonnement se joignent automatiquement à tes transactions. Tu peux passer cette étape et l\'ajouter plus tard.',
+    'h1_phone' => "Les e-mails d'achat sont surveillés dans l'application de bureau",
+    'lede_phone' => "Les confirmations de commande et les reçus d'abonnement se joignent automatiquement à tes transactions dans l'application de bureau, et arrivent sur ce téléphone par synchronisation. Rien sur ce téléphone ne lit ta messagerie : passe cette étape ici et connecte-toi depuis l'ordinateur.",
 
     'mini' => [
         'signin_label' => 'Se connecter',

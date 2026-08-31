@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Muokkaa verotunnistetta: :label',
     'tag' => 'Merkitse',
     'tag_aria' => 'Merkitse verotuksen kannalta olennaiseksi',
+    'tag_caption' => 'Merkitse',
 ];

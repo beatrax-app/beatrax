@@ -104,7 +104,6 @@ it('the settings section refuses to start a browser enrolment on a self-hosted w
     bindNoBiometricVault();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('lockEnabled', true)
         ->call('startEnroll')
         ->assertNotDispatched('beatrax:webauthn-create')
         ->assertSet('biometricEnrolled', false)
@@ -119,7 +118,6 @@ it('the settings section still starts a browser enrolment where a real shield is
     bindProtectingShield();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('lockEnabled', true)
         ->call('startEnroll')
         ->assertDispatched('beatrax:webauthn-create')
         ->assertSet('flashMessage', '');

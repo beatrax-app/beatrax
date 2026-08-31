@@ -255,7 +255,7 @@ parameters:
         # should one). The crossing is confined to the Mobile module's own
         # sync-transport classes.
         -
-            message: '#Cross-module Internal/Models import forbidden: Mobile cannot use Modules\\Sync\\Internal\\(Config\\MergeRulesRegistry|Identity\\(DeviceIdentityDto|DeviceIdentityLoader)|Merge\\OpLogReplayer|Signing\\DeviceKeySigner|Transport\\(Frame\\TransportFramer|Noise\\(NoiseHandshakeState|NoiseSession)|PeerCatchUpExchanger|SyncSession|Relay\\(RelayClient|RelayConfig)))#'
+            message: '#Cross-module Internal/Models import forbidden: Mobile cannot use Modules\\Sync\\Internal\\(Config\\MergeRulesRegistry|Identity\\(DeviceIdentityDto|DeviceIdentityLoader|DeviceIdentityState)|Merge\\OpLogReplayer|Signing\\DeviceKeySigner|Transport\\(Frame\\TransportFramer|Noise\\(NoiseHandshakeState|NoiseSession)|PeerCatchUpExchanger|SyncSession|Relay\\(RelayClient|RelayConfig)))#'
             path: Modules/Mobile/Internal/Sync/*.php
             reportUnmatched: false
     allowedGlobalFunctions:

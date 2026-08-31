@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Auth\Internal\Support;
+namespace Modules\Auth\Public\Support;
 
 // What a username may be, in one place: every account-creating path lowercases
 // and trims it the same way, and the recovery-codes download puts the result in
@@ -17,12 +17,13 @@ final class Username
     // are all outside it.
     private const string PATTERN = '/^[\p{L}\p{N}]([\p{L}\p{N}._-]*[\p{L}\p{N}])?$/u';
 
-    // strtolower, not its mb_ sibling: login, Fortify and the console commands
-    // all normalise this way, and a username stored under a different rule than
-    // the one that looks it up cannot sign in.
+    // mb_strtolower: the pattern admits \p{L} in any script, strtolower folds
+    // ASCII only, and Fortify's own CanonicalizeUsername folds multibyte. A
+    // name stored under one rule and looked up under the other cannot sign
+    // in.
     public static function normalize(string $input): string
     {
-        return strtolower(trim($input));
+        return mb_strtolower(trim($input));
     }
 
     public static function isValid(string $normalized): bool

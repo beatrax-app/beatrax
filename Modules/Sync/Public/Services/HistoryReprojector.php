@@ -13,7 +13,7 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
-use Modules\Sync\Internal\OpLog\OpLogRebuilder;
+use Modules\Sync\Internal\Merge\RowHistoryPolicy;
 use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\OpLog\SyncBacklogState;
@@ -22,30 +22,15 @@ use Throwable;
 /**
  * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#telling-not-yet-openable-apart-from-never-openable-here
  */
-final class HistoryReprojector
+final readonly class HistoryReprojector
 {
     public function __construct(
-        private readonly OpLogRebuilder $rebuilder,
-        private readonly DatabaseManager $db,
-        private readonly PersistedOpLogEntries $entries,
-        private readonly DeviceRegistryService $registry,
-        private readonly GdkKeyringService $keyring,
-        private readonly Container $container,
+        private DatabaseManager $db,
+        private PersistedOpLogEntries $entries,
+        private DeviceRegistryService $registry,
+        private GdkKeyringService $keyring,
+        private Container $container,
     ) {}
-
-    // Re-projects every persisted op-log entry for $userId against the
-    // CURRENT (now possibly newly-populated) GDK keyring. Idempotent — safe
-    // to call more than once, though callers should still gate repeated
-    // calls behind their own cursor to avoid unneeded full-history replay cost.
-    /**
-     * @throws Throwable re-thrown from `OpLogRebuilder::rebuild()` on a
-     *                   transaction failure (rolled back — never a
-     *                   partial rebuild).
-     */
-    public function reproject(int $userId): void
-    {
-        $this->rebuilder->rebuild($userId);
-    }
 
     // Readable with no app-lock key at all, which is what makes it usable as
     // the gate: a caller can ask "did key material move since my last pass?"
@@ -73,7 +58,9 @@ final class HistoryReprojector
             return 0;
         }
 
-        $this->buildReplayer($userId)->replay($entries, $userId);
+        // forRows() already fetched every op of every row named, which is
+        // exactly what a strategy has to resolve over.
+        $this->buildReplayer($userId)->replay($entries, $userId, RowHistoryPolicy::AsGiven);
 
         return count($rows);
     }

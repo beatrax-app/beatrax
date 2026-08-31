@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Přidej vklady a zobrazí se odhad',
         'not_enough_history' => 'Zatím není dost historie pro odhad data',
         'no_recent_contributions' => 'Žádné nedávné příspěvky, ze kterých by šlo odhadovat',
+        'too_far_to_date' => 'Při tomto tempu příliš daleko na určení data',
         'est' => 'Odh. :date ·',
         'projection_note' => '(odhad)',
         'projected' => 'Odhad: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Další akce — cíl: :name',
         'mark_complete' => 'Označit jako dokončené',
+        'mark_complete_caption' => 'Označit',
         'archive' => 'Archivovat',
         'restore' => 'Obnovit',
     ],
 
-    'archived_disclosure' => 'Archivované cíle (:count)',
+    'archived_disclosure' => 'Archivovaný cíl (:count)|Archivované cíle (:count)|Archivovaných cílů (:count)',
 
     'form' => [
         'title_edit' => 'Upravit cíl',
@@ -96,8 +98,11 @@ return [
         'name' => 'Zadej název svého cíle.',
         'date' => 'Zvol cílové datum.',
         'date_invalid' => 'Zvolte skutečné datum.',
+        'date_before_start' => 'Vyber datum v den zahájení cíle nebo pozdější.',
         'generic' => 'Cíl se nepodařilo uložit. Zkontrolujte pole a zkuste to znovu.',
         'amount' => 'Zadej platnou částku větší než nula.',
         'pot_linked_category' => 'Tato spořicí obálka je propojená s kategorií. Nejdřív toto propojení odstraň na stránce Spořicí obálky.',
+        'pot_already_linked' => 'Tato obálka už spoří na jiný cíl. Nejdřív tam zruš propojení.',
+        'pot_missing' => 'Tato obálka už není dostupná. Vyber jinou, nebo nech tento cíl bez propojení.',
     ],
 ];

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Kategoriseerimata',
+    'no_counterparty' => 'Vastaspooleta',
+    'unavailable_counterparty' => 'Vastaspoolt pole selles seadmes',
     'title' => 'Aruanded',
     'page_title' => 'Aruanded · Beatrax',
     'subtitle' => 'Koosta oma pearaamatust aruanne.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Graafik valuutas :currency — :list ei kuvata',
+        'undrawn' => 'Ringil puudub — :amount liigub vastassuunas',
         'bar_title' => 'Klõpsa tulbal, et näha selle tehinguid',
         'line_title' => 'Klõpsa punktil, et näha selle tehinguid',
         'donut_title' => 'Klõpsa segmendil, et näha selle tehinguid',

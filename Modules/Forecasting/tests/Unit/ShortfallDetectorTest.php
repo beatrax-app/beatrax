@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Internal\Pipeline\ShortfallDetector;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Ledger\Models\Account;
 
@@ -78,7 +79,7 @@ beforeEach(function (): void {
     $this->account = sdAccount($this->user, 'bank');
 });
 
-it('emits a window with buffer_used_minor=0 when no buffer is set and balance dips below zero', function (): void {
+it('emits a window with buffer_used_minor=0 on the zero-crossing floor when the balance dips below zero', function (): void {
     $points = sdPoints([
         '2026-05-19' => 100,
         '2026-05-20' => -50,
@@ -90,7 +91,8 @@ it('emits a window with buffer_used_minor=0 when no buffer is set and balance di
         dailyPoints: $points,
         accountId: $this->account->id,
         scenarioId: null,
-        effectiveBufferMinor: null,
+        horizonDays: 30,
+        effectiveBufferMinor: 0,
         currency: 'EUR',
         user: $this->user,
     );
@@ -122,6 +124,7 @@ it('emits a window with buffer_used_minor=effective when balance dips below set 
         dailyPoints: $points,
         accountId: $this->account->id,
         scenarioId: null,
+        horizonDays: 30,
         effectiveBufferMinor: 50000,
         currency: 'EUR',
         user: $this->user,
@@ -150,6 +153,7 @@ it('emits two distinct windows when the balance dips, recovers, and dips again',
         dailyPoints: $points,
         accountId: $this->account->id,
         scenarioId: null,
+        horizonDays: 30,
         effectiveBufferMinor: 0,
         currency: 'EUR',
         user: $this->user,
@@ -175,6 +179,7 @@ it('emits a final window with ends_at=last day when in-shortfall at end of horiz
         dailyPoints: $points,
         accountId: $this->account->id,
         scenarioId: null,
+        horizonDays: 30,
         effectiveBufferMinor: 0,
         currency: 'EUR',
         user: $this->user,
@@ -186,7 +191,7 @@ it('emits a final window with ends_at=last day when in-shortfall at end of horiz
     expect($windows[0]['lowest_balance_minor'])->toBe(-75);
 });
 
-it('deletes prior rows for (user, account, scenario) before inserting new windows (pre-write cleanup)', function (): void {
+it('deletes prior rows for (user, account, scenario, horizon) before inserting new windows (pre-write cleanup)', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -194,6 +199,7 @@ it('deletes prior rows for (user, account, scenario) before inserting new window
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
         'scenario_id' => null,
+        'horizon_days' => 30,
         'starts_at' => '2026-01-01',
         'ends_at' => '2026-01-05',
         'lowest_balance_minor' => -9999,
@@ -217,6 +223,7 @@ it('deletes prior rows for (user, account, scenario) before inserting new window
         dailyPoints: $points,
         accountId: $this->account->id,
         scenarioId: null,
+        horizonDays: 30,
         effectiveBufferMinor: 0,
         currency: 'EUR',
         user: $this->user,
@@ -244,6 +251,7 @@ it('dispatches ForecastShortfallDetected once per new window', function (): void
         dailyPoints: $points,
         accountId: $this->account->id,
         scenarioId: null,
+        horizonDays: 30,
         effectiveBufferMinor: 0,
         currency: 'EUR',
         user: $this->user,
@@ -264,6 +272,7 @@ it('writes rows scoped to the passed user — never another user (cross-user saf
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
         'scenario_id' => null,
+        'horizon_days' => 30,
         'starts_at' => '2026-01-01',
         'ends_at' => '2026-01-05',
         'lowest_balance_minor' => -9999,
@@ -283,6 +292,7 @@ it('writes rows scoped to the passed user — never another user (cross-user saf
         dailyPoints: $points,
         accountId: $otherAccount->id,
         scenarioId: null,
+        horizonDays: 30,
         effectiveBufferMinor: 0,
         currency: 'EUR',
         user: $other,
@@ -294,4 +304,136 @@ it('writes rows scoped to the passed user — never another user (cross-user saf
     expect($db->connection()->table('forecast_shortfall_windows')
         ->where('user_id', $other->id)
         ->count())->toBe(1);
+});
+
+it('leaves the other four horizons\' windows alone when one horizon re-runs', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    foreach (ForecastHorizon::days() as $horizon) {
+        sdDetector()->detect(
+            dailyPoints: sdPoints([
+                '2026-05-19' => 100,
+                '2026-05-20' => -50,
+                '2026-05-21' => 50,
+            ]),
+            accountId: $this->account->id,
+            scenarioId: null,
+            horizonDays: $horizon,
+            effectiveBufferMinor: 0,
+            currency: 'EUR',
+            user: $this->user,
+        );
+    }
+
+    // Five queued horizons run in whatever order the worker picks them up. An
+    // unscoped delete meant the last one to finish spoke for all five, and the
+    // 30-day chart shaded a dip only the 365-day run had found.
+    expect($db->connection()->table('forecast_shortfall_windows')
+        ->where('user_id', $this->user->id)
+        ->count())->toBe(count(ForecastHorizon::days()));
+
+    foreach (ForecastHorizon::days() as $horizon) {
+        expect($db->connection()->table('forecast_shortfall_windows')
+            ->where('user_id', $this->user->id)
+            ->where('horizon_days', $horizon)
+            ->count())->toBe(1);
+    }
+});
+
+it('raises no shortfall event for a what-if scenario run', function (): void {
+    Event::fake([ForecastShortfallDetected::class]);
+
+    $scenarioId = app(DatabaseManager::class)->connection()->table('forecast_scenarios')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => 'What if',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $windows = sdDetector()->detect(
+        dailyPoints: sdPoints([
+            '2026-05-19' => 100,
+            '2026-05-20' => -50,
+            '2026-05-21' => 50,
+        ]),
+        accountId: $this->account->id,
+        scenarioId: $scenarioId,
+        horizonDays: 30,
+        effectiveBufferMinor: 0,
+        currency: 'EUR',
+        user: $this->user,
+    );
+
+    // The window itself is the scenario's own output and stays keyed by its
+    // scenario_id; what must not happen is the event that reaches the inbox.
+    expect($windows)->toHaveCount(1);
+    Event::assertNotDispatched(ForecastShortfallDetected::class);
+});
+
+it('hands the notification dedup key a start date no listener can move', function (): void {
+    // PersistForecastShortfall builds the occurrence key from startsAt, so a
+    // listener that moved the date in place would change which row gets
+    // written — and the event is readonly only down to the reference.
+    $captured = null;
+    Event::listen(
+        ForecastShortfallDetected::class,
+        static function (ForecastShortfallDetected $event) use (&$captured): void {
+            $captured = $event;
+        },
+    );
+
+    sdDetector()->detect(
+        dailyPoints: sdPoints(['2026-05-19' => 100, '2026-05-20' => -50, '2026-05-21' => 50]),
+        accountId: $this->account->id,
+        scenarioId: null,
+        horizonDays: 30,
+        effectiveBufferMinor: 0,
+        currency: 'EUR',
+        user: $this->user,
+    );
+
+    expect($captured)->not->toBeNull();
+
+    $before = $captured->startsAt->toDateString();
+    $captured->startsAt->addDays(10);
+    $captured->endsAt->addDays(10);
+
+    expect($captured->startsAt->toDateString())->toBe($before)
+        ->and($before)->toBe('2026-05-20');
+});
+
+// Null is not the zero-crossing default: it is "no floor is in force", which is
+// what a liability's balance needs. The rows still have to be cleared, or a
+// floor the reader has just taken away leaves its last run's windows standing.
+it('writes no window and clears the previous ones when no floor is in force', function (): void {
+    $points = sdPoints([
+        '2026-05-19' => -100,
+        '2026-05-20' => -200,
+    ]);
+
+    sdDetector()->detect(
+        dailyPoints: $points,
+        accountId: $this->account->id,
+        scenarioId: null,
+        horizonDays: 30,
+        effectiveBufferMinor: 0,
+        currency: 'EUR',
+        user: $this->user,
+    );
+
+    $this->assertDatabaseCount('forecast_shortfall_windows', 1);
+
+    $windows = sdDetector()->detect(
+        dailyPoints: $points,
+        accountId: $this->account->id,
+        scenarioId: null,
+        horizonDays: 30,
+        effectiveBufferMinor: null,
+        currency: 'EUR',
+        user: $this->user,
+    );
+
+    expect($windows)->toBe([]);
+    $this->assertDatabaseCount('forecast_shortfall_windows', 0);
 });

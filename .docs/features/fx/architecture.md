@@ -144,7 +144,12 @@ disagree.
 There is no per-transaction rate path. `transactions.fx_rate_used` is a
 display artifact — the detail screen's "Effective rate" line — and a
 balance as of a date is a sum of many transactions carrying many
-different stored rates, so there is nothing a caller could hand in. The
+different stored rates, so there is nothing a caller could hand in. It
+reads **settled currency per one native unit**, which is what the detail
+screen draws it as (`€0.924 / USD`), and it is a magnitude: the value is
+`Rate::between(settled, native)` over a pair whose two legs
+`Ledger::TransactionAmount` has already given one shared sign, so a
+negative rate is not a value this column can hold. The
 `$knownRate` argument that claimed precedence over the dated row was
 never passed by any caller, and it registered whatever it was given as an
 uninverted direct pair on the caller's word.

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 return [
     'help_paypal' => 'PayPal-exports bevatten geen saldoregels, dus stel dit handmatig in.',
-    'help_asn' => 'Automatisch verankerd vanuit je laatste afschrift. Overschrijf dit alleen als je weet dat het actuele saldo afwijkt.',
     'help_default' => 'Overschrijf dit alleen als je weet dat het huidige actuele saldo afwijkt van wat Beatrax berekent.',
 
     'legend' => 'Beginsaldo prognose voor :name',
     'opening_label' => 'Beginsaldo',
-    'opening_placeholder' => 'bijv. 1.250,00',
+    'opening_placeholder' => 'bijv. :amount',
     'as_of_label' => 'Beginsaldo per',
     'as_of_help' => 'De datum waarop het bedrag hierboven geldt.',
 
     'divergence' => 'Dit wijkt meer dan :threshold af van het saldo dat Beatrax berekent op basis van je geïmporteerde transacties. Weet je het zeker?',
+    'computed_is' => 'Beatrax berekent :amount.',
     'use_beatrax' => 'Gebruik het getal van Beatrax',
     'use_mine' => 'Gebruik mijn getal',
 

@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Import\Public\Actions\ApplyEnrichments;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Dto\PendingEnrichment;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -72,7 +73,7 @@ it('PendingEnrichment default conflictingFields is an empty array', function ():
         existingTransactionId: 1,
         newSourceRef: 'X',
         importRunId: 1,
-        sourceFormat: 'paypal-receipt',
+        sourceFormat: SourceFormat::Eml->value,
     );
     expect($pe->conflictingFields)->toBe([]);
 });
@@ -87,7 +88,7 @@ it('no conflict: empty conflictingFields path proceeds with pure source_ref enri
             existingTransactionId: $tx->id,
             newSourceRef: 'TX-12345',
             importRunId: 99,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
         ),
     ], $this->fixtureUser);
 
@@ -109,7 +110,7 @@ it('unset policy + receipt conflict: holds in pending_enrichment_conflicts + dis
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
             importRunId: $tx->import_run_id,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
             ],
@@ -128,7 +129,7 @@ it('unset policy + receipt conflict: holds in pending_enrichment_conflicts + dis
         ->where('field_name', 'counterparty_name')
         ->first();
     expect($pending)->not->toBeNull();
-    expect((string) $pending->incoming_source_format)->toBe('paypal-receipt');
+    expect((string) $pending->incoming_source_format)->toBe(SourceFormat::Eml->value);
 
     Event::assertDispatched(
         ReceiptConflictDetected::class,
@@ -153,7 +154,7 @@ it('prefer_receipt policy: applies incoming values silently; no event; no pendin
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
             importRunId: 99,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
             ],
@@ -183,7 +184,7 @@ it('prefer_first_write policy: keeps stored values; no event; no pending row; so
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
             importRunId: 99,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
             ],
@@ -224,7 +225,7 @@ it('cross-user: pending_enrichment_conflicts for another user is NEVER touched',
         'field_name' => 'counterparty_name',
         'stored_value' => json_encode('foreign stored'),
         'incoming_value' => json_encode('foreign incoming'),
-        'incoming_source_format' => 'paypal-receipt',
+        'incoming_source_format' => SourceFormat::Eml->value,
         'import_run_id' => null,
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
@@ -237,7 +238,7 @@ it('cross-user: pending_enrichment_conflicts for another user is NEVER touched',
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
             importRunId: $tx->import_run_id,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
             ],
@@ -316,7 +317,7 @@ it('W6 no-instance-cache: two consecutive __invoke calls for different users hon
             existingTransactionId: $txA->id,
             newSourceRef: 'RECEIPT-A',
             importRunId: $txA->import_run_id,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'For A'],
             ],
@@ -328,7 +329,7 @@ it('W6 no-instance-cache: two consecutive __invoke calls for different users hon
             existingTransactionId: $txB->id,
             newSourceRef: 'RECEIPT-B',
             importRunId: $txB->import_run_id,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'For B'],
             ],

@@ -14,8 +14,10 @@ use Illuminate\Queue\SerializesModels;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 
 final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -25,9 +27,6 @@ final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQ
     use SerializesModels;
     use TunedQueueJob;
 
-    /** @var list<int> */
-    public const HORIZON_DAYS = [30, 60, 90, 180, 365];
-
     public function __construct(
         public readonly int $userId,
         public readonly ?int $scenarioId,
@@ -35,9 +34,10 @@ final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQ
     ) {
         // Rejects a tampered Livewire payload or any other caller-supplied
         // horizon so it never reaches the queue worker.
-        if (! in_array($this->horizonDays, self::HORIZON_DAYS, true)) {
+        if (ForecastHorizon::tryFrom($this->horizonDays) === null) {
             throw new InvalidArgumentException(sprintf(
-                'ProjectForecastJob: horizonDays must be one of [30, 60, 90, 180, 365]; got %d.',
+                'ProjectForecastJob: horizonDays must be one of %s; got %d.',
+                ForecastHorizon::spelledOut(),
                 $this->horizonDays,
             ));
         }
@@ -58,7 +58,7 @@ final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQ
 
     public function uniqueFor(): int
     {
-        return 600;
+        return Duration::Hour->seconds();
     }
 
     public function uniqueVia(): Repository

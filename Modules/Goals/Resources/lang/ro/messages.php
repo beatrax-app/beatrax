@@ -27,7 +27,7 @@ return [
     ],
 
     'progress' => [
-        'aria' => ':name: :pct% finalizat',
+        'aria' => ':name: :pct % finalizat',
     ],
 
     'card' => [
@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Adaugă contribuții pentru a vedea o proiecție',
         'not_enough_history' => 'Încă nu există suficient istoric pentru a estima o dată',
         'no_recent_contributions' => 'Nu există contribuții recente pe care să se bazeze o estimare',
+        'too_far_to_date' => 'Prea departe pentru o dată în acest ritm',
         'est' => 'Est. :date ·',
         'projection_note' => '(proiecție)',
         'projected' => 'Estimat: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Mai multe acțiuni pentru :name',
         'mark_complete' => 'Marchează drept finalizat',
+        'mark_complete_caption' => 'Marchează',
         'archive' => 'Arhivează',
         'restore' => 'Restaurează',
     ],
 
-    'archived_disclosure' => 'Obiective arhivate (:count)',
+    'archived_disclosure' => 'Obiectiv arhivat (:count)|Obiective arhivate (:count)|Obiective arhivate (:count)',
 
     'form' => [
         'title_edit' => 'Editează obiectivul',
@@ -96,8 +98,11 @@ return [
         'name' => 'Introdu un nume pentru obiectiv.',
         'date' => 'Alege o dată țintă.',
         'date_invalid' => 'Alegeți o dată reală.',
+        'date_before_start' => 'Alege o dată din ziua de început a obiectivului sau ulterioară.',
         'generic' => 'Obiectivul nu a putut fi salvat. Verificați câmpurile și încercați din nou.',
         'amount' => 'Introdu o sumă validă, mai mare decât zero.',
         'pot_linked_category' => 'Această pușculiță este asociată unei categorii. Elimină întâi asocierea din pagina Pușculițe.',
+        'pot_already_linked' => 'Această pușculiță finanțează deja alt obiectiv. Elimină întâi asocierea de acolo.',
+        'pot_missing' => 'Această pușculiță nu mai este disponibilă. Alege alta sau lasă acest obiectiv fără asociere.',
     ],
 ];

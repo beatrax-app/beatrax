@@ -5,25 +5,25 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Public\Events\IcsStatementReady;
-use Modules\Notifications\Internal\Support\CopyLine;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationCopySpec;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Throwable;
 
-final class PersistIcsStatementReady
+final readonly class PersistIcsStatementReady
 {
     public function __construct(
-        private readonly NotificationWriter $writer,
-        private readonly UrlGenerator $urls,
-        private readonly LoggerInterface $log,
-        private readonly NotificationCopyRenderer $copyRenderer,
+        private NotificationWriter $writer,
+        private UrlGenerator $urls,
+        private LoggerInterface $log,
+        private NotificationCopyRenderer $copyRenderer,
     ) {}
 
     public function handle(IcsStatementReady $event): void
@@ -40,7 +40,7 @@ final class PersistIcsStatementReady
 
             $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => NotificationDraft::fromCopy(
                 userId: $event->userId,
-                triggerType: DeterministicKeyDeriver::TRIGGER_ICS_STATEMENT_READY,
+                triggerType: NotificationTrigger::IcsStatementReady,
                 subjectKey: 'ics-card',
                 occurrence: $event->internalDate->format('Y-m-d'),
                 copy: $copy,

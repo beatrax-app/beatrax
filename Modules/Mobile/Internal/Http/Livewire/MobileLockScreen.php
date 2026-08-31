@@ -132,7 +132,7 @@ final class MobileLockScreen extends Component
         // The enclave-gated vault IS the biometric gate: recover() yields a
         // key only after the OS releases the entry for a live biometric.
         // Firing the bridge prompt too would add a bypassable second one.
-        $result = $vault->recover();
+        $result = $vault->recover($currentUser->id());
         if ($result->isRecovered() && $result->dataKey !== null) {
             // Also stamps last_activity_at, or the idle-timeout middleware
             // re-locks this usually long-idle cold start immediately.

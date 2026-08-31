@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Public\Dto;
 
-use Modules\Notifications\Public\Enums\DigestCadence;
+use Modules\Core\Public\Enums\DigestCadence;
 use Spatie\LaravelData\Data;
 
 final class NotificationPreferencesDto extends Data

@@ -17,10 +17,8 @@ return [
     'section_categories' => 'Categories',
     'section_goals_recurring' => 'Goals & Recurring',
     'no_name' => '(no name)',
-    'see_all_prefix' => 'See all ',
-    'see_all_suffix' => ' results →',
-    'no_transactions_prefix' => 'No transactions match "',
-    'no_transactions_suffix' => '"',
+    'see_all' => 'See :count result →|See all :count results →',
+    'no_transactions' => 'No transactions match ":query"',
     'source_txn' => 'txn',
     'source_counterparty' => 'counterparty',
     'source_category' => 'category',
@@ -30,6 +28,29 @@ return [
     'foot_select' => 'select',
     'foot_close' => 'close',
     'close_aria' => 'Close search',
+    'close_caption' => 'Close',
     'foot_try' => 'Try',
-    'results_suffix' => ' results',
+    'results' => ':count result|:count results',
+
+    'action' => [
+        'run_import' => ['label' => 'Run import', 'hint' => 'Open the import wizard'],
+        'scan_email' => ['label' => 'Scan email now', 'hint' => 'Run the inbox sync immediately'],
+        'open_profile' => ['label' => 'Open profile', 'hint' => 'Settings — account and preferences'],
+        'toggle_theme' => ['label' => 'Toggle theme', 'hint' => 'Switch between light and dark'],
+    ],
+
+    'run_command' => 'Run :command',
+
+    'nav' => [
+        'overview' => ['label' => 'Dev overview', 'hint' => 'System tiles + recent runs'],
+        'artisan' => ['label' => 'Artisan runner', 'hint' => 'Run whitelisted commands'],
+        'audit' => ['label' => 'Dev audit log', 'hint' => 'Every dev-mode action'],
+        'logs' => ['label' => 'Log tailer', 'hint' => 'Live laravel-*.log stream'],
+        'queue' => ['label' => 'Queue inspector', 'hint' => 'Pending / failed / batches'],
+        'doctor' => ['label' => 'Doctor', 'hint' => 'System probes'],
+        'sql' => ['label' => 'SQL panel', 'hint' => 'SELECT-only browser'],
+        'system' => ['label' => 'System snapshot', 'hint' => 'Env + paths + config'],
+        'horizon' => ['label' => 'Horizon', 'hint' => 'Embedded queue dashboard'],
+        'sync_health' => ['label' => 'Sync health', 'hint' => 'Quarantined / skipped merge ops'],
+    ],
 ];

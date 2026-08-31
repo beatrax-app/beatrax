@@ -8,17 +8,17 @@ use Psr\Log\LoggerInterface;
 
 final class CorpusPatternMatcher
 {
-    public const REGEX_PREFIX = 'regex:';
+    public const string REGEX_PREFIX = 'regex:';
 
     // Real corpus patterns are short merchant tokens. This does NOT bound
     // backtracking — a short `(a+)+$` is still pathological — so ReDoS safety
     // comes from matchWithinBudget(), not from this cap.
-    public const MAX_REGEX_BODY_LENGTH = 256;
+    public const int MAX_REGEX_BODY_LENGTH = 256;
 
     // Backtracking on a corpus-supplied pattern is bounded here rather than by
     // php.ini's 1M default: a match past this many steps aborts and counts as
     // a non-match, still far above any real merchant token's needs.
-    private const PCRE_BACKTRACK_BUDGET = 100_000;
+    private const int PCRE_BACKTRACK_BUDGET = 100_000;
 
     /** @var array<string, string|null> */
     private array $compiledRegexes = [];

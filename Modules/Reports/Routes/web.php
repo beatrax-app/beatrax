@@ -8,6 +8,8 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Mobile\Public\Enums\FileExportOutcome;
+use Modules\Mobile\Public\Services\ShareSheetExport;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
 use Modules\Reports\Internal\Exceptions\InvalidReportPeriod;
 use Modules\Reports\Internal\Http\Livewire\ReportsIndex;
@@ -26,6 +28,7 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         CurrentUser $currentUser,
         ReportDefinitionRequestFactory $definitions,
         PeriodPresetResolver $periodPresetResolver,
+        ShareSheetExport $shareSheet,
     ): Response|StreamedResponse {
         if (! $currentUser->isAuthenticated()) {
             return new StreamedResponse(static function (): void {
@@ -52,11 +55,29 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
             );
         }
 
+        $filename = "beatrax-report-{$definition->slug()}.csv";
+
+        // This route is a plain navigation, so on a shell that drops the
+        // download the reader is left on a page that never changed. The file
+        // goes to the OS share sheet and the body says which of the three
+        // things happened to it.
+        if ($shareSheet->replacesWebViewDownload()) {
+            $outcome = $shareSheet->export($filename, $exporter->export($user, $definition));
+
+            return $responses->make(
+                $outcome->message(),
+                $outcome === FileExportOutcome::Shared
+                    ? SymfonyResponse::HTTP_OK
+                    : SymfonyResponse::HTTP_SERVICE_UNAVAILABLE,
+                ['Content-Type' => 'text/plain; charset=UTF-8'],
+            );
+        }
+
         return $responses->streamDownload(
             static function () use ($exporter, $user, $definition): void {
                 echo $exporter->export($user, $definition);
             },
-            "beatrax-report-{$definition->slug()}.csv",
+            $filename,
             ['Content-Type' => 'text/csv; charset=UTF-8'],
         );
     })->name('reports.export');

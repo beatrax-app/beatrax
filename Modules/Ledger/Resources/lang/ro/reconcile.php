@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'alege un cont',
+        'choose_date' => 'alege data extrasului',
         'enter_balance' => 'introdu un sold din extras',
         'matched' => 'se potrivește — :amount',
         'discrepancy' => 'discrepanță — :amount',
+        'reconciled_through' => 'reconciliat până la :date',
     ],
 
     'mismatch_html' => 'Soldul din extras încă nu se potrivește cu soldul tău decontat. Comută rândurile decontate în <a href=":url" class="underline">lista de tranzacții</a> sau ajustează soldul introdus până când diferența ajunge la zero — acest flux nu creează niciodată o înregistrare de echilibrare.',
+    'unreachable_no_baseline_html' => 'Nicio combinație de rânduri nu poate aduce această diferență la zero. Acest cont nu are un sold inițial înregistrat, așa că soldul lui este măsurat de la zero. Importă extrasul cu care se deschide contul sau setează soldul inițial în <a href=":url" class="underline">Setări</a>.',
+    'unreachable' => 'Nicio combinație de rânduri nu poate aduce această diferență la zero: se află în afara intervalului tuturor rândurilor din acest cont până la data dată. Verifică data extrasului și soldul introdus.',
 
     'check' => 'Verifică',
     'complete' => 'Finalizează reconcilierea',
+    'complete_unavailable' => 'Până la această dată nu mai există nimic de blocat — marchează mai multe rânduri ca decontate sau alege o dată a extrasului ulterioară.',
 
     'errors' => [
         'choose_account' => 'Alege mai întâi un cont.',

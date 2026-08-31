@@ -26,14 +26,11 @@ return [
 
     'your_devices' => 'Tavo įrenginiai',
 
-    // Nustatymuose lieka nuoroda į perkeltą skiltį; pati skiltis
-    // dabar yra /sync puslapyje kartu su būsena ir sinchronizavimo veiksmu.
-    'moved_help' => 'Susiejimas, įrenginių pavadinimai ir šifravimas dabar yra kartu su sinchronizavimo būsena.',
-    'moved_cta' => 'Atverti Sinchronizavimą ir įrenginį',
     'device_name' => 'Įrenginio pavadinimas',
     'save' => 'Išsaugoti',
     'peer_default_name' => 'Susietas įrenginys',
     'rename_device' => 'Pervadinti įrenginį',
+    'rename_device_caption' => 'Pervadinti',
     'this_device' => 'Šis įrenginys',
     'removed' => 'Pašalinta',
     'confirmed' => 'Patvirtinta',
@@ -51,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Retransliavimo adresas',
     'relay_endpoint_help' => 'Neprivaloma. Nurodžius, neprisijungę įrenginiai sinchronizuojasi per šį retransliatorių. Palik tuščią, jei nori tik tiesioginio LAN&#8209;ryšio.',
+    'relay_endpoint_help_phone' => 'Neprivaloma. Nurodžius, pakeitimai keliauja per šį retransliatorių net tada, kai tavo įrenginiai nėra tame pačiame tinkle. Šis įrenginys juos pasiima, kai sinchronizuoji iš šio ekrano — niekada fone, nes programėlės užraktas saugo vienintelį raktą. Palik tuščią, jei nori tik tiesioginio LAN&#8209;ryšio.',
     'relay_endpoint_aria' => 'Retransliavimo adreso URL',
     'relay_insecure_warning' => 'Šis retransliavimo adresas naudoja paprastą HTTP. Nors retransliatorius tavo duomenų niekada neiššifruoja, nesaugus ryšys atskleidžia šifruotų duomenų dydžius ir laiką tinklo stebėtojams. Geriausią privatumą užtikrina <strong>https://</strong> adresas.',
 
@@ -72,6 +70,7 @@ return [
     'removing' => 'Šalinama:',
     'remove_rotates_key' => 'Pašalinus šį įrenginį pakeičiamas šifravimo raktas, todėl jis nebegaus jokių atnaujinimų.',
     'remove_cannot_erase' => 'Tame įrenginyje jau esančių duomenų ištrinti neįmanoma. Jei šis įrenginys buvo pamestas ar pavogtas, laikyk visus jame buvusius duomenis atskleistais.',
+    'remove_is_local' => 'Kiti tavo įrenginiai turi savo sąrašą. Kol nepašalinsi jo ir ten, jie ir toliau su juo sinchronizuosis.',
     'remove_device' => 'Pašalinti įrenginį',
     'keep_device' => 'Palikti įrenginį',
     'rotating_key' => 'Keičiamas šifravimo raktas…',

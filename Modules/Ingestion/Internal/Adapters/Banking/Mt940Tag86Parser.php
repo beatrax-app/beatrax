@@ -11,7 +11,7 @@ final class Mt940Tag86Parser
     /**
      * @var list<string>
      */
-    private const GVC_KEYWORDS = [
+    private const array GVC_KEYWORDS = [
         'EREF',
         'MREF',
         'CRED',

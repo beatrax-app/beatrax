@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Prikazano je :shown najnovijih od :count.',
+
     'drawer_nav' => 'Navigacija',
 
     'search_placeholder' => 'Pretraži…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Želiš svoje podatke vidjeti i na mobitelu?',
         'body' => 'Instaliraj Beatrax na mobitel za brz pristup svojim financijama.',
         'dismiss_aria' => 'Odbaci savjet o instalaciji',
+        'dismiss_caption' => 'Odbaci',
         'install_app' => 'Instaliraj aplikaciju',
 
         'desktop_html' => 'Otvori Beatrax u pregledniku na mobitelu i dodirni „Dodaj na početni zaslon” — ili dodirni ikonu <strong style="color: var(--color-text);">⚡</strong> u Safarijevu izborniku za dijeljenje.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Odabrano datoteka: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Odaberi datum',
         'prev_month' => 'Prethodni mjesec',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Minuta',
         'empty' => 'vrijeme nije odabrano',
     ],
+
+    'toast_undo' => 'Poništi',
 
     'veil_locked' => 'Aplikacija je zaključana',
 

@@ -73,7 +73,6 @@ function buildCanonical(int $userId, int $accountId, int $importRunId, int $rowI
         currency: 'EUR',
         settledAmountMinor: $amount,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: $counterparty,
         counterpartyIban: null,
         counterpartyNormalized: mb_strtolower($counterparty),

@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Užregistruotas mokėjimas',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list neįskaičiuota — ten atlikti mokėjimai nekeičia likučio',
+    ],
+
     'panel' => [
         'aria' => 'Dienos informacijos skydelis',
         'close' => 'Uždaryti dienos skydelį',
+        'close_caption' => 'Uždaryti',
         'start_of_day' => 'Dienos pradžia',
         'no_payments' => 'Šią dieną mokėjimų nėra.',
         'date_approximate' => '~ data apytikslė',

@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Atgal į Beatrax',
 
+    'not_saved' => 'Nieko nebuvo išsaugota. Tavo duomenys nepakitę — bandyk dar kartą.',
+
+    'no_longer_here' => 'To nebėra.',
+
     '404' => [
         'title' => 'Tokio puslapio nėra',
         'body' => 'Nuoroda gali būti sena arba puslapis pervadintas. Su tavo duomenimis viskas gerai.',

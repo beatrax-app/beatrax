@@ -10,15 +10,14 @@ return [
     'subtitle_full' => 'Teljes előzmény.',
     'subtitle_recent' => 'Legutóbbi tranzakciók (utolsó 90 nap).',
 
-    'currency_aria' => 'Devizanézet',
-    'currency_eur' => 'Csak :code',
-    'currency_original' => 'Eredeti deviza',
+    'currency_aria' => 'Megjelenített összeg',
+    'currency_eur' => 'Elszámolt összeg',
+    'currency_original' => 'Eredeti összeg',
 
     'show_recent' => 'Csak a legutóbbiak',
     'show_full' => 'Teljes előzmény mutatása',
 
     'empty_period' => 'Ebben az időszakban nincs semmi.',
-
 
     'empty_recent_has_older' => 'Az elmúlt 90 napban semmi. A korábbi tételei továbbra is megvannak.',
 

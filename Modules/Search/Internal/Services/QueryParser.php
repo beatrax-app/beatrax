@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
+
 // Parses typed token syntax (account:/after:/before:/amount:/category:)
 // out of the raw query string; tokens are stripped first, and the
 // remaining text becomes the FTS text query.
 final class QueryParser
 {
     /**
+     * @param  string  $readerCurrency  the money an `amount:` bound is typed in
      * @return array{textQuery: string, filters: array<string, mixed>}
      */
-    public function parse(string $raw): array
+    public function parse(string $raw, string $readerCurrency): array
     {
         $filters = [];
         $remainder = $raw;
@@ -35,8 +38,13 @@ final class QueryParser
             $remainder = (string) preg_replace('/\bbefore:\S+/i', '', $remainder);
         }
 
+        // A bound written past the fraction this token's regex allowed was
+        // truncated, not refused: `amount:12.500-13.000` reached the filter as
+        // `12.50`, which is a hundredth of the dinar the reader typed.
+        $decimals = MoneyInput::decimalPlaces($readerCurrency);
+        $figure = '\d+'.($decimals === 0 ? '' : '(?:[.,]\d{1,'.$decimals.'})?');
         $amountCount = preg_match(
-            '/\bamount:([<>]?\d+(?:[.,]\d{1,2})?(?:-\d+(?:[.,]\d{1,2})?)?)/i',
+            '/\bamount:([<>]?'.$figure.'(?:-'.$figure.')?)/i',
             $remainder,
             $amountMatch,
         );

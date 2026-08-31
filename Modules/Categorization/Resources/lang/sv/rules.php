@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Regler stannar på den här enheten. De delas inte med dina andra enheter.',
 
     'reapply' => 'Tillämpa regler på historiken igen',
+    'reapply_confirm' => 'Vill du tillämpa alla regler på hela din historik igen? Varje kategori, motpart, anteckning och skatteetikett som en regel har satt skrivs över. Det du har satt för hand står kvar, och det gör även allt på ett avstämt kontoutdrag. Ingenting återställer de gamla värdena.',
     'reapplying' => 'Tillämpar igen…',
     'new_rule' => 'Ny regel',
 
-    'reapply_progress_lead' => 'Tillämpar regler igen…',
-    'reapply_progress_of' => 'av',
-    'reapply_progress_trail' => 'transaktioner kontrollerade',
+    'reapply_progress' => 'Tillämpar regler igen… :checked av :count transaktion kontrollerad|Tillämpar regler igen… :checked av :count transaktioner kontrollerade',
 
     'empty_heading' => 'Inga regler ännu',
     'empty_body' => 'Regler matchar transaktioner mot flera villkor och tillämpar automatiskt ändringar av kategori, motpart, anteckning och skatteetikett — vid import och varje gång du tillämpar dem på din befintliga historik igen.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Skapad',
     'col_row_actions' => 'Åtgärder',
     'inactive_badge' => 'Av',
+    'combinator_all' => 'ALLA',
+    'combinator_any' => 'NÅGOT',
     'inactive_title' => 'Den här regeln körs inte. En regel stängs av när kategorin eller motparten den pekar på tas bort.',
 
     'more_conditions' => '+:count till',

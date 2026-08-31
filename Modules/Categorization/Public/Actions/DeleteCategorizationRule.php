@@ -8,10 +8,10 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class DeleteCategorizationRule
+final readonly class DeleteCategorizationRule
 {
     public function __construct(
-        private readonly DatabaseManager $db,
+        private DatabaseManager $db,
     ) {}
 
     public function __invoke(User $user, int $ruleId): void

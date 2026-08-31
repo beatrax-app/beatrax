@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Mennyire könnyen minősíti a Beatrax szokatlannak egy terhelést ennél a kereskedőnél vagy kategóriánál, 1-től 100-ig. Magasabb érték többet jelöl meg.',
 
     'min_amount_label' => 'Minimális terhelési összeg',
-    'min_amount_help' => 'Az ennél kisebb terheléseknél ne jelezzen anomáliát. Centben tárolva (:symbol) — az 1000 azt jelenti: :example.',
+    'min_amount_help' => 'Az ennél kisebb terheléseknél ne jelezzen anomáliát. Váltópénzben tárolva (:symbol) — az :minor azt jelenti: :example.',
 
     'save' => 'Anomáliabeállítások mentése',
     'saved' => 'Mentve.',

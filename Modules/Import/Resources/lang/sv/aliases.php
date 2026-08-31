@@ -37,9 +37,13 @@ return [
     'parse_preview' => 'Läs in och förhandsgranska',
     'cancel_import' => 'Avbryt importen',
 
-    'diff_new' => 'nya,',
-    'diff_unchanged' => 'oförändrade,',
-    'diff_conflicts' => 'konflikter.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: sv · diff_new, diff_unchanged — the elided noun is alias, taken
+    // here as neuter (ett alias), which is what gives nytt and oförändrat. A
+    // common-gender alias would want ny and oförändrad instead.
+    'diff_new' => ':count nytt|:count nya',
+    'diff_unchanged' => ':count oförändrat|:count oförändrade',
+    'diff_conflicts' => ':count konflikt|:count konflikter',
 
     'conflicts_heading' => 'Konflikter',
     'conflict_name' => 'namn — befintligt: :existing → fil: :file',
@@ -54,8 +58,7 @@ return [
     'test_heading' => 'Testa mot mina transaktioner',
     'test_help' => 'Redigera en rads generaliserade mönster för att se vilka transaktioner det skulle träffa.',
     'typing' => 'Skriver…',
-    'matches_prefix' => 'Träffar',
-    'matches_suffix' => 'transaktioner i din senaste historik.',
+    'matches' => 'Träffar :count transaktion i din senaste historik.|Träffar :count transaktioner i din senaste historik.',
 
     'merge_modal_title' => 'Slå samman :count alias|Slå samman :count alias',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Ingen fil uppladdad.',
         'unreadable' => 'Det gick inte att läsa den uppladdade filen.',
         'too_short' => 'Mönstret är för kort för att testa.',
+        'file_not_yaml' => 'Den här filen är inte giltig YAML, så inget i den gick att läsa. Exportera dina alias igen och ladda upp filen du får.',
+        'file_unreadable_as_yaml' => 'Den här filen gick inte att läsa som en aliaslista. Exportera dina alias igen och ladda upp filen du får.',
+        'file_has_no_entries_list' => 'Den här filen börjar inte med en entries:-lista på översta nivån, så den innehåller inga alias att importera. Kontrollera att du valde rätt fil.',
+        'entry_is_not_a_mapping' => 'Post :entry är ett ensamt värde där ett mönster och ett namn förväntades. Ge den båda fälten, eller ta bort den, och ladda upp filen igen.',
+        'entry_is_missing_a_field' => 'Post :entry saknar sitt mönster eller sitt namn, och ett alias behöver båda. Fyll i det som saknas, eller ta bort posten, och ladda upp filen igen.',
     ],
 ];

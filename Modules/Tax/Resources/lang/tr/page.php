@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'PDF olarak dışa aktar',
     'export_pdf_aria' => 'PDF olarak dışa aktar',
     'export_pdf_title' => 'beatrax-tax-:year.pdf dosyasını indir',
+    'export_dismiss' => 'Kapat',
 
     'country_prompt_heading' => 'Vergi beyannameni hangi ülkede veriyorsun?',
     'country_prompt_body' => 'Bunu istediğin zaman Ayarlar → :section bölümünden değiştirebilirsin.',

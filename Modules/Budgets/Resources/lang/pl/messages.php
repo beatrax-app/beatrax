@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategoria',
         'assigned' => 'Przypisano',
+        'carried_in' => 'Przeniesiono',
+        'moved' => 'Przesunięto',
         'spent' => 'Wydano',
         'available' => 'Dostępne',
         'if_overspent' => 'Przy przekroczeniu',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Ukryj historię ↑',
         'moved_from' => 'Przeniesiono z kategorii: :category',
         'moved_to' => 'Przeniesiono do kategorii: :category',
+        'moved_unreadable' => 'Przeniesiono z kategorią: :category przez nowszą wersję Beatrax',
         'undo' => 'Cofnij',
     ],
 
     'phone' => [
         'spent' => 'Wydano :amount',
+        'carried_in' => 'Przeniesiono :amount',
+        'moved' => 'Przesunięto :amount',
         'available' => 'Dostępne :amount',
         'notify_at' => 'Powiadom przy',
     ],

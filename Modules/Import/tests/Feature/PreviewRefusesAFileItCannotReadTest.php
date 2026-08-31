@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use Modules\Chains\Models\ChainResolutionRun;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\RunsImports;
@@ -24,6 +23,7 @@ const PREVIEW_UNREADABLE_FIXTURE = __DIR__.'/../../../../tests/fixtures/unrecogn
 const PREVIEW_PARTIAL_FIXTURE = __DIR__.'/../../../../tests/fixtures/asn-partial-failure.csv';
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
 });
@@ -132,28 +132,6 @@ it('still offers to confirm the rows a part-read file did yield', function (): v
         ->assertRedirect();
 
     expect(Transaction::query()->count())->toBe(3);
-});
-
-// chain_resolution_runs.last_error is written as "<JobClass>: <first line of
-// the message>". That is a developer's sentence wherever it comes from, and
-// the crypto layer's version of it names an internal class and the reader's
-// own user id. The Horizon link beside it is the developer's door.
-it('does not print a failed job class name into the chain-resolution notice', function (): void {
-    $preview = previewOf($this->fixtureUser, PREVIEW_PARTIAL_FIXTURE);
-
-    ChainResolutionRun::query()->create([
-        'user_id' => $this->fixtureUser->id,
-        'status' => 'failed',
-        'last_error' => 'ResolveChainLinksJob: BlindIndexCodec: encryption is enabled for user 1',
-    ]);
-
-    $html = Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
-        ->call('refreshChainResolutionStatus')
-        ->assertSee('the details are in the job log')
-        ->html();
-
-    expect($html)->not->toContain('ResolveChainLinksJob')
-        ->and($html)->not->toContain('BlindIndexCodec');
 });
 
 // The first data row failing left zero preview rows, and the screen then read

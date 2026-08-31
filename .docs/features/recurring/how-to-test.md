@@ -28,7 +28,7 @@ isolation.
   - The cross-user 404 posture on every action + mount.
   - The cadence-flip path (an `approved` series whose
     inferred cadence shifted).
-  - The `RecurringSeriesQuery::occurrencesForSeries` shape
+  - The `RecurringOccurrenceQuery::occurrencesForSeries` shape
     consumed by `DriftAlerts` — the whole `observed_at` DESC
     list, of which `DriftEvaluator` reads the first two.
 
@@ -114,10 +114,6 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `Recurring` module.
-
-## Behavioral contracts
-
 - **Detection never auto-approves a series.** Every detected
   series lands as `pending`; the only path to `approved` is
   the user's explicit `ApproveRecurringSeries` call. The
@@ -168,7 +164,7 @@ The behavioural contract for the `Recurring` module.
   5% floor at evaluation time (not at write time — the user
   can set any value; the evaluator decides the effective
   threshold).
-- **`RecurringSeriesQuery::occurrencesForSeries` is the
+- **`RecurringOccurrenceQuery::occurrencesForSeries` is the
   sanctioned external read of recurring occurrences.** It
   returns every occurrence row for the series ordered
   `observed_at` DESC, and an empty list for a cross-user
@@ -186,7 +182,7 @@ The behavioural contract for the `Recurring` module.
   - `Calendar::SeriesEntryPlacer::seriesStartFloors` — a
     `MIN(observed_at)` per series, joined onto
     `recurring_series`. An aggregate, not a row list.
-  - `Chains::ChainLinkQuery::confirmedAndDeterministicForSeries`
+  - `Chains::ChainLinkQuery::confirmedFundersForSeries`
     — joins the table as an EDGE (`rso.transaction_id =
     chain_links.from_transaction_id`) to find a series' funder
     links. It reads no occurrence field at all.
@@ -194,19 +190,32 @@ The behavioural contract for the `Recurring` module.
     replication rules (`_delete_wins`, the create-required
     set). A registry of every synced table has to name it.
 
-  So the SOLE-external-read invariant this page used to assert
-  was never true, and it is the invariant that is wrong rather
-  than the four call sites. The property actually worth holding
-  is on the WRITE side, where the module really is alone:
+  There is no sole-external-read invariant over this table, and
+  there should not be: each of those four call sites is correct.
+  The property actually worth holding is on the WRITE side, where
+  the module really is alone:
   `Recurring`'s `OccurrenceWriter::write()` is the only
   production writer, its `insertOrIgnore` against the (series,
   transaction) UNIQUE is what makes a re-detection sweep a
   no-op, and that append-only shape is exactly what Sync's
   merge rules for the table depend on — a second writer
   updating rows in place would break replication, whereas a
-  second reader breaks nothing. The only other writer today is
-  `DriftAlerts`' demo seeder. No arch test enforces either
-  side; the write-side one is the one worth adding.
+  second reader breaks nothing. It is now the only writer at
+  all: `DriftAlerts`' demo seeder used to write the table too
+  and only reads it now, deriving each alert's prior price
+  from the newest adjacent pair whose amounts actually differ.
+  `TheOccurrenceLogHasOneAppendOnlyWriterArchTest` enforces the
+  write side in three parts — one appender, no in-place
+  rewrite, deletion confined to `Auth`'s `UserScopedDataPurge`
+  — and fails on its own first assertion if the scan ever
+  stops finding the writer it is named for. That purge is the
+  one place occurrence rows are removed: both the demo reset
+  and Delete Account go through it, and because it discovers
+  its tables off the live schema it clears the log without
+  naming it, so the deletion part scans for that shape too and
+  fails on an empty result as loudly as on an extra one. The
+  read side is still unenforced, and per the paragraph above
+  should stay that way.
 - **`pending_count_for_user` query is a single COUNT
   against `(user_id, state='pending')`.** No JOIN, no aggregation.
   It no longer feeds a badge: the sidebar's Recurring count is the
@@ -261,7 +270,7 @@ The behavioural contract for the `Recurring` module.
     `RecurringSeriesQuery`.
   - [`DriftAlerts`](../drift-alerts/how-to-test.md) — subscribes
     to `MetricsRefreshed`; reads
-    `RecurringSeriesQuery::occurrencesForSeries`, plus
+    `RecurringOccurrenceQuery::occurrencesForSeries`, plus
     `forSeries`, `driftThresholdForSeries`, `forSeriesIds`,
     `statesForSeriesIds` and `displayNamesForSeriesIds`.
   - The app sidebar — reads the active-series count from `Core`'s

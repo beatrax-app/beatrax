@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Vai atzīmēt vēl :count no',
     'batch_after' => '?',
+    'batch_confirm' => 'Vai atzīmēt visus atlikušos darījumus no :name kā attaisnotos izdevumus? Katrs no tiem saņem šo kategoriju un šo piezīmi. Atzīmi pēc tam var noņemt tikai pa vienam darījumam.',
     'batch_tag_all' => 'Atzīmēt visus',
     'batch_dismiss' => 'Aizvērt',
 ];

@@ -1,13 +1,16 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
+@use('Modules\Ledger\Public\ValueObjects\MoneyInput')
 {{--
     Search toolbar — always visible on /transactions.
 
     Contains:
     - Search input (wire:model.live.debounce.250ms="searchQuery")
+    - Phone: "Filters {N}" button on the input's own line, plus "Clear all"
+      there when a search is active
     - Filter chip row (Date / Account / Amount / Category) — desktop
     - Summary strip (.srch-strip) — visible when search is active
-    - "Clear all" link — visible when search is active
-    - Phone: "Filters {N}" button + bottom sheet with stacked filter sections
+    - Phone: the bottom sheet the Filters button opens, with stacked sections
 
     UI-SPEC bindings: § Component Inventory #1 (srch-toolbar), #2 (srch-strip),
     #4 (filter popovers), #5 (phone bottom sheet).
@@ -15,29 +18,57 @@
 --}}
 
 <div class="srch-toolbar">
-    {{-- ─── Search input ─────────────────────────────────────────────── --}}
-    <div class="srch-input-wrap" wire:loading.class="srch-input-wrap--loading" wire:target="searchQuery">
-        <x-core::search-mark class="srch-icon" />
-        <input
-            type="search"
-            wire:model.live.debounce.250ms="searchQuery"
-            placeholder="{{ Lang::get('ledger::list.search.placeholder') }}"
-            class="srch-input hidden md:block"
-            aria-label="{{ Lang::get('ledger::list.search.aria') }}"
-            x-on:keydown.escape="$wire.clearSearch()"
-        />
-        {{-- Phone-specific shorter placeholder --}}
-        <input
-            type="search"
-            wire:model.live.debounce.250ms="searchQuery"
-            placeholder="{{ Lang::get('ledger::list.search.placeholder_short') }}"
-            class="srch-input md:hidden"
-            aria-label="{{ Lang::get('ledger::list.search.aria') }}"
-            x-on:keydown.escape="$wire.clearSearch()"
-        />
-        <span wire:loading wire:target="searchQuery" class="srch-spinner" aria-hidden="true">
-            <x-core::spinner />
-        </span>
+    {{-- ─── Search input, with the phone's Filters button on the same line ─── --}}
+    <div class="srch-input-row">
+        <div class="srch-input-wrap" wire:loading.class="srch-input-wrap--loading" wire:target="searchQuery">
+            <x-core::search-mark class="srch-icon" />
+            <input
+                type="search"
+                wire:model.live.debounce.250ms="searchQuery"
+                placeholder="{{ Lang::get('ledger::list.search.placeholder') }}"
+                class="srch-input hidden md:block"
+                aria-label="{{ Lang::get('ledger::list.search.aria') }}"
+                x-on:keydown.escape="$wire.clearSearch()"
+            />
+            <input
+                type="search"
+                wire:model.live.debounce.250ms="searchQuery"
+                placeholder="{{ Lang::get('ledger::list.search.placeholder_short') }}"
+                class="srch-input md:hidden"
+                aria-label="{{ Lang::get('ledger::list.search.aria') }}"
+                x-on:keydown.escape="$wire.clearSearch()"
+            />
+            <span wire:loading wire:target="searchQuery" class="srch-spinner" aria-hidden="true">
+                <x-core::spinner />
+            </span>
+        </div>
+
+        {{-- The hide sits on this wrapper for the same reason the chip row's
+             does below: .srch-filters-btn sets `display: inline-flex` in
+             unlayered CSS, which outranks Tailwind's layered `md:hidden`, so
+             the button would have stayed on screen beside the desktop input. --}}
+        <div class="md:hidden flex items-center gap-2 srch-phone-filters">
+            {{-- Outside the sheet, not in its slot: everything passed to
+                 x-core::bottom-sheet is rendered inside the panel, which is
+                 display:none until it opens — so the only control that opens the
+                 sheet was hidden inside the sheet. The window-level open-sheet
+                 event is what the panel listens for, so it works from out here. --}}
+            <button
+                type="button"
+                x-on:click="$dispatch('open-sheet', { name: 'search-filters' })"
+                class="srch-filters-btn"
+                aria-label="{{ Lang::get('ledger::list.search.open_filters_aria') }}"
+            >
+                {{ Lang::get('ledger::list.search.filters') }}
+                @if (($activeFilterCount ?? 0) > 0)
+                    <span class="srch-filter-badge">{{ $activeFilterCount }}</span>
+                @endif
+            </button>
+
+            @if ($isSearchMode ?? false)
+                <button type="button" wire:click="clearSearch" class="srch-clear-all">{{ Lang::get('ledger::list.search.clear_all') }}</button>
+            @endif
+        </div>
     </div>
 
     {{-- ─── Filter chips row (desktop ≥768px) ──────────────────────────── --}}
@@ -59,25 +90,10 @@
         </div>
     </div>
 
-    {{-- ─── Phone "Filters {N}" button + bottom sheet (<768px) ────────────── --}}
-    <div class="md:hidden flex items-center gap-2 mt-2">
-        {{-- Outside the sheet, not in its slot: everything passed to
-             x-core::bottom-sheet is rendered inside the panel, which is
-             display:none until it opens — so the only control that opens the
-             sheet was hidden inside the sheet. The window-level open-sheet
-             event is what the panel listens for, so it works from out here. --}}
-        <button
-            type="button"
-            x-on:click="$dispatch('open-sheet', { name: 'search-filters' })"
-            class="srch-filters-btn"
-            aria-label="{{ Lang::get('ledger::list.search.open_filters_aria') }}"
-        >
-            {{ Lang::get('ledger::list.search.filters') }}
-            @if (($activeFilterCount ?? 0) > 0)
-                <span class="srch-filter-badge">{{ $activeFilterCount }}</span>
-            @endif
-        </button>
-
+    {{-- ─── Phone filter bottom sheet (<768px) ─────────────────────────── --}}
+    {{-- The panel only, and it draws no band of its own: scrim and panel are
+         both display:none until the button above opens them. --}}
+    <div class="md:hidden">
         <x-core::bottom-sheet name="search-filters" title="{{ Lang::get('ledger::list.search.filters') }}">
             {{-- Bottom sheet slot content (stacked filter sections) --}}
             <div class="space-y-4">
@@ -86,18 +102,13 @@
                     <p class="srch-sheet-section-label">{{ Lang::get('ledger::list.filter.date_range') }}</p>
                     <div class="srch-sheet-section">
                         <div class="srch-date-presets">
-                            @foreach ([
-                                'this_month' => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()],
-                                'last_month' => [now()->subMonth()->startOfMonth()->toDateString(), now()->subMonth()->endOfMonth()->toDateString()],
-                                'this_year'  => [now()->startOfYear()->toDateString(), now()->endOfYear()->toDateString()],
-                                'last_year'  => [now()->subYear()->startOfYear()->toDateString(), now()->subYear()->endOfYear()->toDateString()],
-                            ] as $presetKey => [$start, $end])
+                            @foreach ($dateRangePresets as $labelKey => [$start, $end])
                                 <button
                                     type="button"
                                     wire:click="$set('filterAfter', '{{ $start }}')"
                                     x-on:click="$wire.$set('filterBefore', '{{ $end }}')"
                                     class="srch-date-preset"
-                                >{{ Lang::get('ledger::list.date_preset.'.$presetKey) }}</button>
+                                >{{ Lang::get($labelKey) }}</button>
                             @endforeach
                         </div>
                         <div class="srch-date-range">
@@ -129,6 +140,12 @@
                     </div>
                 @endif
 
+                @php
+                    // The same currency SearchQuery::applyAmountFilters() reads
+                    // the bound at, so the box cannot step by a fraction the
+                    // parser behind it refuses.
+                    $amountChipCurrency = BaseCurrency::value();
+                @endphp
                 {{-- Amount filter --}}
                 <div>
                     <p class="srch-sheet-section-label">{{ Lang::get('ledger::list.filter.amount') }}</p>
@@ -142,9 +159,9 @@
                             @endforeach
                         </div>
                         <div class="srch-amount-range">
-                            <input type="number" wire:model.live="filterAmountMin" min="0" step="0.01" placeholder="{{ Lang::get('ledger::list.filter.min') }}" class="srch-amount-input" aria-label="{{ Lang::get('ledger::list.filter.min_aria') }}" />
+                            <input type="number" wire:model.live="filterAmountMin" min="0" step="{{ MoneyInput::decimalPlaces($amountChipCurrency) === 0 ? '1' : '0.01' }}" placeholder="{{ Lang::get('ledger::list.filter.min') }}" class="srch-amount-input" aria-label="{{ Lang::get('ledger::list.filter.min_aria') }}" />
                             <span class="srch-date-sep">–</span>
-                            <input type="number" wire:model.live="filterAmountMax" min="0" step="0.01" placeholder="{{ Lang::get('ledger::list.filter.max') }}" class="srch-amount-input" aria-label="{{ Lang::get('ledger::list.filter.max_aria') }}" />
+                            <input type="number" wire:model.live="filterAmountMax" min="0" step="{{ MoneyInput::decimalPlaces($amountChipCurrency) === 0 ? '1' : '0.01' }}" placeholder="{{ Lang::get('ledger::list.filter.max') }}" class="srch-amount-input" aria-label="{{ Lang::get('ledger::list.filter.max_aria') }}" />
                         </div>
                     </div>
                 </div>
@@ -154,6 +171,10 @@
                     <div>
                         <p class="srch-sheet-section-label">{{ Lang::get('ledger::list.filter.category') }}</p>
                         <div class="srch-sheet-section">
+                            <label class="srch-check-row">
+                                <input type="checkbox" wire:model.live="filterUncategorized" class="srch-checkbox" />
+                                <span>{{ Lang::get('ledger::common.uncategorized') }}</span>
+                            </label>
                             @foreach ($availableCategories as $category)
                                 <label class="srch-check-row">
                                     <input
@@ -185,10 +206,6 @@
                 >{{ Lang::get('ledger::list.search.clear') }}</button>
             </div>
         </x-core::bottom-sheet>
-
-        @if ($isSearchMode ?? false)
-            <button type="button" wire:click="clearSearch" class="srch-clear-all">{{ Lang::get('ledger::list.search.clear_all') }}</button>
-        @endif
     </div>
 
     {{-- ─── Summary strip (.srch-strip) — visible when search is active ── --}}
@@ -207,6 +224,9 @@
             @else
                 {{ $countLabel }} {{ Lang::get('ledger::list.search.matching_suffix') }}
                 &middot; {{ $flow }}
+            @endif
+            @if ($searchUnconverted !== '')
+                <span data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $searchUnconverted]) }}</span>
             @endif
         </div>
     @endif

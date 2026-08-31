@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Wzorzec jest wymagany.',
         'name_required' => 'Nazwa jest wymagana.',
+        'browser_refused' => 'Nie udało się otworzyć przeglądarki, więc nic nie zostało wysłane i nic nie opuściło tego urządzenia. Spróbuj ponownie albo samodzielnie wklej powyższy podgląd YAML do pull requesta.',
     ],
 ];

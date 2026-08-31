@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'serie',
 
+    'template' => [
+        'cancel' => 'Si opp :name',
+        'change_amount' => 'Endre beløpet for :name',
+    ],
+
     'summary' => [
         'cancel' => 'Si opp :name',
         'series_fallback' => 'serie #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenarioet har fått nytt navn.',
         'mutation_added' => 'Endringen er lagt til.',
         'mutation_updated' => 'Endringen er oppdatert.',
-        'mutation_removed' => 'Endringen er fjernet. Angre',
+        'mutation_removed' => 'Endringen er fjernet.',
     ],
 
     'errors' => [
         'name_empty' => 'Scenarionavnet kan ikke være tomt.',
         'name_too_long' => 'Scenarionavnet kan være på høyst :max tegn.|Scenarionavnet kan være på høyst :max tegn.',
         'name_taken' => 'Det finnes allerede et scenario med det navnet.',
+        'date_out_of_range' => 'Datoen ligger utenfor enhver prognosehorisont — fra i dag til :days dag fram — så scenarioet ville ikke endre noe.|Datoen ligger utenfor enhver prognosehorisont — fra i dag til :days dager fram — så scenarioet ville ikke endre noe.',
         'pick_kind_first' => 'Velg først en type endring.',
         'amount_positive' => 'Beløpet må være et positivt tall.',
+        'scenario_gone' => 'Dette scenariet finnes ikke lenger — det ble slettet et annet sted. Velg et annet scenario, eller lag et nytt.',
+        'mutation_gone' => 'Denne endringen finnes ikke lenger — den ble fjernet et annet sted. Lukk redigeringsvinduet og legg den til på nytt hvis du fortsatt vil ha den.',
     ],
 ];

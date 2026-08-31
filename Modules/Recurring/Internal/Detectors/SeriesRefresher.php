@@ -13,6 +13,7 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
+use Modules\Sync\Public\Events\EntityMutated;
 
 final readonly class SeriesRefresher
 {
@@ -47,6 +48,7 @@ final readonly class SeriesRefresher
             'monthly_equivalent_minor' => $detected->monthlyEquivalentMinor,
             'next_expected_at' => $detected->nextExpectedAt?->toDateString(),
             'next_expected_confidence_low' => $detected->confidenceLow,
+            'billing_day' => $detected->billingDay,
             'updated_at' => $this->clock->now()->toDateTimeString(),
         ];
 
@@ -57,6 +59,19 @@ final readonly class SeriesRefresher
         $this->db->connection()->table('recurring_series')
             ->where('id', $seriesId)
             ->update($columns);
+
+        // `updated_at` is stamped by whichever device applies the op, so
+        // putting this device's clock on the wire would only overwrite it.
+        $mutated = $columns;
+        unset($mutated['updated_at']);
+
+        $this->events->dispatch(new EntityMutated(
+            table: 'recurring_series',
+            pk: $seriesId,
+            userId: $user->id,
+            mutationType: 'edit',
+            dirtyFields: $mutated,
+        ));
 
         $this->occurrences->write($user->id, $seriesId, $detected->rows, $detected->currency);
 

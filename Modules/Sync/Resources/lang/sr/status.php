@@ -5,8 +5,9 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Uklonjeni uređaj',
     'dismiss_peer' => 'Odbaci ovaj uređaj',
+    'dismiss_peer_caption' => 'Odbaci',
     'dismiss_stale' => 'Očisti uređaje koji više nisu upareni',
-    'not_synced_yet' => 'Још није синхронизовано',
+    'not_synced_yet' => 'Još nije sinhronizovano',
     'error' => 'Greška sinhronizacije na jednom ili više uređaja',
     'syncing' => 'Sinhronizacija…',
     'offline' => 'Uređaji van mreže',

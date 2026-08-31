@@ -11,6 +11,7 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
+use Modules\Ledger\Public\Support\CategoryPathName;
 
 uses(RefreshDatabase::class);
 
@@ -42,7 +43,7 @@ it('returns a first-run DashboardSummary when the user has zero transactions', f
     expect($summary->outflow->toMinor())->toBe(0);
     expect($summary->net->toMinor())->toBe(0);
     expect($summary->inflow->currency())->toBe('EUR');
-    expect($summary->topCategories)->toBe([]);
+    expect($summary->topCategories->rows)->toBe([]);
     expect($summary->recentTransactions)->toBe([]);
     expect($summary->uncategorizedCount)->toBe(0);
 });
@@ -71,7 +72,7 @@ it('aggregates inflow / outflow / net for the current period', function (): void
     expect($summary->outflow->toMinor())->toBe(1299 + 2500 + 7300 + 1100 + 2000);
     expect($summary->net->toMinor())->toBe(($summary->inflow->toMinor()) - ($summary->outflow->toMinor()));
     expect($summary->recentTransactions)->toHaveCount(10);
-    expect($summary->topCategories)->toBe([]);
+    expect($summary->topCategories->rows)->toBe([]);
 });
 
 it('ignores transactions outside the current period window', function (): void {
@@ -220,15 +221,15 @@ it('returns top categories sorted by spend descending with percentageOfTotal sum
     $period = $this->periods->current();
     $summary = $this->query->for($this->user, $period);
 
-    expect($summary->topCategories)->toHaveCount(3);
-    expect($summary->topCategories[0]->name)->toBe('Groceries');
-    expect($summary->topCategories[0]->spend->toMinor())->toBe(8000);
-    expect($summary->topCategories[1]->name)->toBe('Subscriptions');
-    expect($summary->topCategories[1]->spend->toMinor())->toBe(2000);
-    expect($summary->topCategories[2]->name)->toBe('Transport');
-    expect($summary->topCategories[2]->spend->toMinor())->toBe(1000);
+    expect($summary->topCategories->rows)->toHaveCount(3);
+    expect($summary->topCategories->rows[0]->name)->toBe('Groceries');
+    expect($summary->topCategories->rows[0]->spend->toMinor())->toBe(8000);
+    expect($summary->topCategories->rows[1]->name)->toBe('Subscriptions');
+    expect($summary->topCategories->rows[1]->spend->toMinor())->toBe(2000);
+    expect($summary->topCategories->rows[2]->name)->toBe('Transport');
+    expect($summary->topCategories->rows[2]->spend->toMinor())->toBe(1000);
 
-    $total = array_sum(array_map(fn ($row) => $row->percentageOfTotal, $summary->topCategories));
+    $total = array_sum(array_map(fn ($row) => $row->percentageOfTotal, $summary->topCategories->rows));
     expect(abs($total - 1.0))->toBeLessThan(0.0001);
 });
 
@@ -268,8 +269,8 @@ it('does not surface a foreign user\'s parent name in the breadcrumb', function 
     $period = $this->periods->current();
     $summary = $this->query->for($this->user, $period);
 
-    expect($summary->topCategories)->toHaveCount(1);
-    expect($summary->topCategories[0]->name)->toBe('Local Leaf');
+    expect($summary->topCategories->rows)->toHaveCount(1);
+    expect($summary->topCategories->rows[0]->name)->toBe('Local Leaf');
 });
 
 it('does not probe categories beyond a filtered-out parent in the walk', function (): void {
@@ -330,8 +331,8 @@ it('does not probe categories beyond a filtered-out parent in the walk', functio
     // Two batches: the leaf, then the foreign mid (0 rows). The global root
     // behind the filtered-out mid is never enqueued.
     expect($categoriesQueries)->toHaveCount(2);
-    expect($summary->topCategories)->toHaveCount(1);
-    expect($summary->topCategories[0]->name)->toBe('Local Leaf');
+    expect($summary->topCategories->rows)->toHaveCount(1);
+    expect($summary->topCategories->rows[0]->name)->toBe('Local Leaf');
 
     $connection->disableQueryLog();
 });
@@ -365,5 +366,5 @@ it('renders the full category path for nested categories', function (): void {
     $period = $this->periods->current();
     $summary = $this->query->for($this->user, $period);
 
-    expect($summary->topCategories[0]->name)->toBe('Subscriptions / Streaming');
+    expect($summary->topCategories->rows[0]->name)->toBe('Subscriptions'.CategoryPathName::SEPARATOR.'Streaming');
 });

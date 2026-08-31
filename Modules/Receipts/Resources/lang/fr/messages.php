@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Dépose un message e-mail (.eml) ou une archive de boîte aux lettres (.mbox). Le moteur de correspondance reconnaît les reçus PayPal et les fait remonter comme transactions canoniques ; les expéditeurs non reconnus restent dans le journal d\'audit pour triage.',
-    ],
-
     'conflict' => [
         'field' => [
             'amount_minor' => 'le montant',

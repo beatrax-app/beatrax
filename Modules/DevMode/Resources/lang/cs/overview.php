@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Provozní plocha vestavěné vývojářské konzole.',
     'worker_heartbeat' => 'Heartbeat workeru',
     'not_running' => 'NEBĚŽÍ',
+    'heartbeat_age' => 'před :count s · ttl :ttl s|před :count s · ttl :ttl s|před :count s · ttl :ttl s',
     'queue' => 'Fronta',
     'pending' => 'čeká',
     'failed' => 'selhalo',

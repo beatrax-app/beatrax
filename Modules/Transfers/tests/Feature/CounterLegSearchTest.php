@@ -257,8 +257,8 @@ it('accepts either transfer type as a candidate, not only the opposite of the fi
 });
 
 it('refuses to pair a zero-amount leg with itself when its counterparty IBAN is its own account', function (): void {
-    // Its own negation is its own amount, so every predicate but the id guard
-    // lets this row answer its own search.
+    // Its own negation is its own amount, so nothing about the row itself
+    // separates it from the partner it is looking for.
     $selfReferential = counterLegPinTx($this->user, $this->asn, $this->run, [
         'type' => TransactionType::TransferOut->value,
         'amount_minor' => 0,

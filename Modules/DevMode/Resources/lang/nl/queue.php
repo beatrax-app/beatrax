@@ -14,12 +14,13 @@ return [
     'bulk_delete' => ':count job verwijderen|:count jobs verwijderen',
     'empty_pending' => 'Wachtrij is leeg.',
     'empty_failed' => 'Geen mislukte jobs.',
-    'empty_batches' => 'Geen actieve batches.',
+    'empty_batches' => 'Geen batches.',
     'select_aria' => 'Selecteren',
     'select_row_aria' => 'Selecteer regel :key',
     'col_id' => 'Id',
     'col_queue' => 'Wachtrij',
     'col_attempts' => 'Pogingen',
+    'col_state' => 'Status',
     'col_created' => 'Aangemaakt',
     'col_uuid' => 'UUID',
     'col_failed' => 'Mislukt',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'In behandeling',
     'col_actions' => 'Acties',
     'delete_job' => 'Job verwijderen',
+    'worker_running' => 'Worker voert dit uit',
     'delete_pending_confirm' => 'Job in behandeling #:key verwijderen?',
     'retry_job' => 'Job opnieuw proberen',
     'forget_confirm' => 'Mislukte job :uuid verwijderen?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'De geselecteerde mislukte jobs worden opnieuw in de wachtrij gezet zodat de worker ze opnieuw probeert.',
     'cancel' => 'Annuleren',
 
+    'state' => [
+        'available' => 'Beschikbaar',
+        'reserved' => 'Gereserveerd',
+        'scheduled' => 'Gepland',
+    ],
+
     'tab' => [
         'pending' => 'In behandeling',
         'failed' => 'Mislukt',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Job in behandeling verwijderd',
+        'pending_already_gone' => 'Die taak was al weg',
         'failed_requeued' => 'Mislukte job opnieuw in de wachtrij gezet',
         'failed_removed' => 'Mislukte job verwijderd',
         'batch_cancelled' => 'Batch geannuleerd',
         'batch_deleted' => 'Batch verwijderd',
         'batch_failures_requeued' => 'Mislukte batchjobs opnieuw in de wachtrij gezet',
+        'batch_failures_none' => 'Geen mislukkingen meer in deze batch om opnieuw in de wachtrij te zetten',
         'failed_jobs_requeued' => 'Mislukte jobs opnieuw in de wachtrij gezet',
+        'failed_jobs_none' => 'Geen mislukte taken meer om opnieuw in de wachtrij te zetten',
         'bulk_refused' => 'Bulkverwijdering geweigerd — :reason',
         'rows_deleted' => 'Geselecteerde regels verwijderd',
     ],

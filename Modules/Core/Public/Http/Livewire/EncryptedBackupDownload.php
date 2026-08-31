@@ -10,18 +10,22 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
+use Modules\Core\Internal\Backup\BackupKeyMaterial;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SqliteDatabase;
+use Modules\Mobile\Public\Enums\FileExportOutcome;
+use Modules\Mobile\Public\Services\ShareSheetExport;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 final class EncryptedBackupDownload extends Component
 {
-    private const MIN_PASSPHRASE_LENGTH = 8;
+    private const int MIN_PASSPHRASE_LENGTH = 8;
 
     public string $passphrase = '';
 
@@ -29,13 +33,18 @@ final class EncryptedBackupDownload extends Component
 
     public string $error = '';
 
+    public string $notice = '';
+
     public function download(
         DatabaseManager $db,
         Repository $config,
         FileEncryptor $encryptor,
         Clock $clock,
         ResponseFactory $responses,
+        ShareSheetExport $shareSheet,
+        BackupKeyMaterial $keyMaterial,
     ): ?BinaryFileResponse {
+        $this->notice = '';
         $this->error = $this->downloadValidationError($config);
         if ($this->error !== '') {
             return null;
@@ -65,11 +74,21 @@ final class EncryptedBackupDownload extends Component
             // db:backup's chmod 0600.
             @chmod($plainPath, 0600);
 
+            // Before the encrypt, because a snapshot that leaves without it is
+            // a copy of ciphertext for anyone whose columns are sealed: the
+            // keys live in a file beside the database, not inside it.
+            $keyMaterial->packInto($plainPath);
+
             $encryptor->encrypt($plainPath, $encPath, $this->passphrase);
         } catch (Throwable $e) {
             @unlink($plainPath);
             @unlink($encPath);
-            $this->error = Lang::get('core::backup.errors.create_failed', ['message' => $e->getMessage()]);
+            // Its own sentence is a developer's, in one language, and the I/O
+            // failures in it carry an absolute path. The class name says what
+            // failed and is quotable in every locale.
+            $this->error = Lang::get('core::backup.errors.create_failed', [
+                'message' => SafeExceptionContext::shortName($e),
+            ]);
 
             return null;
         } finally {
@@ -80,21 +99,45 @@ final class EncryptedBackupDownload extends Component
 
         $this->reset('passphrase', 'confirmPassphrase');
 
+        $filename = 'beatrax-backup-'.$stamp.'.sqlite.enc';
+
+        if ($shareSheet->replacesWebViewDownload()) {
+            return $this->handToShareSheet($shareSheet, $encPath, $filename);
+        }
+
         return $responses->download(
             $encPath,
-            'beatrax-backup-'.$stamp.'.sqlite.enc',
+            $filename,
             ['Content-Type' => 'application/octet-stream'],
         )->deleteFileAfterSend();
     }
 
-    public function render(ViewFactory $views, Repository $config): View
+    // Nothing is sent back: the response a shell like this would have received
+    // goes nowhere and deleteFileAfterSend() would then destroy the only copy.
+    // A refused handover takes the encrypted file with it, so the container
+    // does not silently accumulate whole databases nobody can reach.
+    private function handToShareSheet(ShareSheetExport $shareSheet, string $encPath, string $filename): null
+    {
+        $outcome = $shareSheet->exportFile($encPath, $filename);
+
+        if ($outcome === FileExportOutcome::Shared) {
+            $this->notice = $outcome->message();
+        } else {
+            @unlink($encPath);
+            $this->error = $outcome->message();
+        }
+
+        return null;
+    }
+
+    public function render(ViewFactory $views, Repository $config, ShareSheetExport $shareSheet): View
     {
         return $views->make('core::livewire.encrypted-backup-download', [
             'sqliteOnly' => SqliteDatabase::isSqliteBuild($config),
             // A BinaryFileResponse is only a backup where the shell saves what
-            // its WebView downloads. Where it does not, the response goes
-            // nowhere and deleteFileAfterSend() removes the file behind it.
-            'savesDownloads' => UserDataPathService::platform()?->savesWebViewDownloads() !== false,
+            // its WebView downloads. Where it does not the OS share sheet is
+            // the route, and only a shell without one has nothing to offer.
+            'canDeliver' => ! $shareSheet->replacesWebViewDownload() || $shareSheet->isAvailable(),
         ]);
     }
 

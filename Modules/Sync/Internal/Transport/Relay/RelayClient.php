@@ -11,7 +11,7 @@ use Psr\Log\LoggerInterface;
 
 final readonly class RelayClient
 {
-    private const TIMEOUT_SECONDS = 10;
+    private const int TIMEOUT_SECONDS = 10;
 
     // 64 KB TransportFramer ceiling + 1 KB headroom for AEAD/Noise overhead.
     // RelayServeCommand mirrors this exact constant server-side so a caller

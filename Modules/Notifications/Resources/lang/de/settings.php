@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Worüber du benachrichtigt wirst',
+    'background_note' => 'Beatrax bereitet diese vor, solange die App offen ist. Ein geplanter Lauf im Hintergrund kann das nicht — die App-Sperre hält den einzigen Schlüssel —, deshalb wird Fälliges nachgeholt, während du die App weiter benutzt.',
+    'background_note_phone' => 'Beatrax bereitet diese vor, solange die App offen ist. Im Hintergrund geht das nicht — die App-Sperre hält den einzigen Schlüssel —, deshalb kommt Fälliges beim nächsten Öffnen der App an.',
 
     'reminders' => [
         'label' => 'Zahlungserinnerungen',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Details in Benachrichtigungen verbergen',
-        'help' => 'Beträge und Händlernamen im Benachrichtigungsbanner selbst anzeigen. Schalte das aus, wenn andere deinen Bildschirm sehen könnten.',
+        'help' => 'Beträge und Händlernamen im Benachrichtigungsbanner selbst verbergen. Schalte das ein, wenn andere deinen Bildschirm sehen könnten.',
     ],
 
     'save' => 'Benachrichtigungseinstellungen speichern',

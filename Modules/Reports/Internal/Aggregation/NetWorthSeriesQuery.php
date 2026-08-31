@@ -21,20 +21,16 @@ use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
 use Modules\Reports\Internal\Enums\ReportGranularity;
 use stdClass;
 
-final class NetWorthSeriesQuery
+final readonly class NetWorthSeriesQuery
 {
     use CoercesScalars;
 
-    // Must match Forecasting's NetWorthQuery::EXCLUDED_KINDS exactly, so
-    // this series' account set stays consistent with the dashboard card.
-    private const EXCLUDED_KINDS = [AccountKind::PaypalFunding->value];
-
     public function __construct(
-        private readonly AccountBalanceQuery $accountBalanceQuery,
-        private readonly ExchangeRateService $fx,
-        private readonly DatabaseManager $db,
-        private readonly TimeBucketGenerator $timeBucketGenerator,
-        private readonly BaseCurrency $baseCurrency,
+        private AccountBalanceQuery $accountBalanceQuery,
+        private ExchangeRateService $fx,
+        private DatabaseManager $db,
+        private TimeBucketGenerator $timeBucketGenerator,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     // Only the account filter is honoured. Net worth is a balance, not a set of
@@ -49,10 +45,13 @@ final class NetWorthSeriesQuery
         $buckets = $this->timeBucketGenerator->generate($period, $granularity ?? ReportGranularity::default());
         $baseCurrency = $this->baseCurrency->forUser($user);
 
+        // The same set the dashboard card reads, asked of the same enum rather
+        // than of a copy of its list: the series is the card plotted over time,
+        // so a kind either surface counts alone is a step with no cause.
         /** @var Collection<int, stdClass> $accounts */
         $accounts = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
-            ->whereNotIn('kind', self::EXCLUDED_KINDS)
+            ->whereNotIn('kind', AccountKind::mirrorValues())
             ->when($filters->accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('id', $filters->accountIds))
             ->orderBy('id')
             ->get(['id']);

@@ -14,7 +14,7 @@ use Native\Desktop\System;
 // machine's keychain and a live Touch ID authentication.
 final readonly class DesktopColdStartVault implements ColdStartVault
 {
-    private const FILE_PREFIX = 'coldstart-datakey-';
+    private const string FILE_PREFIX = 'coldstart-datakey-';
 
     public function __construct(
         private NativeBiometricUnlock $biometrics,

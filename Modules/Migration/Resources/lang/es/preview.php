@@ -16,7 +16,9 @@ return [
         'budget' => 'Meses de presupuesto',
     ],
 
-    'all_clean' => 'Todo se ha asignado sin problemas: no hay nada que revisar antes de confirmar.',
+    'all_clean' => 'Todo se ha asignado sin problemas: aquí no hay nada que decidir.',
+
+    'nothing_staged' => 'Esta exportación no contenía nada que importar: aquí no hay nada que confirmar.',
 
     'groups' => [
         'conflict' => 'Necesita tu decisión',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Esto creará o actualizará las cantidades indicadas arriba en tus categorías, tus presupuestos y tu libro mayor.',
     'discard_button' => 'Descartar la importación',
+    'discard_confirm' => '¿Descartar esta importación? Todo lo que se ha leído de tu archivo de exportación se elimina aquí, y recuperarlo significa volver a subir y procesar el archivo entero. A tu libro mayor todavía no ha llegado nada.',
     'confirm_button' => 'Confirmar la importación',
 ];

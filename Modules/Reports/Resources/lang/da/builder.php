@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Ikke kategoriseret',
+    'no_counterparty' => 'Ingen modpart',
+    'unavailable_counterparty' => 'Modpart findes ikke på denne enhed',
     'title' => 'Rapporter',
     'page_title' => 'Rapporter · Beatrax',
     'subtitle' => 'Sammensæt en rapport ud fra dine transaktioner.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Diagram i :currency — :list vises ikke',
+        'undrawn' => 'Ikke i ringen — :amount går den anden vej',
         'bar_title' => 'Klik på en søjle for at se dens transaktioner',
         'line_title' => 'Klik på et punkt for at se dets transaktioner',
         'donut_title' => 'Klik på et segment for at se dets transaktioner',

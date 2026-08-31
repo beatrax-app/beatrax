@@ -46,17 +46,16 @@ read-model queries the UI consumes:
 
 - **Contracts/** — `AssignsCategory` (the manual-categorise write path),
   `AppliesAutoCategory` (the ImportPipeline-stage contract).
-- **Actions/** — `AssignCategory` (default `AssignsCategory` impl),
-  `CreateCategorizationRule`, `UpdateCategorizationRule`,
-  `DeleteCategorizationRule`.
+- **Actions/** — `CreateCategorizationRule`, `UpdateCategorizationRule`,
+  `DeleteCategorizationRule`. The default `AssignsCategory` implementation
+  is `Internal/Actions/AssignCategory`: the contract is the seam, so the
+  class it binds to is nobody else's business.
 - **DTOs/** — `AutoCategorizationOutcomeDto` (returned by the
   ImportPipeline stage), `CategorizationRuleDto`, `CategoryOption`,
   `MerchantMemoryDto`, `TriageBatch`, `TriageRow`.
 - **Events/** — `TransactionCategorized` (raised on every successful
   categorisation; `Categorization` itself listens to update merchant
-  memory; other modules MAY listen), `CategorizationDiverged` (raised
-  when a manual reclassify contradicts a still-active rule; the
-  `CorrectionDivergenceToast` SFC consumes it).
+  memory; other modules MAY listen).
 - **Services/** — `UncategorizedTriageQuery`, `CategoryOptionsQuery`,
   `CategorizationRuleQuery`, `MerchantMemoryQuery` (read-side queries
   for the Livewire pages, all `BelongsToUser`-scoped).
@@ -75,8 +74,7 @@ read-model queries the UI consumes:
   - `MerchantMemoryWriter` — the three listeners that wire the module
   into `UserInstalled` and `TransactionCategorized`.
 - **Internal/Http/Livewire/** — `TriageInbox`, `InlineCategoryPicker`,
-  `RulesPage`, `RuleFormModal`, `CategorizationProvenancePanel`,
-  `CorrectionDivergenceToast`.
+  `RulesPage`, `RuleFormModal`, `CategorizationProvenancePanel`.
 
 The arch invariant `noCategorizationWritesTransactions` keeps the module
 honest: only `AssignCategory` (via Ledger) and `ApplyAutoCategoryStage`
@@ -96,11 +94,10 @@ honest: only `AssignCategory` (via Ledger) and `ApplyAutoCategoryStage`
   `hits_count` counter atomically with an `UPDATE … SET hits_count =
   hits_count + 1` so the `/rules` table can show how often each rule
   has actually fired.
-- `AssignCategory` — the manual-categorise write path. Reads prior
-  `auto_category_provenance`, delegates the write to Ledger's
-  `UpdatesTransactionCategory`, then dispatches `TransactionCategorized`
-  and conditionally `CategorizationDiverged` (when the user's manual
-  pick contradicts a still-active rule).
+- `AssignCategory` — the manual-categorise write path. Delegates the
+  write to Ledger's `UpdatesTransactionCategory`, dispatches
+  `TransactionCategorized`, and stamps `field_provenance` so the column
+  records that a reader chose this category.
 - `MerchantMemoryWriter` — listens for `TransactionCategorized`, upserts
   `(user_id, merchant_id, category_id)` into `merchant_memories`, and
   bumps `occurrence_count` so the per-user memory weight grows with
@@ -141,9 +138,9 @@ honest: only `AssignCategory` (via Ledger) and `ApplyAutoCategoryStage`
   `position` orders this rule's actions' application (last-writer-wins
   across shared fields).
 - **`AutoCategorizationOutcomeDto`** — three branches: `auto(...)` (a
-  rule or merchant-memory row won, `ruleId`/`memoryId` preserved for
-  the correction-divergence flow), `manual(...)` (no candidate scored
-  above threshold, the row surfaces on `/uncategorized`). The wrapped
+  rule or merchant-memory row won, `ruleId`/`memoryId` preserved so the
+  provenance panel can name what fired), `manual(...)` (no candidate
+  scored above threshold, the row surfaces on `/uncategorized`). The wrapped
   `CanonicalTransaction` carries the row through to the writer.
 
 ## Rule CRUD actions: validation + IDOR guards
@@ -301,6 +298,22 @@ and touches only `categorization_rules.active`; a global (unowned,
 defensive no-op, since neither module exposes a delete path for a
 global row today.
 
+**The model event alone was not enough for counterparties.**
+`CounterpartyGarbageCollectorJob::pruneOrphans()` is the only thing in
+production that ever deletes a `counterparties` row, and it deletes
+through the query builder — which fires no Eloquent model event at all.
+The `eloquent.deleting` arm was therefore unreachable on a real install:
+only a test calling `$counterparty->delete()` ever entered it, and a
+pruned merchant left its rule active on a dangling id, silently doing
+nothing on every later re-apply while `/rules` still showed it as on.
+`handleCounterpartyPruned()` closes it by listening for the
+`Sync\Public\Events\EntityMutated` announcement that same write already
+makes (`table = 'counterparties'`, `mutationType = 'delete'`), which
+keeps the coupling at the raw table name rather than importing the model.
+Both arms are kept: the model event still covers any future Eloquent
+delete path. `ARulePointingAtAPrunedCounterpartyTest` (in
+`Counterparties`) runs the collector for real and pins the outcome.
+
 ## Merchant memory growth
 
 `MerchantMemoryWriter` listens for `TransactionCategorized` and grows
@@ -415,11 +428,41 @@ transaction detail page) takes the other entry point:
 
 ```
 Livewire pick → AssignCategory($transactionId, $categoryId, $user)
-  → read prior auto_category_provenance
   → UpdatesTransactionCategory (Ledger — sole transactions writer)
   → dispatch TransactionCategorized
        → MerchantMemoryWriter upserts memory + bumps occurrence_count
-  → if prior provenance was a rule AND new category ≠ rule.category_id:
-       dispatch CategorizationDiverged
-       → CorrectionDivergenceToast renders Update rule / Keep current
+  → stamp field_provenance category_id = manual
 ```
+
+## One surface for the divergence conversation
+
+`CategorizationProvenancePanel` is the only place a reader is asked
+whether a rule should change. It mounts inline on the transaction
+detail page and reads `auto_category_provenance` on render: when the
+row was categorised by a rule it draws "Rule that fired", the
+condition and the category it chose, and offers **Update rule** (which
+opens `RuleFormModal` on that rule) or **Remove rule**. Keeping the
+rule as it stands is the default, so it needs no control.
+
+The question is attached to the transaction rather than to the moment
+of the correction, so it survives the reader closing the page and is
+still there on the next visit. A correction made from the transactions
+list or the triage inbox does not raise it on the spot: the reader
+meets it when they open that transaction. Two earlier pieces tried to
+raise it from a distance instead, and both are gone:
+
+- `CorrectionDivergenceToast` was a globally mounted toast listening
+  for a Livewire-local `correction-divergence:fire`. Only a
+  `reclassifyCategory()` action on Ledger's transaction detail page
+  ever dispatched it, no control reached that action, and removing it
+  left the toast unreachable — while still costing a Livewire
+  component mount on every authenticated page render.
+- `CategorizationDiverged` was a framework event `AssignCategory`
+  raised when a manual pick contradicted a still-active rule. A
+  framework event cannot reach a Livewire component in the browser, so
+  nothing ever subscribed to it; raising it cost an extra
+  `auto_category_provenance` read on every manual assignment.
+
+Retiring both leaves the panel's own render-time read as the single
+path from provenance to the question, which is why
+`AssignCategory::readPriorProvenance()` stays public and static.

@@ -31,7 +31,7 @@ return [
     ],
 
     'toast' => [
-        'dismissed' => 'Odbačeno — Poništi',
+        'dismissed' => 'Odbačeno',
         'restored' => 'Vraćeno',
     ],
 ];

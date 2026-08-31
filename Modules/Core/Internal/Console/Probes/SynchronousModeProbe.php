@@ -7,10 +7,10 @@ namespace Modules\Core\Internal\Console\Probes;
 use Illuminate\Database\DatabaseManager;
 use Throwable;
 
-final class SynchronousModeProbe implements Probe
+final readonly class SynchronousModeProbe implements Probe
 {
     public function __construct(
-        private readonly DatabaseManager $db,
+        private DatabaseManager $db,
     ) {}
 
     public function label(): string

@@ -2,7 +2,6 @@
 
 The `Search` module gives the app full-text search over every retained
 transaction: an FTS5 trigram index over counterparty name + description
-
 + tax note, kept in lockstep with every write, powering both the
 `/transactions` search-and-filter surface and the ⌘K command-palette
 server endpoint.
@@ -22,6 +21,26 @@ What the module explicitly does NOT do:
   Ledger-owned; this module only maintains a derived search document.
 + It never introduces a second money type — amount-query matching
   reads `transactions.amount_minor`/`settled_amount_minor` directly.
+  A typed amount — the `amount:` token, the `amount_min`/`amount_max`
+  filters, and a bare number in the text box — is scaled at the
+  **reader's own** currency through `BaseCurrency::forUser()`, not at a
+  hard two decimals. A yen has no minor unit, so "20" became 2 000 of
+  them: a JPY reader asking for "at least 20" lost every charge under
+  ¥2 000, and the report row that opens this very list had already read
+  the same figure as twenty yen. Pinned from both sides, by
+  `AnAmountBoundIsReadAtTheReadersOwnScaleTest` here and by
+  `ADrilldownCarriesTheFiltersTheFigureWasNarrowedByTest` in `Reports`.
++ It never writes its own shape check for a money string. Three regexes
+  used to gate a typed figure on `\d{1,2}` before the parser saw it —
+  one in `QueryParser` for the `amount:` token, two in `SearchQuery` —
+  so a yen reader's `"12.50"` cleared the gate, failed the parse behind
+  it, and the `?? 0` that caught the null searched for an amount of
+  zero; a dinar's `amount:12.500-13.000` was truncated to `12.50`.
+  `MoneyInput::tryToMinor()` IS the gate for the bare-number branch, and
+  the token regex takes its fraction width from
+  `MoneyInput::decimalPlaces()` at the reader's base
+  ([minor units](../ledger/minor-units-and-zero-decimal-currencies.md#the-box-has-to-invite-the-shape-it-accepts)).
+  `AYenReaderTypingAnAmountSearchesThatAmountTest` covers both.
 + It never blocks a write on indexing failure being swallowed — the
   writer never catches; a failed FTS upsert rolls back the same
   import-chunk transaction that produced it, so the index and the
@@ -43,7 +62,10 @@ What the module explicitly does NOT do:
   + `SearchFilters` — mirrors `TransactionsList`'s `#[Url]` filter
     property set (accounts/categories/counterparties/date/amount).
   + `SearchResultPage` — mirrors `TransactionListPage`, extended with
-    settled-EUR aggregate totals and an optional "did you mean" string.
+    aggregate totals in the reader's own base currency, the codes those
+    totals left out for want of a rate (`isPartial()` /
+    `unconvertedList()`, rendered in the search strip), and an optional
+    "did you mean" string.
   + `SearchRowDto` — mirrors `TransactionRowDto`, extended with
     sentinel-marked `highlightedCounterparty`/`snippet` HTML.
 + **Services/**
@@ -57,20 +79,41 @@ What the module explicitly does NOT do:
   implementing `SearchIndexWriterContract`.
 + **Internal/Services/QueryParser** — extracts `account:`/`after:`/
   `before:`/`amount:`/`category:` typed tokens; the remainder becomes
-  the FTS text query.
+  the FTS text query. `parse()` takes the reader's currency because the
+  `amount:` token's fraction is that currency's.
++ **Internal/Services/SearchTokenFilters** — resolves what `QueryParser`
+  pulled out of the query into filter values: account and category names
+  to ids (`NO_SUCH_ID` when a token matches nothing, so an unresolvable
+  token narrows the search rather than widening it to the whole history),
+  and an `amount:` token to its min/max pair at the reader's own scale.
 + **Internal/Services/EntityNameSearch** — name-only search across
   counterparties, categories, goals, pots, and recurring series for
   the palette's entity section. Goals, pots and series are `LIKE`-
-  matched in SQL; counterparties are decrypt-then-substring matched in
-  PHP because `display_name` is ciphertext once encryption is enabled;
+  matched in SQL; counterparties are decrypt-then-resolve-then-substring
+  matched in PHP because `display_name` is ciphertext once encryption is
+  enabled *and*, for a row the app had to name itself, stores English
+  while the reader sees a translation (see
+  [the app's own words](../counterparties/resolution-chain.md#the-apps-own-words-for-a-row-it-had-to-name));
   categories are resolve-then-substring matched in PHP because a
   default category's stored name is English while the reader sees a
   translation (see [category display names](../ledger/category-display-names.md)).
+  Both the stored word and the reader's are matched, and only the
+  reader's is shown. The counterparty read is one statement over the
+  reader's own rows, and resolving the app's word adds neither a
+  statement nor a row —
+  `Modules/Search/tests/Feature/APlaceholderCounterpartyIsFoundByTheReadersOwnWordTest.php`
+  pins that at 1 statement / 601 rows over 1001 counterparties.
 + **Internal/Services/DidYouMeanSuggester** — a single levenshtein-
   based spelling suggestion when a query returns zero FTS results.
-+ **Internal/Services/SearchResultsProviderImpl** — composes
++ **Internal/Services/PaletteSectionComposer** — composes
   `SearchQuery::palette()` + `EntityNameSearch::query()` into the
-  `SearchResultsProvider` contract shape.
+  `SearchResultsProvider` contract shape. `palette()` returns its hits
+  and the full hit count together: reading the count from a second
+  search ran the whole query twice on every keystroke.
++ **Internal/Services/LikeNeedle** — the one place a `LIKE` pattern is
+  built, because SQLite gives `LIKE` no escape character unless the
+  predicate declares one. Emitting the escaped pattern and the
+  `ESCAPE` clause from the same call is what stops the two separating.
 + **Internal/Listeners/IndexTransactionOnImport** — subscribes to
   `Import::TransactionImported`; calls the writer synchronously in the
   same DB transaction as the canonical insert.
@@ -87,7 +130,7 @@ What the module explicitly does NOT do:
   `Sync::SensitiveColumnCodec` when encryption is enabled — the FTS
   body must always be plaintext, never ciphertext, per the [disclosed
   plaintext-shadow design](../sync/sensitive-columns-at-rest.md#what-this-does-not-fix))
-  plus any tax note, concatenates them
+  plus the WHOLE-TRANSACTION tax note, concatenates them
   separated by `chr(12)` (a form-feed — not trigram-indexable, so it
   can never produce a false cross-field match), and upserts both
   `transaction_search_docs` and the FTS5 virtual table inside one DB
@@ -95,9 +138,40 @@ What the module explicitly does NOT do:
   deletion. Both methods verify the caller-supplied `$actorUserId`
   against the row's owner before touching anything — a forged
   transaction id can never touch another user's index doc.
-+ `IndexTransactionOnImport::handle($event)` — the one production
-  caller of the writer; runs synchronously so a transaction is
-  searchable the instant the import commits (no queue dependency).
++ `IndexTransactionOnImport::handle($event)` — the import path's
+  caller, running synchronously so a transaction is searchable the
+  instant the import commits (no queue dependency). It is not the only
+  one. **Every write that changes indexed text has to reindex**, and
+  seven classes across five modules do:
+
+  | Caller | Module | When |
+  |---|---|---|
+  | `IndexTransactionOnImport` | Search | a row lands from an import |
+  | `TagTransaction` / `UntagTransaction` | Tax | a tax note is written or cleared |
+  | `DeleteTransaction` | Ledger | a transaction is permanently deleted |
+  | `StripAsnDescriptionDelimiters` | Ledger | the delimiter sweep rewrites a description |
+  | `CashBookPage` | CashBook | a manual entry is deleted |
+  | `SearchIndexRefresher` | Sync | a merged op changed a transaction |
+  | `OpLogRebuilder` | Sync | history is replayed from the op log |
+
+  A write that skips the writer leaves the index stale, and nothing
+  but a search that no longer finds the row will say so. The list is
+  held to the code by `Modules/Search/tests/Unit/TheDocNamesEveryWriterCallerTest.php`,
+  which fails when a new caller is not named here.
+
+  **"The tax note" means the whole-transaction tag, and both writers
+  now say so.** `tax_transaction_tags` also holds one row per tagged
+  SPLIT LEG, and the only writer of a leg tag (`ManagesSplitEditor`)
+  passes no note at all. Neither index writer named which row it wanted:
+  `SearchIndexWriter` took whichever `first()` returned and
+  `ReindexSearchCommand` looped them all into a map, keeping the last —
+  so `search:reindex` overwrote the note with the leg's null and a row
+  the app had indexed stopped being findable by the words on it. Both
+  now filter `transaction_split_id IS NULL`, which is the same predicate
+  `RuleApplier::writeTaxTag()` reads a current tag through, and which
+  lets the partial `tax_tags_whole_tx_unique` index answer.
+  `ALegTagMustNotEraseTheTransactionsOwnTaxNoteTest` pins both writers
+  in both tag-write orders.
 + `SearchQuery::search(...)` — parses typed tokens via `QueryParser`,
   resolves a candidate rowid set (FTS5 `MATCH` when the text query is
   ≥3 characters; a bounded decrypt-then-substring scan otherwise, since
@@ -147,9 +221,10 @@ The read path (⌘K palette or `/transactions` search mode):
 ```
 User types a query
   → QueryParser::parse extracts account:/after:/before:/amount:/category: tokens
-  → account: → resolveAccountNamesToIds (prefix LIKE on accounts.name)
-  → category: → resolveCategoryNameToIds (prefix match in PHP, on the
-       resolved display name AND the stored name)
+  → SearchTokenFilters::merge folds those tokens into the SearchFilters
+       → account: → resolveAccountNamesToIds (prefix LIKE on accounts.name)
+       → category: → resolveCategoryNameToIds (prefix match in PHP, on the
+            resolved display name AND the stored name)
   → SearchQuery::resolveCandidateIds
        → textQuery >= 3 chars → FTS5 MATCH (escaped, ANDed per word)
        → textQuery <  3 chars → bounded decrypt-then-substring scan

@@ -94,6 +94,7 @@ return [
         'heading' => 'Arendaja',
         'open_console' => 'Ava arenduskonsool',
         'pulse' => 'Järjekord :queue · Töötaja :worker',
+        'worker_ago' => ':count s tagasi|:count s tagasi',
     ],
 
     'account' => [

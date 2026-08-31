@@ -19,7 +19,7 @@ use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 
 beforeEach(function (): void {
     $this->artisan('demo:seed')->assertSuccessful();
-    $this->demoUser = User::query()->where('username', 'demo-1@beatrax.local')->firstOrFail();
+    $this->demoUser = User::query()->where('username', 'demo-1')->firstOrFail();
     $this->actingAs($this->demoUser);
 });
 

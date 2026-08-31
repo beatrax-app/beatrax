@@ -30,8 +30,8 @@ rows.
 
 - **Dto/** — `ReportDefinition` (the full user-composed recipe, the exact
   shape persisted as `saved_reports.definition` JSON), `ReportResultDto`
-  (the aggregator's output contract: rows, total, currency,
-  FX-exclusion metadata, optional comparison rows), `ReportResultRow`
+  (the aggregator's output contract: rows, total, currency, the two
+  FX-exclusion SETS, optional comparison rows), `ReportResultRow`
   (one grouped total), `SavedReportIndexRow` (a `/reports/library` row
   with a pre-rendered summary line).
 - **Actions/** — `SaveReport`, `UpdateReport`, `DeleteReport`,
@@ -74,6 +74,13 @@ another module.
   aggregate the `transactions` parent rows directly with no split-leg
   join (`account_id`/`counterparty_id` are invariant across a split
   parent's legs — `transaction_splits` carries only `category_id`).
+  `CounterpartySpendQuery` draws the same two-label distinction the
+  category dimension does, from `reports::builder.no_counterparty` and
+  `reports::builder.unavailable_counterparty`: a transaction whose
+  `counterparty_id` is `NULL` has no counterparty, and one whose id
+  `CounterpartyProfileQuery::identitiesForIds()` cannot resolve has one
+  this device cannot name. Both were English literals until a phone set
+  to Dutch read `No counterparty €12.34`.
   `CategorySpendQuery` is the one place a split-leg-aware `legs ∪
   unsplit-parents` join is combined with the type-based spend/income/net
   definition: pass 1 rolls up unsplit parents *and* "broken split"
@@ -85,11 +92,35 @@ another module.
   group so the category dimension's grand total never disagrees with
   the other (unfiltered-by-category) dimensions' totals for the same
   report — the `cross_dimension_total_consistency` invariant
-  `ReportAggregatorMetricsTest` guards. Its group labels are full
-  breadcrumbs, resolved through `Ledger`'s
+  `ReportAggregatorMetricsTest` guards. **"The same report" includes
+  its filters.** Pass 2 tested the amount bound against the split leg's
+  `settled_amount_minor` while every other dimension tests the
+  transaction's, so a €124.50 parent with a €24.50 leg moved the
+  headline by €24.50 the moment the reader tapped a different "Group
+  by" chip: €2,005.61 by category against €2,030.11 by account under
+  `amount_min=50`, and the other way under `amount_max`. Both bounds
+  and the direction predicate go to `t.`, never `ts.` — a filter
+  selects transactions, and the legs of a selected transaction are
+  attributed whole. The invariant is exercised WITH a filter set in
+  both `CrossDimensionTotalConsistencyTest` and
+  `ReportAggregatorMetricsTest`: under the default empty
+  `SpendQueryFilters` the one predicate the four dimensions write
+  differently is never reached.
+
+  Its group labels are full breadcrumbs, resolved through `Ledger`'s
   `Public\Services\CategoryAncestry` — the same seam the dashboard's
   `TopCategoriesByPeriodQuery` renders from, rather than a second copy
-  of the parent walk and its visibility predicate.
+  of the parent walk and its visibility predicate. A category id that
+  walk cannot resolve — cross-tenant, deleted, or arrived over Sync
+  ahead of its own row — is labelled
+  `ledger::common.unavailable_category`, never "Uncategorized".
+  Borrowing that label put two rows with the same name and different
+  money in the report table, in the pinned donut legend and in the
+  dashboard's spending-trend movers, with nothing to tell them apart:
+  having no category and having one this device cannot see are two
+  different facts, and only the first is one the reader can act on.
+  `CategorySpendTrendQuery` makes the same distinction from the same
+  two keys.
 - `CurrencyModeApplier::apply()` — applies a report's `currencyMode`
   (`'base'` | `'original'`) to a dimension query and assembles the
   `ReportResultDto`. Neither this class nor its caller ever hardcodes a
@@ -107,9 +138,25 @@ another module.
   `'base'` mode converts
   each currency's rows via `CrossCurrencyTotal` and merges same-group
   rows across currencies into one base-currency total; a row whose
-  currency has no available rate is excluded from the total and counted
-  (`hasExcludedAccounts`/`accountsWithoutRate`) — never a silent 1:1
-  fallback, mirroring `NetWorthSeriesQuery`'s own never-1:1 guard. The
+  currency has no available rate is excluded from the total and named
+  in `ReportResultDto::excludedCurrencies` — never a silent 1:1
+  fallback, mirroring `NetWorthSeriesQuery`'s own never-1:1 guard.
+
+  **The exclusion metadata is two fields because it is two facts.** A
+  transaction metric excludes CURRENCIES; `net_worth` excludes
+  ACCOUNTS. One `accountsWithoutRate` counter carried both and the
+  builder rendered it through `":count account not converted"`, so a
+  reader with four ARS accounts, each holding an unconvertible expense,
+  was told "1 account not converted" while ARS 2,300.00 of spend went
+  missing. Both are now SETS — `excludedCurrencies: list<string>` and
+  `excludedAccountIds: list<int>` — which also makes the compare-mode
+  union correct: the previous window's counters used to be ADDED to the
+  current window's, so a currency unconvertible in both periods counted
+  as two. The transaction path renders through
+  `core::money.not_converted`, which names the currency, the sentence
+  the dashboard already uses; the balance path keeps
+  `reports::builder.fx_excluded`, which counts accounts and is right
+  there. The
   rate for every discovered currency, fees included, is fetched once
   per report: each dimension query returns rows already scoped to the
   one currency it was asked for, so converting per row read the whole
@@ -132,10 +179,35 @@ another module.
   `'original'` mode never converts: a group present in
   more than one currency yields one row *per* currency (never merged —
   summing raw minor units across different currencies would corrupt
-  the total); the DTO-level `currency`/`totalMinor` are picked as the
-  currency with the largest absolute total among the *actual* result
-  rows, never a "first discovered currency" guess made before the
-  filtered query has run.
+  the total); the DTO-level `currency`/`totalMinor` come from the
+  *actual* result rows, never a "first discovered currency" guess made
+  before the filtered query has run. **They are picked by what each
+  currency's subtotal is worth, not by the size of its raw number.**
+  Minor units of different currencies are not comparable: ARS 2,300.00
+  is 230,000 of them and EUR 1,049.94 is 104,994, so the headline read
+  "TOTAL SPEND: ARS 2,300.00" over a table whose largest row was the
+  euro one — and that ARS total had no rate behind it at all. Each
+  subtotal is converted to the reader's base currency for RANKING only,
+  changing no displayed figure, and a currency with no rate can never
+  outrank one that has; ties go to the first currency discovered, which
+  is ordered by code, so the same report always headlines the same
+  currency.
+- **The amount filter is one amount of money, not one number.**
+  `ReportAggregator` parses `amountMin`/`amountMax` at the scale of the
+  currency the reader typed them in (their base currency), then converts
+  the bound into the currency each dimension query is scoped to. Parsed
+  at a hard two decimals it became 2,000 minor units against a ¥1,000
+  charge, so a JPY-only report filtered "amount ≥ 20" came back empty;
+  applied unconverted to every discovered currency at once, "≥ 20" meant
+  EUR 20, USD 20, ARS 20 and ¥2,000 simultaneously. Where no rate
+  reaches a currency the bound cannot be stated in it at all, so
+  `queryForCurrency` returns **null** rather than an empty row list —
+  `null` is "this currency cannot be answered", `[]` is "nothing
+  matched" — and `CurrencyModeApplier` adds it to `excludedCurrencies`
+  in BOTH modes. A silent 1:1 threshold is the same forbidden guess as a
+  silent 1:1 conversion. `OtherMovementQuery` re-sums each currency's
+  bucket under its own bound for the same reason, and pays the extra
+  statements only when a bound is actually set.
 - `OtherMovementQuery::totalsByCurrency()` — the money the chosen metric is
   not defined over, per settled currency: `fee` and `adjustment` always,
   plus `refund` for the one metric (`income`) that does not already count
@@ -159,7 +231,13 @@ another module.
   of them were not converted. Every point repeats
   Forecasting's `NetWorthQuery::forUser()` exclude+count algorithm once
   per `TimeBucketGenerator` sample date instead of once for "today".
-  **Scope limitation (C7-R8):** the most-recent point in this series is
+  The account set is the same one and asked the same way: both call
+  `AccountKind::mirrorValues()` rather than keeping a list each, because a
+  kind one of them counts alone is a step in this line with no cause behind
+  it. Which kinds those are, and why `ics_card` is deliberately not among
+  them, is in
+  [which kinds hold money](../ledger/architecture.md#accountkind--which-kinds-hold-money).
+  **Scope limitation:** the most-recent point in this series is
   NOT guaranteed to equal the dashboard net-worth card's "today" figure.
   Both now read `AccountBalanceQuery` as of a date, so the anchor is no
   longer the difference — the remaining one is cleared status. The series
@@ -192,10 +270,17 @@ another module.
 - `PeriodPresetResolver::resolve()` — resolves a period-preset string
   into a concrete `Period`. `this_month`/`last_N_months` delegate to
   `PeriodQuery` (the user's `period_start_day`-anchored stepping) so a
-  report's "this month" always matches the dashboard's. `ytd`/
-  `this_year` both resolve to `startOfYear() -> now+1day` (a future
-  date never carries transactions, so the two windows coincide — kept
-  as two preset keys purely for the picker's copy). `custom` parses
+  report's "this month" always matches the dashboard's. `this_year`
+  resolves through `Ledger\Public\Services\CalendarSpan::year()` — the
+  whole calendar year, `startOfYear() -> startOfYear()+1year` — which is
+  the same definition `/transactions` draws its own "This year" preset
+  from, so a window labelled "2026" means 2026 on both surfaces. `ytd`
+  keeps that start and stops at `now+1day`, which is the only thing that
+  makes it a different preset. These two used to share the second formula
+  on the premise that *a future date never carries transactions*; that
+  premise is false in a codebase shipping `BookedFutureRowQuery`, and it
+  cost a booked-ahead expense its place in a report headed "2026" (157
+  rows on `/transactions` against 156 on `/reports`). `custom` parses
   `customFrom`/`customTo` *strictly* against `Y-m-d` (never Carbon's
   lenient natural-language parser, so a malformed replayed
   `saved_reports.definition` blob throws rather than silently
@@ -245,6 +330,18 @@ another module.
     renders as an em dash rather than as "was zero then", and the result is
     never re-sorted by delta: for a series, the row order IS the series.
 
+  What "the other window has no counterpart" means is the join's to say,
+  and `ComparisonJoin::missingCounterpartMinor()` is the one place it is
+  said: `0` for `Group` (a category nobody spent on genuinely spent
+  zero) and `null` for `Sequence` (a bucket the previous window never
+  reached is unknown). `compare()` reads an EMPTY previous window
+  through that same rule, because it had been reading it a second way:
+  every bucket rendered an em dash while the footer under them computed
+  a full-value delta of +€8,308.65 off a previous total of zero — one
+  screen, two contradictory claims about the same fact, and the em dash
+  is documented as meaning "no counterpart, and must not read as 'was
+  zero then'".
+
   `compare()` also returns the previous period's **own** `totalMinor` and
   `currency`, which reach the page as
   `ReportResultDto::previousTotalMinor`/`previousCurrency`. The headline
@@ -267,22 +364,74 @@ another module.
   point's `groupKey` (its sample date, the last day of the same window)
   back through `TimeBucketGenerator` to that bucket's own `Period`; handed
   the whole range, three monthly rows all linked to one identical list. It
-  also emits the metric's own direction — `spend` -> `amount_dir=out`,
-  `income` -> `in`, `net` undirected — so a `spend` row cannot point at a
-  list carrying salary income. An explicit `amountDirection` on the
-  definition is the reader's and is left alone. `TransactionsList` has no
-  `type` filter parameter, so the drill-down narrows by direction rather
-  than by transaction type: a `transfer_out` or a `fee` can still appear
-  beside the expenses a `spend` figure counted. Uses the *singular* array param names
+  also emits `type[]`, the metric's own type set, so the list a row opens
+  carries exactly the rows the figure summed — a `transfer_out` or a `fee`
+  cannot appear beside the expenses a `spend` figure counted, and neither
+  can salary income.
+
+  **It emits no direction of its own.** `amount_dir` was the first attempt at
+  that narrowing and it survived `type[]` landing, which made the two
+  parameters contradict each other: `ReportMetric::Spend->types()` is
+  `[expense, refund]`, a refund is POSITIVE, and `amount_dir=out` is
+  `amount_minor < 0` — so the list dropped every refund the figure had
+  already subtracted. A €100 charger and a €30 refund read as €70 on the
+  report and €100 in the list. It is not kept for the single-signed metrics
+  either: `income`'s type set looks positive-only by convention rather than
+  by constraint, and a reversed salary would go the same way. An explicit
+  `amountDirection` on the definition IS carried through — that one is the
+  reader's own filter, and the dimension queries apply it to the report
+  figure too (`SpendFilterApplier`), so the two still agree.
+  Uses the *singular* array param names
   `TransactionsList`'s `#[Url(as: 'account'/'category'/'counterparty')]`
   properties expect (`accounts`/`categories`/`counterparties` would
   silently no-op). `Period.endExclusive` is exclusive by contract but
   the `before` query param is inclusive — this is the one place that
   `subDay()` conversion happens. `time_bucket` carries no group filter
-  param (a time-bucket row has no category/account/counterparty id); a
-  `null` `groupKey` (the "No category"/"No counterparty"/"No account"
-  bucket) omits the dimension filter entirely rather than filtering on
-  a synthetic id.
+  param (a time-bucket row has no category/account/counterparty id).
+
+  **The reader's own account/category/counterparty filters ride along.**
+  Only the clicked row's group was ever emitted, so a report narrowed to
+  one account and grouped by category opened a list carrying every
+  account's rows: an `Office` row reading €100.00 opened a list summing
+  €140.00, and neither number was labelled as the narrowed one. The three
+  filter arrays are emitted first and the row's own group overwrites its
+  own dimension's entry — the group key is already inside that filter, so
+  intersecting them would be a no-op at best and, for the `uncategorized`
+  bucket, an impossible AND. That bucket therefore clears the inherited
+  `category[]` outright: "has no category" and "is one of these
+  categories" cannot both hold. Pinned by
+  `ADrilldownCarriesTheFiltersTheFigureWasNarrowedByTest`.
+
+  **A `null` `groupKey` on the CATEGORY dimension is a filter, not the
+  absence of one.** Emitting nothing for it opened the whole period: a
+  row reading `Uncategorized €85.00` produced a list of 32 transactions,
+  €2,459.11 out and €34.99 in. It now emits `uncategorized=1`, which
+  `TransactionsList`/`SearchFilters`/`SearchQuery` honour as
+  `category_id IS NULL` plus `SplitLegs::excludeParents()` — the same
+  convention the dashboard's uncategorized count uses. The other two
+  dimensions have no such bucket to name and still emit nothing.
+
+  **`category[]=N` is split-aware.** It filtered
+  `transactions.category_id` alone, so a split parent whose LEG the
+  report had counted was invisible to the list it opened:
+  `Personal care €110.00` opened one transaction of €21.05, and
+  `Subscriptions/Cloud/Software €137.95` opened three totalling €113.45.
+  `SearchQuery::applyCategoryFilter()` now matches the parent column OR
+  any of the transaction's `transaction_splits.category_id` legs, which
+  is what `CategorySpendQuery`'s two passes actually select on —
+  splitting a transaction is precisely how part of it is attributed to a
+  category. The account and counterparty drilldowns never had either
+  problem: those columns are invariant across a split parent's legs, and
+  every row of theirs has a key.
+
+  A caveat that remains, and is not a defect: for a parent split across
+  SEVERAL categories the list shows the parent's whole amount, because a
+  transaction list lists transactions. The row's figure and the list's
+  sum agree exactly whenever the parent's legs all sit in the clicked
+  category, which is what
+  `TheDrilldownListAddsUpToTheRowItWasOpenedFromTest` pins; the
+  partially-split case is pinned on the weaker property that the parent
+  is *present*, which is the thing that was broken.
 - `ReportCsvExporter::export()` — streams a report's aggregated rows as
   CSV via `ReportAggregator::run()`, so the download can never disagree
   with the on-screen table/chart. `EscapeFormula` runs on every
@@ -295,6 +444,22 @@ another module.
   left than arrived and the file carries nothing else to recover the sign
   from: `abs()` made the export unsummable and put it at odds with the
   table it is documented to match.
+
+  **It exports the rows the SCREEN renders**, which with comparison on
+  is `comparisonRows` — the union of both windows' groups, carrying the
+  delta and sorted by it — plus a `Delta` column. Iterating `->rows`
+  instead silently dropped every group that had fallen to zero (a
+  15-row screen exported as 14, with `Donations €0.00 −€75.00` gone)
+  along with the whole column the reader had turned comparison on to
+  get. A row whose counterpart is unknown writes an EMPTY delta cell,
+  never `0.00` — the em dash the table prints there. In `'original'`
+  mode the file spans several currencies and there is no single sum to
+  check it against: each currency's rows sum to that currency's own
+  subtotal, and the headline currency's rows sum to `totalMinor`. The
+  group header comes from `Enums\ReportGroupHeading`, which the
+  on-screen table reads too — the exporter guarded the `net_worth` case
+  in a comment describing the exact failure while the screen it is
+  documented to match still headed a column of months with "Category".
 
 ## Write actions: security & concurrency contracts
 
@@ -377,14 +542,47 @@ ReportBuilder (Livewire, every control is a #[Url]-bound property)
      a /transactions filter URL
 ```
 
+**A chart draws one currency and, for a donut, one direction.**
+`Internal\Support\ChartSeries` decides what a given `viz` can actually
+draw out of the report's rows, and hands back what it left out so the
+page can say it — the builder renders both omissions under the chart,
+and `PinnedReportsRow` narrows the same way.
+
+- **One currency.** Raw minor units of two currencies share no scale, so
+  `'original'` mode plotted four of them on the reader's base-currency
+  axis: "JP Wallet" drawn at 1,000 (it is ¥1,000 ≈ €6.29) and three ARS
+  bars at 600 with no rate behind them, beside a real €1,049.94 bar. The
+  chart keeps the rows in `ReportResultDto::currency` and names the rest
+  through `reports::builder.chart.other_currencies`.
+- **The axis says which currency.** Every partial now sets
+  `beatraxCurrency`; without it `resources/js/app.js` stamps the
+  reader's base currency on the axis of a chart drawn in another. This
+  is the precedent `Forecasting`'s `aggregate-line-chart` set, pinned by
+  `AYenChartIsDrawnInYenTest` and `ForecastChartSaysItsOwnCurrencyTest`.
+- **One direction, for the donut.** A ring is built from sizes and a
+  report total is signed, so `abs()` drew an `Income / Refunds` slice
+  inside "where the money went" while the table beneath printed the same
+  row as −€34.99 in red, and the slices summed to 2,459.11 under a
+  headline of 2,389.13. The ring keeps the rows moving the way the total
+  does and names what it left out through
+  `reports::builder.chart.undrawn`, so ring + disclosure reconciles to
+  the headline. The bar chart in base mode needs none of this: it has a
+  zero line and draws a refund below it.
+- **The donut palette does not repeat.** Ten brand colours cycled with a
+  modulo, so a fifteen-category ring drew slices 11–15 in the same greys
+  as 1–5. `Internal\Support\DonutPalette` keeps the brand set for ten or
+  fewer and past that splits the wheel into as many hues as there are
+  slices, anchored on the brand's own opening hue so a ring of eleven
+  does not read as a different chart from a ring of ten.
+
 Chart series go through `Internal\Support\ChartAmount`, never a division
 by a hardcoded hundred: ApexCharts needs a number in *major* units and the
 divisor is not the same for every currency, so a JPY row (which has no minor
 unit at all) was drawn at a hundredth of itself beside a table still printing
 the true figure. The scale is taken from the currency itself; an unrecognised
 code falls back to two decimals, which is what every other boundary in the
-repo assumes. The right long-term home for that scale is `Ledger`'s `Money`
-or `Currency`, both of which today hardcode `MINOR_UNITS_PER_MAJOR = 100`
+repo assumes. There is no shared seam to take that scale from: `Ledger`'s
+`Money` and `Currency` both hardcode `MINOR_UNITS_PER_MAJOR = 100`
 everywhere except `Money::formatWholeUnits()`.
 
 CSV export mirrors the same aggregator call

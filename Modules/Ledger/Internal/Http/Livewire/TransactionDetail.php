@@ -12,21 +12,19 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
-use Modules\Categorization\Public\Actions\AssignCategory;
-use Modules\Categorization\Public\Contracts\AssignsCategory;
-use Modules\Categorization\Public\Events\CategorizationDiverged;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyDisplayName;
 use Modules\Goals\Public\Services\GoalContributionQuery;
 use Modules\Goals\Public\Services\GoalContributionWriter;
 use Modules\Ledger\Internal\Http\Livewire\Concerns\ManagesSplitEditor;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Contracts\DeletesTransaction;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
@@ -36,18 +34,17 @@ use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
-use Modules\Ledger\Public\Support\CategoryDisplayName;
-use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Events\TransactionMutated;
-use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Sync\Public\Transport\SensitiveTextBudget;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class TransactionDetail extends Component
 {
-    private const RECONCILED_NOTICE_KEY = 'ledger::detail.toast.reconciled_locked';
+    private const string RECONCILED_NOTICE_KEY = 'ledger::detail.toast.reconciled_locked';
 
     use DispatchesToast;
     use HandlesClearedStatus;
@@ -63,6 +60,8 @@ final class TransactionDetail extends Component
     public string $note = '';
 
     public bool $noteSaved = false;
+
+    public bool $confirmingUnreconcile = false;
 
     public function mount(int $transactionId, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session, BaseCurrency $baseCurrency): void
     {
@@ -113,7 +112,7 @@ final class TransactionDetail extends Component
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        if ($tx->status === ClearedStatus::Reconciled->value) {
+        if (TransactionStatusQuery::locksEdits($tx->status)) {
             $this->toast(Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
@@ -179,84 +178,39 @@ final class TransactionDetail extends Component
         }
     }
 
-    // AssignsCategory scopes the UPDATE by user_id, so a foreign-user
-    // transaction affects 0 rows and no divergence event fires.
-    public function reclassifyCategory(
-        int $newCategoryId,
-        CurrentUser $currentUser,
-        AssignsCategory $assign,
-        DatabaseManager $db,
-    ): void {
-        $user = $currentUser->user();
-
-        // Invokable straight from the browser, so the reconciled lock has to
-        // be re-checked here and not only in the sibling mutators.
-        $status = $db->connection()
-            ->table('transactions')
-            ->where('id', $this->transactionId)
-            ->where('user_id', $user->id)
-            ->value('status');
-
-        if ($status === ClearedStatus::Reconciled->value) {
-            $this->toast(Lang::get(self::RECONCILED_NOTICE_KEY));
-
-            return;
-        }
-
-        // Both this dispatch and AssignCategory's framework-event dispatch go
-        // through fromProvenance(), so the two channels cannot disagree about
-        // what counts as a divergence.
-        $priorProvenance = AssignCategory::readPriorProvenance($db, $this->transactionId, $user->id);
-
-        $affected = ($assign)($this->transactionId, $newCategoryId, $user);
-        if ($affected === 0) {
-            return;
-        }
-
-        $divergence = CategorizationDiverged::fromProvenance(
-            priorProvenance: $priorProvenance,
-            transactionId: $this->transactionId,
-            newCategoryId: $newCategoryId,
-            userId: $user->id,
-        );
-        if ($divergence === null) {
-            return;
-        }
-
-        $this->dispatch(
-            'correction-divergence:fire',
-            transactionId: $divergence->transactionId,
-            ruleId: $divergence->ruleId,
-            oldCategoryId: $divergence->oldCategoryId,
-            newCategoryId: $divergence->newCategoryId,
-            userId: $divergence->userId,
-        );
-    }
-
     public function saveNote(
         CurrentUser $currentUser,
-        DatabaseManager $db,
         Dispatcher $events,
         SetsTransactionNote $setNote,
         FieldProvenanceWriter $provenance,
+        TransactionStatusQuery $statusQuery,
     ): void {
         $user = $currentUser->user();
 
         // Pre-checked here rather than only inside the action, so the user
         // gets the "un-reconcile first" toast instead of a silent no-op.
-        $status = $db->connection()
-            ->table('transactions')
-            ->where('id', $this->transactionId)
-            ->where('user_id', $user->id)
-            ->value('status');
-
-        if ($status === ClearedStatus::Reconciled->value) {
+        if ($statusQuery->isReconciled($user->id, $this->transactionId)) {
             $this->toast(Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
         }
 
         $trimmed = trim($this->note);
+
+        // `note` is a sealed column, and a sealed value past the transport's
+        // text budget is written locally and then withheld from every peer for
+        // as long as it exists — a sync that looks clean and is not. Refused
+        // here so the ceiling is a sentence rather than a line in a log.
+        if (mb_strlen($trimmed) > SensitiveTextBudget::MAX_PLAINTEXT_CHARACTERS) {
+            $this->toast(Lang::choice(
+                'ledger::detail.toast.note_too_long',
+                SensitiveTextBudget::MAX_PLAINTEXT_CHARACTERS,
+                ['max' => Fmt::number(SensitiveTextBudget::MAX_PLAINTEXT_CHARACTERS)],
+            ));
+
+            return;
+        }
+
         $value = $trimmed === '' ? null : $trimmed;
 
         $affected = ($setNote)($this->transactionId, $value, 'set', $user);
@@ -276,13 +230,14 @@ final class TransactionDetail extends Component
         $this->toast(Lang::get('ledger::detail.toast.note_saved'));
     }
 
-    public function toggleCleared(
-        CurrentUser $currentUser,
-        DatabaseManager $db,
-        Dispatcher $events,
-        Clock $clock,
-    ): void {
-        $this->toggleClearedStatus($this->transactionId, $currentUser, $db, $events, $clock);
+    public function startUnreconcile(): void
+    {
+        $this->confirmingUnreconcile = true;
+    }
+
+    public function cancelUnreconcile(): void
+    {
+        $this->confirmingUnreconcile = false;
     }
 
     // The escape hatch every reconciled-lock toast on this page points to. A
@@ -291,6 +246,8 @@ final class TransactionDetail extends Component
         ReconciliationWriter $writer,
         CurrentUser $currentUser,
     ): void {
+        $this->confirmingUnreconcile = false;
+
         $writer->unreconcile($currentUser->user(), $this->transactionId);
 
         $this->toast(Lang::get('ledger::detail.toast.unreconciled'));
@@ -316,7 +273,7 @@ final class TransactionDetail extends Component
             throw new NotFoundHttpException;
         }
 
-        if ($status === ClearedStatus::Reconciled->value) {
+        if (TransactionStatusQuery::locksEdits($status)) {
             $this->toast(Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
@@ -370,64 +327,31 @@ final class TransactionDetail extends Component
     public function deleteTransaction(
         CurrentUser $currentUser,
         DatabaseManager $db,
-        Dispatcher $events,
         UrlGenerator $urls,
-        SearchIndexWriterContract $searchIndex,
+        DeletesTransaction $deleter,
     ): void {
-        $userId = $currentUser->user()->id;
+        $user = $currentUser->user();
 
         $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
-            ->where('user_id', $userId)
+            ->where('user_id', $user->id)
             ->value('status');
 
         if ($status === null) {
             throw new NotFoundHttpException;
         }
 
-        if ($status === ClearedStatus::Reconciled->value) {
+        // Pre-checked here rather than only inside the action, so the user gets
+        // the "un-reconcile first" toast instead of a silent no-op.
+        if (TransactionStatusQuery::locksEdits($status)) {
             $this->toast(Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
         }
 
-        // Read the leg ids before the parent delete cascades them away:
-        // convergence cannot assume the peer's replay connection has FK
-        // cascade on, so each leg needs its own tombstone below.
-        $legRows = $db->connection()
-            ->table('transaction_splits')
-            ->where('transaction_id', $this->transactionId)
-            ->where('user_id', $userId)
-            ->get(['id']);
-
-        $db->connection()
-            ->table('transactions')
-            ->where('id', $this->transactionId)
-            ->where('user_id', $userId)
-            ->delete();
-
-        // search_body is the deliberate plaintext shadow of the encrypted name
-        // and description, with no FK, no cascade and no trigger. Only a PEER's
-        // delete was reaped, so a row the reader deleted themselves left its
-        // decrypted text on disk and red-flagged the FTS health check.
-        $searchIndex->deleteForTransaction($this->transactionId, $userId);
-
-        $events->dispatch(new TransactionMutated(
-            transactionId: $this->transactionId,
-            userId: $userId,
-            mutationType: 'delete',
-            dirtyFields: [],
-        ));
-
-        foreach ($legRows as $legRow) {
-            $legId = is_numeric($legRow->id) ? (int) $legRow->id : 0;
-            $events->dispatch(new TransactionSplitMutated(
-                splitId: $legId,
-                transactionId: $this->transactionId,
-                userId: $userId,
-                mutationType: 'delete',
-            ));
+        if (! $deleter->delete($user, $this->transactionId)) {
+            return;
         }
 
         $this->redirect(Destination::Transactions->urlFrom($urls), navigate: true);
@@ -486,22 +410,23 @@ final class TransactionDetail extends Component
             )['value'];
         }
 
-        // Read past the Category model, not through it: the shipped tree is
-        // seeded with user_id = NULL and the model carries BelongsToUser, so
-        // its relation answers null for every default category. The seam is
-        // where every other category read in the app already goes.
-        $categoryRow = $transaction->category_id === null
-            ? null
-            : $db->connection()->table('categories')
-                ->where('id', $transaction->category_id)
-                ->first(CategoryDisplayName::bareColumns());
+        // Named off the same list the leg pickers below it offer, not off a
+        // read of its own row: two categories can share a qualified path, and
+        // the list is what decides which of them carries the ordinal. A private
+        // read spelled it one way and the picker under it another.
+        $visibleCategories = $categoryOptions->for($currentUser->user());
 
-        $currentCategoryName = $categoryRow === null
-            ? null
-            : CategoryDisplayName::fromRow($categoryRow);
+        $currentCategoryName = null;
+        foreach ($visibleCategories as $option) {
+            if ($option->id === $transaction->category_id) {
+                $currentCategoryName = $option->path;
+
+                break;
+            }
+        }
 
         $isSplittable = (TransactionType::tryFrom($transaction->type)?->isSplittable() === true);
-        $splitCategories = $isSplittable ? $categoryOptions->for($currentUser->user()) : [];
+        $splitCategories = $isSplittable ? $visibleCategories : [];
 
         // Gates the "View chain" button, so a row with no chain_link rows
         // does not offer a button that opens an empty drawer.

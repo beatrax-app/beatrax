@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Eltávolított eszköz',
     'dismiss_peer' => 'Eszköz elvetése',
+    'dismiss_peer_caption' => 'Elvetése',
     'dismiss_stale' => 'A már nem párosított eszközök törlése',
     'not_synced_yet' => 'Még nincs szinkronizálva',
     'error' => 'Szinkronizálási hiba egy vagy több eszközön',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
@@ -24,6 +25,19 @@ function pqUser(string $username): User
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
+    ]);
+}
+
+function pqExpenseCategory(DatabaseManager $db, int $userId, string $slug): int
+{
+    return $db->connection()->table('categories')->insertGetId([
+        'user_id' => $userId,
+        'name' => 'Groceries',
+        'slug' => $slug,
+        'kind' => 'expense',
+        'display_order' => 1,
+        'created_at' => '2026-05-01 00:00:00',
+        'updated_at' => '2026-05-01 00:00:00',
     ]);
 }
 
@@ -139,7 +153,7 @@ it('summary is value-identical to ThisPeriodAtAGlanceQuery::for() for the same (
     expect($position->summary->net->toMinor())->toBe($direct->net->toMinor());
     expect($position->summary->uncategorizedCount)->toBe($direct->uncategorizedCount);
     expect($position->summary->recentTransactions)->toHaveCount(count($direct->recentTransactions));
-    expect($position->summary->topCategories)->toHaveCount(count($direct->topCategories));
+    expect($position->summary->topCategories->rows)->toHaveCount(count($direct->topCategories->rows));
     expect($position->summary->period->start->toDateString())->toBe($direct->period->start->toDateString());
     expect($position->summary->period->endExclusive->toDateString())->toBe($direct->period->endExclusive->toDateString());
 });
@@ -224,42 +238,51 @@ it('composes upcoming recurring charges from RecurringSeriesQuery, scoped to the
     expect($position->upcoming[0]->detectedName)->toBe('Netflix');
 });
 
-it('composes budgets from BudgetProgressQuery', function (): void {
+it('composes budgets from the envelope model the app actually writes', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = pqUser('pq-budgets');
     $this->actingAs($user);
 
-    $categoryId = $db->connection()->table('categories')->insertGetId([
-        'user_id' => $user->id,
-        'name' => 'Groceries',
-        'slug' => 'pq-groceries',
-        'kind' => 'expense',
-        'display_order' => 1,
-        'created_at' => '2026-05-01 00:00:00',
-        'updated_at' => '2026-05-01 00:00:00',
-    ]);
+    $categoryId = pqExpenseCategory($db, (int) $user->id, 'pq-groceries');
 
-    $db->connection()->table('category_budgets')->insert([
-        'user_id' => $user->id,
-        'category_id' => $categoryId,
-        'period_type' => 'monthly',
-        'budget_minor' => 20000,
-        'currency' => 'EUR',
-        'created_at' => '2026-05-01 00:00:00',
-        'updated_at' => '2026-05-01 00:00:00',
-    ]);
+    /** @var PeriodQuery $periods */
+    $periods = app(PeriodQuery::class);
+    app(EnvelopeWriter::class)->setAssigned($user, $categoryId, $periods->current()->start, 20000);
 
     /** @var PositionQuery $query */
     $query = app(PositionQuery::class);
-    /** @var PeriodQuery $periods */
-    $periods = app(PeriodQuery::class);
 
     $position = $query->forUser($user, $periods->current());
 
     expect($position->budgets)->toHaveCount(1);
     expect($position->budgets[0]->name)->toBe('Groceries');
     expect($position->budgets[0]->budgetMinor)->toBe(20000);
+});
+
+it('reports the budgets of the period it was asked for, not of the current one', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = pqUser('pq-budgets-paged');
+    $this->actingAs($user);
+
+    $categoryId = pqExpenseCategory($db, (int) $user->id, 'pq-groceries-paged');
+
+    /** @var PeriodQuery $periods */
+    $periods = app(PeriodQuery::class);
+    $current = $periods->current();
+    $previous = $periods->previous($current);
+
+    app(EnvelopeWriter::class)->setAssigned($user, $categoryId, $previous->start, 5000);
+    app(EnvelopeWriter::class)->setAssigned($user, $categoryId, $current->start, 20000);
+
+    /** @var PositionQuery $query */
+    $query = app(PositionQuery::class);
+
+    $position = $query->forUser($user, $previous);
+
+    expect($position->budgets)->toHaveCount(1);
+    expect($position->budgets[0]->budgetMinor)->toBe(5000);
 });
 
 it('composes shortfallAhead from ForecastHighlightsQuery::activeShortfallCountForUser', function (): void {

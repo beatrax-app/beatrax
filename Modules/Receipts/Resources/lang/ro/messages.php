@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Trage aici un mesaj de e-mail (.eml) sau o arhivă de căsuță poștală (.mbox). Motorul de potrivire recunoaște bonurile PayPal și le afișează drept tranzacții canonice; expeditorii nepotriviți rămân în jurnalul de audit pentru triaj.',
-    ],
-
     'conflict' => [
 
         'field' => [

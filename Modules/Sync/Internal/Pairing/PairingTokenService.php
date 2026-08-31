@@ -8,14 +8,14 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Pairing\Concerns\AppliesResponderAccept;
-use Modules\Sync\Public\Enums\PairingSide;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 
 /**
  * @link ../../../../.docs/features/sync/pairing-handshake.md
  */
-final class PairingTokenService
+final readonly class PairingTokenService
 {
     use AppliesResponderAccept;
 
@@ -29,13 +29,13 @@ final class PairingTokenService
     private const int CEREMONY_MAX_AGE_MINUTES = 60;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly PairingStateMachine $stateMachine,
-        private readonly PairedDeviceAdmitter $admitter,
-        private readonly PeerConfirmVerifier $peerConfirmVerifier,
-        private readonly SafetyNumberDeriver $safetyDeriver,
-        private readonly HeldPeerConfirm $heldPeerConfirm,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private PairingStateMachine $stateMachine,
+        private PairedDeviceAdmitter $admitter,
+        private PeerConfirmVerifier $peerConfirmVerifier,
+        private LocalConfirmRecorder $localConfirm,
+        private HeldPeerConfirm $heldPeerConfirm,
     ) {}
 
     // Mints a pairing token for the initiator and persists its hash. Returns
@@ -68,8 +68,8 @@ final class PairingTokenService
             'initiator_ed25519_pub_hex' => $ed25519PubHex,
             'initiator_x25519_pub_hex' => $x25519PubHex,
             'state' => PairingState::Pending->value,
-            'expires_at' => ZuluTimestamp::stamp($now->addMinutes(self::TTL_MINUTES)),
-            'created_at' => ZuluTimestamp::stamp($now),
+            'expires_at' => Instant::zulu($now->addMinutes(self::TTL_MINUTES)),
+            'created_at' => Instant::zulu($now),
         ]);
 
         return $token;
@@ -83,17 +83,11 @@ final class PairingTokenService
      * @return object|false The seeded (or already-seeded) row, or `false`
      *                      when the initiator's key material is malformed.
      */
-    public function seedFromInitiator(
-        int $userId,
-        string $initiatorDeviceId,
-        string $initiatorEd25519PubHex,
-        string $initiatorX25519PubHex,
-        string $token,
-        ?string $initiatorName = null,
-    ): object|false {
+    public function seedFromInitiator(int $userId, PairingPeerIdentity $initiator, string $token): object|false
+    {
         try {
-            SafetyNumberDeriver::hexToRawKey($initiatorEd25519PubHex);
-            SafetyNumberDeriver::hexToRawKey($initiatorX25519PubHex);
+            SafetyNumberDeriver::hexToRawKey($initiator->ed25519PubHex);
+            SafetyNumberDeriver::hexToRawKey($initiator->x25519PubHex);
         } catch (InvalidPublicKeyException) {
             return false;
         }
@@ -103,12 +97,14 @@ final class PairingTokenService
 
         $tokenHash = hash('sha256', $token);
 
-        // Idempotent: a pending row already seeded for this exact
-        // token_hash + user is returned as-is rather than duplicated.
+        // Idempotent for a ceremony still in flight, not only a `pending` one:
+        // once accept() has moved the row to awaiting_confirm, a second scan of
+        // the code the initiator is still showing fell through to insert() and
+        // hit the token_hash UNIQUE index — a 500 on the phone's own screen.
         $existing = $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->where('token_hash', $tokenHash)
-            ->where('state', PairingState::Pending->value)
+            ->whereIn('state', PairingState::inFlightValues())
             ->first();
 
         if ($existing !== null) {
@@ -118,14 +114,16 @@ final class PairingTokenService
         $this->db->connection()->table('pairing_tokens')->insert([
             'user_id' => $userId,
             'token_hash' => $tokenHash,
-            'initiator_device_id' => $initiatorDeviceId,
-            'initiator_ed25519_pub_hex' => $initiatorEd25519PubHex,
-            'initiator_x25519_pub_hex' => $initiatorX25519PubHex,
+            'initiator_device_id' => $initiator->deviceId,
+            'initiator_ed25519_pub_hex' => $initiator->ed25519PubHex,
+            'initiator_x25519_pub_hex' => $initiator->x25519PubHex,
             'state' => PairingState::Pending->value,
-            'expires_at' => ZuluTimestamp::stamp($now->addMinutes(self::TTL_MINUTES)),
-            'initiator_seeded_at' => ZuluTimestamp::stamp($now),
-            'initiator_name' => $initiatorName,
-            'created_at' => ZuluTimestamp::stamp($now),
+            'expires_at' => Instant::zulu($now->addMinutes(self::TTL_MINUTES)),
+            'initiator_seeded_at' => Instant::zulu($now),
+            'initiator_name' => $initiator->deviceName,
+            'initiator_lan_host' => $initiator->lanHost,
+            'initiator_lan_port' => $initiator->lanPort,
+            'created_at' => Instant::zulu($now),
         ]);
 
         $seeded = $this->db->connection()->table('pairing_tokens')
@@ -162,14 +160,14 @@ final class PairingTokenService
             ->where('token_hash', $tokenHash)
             ->where('user_id', $userId)
             ->where('state', PairingState::Pending->value)
-            ->where('expires_at', '>', ZuluTimestamp::stamp($now))
+            ->where('expires_at', '>', Instant::zulu($now))
             ->first();
 
         if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
             return false;
         }
 
-        $acceptedAt = ZuluTimestamp::stamp($now);
+        $acceptedAt = Instant::zulu($now);
         $newExpiry = $this->extendedExpiry($row, $now);
 
         $this->db->connection()->table('pairing_tokens')
@@ -181,7 +179,7 @@ final class PairingTokenService
                 'responder_x25519_pub_hex' => $responderX25519PubHex,
                 'state' => PairingState::AwaitingConfirm->value,
                 'accepted_at' => $acceptedAt,
-                'expires_at' => ZuluTimestamp::stamp($newExpiry),
+                'expires_at' => Instant::zulu($newExpiry),
             ]);
 
         $accepted = $this->db->connection()->table('pairing_tokens')
@@ -216,22 +214,7 @@ final class PairingTokenService
      */
     public function confirm(int $tokenId, int $userId, string $confirmingDeviceId, string $expectedSafetyDigest): ?string
     {
-        // An unknown token and a device that owns neither side are the same
-        // refusal: this device has nothing it may confirm on this token.
-        $side = $this->confirmableSideFor($tokenId, $userId, $confirmingDeviceId);
-        if ($side === null) {
-            return null;
-        }
-
-        // The tap confirms the keys behind the words on screen, not whatever the
-        // row says now: without this a responder rebinding between the reading
-        // and the tap inherits a confirmation nobody gave it (see @link).
-        $comparedKeys = $this->keysBehindDigest($tokenId, $userId, $expectedSafetyDigest);
-        if ($comparedKeys === null) {
-            return null;
-        }
-
-        $stamped = $this->stampSideConfirmation($tokenId, $userId, $side, $comparedKeys);
+        $stamped = $this->localConfirm->record($tokenId, $userId, $confirmingDeviceId, $expectedSafetyDigest);
 
         return $stamped === null ? null : $this->stateAfterAnyHeldPeerConfirm($stamped, $userId)->value;
     }
@@ -260,84 +243,6 @@ final class PairingTokenService
         );
 
         return $replayed?->stateApplied() ?? $this->finalizeIfBothConfirmed($stamped, $userId);
-    }
-
-    // Stamping and reading back are one step: the stamp is conditional on the
-    // compared keys still being the bound ones, so only the row that comes back
-    // carrying it is evidence that this side was recorded.
-    /**
-     * @param  array{initiator: string, responder: string}  $comparedKeys
-     */
-    private function stampSideConfirmation(int $tokenId, int $userId, PairingSide $side, array $comparedKeys): ?\stdClass
-    {
-        $column = $side->confirmedAtColumn();
-
-        // Those keys ride in the WHERE rather than being checked and then
-        // trusted: a rebind landing in between matches no row, so nothing is
-        // stamped and the re-read below sees an unconfirmed side.
-        $this->db->connection()->table('pairing_tokens')
-            ->where('id', $tokenId)
-            ->where('user_id', $userId)
-            ->where('initiator_ed25519_pub_hex', $comparedKeys['initiator'])
-            ->where('responder_ed25519_pub_hex', $comparedKeys['responder'])
-            ->update([$column => ZuluTimestamp::stamp($this->clock->now())]);
-
-        $row = $this->db->connection()->table('pairing_tokens')
-            ->where('id', $tokenId)
-            ->where('user_id', $userId)
-            ->first();
-
-        // Read back rather than trusting an affected-row count, which a driver
-        // may report as zero for a second tap writing the value already there.
-        if ($row === null || ! is_string($row->{$column})) {
-            return null;
-        }
-
-        return $row;
-    }
-
-    // The two Ed25519 keys the compared words were derived from, or null when
-    // the row's current pair no longer produces that digest — which means the
-    // pair being confirmed is not the pair that was read aloud.
-    /**
-     * @return array{initiator: string, responder: string}|null
-     */
-    private function keysBehindDigest(int $tokenId, int $userId, string $expectedSafetyDigest): ?array
-    {
-        if ($expectedSafetyDigest === '') {
-            return null;
-        }
-
-        $row = $this->db->connection()->table('pairing_tokens')
-            ->where('id', $tokenId)
-            ->where('user_id', $userId)
-            ->first(['initiator_ed25519_pub_hex', 'responder_ed25519_pub_hex']);
-
-        if ($row === null
-            || ! is_string($row->initiator_ed25519_pub_hex)
-            || ! is_string($row->responder_ed25519_pub_hex)) {
-            return null;
-        }
-
-        $pair = ['initiator' => $row->initiator_ed25519_pub_hex, 'responder' => $row->responder_ed25519_pub_hex];
-
-        return $this->pairDerivesDigest($pair, $expectedSafetyDigest) ? $pair : null;
-    }
-
-    // Key material the deriver refuses derives nothing, so an unusable pair is
-    // a plain mismatch rather than an exception out of the confirm path.
-    /**
-     * @param  array{initiator: string, responder: string}  $pair
-     */
-    private function pairDerivesDigest(array $pair, string $expectedSafetyDigest): bool
-    {
-        try {
-            $current = $this->safetyDeriver->digestFor($pair['initiator'], $pair['responder']);
-        } catch (InvalidPublicKeyException) {
-            return false;
-        }
-
-        return hash_equals($current, $expectedSafetyDigest);
     }
 
     // Applies a relayed, Ed25519-SIGNED PAIR_CONFIRM frame from the bound
@@ -403,7 +308,7 @@ final class PairingTokenService
                 ->where('id', $context->rowId)
                 ->where('user_id', $userId)
                 ->update([
-                    $context->peerConfirmedColumn => ZuluTimestamp::stamp($this->clock->now()),
+                    $context->peerConfirmedColumn => Instant::zulu($this->clock->now()),
                     HeldPeerConfirm::COLUMN => null,
                 ]);
         }
@@ -416,18 +321,6 @@ final class PairingTokenService
         return $freshRow === null
             ? null
             : PeerConfirmResult::applied($this->finalizeIfBothConfirmed($freshRow, $userId));
-    }
-
-    // The side this device may confirm on this token, or null when the token
-    // is unknown or the device owns neither side.
-    private function confirmableSideFor(int $tokenId, int $userId, string $deviceId): ?PairingSide
-    {
-        $token = $this->db->connection()->table('pairing_tokens')
-            ->where('id', $tokenId)
-            ->where('user_id', $userId)
-            ->first(['initiator_device_id', 'responder_device_id']);
-
-        return $token === null ? null : PairingRowGuards::sideOwnedBy($token, $deviceId);
     }
 
     // Shared tail of confirm() and applyPeerConfirm(): both reach the exact
@@ -499,7 +392,7 @@ final class PairingTokenService
             ->where('id', is_numeric($row->id) ? (int) $row->id : 0)
             ->where('user_id', $userId)
             ->where('state', PairingState::AwaitingConfirm->value)
-            ->update(['expires_at' => ZuluTimestamp::stamp($this->extendedExpiry($row, $this->clock->now()))]);
+            ->update(['expires_at' => Instant::zulu($this->extendedExpiry($row, $this->clock->now()))]);
 
         return true;
     }
@@ -520,7 +413,7 @@ final class PairingTokenService
     {
         $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
-            ->whereIn('state', [PairingState::Pending->value, PairingState::AwaitingConfirm->value])
+            ->whereIn('state', PairingState::inFlightValues())
             ->update(['state' => PairingState::Expired->value]);
     }
 
@@ -531,8 +424,8 @@ final class PairingTokenService
     {
         $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
-            ->whereIn('state', [PairingState::Pending->value, PairingState::AwaitingConfirm->value])
-            ->where('created_at', '<', ZuluTimestamp::stamp($now->subMinutes(self::CEREMONY_MAX_AGE_MINUTES)))
+            ->whereIn('state', PairingState::inFlightValues())
+            ->where('created_at', '<', Instant::zulu($now->subMinutes(self::CEREMONY_MAX_AGE_MINUTES)))
             ->update(['state' => PairingState::Expired->value]);
     }
 
@@ -544,7 +437,7 @@ final class PairingTokenService
         $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->where(function (QueryBuilder $query) use ($now): void {
-                $query->where('expires_at', '<', ZuluTimestamp::stamp($now))
+                $query->where('expires_at', '<', Instant::zulu($now))
                     ->orWhereIn('state', [
                         PairingState::Confirmed->value,
                         PairingState::Expired->value,

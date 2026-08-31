@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Kategorisiz',
+    'no_counterparty' => 'Karşı taraf yok',
+    'unavailable_counterparty' => 'Karşı taraf bu cihazda yok',
     'title' => 'Raporlar',
     'page_title' => 'Raporlar · Beatrax',
     'subtitle' => 'Defterinden bir rapor oluştur.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Grafik :currency cinsinden — :list çizilmiyor',
+        'undrawn' => 'Halkada değil — :amount ters yönde ilerliyor',
         'bar_title' => 'İşlemlerini görmek için bir sütuna tıkla',
         'line_title' => 'İşlemlerini görmek için bir noktaya tıkla',
         'donut_title' => 'İşlemlerini görmek için bir dilime tıkla',

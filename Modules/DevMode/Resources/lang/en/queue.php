@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Delete :count job|Delete :count jobs',
     'empty_pending' => 'Queue is empty.',
     'empty_failed' => 'No failed jobs.',
-    'empty_batches' => 'No active batches.',
+    'empty_batches' => 'No batches.',
     'select_aria' => 'Select',
     'select_row_aria' => 'Select row :key',
     'col_id' => 'Id',
     'col_queue' => 'Queue',
     'col_attempts' => 'Attempts',
+    'col_state' => 'State',
     'col_created' => 'Created',
     'col_uuid' => 'UUID',
     'col_failed' => 'Failed',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Pending',
     'col_actions' => 'Actions',
     'delete_job' => 'Delete job',
+    'worker_running' => 'Worker running',
     'delete_pending_confirm' => 'Delete pending job #:key?',
     'retry_job' => 'Retry job',
     'forget_confirm' => 'Remove failed job :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'The selected failed jobs will be re-queued for the worker to retry.',
     'cancel' => 'Cancel',
 
+    'state' => [
+        'available' => 'Available',
+        'reserved' => 'Reserved',
+        'scheduled' => 'Scheduled',
+    ],
+
     'tab' => [
         'pending' => 'Pending',
         'failed' => 'Failed',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Pending job deleted',
+        'pending_already_gone' => 'That job was already gone',
         'failed_requeued' => 'Failed job re-queued',
         'failed_removed' => 'Failed job removed',
         'batch_cancelled' => 'Batch cancelled',
         'batch_deleted' => 'Batch deleted',
         'batch_failures_requeued' => 'Batch failures re-queued',
+        'batch_failures_none' => 'No batch failures left to re-queue',
         'failed_jobs_requeued' => 'Failed jobs re-queued',
+        'failed_jobs_none' => 'No failed jobs left to re-queue',
         'bulk_refused' => 'Bulk delete refused — :reason',
         'rows_deleted' => 'Selected rows deleted',
     ],

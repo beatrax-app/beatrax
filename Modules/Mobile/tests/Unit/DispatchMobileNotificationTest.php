@@ -6,7 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Listeners\DispatchMobileNotification;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
@@ -90,7 +90,7 @@ function donMobileForecastDeliverable(int $userId): NotificationDeliverable
     return new NotificationDeliverable(
         notificationId: hash('sha256', 'don-mobile-forecast-'.$userId),
         userId: $userId,
-        triggerType: DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
+        triggerType: NotificationTrigger::ForecastShortfall,
         title: 'Cash-flow shortfall ahead',
         body: 'Your projected balance dips below zero within the next 30 days.',
         deepLinkRoute: '/forecast',

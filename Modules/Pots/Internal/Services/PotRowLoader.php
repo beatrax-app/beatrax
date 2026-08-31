@@ -8,11 +8,15 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\PeriodQuery;
-use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Services\SpendByCategoryQuery;
+use Modules\Ledger\Public\Support\CategoryPathName;
 use Modules\Pots\Public\Dto\PotMovementRow;
 use Modules\Pots\Public\Dto\PotRow;
+use Modules\Pots\Public\Enums\PotMovementKind;
 use Modules\Pots\Public\Enums\PotStatus;
 use stdClass;
 
@@ -23,15 +27,18 @@ use stdClass;
 /**
  * @link ../../../../.docs/features/pots/architecture.md
  */
-final class PotRowLoader
+final readonly class PotRowLoader
 {
     use CoercesScalars;
 
-    private const RECENT_MOVEMENT_LIMIT = 10;
+    private const int RECENT_MOVEMENT_LIMIT = 10;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly PeriodQuery $periods,
+        private DatabaseManager $db,
+        private PeriodQuery $periods,
+        private CrossCurrencyTotal $fx,
+        private SpendByCategoryQuery $spendByCategory,
+        private Clock $clock,
     ) {}
 
     public function balanceForPot(int $potId, User $user): int
@@ -50,10 +57,12 @@ final class PotRowLoader
     {
         $connection = $this->db->connection();
 
-        $pots = $connection->table('pots')
+        $joined = $connection->table('pots')
             ->leftJoin('accounts', 'pots.account_id', '=', 'accounts.id')
             ->leftJoin('goals', 'pots.goal_id', '=', 'goals.id')
-            ->leftJoin('categories', 'pots.category_id', '=', 'categories.id')
+            ->leftJoin('categories', 'pots.category_id', '=', 'categories.id');
+
+        $pots = CategoryPathName::joinParent($joined, $user->id, 'categories', 'parent_categories')
             ->where('pots.user_id', $user->id)
             ->where('pots.status', $status->value)
             ->orderBy('accounts.name')
@@ -68,7 +77,7 @@ final class PotRowLoader
                 'pots.category_id',
                 'accounts.name as account_name',
                 'goals.name as goal_name',
-                ...CategoryDisplayName::columns('categories'),
+                ...CategoryPathName::columns('categories', 'parent_categories'),
             ]);
 
         if ($pots->isEmpty()) {
@@ -80,22 +89,57 @@ final class PotRowLoader
             ->pluck('name', 'id')
             ->toArray();
 
-        $period = $this->periods->current();
-        $periodStart = $period->start->toDateString();
-        $periodEndExclusive = $period->endExclusive->toDateString();
+        // The owner's own budget month, not the browsing session's: this is a
+        // Public read a caller may run for a user who is not behind the guard.
+        $period = $this->periods->containingForUser($user, $this->clock->now());
+        $spendByCategory = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
+
+        $movementCounts = $this->movementCounts(
+            $connection,
+            $user,
+            array_values(array_map(static fn (stdClass $pot): int => self::toInt($pot->id), $pots->all())),
+        );
 
         $rows = [];
         foreach ($pots as $pot) {
-            $rows[] = $this->buildPotRow($pot, $user, $connection, $potNameById, $periodStart, $periodEndExclusive);
+            $rows[] = $this->buildPotRow($pot, $user, $connection, $potNameById, $spendByCategory, $movementCounts);
         }
 
         return $rows;
     }
 
+    // One statement for the whole list: the card needs to know an eleventh
+    // movement exists, and asking per pot would be a query per card.
+    /**
+     * @param  list<int>  $potIds
+     * @return array<int, int>
+     */
+    private function movementCounts(ConnectionInterface $connection, User $user, array $potIds): array
+    {
+        if ($potIds === []) {
+            return [];
+        }
+
+        $rows = $connection->table('pot_movements')
+            ->where('user_id', $user->id)
+            ->whereIn('pot_id', $potIds)
+            ->groupBy('pot_id')
+            ->get(['pot_id', $connection->raw('COUNT(*) as movement_count')]);
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[self::toInt($row->pot_id)] = self::toInt($row->movement_count);
+        }
+
+        return $counts;
+    }
+
     /**
      * @param  array<int|string, mixed>  $potNameById
+     * @param  array<string, int>  $spendByCategory
+     * @param  array<int, int>  $movementCounts
      */
-    private function buildPotRow(stdClass $pot, User $user, ConnectionInterface $connection, array $potNameById, string $periodStart, string $periodEndExclusive): PotRow
+    private function buildPotRow(stdClass $pot, User $user, ConnectionInterface $connection, array $potNameById, array $spendByCategory, array $movementCounts): PotRow
     {
         $potId = self::toInt($pot->id);
 
@@ -116,6 +160,7 @@ final class PotRowLoader
             ]);
 
         $categoryId = $pot->category_id !== null ? self::toInt($pot->category_id) : null;
+        $spent = $this->categorySpent($pot, $categoryId, $spendByCategory);
 
         return new PotRow(
             id: $potId,
@@ -128,16 +173,23 @@ final class PotRowLoader
             goalId: $pot->goal_id !== null ? self::toInt($pot->goal_id) : null,
             goalName: is_string($pot->goal_name) ? $pot->goal_name : null,
             categoryId: $categoryId,
-            categoryName: CategoryDisplayName::fromRow($pot, 'category'),
-            categorySpentMinor: $this->categorySpentMinor($connection, $pot, $categoryId, $user, $periodStart, $periodEndExclusive),
+            categoryName: CategoryPathName::fromRow($pot),
+            categorySpentMinor: $spent === null ? null : $spent['minor'],
+            categorySpentUnconverted: $spent === null ? [] : $spent['unconverted'],
             recentMovements: $this->buildRecentMovements($movementRows, $potNameById),
+            movementCount: $movementCounts[$potId] ?? 0,
         );
     }
 
+    // tryFrom, never from: `pot_movements.kind` has no CHECK, a peer on a newer
+    // build writes its own spelling straight through the op log, and a raise
+    // here took the whole /pots page down on the older device.
     /**
      * @param  iterable<mixed>  $movementRows
      * @param  array<int|string, mixed>  $potNameById
      * @return list<PotMovementRow>
+     *
+     * @link ../../../../.docs/features/sync/a-peer-may-be-on-a-newer-version.md
      */
     private function buildRecentMovements(iterable $movementRows, array $potNameById): array
     {
@@ -151,7 +203,7 @@ final class PotRowLoader
 
             $recentMovements[] = new PotMovementRow(
                 id: self::toInt($m->id),
-                kind: self::toString($m->kind),
+                kind: PotMovementKind::tryFrom(self::toString($m->kind)),
                 amountMinor: self::toInt($m->amount_minor),
                 currency: self::toString($m->currency),
                 counterpartPotId: $counterpartPotId,
@@ -169,21 +221,31 @@ final class PotRowLoader
         return SafeDate::parseOrNull(self::toString($createdAt))?->format('Y-m-d H:i') ?? '';
     }
 
-    // Filtered to the pot's own currency — summing mixed currencies in raw
-    // minor units would be dishonest against the label the view shows.
-    private function categorySpentMinor(ConnectionInterface $connection, stdClass $pot, ?int $categoryId, User $user, string $periodStart, string $periodEndExclusive): ?int
+    // Bucketed by settled currency and converted into the pot's, never filtered
+    // to it: a card denominated elsewhere dropped out of a line sitting beside a
+    // balance that counted everything. The buckets are the ledger's own, so the
+    // line and the budgets grid one screen away answer the same question.
+    /**
+     * @param  array<string, int>  $spendByCategory  "categoryId|currency" => spend minor
+     * @return array{minor: int, unconverted: list<string>}|null
+     */
+    private function categorySpent(stdClass $pot, ?int $categoryId, array $spendByCategory): ?array
     {
         if ($categoryId === null) {
             return null;
         }
 
-        return (int) $connection->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('category_id', $categoryId)
-            ->where('settled_currency', self::toString($pot->currency))
-            ->where('settled_amount_minor', '<', 0)
-            ->where('posted_at', '>=', $periodStart)
-            ->where('posted_at', '<', $periodEndExclusive)
-            ->sum($connection->raw('-settled_amount_minor'));
+        $byCurrency = [];
+        foreach ($spendByCategory as $key => $spentMinor) {
+            [$rowCategoryId, $currency] = explode('|', self::toString($key), 2) + [1 => ''];
+            if ((int) $rowCategoryId !== $categoryId || $currency === '') {
+                continue;
+            }
+            $byCurrency[$currency] = ($byCurrency[$currency] ?? 0) + $spentMinor;
+        }
+
+        $converted = $this->fx->of($byCurrency, self::toString($pot->currency));
+
+        return ['minor' => $converted->minor, 'unconverted' => $converted->unconverted];
     }
 }

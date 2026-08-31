@@ -6,6 +6,7 @@
     $total: int|null  — tagged total in minor EUR (null = no data)
     $count: int       — number of tagged items
     $year:  int       — active tax year (0 = unauthenticated)
+    $unconvertedList: string — codes left out of $total for want of a rate ('' = none)
 
     The entire card is an anchor to /tax.
     Height target: 72px (two lines; fits the dashboard grid row).
@@ -42,5 +43,10 @@
         <p style="margin-top: 2px; font-size: var(--text-xs); color: var(--color-text-muted);">
             {{ Lang::choice('tax::summary.tagged', $count, ['count' => $count]) }}
         </p>
+        @if ($unconvertedList !== '')
+            <p data-not-converted="true" style="margin-top: 2px; font-size: var(--text-xs); color: var(--color-text-faint);">
+                {{ Lang::get('core::money.not_converted', ['list' => $unconvertedList]) }}
+            </p>
+        @endif
     @endif
 </a>

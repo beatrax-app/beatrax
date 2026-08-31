@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
 use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Dto\SniffResult;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->sniffer = $this->app->make(HeaderSniffer::class);
 });
 
@@ -25,15 +26,15 @@ function writeTempXml(string $body, string $prefix = ''): string
 it('accepts the real anonymized ASN fixture and reports its profile', function (): void {
     $result = $this->sniffer->sniff(
         base_path('tests/fixtures/asn-sample-1.csv'),
-        AsnCsvHeaderProfile::FORMAT,
+        CsvPresetRegistry::ASN,
     );
 
     expect($result)->toBeInstanceOf(SniffResult::class);
-    expect($result->format)->toBe(AsnCsvHeaderProfile::FORMAT);
-    expect($result->delimiter)->toBe(AsnCsvHeaderProfile::DELIMITER);
-    expect($result->hasHeader)->toBe(AsnCsvHeaderProfile::HAS_HEADER);
-    expect($result->encoding)->toBe(AsnCsvHeaderProfile::SOURCE_ENCODING);
-    expect($result->columnCount)->toBe(AsnCsvHeaderProfile::EXPECTED_COLUMN_COUNT);
+    expect($result->format)->toBe(CsvPresetRegistry::ASN);
+    expect($result->delimiter)->toBe(',');
+    expect($result->hasHeader)->toBe(true);
+    expect($result->encoding)->toBe('UTF-8');
+    expect($result->columnCount)->toBe(20);
 });
 
 it('rejects a non-CSV extension with a user-readable message', function (): void {
@@ -41,7 +42,7 @@ it('rejects a non-CSV extension with a user-readable message', function (): void
     file_put_contents($tmp, "not a csv\n");
 
     try {
-        expect(fn () => $this->sniffer->sniff($tmp, AsnCsvHeaderProfile::FORMAT))
+        expect(fn () => $this->sniffer->sniff($tmp, CsvPresetRegistry::ASN))
             ->toThrow(SniffMismatchException::class, "doesn't look like a CSV");
     } finally {
         @unlink($tmp);
@@ -54,7 +55,7 @@ it('rejects a CSV with the wrong column count', function (): void {
     file_put_contents($tmp, "a,b,c,d,e\n01-01-2026,X,Y,Z,W\n");
 
     try {
-        expect(fn () => $this->sniffer->sniff($tmp, AsnCsvHeaderProfile::FORMAT))
+        expect(fn () => $this->sniffer->sniff($tmp, CsvPresetRegistry::ASN))
             ->toThrow(SniffMismatchException::class, 'Expected 19 or 20 columns');
     } finally {
         @unlink($tmp);
@@ -82,8 +83,8 @@ it('accepts the 19-column ASN variant (no trailing Categorie column)', function 
     file_put_contents($tmp, implode("\n", $lines));
 
     try {
-        $result = $this->sniffer->sniff($tmp, AsnCsvHeaderProfile::FORMAT);
-        expect($result->format)->toBe(AsnCsvHeaderProfile::FORMAT);
+        $result = $this->sniffer->sniff($tmp, CsvPresetRegistry::ASN);
+        expect($result->format)->toBe(CsvPresetRegistry::ASN);
         expect($result->columnCount)->toBe(19);
     } finally {
         @unlink($tmp);
@@ -91,7 +92,7 @@ it('accepts the 19-column ASN variant (no trailing Categorie column)', function 
 });
 
 it('rejects an unreadable / non-existent file', function (): void {
-    expect(fn () => $this->sniffer->sniff('/no/such/path-xyz.csv', AsnCsvHeaderProfile::FORMAT))
+    expect(fn () => $this->sniffer->sniff('/no/such/path-xyz.csv', CsvPresetRegistry::ASN))
         ->toThrow(SniffMismatchException::class);
 });
 

@@ -17,10 +17,8 @@ return [
     'section_categories' => 'Kategorijas',
     'section_goals_recurring' => 'Mērķi un regulārie maksājumi',
     'no_name' => '(bez nosaukuma)',
-    'see_all_prefix' => 'Skatīt visus ',
-    'see_all_suffix' => ' rezultātus →',
-    'no_transactions_prefix' => 'Neviens darījums neatbilst „',
-    'no_transactions_suffix' => '”',
+    'see_all' => 'Skatīt :count rezultātu →|Skatīt :count rezultātu →|Skatīt visus :count rezultātus →',
+    'no_transactions' => 'Neviens darījums neatbilst „:query”',
     'source_txn' => 'darījums',
     'source_counterparty' => 'partneris',
     'source_category' => 'kategorija',
@@ -30,6 +28,29 @@ return [
     'foot_select' => 'izvēlēties',
     'foot_close' => 'aizvērt',
     'close_aria' => 'Aizvērt meklēšanu',
+    'close_caption' => 'Aizvērt',
     'foot_try' => 'Mēģiniet',
-    'results_suffix' => ' rezultāti',
+    'results' => ':count rezultātu|:count rezultāts|:count rezultāti',
+
+    'action' => [
+        'run_import' => ['label' => 'Palaist importu', 'hint' => 'Atvērt importēšanas vedni'],
+        'scan_email' => ['label' => 'Skenēt e-pastu tagad', 'hint' => 'Nekavējoties palaist pastkastes sinhronizāciju'],
+        'open_profile' => ['label' => 'Atvērt profilu', 'hint' => 'Iestatījumi — konts un preferences'],
+        'toggle_theme' => ['label' => 'Mainīt motīvu', 'hint' => 'Pārslēgt starp gaišo un tumšo motīvu'],
+    ],
+
+    'run_command' => 'Izpildīt :command',
+
+    'nav' => [
+        'overview' => ['label' => 'Izstrādes pārskats', 'hint' => 'Sistēmas elementi + nesenās izpildes'],
+        'artisan' => ['label' => 'Artisan izpildītājs', 'hint' => 'Atļauto komandu izpilde'],
+        'audit' => ['label' => 'Izstrādes audita žurnāls', 'hint' => 'Katra darbība izstrādes režīmā'],
+        'logs' => ['label' => 'Žurnālu sekotājs', 'hint' => 'laravel-*.log tiešraides plūsma'],
+        'queue' => ['label' => 'Rindas inspektors', 'hint' => 'Gaidošie / neizdevušies / partijas'],
+        'doctor' => ['label' => 'Doctor', 'hint' => 'Sistēmas pārbaudes'],
+        'sql' => ['label' => 'SQL panelis', 'hint' => 'Pārlūks tikai SELECT vaicājumiem'],
+        'system' => ['label' => 'Sistēmas momentuzņēmums', 'hint' => 'Vide + ceļi + konfigurācija'],
+        'horizon' => ['label' => 'Horizon', 'hint' => 'Iegultais rindas panelis'],
+        'sync_health' => ['label' => 'Sinhronizācijas stāvoklis', 'hint' => 'Karantīnā ievietotās vai izlaistās apvienošanas darbības'],
+    ],
 ];

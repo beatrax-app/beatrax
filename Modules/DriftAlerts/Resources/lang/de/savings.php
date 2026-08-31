@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Abos →',
     'disclaimer' => 'Offizielle Links aus dem Support-Korpus — Beatrax kündigt oder wechselt nie etwas für dich.',
     'dismiss_aria' => 'Vorschlag ausblenden',
+    'dismiss_caption' => 'Ausblenden',
 
     'insight' => [
         'cheaper_message' => ':name hat womöglich einen günstigeren Tarif — du zahlst :monthly/Mon.',

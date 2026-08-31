@@ -12,6 +12,7 @@ return [
         'locked' => 'Seadistamise jätkamiseks ava rakendus.',
         'revoked' => 'See seade eemaldati teie teisest seadmest. Siduge uuesti, et sünkroonimine jätkuks.',
     ],
+    'unlock_cta' => 'Ava rakendus',
     'step' => [
         'connect' => 'Ühendun sinu teise seadmega',
         'keys' => 'Võtan vastu krüpteerimisvõtmeid',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Ehitan sinu ajalugu uuesti üles',
     ],
     'step_current' => 'praegune samm',
-    'working' => [
-        'connect' => 'Võtan ühendust sinu teise seadmega…',
-        'keys' => 'Avan sinu andmeid…',
-        'transfer' => 'Küsin sinu ajalugu…',
-        'rebuild' => 'Ehitan sinu ajalugu uuesti üles — see võib võtta minuti.',
-    ],
     'page_title' => 'Seadistan…',
     'resuming' => 'Jätkan seadistamist…',
     'setting_up' => 'Seadistan seda seadet…',
     'progress_aria' => 'Seadistamise edenemine',
     'records' => ':count kirje|:count kirjet',
-    'records_preparing' => 'Ootan teist seadet…',
 ];

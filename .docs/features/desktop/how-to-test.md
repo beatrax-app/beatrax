@@ -27,7 +27,7 @@ Practical recipes for exercising the `Desktop` module in isolation.
     (the listener is unconditional; subscribers in
     `Import` / `Receipts` consume it directly).
   - The continue-pending-intent-after-login flow.
-  - The close-window applicator with both `'minimize'` and
+  - The close-window applicator with both `'tray'` and
     `'quit'` users.
 - **Setup:** every test uses `RefreshDatabase`. Tests that exercise
   bundle-gated behaviour set
@@ -106,10 +106,6 @@ Each contract below names the test that proves it. The requirement it
 serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
-
-The behavioural contract for the `Desktop` module.
-
-## Behavioral contracts
 
 - **No NativePHP imports outside `Modules\Desktop\`.** Every
   `use Native\Laravel\…` and `use Native\Desktop\…` statement in the
@@ -225,7 +221,7 @@ The behavioural contract for the `Desktop` module.
 
 ## Configuration + feature flags
 
-- `users.close_behavior` — per-user `'minimize'|'quit'` decision the
+- `users.close_behavior` — per-user `'tray'|'quit'` decision the
   close-intercept reads.
 - `users.theme` — per-user theme preference; the OS theme is one
   signal, the user preference overrides.
@@ -235,5 +231,6 @@ The behavioural contract for the `Desktop` module.
   `app_version` field. Owned by [`Core`](../core/how-to-test.md);
   surfaced to the user via the application-menu's "About" item
   built by `AppMenuBuilder`.
-- No per-user OS-notification opt-out today; the focus-gate is the
-  silencer.
+- The per-trigger toggles and quiet hours the `Notifications` module's
+  `SuppressionEvaluator` reads are consulted before the focus gate; the
+  focus gate is the last silencer, not the only one.

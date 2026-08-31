@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Anomaly\Internal\Jobs\BackfillAnomaliesJob;
+use Modules\Anomaly\Internal\Support\AnomalySensitivity;
 use Modules\Anomaly\Public\Actions\RemoveAnomalySuppressionRule;
 use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
 use Modules\Core\Public\Actions\WriteUserPreference;
@@ -22,9 +23,9 @@ final class AnomalySettingsSection extends Component
 {
     use DispatchesToast;
 
-    public int $anomalySensitivityPercent = 50;
+    public int $anomalySensitivityPercent = AnomalySensitivity::DEFAULT_PERCENT;
 
-    public int $anomalyMinAmountMinor = 1000;
+    public int $anomalyMinAmountMinor = AnomalySensitivity::DEFAULT_MIN_AMOUNT_MINOR;
 
     public string $saveError = '';
 
@@ -39,12 +40,10 @@ final class AnomalySettingsSection extends Component
             ->first(['anomaly_sensitivity_percent', 'anomaly_min_amount_minor']);
 
         if ($row !== null) {
-            $this->anomalySensitivityPercent = is_numeric($row->anomaly_sensitivity_percent ?? null)
-                ? (int) $row->anomaly_sensitivity_percent
-                : 50;
+            $this->anomalySensitivityPercent = AnomalySensitivity::fromStored($row->anomaly_sensitivity_percent ?? null)->percent;
             $this->anomalyMinAmountMinor = is_numeric($row->anomaly_min_amount_minor ?? null)
                 ? (int) $row->anomaly_min_amount_minor
-                : 1000;
+                : AnomalySensitivity::DEFAULT_MIN_AMOUNT_MINOR;
         }
     }
 
@@ -57,10 +56,10 @@ final class AnomalySettingsSection extends Component
         $this->saveError = '';
         $this->saved = false;
 
-        $sensitivity = $this->anomalySensitivityPercent;
+        $sensitivity = AnomalySensitivity::tryFrom($this->anomalySensitivityPercent);
         $floor = $this->anomalyMinAmountMinor;
 
-        if ($sensitivity < 1 || $sensitivity > 100) {
+        if ($sensitivity === null) {
             $this->saveError = Lang::get('anomaly::settings.errors.sensitivity_range');
 
             return;
@@ -80,7 +79,7 @@ final class AnomalySettingsSection extends Component
             ->value('anomaly_backfilled_at');
 
         ($writeUserPreference)($user->id, [
-            'anomaly_sensitivity_percent' => $sensitivity,
+            'anomaly_sensitivity_percent' => $sensitivity->percent,
             'anomaly_min_amount_minor' => $floor,
         ]);
 

@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Step :current of :total',
 
-    'step_dot_aria' => 'Step :number of :total',
-
     'back' => 'Back',
     'back_aria' => 'Back — returns to the previous setup step',
 

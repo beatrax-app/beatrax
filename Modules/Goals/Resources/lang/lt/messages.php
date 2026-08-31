@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Pridėk įnašų, kad matytum prognozę',
         'not_enough_history' => 'Kol kas per mažai istorijos datai prognozuoti',
         'no_recent_contributions' => 'Nėra naujausių įnašų, pagal kuriuos būtų galima prognozuoti',
+        'too_far_to_date' => 'Šiuo tempu per toli, kad būtų galima nurodyti datą',
         'est' => 'Apytiksliai :date ·',
         'projection_note' => '(prognozė)',
         'projected' => 'Prognozuojama: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Daugiau veiksmų su tikslu :name',
         'mark_complete' => 'Žymėti kaip užbaigtą',
+        'mark_complete_caption' => 'Žymėti',
         'archive' => 'Archyvuoti',
         'restore' => 'Atkurti',
     ],
 
-    'archived_disclosure' => 'Archyvuoti tikslai (:count)',
+    'archived_disclosure' => 'Archyvuotas tikslas (:count)|Archyvuoti tikslai (:count)|Archyvuotų tikslų (:count)',
 
     'form' => [
         'title_edit' => 'Redaguoti tikslą',
@@ -96,8 +98,11 @@ return [
         'name' => 'Įvesk tikslo pavadinimą.',
         'date' => 'Pasirink tikslo datą.',
         'date_invalid' => 'Pasirinkite tikrą datą.',
+        'date_before_start' => 'Pasirink datą tikslo pradžios dieną arba vėliau.',
         'generic' => 'Tikslo išsaugoti nepavyko. Patikrinkite laukus ir bandykite dar kartą.',
         'amount' => 'Įvesk tinkamą sumą, didesnę už nulį.',
         'pot_linked_category' => 'Ši taupyklė susieta su kategorija. Pirmiausia pašalink tą ryšį Taupyklių puslapyje.',
+        'pot_already_linked' => 'Ši taupyklė jau finansuoja kitą tikslą. Pirmiausia ten pašalink susiejimą.',
+        'pot_missing' => 'Ši taupyklė nebepasiekiama. Pasirink kitą arba palik šį tikslą nesusietą.',
     ],
 ];

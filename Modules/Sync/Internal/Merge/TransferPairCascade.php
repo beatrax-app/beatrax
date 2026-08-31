@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Ledger\Public\Contracts\UnpairsTransferLegs;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
@@ -17,6 +18,7 @@ final readonly class TransferPairCascade
 {
     public function __construct(
         private DatabaseManager $db,
+        private UnpairsTransferLegs $unpairer,
     ) {}
 
     // Captured BEFORE the delete, because ON DELETE SET NULL on
@@ -65,44 +67,18 @@ final readonly class TransferPairCascade
     public function apply(array $pairCascades, int $userId, string $now, array &$touchedTransactionIds): void
     {
         foreach ($pairCascades as $cascade) {
-            // A leg whose partner is gone is no longer money moving between
-            // two of your own accounts — it is money that arrived or left.
-            $newType = match ($cascade['deletedType']) {
-                TransactionType::TransferOut->value => TransactionType::Income->value,
-                TransactionType::TransferIn->value => TransactionType::Expense->value,
-                default => null,
-            };
+            $deletedType = TransactionType::tryFrom($cascade['deletedType']);
+            $newType = $deletedType === null
+                ? null
+                : $this->unpairer->unpair($userId, $cascade['partnerId'], $deletedType);
 
-            if ($newType === null || ! $this->reclassify($cascade['partnerId'], $newType, $userId)) {
+            if ($newType === null) {
                 continue;
             }
 
-            $this->persistCascadeOp($cascade['partnerId'], $newType, $cascade, $userId, $now);
+            $this->persistCascadeOp($cascade['partnerId'], $newType->value, $cascade, $userId, $now);
             $touchedTransactionIds[] = $cascade['partnerId'];
         }
-    }
-
-    // False when the partner is gone too, or when it still has a pair link —
-    // something re-paired it, and reclassifying would then be wrong.
-    private function reclassify(int $partnerId, string $newType, int $userId): bool
-    {
-        $partnerRow = $this->db->connection()
-            ->table('transactions')
-            ->where('id', $partnerId)
-            ->where('user_id', $userId)
-            ->first();
-
-        if ($partnerRow === null || $partnerRow->pair_transaction_id !== null) {
-            return false;
-        }
-
-        $this->db->connection()
-            ->table('transactions')
-            ->where('id', $partnerId)
-            ->where('user_id', $userId)
-            ->update(['type' => $newType]);
-
-        return true;
     }
 
     // Stored with a REAL monotonic HLC (tombstone HLC, counter + 1) so it

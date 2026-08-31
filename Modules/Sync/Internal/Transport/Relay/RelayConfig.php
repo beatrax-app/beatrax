@@ -10,11 +10,11 @@ use Modules\Sync\Internal\Exceptions\SecretFileException;
 
 final class RelayConfig
 {
-    private const CONFIG_SUB = 'sync/relay.json';
+    private const string CONFIG_SUB = 'sync/relay.json';
 
-    private const TOKEN_FILE = 'sync-relay-token.json';
+    private const string TOKEN_FILE = 'sync-relay-token.json';
 
-    private const DRAIN_SECRET_FILE = 'sync-relay-drain-secret.json';
+    private const string DRAIN_SECRET_FILE = 'sync-relay-drain-secret.json';
 
     // Never throws on a missing file — absent file/empty `endpoint` key
     // both mean "not configured".

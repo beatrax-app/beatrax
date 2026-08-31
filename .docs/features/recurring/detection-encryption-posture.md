@@ -157,8 +157,7 @@ in an indexed column that syncs in the clear. Healing lazily through
 `Rejected` and `Snoozed` series, and a series whose transactions fall
 outside `recurring_detection_window_months` is never revisited.
 
-The migration this page once said the hardening was deferred for is real,
-and it is the reason for two decisions worth reading together.
+That hardening is the reason for two decisions worth reading together.
 `CounterpartyKey::normalizeIban()` trims and upper-cases but does **not**
 strip interior whitespace: compacting would change what an already-keyed
 spaced IBAN hashes to, orphaning exactly the rows it was meant to

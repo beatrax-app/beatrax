@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Cele mai mari cheltuieli',
     'no_expenses' => 'Încă nu există cheltuieli categorisite.',
+    'top_spending_refunded' => 'În afara clasamentului — :amount s-a întors',
 
     'recent_transactions' => 'Tranzacții recente',
     'view_all' => 'Vezi toate',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Categorie',
     'th_amount' => 'Sumă',
     'uncategorized' => 'Necategorizat',
+
+    'jump_to_records' => [
+        'body' => 'Nimic pentru această perioadă. Cele mai recente tranzacții sunt încă aici.',
+        'action' => 'Arată perioada :period',
+    ],
 
     'reauth' => [
         'title' => 'O căsuță poștală trebuie reconectată.',

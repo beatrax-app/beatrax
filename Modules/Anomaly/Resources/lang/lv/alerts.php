@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'bāze :baseline → faktiski: :actual',
+    'charged' => 'norakstīts :actual',
     'detected' => 'atklāts :date',
     'sensitivity' => 'jutīgums :percent no 100',
 

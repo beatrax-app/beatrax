@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Kases grāmata',
     'heading' => 'Kases grāmata',
-    'intro' => 'Pierakstiet skaidras naudas un citus ārpusbankas tēriņus manuāli. Manuālie ieraksti nonāk tajā pašā virsgrāmatā, kur importētie — tie tiek kategorizēti, iekļauti regulāro maksājumu atpazīšanā un ieskaitīti mēneša kopsummā.',
+    'intro' => 'Pierakstiet skaidras naudas un citus ārpusbankas tēriņus manuāli. Manuālie ieraksti nonāk tajā pašā virsgrāmatā, kur importētie — tie tiek kategorizēti, sasaistīti ar darījuma partneri, iekļauti regulāro maksājumu atpazīšanā un ieskaitīti mēneša kopsummā.',
 
     'direction' => 'Virziens',
     'expense' => 'Izdevumi',
@@ -24,6 +24,7 @@ return [
     'manual_entries' => 'Manuālie ieraksti',
     'no_entries' => 'Vēl nav neviena manuāla ieraksta.',
     'delete_entry' => 'Dzēst ierakstu',
+    'delete_entry_caption' => 'Dzēst',
     'delete' => 'Dzēst',
     'delete_confirm' => 'Dzēst šo ierakstu?',
     'delete_keep' => 'Paturēt',
@@ -31,12 +32,15 @@ return [
     'errors' => [
         'amount_positive' => 'Ievadiet summu, kas lielāka par nulli.',
         'amount_too_large' => 'Šī summa ir pārāk liela. Pārbaudiet ciparus.',
-        'amount_unreadable' => 'Šo summu neizdevās nolasīt. Ievadiet to bez tūkstošu atdalītāja un ar ne vairāk kā divām zīmēm aiz komata, piemēram, :example.',
+        'amount_unreadable' => 'Summu nevarēja nolasīt. Ievadiet to ar ne vairāk kā :decimals cipariem aiz komata, piemēram :example.|Summu nevarēja nolasīt. Ievadiet to ar ne vairāk kā :decimals ciparu aiz komata, piemēram :example.|Summu nevarēja nolasīt. Ievadiet to ar ne vairāk kā :decimals cipariem aiz komata, piemēram :example.',
+        'amount_unreadable_whole' => 'Summu nevarēja nolasīt. Šai valūtai nav decimāldaļu, tāpēc ievadiet veselu skaitli, piemēram :example.',
         'invalid_date' => 'Ievadiet derīgu datumu.',
+        'not_recorded' => 'Ieraksts netika saglabāts. Mēģiniet to pievienot vēlreiz.',
     ],
 
     'toast' => [
         'added' => 'Skaidras naudas ieraksts pievienots.',
         'removed' => 'Skaidras naudas ieraksts noņemts.',
+        'reconciled_locked' => 'Šis darījums ir saskaņots. Atceliet saskaņojumu, lai veiktu izmaiņas.',
     ],
 ];

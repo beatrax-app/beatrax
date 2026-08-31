@@ -12,7 +12,7 @@ final class TimeBucketGenerator
 {
     // ~5 years of monthly points. Exceeding it widens the stepping rather than
     // truncating the range, so the full window still renders, just coarser.
-    public const MAX_BUCKET_POINTS = 60;
+    public const int MAX_BUCKET_POINTS = 60;
 
     /**
      * @return list<Period>
@@ -30,7 +30,7 @@ final class TimeBucketGenerator
     // 4108 buckets -- each one a query per account plus an FX conversion, 7.8
     // seconds on a 164-transaction database, from a plain GET.
     /**
-     * @param  callable(CarbonImmutable): CarbonImmutable  $step
+     * @param  list<array{step: callable(CarbonImmutable): CarbonImmutable, label: callable(CarbonImmutable, CarbonImmutable): string}>  $steps
      * @return list<Period>
      */
     private function firstStepInsideTheCap(Period $period, array $steps): array
@@ -43,11 +43,13 @@ final class TimeBucketGenerator
 
         // Nothing on the calendar fits, so the step is computed from the range
         // itself: whole years, widened until the point count is inside the cap.
+        // NoOverflow like the calendar steps above it — a range opening on 29
+        // February otherwise walks every later bucket edge into March.
         $years = max(1, (int) ceil(($period->start->diffInYears($period->endExclusive) + 1) / self::MAX_BUCKET_POINTS));
 
         return $this->stepBuckets(
             $period,
-            static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addYears($years),
+            static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addYearsNoOverflow($years),
             self::spanLabel('Y'),
         );
     }

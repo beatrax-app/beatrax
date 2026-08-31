@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Auth\Internal\Lock\IdleTimeoutOptions')
 {{--
     App Lock settings section — UI-SPEC §3.
     Mounted on the Data & Devices screen, not the settings page: enabling sync
@@ -311,10 +312,9 @@
                    focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                    dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
         >
-            <option value="1">{{ Lang::get('auth::app_lock.idle_1') }}</option>
-            <option value="5">{{ Lang::get('auth::app_lock.idle_5') }}</option>
-            <option value="15">{{ Lang::get('auth::app_lock.idle_15') }}</option>
-            <option value="30">{{ Lang::get('auth::app_lock.idle_30') }}</option>
+            @foreach (IdleTimeoutOptions::LABEL_KEYS as $minutes => $labelKey)
+                <option value="{{ $minutes }}">{{ Lang::get($labelKey) }}</option>
+            @endforeach
         </select>
     </div>
 

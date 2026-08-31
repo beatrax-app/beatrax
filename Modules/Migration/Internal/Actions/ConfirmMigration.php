@@ -16,18 +16,22 @@ use Modules\Migration\Internal\Exceptions\MigrationAlreadyDiscardedException;
 use Modules\Migration\Internal\Pipeline\ConflictRow;
 use Modules\Migration\Internal\Pipeline\ConflictValueCodec;
 use Modules\Migration\Internal\Pipeline\EntityChangeApplier;
+use Modules\Migration\Internal\Pipeline\MergeApplier;
 use Modules\Migration\Internal\Pipeline\PromoteResult;
 use Modules\Migration\Internal\Pipeline\PromoteStagingToDomain;
+use Modules\Migration\Internal\Pipeline\ThreeWayMergeResolver;
 use Modules\Migration\Models\MigrationRun;
 use stdClass;
 
-final class ConfirmMigration
+final readonly class ConfirmMigration
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly PromoteStagingToDomain $promoter,
-        private readonly EntityChangeApplier $applier,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private PromoteStagingToDomain $promoter,
+        private EntityChangeApplier $applier,
+        private ThreeWayMergeResolver $resolver,
+        private MergeApplier $mergeApplier,
     ) {}
 
     public function __invoke(int $migrationRunId, User $user): MigrationConfirmResult
@@ -70,9 +74,26 @@ final class ConfirmMigration
             }
         }
 
+        // CheckForUpdates only staged and listed; the merge is re-derived here
+        // against live values, so confirming is the first and only moment a
+        // reconciliation reaches a domain table.
+        $decision = $run->status === MigrationRunStatus::NeedsAttention->value
+            ? $this->resolver->resolve($migrationRunId, $user, $run->source_product)
+            : null;
+
         // No outer transaction: promote()'s per-entity writes are already
         // chunked, and wrapping them would collapse them into one unbounded one.
         $promoteResult = $this->promoter->promote($migrationRunId, $user, $skipBudgetAssignmentKeys);
+
+        if ($decision !== null) {
+            $this->mergeApplier->applyNonBudgetAssignmentChanges(
+                $migrationRunId,
+                $user,
+                $run->source_product,
+                $decision,
+                self::deferredConflictKeys($conflicts),
+            );
+        }
 
         $this->applyTakeSourceConflicts($conflicts, $user, $run->source_product);
         $this->advanceKeepLocalConflictBaselines($conflicts, $user, $run->source_product);
@@ -80,6 +101,20 @@ final class ConfirmMigration
         return $this->db->connection()->transaction(
             fn (): MigrationConfirmResult => $this->flipToConfirmed($run, $promoteResult),
         );
+    }
+
+    /**
+     * @param  list<ConflictRow>  $conflicts
+     * @return list<string>
+     */
+    private static function deferredConflictKeys(array $conflicts): array
+    {
+        $keys = [];
+        foreach ($conflicts as $conflict) {
+            $keys[] = MergeApplier::deferredKey($conflict->entityType, $conflict->sourceExternalId, $conflict->fieldName);
+        }
+
+        return $keys;
     }
 
     /**
@@ -143,12 +178,16 @@ final class ConfirmMigration
     {
         foreach ($conflicts as $conflict) {
             // A take-source budget_assignment had its baseline advanced by
-            // promoteBudgetAssignments() already.
+            // PromoteBudgetAssignments already.
             if ($conflict->resolution === ConflictResolution::TakeSource) {
                 continue;
             }
 
-            $value = ConflictValueCodec::fromStorage($conflict->localValue, $conflict->fieldName);
+            // The baseline records what the FILE said, not what the reader kept:
+            // storing the local value here makes the same unchanged export read
+            // as a source-side change next time, and the next import then
+            // "applies" the very value this keep-local rejected.
+            $value = ConflictValueCodec::fromStorage($conflict->sourceValue, $conflict->fieldName);
             $this->applier->advanceBaseline($user, $sourceProduct, $conflict->entityType, $conflict->sourceExternalId, $conflict->fieldName, $value);
         }
     }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Pots · Beatrax',
     'heading' => 'Pots',
-    'subtitle' => 'Virtual sub-balances that always add up to your real account balance.',
+    'subtitle' => 'Virtual sub-balances carved out of a real account balance.',
     'add_pot' => 'Add pot',
 
     'pot_fallback' => 'pot',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Show history ↓',
         'hide' => 'Hide history ↑',
+        'truncated' => 'Most recent movements: :shown of :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Withdraw',
         'moved_from' => 'Moved from :name',
         'moved_to' => 'Moved to :name',
+        'unreadable' => 'Recorded by a newer version of Beatrax',
+        'released_on_archive' => 'Released on archive',
     ],
 
     'archived' => [
-        'toggle' => 'Archived pots (:count)',
+        'toggle' => 'Archived pot (:count)|Archived pots (:count)',
         'badge' => 'Archived',
     ],
 
@@ -119,12 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Enter a name for this pot.',
         'select_account' => 'Select an account for this pot.',
-        'amount_exceeds_unallocated' => 'Amount exceeds unallocated balance.',
         'amount_exceeds_unallocated_available' => 'Amount exceeds unallocated balance (:amount available).',
         'amount_exceeds_pot_balance' => 'Amount exceeds balance in :name (:amount available).',
         'generic' => 'That pot could not be saved. Check the fields and try again.',
         'amount_invalid' => 'Enter an amount greater than zero.',
         'goal_already_linked' => 'This goal already has an active linked pot. Archive it first.',
+        'account_cannot_hold_pots' => 'A pot needs an account that holds money. Choose another account.',
+        'select_target_pot' => 'Select a pot to move to.',
+        'move_target_missing' => 'That pot is no longer available. Pick another one.',
+        'move_same_pot' => 'A pot cannot move money to itself. Pick a different pot.',
+        'move_cross_account' => 'Pots only exchange money inside one account, and :name is in :account.',
+        'pot_missing' => 'That pot is no longer available.',
+        'operation_failed' => 'That did not go through. No money was moved — try again.',
     ],
 
     'toast' => [

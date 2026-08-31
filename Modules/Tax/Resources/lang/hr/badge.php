@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Uredi poreznu oznaku: :label',
     'tag' => 'Označi',
     'tag_aria' => 'Označi kao porezno relevantno',
+    'tag_caption' => 'Označi',
 ];

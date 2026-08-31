@@ -18,13 +18,13 @@ use Throwable;
 
 class MicrosoftOAuthProvider
 {
-    private const MAIL_READ_SCOPE = 'Mail.Read';
+    private const string MAIL_READ_SCOPE = 'Mail.Read';
 
-    private const OFFLINE_ACCESS_SCOPE = 'offline_access';
+    private const string OFFLINE_ACCESS_SCOPE = 'offline_access';
 
-    private const USER_READ_SCOPE = 'User.Read';
+    private const string USER_READ_SCOPE = 'User.Read';
 
-    private const SCOPE_STRING = self::MAIL_READ_SCOPE.' '.self::OFFLINE_ACCESS_SCOPE.' '.self::USER_READ_SCOPE;
+    private const string SCOPE_STRING = self::MAIL_READ_SCOPE.' '.self::OFFLINE_ACCESS_SCOPE.' '.self::USER_READ_SCOPE;
 
     public function __construct(
         private readonly OAuthSecretsRepository $secrets,
@@ -71,6 +71,7 @@ class MicrosoftOAuthProvider
         } catch (Throwable $e) {
             throw new OAuthExchangeFailed(
                 'Microsoft OAuth token exchange failed: '.$this->safeMessage($e),
+                previous: $e,
             );
         }
 
@@ -89,7 +90,7 @@ class MicrosoftOAuthProvider
             accessToken: $accessTokenString,
             refreshToken: is_string($refreshToken) && $refreshToken !== '' ? $refreshToken : null,
             expiresAt: $expiresAt,
-            scope: self::SCOPE_STRING,
+            scope: self::grantedScope($token),
             email: $email,
         );
     }
@@ -115,6 +116,7 @@ class MicrosoftOAuthProvider
         } catch (Throwable $e) {
             throw new OAuthExchangeFailed(
                 'Microsoft OAuth refresh failed: '.$this->safeMessage($e),
+                previous: $e,
             );
         }
 
@@ -130,7 +132,7 @@ class MicrosoftOAuthProvider
             accessToken: $token->getToken(),
             refreshToken: is_string($newRefresh) && $newRefresh !== '' ? $newRefresh : null,
             expiresAt: $expiresAt,
-            scope: self::SCOPE_STRING,
+            scope: self::grantedScope($token),
             email: '',
         );
     }
@@ -190,6 +192,7 @@ class MicrosoftOAuthProvider
         } catch (Throwable $e) {
             throw new OAuthExchangeFailed(
                 'Microsoft Graph /me read failed: '.$this->safeMessage($e),
+                previous: $e,
             );
         }
     }
@@ -197,19 +200,60 @@ class MicrosoftOAuthProvider
     private function mapIdentityProviderException(IdentityProviderException $e): RuntimeException
     {
         $message = $this->safeMessage($e);
-        $body = $e->getResponseBody();
-        $bodyError = '';
-        if (is_array($body)) {
-            $bodyError = isset($body['error']) && is_string($body['error']) ? $body['error'] : '';
-        }
 
-        if (str_contains($message, 'invalid_grant') || $bodyError === 'invalid_grant') {
+        if (str_contains($message, 'invalid_grant') || self::bodyError($e) === 'invalid_grant') {
             return new InvalidGrantException(
                 'Microsoft OAuth refresh rejected with invalid_grant — reconnect required.',
             );
         }
 
         return new OAuthExchangeFailed('Microsoft OAuth exchange failed: '.$message);
+    }
+
+    // The league Azure provider passes a PSR-7 stream here, never an array, so
+    // the old is_array() arm was dead. It went unnoticed because a flat
+    // {"error":"invalid_grant"} body repeats the code in the message — Azure's
+    // nested {"error":{"code":…}} shape does not.
+    private static function bodyError(IdentityProviderException $e): string
+    {
+        $body = $e->getResponseBody();
+        $raw = is_array($body) ? $body : self::decodeBody($body);
+
+        $error = $raw['error'] ?? null;
+        if (is_string($error)) {
+            return $error;
+        }
+
+        $code = is_array($error) ? ($error['code'] ?? null) : null;
+
+        return is_string($code) ? $code : '';
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private static function decodeBody(mixed $body): array
+    {
+        $text = is_string($body) ? $body : (is_object($body) && method_exists($body, '__toString') ? (string) $body : '');
+        if ($text === '') {
+            return [];
+        }
+
+        /** @var mixed $decoded */
+        $decoded = json_decode($text, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    // What the user actually consented to, never what was asked for: a scope
+    // unticked on the consent screen otherwise leaves an inbox the app
+    // believes can read mail, and the first scan 403s into a generic error
+    // rather than the actionable needs_reauth.
+    private static function grantedScope(AccessTokenInterface $token): string
+    {
+        $granted = $token->getValues()['scope'] ?? null;
+
+        return is_string($granted) && $granted !== '' ? $granted : self::SCOPE_STRING;
     }
 
     private function safeMessage(Throwable $e): string

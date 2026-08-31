@@ -1,13 +1,21 @@
 # ASN CSV — empirical fixture record
 
 `asn-sample-1.csv` is an anonymized real ASN Online Bankieren CSV export. It is
-the gold fixture that drives the `AsnCsvAdapter`'s tests, the snapshot test, and
-the `IdempotencyContractTest` Pest dataset.
+the gold fixture that drives `PositionalCsvAdapter`'s tests, the snapshot test,
+and the `IdempotencyContractTest` Pest dataset. The layout below is what
+`CsvPresetRegistry::ASN` encodes: a bank's column shape is preset data, not a
+class of its own.
 
 The unanonymized source is **not committed** and **must never be committed** —
 it lived only in the contributor's `~/Downloads/` long enough to be processed
 by `tests/fixtures/anonymize_asn.py` (see the project history if the script is
 re-added later).
+
+Its dates are absolute (2026-02 to 2026-04) and stay that way: several tests
+assert on specific rows, amounts, IBANs and the file's own `sha256`. To get this
+statement inside the date windows the product actually reads — for hand-testing
+a build — generate a rebased copy rather than editing these bytes:
+[`.docs/local_development/rebasing-a-statement-fixture.md`](../../.docs/local_development/rebasing-a-statement-fixture.md).
 
 ## Confirmed format
 
@@ -54,7 +62,9 @@ its default `array_values` step.
 
 ## Differences from the prior assumed layout
 
-Three of four `AsnCsvHeaderProfile` constants required correction:
+Three of four values on the then-`AsnCsvHeaderProfile` required correction.
+They now live on the `PositionalCsvPreset` the registry returns for
+`CsvPresetRegistry::ASN`:
 
 | Constant | Assumed | Actual | Delta |
 |----------|---------|--------|-------|

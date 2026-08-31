@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Peida vaatest (logifaili ei muudeta)',
     'dismiss_aria' => 'Peida logikirje vaatest',
     'totals' => [
-        'showing' => 'Kuvatud',
-        'of' => '/',
-        'received' => 'vastu võetud (puhvri ülempiir 10k)',
-        'lines_today' => 'rida täna',
+        'showing' => 'Kuvatud :shown / :count vastu võetud reast (puhvri ülempiir :cap)|Kuvatud :shown / :count vastu võetud reast (puhvri ülempiir :cap)',
+        'lines_today' => ':count rida täna|:count rida täna',
+        'lines_today_capped' => 'üle :count rea täna|üle :count rea täna',
         'today' => 'täna',
-        'across' => 'kokku',
-        'daily_files' => 'päevafailis',
+        'all_files' => ':size kokku :count päevafailis|:size kokku :count päevafailis',
     ],
 
     'status' => [

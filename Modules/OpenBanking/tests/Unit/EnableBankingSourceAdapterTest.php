@@ -91,6 +91,33 @@ it('yields only booked rows and drops pending PSD2 rows', function (): void {
     expect($descriptions)->not->toContain('Card authorisation hold, not yet booked');
 });
 
+// A yen has no minor unit. Parsing its amount at the repo-wide hundred reads
+// every JPY row as a hundred times the figure the bank sent, and accepts a
+// fractional yen the currency cannot express.
+it('scales a booked amount by the row\'s OWN currency, not a fixed hundred', function (): void {
+    $client = ebFixtureHttpClient(EnableBankingFixtures::jpyTransactions(), $this->accountDetailsResponse);
+    $adapter = new EnableBankingSourceAdapter($client);
+
+    $rows = iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials()));
+
+    expect($rows)->toHaveCount(1);
+    expect($rows[0]->currency)->toBe('JPY');
+    expect($rows[0]->counterpartyName)->toBe('Yodobashi Camera');
+    expect($rows[0]->amountMinor)->toBe(-980000);
+});
+
+// The same argument that fixes the scale restores the refusal: without it the
+// over-precise figure is silently rounded into a yen amount nobody sent.
+it('skips a booked row whose amount has more precision than its currency can hold', function (): void {
+    $client = ebFixtureHttpClient(EnableBankingFixtures::jpyTransactions(), $this->accountDetailsResponse);
+    $adapter = new EnableBankingSourceAdapter($client);
+
+    $rows = iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials()));
+
+    $names = array_map(static fn ($row): ?string => $row->counterpartyName, $rows);
+    expect($names)->not->toContain('Impossible Yen Merchant');
+});
+
 it('maps bookedAt and postedAt to the SAME midnight-zeroed booking_date, never value_date', function (): void {
     // Fixture rows carry equal booking_date/value_date, which would mask a
     // mistaken substitution of either field; these two diverge so it cannot.

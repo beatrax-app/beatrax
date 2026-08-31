@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Hashing\Hasher;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
 use Modules\Auth\Models\UserRecoveryCode;
@@ -17,6 +18,18 @@ function manageOwner(): User
         'password' => 'owner-password-12chars',
         'period_start_day' => 1,
         'is_developer' => true,
+    ]);
+}
+
+function manageSeedSession(int $userId, string $id): void
+{
+    DB::table('sessions')->insert([
+        'id' => $id,
+        'user_id' => $userId,
+        'ip_address' => '127.0.0.1',
+        'user_agent' => 'seeded',
+        'payload' => base64_encode(serialize([])),
+        'last_activity' => time(),
     ]);
 }
 
@@ -62,16 +75,20 @@ it('regenerates partner codes: stamps old unused codes used and inserts ten fres
     expect($used)->toBe(10);
 });
 
-it('throws a 404 when a non-developer caller regenerates another user codes', function (): void {
+// The caller here is a developer, so the ownership check is the only thing
+// that can produce the 404 -- which is the point: is_developer is self-settable
+// from /settings, and the action never reads it.
+it('throws a 404 when a caller who is not the owner regenerates another user codes', function (): void {
     // Owner first: the owner is the account created first, so the order the
     // fixture writes them in is the thing under test.
     manageOwner();
-    $nonDeveloper = managePartner();
+    $notTheOwner = managePartner();
+    $notTheOwner->update(['is_developer' => true]);
 
     /** @var RegenerateRecoveryCodesAction $regen */
     $regen = app(RegenerateRecoveryCodesAction::class);
 
-    expect(fn () => $regen($nonDeveloper, 'owner'))
+    expect(fn () => $regen($notTheOwner->fresh(), 'owner'))
         ->toThrow(NotFoundHttpException::class);
 });
 
@@ -100,12 +117,16 @@ it('returns 404 from the manage route for a non-existent username', function ():
     $this->actingAs($owner)->get('/settings/users/ghost')->assertNotFound();
 });
 
-it('sets a new partner password and flags a forced change from the manage page', function (): void {
+it('sets a new partner password, flags a forced change and severs what the partner still holds', function (): void {
     /** @var Hasher $hasher */
     $hasher = app(Hasher::class);
 
     $owner = manageOwner();
     $partner = managePartner();
+
+    DB::table('users')->where('id', $partner->id)->update(['remember_token' => 'manage-stale-token']);
+    manageSeedSession($partner->id, 'manage-partner-session');
+    manageSeedSession($owner->id, 'manage-owner-session');
 
     Livewire::actingAs($owner)->test(ManageUserPage::class, ['username' => 'partner'])
         ->set('newPartnerPassword', 'partner-new-password-1')
@@ -114,6 +135,13 @@ it('sets a new partner password and flags a forced change from the manage page',
     $fresh = $partner->fresh();
     expect($hasher->check('partner-new-password-1', $fresh->password))->toBeTrue();
     expect($fresh->force_password_change_at_next_login)->toBeTrue();
+
+    // The forced change at next sign-in is not containment: without these the
+    // partner's live session and remember cookie both outlived their password.
+    expect(DB::table('sessions')->where('user_id', $partner->id)->count())->toBe(0);
+    expect(DB::table('users')->where('id', $partner->id)->value('remember_token'))
+        ->not->toBe('manage-stale-token');
+    expect(DB::table('sessions')->where('user_id', $owner->id)->count())->toBe(1);
 });
 
 it('regenerates the partner codes from the manage page and displays them inline', function (): void {

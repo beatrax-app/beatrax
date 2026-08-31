@@ -9,10 +9,10 @@ use Modules\Desktop\Public\Events\FileOpenedFromOs;
 
 // .csv FileOpenedFromOs intents land here, not in Ingestion. A re-fired
 // event overwrites the stored intent, which is session-scoped.
-final class HandleFileOpenedFromOs
+final readonly class HandleFileOpenedFromOs
 {
     public function __construct(
-        private readonly RemembersPendingFileIntent $intent,
+        private RemembersPendingFileIntent $intent,
     ) {}
 
     public function handle(FileOpenedFromOs $event): void

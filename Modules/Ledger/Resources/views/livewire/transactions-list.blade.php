@@ -15,6 +15,13 @@
     // @param array{amountMinor: int, amountCurrency: string} $row
     $rowMoney = static fn (array $row): Money => Money::ofMinor($row['amountMinor'], $row['amountCurrency']);
 
+    // The FX partner of $rowMoney, null on the rows that have no second
+    // currency. Same pair, same serialisation, read from the same array.
+    // @param array{secondaryMinor: ?int, secondaryCurrency: ?string} $row
+    $rowSecondary = static fn (array $row): ?Money => $row['secondaryMinor'] !== null && $row['secondaryCurrency'] !== null
+        ? Money::ofMinor($row['secondaryMinor'], $row['secondaryCurrency'])
+        : null;
+
     // Tax state map: array<int, array{taxTagged: bool, taxCategoryShortName: ?string}>
     // Batch-loaded once per render — no N+1.
     $taxState ??= [];
@@ -29,6 +36,7 @@
     $searchTotalCount ??= 0;
     $searchTotalOut ??= 0;
     $searchTotalIn ??= 0;
+    $searchUnconverted ??= '';
     $didYouMean ??= null;
     $searchRows ??= [];
     $activeFilterCount ??= 0;
@@ -47,15 +55,15 @@
 @endphp
 
 <div class="space-y-6">
-    {{-- Tax tag picker — rendered once for the whole list (not per-row). --}}
-    @include('tax::components.tax-tag-popover')
+    {{-- The header is FIRST, and first of all — ahead of the tax picker too.
+         `space-y-6` gives a margin-top to every child but the first, so a
+         zero-height sibling ahead of the header still costs the title 25.5px
+         and puts it below every other page's. This page led with its search
+         toolbar instead, which is a whole band: measured at 375px and 411px,
+         "Transactions" sat 153.5px lower than "Budgets", "Cash book" and
+         "Transaction" on the same device in the same session.
 
-    {{-- ============================================================
-         SEARCH TOOLBAR (always visible on /transactions)
-         ============================================================ --}}
-    @include('ledger::livewire.partials.search-toolbar')
-
-    {{-- Stacks below sm: the title and the controls together need ~500px,
+         Stacks below sm: the title and the controls together need ~500px,
          so forcing them onto one row pushed the currency toggle and the
          history button off the right edge of a phone. --}}
     <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -72,7 +80,7 @@
         @if (! $isSearchMode)
             <div class="flex flex-wrap items-center gap-2">
                 <flux:radio.group wire:model.live="currency" variant="segmented" aria-label="{{ Lang::get('ledger::list.currency_aria') }}">
-                    <flux:radio value="{{ CurrencyView::BaseOnly->value }}" label="{{ Lang::get('ledger::list.currency_eur', ['code' => $baseCurrency]) }}" />
+                    <flux:radio value="{{ CurrencyView::BaseOnly->value }}" label="{{ Lang::get('ledger::list.currency_eur') }}" />
                     <flux:radio value="{{ CurrencyView::Original->value }}" label="{{ Lang::get('ledger::list.currency_original') }}" />
                 </flux:radio.group>
                 <x-core::secondary-button
@@ -84,6 +92,14 @@
             </div>
         @endif
     </header>
+
+    {{-- Tax tag picker — rendered once for the whole list (not per-row). --}}
+    @include('tax::components.tax-tag-popover')
+
+    {{-- ============================================================
+         SEARCH TOOLBAR (always visible on /transactions)
+         ============================================================ --}}
+    @include('ledger::livewire.partials.search-toolbar')
 
     @if ($isSearchMode && count($page->rows) === 0 && $searchTotalCount === 0)
         {{-- No-results state --}}
@@ -167,7 +183,7 @@
                                                 title="{{ Lang::get('ledger::list.table.category') }}"
                                             ><span aria-hidden="true">▦</span><span class="sr-only">{{ Lang::get('ledger::list.table.category') }}</span></span>
                                         @endif
-                                        {{ $row['bookedAt'] }}
+                                        {{ $row['postedAt'] }}
                                     </p>
                                 </div>
                             </a>
@@ -208,6 +224,9 @@
                                  parent total — never a client-recomputed sum (UI-SPEC §5.1). --}}
                             <span class="amount {{ $isPositive($rowAmt) ? 'positive' : '' }}">
                                 {{ $fmt($rowAmt) }}
+                                @if (! $isSearchMode && $currency === CurrencyView::Original->value)
+                                    <x-ledger::secondary-amount :money="$rowSecondary($row)" />
+                                @endif
                             </span>
                         </div>
                         {{-- Expanded legs: inset stacked rows below the card (UI-SPEC §5.2/§6/§14).
@@ -322,7 +341,7 @@
                                 wire:navigate
                                 class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                 data-testid="tx-row-link-{{ $row->id }}"
-                            >{{ $row->bookedAt }}</a>
+                            >{{ $row->postedAt }}</a>
                         </td>
                         <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
                             {{-- In search mode: use {!! !!} ONLY for server-built FTS
@@ -414,8 +433,8 @@
                                 {{-- Always the parent total — never a client-recomputed
                                      leg sum (UI-SPEC §5.1). --}}
                                 <span class="block text-sm text-slate-900 dark:text-slate-100">{{ $fmt($row->amount) }}</span>
-                                @if ($currency === CurrencyView::Original->value && $row->secondaryAmount !== null)
-                                    <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">{{ $fmt($row->secondaryAmount) }}</span>
+                                @if ($currency === CurrencyView::Original->value)
+                                    <x-ledger::secondary-amount :money="$row->secondaryAmount" />
                                 @endif
                             @endif
                         </td>

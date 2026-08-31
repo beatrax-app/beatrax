@@ -6,7 +6,7 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 
 // Every read PairingGateway makes against a pairing_tokens row, in one place.
 // The ceremony's state lives in that row, so the queries answering "which row,
@@ -54,7 +54,7 @@ final readonly class PairingTokenRowReader
         }
 
         return is_string($row->expires_at)
-            && $row->expires_at > ZuluTimestamp::stamp($this->clock->now())
+            && $row->expires_at > Instant::zulu($this->clock->now())
                 ? $row->state
                 : PairingState::Expired->value;
     }
@@ -84,8 +84,8 @@ final readonly class PairingTokenRowReader
     {
         return $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
-            ->whereIn('state', [PairingState::Pending->value, PairingState::AwaitingConfirm->value])
-            ->where('expires_at', '>', ZuluTimestamp::stamp($this->clock->now()))
+            ->whereIn('state', PairingState::inFlightValues())
+            ->where('expires_at', '>', Instant::zulu($this->clock->now()))
             ->exists();
     }
 
@@ -100,8 +100,8 @@ final readonly class PairingTokenRowReader
     {
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
-            ->whereIn('state', [PairingState::Pending->value, PairingState::AwaitingConfirm->value])
-            ->where('expires_at', '>', ZuluTimestamp::stamp($this->clock->now()))
+            ->whereIn('state', PairingState::inFlightValues())
+            ->where('expires_at', '>', Instant::zulu($this->clock->now()))
             ->orderByDesc('id')
             ->first();
 
@@ -139,7 +139,7 @@ final readonly class PairingTokenRowReader
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->whereIn('state', [PairingState::AwaitingConfirm->value, PairingState::Confirmed->value])
-            ->where('expires_at', '>', ZuluTimestamp::stamp($this->clock->now()))
+            ->where('expires_at', '>', Instant::zulu($this->clock->now()))
             ->orderByDesc('id')
             ->first([
                 'id',

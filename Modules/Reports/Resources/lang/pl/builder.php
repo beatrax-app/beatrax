@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Bez kategorii',
+    'no_counterparty' => 'Brak kontrahenta',
+    'unavailable_counterparty' => 'Kontrahent niedostępny na tym urządzeniu',
     'title' => 'Raporty',
     'page_title' => 'Raporty · Beatrax',
     'subtitle' => 'Ułóż raport na podstawie swojej księgi.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Wykres w walucie :currency — :list nie jest pokazane',
+        'undrawn' => 'Poza pierścieniem — :amount płynie w drugą stronę',
         'bar_title' => 'Kliknij słupek, aby zobaczyć jego transakcje',
         'line_title' => 'Kliknij punkt, aby zobaczyć jego transakcje',
         'donut_title' => 'Kliknij segment, aby zobaczyć jego transakcje',

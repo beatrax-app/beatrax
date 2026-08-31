@@ -7,33 +7,36 @@ namespace Modules\Core\Public\Services;
 use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Backup\BackupContentsUnreadableException;
+use Modules\Core\Internal\Backup\BackupKeyMaterial;
+use Modules\Core\Internal\Backup\LiveDatabaseTransplant;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
-use Modules\Core\Public\Exceptions\BackupFormatException;
-use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Support\SqliteDatabase;
-use SQLite3;
 use Throwable;
 
-final class RestoreEncryptedBackup
+final readonly class RestoreEncryptedBackup
 {
     public function __construct(
-        private readonly FileEncryptor $encryptor,
-        private readonly DatabaseManager $db,
-        private readonly Repository $config,
-        private readonly UserDataPathService $paths,
-        private readonly Clock $clock,
-        private readonly Filesystem $files,
+        private FileEncryptor $encryptor,
+        private DatabaseManager $db,
+        private Repository $config,
+        private UserDataPathService $paths,
+        private Clock $clock,
+        private Filesystem $files,
+        private BackupKeyMaterial $keyMaterial,
+        private LiveDatabaseTransplant $transplant,
     ) {}
 
     /**
      * @return string the absolute path of the pre-restore snapshot
      *
      * @throws BackupNotSupportedException when this is not the SQLite build
-     * @throws BackupFormatException when the decrypted payload will not open as a
-     *                               database — the live DB is only swapped after
-     *                               it opens AND passes integrity_check
+     * @throws BackupContentsUnreadableException when the decrypted payload will not
+     *                                           open as a database — the live DB is
+     *                                           only swapped after it opens AND
+     *                                           passes integrity_check
      */
     public function __invoke(string $encryptedPath, string $passphrase): string
     {
@@ -58,73 +61,21 @@ final class RestoreEncryptedBackup
             //    state is always recoverable if the swap goes wrong.
             $snapshotPath = $this->snapshotCurrent($connection);
 
-            // 4. Write the verified pages INTO the live database, not over
+            // 4. Lift the encryption keyring the archive carries out onto this
+            //    machine, BEFORE the swap, so a failure here leaves the live
+            //    database untouched. Restoring the rows without it hands the
+            //    reader a ledger of ciphertext and calls the restore a success.
+            $this->keyMaterial->unpackFrom($decryptedPath);
+
+            // 5. Write the verified pages INTO the live database, not over
             //    it. Replacing the file left a new connection running
             //    `PRAGMA journal_mode = WAL` reporting code 11, on a file
             //    whose own integrity_check passed when pulled off the device.
-            $this->purgeEveryConnectionTo($livePath);
-            $this->transplant($decryptedPath, $livePath, $snapshotPath);
-            $this->purgeEveryConnectionTo($livePath);
+            ($this->transplant)($decryptedPath, $livePath, $snapshotPath);
 
             return $snapshotPath;
         } finally {
             $this->files->delete($decryptedPath);
-        }
-    }
-
-    // The backup API copies pages through SQLite, so the WAL and -shm
-    // bookkeeping stays coherent and nothing is unlinked under a process
-    // holding it mapped. The file copy remains only for a runtime without the
-    // sqlite3 extension: it is the path that poisoned the phone.
-    private function transplant(string $decryptedPath, string $livePath, string $snapshotPath): void
-    {
-        if (class_exists(SQLite3::class)) {
-            $source = new SQLite3($decryptedPath, SQLITE3_OPEN_READONLY);
-
-            try {
-                $destination = new SQLite3($livePath, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
-
-                try {
-                    if ($source->backup($destination) !== true) {
-                        throw new BackupIoException('Restore could not write the backup into the live database; the pre-restore snapshot is at '.$snapshotPath.'.');
-                    }
-                } finally {
-                    $destination->close();
-                }
-            } finally {
-                $source->close();
-            }
-
-            return;
-        }
-
-        if ($this->files->copy($decryptedPath, $livePath) === false) {
-            throw new BackupIoException('Restore copy failed; the pre-restore snapshot is at '.$snapshotPath.'.');
-        }
-
-        $this->files->delete([$livePath.'-wal', $livePath.'-shm']);
-    }
-
-    // Laravel resolves a connection per NAME, and more than one name can point
-    // at the same file -- this app has had `sqlite` and the platform default
-    // both open at once. Purging by config name alone left the others holding
-    // the file.
-    private function purgeEveryConnectionTo(string $livePath): void
-    {
-        $target = realpath($livePath);
-
-        foreach ($this->db->getConnections() as $name => $open) {
-            $configured = $open->getConfig('database');
-
-            if (! is_string($configured)) {
-                continue;
-            }
-
-            $resolved = realpath($configured);
-
-            if ($configured === $livePath || ($target !== false && $resolved === $target)) {
-                $this->db->purge($name);
-            }
         }
     }
 
@@ -160,13 +111,13 @@ final class RestoreEncryptedBackup
             $this->db->purge($connectionName);
             $result = $this->db->connection($connectionName)->scalar('PRAGMA integrity_check');
         } catch (Throwable $e) {
-            throw new BackupFormatException('The backup is not a readable database.', 0, $e);
+            throw new BackupContentsUnreadableException('The backup is not a readable database.', 0, $e);
         } finally {
             $this->db->purge($connectionName);
         }
 
         if ($result !== 'ok') {
-            throw new BackupFormatException('The backup failed its integrity check and was not restored.');
+            throw new BackupContentsUnreadableException('The backup failed its integrity check and was not restored.');
         }
     }
 

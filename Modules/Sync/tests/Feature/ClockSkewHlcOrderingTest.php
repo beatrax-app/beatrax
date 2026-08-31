@@ -15,8 +15,9 @@ uses(RefreshDatabase::class);
 
 // Three ops whose HLCs deliberately disagree with the order they arrive in,
 // one of them from a slow clock and one with a high counter but a lower
-// physical timestamp. Replaying the same three in three different arrival
-// orders is what proves the winner comes from the HLC and not from arrival.
+// physical timestamp. Arrival order within one batch is the easy axis; the
+// axis that actually broke is the BATCH BOUNDARY, so the same three are also
+// replayed one call at a time, which is what a 1024-op frame cap produces.
 
 function skewUser(string $username): User
 {
@@ -251,4 +252,76 @@ it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in shuffled or
         ->where('user_id', $this->user->id)
         ->count();
     expect($logCount)->toBeGreaterThanOrEqual(3);
+});
+
+// One replay() per op — the shape receiveOps() produces, since it is called
+// once per frame. Each batch then holds a single candidate for the field, so a
+// merge that resolves over the batch alone lets whichever op arrived LAST win
+// no matter what its HLC says.
+/**
+ * @param  list<int>  $order  Indices into [opA, opB, opC].
+ * @param  array<string, string>  $deviceKeys  device-id => hex Ed25519 public key.
+ */
+function replaySkewedOpsOneAtATime(array $order, DeviceKeySigner $signer, string $sk, int $txnId, int $catA, int $catB, int $catC, int $userId, array $deviceKeys): void
+{
+    $ops = buildSkewedOps($signer, $sk, $txnId, $catA, $catB, $catC, $userId);
+    $replayer = new OpLogReplayer(app(DatabaseManager::class), $deviceKeys);
+
+    foreach ($order as $index) {
+        $replayer->replay([$ops[$index]], $userId);
+    }
+}
+
+it('resolves to category_id=C_a when each op arrives in its own frame, oldest HLC last', function (): void {
+    replaySkewedOpsOneAtATime(
+        [0, 2, 1],
+        $this->signer, $this->sk,
+        $this->txnId, $this->catA, $this->catB, $this->catC,
+        (int) $this->user->id, $this->deviceKeys,
+    );
+
+    $catId = app(DatabaseManager::class)
+        ->connection()
+        ->table('transactions')
+        ->where('id', $this->txnId)
+        ->value('category_id');
+
+    expect((int) $catId)->toBe($this->catA);
+});
+
+it('resolves to category_id=C_a when each op arrives in its own frame, winner first', function (): void {
+    replaySkewedOpsOneAtATime(
+        [0, 1, 2],
+        $this->signer, $this->sk,
+        $this->txnId, $this->catA, $this->catB, $this->catC,
+        (int) $this->user->id, $this->deviceKeys,
+    );
+
+    $catId = app(DatabaseManager::class)
+        ->connection()
+        ->table('transactions')
+        ->where('id', $this->txnId)
+        ->value('category_id');
+
+    expect((int) $catId)->toBe($this->catA);
+});
+
+it('resolves to category_id=C_a when the two frames straddle the winner', function (): void {
+    $ops = buildSkewedOps(
+        $this->signer, $this->sk,
+        $this->txnId, $this->catA, $this->catB, $this->catC,
+        (int) $this->user->id,
+    );
+
+    $replayer = new OpLogReplayer(app(DatabaseManager::class), $this->deviceKeys);
+    $replayer->replay([$ops[0], $ops[1]], (int) $this->user->id);
+    $replayer->replay([$ops[2]], (int) $this->user->id);
+
+    $catId = app(DatabaseManager::class)
+        ->connection()
+        ->table('transactions')
+        ->where('id', $this->txnId)
+        ->value('category_id');
+
+    expect((int) $catId)->toBe($this->catA);
 });

@@ -10,7 +10,6 @@ return [
     // carries "transaction" everywhere else in this locale.
     'skipped' => ':count atlanan operasyon',
     'empty' => 'Son 7 günde atlanan operasyon yok.',
-
     'col_reason' => 'Neden',
     'col_table' => 'Tablo',
     'col_device' => 'Cihaz',

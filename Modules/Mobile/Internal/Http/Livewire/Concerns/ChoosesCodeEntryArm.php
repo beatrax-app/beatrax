@@ -44,6 +44,24 @@ trait ChoosesCodeEntryArm
         $this->cameraUnavailableNotice = true;
     }
 
+    // Which road is shut, decided once for the amber slot. With the camera
+    // refused AND no search, "enter the code instead" is the order the submit
+    // error below has already ruled out, and that pair left the reader with two
+    // lines pointing at each other and no third affordance on the screen.
+    /**
+     * @link ../../../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md
+     */
+    private function entryArmNotice(bool $typedCodeCanFindPeer): ?string
+    {
+        if ($this->cameraUnavailableNotice) {
+            return $typedCodeCanFindPeer
+                ? 'mobile::pairing.camera_off'
+                : 'mobile::pairing.camera_off_no_search';
+        }
+
+        return $typedCodeCanFindPeer ? null : 'mobile::pairing.no_search';
+    }
+
     // The deliberate "I'd rather type it" choice, unlike cameraDenied()'s
     // forced fallback: same step, no amber notice, because nothing failed.
     public function useWordCode(): void

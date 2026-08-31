@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
-final class PaypalCsvLanguageProfile
+use Modules\Ingestion\Public\Enums\SourceFormat;
+
+final readonly class PaypalCsvLanguageProfile
 {
-    public const FORMAT = 'paypal-csv';
+    public const FORMAT = SourceFormat::PaypalCsv->value;
 
-    public const DELIMITER = ',';
+    public const string DELIMITER = ',';
 
-    public const HAS_HEADER = true;
+    public const bool HAS_HEADER = true;
 
-    public const SOURCE_ENCODING = 'UTF-8';
+    public const string SOURCE_ENCODING = 'UTF-8';
 
     // Detection passes when every token in a locale's list is present (order-insensitive).
     // "Reference Txn ID" is never localised, so it discriminates against a non-PayPal
@@ -20,7 +22,7 @@ final class PaypalCsvLanguageProfile
     /**
      * @var array<string, list<string>>
      */
-    private const LANGUAGE_SIGNATURES = [
+    private const array LANGUAGE_SIGNATURES = [
         'nl' => [
             'Datum',
             'Tijd',
@@ -33,7 +35,7 @@ final class PaypalCsvLanguageProfile
     ];
 
     public function __construct(
-        private readonly string $language,
+        private string $language,
     ) {}
 
     public function detected(): string

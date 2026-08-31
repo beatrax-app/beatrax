@@ -6,6 +6,7 @@
     $data:           TaxYearData|null  — grouped categories + totals for the selected year
     $availableYears: array<int>        — years with tags (for year switcher options)
     $hasCountry:  bool              — false = first-visit guided empty state
+    $documentTitle: string             — what the browser tab and OS window are named
 
     Page structure (UI-SPEC Section 8):
       [Page header: H1 + year switcher + export buttons]
@@ -18,7 +19,14 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
-<div class="py-12">
+<div class="py-6">
+    {{-- The layout writes <title> once, on the full page load; switching the
+         year in place is a Livewire update, so the browser tab and the desktop
+         app's OS window went on naming the year the reader had just left. The
+         wire:key carries the year, so the morph replaces this node and Alpine
+         initialises the new one. --}}
+    <div wire:key="tax-document-title-{{ $year }}" x-data x-init="document.title = @js($documentTitle)" hidden></div>
+
     <div class="mx-auto max-w-4xl px-4 sm:px-6">
 
         {{-- ────────────────────────────────────────────────────────────────── --}}
@@ -83,6 +91,16 @@
                 </div>
             </div>
         </div>
+
+        {{-- Where the shell drops what the WebView downloads, the export leaves
+             through the OS share sheet and this line is the only thing on the
+             page that changes. It said nothing at all before. --}}
+        @if ($flashMessage !== '')
+            <x-core::alert tone="positive" class="px-4 py-2" aria-atomic="true" aria-live="polite">
+                {{ $flashMessage }}
+                <button type="button" wire:click="clearFlash" class="ml-3 text-xs underline">{{ Lang::get('tax::page.export_dismiss') }}</button>
+            </x-core::alert>
+        @endif
 
         {{-- ────────────────────────────────────────────────────────────────── --}}
         {{-- First-visit empty state (no tax country set)                       --}}
@@ -206,6 +224,7 @@
                             $catName  = $category['name'] ?? null;
                             $rows     = $category['rows'] ?? [];
                             $subtotal = $category['subtotalMinor'] ?? 0;
+                            $incomeSubtotal = $category['incomeSubtotalMinor'] ?? 0;
                             $count    = count($rows);
                             $isNoCategory = $catId === null;
                             $sectionKey = $isNoCategory ? 'no-cat' : 'cat-' . $catId;
@@ -230,6 +249,16 @@
                                         aria-label="{{ Lang::choice('tax::page.items_count_aria', $count) }}"
                                     >{{ $count }}</span>
                                 </div>
+                                {{-- Two figures, never one: the strip above is headed
+                                     "Total deductions", so a tagged income row filed
+                                     under this category is counted beside the subtotal
+                                     and never inside it. --}}
+                                @if ($incomeSubtotal > 0)
+                                    <span class="kpi-number" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-emerald); margin-right: var(--space-3);">
+                                        <span style="text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-faint);">{{ Lang::get('tax::page.income') }}</span>
+                                        {{ Money::ofMinor($incomeSubtotal, $data->currency)->format() }}
+                                    </span>
+                                @endif
                                 <span class="kpi-number" style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin-right: var(--space-3);">
                                     {{ Money::ofMinor($subtotal, $data->currency)->format() }}
                                 </span>
@@ -261,7 +290,7 @@
                                     <tbody>
                                         @foreach ($rows as $row)
                                             @php
-                                                $bookedAt  = isset($row['bookedAt']) ? \Carbon\CarbonImmutable::parse($row['bookedAt']) : null;
+                                                $postedAt  = isset($row['postedAt']) ? \Carbon\CarbonImmutable::parse($row['postedAt']) : null;
                                                 $hasOverride = isset($row['taxYearOverride']) && $row['taxYearOverride'] !== null;
                                                 $settledMinor = is_int($row['settledAmountMinor']) ? $row['settledAmountMinor'] : 0;
                                                 $origMinor    = is_int($row['amountMinor']) ? $row['amountMinor'] : 0;
@@ -275,7 +304,7 @@
                                             >
                                                 {{-- Date --}}
                                                 <td class="date whitespace-nowrap px-3 py-2" style="color: var(--color-text-muted);">
-                                                    {{ $bookedAt ? $bookedAt->translatedFormat('d M Y') : '—' }}
+                                                    {{ $postedAt ? $postedAt->translatedFormat('d M Y') : '—' }}
                                                 </td>
                                                 {{-- Account --}}
                                                 <td class="px-3 py-2 text-sm" style="color: var(--color-text-muted); max-width: 6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -328,7 +357,7 @@
                                 <ul class="divide-y sm:hidden" style="border-color: var(--color-border);">
                                     @foreach ($rows as $row)
                                         @php
-                                            $bookedAt  = isset($row['bookedAt']) ? \Carbon\CarbonImmutable::parse($row['bookedAt']) : null;
+                                            $postedAt  = isset($row['postedAt']) ? \Carbon\CarbonImmutable::parse($row['postedAt']) : null;
                                             $hasOverride = isset($row['taxYearOverride']) && $row['taxYearOverride'] !== null;
                                             $settledMinor = is_int($row['settledAmountMinor']) ? $row['settledAmountMinor'] : 0;
                                             $settledCurrency = is_string($row['settledCurrency']) ? $row['settledCurrency'] : $data->currency;
@@ -344,7 +373,7 @@
                                                         {{ $row['counterpartyName'] ?? '—' }}
                                                     </p>
                                                     <p style="font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px;">
-                                                        {{ $bookedAt ? $bookedAt->translatedFormat('d M Y') : '—' }}
+                                                        {{ $postedAt ? $postedAt->translatedFormat('d M Y') : '—' }}
                                                         @if (! empty($row['accountName']))
                                                             · {{ $row['accountName'] }}
                                                         @endif

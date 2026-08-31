@@ -8,9 +8,9 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\Community\Public\Dto\SuggestMappingDto;
 use Modules\Core\Public\Support\ProjectLinks;
 
-final class GitHubCompareUrlBuilder
+final readonly class GitHubCompareUrlBuilder
 {
-    public function __construct(private readonly ConfigRepository $config) {}
+    public function __construct(private ConfigRepository $config) {}
 
     public function build(SuggestMappingDto $dto): string
     {

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 return [
     'help_paypal' => 'Le esportazioni di PayPal non contengono righe di saldo, quindi imposta questo valore a mano.',
-    'help_asn' => 'Ancorato automaticamente al tuo ultimo estratto conto. Sovrascrivi solo se sai che il saldo reale è diverso.',
     'help_default' => 'Sovrascrivi solo se sai che il saldo reale attuale è diverso da quello calcolato da Beatrax.',
 
     'legend' => 'Saldo iniziale della previsione per :name',
     'opening_label' => 'Saldo iniziale',
-    'opening_placeholder' => 'es. 1.250,00',
+    'opening_placeholder' => 'es. :amount',
     'as_of_label' => 'Saldo iniziale alla data',
     'as_of_help' => 'La data a cui si riferisce la cifra qui sopra.',
 
     'divergence' => 'Questo si discosta di oltre :threshold dal saldo che Beatrax calcola dalle transazioni importate. Sei sicuro?',
+    'computed_is' => 'Beatrax calcola :amount.',
     'use_beatrax' => 'Usa il numero di Beatrax',
     'use_mine' => 'Usa il mio numero',
 

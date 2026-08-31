@@ -15,7 +15,7 @@ declare(strict_types=1);
  */
 function headingProperNouns(): array
 {
-    return ['Actual', 'Beatrax', 'Console', 'Dev', 'ICS', 'PayPal', 'YNAB'];
+    return ['Actual', 'Beatrax', 'Console', 'Dev', 'Google', 'ICS', 'PayPal', 'Play', 'YNAB'];
 }
 
 /**

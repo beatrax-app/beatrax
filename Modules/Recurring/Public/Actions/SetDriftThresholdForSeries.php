@@ -4,25 +4,28 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Public\Actions;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\DriftThresholdOptions;
+use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // null clears the override so the series falls back to the user-global
 // setting (which itself falls back to the hard 5% default at the
 // DriftEvaluator's effective-threshold resolution).
 
-final class SetDriftThresholdForSeries
+final readonly class SetDriftThresholdForSeries
 {
     /** @var list<int> */
-    public const ALLOWED_THRESHOLD_PERCENTS = DriftThresholdOptions::PERCENTS;
+    public const array ALLOWED_THRESHOLD_PERCENTS = DriftThresholdOptions::PERCENTS;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
     ) {}
 
     public function __invoke(int $seriesId, User $user, ?int $thresholdPercent): void
@@ -58,5 +61,13 @@ final class SetDriftThresholdForSeries
                 'drift_threshold_percent' => $thresholdPercent,
                 'updated_at' => $now,
             ]);
+
+        $this->events->dispatch(new EntityMutated(
+            table: 'recurring_series',
+            pk: $seriesId,
+            userId: $user->id,
+            mutationType: 'edit',
+            dirtyFields: ['drift_threshold_percent' => $thresholdPercent],
+        ));
     }
 }

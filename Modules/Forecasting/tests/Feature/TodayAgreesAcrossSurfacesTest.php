@@ -179,8 +179,8 @@ it('draws today on the calendar at the projection opening, continuous from yeste
     $forecast = app(ForecastQuery::class)->forUser($accountId, TAAS_HORIZON_DAYS, null, $this->user);
 
     expect($built['todayAnchorMinor'])->toBe($forecast->todayBalanceMinor)
-        ->and($built['map'][$today->toDateString()][0])->toBe(192_109)
-        ->and($built['map'][$today->subDay()->toDateString()][0])->toBe(194_109);
+        ->and($built['map'][$today->toDateString()]->minor)->toBe(192_109)
+        ->and($built['map'][$today->subDay()->toDateString()]->minor)->toBe(194_109);
 });
 
 function taasSeedEuroAccountWithForeignRows(DatabaseManager $db, int $userId): int
@@ -242,8 +242,113 @@ it('draws a past day carrying foreign rows at the balance the account was debite
 
     expect($ledgerYesterday)->toBe(90_000)
         ->and($ledgerToday)->toBe(88_000)
-        ->and($built['map'][$yesterday->toDateString()][0])->toBe($ledgerYesterday)
-        ->and($built['map'][$today->toDateString()][0])->toBe($ledgerToday)
+        ->and($built['map'][$yesterday->toDateString()]->minor)->toBe($ledgerYesterday)
+        ->and($built['map'][$today->toDateString()]->minor)->toBe($ledgerToday)
         ->and($built['todayAnchorMinor'])->toBe($ledgerToday)
-        ->and($built['map'][$today->toDateString()][0] - $built['map'][$yesterday->toDateString()][0])->toBe(-2_000);
+        ->and($built['map'][$today->toDateString()]->minor - $built['map'][$yesterday->toDateString()]->minor)->toBe(-2_000);
 });
+
+// AccountKind::Bank with no jittered series was every case above, and those are
+// exactly the two the four surfaces DID agree on. A card takes a different
+// anchor arm, and a jittered series puts a replica on the walk's first day.
+
+function taasSeedCardWithNoStatement(DatabaseManager $db, int $userId): int
+{
+    $hex = bin2hex(random_bytes(4));
+    $accountId = $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId,
+        'name' => 'TAAS ICS Card',
+        'slug' => 'taas-card-'.$hex,
+        'kind' => AccountKind::IcsCard->value,
+        'iban' => 'NL02TAAS'.strtoupper($hex),
+        'default_currency' => Currency::Eur->value,
+        'created_at' => '2026-01-01 00:00:00',
+        'updated_at' => '2026-01-01 00:00:00',
+    ]);
+
+    taasTransaction($db, $userId, $accountId, '2026-07-04', -55_400);
+
+    return $accountId;
+}
+
+// One click apart, the all-accounts curve read EUR6,681.85 and net worth read
+// EUR6,127.85 — exactly the EUR554.00 the card was carrying and the forecast
+// anchored at zero.
+it('opens a card with no statement on the balance the dashboard rolls up', function (): void {
+    $bankId = taasSeedAccountWithStaleStatement($this->db, $this->user->id);
+    $cardId = taasSeedCardWithNoStatement($this->db, $this->user->id);
+
+    app(ProjectionPipeline::class)->project($this->user, null, TAAS_HORIZON_DAYS);
+
+    $forecasts = app(ForecastQuery::class);
+    $card = $forecasts->forUser($cardId, TAAS_HORIZON_DAYS, null, $this->user);
+    $bank = $forecasts->forUser($bankId, TAAS_HORIZON_DAYS, null, $this->user);
+    $netWorth = app(NetWorthQuery::class)->forUser($this->user);
+    $ledger = app(AccountBalanceQuery::class)
+        ->currentBalanceAsOf($cardId, $this->user, CarbonImmutable::now()->startOfDay())
+        ->in(Currency::Eur->value);
+
+    expect($card->todayBalanceMinor)->toBe(-55_400)
+        ->and($card->todayBalanceMinor)->toBe($ledger)
+        ->and($card->todayBalanceMinor + $bank->todayBalanceMinor)->toBe($netWorth->totalMinor);
+});
+
+// A percentile-tier series is smeared over seven days by CadenceJitter, and one
+// of those replicas was clamped onto day 0: the header said EUR6,604.64 today
+// while the chart's own first point said EUR6,578.93.
+it('holds day 0 at the anchor when a jittered series lands beside today', function (): void {
+    $accountId = taasSeedAccountWithStaleStatement($this->db, $this->user->id);
+    taasSeedJitteredSeries($this->db, $this->user->id, $accountId);
+
+    app(ProjectionPipeline::class)->project($this->user, null, TAAS_HORIZON_DAYS);
+
+    $forecast = app(ForecastQuery::class)->forUser($accountId, TAAS_HORIZON_DAYS, null, $this->user);
+    $ledger = app(AccountBalanceQuery::class)
+        ->currentBalanceAsOf($accountId, $this->user, CarbonImmutable::now()->startOfDay())
+        ->in(Currency::Eur->value);
+    $dayZero = $forecast->points[0];
+
+    expect($forecast->todayBalanceMinor)->toBe($ledger)
+        ->and($dayZero->date)->toBe(CarbonImmutable::now()->toDateString())
+        ->and($dayZero->pointMinor)->toBe($ledger)
+        ->and($dayZero->lowMinor)->toBe($ledger)
+        ->and($dayZero->highMinor)->toBe($ledger);
+});
+
+// Both bars of the percentile tier: a variance tolerance at or above 40% and at
+// least six observed occurrences. Next expected two days out, so the -3 replica
+// falls behind asOf and is clamped onto the walk's first day.
+function taasSeedJitteredSeries(DatabaseManager $db, int $userId, int $accountId): void
+{
+    $seriesId = (int) $db->connection()->table('recurring_series')->insertGetId([
+        'user_id' => $userId,
+        'direction' => 'expense',
+        'detected_name' => 'Electricity',
+        'state' => 'approved',
+        'cadence' => 'monthly',
+        'latest_amount_minor' => -18_000,
+        'latest_currency' => Currency::Eur->value,
+        'monthly_equivalent_minor' => -18_000,
+        'variance_tolerance_percent' => 45,
+        'next_expected_at' => CarbonImmutable::now()->addDays(2)->toDateString(),
+        'cluster_key' => 'taas-jitter-cluster',
+        'cluster_counterparty_key' => 'electricity',
+        'created_at' => '2026-01-01 00:00:00',
+        'updated_at' => '2026-01-01 00:00:00',
+    ]);
+
+    foreach (range(1, 6) as $i) {
+        taasTransaction($db, $userId, $accountId, '2026-0'.$i.'-15', -17_000 - ($i * 500));
+        $txnId = (int) $db->connection()->table('transactions')->max('id');
+        $db->connection()->table('recurring_series_occurrences')->insert([
+            'user_id' => $userId,
+            'recurring_series_id' => $seriesId,
+            'transaction_id' => $txnId,
+            'observed_at' => '2026-0'.$i.'-15',
+            'observed_amount_minor' => -17_000 - ($i * 500),
+            'observed_currency' => Currency::Eur->value,
+            'created_at' => '2026-01-01 00:00:00',
+            'updated_at' => '2026-01-01 00:00:00',
+        ]);
+    }
+}

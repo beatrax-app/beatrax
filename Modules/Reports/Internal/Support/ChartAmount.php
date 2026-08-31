@@ -23,7 +23,8 @@ final class ChartAmount
     }
 
     // Magnitudes only, for the donut: ApexCharts draws a slice from a size, and
-    // a report total is signed.
+    // a report total is signed. Only ever fed rows that already move the way
+    // the total does -- abs() over the rest drew a credit as spending.
     /**
      * @param  list<ReportResultRow>  $rows
      * @return list<float>
@@ -33,16 +34,47 @@ final class ChartAmount
         return array_map(static fn (ReportResultRow $row): float => abs(self::majorUnits($row->amountMinor, $row->currency)), $rows);
     }
 
-    public static function majorUnits(int $minor, string $currency): float
+    // Raw minor units of different currencies share no scale, so a chart axis
+    // can only carry one of them: ¥1,000 was drawn at 1000 on a euro axis,
+    // beside a real EUR bar a fifth of its height.
+    /**
+     * @param  list<ReportResultRow>  $rows
+     * @return list<int> positions in $rows, in order
+     */
+    public static function positionsInCurrency(array $rows, string $currency): array
     {
-        $money = Money::tryOfMinor($minor, $currency);
-
-        if ($money === null) {
-            // A code no currency table knows cannot say how it scales; two
-            // decimals is what every other boundary in the repo assumes.
-            return $minor / Money::MINOR_UNITS_PER_MAJOR;
+        $positions = [];
+        foreach ($rows as $index => $row) {
+            if ($row->currency === $currency) {
+                $positions[] = $index;
+            }
         }
 
-        return $money->toMajorFloat();
+        return $positions;
+    }
+
+    // A ring is built from sizes, so it can only show one direction at a time.
+    // The one it shows is the total's own: an Income/Refunds slice sat in the
+    // "where the money went" ring while the table beneath it printed the same
+    // row as a credit in red.
+    /**
+     * @param  list<ReportResultRow>  $rows
+     * @return list<int> positions in $rows, in order
+     */
+    public static function positionsTowards(array $rows, int $totalMinor): array
+    {
+        $positions = [];
+        foreach ($rows as $index => $row) {
+            if (($row->amountMinor >= 0) === ($totalMinor >= 0)) {
+                $positions[] = $index;
+            }
+        }
+
+        return $positions;
+    }
+
+    public static function majorUnits(int $minor, string $currency): float
+    {
+        return Money::majorUnits($minor, $currency);
     }
 }

@@ -17,24 +17,24 @@ two decisions produced.
 | Module | What it owns |
 | --- | --- |
 | `Anomaly` | Per-transaction unusual-charge detection (large-vs-typical, first-time merchant, duplicate-charge) surfaced on `/drift`, with its own state machine, audit-transition table, and suppression rules |
-| `Auth` | Username/password auth, recovery codes, OAuth-secret repository, owner-resets-partner flow, the `force_password_change` posture |
-| `Budgets` | Per-category monthly spending budgets and progress tracking |
+| `Auth` | Username/password auth, recovery codes, the app lock, owner-resets-partner flow, the `force_password_change` posture. The OAuth-secret repository is **not** here: it belongs to `EmailScan`, the module that holds the tokens |
+| `Budgets` | Zero-based envelope budgeting — per-period assignment, the genesis-to-target carryover fold, move-money between envelopes, per-envelope over-budget nudges |
 | `Calendar` | Month-grid calendar of transactions and scheduled charges (`CalendarQuery`) |
 | `CashBook` | Manual / cash transaction entry into the canonical ledger |
 | `Categorization` | Rule-based auto-categorization, per-user merchant memory, the categorization-rules CRUD surface, the receipt-vs-statement enrichment conflict resolver |
 | `Chains` | PayPal→funder + ICS bulk-iDEAL settlement chain resolution, the `chain_links` ledger, the per-user `ShouldBeUniqueUntilProcessing` resolver job |
 | `Community` | Optional community-merchant-mapping dataset opt-in toggles + corpus distribution |
-| `Core` | Users + sessions + system alerts + user preferences; the `BelongsToUser` trait; the `diederik:doctor` and `db:backup` console commands; the `Destination` vocabulary naming every screen the app can send a reader to. The kernel every module depends on — it owns no screen that reads across modules (see `Shell`) |
+| `Core` | Users + sessions + system alerts + user preferences; the `BelongsToUser` trait; the `beatrax:doctor` and `db:backup` console commands; the `Destination` vocabulary naming every screen the app can send a reader to; the copy seam a stored row keeps its sentence through (`CopyLine`, `CopyParam`, `StoredCopy`), so a column any module writes can still be read in the reader's own language. The kernel every module depends on — it owns no screen that reads across modules (see `Shell`) |
 | `Counterparties` | Counterparty resolution pipeline + index/profile/triage surfaces (`/counterparties`) |
 | `Desktop` | NativePHP shell glue — the entire `Native\Laravel\*` import surface lives here and nowhere else |
 | `DevMode` | Developer-mode gate + dev-console pages (logs, queue, audit, doctor, palette) |
 | `DriftAlerts` | Drift detection over recurring series, drift-alert state machine, acknowledge/snooze/what-if-cancel actions |
 | `EmailScan` | Gmail + Microsoft Graph OAuth, per-inbox UID-resume scan state, the inbox-scan state machine, `.eml`/`.mbox` drop-in |
-| `Forecasting` | 30/60/90-day cash-flow projections, scenario mutations (non-persistent), R-7 percentile bands, shortfall windows |
+| `Forecasting` | 30/60/90-day cash-flow projections, saved scenarios and their persisted `forecast_scenario_mutations`, R-7 percentile bands, shortfall windows |
 | `FX` | Multi-currency exchange-rate infrastructure and base-currency conversion |
 | `Goals` | Savings goals funded by a linked pot or explicitly attributed transactions, with projected finish dates |
-| `Import` | The ImportPipeline orchestrator + per-format adapters (ASN CSV/CAMT/MT940, ICS PDF, PayPal CSV), the preview wizard |
-| `Ingestion` | The canonical-transaction DTO + source-adapter registry + statement-summary writer + account-resolver contract |
+| `Import` | The ImportPipeline orchestrator, the upload + preview wizards, the per-format payment-type hinters and starting-balance detectors |
+| `Ingestion` | The source adapters themselves (CSV by header name or by index, CAMT.053, MT940, card-statement PDF, PayPal CSV) + the adapter registry + CSV preset registry + header sniffer + account-resolver contract |
 | `Ledger` | Transactions, accounts, categories, merchants, import runs, currencies, statement summaries — the canonical store |
 | `Migration` | One-time migration wizard importing a full budget file (YNAB4, nYNAB, or Actual Budget) into Beatrax's envelope model |
 | `Mobile` | Mobile client peer (NativePHP-for-Mobile): on-device encrypted SQLite, client-only sync transport (LAN-direct + relay), biometric app-lock, resumable initial sync |
@@ -111,10 +111,10 @@ not move. The work behind it does.
 The default is a collaborator object under the owning module's `Internal/`,
 holding the dependencies that group needs, with the facade keeping a
 one-line public method that delegates to it. `PairingGateway`'s five
-peer-facing methods moved into `Modules/Sync/Internal/Pairing/PairingPeerLink.php`,
-which took the five collaborators that carry frames, discovery and relay
-configuration with them; the gateway's constructor went from twelve
-dependencies to eight and every caller stayed as it was.
+peer-facing methods live in `Modules/Sync/Internal/Pairing/PairingPeerLink.php`,
+which holds the five collaborators that carry frames, discovery and relay
+configuration; the gateway keeps the five public methods, eight dependencies of
+its own, and every caller's existing call.
 
 A trait is the right shape only for a group that owns **no dependencies of its
 own** — one whose methods compose references the facade already holds for other
@@ -288,7 +288,8 @@ change.
   reaches across `Ledger`, `Counterparties`, and `Chains` without writing
   outside its own `chain_links` table.
 - [Categorization](categorization.md) — the categorizer's two-pass shape
-  (rule-based + per-user memory) plus the ≥40% confidence gate.
+  (rule-based + per-user memory) and which of several matching rules
+  wins.
 - [Table ownership](table-ownership.md) — which module owns which table, how
   that map is derived from the migrations, and the pinned cross-module writes
   and schema alterations.

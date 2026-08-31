@@ -21,20 +21,18 @@ use Modules\Transfers\Public\Support\CounterLegMatch;
 use Modules\Transfers\Public\Support\CounterLegWindow;
 use stdClass;
 
-final class TransferPairer implements PairsTransferLegs
+final readonly class TransferPairer implements PairsTransferLegs
 {
     use CoercesScalars;
 
-    private const WINDOW_DAYS = 3;
-
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly ResolvesKnownCounterpartyIban $aliasResolver,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly EncryptionMigrationService $encryptionService,
-        private readonly PairLookup $pairs,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private ResolvesKnownCounterpartyIban $aliasResolver,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private EncryptionMigrationService $encryptionService,
+        private PairLookup $pairs,
     ) {}
 
     public function pairOne(Transaction $tx, User $user): ?int
@@ -76,13 +74,14 @@ final class TransferPairer implements PairsTransferLegs
             return null;
         }
 
-        $partnerAccountId = $this->resolvePartnerAccountId($ibanResult['value'], $user);
+        $partnerAccountId = $this->resolvePartnerAccountId($ibanResult['value'], $user, $tx->account_id);
         if ($partnerAccountId === null) {
             return null;
         }
 
-        // The id guard covers a row whose counterparty IBAN is its own
-        // account's; without it a zero-amount leg answers its own search.
+        // Still excluded by id as well: the account guard already keeps the row
+        // out of its own result set, but passing null would say the caller
+        // wants itself back.
         return $this->pairs->counterLegOnAccount(
             new CounterLegMatch(
                 accountId: $partnerAccountId,
@@ -92,7 +91,7 @@ final class TransferPairer implements PairsTransferLegs
                 unpairedOnly: true,
                 excludeTransactionId: $tx->id,
             ),
-            new CounterLegWindow($tx->booked_at, self::WINDOW_DAYS, CounterLegOrder::EarliestBooked),
+            new CounterLegWindow($tx->booked_at, CounterLegWindow::DEFAULT_DAYS, CounterLegOrder::EarliestBooked),
             $user,
         );
     }
@@ -108,11 +107,16 @@ final class TransferPairer implements PairsTransferLegs
         );
     }
 
-    private function resolvePartnerAccountId(string $plainIban, User $user): ?int
+    // Both arms refuse the account the leg already sits on — a transfer
+    // crosses two accounts. resolveAccount() answers with the LOWEST-id
+    // account of the aliased kind, which is the firing leg's own whenever it
+    // sits there: two ICS cards, and the row on the first pairs beside itself.
+    private function resolvePartnerAccountId(string $plainIban, User $user, int $ownAccountId): ?int
     {
         $partnerAccountRow = $this->db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
+            ->where('id', '!=', $ownAccountId)
             ->where('iban', $plainIban)
             ->first(['id']);
 
@@ -120,7 +124,9 @@ final class TransferPairer implements PairsTransferLegs
             return self::toInt($partnerAccountRow->id ?? null);
         }
 
-        return $this->aliasResolver->resolveAccount($plainIban, $user->id)?->id;
+        $aliasAccountId = $this->aliasResolver->resolveAccount($plainIban, $user->id)?->id;
+
+        return $aliasAccountId === $ownAccountId ? null : $aliasAccountId;
     }
 
     // Both sides in one transaction. Uniqueness rules out a concurrent run for
@@ -204,8 +210,8 @@ final class TransferPairer implements PairsTransferLegs
         // Whole-day boundaries keep the window symmetric in calendar days;
         // adapters book at different times (ASN at 12:00:00, PayPal at
         // startOfDay), which otherwise skews it.
-        $windowStart = $tx->booked_at->copy()->startOfDay()->subDays(self::WINDOW_DAYS)->toDateTimeString();
-        $windowEnd = $tx->booked_at->copy()->endOfDay()->addDays(self::WINDOW_DAYS)->toDateTimeString();
+        $windowStart = $tx->booked_at->copy()->startOfDay()->subDays(CounterLegWindow::DEFAULT_DAYS)->toDateTimeString();
+        $windowEnd = $tx->booked_at->copy()->endOfDay()->addDays(CounterLegWindow::DEFAULT_DAYS)->toDateTimeString();
 
         $accountRow = $connection
             ->table('accounts')

@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Kategooria nimi ei saa olla tühi.',
         'name_duplicate' => 'Sellise nimega kategooria on juba olemas.',
+        'category_not_saved' => 'Seda kategooriat ei õnnestunud salvestada. Proovi uuesti.',
+        'tag_refused' => 'Seda märgist ei õnnestunud salvestada. Sulge valija ja proovi uuesti.',
     ],
 ];

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Bez kategorijas',
+    'no_counterparty' => 'Nav darījuma partnera',
+    'unavailable_counterparty' => 'Darījuma partnera šajā ierīcē nav',
     'title' => 'Atskaites',
     'page_title' => 'Atskaites · Beatrax',
     'subtitle' => 'Izveidojiet atskaiti no savas virsgrāmatas.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Diagramma valūtā :currency — :list netiek attēlots',
+        'undrawn' => 'Nav gredzenā — :amount virzās pretējā virzienā',
         'bar_title' => 'Noklikšķiniet uz stabiņa, lai redzētu tā darījumus',
         'line_title' => 'Noklikšķiniet uz punkta, lai redzētu tā darījumus',
         'donut_title' => 'Noklikšķiniet uz segmenta, lai redzētu tā darījumus',

@@ -14,12 +14,13 @@
 
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
+    use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
     $fmt = static fn (int $minor, ?string $currency = null): string => Money::ofMinor($minor, $currency ?? BaseCurrency::value())
         ->format();
 @endphp
 
-<div class="mx-auto max-w-5xl px-4 py-12">
+<div class="mx-auto max-w-5xl px-4 py-6">
     {{-- Header row: title + subtitle, month nav on the right.
          flex-col until sm, because the stepper is shrink-0 (its glyphs must
          keep their tap targets) in a nowrap row — so a month name longer than
@@ -57,7 +58,18 @@
         $toBudgetColour = $toBudgetMinor >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
     @endphp
     <div class="sticky top-0 z-10 mb-6 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.ready.label') }}</p>
+        {{-- The label carries no element of its own: the tip's panel is a
+             <div popover>, and a div inside a <p> closes the paragraph in the
+             parser before the figure below is reached. The block holds the
+             type for the label and the mark both, which is what puts the mark
+             on the label's cap height rather than on the body text's. The
+             space between them is non-breaking so that a label with no room
+             left takes its last word down with the mark. --}}
+        <div class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.ready.label') }}&nbsp;<x-core::help-tip
+            topic="budgets-ready"
+            :label="Lang::get('budgets::messages.ready.label')"
+            :body="Lang::get('budgets::help.ready_to_assign')"
+        /></div>
         <p class="mt-1 text-3xl font-semibold {{ $toBudgetColour }}" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
             {{ $fmt($toBudgetMinor) }}
         </p>
@@ -105,9 +117,23 @@
                 <tr>
                     <x-core::th align="left">{{ Lang::get('budgets::messages.table.category') }}</x-core::th>
                     <x-core::th align="right">{{ Lang::get('budgets::messages.table.assigned') }}</x-core::th>
+                    <x-core::th align="right">{{ Lang::get('budgets::messages.table.carried_in') }}</x-core::th>
+                    <x-core::th align="right">{{ Lang::get('budgets::messages.table.moved') }}</x-core::th>
                     <x-core::th align="right">{{ Lang::get('budgets::messages.table.spent') }}</x-core::th>
                     <x-core::th align="right">{{ Lang::get('budgets::messages.table.available') }}</x-core::th>
-                    <x-core::th align="left">{{ Lang::get('budgets::messages.table.if_overspent') }}</x-core::th>
+                    {{-- The tip sits on the header rather than on each row's
+                         select: one panel per page, and the id it needs is
+                         unique only up here. The space before the mark is
+                         non-breaking so a narrowed column takes its last word
+                         down with the mark instead of stranding it. --}}
+                    <x-core::th align="left">{{ Lang::get('budgets::messages.table.if_overspent') }}&nbsp;<x-core::help-tip
+                        topic="budgets-overspend"
+                        :label="Lang::get('budgets::messages.table.if_overspent')"
+                        :body="Lang::get('budgets::help.if_overspent', [
+                            'reduce' => Lang::get('budgets::messages.overspend.reduce'),
+                            'carry' => Lang::get('budgets::messages.overspend.carry'),
+                        ])"
+                    /></x-core::th>
                     <x-core::th align="right">{{ Lang::get('budgets::messages.table.notify_at') }}</x-core::th>
                     <x-core::th align="right"><span class="sr-only">{{ Lang::get('budgets::messages.table.actions') }}</span></x-core::th>
                 </tr>
@@ -116,7 +142,7 @@
                 @foreach ($rows as $row)
                     <tr class="group border-b border-slate-100 dark:border-slate-800" wire:key="envelope-row-{{ $row->categoryId }}">
                         <td class="px-4 py-2">
-                            <span class="truncate text-slate-900 dark:text-slate-100">{{ $row->categoryName }}</span>
+                            <span class="truncate text-slate-900 dark:text-slate-100">{{ $row->categoryPath }}</span>
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative)
                                 <x-core::status-pill tone="warning" class="ml-2">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
@@ -132,15 +158,25 @@
                         <td class="px-4 py-2 text-right">
                             <input
                                 type="text"
-                                inputmode="decimal"
+                                inputmode="{{ MoneyInput::decimalPlaces($row->currency) === 0 ? 'numeric' : 'decimal' }}"
                                 wire:model="assignedInputs.{{ $row->categoryId }}"
                                 wire:keydown.enter="setAssigned({{ $row->categoryId }})"
                                 wire:blur="setAssigned({{ $row->categoryId }})"
-                                aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryName]) }}"
-                                placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                                aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryPath]) }}"
+                                placeholder="{{ MoneyInput::formatAbsMinor(0, $row->currency) }}"
                                 class="w-24 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                 style="font-variant-numeric: tabular-nums;"
                             >
+                        </td>
+                        {{-- available = assigned + carried in + moved - spent, and three
+                             of the five terms used to be on the grid. A reader with
+                             €200.00 assigned against €50.00 spent read €358.00
+                             available with nowhere to find the rest of it. --}}
+                        <td class="px-4 py-2 text-right text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
+                            {{ $fmt($row->carriedInMinor, $row->currency) }}
+                        </td>
+                        <td class="px-4 py-2 text-right text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
+                            {{ $fmt($row->netMovedMinor, $row->currency) }}
                         </td>
                         <td class="px-4 py-2 text-right text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
                             {{ $fmt($row->spentMinor, $row->currency) }}
@@ -152,7 +188,7 @@
                             <select
                                 x-data="{ mode: @js($row->overspendMode->value) }"
                                 x-on:change="if ($event.target.value !== mode) { mode = $event.target.value; $wire.setOverspendMode({{ $row->categoryId }}, mode) }"
-                                aria-label="{{ Lang::get('budgets::messages.row.overspend_aria', ['category' => $row->categoryName]) }}"
+                                aria-label="{{ Lang::get('budgets::messages.row.overspend_aria', ['category' => $row->categoryPath]) }}"
                                 class="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300"
                             >
                                 <option value="{{ \Modules\Budgets\Public\Enums\OverspendMode::ReduceToBudget->value }}" @selected($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::ReduceToBudget)>{{ Lang::get('budgets::messages.overspend.reduce') }}</option>
@@ -167,7 +203,7 @@
                                     wire:model="thresholdInputs.{{ $row->categoryId }}"
                                     wire:keydown.enter="setNotifyThreshold({{ $row->categoryId }})"
                                     wire:blur="setNotifyThreshold({{ $row->categoryId }})"
-                                    aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryName]) }}"
+                                    aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryPath]) }}"
                                     placeholder="{{ $defaultNotifyThreshold }}"
                                     class="w-14 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     style="font-variant-numeric: tabular-nums;"
@@ -189,7 +225,7 @@
                     </tr>
                     @if (count($recentMoves[$row->categoryId] ?? []) > 0)
                         <tr class="border-b border-slate-100 dark:border-slate-800" x-data="{ open: false }" wire:key="envelope-history-row-{{ $row->categoryId }}">
-                            <td colspan="7" class="px-4 pb-3">
+                            <td colspan="9" class="px-4 pb-3">
                                 <button
                                     type="button"
                                     x-on:click="open = !open"
@@ -206,11 +242,19 @@
                                             <li class="flex items-center justify-between gap-4 py-2 text-sm">
                                                 <div class="min-w-0">
                                                     <span class="text-xs text-slate-600 dark:text-slate-400 tabular-nums">{{ substr($move->createdAt, 0, 10) }}</span>
-                                                    <span class="ml-2 text-sm text-slate-500 dark:text-slate-400">{{ $move->direction === 'in' ? Lang::get('budgets::messages.history.moved_from', ['category' => $move->counterpartCategoryName]) : Lang::get('budgets::messages.history.moved_to', ['category' => $move->counterpartCategoryName]) }}</span>
+                                                    {{-- A kind this build has no case for keeps the row and drops
+                                                         the direction word: the sentence would otherwise claim a side
+                                                         of the move that only the newer version knows. --}}
+                                                    <span class="ml-2 text-sm text-slate-500 dark:text-slate-400">{{ $move->kind === null ? Lang::get('budgets::messages.history.moved_unreadable', ['category' => $move->counterpartCategoryName]) : ($move->kind->isIncoming() ? Lang::get('budgets::messages.history.moved_from', ['category' => $move->counterpartCategoryName]) : Lang::get('budgets::messages.history.moved_to', ['category' => $move->counterpartCategoryName])) }}</span>
+                                                    @if ($move->memo !== null && $move->memo !== '')
+                                                        <span class="block truncate text-xs text-slate-500 dark:text-slate-400">{{ $move->memo }}</span>
+                                                    @endif
                                                 </div>
                                                 <div class="flex shrink-0 items-center gap-3">
-                                                    <span class="text-sm tabular-nums {{ $move->direction === 'in' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}">
-                                                        {{ $move->direction === 'in' ? '+' : '' }}{{ $fmt(abs($move->amountMinor), $row->currency) }}
+                                                    <span class="text-sm tabular-nums {{ $move->kind?->isIncoming() ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}">
+                                                        {{-- The stored figure carries its own sign, which is the one
+                                                             fact about direction this build still has. --}}
+                                                        {{ $move->kind === null ? $fmt($move->amountMinor, $move->currency) : ($move->kind->isIncoming() ? '+' : '').$fmt(abs($move->amountMinor), $move->currency) }}
                                                     </span>
                                                     <button
                                                         type="button"
@@ -241,7 +285,7 @@
                 <div class="card-list-item" wire:key="envelope-phone-{{ $row->categoryId }}">
                     <div class="w-full min-w-0">
                         <p class="primary truncate">
-                            {{ $row->categoryName }}
+                            {{ $row->categoryPath }}
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative)
                                 <x-core::status-pill tone="warning" class="ml-1">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
@@ -256,6 +300,15 @@
                         </p>
                         <p class="secondary" style="font-variant-numeric: tabular-nums;">
                             {{ Lang::get('budgets::messages.phone.spent', ['amount' => $fmt($row->spentMinor, $row->currency)]) }}
+                            {{-- Only when they carry something: the two terms explain a
+                                 figure the reader cannot otherwise derive, and a row
+                                 where both are nought has nothing to explain. --}}
+                            @if ($row->carriedInMinor !== 0)
+                                ·&nbsp;{{ Lang::get('budgets::messages.phone.carried_in', ['amount' => $fmt($row->carriedInMinor, $row->currency)]) }}
+                            @endif
+                            @if ($row->netMovedMinor !== 0)
+                                ·&nbsp;{{ Lang::get('budgets::messages.phone.moved', ['amount' => $fmt($row->netMovedMinor, $row->currency)]) }}
+                            @endif
                             ·&nbsp;<span class="{{ $row->availableMinor < 0 ? 'text-rose-600 dark:text-rose-400' : '' }}">{{ Lang::get('budgets::messages.phone.available', ['amount' => $fmt($row->availableMinor, $row->currency)]) }}</span>
                         </p>
                     </div>
@@ -275,7 +328,7 @@
                                     wire:model="thresholdInputs.{{ $row->categoryId }}"
                                     wire:keydown.enter="setNotifyThreshold({{ $row->categoryId }})"
                                     wire:blur="setNotifyThreshold({{ $row->categoryId }})"
-                                    aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryName]) }}"
+                                    aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryPath]) }}"
                                     placeholder="{{ $defaultNotifyThreshold }}"
                                     class="h-8 w-24 rounded-md border border-slate-200 bg-white pl-2 pr-6 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     style="font-variant-numeric: tabular-nums;"
@@ -291,12 +344,12 @@
                             <span>{{ Lang::get('budgets::messages.table.assigned') }}</span>
                             <input
                                 type="text"
-                                inputmode="decimal"
+                                inputmode="{{ MoneyInput::decimalPlaces($row->currency) === 0 ? 'numeric' : 'decimal' }}"
                                 wire:model="assignedInputs.{{ $row->categoryId }}"
                                 wire:keydown.enter="setAssigned({{ $row->categoryId }})"
                                 wire:blur="setAssigned({{ $row->categoryId }})"
-                                aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryName]) }}"
-                                placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                                aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryPath]) }}"
+                                placeholder="{{ MoneyInput::formatAbsMinor(0, $row->currency) }}"
                                 class="amount h-8 w-24 rounded-md border border-slate-200 bg-white px-2 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                 style="font-variant-numeric: tabular-nums;"
                             >
@@ -326,7 +379,7 @@
     {{-- ------------------------------------------------------------------- --}}
     <flux:modal name="envelope-move" dismissible>
         <div class="pt-[44px]" style="max-width: 480px;">
-            <x-core::section-heading :title="Lang::get('budgets::messages.modal.move_from', ['name' => $moveFromCategory?->categoryName ?? Lang::get('budgets::messages.modal.move_from_fallback')])" />
+            <x-core::section-heading :title="Lang::get('budgets::messages.modal.move_from', ['name' => $moveFromCategory?->categoryPath ?? Lang::get('budgets::messages.modal.move_from_fallback')])" />
             <form wire:submit="moveMoney" class="mt-6 space-y-4">
                 <x-core::form-field
                     :label="Lang::get('budgets::messages.modal.move_to')"
@@ -337,7 +390,7 @@
                 >
                     <option value="">{{ count($moveDestinations) === 0 ? Lang::get('budgets::messages.modal.no_other') : Lang::get('budgets::messages.modal.select') }}</option>
                     @foreach ($moveDestinations as $dest)
-                        <option value="{{ $dest->categoryId }}">{{ $dest->categoryName }}</option>
+                        <option value="{{ $dest->categoryId }}">{{ $dest->categoryPath }}</option>
                     @endforeach
                 </x-core::form-field>
                 <div>
@@ -350,15 +403,15 @@
                         name="moveAmount"
                         field-id="envelope-move-amount"
                         wire:model="moveAmount"
-                        inputmode="decimal"
-                        placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                        inputmode="{{ MoneyInput::decimalPlaces($moveFromCategory?->currency) === 0 ? 'numeric' : 'decimal' }}"
+                        placeholder="{{ MoneyInput::formatAbsMinor(0, $moveFromCategory?->currency) }}"
                         :aria-invalid="$moveError !== '' ? 'true' : null"
                         :aria-describedby="$moveError !== '' ? 'envelope-move-amount-error' : null"
                         style="font-variant-numeric: tabular-nums;"
                     />
                     @if ($moveFromCategory !== null)
                         <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                            {{ Lang::get('budgets::messages.modal.available_in', ['name' => $moveFromCategory->categoryName, 'amount' => $fmt($moveFromCategory->availableMinor, $moveFromCategory->currency)]) }}
+                            {{ Lang::get('budgets::messages.modal.available_in', ['name' => $moveFromCategory->categoryPath, 'amount' => $fmt($moveFromCategory->availableMinor, $moveFromCategory->currency)]) }}
                         </p>
                     @endif
                     @if ($moveError !== '')
@@ -404,7 +457,7 @@
             >
                 <option value="">{{ count($moveDestinations) === 0 ? Lang::get('budgets::messages.modal.no_other') : Lang::get('budgets::messages.modal.select') }}</option>
                 @foreach ($moveDestinations as $dest)
-                    <option value="{{ $dest->categoryId }}">{{ $dest->categoryName }}</option>
+                    <option value="{{ $dest->categoryId }}">{{ $dest->categoryPath }}</option>
                 @endforeach
             </x-core::form-field>
             <div>
@@ -414,8 +467,8 @@
                     field-id="envelope-move-amount-sheet"
                     size="base"
                     wire:model="moveAmount"
-                    inputmode="decimal"
-                    placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                    inputmode="{{ MoneyInput::decimalPlaces($moveFromCategory?->currency) === 0 ? 'numeric' : 'decimal' }}"
+                    placeholder="{{ MoneyInput::formatAbsMinor(0, $moveFromCategory?->currency) }}"
                     :aria-invalid="$moveError !== '' ? 'true' : null"
                     :aria-describedby="$moveError !== '' ? 'envelope-move-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"

@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Internal\Enums;
 
-// Ytd and ThisYear resolve to the same window and are two cases only because
-// the picker shows two labels. The values reach the reader as `?period=` and
-// as a stored saved_reports.definition key, so they cannot be renamed.
+// Ytd stops at today and ThisYear covers the whole calendar year, which are
+// two questions and not two labels for one: a ledger holding booked-ahead rows
+// answers them differently. The values reach the reader as `?period=` and as a
+// stored saved_reports.definition key, so they cannot be renamed.
 enum ReportPeriodPreset: string
 {
     case ThisMonth = 'this_month';

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\SharedListSettingsPanel;
 
@@ -56,4 +57,30 @@ it('does not write to users.community_settings when Toggle 3 (updateOnAppUpdates
     } else {
         expect($settings['updateOnAppUpdates'] ?? false)->toBeFalse();
     }
+});
+
+// The panel computed mappingsCount and contributorCount on every render and
+// the blade referenced neither, while its own comment promised "the stats ride
+// under the intro as a caption" — two lang keys with no reader, carried in all
+// 26 locales.
+it('renders the mapping and contributor counts the panel computes', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    foreach ([['a', 'bundled'], ['b', 'bundled'], ['c', 'someone-else']] as [$pattern, $contributor]) {
+        $db->connection()->table('community_merchant_mappings')->insert([
+            'user_id' => null,
+            'pattern' => strtoupper($pattern),
+            'generalized_pattern' => $pattern,
+            'name' => 'Name '.$pattern,
+            'contributor' => $contributor,
+            'created_at' => '2026-08-15T10:00:00Z',
+            'updated_at' => '2026-08-15T10:00:00Z',
+        ]);
+    }
+
+    $html = Livewire::test(SharedListSettingsPanel::class)->html();
+
+    expect($html)->toContain('data-testid="shared-list-stats"');
+    expect($html)->toContain('3 mappings');
+    expect($html)->toContain('2 contributors');
 });

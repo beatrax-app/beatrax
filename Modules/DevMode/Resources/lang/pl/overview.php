@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Powierzchnia operacyjna wbudowanej konsoli deweloperskiej.',
     'worker_heartbeat' => 'Puls workera',
     'not_running' => 'NIE DZIAŁA',
+    'heartbeat_age' => ':count s temu · ttl :ttl s|:count s temu · ttl :ttl s|:count s temu · ttl :ttl s',
     'queue' => 'Kolejka',
     'pending' => 'oczekujące',
     'failed' => 'nieudane',

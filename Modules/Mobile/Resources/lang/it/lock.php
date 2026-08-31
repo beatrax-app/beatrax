@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Sblocca',
 
-    'digits_entered' => 'cifre inserite',
+    'digits_entered' => ':count cifra inserita|:count cifre inserite',
     'pin_pad' => 'Tastierino del PIN',
     'digit' => 'Cifra :digit',
     'backspace' => 'Tasto indietro',

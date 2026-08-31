@@ -9,13 +9,14 @@ return [
     'step_3_of_3' => 'Pasul 3 din 3',
 
     'show_my_code' => 'Arată codul meu',
-    'show_my_code_help' => 'Afișează codul QR și codul din cuvinte ale acestui dispozitiv pentru celălalt dispozitiv.',
+    'show_my_code_help' => 'Afișează codul acestui dispozitiv pentru ca celălalt să îl citească.',
     'enter_a_code' => 'Introdu un cod',
     'safety_number_changed' => 'Celălalt dispozitiv s-a schimbat în timp ce comparai. Verifică din nou cuvintele de mai jos înainte de a confirma.',
     'enter_a_code_help' => 'Tastează codul afișat pe celălalt dispozitiv.',
 
     'show_this_code' => 'Arată acest cod',
     'enter_on_other' => 'Introdu acest cod pe celălalt dispozitiv sau lasă-l să scaneze codul QR.',
+    'scan_on_other' => 'Scanează acest cod cu camera celuilalt dispozitiv. Un computer nu are cameră — afișează codul lui și introdu-l aici.',
     'expires_in' => 'Expiră în',
     'code_expired' => 'Codul a expirat.',
     'generate_new_code' => 'Generează un cod nou',
@@ -37,4 +38,9 @@ return [
 
     'identity_locked' => 'Identitatea dispozitivului tău este blocată. Deblochează aplicația și încearcă din nou.',
     'invalid_code' => 'Acest cod este invalid sau a expirat. Cere celuilalt dispozitiv să genereze unul nou.',
+    'code_incomplete' => 'Acest cod nu este complet. Compară-l cu celălalt dispozitiv și introdu-l în întregime.',
+    'code_not_accepted' => 'Niciun dispozitiv din această rețea nu a acceptat codul. Verifică codul și dacă celălalt dispozitiv încă îl afișează.',
+    'no_peer_answered' => 'Nimic din această rețea nu a răspuns la acel cod. Verifică dacă sincronizarea rulează pe celălalt dispozitiv.',
+    'no_peer_search' => 'Acest dispozitiv nu a putut căuta în rețea, așa că nu a putut verifica codul. Afișează în schimb codul acestui dispozitiv și introdu-l pe celălalt.',
+    'rate_limited' => 'Prea multe încercări. Așteaptă un minut și încearcă din nou.',
 ];

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Некатегоризирани',
+    'no_counterparty' => 'Без контрагент',
+    'unavailable_counterparty' => 'Контрагентът го няма на това устройство',
     'title' => 'Отчети',
     'page_title' => 'Отчети · Beatrax',
     'subtitle' => 'Състави отчет от регистъра си.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Графиката е в :currency — :list не се показва',
+        'undrawn' => 'Извън пръстена — :amount се движи в обратната посока',
         'bar_title' => 'Кликни върху стълб, за да видиш транзакциите му',
         'line_title' => 'Кликни върху точка, за да видиш транзакциите ѝ',
         'donut_title' => 'Кликни върху сегмент, за да видиш транзакциите му',

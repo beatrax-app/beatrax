@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Uit beeld verbergen (wijzigt het logbestand niet)',
     'dismiss_aria' => 'Logregel uit beeld verbergen',
     'totals' => [
-        'showing' => 'Toont',
-        'of' => 'van',
-        'received' => 'ontvangen (bufferlimiet 10k)',
-        'lines_today' => 'regels vandaag',
+        'showing' => 'Toont :shown van :count ontvangen regel (bufferlimiet :cap)|Toont :shown van :count ontvangen regels (bufferlimiet :cap)',
+        'lines_today' => ':count regel vandaag|:count regels vandaag',
+        'lines_today_capped' => 'meer dan :count regel vandaag|meer dan :count regels vandaag',
         'today' => 'vandaag',
-        'across' => 'over',
-        'daily_files' => 'dagelijkse bestanden',
+        'all_files' => ':size over :count dagelijks bestand|:size over :count dagelijkse bestanden',
     ],
 
     'status' => [

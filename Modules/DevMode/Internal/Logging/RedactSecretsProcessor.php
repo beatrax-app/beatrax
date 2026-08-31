@@ -8,14 +8,14 @@ use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 
-final class RedactSecretsProcessor implements ProcessorInterface
+final readonly class RedactSecretsProcessor implements ProcessorInterface
 {
     // Keys whose VALUE is a credential whatever it looks like. Guzzle and
     // Laravel log headers as ['Authorization' => 'Bearer ...'], and
     // scrubArray() visits each leaf on its own, so the header word and the
     // token were never in one string for a value pattern to match.
     /** @var list<string> */
-    private const SECRET_KEYS = [
+    private const array SECRET_KEYS = [
         'authorization', 'proxy_authorization', 'cookie', 'set_cookie',
         'x_api_key', 'api_key', 'apikey', 'x_auth_token',
         'token', 'access_token', 'refresh_token', 'id_token', 'tokens_blob',
@@ -25,7 +25,7 @@ final class RedactSecretsProcessor implements ProcessorInterface
     // Value shapes, each anchored on a prefix that only a credential carries,
     // so an ordinary log line is never touched.
     /** @var array<string, string> */
-    private const VALUE_PATTERNS = [
+    private const array VALUE_PATTERNS = [
         '/(Authorization:\s*)(Bearer|Basic)\s+\S+/i' => '$1$2 [REDACTED]',
         // Without the header word a length floor keeps the English word
         // "bearer" followed by an ordinary word out of it.
@@ -41,12 +41,12 @@ final class RedactSecretsProcessor implements ProcessorInterface
 
     // The signature of an HS256 JWT is 43 characters and its payload can be
     // shorter still, so requiring 20 in every segment let real tokens through.
-    private const JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/';
+    private const string JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/';
 
     // Nullable so the Bearer + JWT branches can be exercised without a
     // container; the binding always passes the real singleton.
     public function __construct(
-        private readonly ?OAuthScrubSet $scrubSet = null,
+        private ?OAuthScrubSet $scrubSet = null,
     ) {}
 
     public function __invoke(LogRecord $record): LogRecord

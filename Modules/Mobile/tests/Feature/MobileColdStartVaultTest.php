@@ -5,9 +5,8 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
-use Modules\Auth\Public\Services\MobileLockGateway;
+use Modules\Auth\Public\Services\ColdStartEnrolmentFlag;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricRecoverResult;
 use Modules\Mobile\Internal\Identity\MobileColdStartVault;
@@ -20,20 +19,24 @@ uses(RefreshDatabase::class);
  */
 function coldStartEnclave(bool $enrolls = true, ?string $recovers = null): BiometricKeyVault
 {
-    return new class(app(BiometricKeyBlobCodec::class), app(CurrentUser::class), app(LoggerInterface::class), $enrolls, $recovers) extends BiometricKeyVault
+    return new class(app(BiometricKeyBlobCodec::class), app(LoggerInterface::class), $enrolls, $recovers) extends BiometricKeyVault
     {
-        public bool $cleared = false;
+        /** @var list<int> */
+        public array $clearedFor = [];
 
-        public int $recoverCalls = 0;
+        /** @var list<int> */
+        public array $recoveredFor = [];
+
+        /** @var list<int> */
+        public array $enrolledFor = [];
 
         public function __construct(
             BiometricKeyBlobCodec $codec,
-            CurrentUser $currentUser,
             LoggerInterface $log,
             private readonly bool $enrolls,
             private readonly ?string $recovers,
         ) {
-            parent::__construct($codec, $currentUser, $log);
+            parent::__construct($codec, $log);
         }
 
         protected function runtimeAvailable(): bool
@@ -50,23 +53,25 @@ function coldStartEnclave(bool $enrolls = true, ?string $recovers = null): Biome
             return 'Darwin';
         }
 
-        public function enroll(string $dataKey): bool
+        public function enroll(int $userId, string $dataKey): bool
         {
+            $this->enrolledFor[] = $userId;
+
             return $this->enrolls;
         }
 
-        public function recover(string $reason = 'Unlock Beatrax'): BiometricRecoverResult
+        public function recover(int $userId, string $reason = 'Unlock Beatrax'): BiometricRecoverResult
         {
-            $this->recoverCalls++;
+            $this->recoveredFor[] = $userId;
 
             return $this->recovers === null
                 ? BiometricRecoverResult::canceled()
                 : BiometricRecoverResult::recovered($this->recovers);
         }
 
-        public function clear(): void
+        public function clear(int $userId): void
         {
-            $this->cleared = true;
+            $this->clearedFor[] = $userId;
         }
     };
 }
@@ -91,8 +96,8 @@ function coldStartVaultUser(string $username): User
 // second prompt would ask the user twice.
 
 it('reports availability from the enclave', function (): void {
-    $available = new MobileColdStartVault(coldStartEnclave(), app(MobileLockGateway::class));
-    $unavailable = new MobileColdStartVault(app(BiometricKeyVault::class), app(MobileLockGateway::class));
+    $available = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrolmentFlag::class));
+    $unavailable = new MobileColdStartVault(app(BiometricKeyVault::class), app(ColdStartEnrolmentFlag::class));
 
     expect($available->isAvailable())->toBeTrue()
         ->and($unavailable->isAvailable())->toBeFalse();
@@ -100,7 +105,7 @@ it('reports availability from the enclave', function (): void {
 
 it('records the enrollment against the user and reads it back', function (): void {
     $user = coldStartVaultUser('cold-start-enrolls');
-    $vault = new MobileColdStartVault(coldStartEnclave(), app(MobileLockGateway::class));
+    $vault = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrolmentFlag::class));
 
     expect($vault->isEnrolled((int) $user->id))->toBeFalse()
         ->and($vault->enroll((int) $user->id, random_bytes(32)))->toBeTrue()
@@ -111,7 +116,7 @@ it('records the enrollment against the user and reads it back', function (): voi
 // an unlock that cannot work and the user is stuck behind a dead button.
 it('leaves the flag false when the enclave refuses to enroll', function (): void {
     $user = coldStartVaultUser('cold-start-refuses');
-    $vault = new MobileColdStartVault(coldStartEnclave(enrolls: false), app(MobileLockGateway::class));
+    $vault = new MobileColdStartVault(coldStartEnclave(enrolls: false), app(ColdStartEnrolmentFlag::class));
 
     expect($vault->enroll((int) $user->id, random_bytes(32)))->toBeFalse()
         ->and($vault->isEnrolled((int) $user->id))->toBeFalse();
@@ -122,7 +127,7 @@ it('leaves the flag false when the enclave refuses to enroll', function (): void
 it('scopes the enrollment flag per user', function (): void {
     $first = coldStartVaultUser('cold-start-first');
     $second = coldStartVaultUser('cold-start-second');
-    $vault = new MobileColdStartVault(coldStartEnclave(), app(MobileLockGateway::class));
+    $vault = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrolmentFlag::class));
 
     $vault->enroll((int) $first->id, random_bytes(32));
 
@@ -134,15 +139,15 @@ it('returns the key the enclave yields, prompting exactly once', function (): vo
     $user = coldStartVaultUser('cold-start-recovers');
     $dataKey = random_bytes(32);
     $enclave = coldStartEnclave(recovers: $dataKey);
-    $vault = new MobileColdStartVault($enclave, app(MobileLockGateway::class));
+    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
 
     expect($vault->recover((int) $user->id, 'Unlock Beatrax'))->toBe($dataKey)
-        ->and($enclave->recoverCalls)->toBe(1);
+        ->and($enclave->recoveredFor)->toBe([(int) $user->id]);
 });
 
 it('returns nothing when the enclave recovery is not completed', function (): void {
     $user = coldStartVaultUser('cold-start-canceled');
-    $vault = new MobileColdStartVault(coldStartEnclave(), app(MobileLockGateway::class));
+    $vault = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrolmentFlag::class));
 
     expect($vault->recover((int) $user->id, 'Unlock Beatrax'))->toBeNull();
 });
@@ -150,11 +155,11 @@ it('returns nothing when the enclave recovery is not completed', function (): vo
 it('clears both the enclave entry and the flag when forgetting', function (): void {
     $user = coldStartVaultUser('cold-start-forgets');
     $enclave = coldStartEnclave();
-    $vault = new MobileColdStartVault($enclave, app(MobileLockGateway::class));
+    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
 
     $vault->enroll((int) $user->id, random_bytes(32));
     $vault->forget((int) $user->id);
 
-    expect($enclave->cleared)->toBeTrue()
+    expect($enclave->clearedFor)->toBe([(int) $user->id])
         ->and($vault->isEnrolled((int) $user->id))->toBeFalse();
 });

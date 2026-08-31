@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -20,7 +21,8 @@ use Modules\Counterparties\Public\Queries\CounterpartyDisplayName;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Ledger\Public\Services\BaseCurrency;
-use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Support\CategoryPathName;
+use Modules\Mobile\Public\Services\ShareSheetExport;
 use Modules\Reports\Internal\Actions\SaveReport;
 use Modules\Reports\Internal\Actions\UpdateReport;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
@@ -39,6 +41,7 @@ use Modules\Reports\Internal\Enums\ReportViz;
 use Modules\Reports\Internal\Exceptions\InvalidReportPeriod;
 use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
+use Modules\Reports\Internal\Support\ChartSeries;
 use Modules\Reports\Internal\Support\ReportDefinitionFactory;
 use Modules\Reports\Internal\Support\ReportVocabulary;
 use Modules\Reports\Models\SavedReport;
@@ -97,6 +100,9 @@ final class ReportBuilder extends Component
     #[Url(as: 'amount_dir', except: AmountDirection::Both->value)]
     public string $filterAmountDir = AmountDirection::Both->value;
 
+    // Set only from a stored report the reader just opened or saved; the save
+    // path updates whatever id this holds.
+    #[Locked]
     public ?int $loadedReportId = null;
 
     // Stashed so openSaveForm() can pre-fill saveName: a blank field implies
@@ -181,7 +187,7 @@ final class ReportBuilder extends Component
 
     // A Livewire action rather than an <a href> so it joins wire:loading, and it
     // reads the same currentDefinition() the table renders from.
-    public function export(ResponseFactory $responses, ReportCsvExporter $exporter, CurrentUser $currentUser, PeriodPresetResolver $periodPresetResolver): ?StreamedResponse
+    public function export(ResponseFactory $responses, ReportCsvExporter $exporter, CurrentUser $currentUser, PeriodPresetResolver $periodPresetResolver, ShareSheetExport $shareSheet): ?StreamedResponse
     {
         if (! $currentUser->isAuthenticated()) {
             return new StreamedResponse(static function (): void {
@@ -207,11 +213,22 @@ final class ReportBuilder extends Component
             return null;
         }
 
+        $filename = "beatrax-report-{$definition->slug()}.csv";
+
+        // A shell whose WebView drops the download gets the OS share sheet and
+        // a line saying so. The response it would have been sent goes nowhere,
+        // which is exactly what the reader saw on the phone: nothing.
+        if ($shareSheet->replacesWebViewDownload()) {
+            $this->flashMessage = $shareSheet->export($filename, $exporter->export($user, $definition))->message();
+
+            return null;
+        }
+
         return $responses->streamDownload(
             static function () use ($exporter, $user, $definition): void {
                 echo $exporter->export($user, $definition);
             },
-            "beatrax-report-{$definition->slug()}.csv",
+            $filename,
             ['Content-Type' => 'text/csv; charset=UTF-8'],
         );
     }
@@ -261,6 +278,10 @@ final class ReportBuilder extends Component
         $view = $views->make('reports::livewire.report-builder', [
             'result' => $result,
             'displayRows' => $displayRows,
+            // A chart axis carries one currency and a ring one direction, so
+            // what it can draw is narrower than what the table lists -- and
+            // every row it drops is said on the page, never dropped quietly.
+            'chartSeries' => ChartSeries::for($definition->viz, $displayRows, $drilldownUrls, $result->currency, $result->totalMinor),
             'definition' => $definition,
             'drilldownUrls' => $drilldownUrls,
             'periodError' => $periodError,
@@ -411,20 +432,25 @@ final class ReportBuilder extends Component
      */
     private function availableCategories(DatabaseManager $db, int $userId): array
     {
-        $rows = $db->connection()
-            ->table('categories')
+        // The result rows beside this filter are fully qualified, so a filter
+        // offering the bare leaf named the same category two different ways on
+        // one screen.
+        $rows = CategoryPathName::joinParent($db->connection()->table('categories as c'), $userId, 'c', 'cp')
             ->where(static function (Builder $query) use ($userId): void {
-                $query->whereNull('user_id')->orWhere('user_id', $userId);
+                $query->whereNull('c.user_id')->orWhere('c.user_id', $userId);
             })
-            ->get(['id', ...CategoryDisplayName::bareColumns()])
+            ->get(['c.id', ...CategoryPathName::columns('c', 'cp')])
             ->all();
 
-        $options = array_values(array_map(static function (stdClass $row): array {
-            return [
-                'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'name' => CategoryDisplayName::fromRow($row) ?? '',
-            ];
-        }, $rows));
+        $paths = [];
+        foreach ($rows as $row) {
+            $paths[is_numeric($row->id) ? (int) $row->id : 0] = CategoryPathName::fromRow($row) ?? '';
+        }
+
+        $options = [];
+        foreach (CategoryPathName::distinct($paths) as $id => $name) {
+            $options[] = ['id' => $id, 'name' => $name];
+        }
 
         usort($options, static function (array $a, array $b): int {
             $byName = LocaleCollator::compare($a['name'], $b['name']);

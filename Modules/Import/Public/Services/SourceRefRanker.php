@@ -11,21 +11,19 @@ use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 // preview-then-confirm TOCTOU window closes.
 final class SourceRefRanker
 {
-    // A stored receipt row carries its TRANSPORT format: the wizard arm and the
-    // inbox job both normalise under 'eml'/'mbox' and leave the matcher key in
-    // raw_payload. A matcher key is a different vocabulary and never reaches
-    // either caller, both of which pass a source_format column.
-    /**
-     * @var list<string>
-     */
-    private const RECEIPT_FORMATS = [
-        SourceFormat::Eml->value,
-        SourceFormat::Mbox->value,
-    ];
+    // A receipt's own reference beats the statement export's slug: it carries
+    // the canonical PayPal Transaction ID where the CSV renders an `O-...`
+    // slug, and a clean "Verkoper: <name>" where the ICS PDF fuses the merchant
+    // with a city fragment.
+    private const int RECEIPT_RANK = 2;
 
+    // Which formats those are is SourceFormat's answer, not a second list here:
+    // a copy that omitted one broke every receipt once already. A matcher key
+    // is a different vocabulary and reaches neither caller, both of which pass
+    // a stored source_format column.
     public function isReceiptFormat(string $sourceFormat): bool
     {
-        return in_array($sourceFormat, self::RECEIPT_FORMATS, true);
+        return SourceFormat::tryFrom($sourceFormat)?->isReceiptFile() === true;
     }
 
     public function rank(?string $ref, string $format): int
@@ -34,14 +32,13 @@ final class SourceRefRanker
             return 0;
         }
 
+        if ($this->isReceiptFormat($format)) {
+            return self::RECEIPT_RANK;
+        }
+
         return match ($format) {
             SourceFormat::Camt053->value => 4,
             SourceFormat::Mt940->value => 2,
-            // A receipt's own reference beats the statement export's slug: it
-            // carries the canonical PayPal Transaction ID where the CSV renders
-            // an `O-...` slug, and a clean "Verkoper: <name>" where the ICS PDF
-            // fuses the merchant with a city fragment.
-            SourceFormat::Eml->value, SourceFormat::Mbox->value => 2,
             SourceFormat::IcsPdf->value => 1,
             CsvPresetRegistry::ASN => 1,
             // Same band as asn-csv: disjoint account_id values keep the two

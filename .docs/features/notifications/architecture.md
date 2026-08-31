@@ -1,11 +1,18 @@
 # `Notifications` — architecture
 
 The `Notifications` module owns a single, deduplicated inbox
-(`/notifications`) that unifies eight trigger types — payment reminders,
+(`/notifications`) that unifies eleven trigger types — payment reminders,
 budget nudges, savings prompts, position digests, drift alerts, forecast
-shortfalls, coalesced imports, and ICS-statement-ready nudges — behind
-one persisted `notifications` row per logical event, one delivery
-suppression seam, and one state machine.
+shortfalls, coalesced imports, matched e-mail receipts, hand-entered cash
+entries, finished budget migrations, and ICS-statement-ready nudges — behind one persisted
+`notifications` row per logical event, one delivery suppression seam,
+and one state machine.
+
+Every one of those titles has to hold for **every** state its trigger can
+be raised in, which is a harder question than it reads as and the one
+five of them got wrong — see
+[a notification title that only holds for one of the states that raise
+it](../../conventions/invariants-from-shipped-failures.md#a-notification-title-that-only-holds-for-one-of-the-states-that-raise-it).
 
 ## Deterministic deduplication
 
@@ -63,7 +70,7 @@ different occurrence keys because their real-world identity differs:
 | Position digest | the digest's own occurrence string (a date for daily cadence, an ISO week for weekly) | one digest per calendar unit |
 | Drift alert | the drift alert's own row id | `drift_alerts` already enforces one row per detected drift |
 | Forecast shortfall | the shortfall window's start date | one row per detected window start |
-| Coalesced import | the batch's completion timestamp (second precision) + inserted count | an import is a local, user-initiated event with no independent second-device re-derivation, so it only needs to not double-fire for one batch, not converge across devices |
+| Coalesced import, matched receipts, hand-entered cash | the batch's completion timestamp (second precision) + inserted count | an import is a local, user-initiated event with no independent second-device re-derivation, so it only needs to not double-fire for one batch, not converge across devices |
 | ICS statement ready | the statement-arrival day (`Y-m-d`), not the message id | a resend or a re-scan on a later tick lands on the same day key; two distinct statements on different days do not collide |
 
 ## Never-throw listener envelope
@@ -99,7 +106,7 @@ and by the op-log replayer — never through the state machine, and the
 replayer never touches `state` at all, since `state` is locally-derived
 from a settlement check, not a synced field. `ResolveSettledReminder`
 re-derives the same deterministic id `PersistPaymentReminder` wrote from
-`(userId, TRIGGER_PAYMENT_REMINDER, seriesId, dueDate)` and flips it to
+`(userId, NotificationTrigger::PaymentReminder, seriesId, dueDate)` and flips it to
 `resolved` only when the row exists and is still `open` — a missing row
 (the reminder never fired) or an already-resolved row is a silent no-op.
 
@@ -112,7 +119,8 @@ not fire in queue/console context.
 ## Delivery suppression
 
 `SuppressionEvaluator::shouldDeliver()` is the one place delivery
-suppression is decided; both platform delivery adapters
+suppression is decided, and it takes a `NotificationTrigger` rather than
+a string; both platform delivery adapters
 (`Modules\Desktop`'s `DispatchOsNotification` and `Modules\Mobile`'s
 `DispatchMobileNotification`) call it exclusively. It decides delivery
 only — it never prevents a row from being written, and the writer always
@@ -123,16 +131,40 @@ device's quiet-hours window suppresses (reason `quiet_hours`); otherwise
 delivered (reason `ok`). `hideDetails` always reflects the stored
 preference regardless of the deliver outcome, so a delivery adapter can
 never forget to consult it. A handful of trigger types
-(import-finished, receipts-found, drift-changed, forecast-shortfall,
-ics-statement-ready) carry no per-trigger toggle in the preferences DTO
-and are always deliverable; an unrecognised trigger type is rejected
-loudly (logged, suppressed) rather than silently bypassing every toggle.
+(import-finished, receipts-found, manual-entry-recorded,
+migration-finished, drift-changed, forecast-shortfall,
+ics-statement-ready) carry no per-trigger toggle in
+the preferences DTO and are always deliverable —
+`NotificationTrigger::requiresToggle()` is where that half is stated. The
+toggle match names all eleven cases and has no default arm, so a new trigger
+is a static-analysis failure rather than a row written and then silently
+never delivered; the trigger type is the enum end to end, so an
+unrecognised one cannot be constructed.
 
 `suppressDelivery()` is the seeding/test suppression flag — it runs a
 callback with delivery globally suppressed, restoring the prior flag
 value in a `finally` (reentrant-safe), so a demo seeder or feature test
 can dispatch real trigger events and have rows stored without ever
 pushing to the OS.
+
+### The sentence beside the switch is part of the contract
+
+The settings switch is bound to `hideDetails`, so **on** is the state
+that keeps amounts and merchant names off the banner. The help under it
+shipped describing the control that does not exist — *"Show amounts and
+merchant names in the notification banner itself. Turn off if your
+screen might be visible to others."* A reader who took that advice
+turned the switch **off**, which is the one state that puts the amounts
+on the lock screen; all 25 translations carried the inversion
+faithfully, because each is a faithful translation.
+
+`Modules/Notifications/tests/Feature/TheHideDetailsHelpPointsAtThePrivateStateTest.php`
+is what stops it coming back. It does not compare the sentence to a
+literal — a rewrite would take the literal with it. It reads the switch
+direction *out of* the shipped sentence, sets the settings section to
+that state, saves, and asks the evaluator what a delivery adapter would
+be told. The advice, the rendered switch and the decision have to agree,
+and there is nowhere left for the sentence to be right on its own.
 
 ## Per-device preferences
 
@@ -178,19 +210,26 @@ DTO) and re-runs the same user-scoped existence query the deep-link
 target itself would use — a target belonging to another user resolves
 exactly like a deleted target: disabled, generic copy, no distinguishing
 signal. A handful of `target_kind` values (`dashboard`, `forecast`,
-`inbox`, `import`, `ics-import`) never carry a deletable per-user entity
+`inbox`, `import`, `ics-import`, `cash-book`, `migration`) never carry a
+deletable per-user entity
 and are always live; the rest (`series`, `budget`, `counterparty`,
 `transaction`) resolve through each owning module's Public existence
 check. A row that never carried a `target_kind` at all is a different
 answer from a target that is gone: it renders as a plain non-link with
 NO explanation line, because "This item no longer exists." about
 something that never existed is a lie the reader cannot check. A kind
-this build does not recognise still degrades to the neutral word
-`item`. `NotificationCopy` is the single copy authority for every
-notification title and type-chip glyph/word pair — the reactive titles
-are ported byte-for-byte from the desktop OS-notification adapter's
-original constants (locked, no rewording) so the OS banner and the inbox
-never drift apart.
+this build does not recognise still degrades to the neutral kind
+`item` — the explanation line is a whole sentence per kind, so the kind
+also names a translation key and must never be a raw payload string.
+`NotificationCopy` holds one thing — the type-chip glyph and **lang key**
+per trigger, plus the neutral `◌` chip a trigger this build cannot name
+falls back to; the word itself is resolved per reader through
+`Lang::get()`, because `aria-hidden` keeps the chip from a screen reader
+and not from eyes ([copy that follows the
+reader](reader-language-copy.md)). Titles and bodies live in the
+`notifications::copy` lang files and are re-rendered per reader by
+`NotificationCopyRenderer`, so the OS banner and the inbox take the same
+sentence from the same key.
 
 ## Retention
 
@@ -248,12 +287,46 @@ encryption is not enabled).
 ## UI surface
 
 `/notifications` (`NotificationsPage`) is a single lifecycle dimension —
-Unread / All / Dismissed tabs — deliberately not a second type-switch
+the `NotificationTab` cases, Unread / All / Dismissed, which the strip
+and both empty-state lines are built from — deliberately not a second type-switch
 surface like `/drift`'s; every action re-resolves the user from
 `CurrentUser` rather than trusting a Livewire-payload id as an
 authorization boundary. Its cursor is an opaque `(created_at, id)`
 compound string (unlike `/drift`'s plain integer cursor), since the
-sha256 primary key carries no insertion order. The Settings
+sha256 primary key carries no insertion order.
+
+### The row's three controls, and the rail that counts them
+
+Each row is a flex wrapper holding an anchor and, as its **siblings**, the
+marks for the actions the page implements. The three actions shipped
+implemented, registered and covered by `->call()` tests with nothing in the
+Blade calling any of them: the row was one `<a>` with no siblings, so a reader
+could not mark a notification read, could not dismiss one, and could not undo a
+dismissal — and the *Dismissed* tab filtered to a state the reader had no way
+to produce. Only the demo seeder ever wrote a `read_at` or a `dismissed_at`.
+
+- **Dismiss** (`✖️`) and **Restore** (`↩️`) are the two halves of one
+  reversible pair; which one a row draws is read from its own `dismissed_at`,
+  not from the active tab, so a dismissed row found through *All* offers the
+  way back too. Dismiss carries no confirmation on purpose — the toast offers
+  the Undo, and a reversible action takes none of the three question shapes.
+- **Mark read** (`✅`) is drawn only while `read_at` is null, *in addition to*
+  the anchor's `x-on:click="$wire.markRead()"`. Opening a notification is still
+  what marks it read, but that call is fired at the same moment the browser
+  begins a full page navigation — the anchor deliberately carries no
+  `wire:navigate` — so it races the teardown of the document it was sent from.
+  Nothing but the explicit mark lets a reader clear an inbox without opening
+  every target and coming back.
+
+All three then dispatch `NavBadgeEvents::REFRESH`, which `AppSidebar` listens
+for. The rail is mounted by the layout, which a component update never
+re-renders, so before that the unread badge could only fall on a page load. The
+same seam is why this module's nav-badge composer counts per render rather than
+memoising per boot: the drawer holds the app's single sidebar mount, so a memo
+collapsed nothing and instead froze the count for exactly the second render the
+recount is.
+
+The Settings
 "Notifications" section (`NotificationsSettingsSection`) is the ~9-control
 preferences form plus a read-only "Other devices" panel, bounds-checking
 every input before any write (mirroring the project's other settings

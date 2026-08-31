@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Etichetezi și încă :count din',
     'batch_after' => '?',
+    'batch_confirm' => 'Etichetezi drept deductibile fiscal toate tranzacțiile rămase de la :name? Fiecare primește această categorie și această notă. Eticheta se scoate după aceea doar tranzacție cu tranzacție.',
     'batch_tag_all' => 'Etichetează tot',
     'batch_dismiss' => 'Închide',
 ];

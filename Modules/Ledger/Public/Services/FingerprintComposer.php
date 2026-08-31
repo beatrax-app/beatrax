@@ -11,7 +11,7 @@ final class FingerprintComposer
 {
     // Bump whenever the tuple shape or normalize()'s output changes;
     // re-derive existing rows via beatrax:rederive-fingerprints.
-    public const NORMALIZATION_VERSION = 3;
+    public const int NORMALIZATION_VERSION = 3;
 
     public function compose(CanonicalTransaction $tx): string
     {

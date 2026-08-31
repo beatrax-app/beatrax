@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Pairing;
 use Illuminate\Http\Client\Response;
 use InvalidArgumentException;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
+use Modules\Sync\Internal\Transport\Discovery\PeerAdvertisementLimits;
 use Modules\Sync\Internal\Transport\PairingHttpStatus;
 use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
@@ -23,8 +24,6 @@ final readonly class LanPairingOfferFetcher
     // the typed code. Asking too few asks the wrong ones, which reads to the
     // person typing as a code that did not work.
     private const int MAX_PEERS_ASKED_FOR_AN_OFFER = 8;
-
-    private const int MAX_DEVICE_ID_BYTES = 128;
 
     private const int MAX_NAME_BYTES = 128;
 
@@ -43,7 +42,7 @@ final readonly class LanPairingOfferFetcher
     // ever say one thing — and what it said was "check your network", to a
     // reader whose network was fine and whose code had simply expired.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
     public function fetchForWordCode(string $wordCode): array|PairingOfferLookup
     {
@@ -63,7 +62,7 @@ final readonly class LanPairingOfferFetcher
     // all, or one that answered 429, changes the answer for all of them. That
     // is what the two flags carry past the loop.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
     private function askEveryPeer(string $tokenHex): array|PairingOfferLookup
     {
@@ -98,7 +97,7 @@ final readonly class LanPairingOfferFetcher
     // Keeps WHICH ending happened: a peer that answered at all, even to refuse,
     // proves the network reached it.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
     private function attempt(DiscoveredPeer $peer, string $tokenHex): array|PairingOfferLookup
     {
@@ -120,8 +119,17 @@ final readonly class LanPairingOfferFetcher
             return PairingOfferLookup::RateLimited;
         }
 
-        return $this->identityFrom(self::offeredBody($response), $tokenHex)
-            ?? PairingOfferLookup::CodeNotAccepted;
+        $identity = $this->identityFrom(self::offeredBody($response), $tokenHex);
+
+        if ($identity === null) {
+            return PairingOfferLookup::CodeNotAccepted;
+        }
+
+        // The endpoint this request actually reached, never the reply — the
+        // relay fields below are dropped for exactly that reason. Where the
+        // offer came from is an observation of the transport, and the sync
+        // that follows has no other way to learn it.
+        return [...$identity, 'lanHost' => $peer->host, 'lanPort' => $peer->port];
     }
 
     // Empty for every answer that carries no readable offer, which identityFrom
@@ -152,7 +160,7 @@ final readonly class LanPairingOfferFetcher
      */
     private function identityFrom(array $body, string $tokenHex): ?array
     {
-        $deviceId = $this->boundedString($body, 'device_id', self::MAX_DEVICE_ID_BYTES);
+        $deviceId = $this->boundedString($body, 'device_id', PeerAdvertisementLimits::MAX_DEVICE_ID_BYTES);
         $ed25519 = $this->boundedString($body, 'ed25519', self::MAX_KEY_HEX_BYTES);
         $x25519 = $this->boundedString($body, 'x25519', self::MAX_KEY_HEX_BYTES);
 

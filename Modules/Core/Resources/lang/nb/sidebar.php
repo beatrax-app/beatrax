@@ -94,6 +94,7 @@ return [
         'heading' => 'Utvikler',
         'open_console' => 'Åpne utviklerkonsollen',
         'pulse' => 'Kø :queue · Arbeider :worker',
+        'worker_ago' => 'for :count s siden|for :count s siden',
     ],
 
     'account' => [

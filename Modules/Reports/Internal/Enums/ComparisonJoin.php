@@ -13,4 +13,16 @@ enum ComparisonJoin: string
     case Group = 'group';
 
     case Sequence = 'sequence';
+
+    // What "the other window has no counterpart" means, which is not the same
+    // answer twice: a category nobody spent on genuinely spent zero, while a
+    // bucket the previous window never reached is unknown -- and the table
+    // renders that null as an em dash rather than as "was zero then".
+    public function missingCounterpartMinor(): ?int
+    {
+        return match ($this) {
+            self::Group => 0,
+            self::Sequence => null,
+        };
+    }
 }

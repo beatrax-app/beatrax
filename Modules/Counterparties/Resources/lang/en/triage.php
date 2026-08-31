@@ -6,7 +6,7 @@ return [
     'page_title' => 'Counterparty triage',
     'heading' => 'Triage unknown counterparties',
 
-    'progress' => ':seen of :total · :percent % · ~:minutes min remaining',
+    'progress' => ':seen of :total · :percent% · ~:minutes min remaining',
     'progress_aria' => 'Triage progress',
 
     'all_caught_aria' => 'All counterparties labeled',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'No transactions on file yet.',
 
     'label_manually' => 'Or label manually',
+    'label_question' => 'What is this counterparty?',
     'display_name_label' => 'Display name',
-    'display_name_placeholder' => 'Display name…',
     'type_label' => 'Type',
     'type_merchant' => 'Merchant',
     'type_personal' => 'Personal',
     'type_bank' => 'Bank',
     'type_government' => 'Government',
     'save_label' => 'Save label',
+    'name_required' => 'Give this counterparty a name first.',
+    'draft_kept' => 'What you type is kept while you move through the queue.',
 
     'skip' => 'Skip for now',
-    'mark_ignored' => 'Mark as ignored',
+    'mark_ignored' => 'Stop asking about this one',
+    'not_now_note' => 'Neither writes anything to the counterparty — you can still label it later from the counterparties page.',
     'previous' => 'Previous unknown',
-    'next' => 'Next',
 
     'kbd_yes' => 'yes',
     'kbd_no' => 'no',

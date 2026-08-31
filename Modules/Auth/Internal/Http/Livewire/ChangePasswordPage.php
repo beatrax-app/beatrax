@@ -12,6 +12,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
+use Modules\Auth\Internal\Services\SessionRevoker;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
@@ -37,6 +39,8 @@ final class ChangePasswordPage extends Component
         UrlGenerator $urls,
         Session $session,
         AppLockProvisioner $provisioner,
+        RecoveryCodeMinter $minter,
+        SessionRevoker $sessions,
     ): void {
         $user = $currentUser->user();
 
@@ -72,12 +76,36 @@ final class ChangePasswordPage extends Component
 
         // A password changed after a suspected compromise must sever the other
         // sessions; this one survives only to finish the redirect.
-        $db->connection()->table('sessions')
-            ->where('user_id', $user->id)
-            ->where('id', '!=', $session->getId())
-            ->delete();
+        $sessions->revokeAllFor($user->id, $session->getId());
+
+        $codes = $this->mintFirstRecoverySheet($user->id, $db, $minter);
+
+        if ($codes !== []) {
+            $session->put(RecoveryCodesDisplay::SESSION_KEY, $codes);
+            $session->put(RecoveryCodesDisplay::SESSION_RETURN_KEY, RecoveryCodesDisplay::RETURN_TO_DASHBOARD);
+
+            $this->redirect($urls->route('auth.recovery-codes-display'), navigate: false);
+
+            return;
+        }
 
         $this->redirect(Destination::Dashboard->urlFrom($urls), navigate: false);
+    }
+
+    // A partner an owner added holds no sheet: AddUserAction mints none,
+    // because at that moment there is nobody to hand it to. This is that
+    // moment, and the only one the plaintext can be shown at — the sheet is
+    // stored hashed from here on.
+    /**
+     * @return list<string> empty when this account already has a sheet
+     */
+    private function mintFirstRecoverySheet(int $userId, DatabaseManager $db, RecoveryCodeMinter $minter): array
+    {
+        $hasSheet = $db->connection()->table('user_recovery_codes')
+            ->where('user_id', $userId)
+            ->exists();
+
+        return $hasSheet ? [] : $minter->issueFor($userId);
     }
 
     public function render(ViewFactory $views): View

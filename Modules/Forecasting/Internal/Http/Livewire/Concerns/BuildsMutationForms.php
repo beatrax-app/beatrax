@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Forecasting\Internal\Http\Livewire\Concerns;
 
+use Modules\Core\Public\Support\Lang;
+use Modules\Forecasting\Internal\Enums\ScenarioFormField;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
@@ -13,6 +15,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPaylo
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Forecasting\Public\Enums\ShiftScope;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 
 // The mutation-form surface of ScenarioEditorSidebar: the per-kind default
@@ -28,8 +31,8 @@ trait BuildsMutationForms
     {
         return match ($kind) {
             ScenarioMutationKind::CancelSeries->value => ['seriesId' => null],
-            ScenarioMutationKind::AddOneOff->value => ['date' => '', 'amount' => '', 'currency' => $baseCurrency, 'direction' => 'expense', 'note' => ''],
-            ScenarioMutationKind::AddRecurring->value => ['startDate' => '', 'amount' => '', 'currency' => $baseCurrency, 'direction' => 'expense', 'cadence' => SeriesCadence::Monthly->value, 'note' => ''],
+            ScenarioMutationKind::AddOneOff->value => ['date' => '', 'amount' => '', 'currency' => $baseCurrency, 'direction' => Direction::Expense->value, 'note' => ''],
+            ScenarioMutationKind::AddRecurring->value => ['startDate' => '', 'amount' => '', 'currency' => $baseCurrency, 'direction' => Direction::Expense->value, 'cadence' => SeriesCadence::Monthly->value, 'note' => ''],
             ScenarioMutationKind::ChangeSeriesAmount->value => ['seriesId' => null, 'newAmount' => ''],
             ScenarioMutationKind::ShiftSeriesDate->value => ['seriesId' => null, 'newNextDate' => '', 'scope' => ShiftScope::Next->value],
             default => [],
@@ -41,31 +44,15 @@ trait BuildsMutationForms
         try {
             return match ($kind) {
                 ScenarioMutationKind::CancelSeries->value => new CancelSeriesPayload(
-                    seriesId: $this->intField('seriesId'),
+                    seriesId: $this->intField(ScenarioFormField::SeriesId),
                 ),
-                ScenarioMutationKind::AddOneOff->value => new AddOneOffPayload(
-                    date: $this->stringField('date'),
-                    amountMinor: $this->parseAmountMinor('amount'),
-                    currency: $this->stringField('currency', $baseCurrency),
-                    direction: $this->stringField('direction', 'expense'),
-                    note: $this->optionalStringField('note'),
-                ),
-                ScenarioMutationKind::AddRecurring->value => new AddRecurringPayload(
-                    startDate: $this->stringField('startDate'),
-                    amountMinor: $this->parseAmountMinor('amount'),
-                    currency: $this->stringField('currency', $baseCurrency),
-                    direction: $this->stringField('direction', 'expense'),
-                    cadence: $this->stringField('cadence', 'monthly'),
-                    note: $this->optionalStringField('note'),
-                ),
-                ScenarioMutationKind::ChangeSeriesAmount->value => new ChangeSeriesAmountPayload(
-                    seriesId: $this->intField('seriesId'),
-                    newAmountMinor: $this->parseAmountMinor('newAmount'),
-                ),
+                ScenarioMutationKind::AddOneOff->value => $this->oneOffFromForm($baseCurrency),
+                ScenarioMutationKind::AddRecurring->value => $this->recurringFromForm($baseCurrency),
+                ScenarioMutationKind::ChangeSeriesAmount->value => $this->changeAmountFromForm($baseCurrency),
                 ScenarioMutationKind::ShiftSeriesDate->value => new ShiftSeriesDatePayload(
-                    seriesId: $this->intField('seriesId'),
-                    newNextDate: $this->stringField('newNextDate'),
-                    scope: $this->stringField('scope', ShiftScope::Next->value),
+                    seriesId: $this->intField(ScenarioFormField::SeriesId),
+                    newNextDate: $this->stringField(ScenarioFormField::NewNextDate),
+                    scope: $this->stringField(ScenarioFormField::Scope, ShiftScope::Next->value),
                 ),
                 default => null,
             };
@@ -74,6 +61,56 @@ trait BuildsMutationForms
 
             return null;
         }
+    }
+
+    // The typed figure is denominated in the code the form carries, so the
+    // amount is read at that currency's own scale: 5000 in a yen box is
+    // JPY5,000, and the repo-wide two decimals stored JPY500,000.
+    private function oneOffFromForm(string $baseCurrency): AddOneOffPayload
+    {
+        $currency = $this->stringField(ScenarioFormField::Currency, $baseCurrency);
+
+        return new AddOneOffPayload(
+            date: $this->stringField(ScenarioFormField::Date),
+            amountMinor: $this->parseAmountMinor(ScenarioFormField::Amount, $currency),
+            currency: $currency,
+            direction: $this->stringField(ScenarioFormField::Direction, Direction::Expense->value),
+            note: $this->optionalStringField(ScenarioFormField::Note),
+        );
+    }
+
+    private function recurringFromForm(string $baseCurrency): AddRecurringPayload
+    {
+        $currency = $this->stringField(ScenarioFormField::Currency, $baseCurrency);
+
+        return new AddRecurringPayload(
+            startDate: $this->stringField(ScenarioFormField::StartDate),
+            amountMinor: $this->parseAmountMinor(ScenarioFormField::Amount, $currency),
+            currency: $currency,
+            direction: $this->stringField(ScenarioFormField::Direction, Direction::Expense->value),
+            cadence: $this->stringField(ScenarioFormField::Cadence, SeriesCadence::Monthly->value),
+            note: $this->optionalStringField(ScenarioFormField::Note),
+        );
+    }
+
+    // A new amount for a series is denominated in that series' own currency,
+    // never the reader's base one.
+    private function changeAmountFromForm(string $baseCurrency): ChangeSeriesAmountPayload
+    {
+        $seriesId = $this->intField(ScenarioFormField::SeriesId);
+
+        return new ChangeSeriesAmountPayload(
+            seriesId: $seriesId,
+            newAmountMinor: $this->parseAmountMinor(
+                ScenarioFormField::NewAmount,
+                $this->currencyForSeries($seriesId, $baseCurrency),
+            ),
+        );
+    }
+
+    private function currencyForSeries(int $seriesId, string $baseCurrency): string
+    {
+        return $this->seriesCurrency($seriesId) ?? $baseCurrency;
     }
 
     /**
@@ -96,32 +133,32 @@ trait BuildsMutationForms
         return $coerced;
     }
 
-    private function intField(string $key): int
+    private function intField(ScenarioFormField $field): int
     {
-        $value = $this->form[$key] ?? null;
+        $value = $this->form[$field->value] ?? null;
         if (! is_numeric($value)) {
-            throw new \InvalidArgumentException("Field '{$key}' is required.");
+            throw new \InvalidArgumentException(self::requiredMessage($field));
         }
 
         return (int) $value;
     }
 
-    private function stringField(string $key, ?string $default = null): string
+    private function stringField(ScenarioFormField $field, ?string $default = null): string
     {
-        $value = $this->form[$key] ?? $default;
+        $value = $this->form[$field->value] ?? $default;
         if (! is_string($value) || $value === '') {
             if ($default !== null) {
                 return $default;
             }
-            throw new \InvalidArgumentException("Field '{$key}' is required.");
+            throw new \InvalidArgumentException(self::requiredMessage($field));
         }
 
         return $value;
     }
 
-    private function optionalStringField(string $key): ?string
+    private function optionalStringField(ScenarioFormField $field): ?string
     {
-        $value = $this->form[$key] ?? null;
+        $value = $this->form[$field->value] ?? null;
         if (! is_string($value) || trim($value) === '') {
             return null;
         }
@@ -129,17 +166,24 @@ trait BuildsMutationForms
         return $value;
     }
 
-    private function parseAmountMinor(string $key): int
+    private function parseAmountMinor(ScenarioFormField $field, string $currency): int
     {
-        $value = $this->form[$key] ?? null;
+        $value = $this->form[$field->value] ?? null;
         if (is_string($value)) {
             $raw = $value;
         } elseif (is_numeric($value)) {
             $raw = (string) $value;
         } else {
-            throw new \InvalidArgumentException('Amount is required.');
+            throw new \InvalidArgumentException(Lang::get('forecasting::forecast.errors.amount_required'));
         }
 
-        return AmountStringParser::toMinor($raw);
+        return AmountStringParser::toMinor($raw, $currency);
+    }
+
+    private static function requiredMessage(ScenarioFormField $field): string
+    {
+        return Lang::get('forecasting::forecast.errors.field_required', [
+            'field' => Lang::get($field->labelKey()),
+        ]);
     }
 }

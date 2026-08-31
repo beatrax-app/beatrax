@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Modifier le marquage fiscal : :label',
     'tag' => 'Marquer',
     'tag_aria' => 'Marquer comme pertinent fiscalement',
+    'tag_caption' => 'Marquer',
 ];

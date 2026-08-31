@@ -122,7 +122,6 @@ final readonly class GdkKeyring
             $epochs[] = GdkEpoch::fromArray($row);
         }
 
-        /** @var mixed $blindIndexKeyHex */
         $blindIndexKeyHex = $payload['blind_index_key_hex'] ?? null;
         if ($blindIndexKeyHex !== null && (! is_string($blindIndexKeyHex) || $blindIndexKeyHex === '')) {
             throw new InvalidArgumentException('GdkKeyring::fromArray — blind_index_key_hex must be a non-empty string when present.');

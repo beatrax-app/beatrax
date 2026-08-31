@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Некатегоризирани',
+    'unavailable_category' => 'Категорията я няма на това устройство',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Потвърдена',
         'uncleared' => 'Непотвърдена',

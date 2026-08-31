@@ -108,12 +108,6 @@ registry. The blast radius of a substituted identity is one device's row, not th
   identically: a later `PAIR_CONFIRM` is rejected and nothing is admitted. The grace window
   is five minutes.
 
-## See also
-
-- [`architecture.md`](architecture.md) — the pairing ceremony in the wider sync design.
-- [`gdk-epoch-wrap-delivery.md`](gdk-epoch-wrap-delivery.md) — what gets sent to a device once
-  it is confirmed, and why leftover pairing frames on the shared mailbox matter.
-
 ## Why the courier sends before it collects
 
 `PendingPairingCourier::tick()` re-emits this device's own confirm *before* it
@@ -130,3 +124,9 @@ That is precisely the one-sided pairing the courier exists to end, rebuilt one
 level up — and it is what the first implementation did. The asymmetry in cost is
 what settles it: re-sending a frame the peer already holds costs one idempotent
 apply, while not sending it costs the peer the pairing.
+
+## See also
+
+- [`architecture.md`](architecture.md) — the pairing ceremony in the wider sync design.
+- [`gdk-epoch-wrap-delivery.md`](gdk-epoch-wrap-delivery.md) — what gets sent to a device once
+  it is confirmed, and why leftover pairing frames on the shared mailbox matter.

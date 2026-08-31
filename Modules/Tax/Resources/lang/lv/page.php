@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Eksportēt PDF',
     'export_pdf_aria' => 'Eksportēt PDF',
     'export_pdf_title' => 'Lejupielādēt beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Aizvērt',
 
     'country_prompt_heading' => 'Kurā valstī iesniedziet nodokļu deklarāciju?',
     'country_prompt_body' => 'To jebkurā brīdī varat mainīt sadaļā Iestatījumi → :section.',

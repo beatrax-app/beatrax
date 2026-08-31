@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Recurring\Internal\Detectors;
 
 use Carbon\CarbonImmutable;
+use Modules\Recurring\Internal\InferredCadence;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use stdClass;
 
@@ -22,23 +23,24 @@ final readonly class DetectedSeries
         public ?CarbonImmutable $nextExpectedAt,
         public bool $confidenceLow,
         public array $rows,
+        public ?int $billingDay = null,
     ) {}
 
     /**
-     * @param  array{cadence: SeriesCadence, median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}  $cadence
      * @param  list<stdClass>  $rows
      */
-    public static function fromCadence(string $clusterKey, array $cadence, int $latestAmountMinor, string $currency, array $rows): self
+    public static function fromCadence(string $clusterKey, InferredCadence $cadence, int $latestAmountMinor, string $currency, array $rows): self
     {
         return new self(
             clusterKey: $clusterKey,
-            cadence: $cadence['cadence'],
+            cadence: $cadence->cadence,
             latestAmountMinor: $latestAmountMinor,
             currency: $currency,
-            monthlyEquivalentMinor: self::monthlyEquivalent($latestAmountMinor, $cadence['cadence']),
-            nextExpectedAt: $cadence['next_expected_at'],
-            confidenceLow: $cadence['confidence_low'],
+            monthlyEquivalentMinor: self::monthlyEquivalent($latestAmountMinor, $cadence->cadence),
+            nextExpectedAt: $cadence->nextExpectedAt,
+            confidenceLow: $cadence->confidenceLow,
             rows: $rows,
+            billingDay: $cadence->billingDay,
         );
     }
 

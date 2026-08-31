@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 use Modules\Ledger\Models\Account;
+use Modules\Mobile\Public\Services\ShareSheetExport;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
 use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
@@ -117,7 +118,7 @@ it('returns an empty stream when the export action runs without an authenticated
     };
 
     $component = new ReportBuilder;
-    $response = $component->export(app(ResponseFactory::class), app(ReportCsvExporter::class), $anonymous, app(PeriodPresetResolver::class));
+    $response = $component->export(app(ResponseFactory::class), app(ReportCsvExporter::class), $anonymous, app(PeriodPresetResolver::class), app(ShareSheetExport::class));
 
     expect($response)->toBeInstanceOf(StreamedResponse::class);
 

@@ -34,6 +34,7 @@ Modules/DevMode/
 │   │   ├── RedactionExcerptCap.php
 │   │   └── FinalizeRunAudit.php
 │   ├── Logging/
+│   │   ├── ActiveLogFile.php
 │   │   └── RedactSecretsProcessor.php
 │   ├── Services/
 │   │   └── OAuthScrubSet.php
@@ -116,8 +117,8 @@ Modules/DevMode/
     keywords)`.
 - **Models/**
   - `Job` — read-only model over the framework's `jobs` table.
-    `failed_jobs` and `job_batches` are read through the query
-    builder; the typed models over them went unused and were removed.
+    `failed_jobs` and `job_batches` carry no model of their own; they
+    are read through the query builder.
 
 ## Internal services
 
@@ -164,6 +165,9 @@ Modules/DevMode/
   fact of the run is never lost. A null `$exitCode` (what both
   callers have, since a vanished pid is all either of them saw) is
   resolved from the `RunExitCodeFile` sidecar.
+- `Internal/Logging/ActiveLogFile::path()` — the file the configured
+  log channel writes, and the single source the tailer, the stats
+  reader and the `/dev` console pane all resolve through.
 - `Internal/Logging/RedactSecretsProcessor::__invoke($record)` —
   Monolog tap. Lazy-rebuilds the OAuth pattern from
   `OAuthScrubSet::compiledPattern()` on demand.
@@ -173,7 +177,10 @@ Modules/DevMode/
   `compiledPattern()` call. A failed load is not cached, so the set
   recovers on the next call once the cause clears.
 - `Internal/Http/Middleware/EnsureDeveloperMode::handle($req, $next)`
-  — refuses non-developer callers with 404.
+  — refuses with 404 when the build refuses the console
+  (`DevConsoleBuildGate::permits()`) or the caller is not a
+  developer. That gate is `Modules\Core\Public\Services` — `Shell`
+  and `Desktop` ask it too, and neither may depend on this module.
 - `Internal/Http/Middleware/HorizonFrameAncestors::handle($req, $next)`
   — appends the `frame-ancestors` CSP directive so the iframe
   renders.

@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\Response;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
@@ -126,35 +122,23 @@ it('rejects an unparseable URL', function (): void {
     );
 });
 
-it('accepts the resolved bank SCA host dynamically merged into the allow-list', function (): void {
+// The SCA host is where the READER's browser goes, via an outward redirect this
+// client never issues. Nothing here builds a URL on it, so allow-listing it
+// would authorise a bearer-token request no production path makes.
+it('rejects the resolved bank SCA host: this client only ever talks to the API host', function (): void {
     $secrets = ebFixtureSecrets($this->privateKeyPem, bankScaHost: 'sca.asnbank.example');
-    $mock = new MockHandler([
-        new Response(200, ['Content-Type' => 'application/json'], json_encode(['aspsps' => []], JSON_THROW_ON_ERROR)),
-    ]);
-    $client = new class($secrets, $this->jwtSigner, $mock) extends EnableBankingHttpClient
+    $client = new class($secrets, $this->jwtSigner) extends EnableBankingHttpClient
     {
-        public function __construct(
-            OpenBankingSecretsRepository $secrets,
-            EnableBankingJwtSigner $jwtSigner,
-            private readonly MockHandler $mock,
-        ) {
-            parent::__construct($secrets, $jwtSigner);
-        }
-
         protected function baseUri(): string
         {
             return 'https://sca.asnbank.example/';
         }
-
-        protected function makeHttpClient(): GuzzleClient
-        {
-            return new GuzzleClient(['handler' => HandlerStack::create($this->mock)]);
-        }
     };
 
-    $result = $client->aspsps('NL');
-
-    expect($result)->toBe(['aspsps' => []]);
+    expect(fn () => $client->aspsps('NL'))->toThrow(
+        UnsafeOpenBankingRequestException::class,
+        'non-allow-listed host: sca.asnbank.example',
+    );
 });
 
 it('rejects an attacker host even when a bank SCA host has separately been resolved', function (): void {

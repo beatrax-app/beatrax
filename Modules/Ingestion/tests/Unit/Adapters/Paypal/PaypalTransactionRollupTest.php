@@ -66,7 +66,6 @@ it('rolls up a single flat parent payment row into one canonical DTO', function 
     expect($dtos[0]->currency)->toBe('EUR');
     expect($dtos[0]->settledAmountMinor)->toBeNull();
     expect($dtos[0]->settledCurrency)->toBeNull();
-    expect($dtos[0]->fxRateUsed)->toBeNull();
     expect($dtos[0]->sourceRef)->toBe('O-00000000000000001');
     expect($dtos[0]->ownIban)->toBe('PAYPAL');
 })->group('phase-4');
@@ -118,15 +117,93 @@ it('folds a 4-row USD currency-conversion chain into ONE DTO with the dual-amoun
 
     $dtos = $this->rollup->rollup($rows, 'nl');
 
-    expect($dtos)->toHaveCount(1);
-    $dto = $dtos[0];
+    // Two DTOs, not one: only the FX legs fold into the purchase. The funding
+    // leg is the reader's own money entering PayPal and stands on its own, so
+    // the bank-side debit has something to pair against.
+    expect($dtos)->toHaveCount(2);
+
+    $dto = collect($dtos)->firstOrFail(fn (SourceTransactionDto $d): bool => $d->sourceRef === 'O-00000000000000034');
     expect($dto->currency)->toBe('USD');
     expect($dto->amountMinor)->toBe(-1046);
     expect($dto->settledCurrency)->toBe('EUR');
     expect($dto->settledAmountMinor)->toBe(-927);
-    expect($dto->fxRateUsed)->toBeNull();
     expect($dto->counterpartyName)->toBe('Cloudflare Inc');
-    expect($dto->sourceRef)->toBe('O-00000000000000034');
+
+    $fundingDto = collect($dtos)->firstOrFail(fn (SourceTransactionDto $d): bool => $d->sourceRef === 'O-00000000000000033');
+    expect($fundingDto->amountMinor)->toBe(927);
+    expect($fundingDto->currency)->toBe('EUR');
+})->group('phase-4');
+
+it('gives the settled leg the parent payment direction when PayPal booked that leg as a credit', function (): void {
+    // Modules/Chains/tests/fixtures/scenario-1/paypal-activity.csv lines 8-11.
+    // PayPal books the euro leg of an outgoing dollar payment as the credit its
+    // OWN euro balance saw, so the two legs of one payment carry opposite signs
+    // in the export.
+    $parent = paypalRow([
+        'Valuta' => 'USD',
+        'Bruto ' => '-22,50',
+        'Netto' => '-22,50',
+        'Transactiereferentie' => 'O-PHASE5-0000000000000010',
+        'Naam' => 'Cloudflare Inc',
+        'Reference Txn ID' => 'O-PHASE5-0000000000000011',
+    ]);
+    $fxEur = paypalRow([
+        'Omschrijving' => 'Algemene valutaomrekening',
+        'Valuta' => 'EUR',
+        'Bruto ' => '20,80',
+        'Netto' => '20,80',
+        'Transactiereferentie' => 'O-PHASE5-0000000000000013',
+        'Naam' => '',
+        'Reference Txn ID' => 'O-PHASE5-0000000000000010',
+    ]);
+    $fxUsd = paypalRow([
+        'Omschrijving' => 'Algemene valutaomrekening',
+        'Valuta' => 'USD',
+        'Bruto ' => '-22,50',
+        'Netto' => '-22,50',
+        'Transactiereferentie' => 'O-PHASE5-0000000000000014',
+        'Naam' => '',
+        'Reference Txn ID' => 'O-PHASE5-0000000000000010',
+    ]);
+
+    $dtos = $this->rollup->rollup([$parent, $fxEur, $fxUsd], 'nl');
+
+    expect($dtos)->toHaveCount(1);
+    expect($dtos[0]->currency)->toBe('USD');
+    expect($dtos[0]->amountMinor)->toBe(-2250);
+    expect($dtos[0]->settledCurrency)->toBe('EUR');
+    expect($dtos[0]->settledAmountMinor)->toBe(-2080);
+})->group('phase-4');
+
+it('gives the promoted foreign leg the parent direction when the parent is the euro one', function (): void {
+    // The mirrored branch: a EUR parent whose foreign leg becomes the native
+    // pair, so the leg PayPal credited must not become a positive native amount
+    // against a negative settled one.
+    $parent = paypalRow([
+        'Valuta' => 'EUR',
+        'Bruto ' => '-20,80',
+        'Netto' => '-20,80',
+        'Transactiereferentie' => 'O-PHASE5-0000000000000020',
+        'Naam' => 'Cloudflare Inc',
+        'Reference Txn ID' => '',
+    ]);
+    $fxUsd = paypalRow([
+        'Omschrijving' => 'Algemene valutaomrekening',
+        'Valuta' => 'USD',
+        'Bruto ' => '22,50',
+        'Netto' => '22,50',
+        'Transactiereferentie' => 'O-PHASE5-0000000000000021',
+        'Naam' => '',
+        'Reference Txn ID' => 'O-PHASE5-0000000000000020',
+    ]);
+
+    $dtos = $this->rollup->rollup([$parent, $fxUsd], 'nl');
+
+    expect($dtos)->toHaveCount(1);
+    expect($dtos[0]->currency)->toBe('USD');
+    expect($dtos[0]->amountMinor)->toBe(-2250);
+    expect($dtos[0]->settledCurrency)->toBe('EUR');
+    expect($dtos[0]->settledAmountMinor)->toBe(-2080);
 })->group('phase-4');
 
 it('drops rows whose event type classifies as skip and bumps the hold counter', function (): void {
@@ -152,10 +229,12 @@ it('drops rows whose event type classifies as skip and bumps the hold counter', 
 })->group('phase-4');
 
 it('promotes an orphan child whose parent is absent from the file to a standalone parent', function (): void {
+    // An FX leg is the remaining child kind, and the one a month-boundary
+    // split can strand: its parent sits in the previous statement file.
     $rows = [
         paypalRow([
             'Transactiereferentie' => 'O-00000000000000010',
-            'Omschrijving' => 'Bankstorting naar PP-rekening',
+            'Omschrijving' => 'Algemene valutaomrekening',
             'Bruto ' => '8,10',
             'Netto' => '8,10',
             'Reference Txn ID' => 'O-99999999999999999',   // not in file
@@ -187,7 +266,7 @@ it('writes a rawPayload event manifest carrying parent + children rows in CSV or
     ]);
     $child = paypalRow([
         'Transactiereferentie' => 'O-00000000000000002',
-        'Omschrijving' => 'Bankstorting naar PP-rekening',
+        'Omschrijving' => 'Algemene valutaomrekening',
         'Bruto ' => '8,10',
         'Netto' => '8,10',
         'Reference Txn ID' => 'O-00000000000000001',
@@ -204,7 +283,7 @@ it('writes a rawPayload event manifest carrying parent + children rows in CSV or
     $events = $payload['events'];
     expect($events)->toHaveCount(2);
     expect($events[0]['type'])->toBe('Vooraf goedgekeurde betaling – rekening betaald door gebruiker');
-    expect($events[1]['type'])->toBe('Bankstorting naar PP-rekening');
+    expect($events[1]['type'])->toBe('Algemene valutaomrekening');
 })->group('phase-4');
 
 it('emits monotonically increasing sourceRowIndex over the rolled-up canonical rows', function (): void {
@@ -309,9 +388,9 @@ it('drops a malformed FX child but still emits the parent DTO without the FX pai
     expect($this->rollup->skippedMalformedRowCount())->toBe(1);
 })->group('phase-4');
 
-it('produces 41 logical-payment groups when given the full redacted fixture rows', function (): void {
-    // 86 rows collapse to 41: 39 parents with one child each, plus 2 parents
-    // with three children.
+it('produces 82 logical-payment groups when given the full redacted fixture rows', function (): void {
+    // 86 rows collapse to 82: 41 purchase parents and the 41 funding legs that
+    // settled them, each its own movement. Only the 4 FX legs fold away.
     $fixture = base_path('Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv');
     $handle = fopen($fixture, 'r');
     if ($handle === false) {
@@ -343,6 +422,6 @@ it('produces 41 logical-payment groups when given the full redacted fixture rows
 
     $dtos = $this->rollup->rollup($rows, 'nl');
 
-    expect($dtos)->toHaveCount(41);
+    expect($dtos)->toHaveCount(82);
     expect($this->rollup->skippedHoldCount())->toBe(0);
 })->group('phase-4');

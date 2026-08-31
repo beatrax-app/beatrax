@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Kategorizálatlan',
+    'unavailable_category' => 'A kategória nincs meg ezen az eszközön',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Elszámolt',
         'uncleared' => 'Nem elszámolt',

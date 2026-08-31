@@ -30,7 +30,7 @@ use Throwable;
 final class RuleApplier
 {
     /** @var array<string, string> Action `type` → `field_provenance` key. */
-    private const PROVENANCE_KEY = [
+    private const array PROVENANCE_KEY = [
         ActionType::Category->value => 'category_id',
         ActionType::Counterparty->value => 'counterparty_id',
         ActionType::Note->value => 'note',
@@ -149,7 +149,9 @@ final class RuleApplier
             return null;
         }
 
-        if (! $this->writeCategory($transactionId, $categoryId, $user)) {
+        // Zero covers unchanged, locked and cross-user alike: the action's own
+        // write-only-on-change guard is what keeps a repeat re-apply silent.
+        if (($this->updateCategory)($transactionId, $categoryId, $user) === 0) {
             return null;
         }
 
@@ -162,24 +164,6 @@ final class RuleApplier
         $this->provenance->stamp($user->id, $transactionId, ['category_id' => 'rule']);
 
         return ['category_id', $categoryId];
-    }
-
-    // UpdatesTransactionCategory has no write-only-on-change guard, and an
-    // unchanged category_id still reports one affected row on SQLite, so this
-    // read is the only thing that keeps a repeat re-apply a genuine no-op.
-    private function writeCategory(int $transactionId, int $categoryId, User $user): bool
-    {
-        $currentCategoryId = $this->db->connection()
-            ->table('transactions')
-            ->where('id', $transactionId)
-            ->where('user_id', $user->id)
-            ->value('category_id');
-
-        if ((is_numeric($currentCategoryId) ? (int) $currentCategoryId : null) === $categoryId) {
-            return false;
-        }
-
-        return ($this->updateCategory)($transactionId, $categoryId, $user) !== 0;
     }
 
     /**

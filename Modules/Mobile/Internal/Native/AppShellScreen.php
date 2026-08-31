@@ -24,7 +24,7 @@ final class AppShellScreen extends NativeComponent
     // the drawer's replacement on a phone, and two key sets for the same
     // four destinations is how a Dutch build ends up half-translated.
     /** @var array<string, array{label: string, path: string, ios: string, android: string}> */
-    public const DESTINATIONS = [
+    public const array DESTINATIONS = [
         'dashboard' => ['label' => 'core::sidebar.nav.dashboard', 'path' => '/', 'ios' => 'house', 'android' => 'home'],
         'transactions' => ['label' => 'core::sidebar.nav.transactions', 'path' => '/transactions', 'ios' => 'list.bullet', 'android' => 'list'],
         'calendar' => ['label' => 'core::sidebar.nav.calendar', 'path' => '/calendar', 'ios' => 'calendar', 'android' => 'calendar_month'],

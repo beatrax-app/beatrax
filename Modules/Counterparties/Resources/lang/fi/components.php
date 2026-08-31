@@ -24,6 +24,10 @@ return [
         'unknown' => 'Tuntemattomat',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Pankkikulu',
+    ],
+
     'cp_card' => [
         'aria' => 'Vastapuoli: :name',
         'recent_aria' => 'Viimeaikainen toiminta',

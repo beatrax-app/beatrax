@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Tranzakció',
     'heading' => 'Tranzakció',
+    'booked_on' => 'Könyvelve: :date',
 
     'counterparty' => 'Partner',
     'description' => 'Leírás',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Megjegyzés (opcionális)',
         'tax_deductible' => 'Adóból leírható',
         'remove_leg_aria' => 'Ennek a kategóriának az eltávolítása',
+        'remove_leg_caption' => 'Eltávolítása',
         'add_category' => '+ Kategória hozzáadása',
         'soft_cap' => ':count / ~20 kategória — érdemes összevonni a kis összegeket.',
         'remaining_zero' => 'Hátralévő :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Tranzakció törlése',
         'help' => 'Véglegesen eltávolítja ezt a tranzakciót. A művelet nem vonható vissza.',
         'button' => 'Törlés',
-        'confirm_prompt' => 'Biztos vagy benne?',
+        'confirm_prompt' => 'Törlöd ezt a tranzakciót? A jegyzete, felosztása és adócímkéi is eltűnnek.',
         'confirm' => 'Igen, törlöm',
         'cancel' => 'Mégse',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Lánc megtekintése',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Egyeztetve és zárolva',
+        'help' => 'Egy befejezett egyeztetés zárolta ezt a tranzakciót. A kategóriája, jegyzete, felosztása és adócímkéi változatlanok maradnak, amíg fel nem oldod.',
+        'button' => 'Feloldás szerkesztéshez',
+        'confirm_question' => 'Feloldod ezt a tranzakciót szerkesztésre? Semmi nem változik rajta, és a következő befejezett egyeztetés újra zárolja.',
+        'cancel' => 'Maradjon zárolva',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Ez a tranzakció egyeztetve van. A módosításhoz szüntesd meg az egyeztetést.',
         'reclassified_pair_removed' => 'Újrabesorolva: :type — a párosítás megszüntetve',
         'reclassified' => 'Újrabesorolva: :type',
         'note_saved' => 'Megjegyzés mentve',
         'unreconciled' => 'Egyeztetés megszüntetve — újra szerkesztheted ezt a tranzakciót.',
+        'note_too_long' => 'Egy jegyzet legfeljebb :max karakter.|Egy jegyzet legfeljebb :max karakter.',
         'counterparty_updated' => 'Partner frissítve',
         'goal_attributed' => 'Beleszámít ebbe a célba',
         'goal_attribution_removed' => 'Már nem számít bele ebbe a célba',

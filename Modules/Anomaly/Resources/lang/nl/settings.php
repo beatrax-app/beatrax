@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Hoe snel Beatrax een afschrijving ongebruikelijk noemt voor die winkelier of categorie, van 1 tot 100. Hoger markeert meer.',
 
     'min_amount_label' => 'Minimaal afschrijvingsbedrag',
-    'min_amount_help' => 'Negeer anomalieën op afschrijvingen onder dit bedrag. Opgeslagen in centen (:symbol) — 1000 betekent :example.',
+    'min_amount_help' => 'Negeer anomalieën op afschrijvingen onder dit bedrag. Opgeslagen in kleinste eenheden (:symbol) — :minor betekent :example.',
 
     'save' => 'Anomalie-instellingen opslaan',
     'saved' => 'Opgeslagen.',

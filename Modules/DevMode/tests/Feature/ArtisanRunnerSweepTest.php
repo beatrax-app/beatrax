@@ -77,8 +77,8 @@ it('sweep finalizes a pending audit row whose underlying PID has exited', functi
 
     $props = json_decode((string) $row->properties, true);
 
-    // exit_code stays null — the bash detach loses it — so finished_at is the
-    // only signal that the row is no longer pending.
+    // This fixture has no exit-code sidecar (the run was never spawned), so
+    // finished_at is the signal that the row is no longer pending.
     expect($props['finished_at'])->not->toBeNull();
 });
 

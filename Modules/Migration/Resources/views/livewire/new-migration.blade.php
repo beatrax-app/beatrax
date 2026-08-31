@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Migration\Internal\Enums\MigrationSourceProduct')
 <div class="space-y-6">
     <header class="space-y-1">
         <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400" data-testid="migration-eyebrow">{{ Lang::get('migration::new.eyebrow') }}</p>
@@ -34,9 +35,9 @@
             :disabled="$formatLocked"
             class="disabled:cursor-not-allowed disabled:opacity-60"
         >
-            <option value="ynab4">YNAB4</option>
-            <option value="nynab">New YNAB (nYNAB)</option>
-            <option value="actual">Actual Budget</option>
+            @foreach (MigrationSourceProduct::cases() as $product)
+                <option value="{{ $product->value }}">{{ $product->label() }}</option>
+            @endforeach
         </x-core::form-field>
 
         <div class="space-y-1">

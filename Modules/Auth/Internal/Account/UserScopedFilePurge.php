@@ -15,14 +15,14 @@ use Modules\Core\Public\Services\UserDataPathService;
 // when the account being deleted is the last one on it.
 final readonly class UserScopedFilePurge
 {
-    private const OWNED = [
+    private const array OWNED = [
         'sync/identity/%d.enc',
         'sync/gdk/%d.enc',
         'inbox/%d',
         'inbox-drop/%d',
     ];
 
-    private const DEVICE_WIDE = [
+    private const array DEVICE_WIDE = [
         'secrets',
         'backups',
         'tmp-backups',

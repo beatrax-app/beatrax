@@ -19,8 +19,11 @@ writes `.env`, configures the database, and runs the install.
 ## Requirements
 
 - PHP **8.5** with extensions: `intl`, `pcntl`, `posix`, `pdo_sqlite`,
-  `zip`, `bcmath`.
-- `poppler-utils` (`pdftotext`) for PDF statement ingestion.
+  `zip`, `bcmath`, `zlib`, `iconv` — the last two are what the in-app PDF
+  reader decompresses and transcodes statement streams with.
+- `poppler-utils` (`pdftotext`) is **optional**. It is preferred for PDF
+  statement ingestion where it is installed; without it the app falls back
+  to a pure-PHP reader, which is what every phone build uses.
 - Composer 2, and Node 22+ only if you build front-end assets yourself.
 - **SQLite.** It is the only supported database, in every deployment shape.
 

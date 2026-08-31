@@ -11,14 +11,18 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Public\Dto\ForecastHighlightsDto;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
 final readonly class ForecastHighlightsQuery
 {
-    public const int HORIZON_DAYS = 30;
+    // Not the projection horizon set — this is the one run the highlights
+    // tile and the sidebar badge read, and it is a single day count.
+    public const int TILE_HORIZON = ForecastHorizon::OneMonth->value;
 
     public function __construct(
         private DatabaseManager $db,
@@ -31,11 +35,14 @@ final readonly class ForecastHighlightsQuery
     public function activeShortfallCountForUser(User $user): int
     {
         $today = $this->clock->now()->startOfDay()->toDateString();
-        $horizon = $this->clock->now()->startOfDay()->addDays(self::HORIZON_DAYS)->toDateString();
+        $horizon = $this->clock->now()->startOfDay()->addDays(self::TILE_HORIZON)->toDateString();
 
         return $this->db->connection()->table('forecast_shortfall_windows')
             ->where('user_id', $user->id)
             ->whereNull('scenario_id')
+            // The tile reads the 30-day run, so it counts the 30-day run's own
+            // windows rather than whichever horizon last wrote the table.
+            ->where('horizon_days', self::TILE_HORIZON)
             ->where('starts_at', '<=', $horizon)
             ->where('ends_at', '>=', $today)
             ->count();
@@ -69,6 +76,8 @@ final readonly class ForecastHighlightsQuery
     // found in the account's own currency, then the dips race each other in
     // the reader's — a JPY minor unit is not a euro cent.
     /**
+     * @link ../../../../.docs/features/ledger/architecture.md#accountkind--which-kinds-hold-money
+     *
      * @return array{balanceMinor: int, currency: string, date: string, accountId: int, accountName: string}|null
      */
     private function lowestProjectedBalance(User $user): ?array
@@ -78,8 +87,13 @@ final readonly class ForecastHighlightsQuery
             return null;
         }
 
+        // Forward CASH, so only money the reader holds is in the race. A card
+        // sits below zero for its whole life and a Play tally only descends,
+        // so either wins it outright without naming a balance anyone can run
+        // short of — which is why BufferFloor gives the card no floor either.
         $accounts = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
+            ->whereIn('kind', AccountKind::spendableValues())
             ->orderBy('name')
             ->orderBy('id')
             ->get(['id', 'name', 'default_currency']);
@@ -221,7 +235,7 @@ final readonly class ForecastHighlightsQuery
         $run = $this->db->connection()->table('forecast_runs')
             ->where('user_id', $user->id)
             ->whereNull('scenario_id')
-            ->where('horizon_days', self::HORIZON_DAYS)
+            ->where('horizon_days', self::TILE_HORIZON)
             ->where('status', JobRunStatus::Complete->value)
             ->orderByDesc('id')
             ->first(['result_json']);

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Entsperren',
 
-    'digits_entered' => 'Ziffern eingegeben',
+    'digits_entered' => ':count Ziffer eingegeben|:count Ziffern eingegeben',
     'pin_pad' => 'PIN-Tastenfeld',
     'digit' => 'Ziffer :digit',
     'backspace' => 'Rücktaste',

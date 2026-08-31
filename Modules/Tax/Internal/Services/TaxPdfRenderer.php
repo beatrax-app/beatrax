@@ -9,11 +9,11 @@ use Dompdf\Options;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Modules\Core\Models\User;
 
-final class TaxPdfRenderer
+final readonly class TaxPdfRenderer
 {
     public function __construct(
-        private readonly TaxYearQuery $query,
-        private readonly ViewFactory $views,
+        private TaxYearQuery $query,
+        private ViewFactory $views,
     ) {}
 
     // Returns a string starting with '%PDF-'; an empty string only if

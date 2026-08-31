@@ -7,10 +7,10 @@ namespace Modules\Desktop\Internal\Native;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Native\Desktop\Facades\System;
 
-final class NativeBiometricUnlock
+final readonly class NativeBiometricUnlock
 {
     public function __construct(
-        private readonly ConfigRepository $config,
+        private ConfigRepository $config,
     ) {}
 
     public function isAvailable(): bool

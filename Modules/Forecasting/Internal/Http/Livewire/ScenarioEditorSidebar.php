@@ -6,7 +6,10 @@ namespace Modules\Forecasting\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
@@ -29,6 +32,11 @@ final class ScenarioEditorSidebar extends Component
     use DispatchesToast;
     use SummarisesMutations;
 
+    // Locked because deleteScenario() takes no id parameter: it acts on this
+    // property and never compares it to $confirmingDeleteScenario. Unlocked, a
+    // payload naming another of the reader's own scenarios deleted that one,
+    // cascaded its mutations, and toasted the name of the one still on screen.
+    #[Locked]
     public int $scenarioId = 0;
 
     public string $scenarioName = '';
@@ -40,9 +48,13 @@ final class ScenarioEditorSidebar extends Component
      */
     public array $mutations = [];
 
+    // Locked because render() is the only writer and an action method runs
+    // BEFORE it: unlocked, a tampered wire payload reached currencyForSeries()
+    // and chose the denomination the amount was then parsed in.
     /**
-     * @var list<array{id: int, name: string}>
+     * @var list<array{id: int, name: string, currency: string}>
      */
+    #[Locked]
     public array $availableSeries = [];
 
     public ?int $editingMutationId = null;
@@ -70,6 +82,7 @@ final class ScenarioEditorSidebar extends Component
         int $scenarioId,
         CurrentUser $currentUser,
         ScenarioQuery $scenarioQuery,
+        RecurringSeriesQuery $seriesQuery,
     ): void {
         $user = $currentUser->user();
         $dto = $scenarioQuery->find($scenarioId, $user);
@@ -81,6 +94,10 @@ final class ScenarioEditorSidebar extends Component
         $this->scenarioName = $dto->name;
         $this->scenarioDescription = $dto->description;
 
+        // Before the summaries, not after: each one is written from this list,
+        // and on the first paint render() had not filled it yet -- so every
+        // line named "series #7" and priced it at a hundredth of a yen.
+        $this->loadAvailableSeries($seriesQuery, $user);
         $this->refreshMutations($scenarioQuery, $currentUser);
     }
 
@@ -128,7 +145,11 @@ final class ScenarioEditorSidebar extends Component
         }
         try {
             ($action)($this->scenarioId, $currentUser->user(), $this->selectedKind, $payload);
-        } catch (\InvalidArgumentException|NotFoundHttpException $e) {
+        } catch (NotFoundHttpException) {
+            $this->formError = Lang::get('forecasting::scenario.errors.scenario_gone');
+
+            return;
+        } catch (\InvalidArgumentException $e) {
             $this->formError = $e->getMessage();
 
             return;
@@ -183,7 +204,11 @@ final class ScenarioEditorSidebar extends Component
         }
         try {
             ($action)($this->editingMutationId, $currentUser->user(), $payload);
-        } catch (\InvalidArgumentException|NotFoundHttpException $e) {
+        } catch (NotFoundHttpException) {
+            $this->formError = Lang::get('forecasting::scenario.errors.mutation_gone');
+
+            return;
+        } catch (\InvalidArgumentException $e) {
             $this->formError = $e->getMessage();
 
             return;
@@ -282,16 +307,14 @@ final class ScenarioEditorSidebar extends Component
         ViewFactory $views,
         CurrentUser $currentUser,
         RecurringSeriesQuery $seriesQuery,
+        DatabaseManager $db,
+        BaseCurrency $baseCurrency,
     ): View {
-        $this->availableSeries = [];
-        foreach ($seriesQuery->allApprovedForUser($currentUser->user()) as $s) {
-            $this->availableSeries[] = [
-                'id' => $s->seriesId,
-                'name' => $s->displayNameOverride ?? $s->detectedName,
-            ];
-        }
+        $user = $currentUser->user();
+        $this->loadAvailableSeries($seriesQuery, $user);
 
         return $views->make('forecasting::livewire.scenario-editor-sidebar', [
+            'currencyOptions' => self::currencyOptions($db, $user, $baseCurrency->code()),
             'scenarioId' => $this->scenarioId,
             'scenarioName' => $this->scenarioName,
             'scenarioDescription' => $this->scenarioDescription,
@@ -307,6 +330,40 @@ final class ScenarioEditorSidebar extends Component
             'renameError' => $this->renameError,
             'confirmingDeleteScenario' => $this->confirmingDeleteScenario,
         ]);
+    }
+
+    // The codes the reader can actually be charged in. The field was free text
+    // three characters wide, so 'usd' and 'ZZZ' both persisted, and the first
+    // stage that could refuse them was the fold — which refuses by failing the
+    // whole projection and leaving the scenario chart a flat line.
+    /**
+     * @return list<string>
+     */
+    private static function currencyOptions(DatabaseManager $db, User $user, string $baseCurrency): array
+    {
+        $codes = [$baseCurrency];
+        foreach ($db->connection()->table('accounts')->where('user_id', $user->id)->pluck('default_currency') as $code) {
+            if (is_string($code) && $code !== '' && ! in_array($code, $codes, true)) {
+                $codes[] = $code;
+            }
+        }
+        sort($codes);
+
+        return $codes;
+    }
+
+    private function loadAvailableSeries(RecurringSeriesQuery $seriesQuery, User $user): void
+    {
+        $this->availableSeries = [];
+        foreach ($seriesQuery->allApprovedForUser($user) as $series) {
+            $this->availableSeries[] = [
+                'id' => $series->seriesId,
+                'name' => $series->displayNameOverride ?? $series->detectedName,
+                // A new amount for this series is typed at this currency's own
+                // scale, which is not the reader's base currency's.
+                'currency' => $series->latestAmount->currency(),
+            ];
+        }
     }
 
     private function refreshMutations(ScenarioQuery $scenarioQuery, CurrentUser $currentUser): void

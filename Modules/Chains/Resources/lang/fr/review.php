@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Confirme ou rejette les liens candidats que le résolveur de chaînes n\'a pas pu confirmer automatiquement.',
 
     'empty_heading' => 'Rien à vérifier',
-    'empty_body' => 'Chaque lien de chaîne est confirmé ou rejeté. De nouveaux candidats apparaîtront ici au fil des imports.',
+    'empty_body' => 'Chaque lien que le résolveur a pu apparier est confirmé ou rejeté. De nouveaux candidats apparaîtront ici au fil des imports.',
 
     'auto_confirm_nudge' => 'Encore une confirmation et les liens similaires seront confirmés automatiquement.',
 

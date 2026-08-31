@@ -26,13 +26,14 @@ return [
     'dismiss_title' => 'Noņemt no skata (žurnāla failu nemaina)',
     'dismiss_aria' => 'Noņemt žurnāla ierakstu no skata',
     'totals' => [
-        'showing' => 'Rāda',
-        'of' => 'no',
-        'received' => 'saņemtajām (bufera ierobežojums 10k)',
-        'lines_today' => 'rindas šodien',
+        'showing' => 'Rāda :shown no :count saņemtajām rindām (bufera ierobežojums :cap)|Rāda :shown no :count saņemtās rindas (bufera ierobežojums :cap)|Rāda :shown no :count saņemtajām rindām (bufera ierobežojums :cap)',
+        'lines_today' => ':count rindu šodien|:count rinda šodien|:count rindas šodien',
+        'lines_today_capped' => 'vairāk nekā :count rindu šodien|vairāk nekā :count rinda šodien|vairāk nekā :count rindas šodien',
         'today' => 'šodien',
-        'across' => 'pa',
-        'daily_files' => 'dienas failiem',
+        // i18n-review: lv · totals.all_files — written with a bare locative and no
+        // preposition, because pa governs a case the size phrase before it does not
+        // supply. A native reader decides whether :size :count dienas failos reads.
+        'all_files' => ':size :count dienas failos|:size :count dienas failā|:size :count dienas failos',
     ],
 
     'status' => [

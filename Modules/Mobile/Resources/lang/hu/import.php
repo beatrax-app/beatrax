@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'A jelszavak nem egyeznek.',
         'password_length' => 'Használj legalább 12 karaktert.',
         'pin_length' => 'A PIN-kódnak legalább 6 számjegyből kell állnia.',
+        'pin_digits' => 'A PIN-kódnak 6–10 számjegyből kell állnia — csak számok.',
         'pins_mismatch' => 'A PIN-kódok nem egyeznek. Próbáld újra.',
         'session_expired' => 'A munkameneted lejárt, mielőtt a beállítás befejeződött volna. Add meg újra a PIN-kódodat és a jelszavadat.',
         'retry_failed' => 'Az eszköz beállítását továbbra sem sikerült befejezni. Próbáld újra.',

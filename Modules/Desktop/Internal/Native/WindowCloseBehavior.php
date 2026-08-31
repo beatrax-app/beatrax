@@ -11,16 +11,16 @@ use Modules\Core\Public\Actions\WriteUserPreference;
 // users.close_behavior: null shows the prompt, 'quit' quits, 'tray' hides to the
 // menu bar keeping the bundled worker + scheduler alive. The quit/hide calls
 // themselves live in ApplyCloseWindowChoice.
-final class WindowCloseBehavior
+final readonly class WindowCloseBehavior
 {
-    public const CHOICE_QUIT = 'quit';
+    public const string CHOICE_QUIT = 'quit';
 
-    public const CHOICE_TRAY = 'tray';
+    public const string CHOICE_TRAY = 'tray';
 
-    private const ALLOWED_CHOICES = [self::CHOICE_QUIT, self::CHOICE_TRAY];
+    private const array ALLOWED_CHOICES = [self::CHOICE_QUIT, self::CHOICE_TRAY];
 
     public function __construct(
-        private readonly WriteUserPreference $writeUserPreference,
+        private WriteUserPreference $writeUserPreference,
     ) {}
 
     public function shouldPromptFor(User $user): bool

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Modules\Budgets\Public\Enums\EnvelopeMoveKind;
 use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Budgets\Public\Services\EnvelopeBalanceQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
@@ -128,7 +129,7 @@ it('lists a single envelope\'s recent moves with a formatted timestamp via the p
         ->recentMovesFor($this->user->id, $this->groceries->id, $this->period);
 
     expect($moves)->toHaveCount(1);
-    expect($moves[0]->direction)->toBe('out');
+    expect($moves[0]->kind)->toBe(EnvelopeMoveKind::MoveOut);
     expect($moves[0]->amountMinor)->toBe(-2500);
     expect($moves[0]->counterpartCategoryId)->toBe($this->dining->id);
     expect($moves[0]->memo)->toBe('weekly top-up');

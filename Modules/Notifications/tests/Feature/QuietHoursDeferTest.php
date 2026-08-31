@@ -9,12 +9,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\DigestCadence;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
-use Modules\Notifications\Public\Enums\DigestCadence;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
@@ -109,7 +109,7 @@ function qhdInboxRowCount(int $userId): int
 
     return $db->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED)
+        ->where('trigger_type', NotificationTrigger::DriftChanged)
         ->count();
 }
 
@@ -120,7 +120,7 @@ function qhdIsUnread(int $userId): bool
 
     return $db->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED)
+        ->where('trigger_type', NotificationTrigger::DriftChanged)
         ->value('read_at') === null;
 }
 

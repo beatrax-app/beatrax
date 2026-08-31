@@ -7,19 +7,16 @@ namespace Modules\OpenBanking\Internal\OAuth;
 use DateTimeImmutable;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\OAuthStateWindow;
 use Throwable;
 
-final class OpenBankingStateRepository
+final readonly class OpenBankingStateRepository
 {
-    private const SESSION_KEY = 'open_banking_oauth_state';
-
-    // Ten minutes is long enough for a typical consent + SCA round-trip;
-    // entries older than this are treated as expired and rejected.
-    private const MAX_AGE_SECONDS = 600;
+    private const string SESSION_KEY = 'open_banking_oauth_state';
 
     public function __construct(
-        private readonly SessionFactory $session,
-        private readonly Clock $clock,
+        private SessionFactory $session,
+        private Clock $clock,
     ) {}
 
     public function issueState(int $userId): string
@@ -57,7 +54,7 @@ final class OpenBankingStateRepository
             ? null
             : $this->clock->now()->getTimestamp() - $issuedAt->getTimestamp();
 
-        return $ageSeconds !== null && $ageSeconds >= 0 && $ageSeconds <= self::MAX_AGE_SECONDS;
+        return $ageSeconds !== null && $ageSeconds >= 0 && $ageSeconds <= OAuthStateWindow::MAX_AGE_SECONDS;
     }
 
     private function parseIssuedAt(string $issuedAtRaw): ?DateTimeImmutable

@@ -24,6 +24,10 @@ return [
         'unknown' => 'Неизвестни',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Банкова такса',
+    ],
+
     'cp_card' => [
         'aria' => 'Контрагент: :name',
         'recent_aria' => 'Скорошна активност',

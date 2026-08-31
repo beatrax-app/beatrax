@@ -83,7 +83,7 @@
                         x-bind:class="cursor === {{ $i }} ? 'bg-slate-100 dark:bg-slate-800' : ''"
                         class="triage-row group"
                     >
-                        <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
+                        <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->postedAt }}</td>
                         {{-- Counterparty cell renders the resolved counterparty's
                              display name. When the row's counterparty_id has been
                              resolved (counterpartySlug is non-null), wrap the name

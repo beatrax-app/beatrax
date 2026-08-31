@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Logging;
 
-use Modules\Core\Public\Services\UserDataPathService;
 use SplFileObject;
 use Throwable;
 
@@ -13,6 +12,8 @@ use Throwable;
 final readonly class LogFileStats
 {
     private const int MAX_LINES = 100_000;
+
+    public function __construct(private ActiveLogFile $file) {}
 
     /**
      * @return array{
@@ -25,9 +26,9 @@ final readonly class LogFileStats
      *   capped: bool,
      * }
      */
-    public function forToday(): array
+    public function current(): array
     {
-        $path = UserDataPathService::dailyLogFile();
+        $path = $this->file->path();
         $perSeverity = [
             'DEBUG' => 0,
             'INFO' => 0,
@@ -68,11 +69,15 @@ final readonly class LogFileStats
                 if (! is_string($line) || $line === '') {
                     continue;
                 }
-                $totalLines++;
-                if ($totalLines > self::MAX_LINES) {
+                // Tested before the increment: counting the line that trips
+                // the cap reported one line more than the cap declares, and
+                // left totalLines disagreeing by one with parsedLines and the
+                // severity breakdown rendered beside it.
+                if ($totalLines >= self::MAX_LINES) {
                     $capped = true;
                     break;
                 }
+                $totalLines++;
                 $severity = self::extractSeverity($line);
                 if ($severity === null) {
                     continue;
@@ -98,15 +103,14 @@ final readonly class LogFileStats
         ];
     }
 
-    // The glob is narrowed to `laravel-*.log` because some deployments put
-    // channel-specific sub-paths in the same directory.
+    // The glob is narrowed to the active channel's own filenames because some
+    // deployments put channel-specific sub-paths in the same directory.
     /**
      * @return array{count: int, totalBytes: int}
      */
     public function allFiles(): array
     {
-        $dir = UserDataPathService::logsDirectory();
-        $matches = @glob($dir.DIRECTORY_SEPARATOR.'laravel-*.log');
+        $matches = @glob($this->file->siblingGlob());
         if (! is_array($matches)) {
             return ['count' => 0, 'totalBytes' => 0];
         }
@@ -130,9 +134,9 @@ final readonly class LogFileStats
 
     // ftruncate rather than unlink: keeping the inode is what lets the polling
     // endpoint see the size shrink and signal a reset to the tailer.
-    public function truncateToday(): int
+    public function truncate(): int
     {
-        $path = UserDataPathService::dailyLogFile();
+        $path = $this->file->path();
         if (! is_file($path) || ! is_writable($path)) {
             return 0;
         }

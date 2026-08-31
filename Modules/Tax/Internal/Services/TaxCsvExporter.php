@@ -12,10 +12,10 @@ use Modules\Ledger\Public\ValueObjects\MoneyInput;
 /**
  * @link ../../../../.docs/features/tax/tax-year-resolution.md
  */
-final class TaxCsvExporter
+final readonly class TaxCsvExporter
 {
     public function __construct(
-        private readonly TaxYearQuery $query,
+        private TaxYearQuery $query,
     ) {}
 
     public function export(User $user, int $year): string
@@ -30,7 +30,7 @@ final class TaxCsvExporter
         // rather than an empty file.
         $writer->insertOne([
             'tax_year',
-            'booked_date',
+            'posted_date',
             'account',
             'counterparty',
             'counterparty_iban',
@@ -77,9 +77,9 @@ final class TaxCsvExporter
         $rawOverride = $row['taxYearOverride'] ?? null;
         $taxYear = is_numeric($rawOverride) ? (int) $rawOverride : $year;
 
-        $rawBookedAt = $row['bookedAt'] ?? '';
-        $bookedAt = is_string($rawBookedAt) ? $rawBookedAt : '';
-        $bookedDate = $bookedAt !== '' ? substr($bookedAt, 0, 10) : '';
+        $rawPostedAt = $row['postedAt'] ?? '';
+        $postedAt = is_string($rawPostedAt) ? $rawPostedAt : '';
+        $postedDate = $postedAt !== '' ? substr($postedAt, 0, 10) : '';
 
         $rawSettled = $row['settledAmountMinor'] ?? 0;
         $settledMinor = is_numeric($rawSettled) ? (int) $rawSettled : 0;
@@ -92,7 +92,7 @@ final class TaxCsvExporter
 
         return [
             (string) $taxYear,
-            $bookedDate,
+            $postedDate,
             self::str($row['accountName'] ?? null),
             self::str($row['counterpartyName'] ?? null),
             self::str($row['counterpartyIban'] ?? null),

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Mistä haluat ilmoituksen',
+    'background_note' => 'Beatrax valmistelee ne, kun sovellus on auki. Ajoitettu taustasuoritus ei siihen pysty — sovelluslukko pitää ainoaa avainta — joten odottavat noudetaan, kun jatkat sovelluksen käyttöä.',
+    'background_note_phone' => 'Beatrax valmistelee ne, kun sovellus on auki. Taustalla se ei voi — sovelluslukko pitää ainoaa avainta — joten odottavat saapuvat, kun avaat sovelluksen seuraavan kerran.',
 
     'reminders' => [
         'label' => 'Maksumuistutukset',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Piilota tiedot ilmoituksista',
-        'help' => 'Näytä summat ja kauppiaiden nimet itse ilmoitusbannerissa. Ota pois päältä, jos näyttösi voi näkyä muille.',
+        'help' => 'Piilota summat ja kauppiaiden nimet itse ilmoitusbannerista. Ota käyttöön, jos näyttösi voi näkyä muille.',
     ],
 
     'save' => 'Tallenna ilmoitusasetukset',

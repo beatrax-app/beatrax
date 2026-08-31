@@ -14,12 +14,12 @@ use Native\Desktop\Facades\Notification;
 
 // The Notifications module decides WHAT to notify and persists the row first;
 // this listener only decides whether and how the OS shows it.
-final class DispatchOsNotification
+final readonly class DispatchOsNotification
 {
     public function __construct(
-        private readonly WindowFocusState $focus,
-        private readonly SuppressionEvaluator $suppression,
-        private readonly Clock $clock,
+        private WindowFocusState $focus,
+        private SuppressionEvaluator $suppression,
+        private Clock $clock,
     ) {}
 
     public function handleNotificationDeliverable(NotificationDeliverable $event): void

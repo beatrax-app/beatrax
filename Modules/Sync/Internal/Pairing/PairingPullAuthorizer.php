@@ -6,7 +6,7 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 // Who may collect what is waiting on this listener. The pull route is served on
@@ -60,7 +60,7 @@ final readonly class PairingPullAuthorizer
     {
         $rows = $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
-            ->where('expires_at', '>', ZuluTimestamp::stamp($this->clock->now()))
+            ->where('expires_at', '>', Instant::zulu($this->clock->now()))
             ->orderByDesc('id')
             ->limit(self::MAX_ROWS_CONSIDERED)
             ->get([

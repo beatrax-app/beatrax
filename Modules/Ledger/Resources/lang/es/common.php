@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Sin categorizar',
+    'unavailable_category' => 'Categoría no disponible en este dispositivo',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Compensada',
         'uncleared' => 'Sin compensar',

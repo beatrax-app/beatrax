@@ -5,20 +5,15 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Parsers\Support;
 
 use Carbon\CarbonImmutable;
-use JsonException;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Dto\MigrationGoalDto;
 
 final class ActualGoalDefInterpreter
 {
-    private const MAX_JSON_BYTES = 65536;
-
-    private const MAX_JSON_DEPTH = 20;
-
     public function interpret(string $categorySourceExternalId, string $categoryName, string $goalDefJson, string $currency): ?MigrationGoalDto
     {
-        $decoded = $this->boundedDecode($goalDefJson);
+        $decoded = BoundedJson::decode($goalDefJson);
         if (! is_array($decoded)) {
             return null;
         }
@@ -63,18 +58,5 @@ final class ActualGoalDefInterpreter
         $raw = $decoded['targetDate'] ?? null;
 
         return is_string($raw) ? SafeDate::parseOrNull($raw) : null;
-    }
-
-    private function boundedDecode(string $json): mixed
-    {
-        if ($json === '' || strlen($json) > self::MAX_JSON_BYTES) {
-            return null;
-        }
-
-        try {
-            return json_decode($json, true, self::MAX_JSON_DEPTH, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            return null;
-        }
     }
 }

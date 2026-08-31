@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Public\Asn;
+namespace Modules\Ingestion\Public\Csv;
 
 /**
  * @link ../../../../.docs/features/ingestion/asn-description-delimiters.md

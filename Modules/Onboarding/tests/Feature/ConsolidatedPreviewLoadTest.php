@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Internal\Pipeline\PreviewCache;
+use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Import\Tests\Support\PreviewSeedHelper;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\FirstImportStep;
@@ -68,9 +69,8 @@ it('loads stashed bank_import_run_id and card_import_run_ids from wizard_progres
 
     $component = Livewire::test(FirstImportStep::class);
 
-    /** @var FirstImportStep $instance */
-    $instance = $component->instance();
-    $preview = $instance->currentPreview();
+    /** @var ConsolidatedPreviewBatch $preview */
+    $preview = $component->viewData('preview');
 
     expect($preview->sections)->toHaveCount(2);
     expect($preview->dedupedTotalCount)->toBe(6); // 3 + 2 + 1

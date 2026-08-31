@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Internal\Listeners;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
@@ -23,7 +24,7 @@ final readonly class ProjectForecastOnRecurringChange
     public function handle(
         RecurringSeriesApproved|RecurringSeriesCadenceFlipped|RecurringSeriesRejected|RecurringSeriesMetricsRefreshed $event,
     ): void {
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
+        foreach (ForecastHorizon::days() as $horizon) {
             $this->bus->dispatch(new ProjectForecastJob(
                 userId: $event->userId,
                 scenarioId: null,
@@ -36,7 +37,7 @@ final readonly class ProjectForecastOnRecurringChange
             return;
         }
         foreach ($this->scenarioQuery->forUser($user) as $scenario) {
-            foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
+            foreach (ForecastHorizon::days() as $horizon) {
                 $this->bus->dispatch(new ProjectForecastJob(
                     userId: $event->userId,
                     scenarioId: $scenario->id,

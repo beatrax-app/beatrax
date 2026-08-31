@@ -23,9 +23,9 @@ use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Import\Internal\Listeners\HandleFileOpenedFromOs;
 use Modules\Import\Internal\Listeners\SeedDefaultKnownCounterpartyIbans;
-use Modules\Import\Internal\Parsers\Asn\AsnCsvPaymentTypeHinter;
 use Modules\Import\Internal\Parsers\Banking\Camt053PaymentTypeHinter;
 use Modules\Import\Internal\Parsers\Banking\Mt940PaymentTypeHinter;
+use Modules\Import\Internal\Parsers\Csv\PositionalCsvPaymentTypeHinter;
 use Modules\Import\Internal\Parsers\DescriptionKeywordFallbackHinter;
 use Modules\Import\Internal\Parsers\Ics\IcsPdfPaymentTypeHinter;
 use Modules\Import\Internal\Parsers\Paypal\PaypalCsvPaymentTypeHinter;
@@ -65,10 +65,10 @@ final class ImportServiceProvider extends ServiceProvider
     // Source-specific hinters lead so their higher-confidence verdicts win;
     // the fallback must stay last.
     /** @var list<class-string> */
-    private const PAYMENT_TYPE_HINTER_FQNS = [
+    private const array PAYMENT_TYPE_HINTER_FQNS = [
         Camt053PaymentTypeHinter::class,
         Mt940PaymentTypeHinter::class,
-        AsnCsvPaymentTypeHinter::class,
+        PositionalCsvPaymentTypeHinter::class,
         IcsPdfPaymentTypeHinter::class,
         PaypalCsvPaymentTypeHinter::class,
         DescriptionKeywordFallbackHinter::class,
@@ -77,7 +77,7 @@ final class ImportServiceProvider extends ServiceProvider
     // Detector priority: canonical CAMT.053 first, legacy MT940 next, then
     // ICS PDF, then PayPal CSV, which always declines.
     /** @var list<class-string> */
-    private const STARTING_BALANCE_DETECTOR_FQNS = [
+    private const array STARTING_BALANCE_DETECTOR_FQNS = [
         Camt053StartingBalanceDetector::class,
         Mt940StartingBalanceDetector::class,
         IcsPdfStartingBalanceDetector::class,

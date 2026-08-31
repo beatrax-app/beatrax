@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Lege eine E-Mail-Nachricht (.eml) oder ein Postfach-Archiv (.mbox) ab. Der Abgleich erkennt PayPal-Belege und zeigt sie als kanonische Transaktionen an; nicht zugeordnete Absender bleiben zur Triage im Prüfprotokoll.',
-    ],
-
     'conflict' => [
 
         'field' => [

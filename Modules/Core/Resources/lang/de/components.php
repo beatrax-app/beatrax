@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Angezeigt werden die :shown neuesten von :count.',
+
     'drawer_nav' => 'Navigation',
 
     'search_placeholder' => 'Suchen…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Willst du deine Daten auch auf dem Handy sehen?',
         'body' => 'Installiere Beatrax auf deinem Handy für schnellen Zugriff auf deine Finanzen.',
         'dismiss_aria' => 'Installationshinweis ausblenden',
+        'dismiss_caption' => 'Ausblenden',
         'install_app' => 'App installieren',
 
         'desktop_html' => 'Öffne Beatrax im Browser deines Handys und tippe auf "Zum Home-Bildschirm" — oder tippe auf das <strong style="color: var(--color-text);">⚡</strong>-Symbol im Teilen-Menü von Safari.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Dateien ausgewählt: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Datum wählen',
         'prev_month' => 'Voriger Monat',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Minute',
         'empty' => 'keine Uhrzeit gewählt',
     ],
+
+    'toast_undo' => 'Rückgängig',
 
     'veil_locked' => 'App gesperrt',
 

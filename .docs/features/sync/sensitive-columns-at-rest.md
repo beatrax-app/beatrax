@@ -22,6 +22,23 @@ Currently encrypted:
 - `tax_transaction_tags.note`, `transaction_splits.note`
 - `notifications.title`, `.body`, `.params`, `.trigger_type`
 
+## Asking whether a column is sealed
+
+A caller that hands the codec a whole attribute array never has to ask: `encryptAttrs()`
+consults `SensitiveFieldRegistry` per key and leaves the rest alone. A caller that seals ONE
+named column does have to ask, because `encryptValue()` seals whatever it is given rather than
+consulting the registry — and the answer is `SensitiveColumnCodec::isEncrypted($table, $field)`,
+a Public passthrough to the same registry.
+
+It exists because the alternative is a second copy of the list.
+`Receipts\Public\Actions\ApplyReceiptConflictResolution` held one, under a comment saying it
+mirrored this registry, and by the time anyone looked the mirror named two of the five
+`transactions` columns registered here. It was harmless only by coincidence — a second copy
+elsewhere intersected it at exactly those two — and the day a conflict was raised on
+`counterparty_iban` it would have written that value in the clear for an encrypted reader, with
+nothing failing and nothing logged. A copy of this list is the one shape that turns a silent
+plaintext write into a matter of time.
+
 ## What may be written when no key is reachable
 
 Nothing. A registered column must never receive plaintext while
@@ -79,12 +96,17 @@ Deferring the write until a key exists was the third option. The codec cannot do
 transforms a value and does not own the write, so it has nowhere to hold one. The decision
 between dropping and deferring belongs to the caller, and the throw is how the caller is given
 it. In practice the split is already clean. Background writers carry regenerable content and
-drop it — all eight `Persist*` notification listeners already catch `Throwable` and log, so a
-refused nudge costs one nudge and re-emits on the next run, and `OpLogEntryApplier` routes
-both of its projector calls to quarantine. Writers carrying content the user typed run inside
+drop it — all eight `Persist*` notification listeners already catch `Throwable` and log, and
+`OpLogEntryApplier` routes both of its projector calls to quarantine. Writers carrying content the user typed run inside
 a request behind `AppLockMiddleware`, where the key is held and the refusal is unreachable; if
 one is ever reached, failing the save is the right outcome, because storing the note in the
 clear is not.
+
+Dropping a nudge only costs a nudge while a later run exists to re-emit it. On a device whose
+scheduler is a cold-started process — every phone, and every console on the desktop — no such
+run does, and the cost is the feature. Which passes that applies to, and the seam that
+re-derives them from an unlocked request instead, are on
+[the scheduled passes that cannot write either](../mobile/background-sync-cannot-hold-the-key.md#the-scheduled-passes-that-cannot-write-either).
 
 ### It is no longer silent
 
@@ -113,10 +135,10 @@ The residue is a **closed set**. The codec now refuses, so no background writer 
 clear; and `SensitiveColumnPredicateGuardTest` is what stands between a raw `update()` and a
 registered column. What was missing was a pass to convert what is already there.
 
-#### The sweep is NOT already safe to re-run, and why
+#### Why the enable-time sweep cannot simply be re-run
 
-The claim that `projectionUpdatesForRow()` makes the enable-time sweep re-runnable is true on
-an install that has never rotated, and false on one that has.
+`projectionUpdatesForRow()` makes the enable-time sweep re-runnable on an install that has
+never rotated, and not on one that has.
 `EncryptionMigrationSupport::alreadyEncryptedProjectionValue()` verifies under the **current**
 epoch only. `GdkRotationService::rotateAndRevoke()` appends an epoch and advances
 `current_epoch`, and nothing re-encrypts the projection columns behind it — so on any device
@@ -147,15 +169,24 @@ drain on a desktop runs with no app-lock key. `OpLogEntryVerifier` persists the 
 the decrypt fails closed and the entry is quarantined as `gdk_decrypt_failed`. That is correct
 — projecting it would mean writing the peer's IBAN in the clear — but `op_log_quarantine` is
 audit-only, and until this change nothing on desktop ever replayed from it. `Modules/Mobile`'s
-`InitialSyncPuller` was the only caller of `HistoryReprojector::reproject()`.
+`InitialSyncPuller` was the only caller of the whole-log re-projection `HistoryReprojector` once
+exposed; that method is gone, and the phone reaches the same bounded pass every other caller
+takes, `HistoryReprojector::replayQuarantined()`.
 
 ### Why the recovery is not a rebuild
 
-`reproject()` is a full `OpLogRebuilder::rebuild()`: drop triggers, delete every op-created
-row, replay the entire log, restore triggers, re-index FTS across every transaction. It is the
-right shape for the case it was written for — a phone's initial import, where the device has no
-projection and the whole log is new — and the wrong shape here, because on desktop it would run
-after every single sync and hold SQLite's writer for seconds on a large ledger.
+`reproject()` was a full `OpLogRebuilder::rebuild()`: drop triggers, delete every op-created
+row, replay the entire log, restore triggers, re-index FTS across every transaction. It looked
+like the right shape for the case it was written for — a phone's initial import, where the
+device has no projection and the whole log is new — and it was the wrong shape here, because on
+desktop it would run after every single sync and hold SQLite's writer for seconds on a large
+ledger.
+
+It was the wrong shape there too. Loading the log alone costs about 645 bytes an entry, so the
+step before the replay even begins took 124.5 MB at 130,000 entries and exhausted the phone's
+128 MB ceiling at 200,000 — and what the gate actually needed was only the entries that
+quarantined. Both devices now take the pass below; the argument for it did not change, only
+which devices it was known to apply to.
 
 `replayQuarantined()` replays only what the quarantine names. The safe unit is **not** the
 failed entry: a strategy resolves over the set it is handed, so one op of a field makes that op
@@ -623,12 +654,12 @@ needs an entry there in the same change, or its history is left in the clear.
 
 ## The identity columns that are still plaintext, and what it would take to fix them
 
-An audit of a live desktop database found that `accounts.iban`, `accounts.name`,
-`accounts.slug`, `counterparties.slug` and `transactions.counterparty_normalized` were all
-readable with no key while the UI reports encryption **On**. `counterparty_normalized` was the
-worst of them — sixteen cleartext merchant names beside sixteen ciphertext `counterparty_name`
-values saying the same thing — and it is the one that has since been fixed, by the keyed blind
-index described in the next section. The rest are still plaintext.
+`accounts.iban`, `accounts.name`, `accounts.slug`, `counterparties.slug` and
+`transactions.counterparty_normalized` are all readable with no key on a live desktop database
+while the UI reports encryption **On**. `counterparty_normalized` was the worst of them —
+sixteen cleartext merchant names beside sixteen ciphertext `counterparty_name` values saying
+the same thing — and it is the one that has since been fixed, by the keyed blind index
+described in the next section. The rest are still plaintext.
 
 Every one of those columns is a **matching key**, and that is why none of them can take the
 AEAD treatment the rest of the list gets. Random-nonce ciphertext is different bytes every
@@ -661,7 +692,7 @@ it never collides, and a route parameter built from it resolves to nothing.
 
   **But encrypting it in isolation is incoherent, not merely expensive.** `accounts.slug` is
   `Str::slug()` of `accounts.name` and provably cannot be sealed, so a sealed `name` leaves a
-  readable copy of itself one column over — exactly the objection the audit raised against
+  readable copy of itself one column over — exactly the objection that stands against
   `counterparties.display_name` sitting beside a plaintext `counterparties.slug`. `accounts.name`
   and `accounts.slug` move together or not at all, and moving them together means a blind index,
   not an allowlist entry.
@@ -842,10 +873,10 @@ The last row is why a tie-break is needed at all: two devices that both enrol be
 imported would otherwise **swap** keys and stay diverged, because each builds its wrap from its
 own keyring before the other's arrives.
 
-##### Both sides send, and until recently only one did
+##### Both sides send
 
-The table above is only true of a **symmetric** exchange, and for a while the product shipped an
-asymmetric one. `fanOutAllEpochsToDevice()` had exactly one production caller — `PairingFlowModal`,
+The table above is only true of a **symmetric** exchange, and the exchange that shipped was
+asymmetric. `fanOutAllEpochsToDevice()` had exactly one production caller — `PairingFlowModal`,
 rendered only from the desktop and web settings section — so a phone received a wrap and never
 sent one. Three of the four rows of a desktop-and-phone household therefore diverged, one of them
 with nothing logged on either device, and the `no | no` row was decided by which side happened to
@@ -1113,7 +1144,7 @@ entered `SensitiveFieldRegistry::columns()`, with an in-memory negative probe pi
 check really does catch all six. Promoting `accounts.iban` without deleting the exemptions goes
 red on two tests, not zero.
 
-### What the reader is told, and why the old sentence had to go
+### What the status row must disclose
 
 `/data-devices` used to caption the status row *"Your data is secured with your app-lock
 passphrase."* — one clause, no qualification, next to a database file whose `accounts.iban`,
@@ -1129,6 +1160,54 @@ enable-encryption modal already made that disclosure; the status row is the surf
 actually returns to, so it has to make it too. Pinned by `DevicesAndSyncEncryptionUiTest`, which
 asserts the row names what is *not* covered and asserts the unqualified sentence is absent.
 
+## A backup of the database alone is a backup of ciphertext
+
+The keys that open every column on the list above live in
+`storage/app/sync/gdk/{userId}.enc`, wrapped under the app-lock data key. That file is
+**beside** the database, not inside it, and `sync_encryption_state.current_epoch` — the
+pointer that says the rows are sealed — is inside it.
+
+That split is what makes the encrypted archive from Settings → Data & backup a special
+case. `VACUUM INTO` copies the database and nothing else, so an archive restored anywhere
+the keyring is not carries a `current_epoch` naming an epoch no keyring holds a key for.
+`GdkKeyringService::readKeyringFile()` returns an empty keyring for a file that does not
+exist, `currentEpoch()` then raises `KeyringStateException::missingKeyForEpoch`, and
+`SensitiveColumnCodec::decryptRow()` blanks every sealed column and marks it unreadable.
+Nothing errors at restore time. The restore reports success.
+
+The install where the keyring is not there is not a corner: the mobile
+`MobileRestoreFromBackup` screen is gated to a **fresh install**, which is by definition a
+device with no keyring at all. That is the same outcome as the update that once wiped
+`storage/app` — [a database full of ciphertext with no key](../core/durable-user-data-paths.md),
+reached by a different road.
+
+So the archive carries the keyring. `Modules\Core\Internal\Backup\BackupKeyMaterial`
+writes every `sync/gdk/*.enc` on disk into a `beatrax_backup_keyring` table inside the
+snapshot before it is encrypted, and lifts them back out on restore — before the swap, so a
+failure there leaves the live database untouched — then **drops the table**, so the live
+database never holds key material a query could read. A keyring already on the restoring
+machine is renamed to `{path}.pre-restore-{stamp}` rather than overwritten: it may hold an
+epoch the incoming database does not name, and a restore is not the moment to find that out.
+An archive written before the table existed simply carries none, and still restores.
+
+`Modules\Sync\Public\Services\PortableKeyMaterial` is the one spelling of that path.
+Three copies of `sync/gdk/{userId}.enc` existed as string literals before it, and a keyring
+written where nothing looks for it is indistinguishable from no keyring at all.
+
+### What deliberately does not travel
+
+The **device identity** (`sync/identity/`) does not. It names one device to the group, and a
+restore that installed it would put two devices on the network claiming to be the same peer.
+A second device joins by pairing, which is what the /sync screen offers; the archive is the
+single-device recovery path.
+
+The cost of carrying the keyring is stated rather than assumed: an archive plus its
+passphrase plus the app-lock PIN now opens the sealed columns, where before the archive alone
+could never open them whatever the PIN. The PIN's wrapped key was already in the archive —
+`user_app_lock_configs` is a table like any other — so what changed is that the last link is
+present. Against that, without it the archive is not a backup of the ledger at all, only of
+the half of it the database can reason about.
+
 ## See also
 
 - [Removing a device: revoke, rotate, fan out](device-removal-and-epoch-rotation.md) — where
@@ -1141,3 +1220,5 @@ asserts the row names what is *not* covered and asserts the unqualified sentence
   side that writes it.
 - [Recurring detection under encryption](../recurring/detection-encryption-posture.md) — what the
   detectors read, and what they may write beside a keyed column.
+- [A background task on the phone cannot hold the key](../mobile/background-sync-cannot-hold-the-key.md#the-scheduled-passes-that-cannot-write-either)
+  — the five scheduled commands this refusal stops, and where their content is re-derived.

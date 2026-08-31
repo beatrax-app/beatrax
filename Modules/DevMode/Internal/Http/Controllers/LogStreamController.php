@@ -9,7 +9,7 @@ use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Logging\ActiveLogFile;
 use Modules\DevMode\Internal\Logging\LogFileStats;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Process\FileTailer;
@@ -19,13 +19,14 @@ final readonly class LogStreamController
 {
     use CoercesScalars;
 
-    private const MAX_CONTEXT_RADIUS = 50;
+    private const int MAX_CONTEXT_RADIUS = 50;
 
     public function __construct(
         private FileTailer $tailer,
         private RedactSecretsProcessor $processor,
         private ValidatorFactory $validator,
         private LogFileStats $stats,
+        private ActiveLogFile $file,
     ) {}
 
     // A single-shot poll, deliberately not a stream: no PHP process is left
@@ -48,7 +49,7 @@ final readonly class LogStreamController
 
         $clientInode = self::nullableInt($payload['inode'] ?? null);
 
-        $path = UserDataPathService::dailyLogFile();
+        $path = $this->file->path();
         $currentInode = self::inodeOf($path);
         $currentSize = self::sizeOf($path) ?? 0;
 
@@ -120,7 +121,7 @@ final readonly class LogStreamController
         $radiusValue = $payload['radius'] ?? 0;
         $radius = self::toInt($radiusValue);
 
-        $path = UserDataPathService::dailyLogFile($date);
+        $path = $this->file->path($date);
 
         if (! is_file($path) || ! is_readable($path)) {
             return new JsonResponse([
@@ -174,7 +175,7 @@ final readonly class LogStreamController
     // whole file rather than reading forward from an offset.
     public function stats(): JsonResponse
     {
-        $today = $this->stats->forToday();
+        $today = $this->stats->current();
         $all = $this->stats->allFiles();
 
         return new JsonResponse([

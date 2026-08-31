@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Pravidlá zostávajú v tomto zariadení. Nezdieľajú sa s vašimi ostatnými zariadeniami.',
 
     'reapply' => 'Použiť pravidlá na históriu',
+    'reapply_confirm' => 'Použiť znova všetky pravidlá na celú tvoju históriu? Každá kategória, protistrana, poznámka aj daňová značka, ktoré tam pravidlo dalo, sa prepíšu. Čo je nastavené ručne, zostáva, a rovnako aj všetko na odsúhlasenom výpise. Staré hodnoty už nič nevráti.',
     'reapplying' => 'Aplikujú sa…',
     'new_rule' => 'Nové pravidlo',
 
-    'reapply_progress_lead' => 'Pravidlá sa znova aplikujú…',
-    'reapply_progress_of' => 'z',
-    'reapply_progress_trail' => 'skontrolovaných transakcií',
+    'reapply_progress' => 'Pravidlá sa znova aplikujú… :checked z :count skontrolovanej transakcie|Pravidlá sa znova aplikujú… :checked z :count skontrolovaných transakcií|Pravidlá sa znova aplikujú… :checked z :count skontrolovaných transakcií',
 
     'empty_heading' => 'Zatiaľ žiadne pravidlá',
     'empty_body' => 'Pravidlá porovnávajú transakcie s viacerými podmienkami a automaticky menia kategóriu, protistranu, poznámku aj daňovú značku — pri importe a vždy, keď ich znova použiješ na svoju doterajšiu históriu.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Vytvorené',
     'col_row_actions' => 'Akcie',
     'inactive_badge' => 'Vypnuté',
+    'combinator_all' => 'VŠETKY',
+    'combinator_any' => 'KTORÁKOĽVEK',
     'inactive_title' => 'Toto pravidlo nebeží. Pravidlo sa vypne, keď sa zmaže kategória alebo protistrana, na ktorú odkazuje.',
 
     'more_conditions' => '+:count ďalších',

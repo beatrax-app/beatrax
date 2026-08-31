@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Be kategorijos',
+    'no_counterparty' => 'Kitos šalies nėra',
+    'unavailable_counterparty' => 'Kitos šalies šiame įrenginyje nėra',
     'title' => 'Ataskaitos',
     'page_title' => 'Ataskaitos · Beatrax',
     'subtitle' => 'Sudaryk ataskaitą iš savo didžiosios knygos.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Diagrama valiuta :currency — :list nevaizduojama',
+        'undrawn' => 'Nėra žiede — :amount juda priešinga kryptimi',
         'bar_title' => 'Spustelėk stulpelį, kad pamatytum jo operacijas',
         'line_title' => 'Spustelėk tašką, kad pamatytum jo operacijas',
         'donut_title' => 'Spustelėk segmentą, kad pamatytum jo operacijas',

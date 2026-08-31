@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Tu dispositivo rechazó guardar la clave. El desbloqueo biométrico no está disponible.',
     'heading' => 'Bloqueo de la app',
 
-    'moved_help' => 'Tu PIN, el tiempo de bloqueo automático y el desbloqueo biométrico están en los ajustes de sincronización de este dispositivo.',
-    'moved_cta' => 'Abrir Sincronización y dispositivo',
-
     'toggle_label' => 'Bloquear la app con PIN',
     'toggle_description' => 'Sustituye el inicio de sesión diario por un PIN. Las sesiones siguen activas durante 30 días.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Mantener PIN',
 
     'error_pin_too_short' => 'El PIN debe tener al menos 6 dígitos.',
-    'error_pin_digits' => 'El PIN debe tener de 6 a 10 dígitos — solo números.',
+    'error_pin_digits' => 'El PIN debe tener de :min a :max dígitos — solo números.',
     'error_pin_mismatch' => 'Los PIN no coinciden. Inténtalo de nuevo.',
     'error_pin_required' => 'Introduce tu PIN.',
     'error_pin_incorrect' => 'PIN incorrecto.',

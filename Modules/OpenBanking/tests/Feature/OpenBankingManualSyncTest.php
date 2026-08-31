@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Bus\UniqueLock;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
@@ -11,13 +12,16 @@ use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Support\LockStore;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Internal\Dto\FetchWalk;
 use Modules\OpenBanking\Internal\Dto\FetchWindow;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
+use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
@@ -30,6 +34,7 @@ final class OmsStubRemoteSourceAdapter implements RemoteSourceAdapter
     public function __construct(
         private readonly array $rows = [],
         private readonly ?Throwable $throws = null,
+        private readonly ?FetchWalk $walk = null,
     ) {}
 
     public function format(): string
@@ -44,6 +49,8 @@ final class OmsStubRemoteSourceAdapter implements RemoteSourceAdapter
         }
 
         yield from $this->rows;
+
+        return $this->walk ?? FetchWalk::exhausted(1, count($this->rows));
     }
 }
 
@@ -289,4 +296,42 @@ it('a consent failure (HTTP 401): rose flash with the specific reason, marks con
         OpenBankingConsentFailed::class,
         fn (OpenBankingConsentFailed $event): bool => $event->connectionId === $connectionId && $event->userId === $user->id
     );
+});
+
+// The scheduled job and this button write the same two timestamps for the same
+// connection. Without a shared lock, whichever UPDATE lands second decides
+// last_successful_sync_at, and one of the two attempts is unaccounted for.
+it('declines a manual sync while the connection\'s scheduled sync already holds its lock', function (): void {
+    $seeded = $this->seedFixtureUserAndAccount();
+    /** @var User $user */
+    $user = $seeded['user'];
+    $this->actingAs($user);
+
+    omsSeedCredentials();
+    $connectionId = omsSeedConnection($user);
+
+    $stub = new OmsStubRemoteSourceAdapter([]);
+    app()->instance(RemoteSourceAdapter::class, $stub);
+
+    $held = LockStore::forUniqueJobs()->lock(
+        UniqueLock::getKey(new SyncOpenBankingAccountJob($connectionId)),
+        SyncOpenBankingAccountJob::UNIQUE_FOR_SECONDS,
+    );
+    expect($held->get())->toBeTrue();
+
+    try {
+        Livewire::test(OpenBankingSettingsPage::class)
+            ->call('syncNow')
+            ->assertSet('syncFlashTone', 'busy')
+            ->assertSet('syncFlashMessage', 'A sync is already running. Try again in a moment.');
+    } finally {
+        $held->release();
+    }
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+
+    expect($row->last_attempt_at)->toBeNull()
+        ->and($row->last_successful_sync_at)->toBeNull();
 });

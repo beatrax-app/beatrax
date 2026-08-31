@@ -37,9 +37,13 @@ return [
     'parse_preview' => 'Les inn og forhåndsvis',
     'cancel_import' => 'Avbryt importen',
 
-    'diff_new' => 'nye,',
-    'diff_unchanged' => 'uendrede,',
-    'diff_conflicts' => 'konflikter.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: nb · diff_new, diff_unchanged — the elided noun is alias, taken
+    // here as neuter (et alias), which is what gives nytt and uendret. If en alias
+    // is what Norwegian readers use, both singular arms want ny and uendret.
+    'diff_new' => ':count nytt|:count nye',
+    'diff_unchanged' => ':count uendret|:count uendrede',
+    'diff_conflicts' => ':count konflikt|:count konflikter',
 
     'conflicts_heading' => 'Konflikter',
     'conflict_name' => 'navn — eksisterende: :existing → fil: :file',
@@ -54,8 +58,7 @@ return [
     'test_heading' => 'Test mot transaksjonene mine',
     'test_help' => 'Rediger det generaliserte mønsteret i en rad for å se hvilke transaksjoner det ville treffe.',
     'typing' => 'Skriver…',
-    'matches_prefix' => 'Treffer',
-    'matches_suffix' => 'transaksjoner i den nyeste historikken din.',
+    'matches' => 'Treffer :count transaksjon i den nyeste historikken din.|Treffer :count transaksjoner i den nyeste historikken din.',
 
     'merge_modal_title' => 'Slå sammen :count alias|Slå sammen :count aliaser',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Ingen fil er lastet opp.',
         'unreadable' => 'Klarte ikke å lese filen som ble lastet opp.',
         'too_short' => 'Mønsteret er for kort til å testes.',
+        'file_not_yaml' => 'Denne filen er ikke gyldig YAML, så ingenting i den kunne leses. Eksporter aliasene dine på nytt, og last opp filen du får.',
+        'file_unreadable_as_yaml' => 'Denne filen kunne ikke leses som en aliasliste. Eksporter aliasene dine på nytt, og last opp filen du får.',
+        'file_has_no_entries_list' => 'Denne filen begynner ikke med en entries:-liste på øverste nivå, så den inneholder ingen aliaser å importere. Sjekk at du valgte riktig fil.',
+        'entry_is_not_a_mapping' => 'Oppføring :entry er en enkeltverdi der et mønster og et navn var forventet. Gi den begge feltene, eller fjern den, og last opp filen på nytt.',
+        'entry_is_missing_a_field' => 'Oppføring :entry mangler mønsteret eller navnet sitt, og et alias trenger begge. Fyll inn det som mangler, eller fjern oppføringen, og last opp filen på nytt.',
     ],
 ];

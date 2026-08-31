@@ -8,9 +8,9 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
 uses(RefreshDatabase::class);
 
-// A _create_required string that does not match a real migration column silently
-// quarantines every CreateRow op for the table — the category_budgets
-// monthly_limit_minor/budget_minor typo is what this guards against.
+// A _create_required string that does not match a real migration column
+// silently quarantines every CreateRow op for the table, and a
+// monthly_limit_minor/budget_minor typo is all it takes.
 
 it('MergeRulesRegistry transaction_splits _create_required is a subset of the real NOT-NULL-without-default columns', function (): void {
     $connection = app(DatabaseManager::class)->connection();

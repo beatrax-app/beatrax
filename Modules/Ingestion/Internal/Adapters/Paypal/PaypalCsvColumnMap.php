@@ -9,7 +9,7 @@ final class PaypalCsvColumnMap
     /**
      * @var array<string, array<string, string>>
      */
-    private const COLUMNS = [
+    private const array COLUMNS = [
         'nl' => [
             'date' => 'Datum',
             'time' => 'Tijd',

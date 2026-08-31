@@ -6,9 +6,9 @@ namespace Modules\Receipts\Internal\Matchers;
 
 use Modules\Core\Public\Support\SafeDate;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
+use Modules\Ingestion\Public\Enums\SyntheticIban;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
-use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
@@ -19,34 +19,49 @@ use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
 // suffix equality, not str_contains, defeats a spoofed look-alike
 // domain). Amounts are NEGATED (receipts confirm outgoing payments); a
 // sign-in-notification subject skips rather than treats it as a receipt.
-final class PaypalReceiptMatcher implements SenderMatcher
+final readonly class PaypalReceiptMatcher implements SenderMatcher
 {
-    private const PAYPAL_DOMAIN = 'paypal.com';
+    private const string MATCHER_KEY = 'paypal-receipt';
 
-    private const LOGIN_NOTIFICATION_SUBJECT_REGEX = '/(new (device )?sign-in|new login|inloggen op een nieuw apparaat)/i';
+    private const string PAYPAL_DOMAIN = 'paypal.com';
 
-    private const TRANSACTION_ID_REGEX = '/Transaction ID:\s*([A-Z0-9]{17})/i';
+    private const string LOGIN_NOTIFICATION_SUBJECT_REGEX = '/(new (device )?sign-in|new login|inloggen op een nieuw apparaat)/i';
 
-    private const EUR_AMOUNT_REGEX = '/EUR\s+([0-9.,]+)/i';
+    private const string TRANSACTION_ID_REGEX = '/Transaction ID:\s*([A-Z0-9]{17})/i';
 
-    private const USD_AMOUNT_REGEX = '/\$\s*([0-9.,]+)\s*USD/i';
+    private const string USD_AMOUNT_REGEX = '/\$\s*([0-9.,]+)\s*USD/i';
 
-    private const LABELLED_AMOUNT_REGEX = '/(?:Bedrag|Amount|Total):\s*([A-Z]{3})?\s*([0-9.,]+)/i';
+    private const string MERCHANT_REGEX = '/(?:Aan|Merchant|To|Paid to):\s*(.+)/i';
+
+    public function __construct(
+        private EmlMimeReader $reader,
+        private BaseCurrency $baseCurrency,
+        private ReceiptBodyText $text,
+    ) {}
+
+    // The mark travels into the parse rather than being spelled twice: the
+    // symbol class these anchors carried was written before JPY was seeded, so
+    // a '¥' figure was read at no currency the message had named.
+    private static function markedAmountRegex(): string
+    {
+        return '/('.ReceiptBodyText::currencyMarkers().')\s*([0-9.,]+)/i';
+    }
+
+    private static function labelledAmountRegex(): string
+    {
+        return '/(?:Bedrag|Amount|Total):\s*('.ReceiptBodyText::currencyMarkers().')?\s*([0-9.,]+)/i';
+    }
 
     // Accepts an optional repeated currency token or symbol before the
     // amount, both of which PayPal has been observed emitting.
-    private const SETTLED_CONVERSION_REGEX = '/Conversion to ([A-Z]{3}):?\s*(?:[€$£]\s*|[A-Z]{3}\s+)?([0-9.,]+)/i';
-
-    private const MERCHANT_REGEX = '/(?:Aan|Merchant|To|Paid to):\s*(.+)/i';
-
-    public function __construct(
-        private readonly EmlMimeReader $reader,
-        private readonly BaseCurrency $baseCurrency,
-    ) {}
+    private static function settledConversionRegex(): string
+    {
+        return '/Conversion to ([A-Z]{3}):?\s*(?:(?:'.ReceiptBodyText::currencyMarkers().')\s*|[A-Z]{3}\s+)?([0-9.,]+)/i';
+    }
 
     public function key(): string
     {
-        return 'paypal-receipt';
+        return self::MATCHER_KEY;
     }
 
     public function priority(): int
@@ -104,7 +119,7 @@ final class PaypalReceiptMatcher implements SenderMatcher
     {
         [$transactionId, $nativeAmountMinor, $nativeCurrency, $settledAmountMinor, $settledCurrency] = $charge;
 
-        $bookedAt = SafeDate::parseDayOrNull($parsed->headers['date'] ?? '');
+        $bookedAt = SafeDate::normalisedDayOrNull($parsed->headers['date'] ?? '');
         if ($bookedAt === null) {
             return MatchOutcomeDto::unmatched('invalid_date_header');
         }
@@ -117,10 +132,9 @@ final class PaypalReceiptMatcher implements SenderMatcher
             settledCurrency: $settledCurrency,
             referenceId: $transactionId,
             bookedAt: $bookedAt,
-            ownIban: 'PAYPAL',
+            ownIban: SyntheticIban::Paypal->value,
             description: $merchant,
             rawPayload: [
-                'matcher_key' => 'paypal-receipt',
                 'transaction_id' => $transactionId,
                 'subject' => $subject,
                 'sender' => $parsed->headers['from'] ?? '',
@@ -166,9 +180,9 @@ final class PaypalReceiptMatcher implements SenderMatcher
     {
         // USD is checked first when both `$ X USD` and `EUR Y` appear
         // (foreign-currency receipt shape: native USD, settled EUR) —
-        // its anchor is more specific than the bare EUR anchor.
+        // its anchor is more specific than the bare marked-amount anchor.
         return $this->nativeFromUsd($body)
-            ?? $this->nativeFromEur($body)
+            ?? $this->nativeFromMarked($body)
             ?? $this->nativeFromLabelled($body);
     }
 
@@ -180,34 +194,38 @@ final class PaypalReceiptMatcher implements SenderMatcher
         if (preg_match(self::USD_AMOUNT_REGEX, $body, $m) !== 1) {
             return null;
         }
-        $minor = $this->toMinorOrNull($m[1], 'USD');
+        $minor = $this->text->amountMinor($m[1], Currency::Usd->value);
 
-        return $minor === null ? null : [-$minor, 'USD'];
+        return $minor === null ? null : [-$minor, Currency::Usd->value];
     }
 
     /**
      * @return array{int, string}|null
      */
-    private function nativeFromEur(string $body): ?array
+    private function nativeFromMarked(string $body): ?array
     {
-        if (preg_match(self::EUR_AMOUNT_REGEX, $body, $m) !== 1) {
+        if (preg_match(self::markedAmountRegex(), $body, $m) !== 1) {
             return null;
         }
-        $minor = $this->toMinorOrNull($m[1], Currency::Eur->value);
+        $currency = $this->text->currencyMarked($m[1], Currency::Eur->value);
+        $minor = $this->text->amountMinor($m[2], $currency);
 
-        return $minor === null ? null : [-$minor, Currency::Eur->value];
+        return $minor === null ? null : [-$minor, $currency];
     }
 
+    // The reader's base is the last resort, for a figure the message put no
+    // mark of any kind against: a PayPal total with no code and no glyph is
+    // denominated by nothing the mail says.
     /**
      * @return array{int, string}|null
      */
     private function nativeFromLabelled(string $body): ?array
     {
-        if (preg_match(self::LABELLED_AMOUNT_REGEX, $body, $m) !== 1) {
+        if (preg_match(self::labelledAmountRegex(), $body, $m) !== 1) {
             return null;
         }
-        $currency = $m[1] !== '' ? strtoupper($m[1]) : $this->baseCurrency->code();
-        $minor = $this->toMinorOrNull($m[2], $currency);
+        $currency = $this->text->currencyMarked($m[1], $this->baseCurrency->code());
+        $minor = $this->text->amountMinor($m[2], $currency);
 
         return $minor === null ? null : [-$minor, $currency];
     }
@@ -217,23 +235,15 @@ final class PaypalReceiptMatcher implements SenderMatcher
      */
     private function extractSettledLeg(string $body, string $nativeCurrency, int $nativeAmountMinor): array
     {
-        if (preg_match(self::SETTLED_CONVERSION_REGEX, $body, $m) === 1) {
+        if (preg_match(self::settledConversionRegex(), $body, $m) === 1) {
             $settledCurrency = strtoupper($m[1]);
             $settledRaw = $m[2];
-            $minor = $this->toMinorOrNull($settledRaw, $settledCurrency);
+            $minor = $this->text->amountMinor($settledRaw, $settledCurrency);
             if ($minor !== null && $settledCurrency !== $nativeCurrency) {
                 return [-$minor, $settledCurrency];
             }
         }
 
         return [$nativeAmountMinor, $nativeCurrency];
-    }
-
-    private function toMinorOrNull(string $raw, string $currency): ?int
-    {
-        // The rightmost of '.' or ',' is the decimal. Assuming the comma always
-        // was misread US grouping: "1,234.56" normalised to "1.23456", so a
-        // $1,234.56 receipt matched as $1.23 — a thousandfold understatement.
-        return Currency::tryFrom($currency) === null ? null : MoneyInput::tryToMinor($raw);
     }
 }

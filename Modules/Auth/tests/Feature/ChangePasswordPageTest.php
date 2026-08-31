@@ -3,9 +3,22 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Hashing\Hasher;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Core\Models\User;
+
+function changePasswordSeedSession(int $userId, string $id): void
+{
+    DB::table('sessions')->insert([
+        'id' => $id,
+        'user_id' => $userId,
+        'ip_address' => '127.0.0.1',
+        'user_agent' => 'seeded',
+        'payload' => base64_encode(serialize([])),
+        'last_activity' => time(),
+    ]);
+}
 
 it('renders the change-password heading, subhead and button', function (): void {
     $user = User::query()->create([
@@ -22,7 +35,9 @@ it('renders the change-password heading, subhead and button', function (): void 
         ->assertSeeText('Save new password');
 });
 
-it('updates the password and clears the force flag on a valid submit', function (): void {
+// submit() has four side effects and this used to assert two of them, so the
+// severing it promises in its own comment was never checked.
+it('updates the password, clears the force flag and severs every other session on a valid submit', function (): void {
     /** @var Hasher $hasher */
     $hasher = $this->app->make(Hasher::class);
 
@@ -32,6 +47,20 @@ it('updates the password and clears the force flag on a valid submit', function 
         'period_start_day' => 1,
         'force_password_change_at_next_login' => true,
     ]);
+
+    // An account with no recovery sheet is handed one here instead, so this
+    // fixture carries the one every signed-up account already has.
+    DB::connection()->table('user_recovery_codes')->insert([
+        'user_id' => $user->id,
+        'code_hash' => $hasher->make('a-recovery-code'),
+        'used_at' => null,
+        'created_at' => now(),
+    ]);
+
+    DB::table('users')->where('id', $user->id)->update(['remember_token' => 'change-stale-token']);
+    $liveSessionId = session()->getId();
+    changePasswordSeedSession($user->id, $liveSessionId);
+    changePasswordSeedSession($user->id, 'change-other-session');
 
     Livewire::actingAs($user)->test(ChangePasswordPage::class)
         ->set('currentPassword', 'initial-password-12')
@@ -43,6 +72,13 @@ it('updates the password and clears the force flag on a valid submit', function 
     $fresh = $user->fresh();
     expect($fresh->force_password_change_at_next_login)->toBeFalse();
     expect($hasher->check('a-brand-new-password', $fresh->password))->toBeTrue();
+
+    // This session survives to finish the redirect; nothing else does, and the
+    // recaller least of all -- it re-authenticates a severed session.
+    expect(DB::table('sessions')->where('user_id', $user->id)->pluck('id')->all())
+        ->toBe([$liveSessionId]);
+    expect(DB::table('users')->where('id', $user->id)->value('remember_token'))
+        ->not->toBe('change-stale-token');
 });
 
 it('flashes an error and leaves the password untouched on a wrong current password', function (): void {

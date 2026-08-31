@@ -4,22 +4,26 @@ declare(strict_types=1);
 
 namespace Modules\Search\Public\Services;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\TransactionCursor;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\FtsCandidateResolver;
 use Modules\Search\Internal\Services\QueryParser;
+use Modules\Search\Internal\Services\SearchDocumentBody;
 use Modules\Search\Internal\Services\SearchRowMapper;
+use Modules\Search\Internal\Services\SearchTokenFilters;
+use Modules\Search\Public\Contracts\SearchResultsProvider;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Dto\SearchResultPage;
 use Modules\Search\Public\Dto\SearchRowDto;
@@ -28,27 +32,26 @@ use Modules\Search\Public\Dto\SearchRowDto;
 // palette: FTS5 MATCH + SQL filters + highlight + cursor pagination.
 // Every FTS join and transactions read is scoped by user_id; filter
 // IDs are ownership-validated before use.
-final class SearchQuery
+/**
+ * @phpstan-import-type PaletteTransaction from SearchResultsProvider
+ */
+final readonly class SearchQuery
 {
     use CoercesScalars;
 
-    private const MATCH_NOTHING = '1 = 0';
+    private const string MATCH_NOTHING = '1 = 0';
 
-    // An id no row can hold, standing in for "this token matched nothing".
-    // Dropping an unresolvable filter instead returned the WHOLE history,
-    // which reads to the typist exactly as if the token had worked.
-    private const NO_SUCH_ID = 0;
-
-    private const YEAR_MONTH_LENGTH = 7;
+    private const int PALETTE_HIT_LIMIT = 5;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly QueryParser $parser,
-        private readonly DidYouMeanSuggester $suggester,
-        private readonly FtsCandidateResolver $ftsResolver,
-        private readonly SearchRowMapper $rowMapper,
-        private readonly BaseCurrency $baseCurrency,
-        private readonly CrossCurrencyTotal $fx,
+        private DatabaseManager $db,
+        private QueryParser $parser,
+        private DidYouMeanSuggester $suggester,
+        private FtsCandidateResolver $ftsResolver,
+        private SearchRowMapper $rowMapper,
+        private SearchTokenFilters $tokenFilters,
+        private BaseCurrency $baseCurrency,
+        private CrossCurrencyTotal $fx,
     ) {}
 
     public function search(
@@ -59,11 +62,17 @@ final class SearchQuery
         ?string $cursorPostedAt = null,
         int $limit = 50,
     ): SearchResultPage {
-        $parsed = $this->parser->parse($q);
+        // The reader's own currency, resolved once: it is the scale every
+        // amount they type is denominated at, and the currency the totals
+        // strip below is labelled with. Resolved before the query is parsed
+        // because an `amount:` bound is one of the figures it scales.
+        $base = $this->baseCurrency->forUser($user);
+
+        $parsed = $this->parser->parse($q, $base);
         $textQuery = $parsed['textQuery'];
         $parsedFilters = $parsed['filters'];
 
-        $filters = $this->mergeTokenFilters($user, $filters, $parsedFilters);
+        $filters = $this->tokenFilters->merge($user, $filters, $parsedFilters, $base);
 
         // null means "no text query" (filters-only mode) — the base query
         // is scoped by user_id + filters directly, with no whereIn over a
@@ -72,26 +81,30 @@ final class SearchQuery
         $candidateIds = $this->ftsResolver->resolve(
             $user,
             $textQuery,
-            function (Builder $candidateQuery) use ($user, $filters): void {
-                $this->applyFilters($candidateQuery, $user, $filters);
+            function (Builder $candidateQuery) use ($user, $filters, $base): void {
+                $this->applyFilters($candidateQuery, $user, $filters, $base);
             },
         );
+
+        // The parser is the gate, never a shape written beside it: a
+        // hand-written two-decimal fraction let a yen reader's "12.50" through
+        // to a parse that could only fail, and the null was read as zero.
+        $minor = MoneyInput::tryToMinor(trim($textQuery), $base);
 
         // The amount-query branch only fires when the text branch
         // found no candidates — otherwise a bare numeric query like
         // "2024" would OR in every €2024.00 transaction, conflating
         // "text contains 2024" with "amount is €2024.00".
-        if (
-            $candidateIds !== null
-            && $candidateIds === []
-            && preg_match('/^\d+(?:[.,]\d{1,2})?$/', trim($textQuery)) === 1
-        ) {
-            $minor = MoneyInput::tryToMinor($textQuery) ?? 0;
+        if ($candidateIds !== null && $candidateIds === [] && $minor !== null) {
             $candidateIds = self::toIntList(
                 $this->db->connection()
                     ->table('transactions')
                     ->where('user_id', $user->id)
-                    ->whereRaw('ABS(amount_minor) = ? OR ABS(settled_amount_minor) = ?', [$minor, $minor])
+                    ->where(function (Builder $inReadersMoney) use ($base, $minor): void {
+                        $inReadersMoney
+                            ->where(fn (Builder $native): Builder => $native->where('currency', $base)->whereRaw('ABS(amount_minor) = ?', [$minor]))
+                            ->orWhere(fn (Builder $settled): Builder => $settled->where('settled_currency', $base)->whereRaw('ABS(settled_amount_minor) = ?', [$minor]));
+                    })
                     ->pluck('id')
                     ->all(),
             );
@@ -99,15 +112,12 @@ final class SearchQuery
 
         $query = $this->buildBaseQuery($user, $candidateIds);
 
-        $this->applyFilters($query, $user, $filters);
+        $this->applyFilters($query, $user, $filters, $base);
 
-        // The reader's own reporting currency, not the app-wide fallback: the
-        // strip labels these totals with it. Bucketed by the currency each row
-        // settled in and converted from there — counting only the rows already
-        // in it reported nothing at all over a ledger denominated elsewhere.
-        $base = $this->baseCurrency->forUser($user);
-
-        ['count' => $totalCount, 'out' => $totalOut, 'in' => $totalIn] = $this->totals($query, $base);
+        // Bucketed by the currency each row settled in and converted from there
+        // — counting only the rows already in the reader's own reporting
+        // currency reported nothing at all over a ledger denominated elsewhere.
+        ['count' => $totalCount, 'out' => $totalOut, 'in' => $totalIn, 'unconverted' => $unconverted] = $this->totals($query, $base);
 
         $query->limit($limit + 1);
         TransactionCursor::apply($query, $cursorPostedAt, $cursorId);
@@ -117,7 +127,7 @@ final class SearchQuery
         $sliced = $rows->take($limit)->values();
 
         $highlights = [];
-        if (strlen($textQuery) >= 3 && $candidateIds !== null && count($candidateIds) > 0) {
+        if (strlen($textQuery) >= SearchDocumentBody::TRIGRAM_WIDTH && $candidateIds !== null && count($candidateIds) > 0) {
             $highlights = $this->ftsResolver->loadHighlights($user, $textQuery, self::toIntList($sliced->pluck('id')->all()));
         }
 
@@ -138,15 +148,19 @@ final class SearchQuery
             nextCursorId: $hasMore ? $lastId : null,
             nextCursorPostedAt: $hasMore ? $lastPostedAt : null,
             didYouMean: $didYouMean,
+            unconvertedCurrencies: $unconverted,
         );
     }
 
+    // The count travels with the hits because it is the same page's: reading it
+    // off a second search ran every FTS match, currency aggregation and
+    // did-you-mean corpus build twice per keystroke, for one number.
     /**
-     * @return list<array{id: int, counterpartyName: ?string, date: string, amount: string, snippet: ?string, url: string}>
+     * @return array{hits: list<PaletteTransaction>, totalCount: int}
      */
     public function palette(User $user, string $q): array
     {
-        $page = $this->search($user, $q, SearchFilters::empty(), null, null, 5);
+        $page = $this->search($user, $q, SearchFilters::empty(), null, null, self::PALETTE_HIT_LIMIT);
 
         $hits = [];
         foreach ($page->rows as $row) {
@@ -156,171 +170,14 @@ final class SearchQuery
                 // A bill charged every month repeats its counterparty, its
                 // amount and its reference, so the day is the only thing on
                 // the row that tells two of them apart.
-                'date' => $row->bookedAt,
+                'date' => $row->postedAt,
                 'amount' => $this->rowMapper->formatMinorAmount($row->amountMinor, $row->amountCurrency),
                 'snippet' => $row->snippet,
                 'url' => '/transactions/'.$row->id,
             ];
         }
 
-        return $hits;
-    }
-
-    // Merges parsed token filters into the SearchFilters DTO; token
-    // filters take precedence. The palette advertises
-    // account:/category:/amount: tokens, so they must actually apply.
-    /**
-     * @param  array<string, mixed>  $parsedFilters
-     */
-    private function mergeTokenFilters(User $user, SearchFilters $filters, array $parsedFilters): SearchFilters
-    {
-        $accounts = $filters->accounts;
-        if (isset($parsedFilters['accounts']) && is_array($parsedFilters['accounts'])) {
-            $names = array_values(array_filter(
-                $parsedFilters['accounts'],
-                static fn (mixed $n): bool => is_string($n) && $n !== '',
-            ));
-            if ($names !== []) {
-                $resolved = self::orNoMatch($this->resolveAccountNamesToIds($user, $names));
-                $accounts = array_values(array_unique([...$accounts, ...$resolved]));
-            }
-        }
-
-        $categories = $filters->categories;
-        if (isset($parsedFilters['category']) && is_string($parsedFilters['category']) && $parsedFilters['category'] !== '') {
-            $resolved = self::orNoMatch($this->resolveCategoryNameToIds($user, $parsedFilters['category']));
-            $categories = array_values(array_unique([...$categories, ...$resolved]));
-        }
-
-        $after = $filters->after;
-        if (isset($parsedFilters['after']) && is_string($parsedFilters['after'])) {
-            $after = $parsedFilters['after'];
-        }
-
-        $before = $filters->before;
-        if (isset($parsedFilters['before']) && is_string($parsedFilters['before'])) {
-            $before = $parsedFilters['before'];
-        }
-
-        $amountMin = $filters->amountMin;
-        $amountMax = $filters->amountMax;
-        if (isset($parsedFilters['amount']) && is_string($parsedFilters['amount'])) {
-            [$amountMin, $amountMax] = $this->parseAmountToken($parsedFilters['amount'], $amountMin, $amountMax);
-        }
-
-        return new SearchFilters(
-            accounts: $accounts,
-            categories: $categories,
-            // No counterparty: query token exists yet — pass the
-            // chip/URL value through unchanged so this wholesale
-            // rebuild never silently drops it.
-            counterparties: $filters->counterparties,
-            after: $after,
-            before: $before,
-            amountMin: $amountMin,
-            amountMax: $amountMax,
-            amountDirection: $filters->amountDirection,
-            types: $filters->types,
-        );
-    }
-
-    // Case-insensitive prefix match on `accounts.name`; the column stays a
-    // literal in the raw LIKE predicate.
-    /**
-     * @param  list<string>  $names
-     * @return list<int>
-     */
-    private function resolveAccountNamesToIds(User $user, array $names): array
-    {
-        if ($names === []) {
-            return [];
-        }
-
-        $query = $this->db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where(function (Builder $match) use ($names): void {
-                foreach ($names as $name) {
-                    $like = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $name).'%';
-                    $match->orWhereRaw("LOWER(name) LIKE LOWER(?) ESCAPE '\\'", [$like]);
-                }
-            });
-
-        return self::toIntList($query->pluck('id')->all());
-    }
-
-    // A default category stores English and displays a translation, so the
-    // reader's wording is not a column: the slugs it prefixes are named in PHP
-    // and the rows matched in SQL. The stored name is still tried, so the
-    // English and a rename both keep working.
-    /**
-     * @link ../../../../.docs/features/ledger/category-display-names.md
-     *
-     * @return list<int>
-     */
-    private function resolveCategoryNameToIds(User $user, string $name): array
-    {
-        $needle = mb_strtolower($name);
-
-        $slugs = [];
-        foreach (CategoryDisplayName::displayNamesBySlug() as $slug => $displayed) {
-            if (self::startsWith($displayed, $needle)) {
-                $slugs[] = $slug;
-            }
-        }
-
-        $like = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $name).'%';
-
-        $query = $this->db->connection()
-            ->table('categories')
-            ->where(function (Builder $scope) use ($user): void {
-                $scope->where('user_id', $user->id)->orWhereNull('user_id');
-            })
-            ->where(function (Builder $match) use ($like, $slugs): void {
-                $match->whereRaw("LOWER(name) LIKE LOWER(?) ESCAPE '\\'", [$like]);
-                if ($slugs !== []) {
-                    $match->orWhere(function (Builder $translated) use ($slugs): void {
-                        $translated->where('name_is_default', true)->whereIn('slug', $slugs);
-                    });
-                }
-            });
-
-        return self::toIntList($query->pluck('id')->all());
-    }
-
-    /**
-     * @param  list<int>  $resolved
-     * @return list<int>
-     */
-    private static function orNoMatch(array $resolved): array
-    {
-        return $resolved === [] ? [self::NO_SUCH_ID] : $resolved;
-    }
-
-    private static function startsWith(string $haystack, string $needle): bool
-    {
-        return $haystack !== '' && str_starts_with(mb_strtolower($haystack), $needle);
-    }
-
-    // Parses an amount: token into [min, max] decimal strings: >50
-    // (min), <50 (max), 50-100 (range), bare 50 (exact). Falls back
-    // to the existing values on an unrecognized token.
-    /**
-     * @return array{0: ?string, 1: ?string}
-     */
-    private function parseAmountToken(string $token, ?string $currentMin, ?string $currentMax): array
-    {
-        $token = trim($token);
-        $normalize = static fn (string $v): string => str_replace(',', '.', $v);
-
-        return match (true) {
-            $token === '' => [$currentMin, $currentMax],
-            str_starts_with($token, '>') => [$normalize(substr($token, 1)), $currentMax],
-            str_starts_with($token, '<') => [$currentMin, $normalize(substr($token, 1))],
-            preg_match('/^(\d+(?:[.,]\d{1,2})?)-(\d+(?:[.,]\d{1,2})?)$/', $token, $m) === 1 => [$normalize($m[1]), $normalize($m[2])],
-            preg_match('/^\d+(?:[.,]\d{1,2})?$/', $token) === 1 => [$normalize($token), $normalize($token)],
-            default => [$currentMin, $currentMax],
-        };
+        return ['hits' => $hits, 'totalCount' => $page->totalCount];
     }
 
     /**
@@ -346,7 +203,6 @@ final class SearchQuery
             ->select([
                 'transactions.id',
                 'transactions.posted_at',
-                'transactions.booked_at',
                 'transactions.counterparty_name',
                 'transactions.category_id',
                 'transactions.amount_minor as display_minor',
@@ -358,7 +214,7 @@ final class SearchQuery
             ]);
     }
 
-    private function applyFilters(Builder $query, User $user, SearchFilters $filters): void
+    private function applyFilters(Builder $query, User $user, SearchFilters $filters, string $readerCurrency): void
     {
         $this->applyDateFilters($query, $filters);
 
@@ -366,45 +222,90 @@ final class SearchQuery
             $this->applyOwnershipFilter($query, $user, 'accounts', 'transactions.account_id', $filters->accounts, false);
         }
         if ($filters->categories !== []) {
-            $this->applyOwnershipFilter($query, $user, 'categories', 'transactions.category_id', $filters->categories, true);
+            $this->applyCategoryFilter($query, $user, $filters->categories);
+        }
+        if ($filters->uncategorized) {
+            SplitLegs::excludeParents($query)->whereNull('transactions.category_id');
         }
         if ($filters->counterparties !== []) {
             $this->applyOwnershipFilter($query, $user, 'counterparties', 'transactions.counterparty_id', $filters->counterparties, false);
         }
 
-        $this->applyAmountFilters($query, $filters);
+        $this->applyAmountFilters($query, $filters, $readerCurrency);
+    }
+
+    // Split-aware, because splitting a transaction is precisely how part of it
+    // is attributed to a category: filtering the parent column alone hid every
+    // split parent whose LEG a category report had counted, so the list a row
+    // opened could not add up to the row.
+    /**
+     * @param  list<int>  $categoryIds
+     */
+    private function applyCategoryFilter(Builder $query, User $user, array $categoryIds): void
+    {
+        $validatedIds = $this->ownedIds($user, 'categories', $categoryIds, true);
+
+        if ($validatedIds === []) {
+            $query->whereRaw(self::MATCH_NOTHING);
+
+            return;
+        }
+
+        $query->where(static function (Builder $scope) use ($validatedIds): void {
+            $scope->whereIn('transactions.category_id', $validatedIds)
+                ->orWhereExists(static function (Builder $legs) use ($validatedIds): void {
+                    $legs->selectRaw('1')
+                        ->from('transaction_splits')
+                        ->whereColumn('transaction_splits.transaction_id', 'transactions.id')
+                        ->whereIn('transaction_splits.category_id', $validatedIds);
+                });
+        });
     }
 
     private function applyDateFilters(Builder $query, SearchFilters $filters): void
     {
         if ($filters->after !== null) {
-            $afterDate = strlen($filters->after) === self::YEAR_MONTH_LENGTH
-                ? $filters->after.'-01'
-                : $filters->after;
-            $query->where('transactions.posted_at', '>=', $afterDate);
+            $after = self::boundDay($filters->after, endOfMonth: false);
+            if ($after === null) {
+                $query->whereRaw(self::MATCH_NOTHING);
+            } else {
+                $query->where('transactions.posted_at', '>=', $after);
+            }
         }
 
-        $beforeDate = $filters->before === null ? null : $this->normalizeBeforeDate($filters->before);
-        if ($beforeDate !== null) {
-            $query->where('transactions.posted_at', '<=', $beforeDate);
+        if ($filters->before !== null) {
+            $before = self::boundDay($filters->before, endOfMonth: true);
+            if ($before === null) {
+                $query->whereRaw(self::MATCH_NOTHING);
+            } else {
+                $query->where('transactions.posted_at', '<=', $before);
+            }
         }
     }
 
-    // A bare Y-m before-bound covers the whole month, so it widens to that
-    // month's last day; an unparseable Y-m yields null and drops the bound
-    // rather than clamping to an arbitrary date. The shape is checked before
-    // createFromFormat, which throws on junk instead of returning the null.
-    private function normalizeBeforeDate(string $before): ?string
+    // The bound is compared as a STRING against a DATE column, so an unchecked
+    // '2026' matched every 2026 row as an after: bound and none of them as a
+    // before: one. A bound this cannot honour matches nothing rather than the
+    // whole history, the rule SearchTokenFilters applies to an unresolved name.
+    /**
+     * @link ../../../../.docs/conventions/invariants-from-shipped-failures.md#a-date-from-outside-normalised-instead-of-refused
+     */
+    private static function boundDay(string $raw, bool $endOfMonth): ?string
     {
-        if (strlen($before) !== self::YEAR_MONTH_LENGTH) {
-            return $before;
+        $trimmed = trim($raw);
+
+        // A bare Y-m is the month, which the two bounds read from opposite
+        // ends. Anchored on the 1st before endOfMonth() reads it, since an
+        // unset day is filled from TODAY.
+        if (preg_match('/^\d{4}-\d{2}$/', $trimmed) === 1) {
+            $firstOfMonth = SafeDate::dayOrNull($trimmed.'-01');
+
+            return $firstOfMonth === null
+                ? null
+                : ($endOfMonth ? $firstOfMonth->endOfMonth() : $firstOfMonth)->toDateString();
         }
 
-        if (preg_match('/^\d{4}-\d{2}$/', $before) !== 1) {
-            return null;
-        }
-
-        return CarbonImmutable::createFromFormat('Y-m', $before)?->endOfMonth()->toDateString();
+        return SafeDate::dayOrNull($trimmed)?->toDateString();
     }
 
     // Validates the supplied ids against the user's own rows (plus global
@@ -422,7 +323,22 @@ final class SearchQuery
         array $ids,
         bool $includeGlobal,
     ): void {
-        $validatedIds = $this->db->connection()
+        $validatedIds = $this->ownedIds($user, $table, $ids, $includeGlobal);
+
+        if ($validatedIds !== []) {
+            $query->whereIn($column, $validatedIds);
+        } else {
+            $query->whereRaw(self::MATCH_NOTHING);
+        }
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return list<int>
+     */
+    private function ownedIds(User $user, string $table, array $ids, bool $includeGlobal): array
+    {
+        return self::toIntList($this->db->connection()
             ->table($table)
             ->where(function (Builder $scope) use ($user, $includeGlobal): void {
                 $scope->where('user_id', $user->id);
@@ -432,25 +348,29 @@ final class SearchQuery
             })
             ->whereIn('id', $ids)
             ->pluck('id')
-            ->all();
-
-        if ($validatedIds !== []) {
-            $query->whereIn($column, $validatedIds);
-        } else {
-            $query->whereRaw(self::MATCH_NOTHING);
-        }
+            ->all());
     }
 
-    private function applyAmountFilters(Builder $query, SearchFilters $filters): void
+    // Scaled at the READER's currency, never at a hard two decimals: a yen has
+    // no minor unit, so "20" became 2 000 of them and dropped every charge the
+    // report figure this list opens from had already counted.
+    private function applyAmountFilters(Builder $query, SearchFilters $filters, string $readerCurrency): void
     {
         // A filter that will not parse is dropped rather than widened to zero:
         // "> €0" is every row, which is not what the typist asked for.
-        $minMinor = $filters->amountMin === null ? null : MoneyInput::tryToMinor($filters->amountMin);
+        $minMinor = $filters->amountMin === null ? null : MoneyInput::tryToMinor($filters->amountMin, $readerCurrency);
+        $maxMinor = $filters->amountMax === null ? null : MoneyInput::tryToMinor($filters->amountMax, $readerCurrency);
+
+        // Once for both bounds: applied per bound, a min-and-max search emitted
+        // the same settled_currency predicate twice.
+        if ($minMinor !== null || $maxMinor !== null) {
+            $this->inReadersCurrency($query, $readerCurrency);
+        }
+
         if ($minMinor !== null) {
             $query->whereRaw('ABS(transactions.settled_amount_minor) >= ?', [$minMinor]);
         }
 
-        $maxMinor = $filters->amountMax === null ? null : MoneyInput::tryToMinor($filters->amountMax);
         if ($maxMinor !== null) {
             $query->whereRaw('ABS(transactions.settled_amount_minor) <= ?', [$maxMinor]);
         }
@@ -468,12 +388,23 @@ final class SearchQuery
         }
     }
 
+    // The bound is one number in one money, so it can only test rows in that
+    // money: ¥13,840 is about €87, and as raw minor units it cleared a bound
+    // the chip beside the list rendered as "> €100.00".
+    /**
+     * @link ../../../../.docs/features/ledger/minor-units-and-zero-decimal-currencies.md#the-other-half-comparing-two-denominations-as-bare-integers
+     */
+    private function inReadersCurrency(Builder $query, string $readerCurrency): Builder
+    {
+        return $query->where('transactions.settled_currency', $readerCurrency);
+    }
+
     // Bucketed by the currency each row settled in, then converted — counting
     // only rows already in the reader's currency reported nothing at all over a
-    // ledger denominated elsewhere. A bucket with no currency still counts
-    // toward the total; it just cannot be converted.
+    // ledger denominated elsewhere. A bucket no rate reaches is named to the
+    // reader rather than left quietly missing from the strip.
     /**
-     * @return array{count: int, out: int, in: int}
+     * @return array{count: int, out: int, in: int, unconverted: list<string>}
      */
     private function totals(Builder $query, string $base): array
     {
@@ -499,11 +430,17 @@ final class SearchQuery
         }
 
         $rates = $this->fx->ratesTo(array_keys($outByCurrency), $base);
+        $out = $this->fx->withRates($outByCurrency, $base, $rates);
+        $in = $this->fx->withRates($inByCurrency, $base, $rates);
+
+        $unconverted = array_values(array_unique([...$out->unconverted, ...$in->unconverted]));
+        sort($unconverted);
 
         return [
             'count' => $count,
-            'out' => $this->fx->withRates($outByCurrency, $base, $rates)->minor,
-            'in' => $this->fx->withRates($inByCurrency, $base, $rates)->minor,
+            'out' => $out->minor,
+            'in' => $in->minor,
+            'unconverted' => $unconverted,
         ];
     }
 

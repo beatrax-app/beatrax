@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Modules\Import\Internal\Parsers\Asn\AsnCsvPaymentTypeHinter;
+use Modules\Import\Internal\Parsers\Csv\PositionalCsvPaymentTypeHinter;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
@@ -20,7 +20,6 @@ function asnCsvRow(string $description, string $sourceFormat = 'asn-csv'): Canon
         currency: 'EUR',
         settledAmountMinor: -1234,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'Albert Heijn',
         counterpartyIban: null,
         counterpartyNormalized: 'albert heijn',
@@ -35,7 +34,7 @@ function asnCsvRow(string $description, string $sourceFormat = 'asn-csv'): Canon
 }
 
 it('maps Betaalautomaat descriptions to PaymentType::Pin at confidence 90', function (): void {
-    $hinter = new AsnCsvPaymentTypeHinter;
+    $hinter = new PositionalCsvPaymentTypeHinter;
     $hint = $hinter->hint(asnCsvRow('Betaalautomaat Albert Heijn 1245'), 'asn-csv');
 
     expect($hint)->not->toBeNull();
@@ -44,7 +43,7 @@ it('maps Betaalautomaat descriptions to PaymentType::Pin at confidence 90', func
 });
 
 it('maps iDEAL descriptions to PaymentType::Online at confidence 80', function (): void {
-    $hinter = new AsnCsvPaymentTypeHinter;
+    $hinter = new PositionalCsvPaymentTypeHinter;
     $hint = $hinter->hint(asnCsvRow('iDEAL Bestelling Bol.com'), 'asn-csv');
 
     expect($hint)->not->toBeNull();
@@ -53,7 +52,7 @@ it('maps iDEAL descriptions to PaymentType::Online at confidence 80', function (
 });
 
 it('maps SEPA incasso descriptions to PaymentType::DirectDebit at confidence 85', function (): void {
-    $hinter = new AsnCsvPaymentTypeHinter;
+    $hinter = new PositionalCsvPaymentTypeHinter;
     $hint = $hinter->hint(asnCsvRow('SEPA Incasso Vattenfall'), 'asn-csv');
 
     expect($hint)->not->toBeNull();
@@ -62,7 +61,7 @@ it('maps SEPA incasso descriptions to PaymentType::DirectDebit at confidence 85'
 });
 
 it('maps Overboeking descriptions to PaymentType::Transfer at confidence 70', function (): void {
-    $hinter = new AsnCsvPaymentTypeHinter;
+    $hinter = new PositionalCsvPaymentTypeHinter;
     $hint = $hinter->hint(asnCsvRow('Overboeking aan partner'), 'asn-csv');
 
     expect($hint)->not->toBeNull();
@@ -71,14 +70,14 @@ it('maps Overboeking descriptions to PaymentType::Transfer at confidence 70', fu
 });
 
 it('returns null when the row originated from a different source format', function (): void {
-    $hinter = new AsnCsvPaymentTypeHinter;
+    $hinter = new PositionalCsvPaymentTypeHinter;
     $hint = $hinter->hint(asnCsvRow('iDEAL Bestelling', 'paypal-csv'), 'paypal-csv');
 
     expect($hint)->toBeNull();
 });
 
 it('returns null when the description carries no recognised keyword', function (): void {
-    $hinter = new AsnCsvPaymentTypeHinter;
+    $hinter = new PositionalCsvPaymentTypeHinter;
     $hint = $hinter->hint(asnCsvRow('Pizzeria Roma — eten besteld'), 'asn-csv');
 
     expect($hint)->toBeNull();
@@ -96,7 +95,6 @@ it('returns null when the description is missing entirely', function (): void {
         currency: 'EUR',
         settledAmountMinor: -100,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: null,
         counterpartyIban: null,
         counterpartyNormalized: 'unknown',
@@ -109,12 +107,12 @@ it('returns null when the description is missing entirely', function (): void {
         sourceRef: null,
     );
 
-    $hinter = new AsnCsvPaymentTypeHinter;
+    $hinter = new PositionalCsvPaymentTypeHinter;
     expect($hinter->hint($row, 'asn-csv'))->toBeNull();
 });
 
 it('prefers automatische incasso over the shorter incasso keyword (longest-match-wins ordering)', function (): void {
-    $hinter = new AsnCsvPaymentTypeHinter;
+    $hinter = new PositionalCsvPaymentTypeHinter;
     $hint = $hinter->hint(asnCsvRow('Automatische Incasso Eneco'), 'asn-csv');
 
     expect($hint)->not->toBeNull();

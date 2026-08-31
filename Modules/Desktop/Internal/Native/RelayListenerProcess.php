@@ -16,9 +16,7 @@ use Throwable;
 // accept, never showed the safety words, and the phone polled forever.
 final readonly class RelayListenerProcess
 {
-    private const ALIAS = 'relay-listener';
-
-    private const PROBE_TIMEOUT_SECONDS = 1;
+    private const string ALIAS = 'relay-listener';
 
     public function __construct(
         private DeviceRegistryService $devices,
@@ -98,7 +96,7 @@ final readonly class RelayListenerProcess
     // negotiation each time — accepted, over fighting the daemon for its port.
     private function portIsBound(): bool
     {
-        $socket = @fsockopen('127.0.0.1', $this->ports->relay(), $errno, $errstr, self::PROBE_TIMEOUT_SECONDS);
+        $socket = @fsockopen('127.0.0.1', $this->ports->relay(), $errno, $errstr, LoopbackProbe::TIMEOUT_SECONDS);
 
         if ($socket === false) {
             return false;
@@ -122,7 +120,7 @@ final readonly class RelayListenerProcess
             'ssl://127.0.0.1:'.$this->ports->relay(),
             $errno,
             $errstr,
-            self::PROBE_TIMEOUT_SECONDS,
+            LoopbackProbe::TIMEOUT_SECONDS,
             STREAM_CLIENT_CONNECT,
             $context,
         );

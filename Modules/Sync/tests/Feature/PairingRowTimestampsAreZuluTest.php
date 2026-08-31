@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
@@ -73,13 +74,7 @@ it('writes created_at and initiator_seeded_at in Zulu on the row a scanned code 
     eastOfUtc('2026-06-15T18:30:00Z');
     $user = stampUser('stamp-seed');
 
-    $this->service->seedFromInitiator(
-        (int) $user->id,
-        'the-desktop',
-        str_repeat('a', 64),
-        str_repeat('b', 64),
-        bin2hex(random_bytes(16)),
-    );
+    $this->service->seedFromInitiator((int) $user->id, new PairingPeerIdentity('the-desktop', str_repeat('a', 64), str_repeat('b', 64)), bin2hex(random_bytes(16)));
 
     $row = latestPairingRow((int) $user->id);
 

@@ -23,5 +23,6 @@ return [
         'body' => 'Codurile de recuperare sunt singura cale înapoi în contul tău dacă îți uiți parola.',
         'warning' => 'Sunt păstrate sub formă de hash, așa că nu mai pot fi afișate. Un set nou îl anulează imediat pe cel vechi.',
         'regenerate' => 'Generează coduri noi',
+        'regenerate_confirm' => 'Generezi un set nou de coduri de recuperare? Setul pe care îl ai acum încetează să funcționeze în clipa în care este creat cel nou și nu mai poate fi afișat — o copie tipărită sau scrisă de mână devine inutilă. Salvează codurile noi înainte să părăsești pagina.',
     ],
 ];

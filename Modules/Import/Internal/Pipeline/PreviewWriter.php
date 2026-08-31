@@ -15,6 +15,7 @@ use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Import\Public\Enums\ImportFailureReason;
 use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Receipts\Public\Dto\CapturedReceipt;
 
 // Folds a preview into a bounded head as the rows go past, flushing chunks as
 // they fill, so the peak does not grow with the file. Every count a screen
@@ -134,12 +135,15 @@ final class PreviewWriter
 
     /**
      * @param  list<UnknownIban>  $accountsToName
+     * @param  list<CapturedReceipt>  $receiptCaptures
      */
     public function finish(
         array $accountsToName,
         ?ImportFailureReason $fileFailureReason = null,
         ?string $fileFailureDetail = null,
         ?int $fileFailureRowIndex = null,
+        array $receiptCaptures = [],
+        int $receiptCaptureCount = 0,
     ): PreviewHead {
         $this->flushRows();
 
@@ -162,12 +166,12 @@ final class PreviewWriter
         $issues = [];
 
         if ($fileFailureReason !== null) {
-            $issues[] = (new ImportRowIssue(
+            $issues[] = new ImportRowIssue(
                 kind: ImportIssueKind::FileError,
                 rowIndex: $fileFailureRowIndex,
                 reason: $fileFailureReason,
                 detail: $fileFailureDetail,
-            ))->toStored();
+            )->toStored();
         }
 
         foreach ($this->rowIssues as $issue) {
@@ -192,6 +196,8 @@ final class PreviewWriter
             fileFailureReason: $fileFailureReason,
             fileFailureDetail: $fileFailureDetail,
             fileFailureRowIndex: $fileFailureRowIndex,
+            receiptCaptures: $receiptCaptures,
+            receiptCaptureCount: $receiptCaptureCount,
         );
 
         $this->cache->put(PreviewKeys::head($this->importRunId), $head->toArray(), $this->expiresAt);

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Kategorizálatlan',
+    'no_counterparty' => 'Nincs partner',
+    'unavailable_counterparty' => 'A partner nincs meg ezen az eszközön',
     'title' => 'Jelentések',
     'page_title' => 'Jelentések · Beatrax',
     'subtitle' => 'Állíts össze jelentést a nyilvántartásodból.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'A diagram :currency pénznemben — :list nem jelenik meg',
+        'undrawn' => 'Nincs a gyűrűben — :amount az ellenkező irányba mozog',
         'bar_title' => 'Kattints egy oszlopra a tranzakciói megtekintéséhez',
         'line_title' => 'Kattints egy pontra a tranzakciói megtekintéséhez',
         'donut_title' => 'Kattints egy szegmensre a tranzakciói megtekintéséhez',

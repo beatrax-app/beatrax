@@ -52,21 +52,20 @@ function snapshotOnlyTables(): array
  */
 function uncapturedBacklog(): array
 {
-    return [
-        // All four are detector-driven, and each device mints its own local id for
-        // the same logical row: the idempotency UNIQUE drops the second create, and
-        // that device's later SETs then name a pk it does not hold. Blocked until
-        // each has an identity both devices compute.
-        'chain_links',
-        'recurring_series',
-        'recurring_series_occurrences',
-        'drift_alerts',
-    ];
+    return [];
 }
 
-// `anomaly_alerts` came off that list by deriving its id from (user_id,
-// transaction_id) — the columns its own UNIQUE already names, neither of which
-// ever moves. The four left have no such settled identity yet.
+// Empty because every detector-driven table now derives its id rather than
+// minting one. `anomaly_alerts` went first, from (user_id, transaction_id) —
+// the columns its own UNIQUE already names. `chain_links` followed on the
+// (user, from, to, kind) tuple its insert helper always deduped on,
+// `recurring_series_occurrences` and `drift_alerts` on their own UNIQUEs, and
+// `savings_insight_dismissals` on (user_id, insight_key).
+
+// `recurring_series` is the one that could not take its UNIQUE: `cluster_key`
+// encodes the cadence band and SeriesRefresher rewrites it in place, so it
+// derives from (user_id, direction, cluster_counterparty_key, latest_currency)
+// — the tuple the detector's own cadence-flip fallback matches on.
 
 /**
  * @return list<string>
@@ -117,7 +116,7 @@ function capturedTables(): array
 
             // Only a list the file actually walks: counting every const array meant a
             // table struck out of the capture loop still read as captured.
-            preg_match_all("/const ([A-Z_]+) = \[([^\]]*)\];/", $source, $lists, PREG_SET_ORDER);
+            preg_match_all("/const (?:array\\s+)?([A-Z_]+) = \[([^\]]*)\];/", $source, $lists, PREG_SET_ORDER);
 
             foreach ($lists as $list) {
                 if (! str_contains($source, 'foreach (self::'.$list[1])) {

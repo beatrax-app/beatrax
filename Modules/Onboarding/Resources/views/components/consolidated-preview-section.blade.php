@@ -36,7 +36,7 @@
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewSection $section */
 
     $eyebrowLabel = match ($section->sourceFormat) {
-        SourceFormat::Camt053->value, SourceFormat::Mt940->value, SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL => Lang::get('onboarding::first_import.section.from_bank'),
+        SourceFormat::Camt053->value, SourceFormat::Mt940->value, CsvPresetRegistry::ASN, CsvPresetRegistry::ING_NL => Lang::get('onboarding::first_import.section.from_bank'),
         SourceFormat::IcsPdf->value => Lang::get('onboarding::first_import.section.from_ics'),
         SourceFormat::PaypalCsv->value => Lang::get('onboarding::first_import.section.from_paypal'),
         default => Lang::get('onboarding::first_import.section.from_prefix').strtoupper(str_replace('-', ' ', $section->sourceFormat)),
@@ -117,7 +117,7 @@
                             : Money::ofMinor($row->amountMinor, $row->currency ?? BaseCurrency::value())->format();
                     @endphp
                     <tr>
-                        <td>{{ $row->bookedAt ?? '—' }}</td>
+                        <td>{{ $row->postedAt ?? '—' }}</td>
                         <td>
                             <span class="ptype-chip {{ $chipClass }}">{{ $chipLabel }}</span>
                         </td>

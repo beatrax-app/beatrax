@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Affichage des devises',
+        'heading' => 'Affichage des montants',
         'label' => 'Vue par défaut dans la liste des transactions',
-        'eur_only' => ':code uniquement',
-        'original' => 'Devise d\'origine',
+        'eur_only' => 'Montant réglé',
+        'original' => 'Montant d\'origine',
         'help' => 'Tu peux toujours changer page par page depuis la liste des transactions.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Les taux fournis avec l\'application sont utilisés. Aucune donnée ne quitte cet appareil.',
         'fetch_aria' => 'Récupérer les taux de change actuels en ligne',
         'refreshing' => 'Actualisation…',
-        'next_refresh' => 'Prochaine actualisation automatique : tous les jours à 09:00',
+        'next_refresh' => 'Actualisation automatique : une fois par jour',
         'refresh_gave_up' => 'Impossible d’actualiser les taux. Les taux déjà présents sur cet appareil restent utilisés.',
         'refresh_now' => 'Actualiser maintenant',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Période',
         'label' => 'La période commence le jour',
         'help' => 'Numéroté de 1 à 28. La plupart des gens laissent 1 (mois calendaire). Mets 25 si ton salaire arrive le 25 et que « ton mois » commence pour toi à ce moment-là.',
+
+        'move_confirm' => 'Si la période commence le jour :day, tous les montants des enveloppes sont reclassés et additionnés deux à deux là où deux mois n’en font plus qu’un. Remettre le jour comme avant ne les sépare pas.',
+        'move_cancel' => 'Annuler',
+        'move_apply' => 'Appliquer',
     ],
 
     'recurring' => [
         'heading' => 'Détection des récurrences',
         'window_label' => 'Fenêtre de détection (mois)',
         'window_help' => 'Nombre de mois d\'historique à analyser pour regrouper les transactions en schémas récurrents.',
-        'income_label' => 'Revenu minimum (centimes)',
-        'income_help' => 'Les revenus sous ce seuil ne sont pas regroupés automatiquement. Stocké en centimes — 200000 signifie :example. Mets 0 pour désactiver le seuil.',
+        'income_label' => 'Revenu minimum (sous-unités)',
+        'income_help' => 'Les revenus sous ce seuil ne sont pas regroupés automatiquement. Stocké en sous-unités — :minor signifie :example. Mets 0 pour désactiver le seuil.',
     ],
 
     'drift' => [
@@ -125,12 +129,12 @@ return [
         'label' => 'Seuil d\'alerte de dérive par défaut',
         'help' => 'Les alertes se déclenchent quand le dernier montant d\'un débit récurrent s\'écarte du montant précédent de plus que ce pourcentage. Les valeurs définies par série sont prioritaires.',
         'options' => [
-            '1' => '±1%',
-            '2' => '±2%',
-            '5' => '±5% (par défaut)',
-            '10' => '±10%',
-            '25' => '±25%',
-            '50' => '±50%',
+            '1' => '±1 %',
+            '2' => '±2 %',
+            '5' => '±5 % (par défaut)',
+            '10' => '±10 %',
+            '25' => '±25 %',
+            '50' => '±50 %',
         ],
     ],
 
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Le dossier de dépôt est actif. Beatrax analyse <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> toutes les 5 minutes à la recherche de nouveaux fichiers.',
         'inactive_html' => 'Une fois activé, Beatrax analyse <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> toutes les 5 minutes à la recherche de fichiers <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> et <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> et les importe par le même processus de correspondance que l\'assistant. Les fichiers traités sont déplacés vers <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> pour ne jamais être importés deux fois.',
+        'active_phone_html' => 'Le dossier de dépôt est actif. Beatrax analyse <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> en arrière-plan à la recherche de nouveaux fichiers. C\'est ton téléphone qui décide quand une analyse en arrière-plan démarre — cela peut prendre quelques minutes ou quelques heures.',
+        'inactive_phone_html' => 'Une fois activé, Beatrax analyse <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> en arrière-plan à la recherche de fichiers <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> et <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> et les importe par le même processus de correspondance que l\'assistant. C\'est ton téléphone qui décide quand une analyse en arrière-plan démarre — cela peut prendre quelques minutes ou quelques heures. Les fichiers traités sont déplacés vers <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> pour ne jamais être importés deux fois.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Impôts',
-    'shared_merchant_heading' => 'Liste partagée des commerçants',
     'data_backup_heading' => 'Données et sauvegarde',
-    'install_heading' => 'Installation',
 
     'about_updates' => [
         'heading' => 'À propos des mises à jour',
         'body' => 'Beatrax se met à jour automatiquement une fois installé. Après l\'installation de la toute première version, les versions suivantes arrivent via une bannière dans l\'application — tu n\'as pas besoin de retourner sur GitHub. Si une mise à jour échoue un jour, tu peux toujours retélécharger le dernier installeur manuellement depuis la page des versions.',
+        'body_phone' => 'Ici, Beatrax ne se met pas à jour tout seul. Les nouvelles versions de l\'app mobile arrivent par l\'App Store ou Google Play, comme tes autres applications. La page des versions indique ce qui a changé dans chacune.',
         'open_releases' => 'Ouvrir la page des versions →',
     ],
 
@@ -192,9 +197,10 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Le mois budgétaire n’a pas pu être déplacé, il est donc resté où il était.',
         'currency_required' => 'Choisis une devise.',
         'window_months' => 'Choisis entre 2 et 60 mois.',
-        'threshold' => 'Choisis un seuil parmi 1%, 2%, 5%, 10%, 25% ou 50%.',
+        'threshold' => 'Choisis un seuil parmi 1 %, 2 %, 5 %, 10 %, 25 % ou 50 %.',
         'amount' => 'Saisis un montant à partir de :zero.',
         'period_day' => 'Choisis un jour de 1 à 28.',
         'currency_view' => 'Choisis l\'une des options disponibles.',

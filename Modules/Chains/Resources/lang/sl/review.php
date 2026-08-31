@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Potrdi ali zavrni predlagane povezave, ki jih razreševalnik verig ni mogel samodejno potrditi.',
 
     'empty_heading' => 'Ni ničesar za pregled',
-    'empty_body' => 'Vsaka povezava v verigi je potrjena ali zavrnjena. Novi kandidati se bodo pojavili tukaj, ko bodo prispeli uvozi.',
+    'empty_body' => 'Vsaka povezava, ki jo je razreševalnik lahko sparil, je potrjena ali zavrnjena. Novi kandidati se bodo pojavili tukaj, ko bodo prispeli uvozi.',
 
     'auto_confirm_nudge' => 'Še ena potrditev in podobne povezave se bodo potrjevale samodejno.',
 

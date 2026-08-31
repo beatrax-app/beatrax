@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Dieses Telefon kann eine Datei, die die App übergibt, nicht speichern — das verschlüsselte Backup entsteht daher in der Desktop-App. Koppele dieses Gerät, um beide synchron zu halten.',
+        'no_download_route' => 'Diese App kann deinem Gerät keine Datei übergeben, deshalb entsteht das verschlüsselte Backup stattdessen in der Desktop-App. Koppele dieses Gerät, um beide synchron zu halten.',
         'unavailable' => 'Verschlüsselte Backups gibt es in der Desktop-Version (SQLite). Nutze bei einer Server-Datenbank die eigenen Backup-Werkzeuge deiner Datenbank.',
         'intro' => 'Lade eine mit einer Passphrase verschlüsselte Kopie deiner gesamten Datenbank herunter — du kannst sie bedenkenlos auf einer externen Festplatte oder in der Cloud aufbewahren, denn ohne die Passphrase ist sie unlesbar (quantensicheres XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Passphrase',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'Die Datei wurde nicht vollständig hochgeladen. Sie ist möglicherweise zu groß für dieses Gerät — die Wiederherstellung in der Desktop-App akzeptiert eine größere Sicherung.',
         'enter_passphrase' => 'Gib die Passphrase ein, mit der das Backup verschlüsselt wurde.',
         'unreadable' => 'Die hochgeladene Datei konnte nicht gelesen werden. Versuche es erneut.',
+        'restore_wrong_passphrase' => 'Diese Passphrase hat das Backup nicht geöffnet, und nichts wurde geändert. Tippe sie neu ein und versuche es erneut. Ist sie sicher richtig, wurde die Datei seit ihrer Erstellung verändert — stelle dann aus einer anderen Kopie wieder her.',
+        'restore_not_a_backup' => 'Diese Datei ist kein verschlüsseltes Beatrax-Backup, also gibt es darin nichts wiederherzustellen, und nichts wurde geändert. Wähle die .enc-Datei, die die App beim Erstellen des Backups geschrieben hat.',
+        'restore_contents_unreadable' => 'Das Backup ließ sich öffnen, aber die Datenbank darin ist beschädigt, wurde daher nicht wiederhergestellt, und nichts wurde geändert. Stelle aus einem älteren Backup wieder her.',
+        'restore_could_not_read' => 'Die Backup-Datei konnte nicht gelesen werden, die Wiederherstellung lief daher nicht, und nichts wurde geändert. Prüfe, ob dieses Gerät freien Speicher hat, und versuche es erneut.',
+        'restore_not_supported' => 'Wiederherstellen funktioniert auf der Variante, die ihre Daten in einer einzigen Datei hält — diese ist es nicht, und nichts wurde geändert. Nutze bei einer Serverdatenbank deren eigene Wiederherstellungswerkzeuge.',
+        'restore_failed' => 'Die Wiederherstellung lief nicht, und nichts wurde geändert. Versuche es erneut — schlägt es weiter fehl, hält das App-Protokoll fest, was sie gestoppt hat.',
     ],
 ];

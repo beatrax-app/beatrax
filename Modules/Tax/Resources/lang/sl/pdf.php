@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Znesek',
 
     'subtotal' => 'Delni seštevek',
+    'subtotal_income' => 'Delni seštevek prihodkov',
 
     'footer' => 'Ustvaril Beatrax — osebne finance samo lokalno — :year',
 ];

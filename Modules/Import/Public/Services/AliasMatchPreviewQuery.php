@@ -8,32 +8,33 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\Lang;
 use Modules\Import\Public\Dto\AliasMatchPreviewResultDto;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-final class AliasMatchPreviewQuery
+final readonly class AliasMatchPreviewQuery
 {
     // Shared with the save path: a pattern the preview refuses to test is a
     // pattern nobody has seen the effect of, and it used to be savable anyway.
-    public const MIN_PATTERN_LENGTH = 3;
+    public const int MIN_PATTERN_LENGTH = 3;
 
-    private const SCAN_LIMIT = 500;
+    private const int SCAN_LIMIT = 500;
 
-    private const SAMPLE_LIMIT = 5;
+    private const int SAMPLE_LIMIT = 5;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly EncryptionMigrationService $encryptionService,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private EncryptionMigrationService $encryptionService,
     ) {}
 
     public function preview(string $generalizedPattern, int $userId): AliasMatchPreviewResultDto
     {
         $trimmed = trim($generalizedPattern);
         if (mb_strlen($trimmed) < self::MIN_PATTERN_LENGTH) {
-            return AliasMatchPreviewResultDto::withoutMatches('Pattern is too short to test.');
+            return AliasMatchPreviewResultDto::withoutMatches(Lang::get('import::aliases.errors.too_short'));
         }
 
         $needle = mb_strtolower($trimmed);
@@ -62,8 +63,12 @@ final class AliasMatchPreviewQuery
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $userId)
-            ->select(['id', 'description', 'counterparty_name', 'booked_at', 'amount_minor'])
-            ->orderByDesc('booked_at')
+            ->select(['id', 'description', 'counterparty_name', 'posted_at', 'amount_minor'])
+            // The column the preview prints, so the 500 rows it keeps are the
+            // 500 the reader would call most recent. `id` breaks the tie a DATE
+            // column leaves, or the cut is a different 500 run to run.
+            ->orderByDesc('posted_at')
+            ->orderByDesc('id')
             ->limit(self::SCAN_LIMIT)
             ->get();
 

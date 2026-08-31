@@ -30,8 +30,6 @@ final class NoiseCipherState
         // guarantees this via substr(, 0, 32).
     }
 
-    // Nonce is encoded as 64-bit LE in the first 8 bytes, zeros in [8:12];
-    // the counter increments AFTER building the nonce bytes.
     /**
      * @throws NoiseNonceExhaustedException if the nonce counter would overflow
      * @throws CryptoOperationFailedException wrapping SodiumException
@@ -82,8 +80,10 @@ final class NoiseCipherState
         return $plaintext;
     }
 
-    // Noise §4: n encoded as a 64-bit LE uint in bytes 0-7; bytes 8-11 zero
-    // (layout: lo_lo_lo_lo hi_hi_hi_hi 00_00_00_00).
+    // Noise rev34 §12.3: 32 bits of ZEROS then the little-endian n (layout:
+    // 00_00_00_00 lo_lo_lo_lo hi_hi_hi_hi). The counter-first layout agrees
+    // with this only at n = 0 — every handshake message, and the first
+    // transport message each way — which is why nothing ever noticed.
     private function buildNonce(): string
     {
         // Guard at PHP_INT_MAX rather than the true 2^64-1 MAXNONCE, since
@@ -92,7 +92,7 @@ final class NoiseCipherState
             throw NoiseNonceExhaustedException::beforeRekey();
         }
 
-        return pack('VVV', $this->nonceLo, $this->nonceHi, 0);
+        return pack('VVV', 0, $this->nonceLo, $this->nonceHi);
     }
 
     private function incrementNonce(): void

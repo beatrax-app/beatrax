@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Urządzenie odmówiło zapisania klucza. Odblokowanie biometryczne jest niedostępne.',
     'heading' => 'Blokada aplikacji',
 
-    'moved_help' => 'Kod PIN, czas automatycznej blokady i odblokowanie biometryczne znajdują się w ustawieniach synchronizacji tego urządzenia.',
-    'moved_cta' => 'Otwórz Synchronizację i urządzenie',
-
     'toggle_label' => 'Blokuj aplikację kodem PIN',
     'toggle_description' => 'Zastępuje codzienne logowanie kodem PIN. Sesje pozostają aktywne przez 30 dni.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Zachowaj PIN',
 
     'error_pin_too_short' => 'PIN musi mieć co najmniej 6 cyfry.',
-    'error_pin_digits' => 'PIN musi mieć od 6 do 10 cyfr — tylko cyfry.',
+    'error_pin_digits' => 'PIN musi mieć od :min do :max cyfr — tylko cyfry.',
     'error_pin_mismatch' => 'Kody PIN nie są zgodne. Spróbuj ponownie.',
     'error_pin_required' => 'Wpisz swój PIN.',
     'error_pin_incorrect' => 'Nieprawidłowy PIN.',

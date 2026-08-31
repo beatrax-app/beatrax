@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Http\Livewire\SavingsInsightsCard;
 use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 
@@ -90,4 +91,40 @@ it('renders the dashboard card and dismisses a suggestion', function (): void {
         ->assertSee('cheaper plan')
         ->call('dismiss', 'cheaper:'.$seriesId)
         ->assertDontSee('Ways to save');
+});
+
+// The card was cached under a key with no locale in it, and the entry held the
+// finished sentence and the finished amount. One English page load pinned both
+// for ten minutes, so a German reader met a German heading over Dutch rows.
+it('answers the second reader in their own language, not the first reader\'s', function (): void {
+    siChain($this->db, $this->user->id, 'Spotify', 999);
+    $query = app(SavingsInsightsQuery::class);
+
+    app()->setLocale('en');
+    $english = $query->forUser($this->user);
+
+    app()->setLocale('de');
+    $german = $query->forUser($this->user);
+
+    expect($english[0]->message)->toContain('cheaper plan')
+        ->and($english[0]->message)->toContain('€9.99')
+        ->and($english[0]->actionLabel)->toBe('See cheaper plans')
+        ->and($german[0]->message)->toContain('günstigeren Tarif')
+        ->and($german[0]->message)->toContain("9,99\u{00A0}€")
+        ->and($german[0]->message)->not->toContain('€9.99')
+        ->and($german[0]->actionLabel)->toBe('Günstigere Tarife ansehen');
+});
+
+it('renders the card in the reader\'s language after another language warmed the cache', function (): void {
+    siChain($this->db, $this->user->id, 'Spotify', 999);
+
+    Livewire\Livewire::test(SavingsInsightsCard::class)->assertSee('Ways to save');
+
+    app()->setLocale('de');
+
+    Livewire\Livewire::test(SavingsInsightsCard::class)
+        ->assertSee(Lang::get('drift-alerts::savings.heading'))
+        ->assertSee("9,99\u{00A0}€")
+        ->assertDontSee('See cheaper plans')
+        ->assertDontSee('cheaper plan');
 });

@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Använd minst 12 tecken.',
     'error_wrong_code' => 'Användarnamnet och återställningskoden stämmer inte överens. Kontrollera koden noga — versaler och varken nolla, O, etta eller L.',
+    'error_throttled' => 'För många försök — försök igen om :wait.',
 ];

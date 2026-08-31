@@ -7,74 +7,47 @@ namespace Modules\DriftAlerts\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\DriftThresholdOptions;
+use Modules\DriftAlerts\Internal\CadenceYearRate;
+use Modules\DriftAlerts\Internal\Enums\ThresholdSource;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Models\DriftAlertTransition;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
-use Modules\Ledger\Models\Transaction;
-use Modules\Ledger\Public\Enums\Currency;
-use Modules\Ledger\Public\Enums\Direction;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 
-// Alerts are created directly in their target state rather than driven through
-// DriftAlertStateMachine; the boundary arch test only blocks direct updates.
+// Created directly in their target state rather than through
+// DriftAlertStateMachine; the boundary arch test blocks only direct updates.
+// Every figure comes from the rows the alert names: the hand-written prior
+// price was one no charge in the demo ledger had ever carried.
+/**
+ * @link ../../../../../.docs/features/drift-alerts/drift-detection.md
+ */
 final class DemoDriftAlertsSeeder
 {
-    /** @var list<array{seriesClusterKey: string, txDescription: string, state: string, direction: string, baselineMinor: int, latestMinor: int, deltaMinor: int, annualMinor: int, thresholdPercent: int, ageDays: int, actionedAgeDays: ?int}> */
+    // Three of the six demo subscriptions stepped price, and KPN deliberately
+    // did not: an alert against every eligible series would teach the reader
+    // that /drift lists their subscriptions rather than filters them.
+    /** @var list<array{seriesClusterKey: string, state: string, actionedAfterDays: ?int}> */
     private const ALERTS = [
         [
             'seriesClusterKey' => 'demo:spotify:monthly:1099',
-            'txDescription' => 'Spotify Premium',
             'state' => DriftAlertState::Open->value,
-            'direction' => Direction::Expense->value,
-            'baselineMinor' => -1099,
-            'latestMinor' => -1499,
-            'deltaMinor' => -400,
-            'annualMinor' => -4800,
-            'thresholdPercent' => 10,
-            'ageDays' => 2,
-            'actionedAgeDays' => null,
-        ],
-        [
-            'seriesClusterKey' => 'demo:sport-city:monthly:2500',
-            'txDescription' => 'Sport City',
-            'state' => DriftAlertState::Open->value,
-            'direction' => Direction::Expense->value,
-            'baselineMinor' => -2500,
-            'latestMinor' => -2750,
-            'deltaMinor' => -250,
-            'annualMinor' => -3000,
-            'thresholdPercent' => 10,
-            'ageDays' => 5,
-            'actionedAgeDays' => null,
+            'actionedAfterDays' => null,
         ],
         [
             'seriesClusterKey' => 'demo:netflix:monthly:1499',
-            'txDescription' => 'Netflix.com',
             'state' => DriftAlertState::Acknowledged->value,
-            'direction' => Direction::Expense->value,
-            'baselineMinor' => -1399,
-            'latestMinor' => -1499,
-            'deltaMinor' => -100,
-            'annualMinor' => -1200,
-            'thresholdPercent' => 5,
-            'ageDays' => 14,
-            'actionedAgeDays' => 8,
+            'actionedAfterDays' => 6,
         ],
         [
-            'seriesClusterKey' => 'demo:nordvpn:monthly:499',
-            'txDescription' => 'PayPal conversion fee',
+            'seriesClusterKey' => 'demo:sport-city:monthly:2500',
             'state' => DriftAlertState::DismissedCancelled->value,
-            'direction' => Direction::Expense->value,
-            'baselineMinor' => -499,
-            'latestMinor' => -699,
-            'deltaMinor' => -200,
-            'annualMinor' => -2400,
-            'thresholdPercent' => 10,
-            'ageDays' => 7,
-            'actionedAgeDays' => 2,
+            'actionedAfterDays' => 5,
         ],
     ];
 
-    /** @var list<array{seriesClusterKey: string, fromState: string, toState: string, reason: string, actor: string, ageDays: int, notes: ?string}> */
+    /** @var list<array{seriesClusterKey: string, fromState: string, toState: string, reason: string, actor: string, notes: string}> */
     private const TRANSITIONS = [
         [
             'seriesClusterKey' => 'demo:netflix:monthly:1499',
@@ -82,17 +55,15 @@ final class DemoDriftAlertsSeeder
             'toState' => DriftAlertState::Acknowledged->value,
             'reason' => 'user_action',
             'actor' => 'user',
-            'ageDays' => 8,
             'notes' => 'User acknowledged the Netflix price drift',
         ],
         [
-            'seriesClusterKey' => 'demo:nordvpn:monthly:499',
+            'seriesClusterKey' => 'demo:sport-city:monthly:2500',
             'fromState' => DriftAlertState::Open->value,
             'toState' => DriftAlertState::DismissedCancelled->value,
             'reason' => 'user_dismissed_cancelled',
             'actor' => 'user',
-            'ageDays' => 2,
-            'notes' => 'User dismissed the alert after cancelling the underlying series',
+            'notes' => 'User dismissed the alert after cancelling the gym membership',
         ],
     ];
 
@@ -105,7 +76,7 @@ final class DemoDriftAlertsSeeder
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
             foreach (self::ALERTS as $alertRow) {
                 $this->upsertAlertForUser($primary, $alertRow);
@@ -119,120 +90,175 @@ final class DemoDriftAlertsSeeder
     }
 
     /**
-     * @param  array{seriesClusterKey: string, txDescription: string, state: string, direction: string, baselineMinor: int, latestMinor: int, deltaMinor: int, annualMinor: int, thresholdPercent: int, ageDays: int, actionedAgeDays: ?int}  $row
+     * @param  array{seriesClusterKey: string, state: string, actionedAfterDays: ?int}  $row
      */
     private function upsertAlertForUser(User $user, array $row): void
     {
-        $seriesId = $this->lookupSeriesId($user, $row['seriesClusterKey']);
-        if ($seriesId === null) {
+        $series = $this->eligibleSeries($user, $row['seriesClusterKey']);
+        if ($series === null) {
             return;
         }
 
-        $transaction = Transaction::query()
-            ->where('user_id', $user->id)
-            ->where('source_format', 'demo')
-            ->where('description', $row['txDescription'])
-            ->orderBy('posted_at', 'desc')
-            ->first();
-
-        if ($transaction === null) {
+        $step = $this->newestPriceStep($user, $series['id']);
+        if ($step === null) {
             return;
         }
 
-        $occurrenceId = $this->ensureOccurrence($user, $seriesId, $transaction);
-        $today = CarbonImmutable::today();
-        $detectedAt = $today->subDays($row['ageDays'])->setTime(12, 0);
-        $actionedAt = $row['actionedAgeDays'] === null
-            ? null
-            : $today->subDays($row['actionedAgeDays'])->setTime(12, 0);
+        $latestMinor = $step['latest_amount_minor'];
+        $priorMinor = $step['prior_amount_minor'];
+        if ($priorMinor === 0 || ($priorMinor > 0) !== ($latestMinor > 0)) {
+            return;
+        }
+
+        $deltaMinor = $latestMinor - $priorMinor;
+        [$thresholdPercent, $thresholdSource] = $this->effectiveThreshold($user);
+
+        // The same test the evaluator applies, so the demo can never carry an
+        // alert the shipped detector would have refused to open.
+        if (abs($deltaMinor) * 100 / abs($priorMinor) <= $thresholdPercent) {
+            return;
+        }
 
         $existing = DriftAlert::query()
-            ->where('recurring_series_id', $seriesId)
-            ->where('latest_occurrence_id', $occurrenceId)
-            ->first();
+            ->where('recurring_series_id', $series['id'])
+            ->where('latest_occurrence_id', $step['id'])
+            ->exists();
 
-        if ($existing !== null) {
+        if ($existing) {
             return;
         }
+
+        $detectedAt = CarbonImmutable::parse($step['observed_at'])->setTime(12, 0);
+        $actionedAt = $row['actionedAfterDays'] === null
+            ? null
+            : $detectedAt->addDays($row['actionedAfterDays']);
 
         DriftAlert::query()->create([
             'user_id' => $user->id,
-            'recurring_series_id' => $seriesId,
+            'recurring_series_id' => $series['id'],
             'state' => $row['state'],
-            'direction' => $row['direction'],
-            'baseline_amount_minor' => $row['baselineMinor'],
-            'latest_amount_minor' => $row['latestMinor'],
-            'currency' => Currency::Eur->value,
-            'delta_minor' => $row['deltaMinor'],
-            'annualized_impact_minor' => $row['annualMinor'],
-            'threshold_percent_used' => $row['thresholdPercent'],
-            'threshold_source' => 'user_default',
-            'latest_occurrence_id' => $occurrenceId,
+            'direction' => $series['direction'],
+            'baseline_amount_minor' => $priorMinor,
+            'latest_amount_minor' => $latestMinor,
+            'currency' => $step['currency'],
+            'delta_minor' => $deltaMinor,
+            'annualized_impact_minor' => $deltaMinor * CadenceYearRate::forCadence($series['cadence']),
+            'threshold_percent_used' => $thresholdPercent,
+            'threshold_source' => $thresholdSource->value,
+            'latest_occurrence_id' => $step['id'],
             'snoozed_until' => null,
             'detected_at' => $detectedAt,
             'actioned_at' => $actionedAt,
         ]);
     }
 
+    // The ladder the evaluator walks, minus the per-series override no demo
+    // series carries: the seeder used to stamp `global, 10` at a user whose
+    // global threshold is 5.
+    /**
+     * @return array{0: int, 1: ThresholdSource}
+     */
+    private function effectiveThreshold(User $user): array
+    {
+        $userValue = $user->drift_alert_threshold_percent;
+
+        return $userValue > 0
+            ? [$userValue, ThresholdSource::Global]
+            : [DriftThresholdOptions::DEFAULT_PERCENT, ThresholdSource::Default];
+    }
+
     // Query builder, not the Eloquent model: the boundary arch test bans any
     // RecurringSeries* identifier inside this tree, read access included.
-    private function lookupSeriesId(User $user, string $clusterKey): ?int
+    /**
+     * @return array{id: int, direction: string, cadence: SeriesCadence}|null
+     */
+    private function eligibleSeries(User $user, string $clusterKey): ?array
     {
         $row = $this->db->connection()
             ->table('recurring_series')
             ->where('user_id', $user->id)
             ->where('cluster_key', $clusterKey)
-            ->first(['id']);
+            ->first(['id', 'state', 'direction', 'cadence']);
 
         if ($row === null || ! is_numeric($row->id)) {
             return null;
         }
 
-        return (int) $row->id;
-    }
-
-    private function ensureOccurrence(User $user, int $seriesId, Transaction $tx): int
-    {
-        $connection = $this->db->connection();
-        $now = CarbonImmutable::now()->toDateTimeString();
-
-        $existing = $connection->table('recurring_series_occurrences')
-            ->where('recurring_series_id', $seriesId)
-            ->where('transaction_id', $tx->id)
-            ->first(['id']);
-
-        if ($existing !== null && is_numeric($existing->id)) {
-            return (int) $existing->id;
+        // A rejected or pending series is one the evaluator refuses by design,
+        // and the demo carried an alert against a rejected one.
+        $eligible = [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value];
+        if (! is_string($row->state) || ! in_array($row->state, $eligible, true)) {
+            return null;
         }
 
-        return (int) $connection->table('recurring_series_occurrences')->insertGetId([
-            'user_id' => $user->id,
-            'recurring_series_id' => $seriesId,
-            'transaction_id' => $tx->id,
-            'observed_at' => $tx->posted_at->toDateString(),
-            'observed_amount_minor' => $tx->amount_minor,
-            'observed_currency' => $tx->currency,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
+        $cadence = is_string($row->cadence) ? SeriesCadence::tryFrom($row->cadence) : null;
+        if ($cadence === null || ! is_string($row->direction)) {
+            return null;
+        }
+
+        return ['id' => (int) $row->id, 'direction' => $row->direction, 'cadence' => $cadence];
+    }
+
+    // The newest adjacent pair of occurrences whose amounts differ — the same
+    // two rows the evaluator compares, at the moment the step landed. A series
+    // charged the same amount every month has no step, and gets no alert: the
+    // shipped demo asserted a prior price against four such series.
+    /**
+     * @return array{id: int, prior_amount_minor: int, latest_amount_minor: int, currency: string, observed_at: string}|null
+     */
+    private function newestPriceStep(User $user, int $seriesId): ?array
+    {
+        $rows = $this->db->connection()
+            ->table('recurring_series_occurrences')
+            ->where('user_id', $user->id)
+            ->where('recurring_series_id', $seriesId)
+            ->orderBy('observed_at')
+            ->orderBy('id')
+            ->get(['id', 'observed_amount_minor', 'observed_currency', 'observed_at'])
+            ->all();
+
+        for ($i = count($rows) - 1; $i >= 1; $i--) {
+            $latest = $rows[$i];
+            $prior = $rows[$i - 1];
+
+            if (! is_numeric($latest->id) || ! is_numeric($latest->observed_amount_minor) || ! is_numeric($prior->observed_amount_minor)) {
+                continue;
+            }
+            if (! is_string($latest->observed_currency) || ! is_string($latest->observed_at)) {
+                continue;
+            }
+            if ((int) $latest->observed_amount_minor === (int) $prior->observed_amount_minor) {
+                continue;
+            }
+
+            return [
+                'id' => (int) $latest->id,
+                'prior_amount_minor' => (int) $prior->observed_amount_minor,
+                'latest_amount_minor' => (int) $latest->observed_amount_minor,
+                'currency' => $latest->observed_currency,
+                'observed_at' => $latest->observed_at,
+            ];
+        }
+
+        return null;
     }
 
     private function upsertTransitionsForUser(User $user): void
     {
-        $today = CarbonImmutable::today();
-
         foreach (self::TRANSITIONS as $row) {
-            $seriesId = $this->lookupSeriesId($user, $row['seriesClusterKey']);
-            if ($seriesId === null) {
+            $series = $this->eligibleSeries($user, $row['seriesClusterKey']);
+            if ($series === null) {
                 continue;
             }
 
+            /** @var DriftAlert|null $alert */
             $alert = DriftAlert::query()
-                ->where('recurring_series_id', $seriesId)
+                ->where('user_id', $user->id)
+                ->where('recurring_series_id', $series['id'])
                 ->orderBy('id', 'desc')
                 ->first();
 
-            if ($alert === null) {
+            if ($alert === null || $alert->actioned_at === null) {
                 continue;
             }
 
@@ -254,7 +280,9 @@ final class DemoDriftAlertsSeeder
                 'to_state' => $row['toState'],
                 'transition_reason' => $row['reason'],
                 'actor' => $row['actor'],
-                'transitioned_at' => $today->subDays($row['ageDays'])->setTime(12, 0),
+                // The audit row is the moment the state flipped, which the
+                // alert already records.
+                'transitioned_at' => $alert->actioned_at,
                 'notes' => $row['notes'],
             ]);
         }

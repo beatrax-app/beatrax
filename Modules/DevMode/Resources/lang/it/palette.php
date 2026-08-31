@@ -17,10 +17,8 @@ return [
     'section_categories' => 'Categorie',
     'section_goals_recurring' => 'Obiettivi e ricorrenti',
     'no_name' => '(senza nome)',
-    'see_all_prefix' => 'Vedi tutti i ',
-    'see_all_suffix' => ' risultati →',
-    'no_transactions_prefix' => 'Nessuna transazione corrisponde a "',
-    'no_transactions_suffix' => '"',
+    'see_all' => 'Vedi :count risultato →|Vedi tutti i :count risultati →',
+    'no_transactions' => 'Nessuna transazione corrisponde a ":query"',
     'source_txn' => 'txn',
     'source_counterparty' => 'controparte',
     'source_category' => 'categoria',
@@ -30,6 +28,29 @@ return [
     'foot_select' => 'seleziona',
     'foot_close' => 'chiudi',
     'close_aria' => 'Chiudi la ricerca',
+    'close_caption' => 'Chiudi',
     'foot_try' => 'Prova',
-    'results_suffix' => ' risultati',
+    'results' => ':count risultato|:count risultati',
+
+    'action' => [
+        'run_import' => ['label' => 'Avvia un\'importazione', 'hint' => 'Apri la procedura guidata di importazione'],
+        'scan_email' => ['label' => 'Scansiona le email ora', 'hint' => 'Esegui subito la sincronizzazione della casella di posta'],
+        'open_profile' => ['label' => 'Apri il profilo', 'hint' => 'Impostazioni — account e preferenze'],
+        'toggle_theme' => ['label' => 'Cambia tema', 'hint' => 'Alterna tra il tema chiaro e quello scuro'],
+    ],
+
+    'run_command' => 'Esegui :command',
+
+    'nav' => [
+        'overview' => ['label' => 'Panoramica dev', 'hint' => 'Riquadri di sistema + esecuzioni recenti'],
+        'artisan' => ['label' => 'Runner Artisan', 'hint' => 'Esegui i comandi autorizzati'],
+        'audit' => ['label' => 'Log di audit dev', 'hint' => 'Ogni azione della modalità sviluppatore'],
+        'logs' => ['label' => 'Tail dei log', 'hint' => 'Flusso live di laravel-*.log'],
+        'queue' => ['label' => 'Ispettore della coda', 'hint' => 'In attesa / falliti / batch'],
+        'doctor' => ['label' => 'Doctor', 'hint' => 'Probe di sistema'],
+        'sql' => ['label' => 'Pannello SQL', 'hint' => 'Browser solo SELECT'],
+        'system' => ['label' => 'Snapshot del sistema', 'hint' => 'Ambiente + percorsi + configurazione'],
+        'horizon' => ['label' => 'Horizon', 'hint' => 'Dashboard delle code integrata'],
+        'sync_health' => ['label' => 'Stato sync', 'hint' => 'Operazioni di merge in quarantena o saltate'],
+    ],
 ];

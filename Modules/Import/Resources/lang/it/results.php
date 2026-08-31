@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Carica un altro estratto conto',
 
+    'chain' => [
+        'heading' => 'Risoluzione delle catene…',
+        'pending' => 'In coda. Il risolutore delle catene partirà a breve.',
+        'running' => 'Collegamento delle catene di finanziamento e scomposizione dei regolamenti di estratto conto.',
+    ],
+
     'issues' => [
         'row' => 'Riga :row: :reason',
         'file_stopped' => 'Non è stato possibile leggere il file oltre la riga :row. Nulla dopo quella riga è stato importato.',

@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Salīdzināts ar bāzes līniju augšpusē',
 
+    'run_failed' => 'Šo prognozi neizdevās aprēķināt. Zemāk redzamā līnija rāda tikai to, kas jau ir iegrāmatots.',
+
     'scenario_editor_aria' => 'Scenāriju redaktors',
     'series_confidence' => 'Sērijas ticamība',
     'no_series_contribute' => 'Šī konta prognozē pagaidām neietilpst neviena sērija.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Atjaunina',
     'chart_noscript' => 'Diagrammai nepieciešams JavaScript. Diapazons aptver :days dienu.|Diagrammai nepieciešams JavaScript. Diapazons aptver :days dienu.|Diagrammai nepieciešams JavaScript. Diapazons aptver :days dienas.',
     'total_balance' => 'Kopējais atlikums',
+    'projection_range' => 'Prognozes diapazons',
+    'point_estimate' => 'Punkta novērtējums',
 
     'per_month_suffix' => '/mēn.',
     'confidence_chip_aria' => ':name, ticamība :confidence — prognozes diapazons ir :percent procenti no punkta novērtējuma',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Zemākais 30 dienās',
     'next_ics' => 'Nākamais ICS norēķins: :amount — :date',
     'ics_overdue' => 'ICS norēķins nokavēts: :amount, termiņš bija :date',
+
+    'stale_run' => 'Prognoze no :date — kopš tā laika nav atjaunināta.',
+
+    'confidence' => [
+        'high' => 'Augsta',
+        'medium' => 'Vidēja',
+        'low' => 'Zema',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Summa ir obligāta.',
+        'amount_decimals' => 'Summai jābūt skaitlim ar ne vairāk kā :decimals decimāldaļām.|Summai jābūt skaitlim ar ne vairāk kā :decimals decimāldaļu.|Summai jābūt skaitlim ar ne vairāk kā :decimals decimāldaļām.',
+        'amount_whole' => 'Summai jābūt veselam skaitlim — šai valūtai nav mazākas vienības.',
+        'amount_non_negative' => 'Summai jābūt nullei vai pozitīvai.',
+        'amount_non_zero' => 'Summa nedrīkst būt nulle.',
+        'field_required' => 'Lauks :field ir obligāts.',
+    ],
 ];

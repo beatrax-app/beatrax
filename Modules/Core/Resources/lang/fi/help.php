@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => 'Tietoa: :subject',
+        'close' => 'Sulje',
+    ],
+
     'page_title' => 'Missä tietoni ovat?',
     'intro' => 'Beatrax tallentaa kaiken tälle laitteelle. Mitään ei lähetetä palvelimelle, mitään ei synkronoida pilveen, mitään ei poistu tältä laitteelta ilman että viet sen itse.',
 

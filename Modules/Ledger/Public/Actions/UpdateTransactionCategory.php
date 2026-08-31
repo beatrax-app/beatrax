@@ -9,15 +9,15 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
-use Modules\Ledger\Public\Enums\ClearedStatus;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 
 // Defence in depth: the category — when not null — must either belong
 // to the user or be a global default-tree row. Without this, the FK
 // alone would accept any categories.id from another user, since the FK
 // target is the table, not the row's owner.
-final class UpdateTransactionCategory implements UpdatesTransactionCategory
+final readonly class UpdateTransactionCategory implements UpdatesTransactionCategory
 {
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db) {}
 
     public function __invoke(int $transactionId, ?int $categoryId, User $user): int
     {
@@ -27,7 +27,7 @@ final class UpdateTransactionCategory implements UpdatesTransactionCategory
             ->where('user_id', $user->id)
             ->first(['status', 'category_id']);
 
-        if ($row === null || $row->status === ClearedStatus::Reconciled->value) {
+        if ($row === null || TransactionStatusQuery::locksEdits($row->status)) {
             return 0;
         }
 

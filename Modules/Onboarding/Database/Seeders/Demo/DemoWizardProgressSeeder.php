@@ -6,48 +6,56 @@ namespace Modules\Onboarding\Database\Seeders\Demo;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Onboarding\Internal\Enums\WizardStepStatus;
+use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 use Modules\Onboarding\Models\WizardProgress;
 
 final class DemoWizardProgressSeeder
 {
+    // Only the steps whose state is the point of the demo. The registry names
+    // the list; a step missing from here is seeded pending, which is what the
+    // mount-time initializer would have written for it anyway.
     /**
-     * @var list<array{stepKey: string, status: string, completedAgeHours: ?int, data: ?array<string, mixed>}>
+     * @var array<string, array{status: string, completedAgeHours: ?int, data: ?array<string, mixed>}>
      */
-    private const STEPS = [
-        ['stepKey' => 'welcome', 'status' => WizardStepStatus::Done->value, 'completedAgeHours' => 96, 'data' => null],
-        [
-            'stepKey' => 'connect-bank',
+    private const STATES = [
+        'welcome' => ['status' => WizardStepStatus::Done->value, 'completedAgeHours' => 96, 'data' => null],
+        'connect-bank' => [
             'status' => WizardStepStatus::Done->value,
             'completedAgeHours' => 72,
             'data' => ['connector' => 'asn-csv', 'filename' => 'asn-2026-05.csv'],
         ],
-        [
-            'stepKey' => 'connect-paypal',
+        'connect-paypal' => [
             'status' => WizardStepStatus::InProgress->value,
             'completedAgeHours' => null,
             'data' => ['oauth_attempt' => 1],
         ],
-        ['stepKey' => 'connect-card', 'status' => WizardStepStatus::Pending->value, 'completedAgeHours' => null, 'data' => null],
-        [
-            'stepKey' => 'connect-email',
+        'connect-email' => [
             'status' => WizardStepStatus::Skipped->value,
             'completedAgeHours' => 48,
             'data' => ['reason' => 'user_opted_out'],
         ],
-        ['stepKey' => 'first-import', 'status' => WizardStepStatus::Pending->value, 'completedAgeHours' => null, 'data' => null],
-        ['stepKey' => 'done', 'status' => WizardStepStatus::Pending->value, 'completedAgeHours' => null, 'data' => null],
     ];
+
+    /** @var array{status: string, completedAgeHours: ?int, data: ?array<string, mixed>} */
+    private const UNREACHED = ['status' => WizardStepStatus::Pending->value, 'completedAgeHours' => null, 'data' => null];
+
+    public function __construct(
+        private readonly WizardStepRegistry $registry,
+        private readonly Clock $clock,
+    ) {}
 
     /**
      * @param  array<string, User>  $users
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
-            foreach (self::STEPS as $row) {
-                $this->upsertStep($primary, $row);
+            $now = $this->clock->now();
+            foreach ($this->registry->steps() as $stepKey) {
+                $this->upsertStep($primary, $stepKey, self::STATES[$stepKey] ?? self::UNREACHED, $now);
             }
         }
 
@@ -57,18 +65,18 @@ final class DemoWizardProgressSeeder
     }
 
     /**
-     * @param  array{stepKey: string, status: string, completedAgeHours: ?int, data: ?array<string, mixed>}  $row
+     * @param  array{status: string, completedAgeHours: ?int, data: ?array<string, mixed>}  $row
      */
-    private function upsertStep(User $user, array $row): void
+    private function upsertStep(User $user, string $stepKey, array $row, CarbonImmutable $now): void
     {
         $completedAt = $row['completedAgeHours'] === null
             ? null
-            : CarbonImmutable::now()->subHours($row['completedAgeHours']);
+            : $now->subHours($row['completedAgeHours']);
 
         WizardProgress::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
-                'step_key' => $row['stepKey'],
+                'step_key' => $stepKey,
             ],
             [
                 'status' => $row['status'],

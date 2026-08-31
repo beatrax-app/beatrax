@@ -97,7 +97,7 @@ function esdFixture(DatabaseManager $db): array
     for ($m = 1; $m <= ESD_MERCHANTS; $m++) {
         $merchant = 'merchant '.$m;
         for ($month = 1; $month <= 12; $month++) {
-            $postedAt = CarbonImmutable::parse('2025-05-14')->addMonths($month)->toDateString();
+            $postedAt = CarbonImmutable::parse('2025-05-14')->addMonthsNoOverflow($month)->toDateString();
             // Every fourth merchant leaves counterparty_name NULL, so the
             // display-name lookup has to skip past rows it cannot read.
             $name = $m % 4 === 0 ? null : 'Merchant '.$m.' B.V.';
@@ -107,7 +107,7 @@ function esdFixture(DatabaseManager $db): array
         // A second charge on the same posted_at as the newest one, on a
         // different account and with a different name — a tie the newest-name
         // lookup has to break the same way every run.
-        esdTx($db, $user, $second, $run, CarbonImmutable::parse('2025-05-14')->addMonths(12)->toDateString(), -1000 - $m, 'EUR', $merchant, 'Merchant '.$m.' TIED', 'expense', ++$row, 'tie'.$m);
+        esdTx($db, $user, $second, $run, CarbonImmutable::parse('2025-05-14')->addMonthsNoOverflow(12)->toDateString(), -1000 - $m, 'EUR', $merchant, 'Merchant '.$m.' TIED', 'expense', ++$row, 'tie'.$m);
 
         // Older than the 36-month window's edge for the last merchant only,
         // and old enough that no cadence can reach it.
@@ -117,7 +117,7 @@ function esdFixture(DatabaseManager $db): array
     // A merchant in a second currency, so the currency scoping has something
     // to scope, and a fee/refund pair which the detector also clusters.
     for ($month = 1; $month <= 6; $month++) {
-        $postedAt = CarbonImmutable::parse('2025-11-03')->addMonths($month)->toDateString();
+        $postedAt = CarbonImmutable::parse('2025-11-03')->addMonthsNoOverflow($month)->toDateString();
         esdTx($db, $user, $account, $run, $postedAt, -2500, 'USD', 'usd merchant', 'USD Merchant', 'expense', ++$row, 'usd'.$month);
         esdTx($db, $user, $account, $run, $postedAt, -199, 'EUR', 'bank fees', 'Bank Fees', 'fee', ++$row, 'fee'.$month);
     }
@@ -125,7 +125,7 @@ function esdFixture(DatabaseManager $db): array
     // The other user's ledger, identical merchant keys — nothing here may
     // reach the owner's clusters.
     for ($month = 1; $month <= 12; $month++) {
-        $postedAt = CarbonImmutable::parse('2025-05-14')->addMonths($month)->toDateString();
+        $postedAt = CarbonImmutable::parse('2025-05-14')->addMonthsNoOverflow($month)->toDateString();
         esdTx($db, $other, $foreignAccount, $otherRun, $postedAt, -3300, 'EUR', 'merchant 1', 'Foreign Merchant 1', 'expense', ++$row, 'o'.$month);
     }
 

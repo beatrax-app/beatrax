@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Anomaly\Tests\Support;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Anomaly\Internal\Enums\AnomalyDetector;
 use Modules\Core\Models\User;
 
 // Seeds fixture rows through the raw query builder rather than factories so
@@ -107,6 +108,10 @@ final class AnomalyCorpusSeeder
             $direction = is_string($row['direction'] ?? null) ? $row['direction'] : 'expense';
             $type = $direction === 'income' ? 'income' : 'expense';
             $postedAt = is_string($row['posted_at'] ?? null) ? $row['posted_at'] : '2026-06-15';
+            // transactions carries a UNIQUE over (posted_at, booked_at, amount,
+            // currency, counterparty), so a same-day double-tap is only
+            // representable when the two captures book at different times.
+            $bookedAt = is_string($row['booked_at'] ?? null) ? $row['booked_at'] : $postedAt.' 00:00:00';
 
             $txnId = $connection->table('transactions')->insertGetId([
                 'user_id' => $user->id,
@@ -114,7 +119,7 @@ final class AnomalyCorpusSeeder
                 'import_run_id' => $runId,
                 'fingerprint' => hash('sha256', 'corpus-fp-'.$rowIndex.bin2hex(random_bytes(8))),
                 'posted_at' => $postedAt,
-                'booked_at' => $postedAt.' 00:00:00',
+                'booked_at' => $bookedAt,
                 'value_date' => $postedAt,
                 'amount_minor' => $amountMinor,
                 'currency' => $currency,
@@ -200,6 +205,23 @@ final class AnomalyCorpusSeeder
             );
         }
 
+        // Seeded AFTER the charge under test so the sibling carries the HIGHER
+        // autoincrement id — the row order a newest-first CSV export produces.
+        /** @var list<array<string, mixed>> $historyAfter */
+        $historyAfter = is_array($fixture['history_after'] ?? null) ? $fixture['history_after'] : [];
+        foreach ($historyAfter as $row) {
+            $onSeries = (bool) ($row['on_recurring_series'] ?? false);
+            $txn = $insertTransaction($row, $onSeries);
+            if ($onSeries) {
+                $attachOccurrence(
+                    $txn,
+                    is_string($row['posted_at'] ?? null) ? $row['posted_at'] : '2026-06-12',
+                    (int) ($row['settled_amount_minor'] ?? $row['amount_minor'] ?? 0),
+                    is_string($row['settled_currency'] ?? null) ? $row['settled_currency'] : (is_string($row['currency'] ?? null) ? $row['currency'] : 'EUR'),
+                );
+            }
+        }
+
         /** @var list<array<string, mixed>> $rules */
         $rules = is_array($fixture['suppression_rules'] ?? null) ? $fixture['suppression_rules'] : [];
         foreach ($rules as $rule) {
@@ -208,7 +230,7 @@ final class AnomalyCorpusSeeder
             $connection->table('anomaly_suppression_rules')->insert([
                 'user_id' => $user->id,
                 'counterparty_id' => $counterpartyId,
-                'detector' => is_string($rule['detector'] ?? null) ? $rule['detector'] : 'large',
+                'detector' => is_string($rule['detector'] ?? null) ? $rule['detector'] : AnomalyDetector::Large->value,
                 'direction' => is_string($rule['direction'] ?? null) ? $rule['direction'] : 'expense',
                 'amount_band_low_minor' => (int) ($rule['amount_band_low_minor'] ?? 0),
                 'amount_band_high_minor' => (int) ($rule['amount_band_high_minor'] ?? 0),

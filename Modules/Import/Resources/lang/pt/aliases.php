@@ -37,9 +37,13 @@ return [
     'parse_preview' => 'Interpretar e pré-visualizar',
     'cancel_import' => 'Cancelar a importação',
 
-    'diff_new' => 'novos,',
-    'diff_unchanged' => 'sem alterações,',
-    'diff_conflicts' => 'conflitos.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: pt · diff_unchanged — sem alterações is invariable, so both arms
+    // repeat it and the singular reads terse beside novo. The participle
+    // inalterado would agree but drops the wording this file already had.
+    'diff_new' => ':count novo|:count novos',
+    'diff_unchanged' => ':count sem alterações|:count sem alterações',
+    'diff_conflicts' => ':count conflito|:count conflitos',
 
     'conflicts_heading' => 'Conflitos',
     'conflict_name' => 'nome — atual: :existing → ficheiro: :file',
@@ -54,8 +58,7 @@ return [
     'test_heading' => 'Testar com as minhas transações',
     'test_help' => 'Edita o padrão generalizado de uma linha para veres com que transações corresponderia.',
     'typing' => 'A escrever…',
-    'matches_prefix' => 'Corresponde a',
-    'matches_suffix' => 'transações do teu histórico recente.',
+    'matches' => 'Corresponde a :count transação do teu histórico recente.|Corresponde a :count transações do teu histórico recente.',
 
     'merge_modal_title' => 'Unir :count alias|Unir :count aliases',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Não foi carregado nenhum ficheiro.',
         'unreadable' => 'Não foi possível ler o ficheiro carregado.',
         'too_short' => 'O padrão é demasiado curto para ser testado.',
+        'file_not_yaml' => 'Este ficheiro não é YAML válido, por isso não foi possível ler nada dele. Exporta os teus aliases outra vez e carrega o ficheiro que obtiveres.',
+        'file_unreadable_as_yaml' => 'Não foi possível ler este ficheiro como uma lista de aliases. Exporta os teus aliases outra vez e carrega o ficheiro que obtiveres.',
+        'file_has_no_entries_list' => 'Este ficheiro não começa por uma lista entries: de primeiro nível, por isso não tem aliases para importar. Verifica se escolheste o ficheiro certo.',
+        'entry_is_not_a_mapping' => 'A entrada :entry é um valor simples onde eram esperados um padrão e um nome. Dá-lhe os dois campos, ou remove-a, e carrega o ficheiro outra vez.',
+        'entry_is_missing_a_field' => 'À entrada :entry falta o padrão ou o nome, e um alias precisa dos dois. Preenche o que falta, ou remove essa entrada, e carrega o ficheiro outra vez.',
     ],
 ];

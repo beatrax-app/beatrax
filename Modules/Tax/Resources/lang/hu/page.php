@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'PDF exportálása',
     'export_pdf_aria' => 'PDF exportálása',
     'export_pdf_title' => 'A beatrax-tax-:year.pdf letöltése',
+    'export_dismiss' => 'Elvetés',
 
     'country_prompt_heading' => 'Melyik országban adózol?',
     'country_prompt_body' => 'Ezt bármikor módosíthatod a Beállítások → :section menüpontban.',

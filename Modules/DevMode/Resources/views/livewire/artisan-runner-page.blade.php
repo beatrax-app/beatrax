@@ -128,10 +128,10 @@
                                     >{{ Lang::get('dev::runner.args_badge') }}</span>
                                 @endif
                             </div>
-                            <span class="text-xs text-slate-500 dark:text-slate-400">{{ $spec->label }}</span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get($spec->labelKey) }}</span>
                         </div>
-                        @if ($spec->description !== null && $spec->description !== '')
-                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $spec->description }}</p>
+                        @if ($spec->descriptionKey !== null)
+                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get($spec->descriptionKey) }}</p>
                         @endif
                     </button>
                 @endforeach

@@ -9,8 +9,10 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\RegistersScheduledCommands;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 use Modules\Import\Public\Events\TransactionImported;
+use Modules\Receipts\Internal\Console\ScanInboxDropFolderCommand;
 use Modules\Receipts\Internal\Http\Livewire\ReceiptConflictToast;
 use Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt;
 use Modules\Receipts\Internal\Listeners\HandleFileOpenedFromOs;
@@ -18,6 +20,8 @@ use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\GooglePlayReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
+use Modules\Receipts\Internal\Matchers\ReceiptBodyText;
+use Modules\Receipts\Internal\ReceiptLedgerBridge;
 use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
@@ -30,16 +34,17 @@ use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 final class ReceiptsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
+    use RegistersScheduledCommands;
 
     /** @var list<class-string<SenderMatcher>> */
-    private const MATCHER_FQNS = [
+    private const array MATCHER_FQNS = [
         PaypalReceiptMatcher::class,
         IcsReceiptMatcher::class,
         GooglePlayReceiptMatcher::class,
     ];
 
     /** @var list<class-string> */
-    private const PIPELINE_FQNS = [
+    private const array PIPELINE_FQNS = [
         EmlMimeReader::class,
         MboxIterator::class,
         FileDropEmlBlobStore::class,
@@ -48,6 +53,9 @@ final class ReceiptsServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        $this->app->singleton(ReceiptBodyText::class);
+        $this->app->singleton(ReceiptLedgerBridge::class);
+
         foreach (self::PIPELINE_FQNS as $fqn) {
             $this->app->singleton($fqn);
         }
@@ -88,6 +96,8 @@ final class ReceiptsServiceProvider extends ServiceProvider
         if (is_file(__DIR__.'/../Routes/console.php')) {
             $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         }
+
+        $this->registerScheduledCommands([ScanInboxDropFolderCommand::class]);
 
         $livewire->component('receipts.receipt-conflict-toast', ReceiptConflictToast::class);
 

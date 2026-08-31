@@ -15,11 +15,11 @@ use Modules\Tax\Internal\Exceptions\CategoryPersistenceException;
 use Modules\Tax\Internal\Exceptions\DuplicateTaxCategoryNameException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class TaxCategoryWriter
+final readonly class TaxCategoryStore
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly TaxCorpusLoader $corpusLoader,
+        private DatabaseManager $db,
+        private TaxCorpusLoader $corpusLoader,
     ) {}
 
     /**

@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Naudok bent 12 simbolių.',
     'error_wrong_code' => 'Šis naudotojo vardas ir atkūrimo kodas nesutampa. Atidžiai patikrink kodą — didžiosios raidės, jokių nulių, jokių O, jokių vienetų, jokių L.',
+    'error_throttled' => 'Per daug bandymų — bandyk dar kartą po :wait.',
 ];

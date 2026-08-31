@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Částka',
 
     'subtotal' => 'Mezisoučet',
+    'subtotal_income' => 'Mezisoučet příjmů',
 
     'footer' => 'Vytvořeno v Beatraxu — osobní finance jen lokálně — :year',
 ];

@@ -24,11 +24,14 @@ One row models one statement period on one ICS-kind account.
 | `open_balance_minor` | What is still to settle, **positive**. Starts at `abs(total_amount_minor)`. |
 | `currency` | What the two amounts above count. Taken from `statement_summaries.closing_balance_currency`; `EUR` when the summary states none, which is every row the ICS reader wrote. |
 | `state` | `open`, `partially_settled`, `settled`, `overpaid`. |
-| `period_start` / `period_end` | The statement window. Both are required. |
+| `period_start` / `period_end` | The statement window: the min and max `posted_at` of the rows the statement bills, copied off the summary the ICS reader wrote. Both are required. |
 | `import_run_id` | Nullable, `nullOnDelete` — a back-populated row outlives the import that produced it. |
 
 `UNIQUE (user_id, account_id, period_start, period_end)` is what makes
-creation idempotent. A `BEFORE INSERT` / `BEFORE UPDATE` trigger pair
+creation idempotent — which is also why the pair is derived from `posted_at`
+and not `booked_at`, and why changing that derivation needed a migration to
+move the stored pair with it. See [a period derived from one column and tested
+on another](../../conventions/invariants-from-shipped-failures.md#a-period-derived-from-one-column-and-tested-on-another). A `BEFORE INSERT` / `BEFORE UPDATE` trigger pair
 rejects any `state` outside the four values above, so an out-of-band
 write fails at the database rather than silently corrupting the
 lifecycle.
@@ -101,8 +104,11 @@ the previous and new open balances, and the new state.
 `Modules\Chains\Internal\Resolvers\IcsSettlementResolver` is the only
 caller. When an ASN-side bulk settlement matches a statement within
 tolerance and covers at least one expense, the resolver writes the
-per-expense `chain_links` rows and then hands the transfer's magnitude
-to `applySettlement()`. A settlement that covers no expense is left
+per-expense `chain_links` rows and then hands `applySettlement()` the
+transfer's magnitude **plus whatever credits were carried into that
+statement** — the tolerance test above has already spent them, so told
+the payment alone the machine left a statement nobody owed anything on
+reading `partially_settled` forever. A settlement that covers no expense is left
 alone entirely — there would be no link recording that it was applied,
 and the next pass would apply it again. If the
 resulting state is `overpaid`, it writes a `card_statement_credits` row
@@ -123,7 +129,13 @@ values:
 
 - **`overpayment`** — the surplus left when a settlement overshoots.
   Written by the resolver's main pass at the moment the state machine
-  returns `overpaid`.
+  returns `overpaid`, with a NULL `to_statement_id`: the statement that
+  will absorb the surplus has not been imported yet.
+  `IcsSettlementResolver::attachDanglingCredits()` runs ahead of the main
+  pass on every later run and closes that pointer onto the earliest
+  `open`/`partially_settled` statement on the same account, in the
+  credit's own currency, whose period starts after the source period
+  ended.
 - **`refund_after_close`** — a refund that posted inside a statement
   period that had already reached `settled` or `overpaid`. Written by
   the resolver's second pass, which also chains the refund back to the
@@ -136,17 +148,45 @@ statement has no meaning. `to_statement_id` is nullable and
 `nullOnDelete`, because a surplus can exist before the next statement
 period rolls in.
 
-The consumer is `IcsSettlementResolver::priorCreditsMinor()`, which
+There are two consumers. `IcsSettlementResolver::priorCreditsMinor()`, which
 sums `amount_minor` over the credits whose `to_statement_id` is the
 statement being settled **and whose `currency` is the statement's own**,
 and adds that sum to what the payment covered when computing the
 unaccounted delta. The currency predicate is load-bearing: a USD 20
 credit summed into a EUR 500 statement pushed a fully-paid statement
-back out of tolerance and left it `open`. A credit whose `to_statement_id` is still NULL is
-therefore invisible to that sum: `overpayment` rows are written with a
-NULL destination and nothing currently fills it in, so an overpayment
-surplus is recorded for audit but does not yet reduce the next
-statement's expected settlement.
+back out of tolerance and left it `open`. A credit whose `to_statement_id`
+is still NULL is invisible to that sum, which is why the carry-forward
+pass picks a destination in the credit's own currency: a surplus pointed
+at a statement denominated in another money would be spent on nothing
+and never reconsidered.
+
+The second is `CardStatementQuery::payableMinor()`, which states what
+will actually leave the bank account. It draws the same two lines — the
+statement's own currency, and a destination already chosen — and
+subtracts the sum from `open_balance_minor`, floored at zero. Reading the
+open balance raw contradicted the resolver on the same row: the machine
+is handed payment **plus** credits and lands on zero, so a statement of
+EUR 500.00 carrying a EUR 75.00 credit is settled by a EUR 425.00
+payment, while the projection deducted EUR 500.00 from the account and
+waited for a settlement no pass would ever match.
+
+Every reader of that figure goes through it. `nextSettlementForUser()`
+and `forecastTileForUser()` are one row read and one amount, differing
+only in that the first also names the funder account and answers null
+where there is none. `ThisPeriodAtAGlanceQuery::nextIcsSettlement()`
+composed the tile from a query of its own and deducted nothing, so the
+position tile and the forecast highlights quoted one statement at two
+amounts on the same due date; it now calls `forecastTileForUser()`. The
+`Public/` seam is what makes that reachable from Ledger without touching
+this module's `Internal/`.
+
+Which account it names is read from `chain_links` first — the payer of the
+last settlement on that card. With no settlement yet linked it falls back to
+the reader's first account that is not itself an `ics_card`, the same line
+`IcsSettlementResolver::candidateTransferIds()` draws on the write side.
+Pinned to `kind = 'bank'` instead, it returned nothing at all for a reader
+paying their card from a PayPal balance or a cash account — no tile, no
+overdue banner, on a statement that was open.
 
 ## Where to look in the code
 

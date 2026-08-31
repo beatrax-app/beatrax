@@ -1,10 +1,10 @@
-@use('Modules\Core\Public\Enums\JobRunStatus')
 @use('Modules\Core\Public\Support\Iban')
 @use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Core\Public\Support\Fmt;
     use Modules\Import\Public\Enums\ImportFailureReason;
     use Modules\Import\Public\Enums\PreviewRowStatus;
+    use Modules\Import\Internal\Enums\ReceiptCaptureState;
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
@@ -17,6 +17,7 @@
     $canConfirmImport = $hasLivePreview
         && ! $needsIcsAccountName
         && ! $needsPaypalAccountName
+        && ! $needsGooglePlayAccountName
         && $unnamedAccountCount === 0
         && $importableRowCount > 0;
 
@@ -27,7 +28,27 @@
     $fileFailureDetail = $hasLivePreview ? $preview->fileFailureDetail : null;
     $parsedRowCount = $hasLivePreview ? $preview->totalRows() : 0;
     $shownRowCount = $hasLivePreview ? count($preview->rows) : 0;
-    $nothingToImport = $hasLivePreview && $importableRowCount === 0;
+    $nothingImportableYet = $hasLivePreview && $importableRowCount === 0;
+
+    // A row held back by a name this screen is asking for is not a row that
+    // failed to become a transaction. Counting it as one is how the first
+    // receipt of every provider was told nothing reached the ledger, directly
+    // above a capture saying confirming would add it.
+    $awaitingAccountName = $hasLivePreview
+        && ($needsIcsAccountName
+            || $needsPaypalAccountName
+            || $needsGooglePlayAccountName
+            || $unnamedAccountCount > 0);
+    $nothingImported = $nothingImportableYet && ! $awaitingAccountName;
+
+    // An email drop is read by the receipt recorder, and a message it files but
+    // cannot read a payment out of yields no row at all. Read as an empty
+    // preview, that is a file which "could not be read" -- over a receipt whose
+    // sender, subject and date are already in the database.
+    $receiptCaptures = $hasLivePreview ? $preview->receiptCaptures : [];
+    $receiptCaptureCount = $hasLivePreview ? $preview->receiptCaptureCount : 0;
+    $capturedReceipts = $hasLivePreview && $preview->capturedAReceipt();
+    $nothingToImport = $nothingImported && ! $capturedReceipts;
 @endphp
 
 <div class="space-y-6">
@@ -56,16 +77,48 @@
                 </button>
             </div>
         </div>
-        @unless ($nothingToImport)
+        @unless ($nothingImportableYet)
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.subtitle') }}</p>
         @endunless
     </header>
+
+    @if ($capturedReceipts && ! $alreadyImported)
+        <x-core::alert tone="info" role="status">
+            <p class="font-medium">{{ Lang::get('import::preview.receipts.heading') }}</p>
+            <p class="mt-2">{{ Lang::get('import::preview.receipts.saved') }}</p>
+            @if ($nothingImported)
+                <p class="mt-2">{{ Lang::get('import::preview.receipts.none_imported') }}</p>
+            @endif
+            <ul class="mt-3 space-y-3">
+                @foreach ($receiptCaptures as $capture)
+                    <li>
+                        <p class="font-medium">{{ $capture->subject ?? Lang::get('import::preview.receipts.no_subject') }}</p>
+                        {{-- break-words, because a sender address is one unbroken
+                             token and the phone this screen is mostly used from
+                             is 375px wide. --}}
+                        <p class="mt-1 break-words">
+                            @if ($capture->senderEmail !== '')
+                                {{ $capture->senderEmail }} ·
+                            @endif
+                            {{ Fmt::shortDate($capture->internalDate) }}
+                        </p>
+                        <p class="mt-1">{{ ReceiptCaptureState::of($capture)->label() }}</p>
+                    </li>
+                @endforeach
+            </ul>
+            {{-- Never a silent cap: a mailbox archive is thousands of messages
+                 and the list above is a window onto it. --}}
+            @if (count($receiptCaptures) < $receiptCaptureCount)
+                <p class="mt-3">{{ Lang::get('import::preview.receipts.shown', ['shown' => Fmt::number(count($receiptCaptures)), 'total' => Fmt::number($receiptCaptureCount)]) }}</p>
+            @endif
+        </x-core::alert>
+    @endif
 
     @if ($alreadyImported)
         <x-core::alert tone="info">
             <p>{{ Lang::get('import::preview.already_imported') }}</p>
             <p class="mt-2">
-                <a href="{{ route('imports.results', ['id' => $importRunId]) }}" class="underline">
+                <a href="{{ route('imports.results', ['id' => $importRunId]) }}" class="tap-link underline">
                     {{ Lang::get('import::preview.already_imported_link') }}
                 </a>
             </p>
@@ -138,15 +191,43 @@
                 </div>
             </div>
         </section>
+    @elseif ($needsGooglePlayAccountName)
+        <section class="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-6 dark:bg-slate-900 dark:border-slate-700">
+            <div class="space-y-3">
+                <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('import::preview.google_play.heading') }}</p>
+                {{-- {!! !!}: app-static copy whose apostrophe must reach the DOM
+                     literally (not as &#039;). No user data is interpolated. --}}
+                <p class="text-sm text-slate-500 dark:text-slate-400">{!! Lang::get('import::preview.google_play.help') !!}</p>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div class="flex-1">
+                        <x-core::form-field
+                            name="googlePlayAccountName"
+                            :label="Lang::get('import::preview.account_name_label')"
+                            wire:model="googlePlayAccountName"
+                            :placeholder="Lang::get('import::preview.google_play.placeholder')"
+                            required
+                            maxlength="80"
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        wire:click="saveGooglePlayAccountName"
+                        class="bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:hover:bg-emerald-800 dark:bg-emerald-700"
+                    >
+                        {{ Lang::get('import::preview.save_name') }}
+                    </button>
+                </div>
+            </div>
+        </section>
     @else
         @if (count($preview->accountsToName) > 0)
             <section class="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-6 dark:bg-slate-900 dark:border-slate-700">
                 @foreach ($preview->accountsToName as $unknown)
                     <div class="space-y-3">
                         <p class="text-sm text-slate-900 dark:text-slate-100">
-                            {{ in_array($unknown->iban, $presetIssuedIdentifiers, true)
-                                ? Lang::get('import::preview.unknown_account_prefix')
-                                : Lang::get('import::preview.unknown_iban_prefix') }} <strong class="font-medium">{{ Iban::grouped($unknown->iban) }}</strong>. {{ Lang::get('import::preview.unknown_iban_suffix') }}
+                            {{ Iban::isIban($unknown->iban)
+                                ? Lang::get('import::preview.unknown_iban_prefix')
+                                : Lang::get('import::preview.unknown_account_prefix') }} <strong class="font-medium">{{ $standInAccountNames[$unknown->iban] ?? Iban::grouped($unknown->iban) }}</strong>. {{ Lang::get('import::preview.unknown_iban_suffix') }}
                         </p>
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
                             <div class="flex-1">
@@ -235,7 +316,7 @@
 
                     @foreach ($preview->rows as $row)
                         <tr data-row-index="{{ $row->rowIndex }}">
-                            <td class="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">{{ $row->bookedAt ?? '—' }}</td>
+                            <td class="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">{{ $row->postedAt ?? '—' }}</td>
                             {{-- Funding source: counterparty IBAN that funded this row,
                                  rendered monospace so it lines up legibly with the
                                  IBAN fallback in the Counterparty column. Empty when
@@ -333,46 +414,6 @@
                     </div>
                 @endif
                 @endif
-    @endif
-
-    {{-- Chain-resolution polling surface.
-
-         Polls the `chain_resolution_runs` audit table via
-         `wire:poll.2s.keep-alive="refreshChainResolutionStatus"`. The auto-navigate
-         on status='complete' fires inside `refreshChainResolutionStatus`
-         itself; the rendered Blade body covers pending / running /
-         failed states only.
-
-         The polling target queries
-         `chain_resolution_runs` by exact user_id — NEVER
-         `failed_jobs.payload LIKE '%userId:N%'` (which leaks
-         cross-user state via id-prefix substring matches). --}}
-    @if ($chainResolutionStatus !== null && $chainResolutionStatus !== JobRunStatus::Complete)
-        <section
-            wire:poll.2s.keep-alive="refreshChainResolutionStatus"
-            class="rounded-md border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700"
-            aria-live="polite"
-        >
-            <x-core::section-heading :title="Lang::get('import::preview.chain.heading')" :level="3" />
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                @if ($chainResolutionStatus === JobRunStatus::Pending)
-                    {{ Lang::get('import::preview.chain.pending') }}
-                @elseif ($chainResolutionStatus === JobRunStatus::Running)
-                    {{ Lang::get('import::preview.chain.running') }}
-                @elseif ($chainResolutionStatus === JobRunStatus::Failed)
-                    {{-- The stored last_error is the failed job's class name and the first
-                         line of its message. That is a developer's sentence, and the crypto
-                         layer's version of it names an internal class and the reader's own
-                         user id. Horizon is one line down for whoever needs it. --}}
-                    {{ Lang::get('import::preview.chain.failed_prefix') }} {{ Lang::get('import::preview.chain.failed_detail') }}.
-                    <a href="/horizon/failed" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('import::preview.chain.open_horizon') }}</a>
-                    {{ Lang::get('import::preview.chain.failed_suffix') }}
-                @endif
-            </p>
-            @if ($chainResolutionStatus !== JobRunStatus::Failed)
-                <span aria-hidden="true" class="mt-3 inline-block h-2 w-2 animate-pulse rounded-full bg-slate-400"></span>
-            @endif
-        </section>
     @endif
 
     {{-- Rename counterparty popover. Single mount per wizard page; the

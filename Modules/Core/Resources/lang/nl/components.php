@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'De :shown meest recente van :count worden getoond.',
+
     'drawer_nav' => 'Navigatie',
 
     'search_placeholder' => 'Zoeken…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Wil je je gegevens ook op je telefoon zien?',
         'body' => 'Installeer Beatrax op je telefoon voor snelle toegang tot je financiën.',
         'dismiss_aria' => 'Installatietip sluiten',
+        'dismiss_caption' => 'Sluiten',
         'install_app' => 'App installeren',
         'desktop_html' => 'Open Beatrax in de browser van je telefoon en tik op "Zet op beginscherm" — of tik op het <strong style="color: var(--color-text);">⚡</strong>-icoon in het deelmenu van Safari.',
     ],
@@ -33,8 +36,6 @@ return [
         'count' => 'Bestanden gekozen: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Kies een datum',
         'prev_month' => 'Vorige maand',
@@ -50,6 +51,8 @@ return [
         'minute' => 'Minuut',
         'empty' => 'geen tijd gekozen',
     ],
+
+    'toast_undo' => 'Ongedaan maken',
 
     'veil_locked' => 'App vergrendeld',
 

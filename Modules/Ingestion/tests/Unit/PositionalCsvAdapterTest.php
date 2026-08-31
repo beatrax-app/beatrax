@@ -2,15 +2,16 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvColumnMap;
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
+use Modules\Ingestion\Internal\Adapters\Csv\PositionalCsvAdapter;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
+use Modules\Ingestion\Public\Dto\PositionalCsvPreset;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Exceptions\UnsupportedFormatException;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
 beforeEach(function (): void {
@@ -22,11 +23,11 @@ beforeEach(function (): void {
         }
     };
 
-    $this->adapter = $this->app->make(AsnCsvAdapter::class);
+    $this->adapter = $this->app->make(SourceAdapterRegistry::class)->for(CsvPresetRegistry::ASN);
 });
 
 it('reports its stable format identifier', function (): void {
-    expect($this->adapter->format())->toBe(AsnCsvHeaderProfile::FORMAT);
+    expect($this->adapter->format())->toBe(CsvPresetRegistry::ASN);
 });
 
 it('parses the real fixture into SourceTransactionDtos', function (): void {
@@ -74,7 +75,7 @@ it('preserves the full source row in rawPayload for audit', function (): void {
     );
 
     foreach ($dtos as $dto) {
-        expect($dto->rawPayload)->toHaveCount(AsnCsvHeaderProfile::EXPECTED_COLUMN_COUNT);
+        expect($dto->rawPayload)->toHaveCount(20);
         foreach ($dto->rawPayload as $cell) {
             expect($cell)->toBeString();
         }
@@ -210,18 +211,32 @@ it('parses the 19-column ASN variant (no trailing Categorie column) without erro
     }
 });
 
-it('exposes the AsnCsvColumnMap as the empirical single source of truth', function (): void {
-    expect(AsnCsvColumnMap::POSTED_DATE)->toBe(0);
-    expect(AsnCsvColumnMap::OWN_IBAN)->toBe(1);
-    expect(AsnCsvColumnMap::COUNTERPARTY_IBAN)->toBe(2);
-    expect(AsnCsvColumnMap::COUNTERPARTY_NAME)->toBe(3);
-    expect(AsnCsvColumnMap::MUTATION_CURRENCY)->toBe(9);
-    expect(AsnCsvColumnMap::AMOUNT)->toBe(10);
-    expect(AsnCsvColumnMap::VALUE_DATE)->toBe(12);
-    expect(AsnCsvColumnMap::SEQUENCE_NUMBER)->toBe(15);
-    expect(AsnCsvColumnMap::DESCRIPTION)->toBe(17);
-    expect(AsnCsvColumnMap::STATEMENT_NUMBER)->toBe(18);
-    expect(AsnCsvColumnMap::CATEGORY)->toBe(19);
+it('carries the empirical column layout as preset data rather than in the adapter', function (): void {
+    $preset = $this->app->make(CsvPresetRegistry::class)->positional(CsvPresetRegistry::ASN);
+
+    expect($preset)->not->toBeNull();
+    /** @var PositionalCsvPreset $preset */
+    expect($preset->postedDateColumn)->toBe(0);
+    expect($preset->ownIbanColumn)->toBe(1);
+    expect($preset->counterpartyIbanColumn)->toBe(2);
+    expect($preset->counterpartyNameColumn)->toBe(3);
+    expect($preset->currencyColumn)->toBe(9);
+    expect($preset->amountColumn)->toBe(10);
+    expect($preset->valueDateColumn)->toBe(12);
+    expect($preset->sourceRefColumn)->toBe(15);
+    expect($preset->descriptionColumns)->toBe([16, 17]);
+    expect($preset->acceptedColumnCounts)->toBe([19, 20]);
+    expect($preset->dateFormat)->toBe('d-m-Y');
+});
+
+it('keeps the issuer name as preset data and out of every identifier', function (): void {
+    $preset = $this->app->make(CsvPresetRegistry::class)->positional(CsvPresetRegistry::ASN);
+
+    expect($preset)->not->toBeNull();
+    /** @var PositionalCsvPreset $preset */
+    expect($preset->label)->toBe('ASN');
+    expect(array_column(SourceFormat::cases(), 'value'))->not->toContain(CsvPresetRegistry::ASN);
+    expect(SourceFormat::tryFrom(CsvPresetRegistry::ASN))->toBeNull();
 });
 
 it('matches the snapshot of the parsed fixture (drift detector)', function (): void {
@@ -250,8 +265,8 @@ it('registers under the asn-csv key in the SourceAdapterRegistry', function (): 
     /** @var SourceAdapterRegistry $registry */
     $registry = $this->app->make(SourceAdapterRegistry::class);
 
-    $adapter = $registry->for('asn-csv');
-    expect($adapter)->toBeInstanceOf(AsnCsvAdapter::class);
+    $adapter = $registry->for(CsvPresetRegistry::ASN);
+    expect($adapter)->toBeInstanceOf(PositionalCsvAdapter::class);
     expect($adapter->format())->toBe('asn-csv');
 
     expect(fn () => $registry->for('asn-no-such-format'))

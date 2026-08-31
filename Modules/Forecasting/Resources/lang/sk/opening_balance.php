@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 return [
     'help_paypal' => 'Exporty z PayPalu neobsahujú riadky so zostatkom, preto ho nastav ručne.',
-    'help_asn' => 'Automaticky ukotvené podľa tvojho posledného výpisu z účtu. Zmeň to len vtedy, ak vieš, že skutočný zostatok je iný.',
     'help_default' => 'Zmeň to len vtedy, ak vieš, že aktuálny skutočný zostatok sa líši od toho, ktorý vypočíta Beatrax.',
 
     'legend' => 'Počiatočný zostatok prognózy — :name',
     'opening_label' => 'Počiatočný zostatok',
-    'opening_placeholder' => 'napr. 1.250,00',
+    'opening_placeholder' => 'napr. :amount',
     'as_of_label' => 'Počiatočný zostatok k dátumu',
     'as_of_help' => 'Dátum, ku ktorému uvedená suma platí.',
 
     'divergence' => 'Toto je o viac než :threshold vedľa zostatku, ktorý Beatrax vypočíta z tvojich importovaných transakcií. Naozaj?',
+    'computed_is' => 'Beatrax počíta :amount.',
     'use_beatrax' => 'Použiť číslo z Beatraxu',
     'use_mine' => 'Použiť moje číslo',
 

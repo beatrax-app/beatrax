@@ -25,7 +25,7 @@ it('lands a single canonical transaction for a dropped PayPal .eml receipt', fun
     $file = UploadedFile::fake()->createWithContent('paypal-receipt.eml', $emlBytes);
 
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'email-file')
+        ->set('importType', 'email')
         ->set('sourceFormat', 'eml')
         ->set('file', $file)
         ->call('submit')
@@ -61,7 +61,7 @@ it('treats a re-dropped .eml as a no-op (UNIQUE constraint on user_id + provider
     $drop = function () use ($emlBytes): void {
         $file = UploadedFile::fake()->createWithContent('paypal-receipt.eml', $emlBytes);
         Livewire::test(UploadWizard::class)
-            ->set('issuer', 'email-file')
+            ->set('importType', 'email')
             ->set('sourceFormat', 'eml')
             ->set('file', $file)
             ->call('submit');

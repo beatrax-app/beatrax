@@ -6,6 +6,7 @@ namespace Modules\Counterparties\Internal\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Session\Session;
@@ -18,9 +19,13 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Concerns\TunedQueueJob;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Core\Public\Support\RetentionWindow;
+use Modules\Sync\Public\Events\EntityMutated;
+use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -57,32 +62,34 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
 
     public function handle(
         DatabaseManager $db,
+        Clock $clock,
         ?Session $session = null,
         ?AppLockKeyService $appLockKeyService = null,
         ?EncryptionMigrationService $encryptionMigrationService = null,
         ?SensitiveColumnCodec $codec = null,
         ?LoggerInterface $logger = null,
+        ?Dispatcher $events = null,
     ): void {
         $connection = $db->connection();
+        $cutoff = RetentionWindow::cutoff($clock);
         [$isEncrypted, $canDecryptMerchantName] = $this->resolveEncryptionContext(
             $session,
             $appLockKeyService,
             $encryptionMigrationService,
         );
 
-        $connection->transaction(function () use ($connection, $isEncrypted, $canDecryptMerchantName, $session, $codec, $logger): void {
-            $orphans = $this->collectOrphans($connection, $isEncrypted, $canDecryptMerchantName, $session, $codec, $logger);
+        $connection->transaction(function () use ($connection, $cutoff, $isEncrypted, $canDecryptMerchantName, $session, $codec, $logger, $events): void {
+            $orphans = $this->collectOrphans($connection, $cutoff, $isEncrypted, $canDecryptMerchantName, $session, $codec, $logger);
             if ($orphans === []) {
                 return;
             }
 
-            $this->pruneOrphans($connection, $orphans);
+            $this->pruneOrphans($connection, $orphans, $events);
         });
     }
 
-    // The legacy 1-arg call shape leaves all three collaborators null, so it
-    // defaults to "not encrypted" rather than gating on a KEK it was never
-    // handed.
+    // The short call shape leaves all three collaborators null, so it defaults
+    // to "not encrypted" rather than gating on a KEK it was never handed.
     /**
      * @return array{0: bool, 1: bool} [isEncrypted, canDecryptMerchantName]
      */
@@ -106,38 +113,39 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
      */
     private function collectOrphans(
         ConnectionInterface $connection,
+        string $cutoff,
         bool $isEncrypted,
         bool $canDecryptMerchantName,
         ?Session $session,
         ?SensitiveColumnCodec $codec,
         ?LoggerInterface $logger,
     ): array {
-        $orphans = $this->collectNullNameOrphans($connection);
+        $orphans = $this->collectNullNameOrphans($connection, $cutoff);
 
         if (! $isEncrypted) {
-            return [...$orphans, ...$this->collectPlaintextNamedOrphans($connection)];
+            return [...$orphans, ...$this->collectPlaintextNamedOrphans($connection, $cutoff)];
         }
 
         if ($canDecryptMerchantName && $session !== null && $codec !== null) {
-            return [...$orphans, ...$this->collectDecryptedNamedOrphans($connection, $session, $codec)];
+            return [...$orphans, ...$this->collectDecryptedNamedOrphans($connection, $cutoff, $session, $codec)];
         }
 
-        $this->logSkippedEncryptedHalf($connection, $logger);
+        $this->logSkippedEncryptedHalf($connection, $cutoff, $logger);
 
         return $orphans;
     }
 
-    // The 365-day window is measured on transactions.created_at (row insert
-    // time), not posted_at, so re-importing an old statement re-arms
-    // retention for its counterparty.
-    private function notRecentlyTransacted(Builder $query): void
+    // The window is measured on transactions.created_at (row insert time), not
+    // posted_at, so re-importing an old statement re-arms retention for its
+    // counterparty.
+    private function notRecentlyTransacted(Builder $query, string $cutoff): void
     {
         $query
             ->select(new Expression('1'))
             ->from('transactions')
             ->whereColumn('transactions.counterparty_id', 'counterparties.id')
             ->where('transactions.user_id', $this->userId)
-            ->whereRaw("transactions.created_at >= datetime('now', '-365 days')");
+            ->where('transactions.created_at', '>=', $cutoff);
     }
 
     // A NULL column is never turned into ciphertext, so this half of the
@@ -145,12 +153,14 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
     /**
      * @return list<int>
      */
-    private function collectNullNameOrphans(ConnectionInterface $connection): array
+    private function collectNullNameOrphans(ConnectionInterface $connection, string $cutoff): array
     {
         $ids = $connection
             ->table('counterparties')
             ->where('counterparties.user_id', $this->userId)
-            ->whereNotExists($this->notRecentlyTransacted(...))
+            ->whereNotExists(function (Builder $query) use ($cutoff): void {
+                $this->notRecentlyTransacted($query, $cutoff);
+            })
             ->whereNull('counterparties.merchant_name')
             ->pluck('counterparties.id')
             ->filter(static fn (mixed $id): bool => is_numeric($id))
@@ -163,12 +173,14 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
     /**
      * @return list<int>
      */
-    private function collectPlaintextNamedOrphans(ConnectionInterface $connection): array
+    private function collectPlaintextNamedOrphans(ConnectionInterface $connection, string $cutoff): array
     {
         $ids = $connection
             ->table('counterparties')
             ->where('counterparties.user_id', $this->userId)
-            ->whereNotExists($this->notRecentlyTransacted(...))
+            ->whereNotExists(function (Builder $query) use ($cutoff): void {
+                $this->notRecentlyTransacted($query, $cutoff);
+            })
             ->whereNotNull('counterparties.merchant_name')
             ->whereNotExists(function (Builder $query): void {
                 $query
@@ -195,6 +207,7 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
      */
     private function collectDecryptedNamedOrphans(
         ConnectionInterface $connection,
+        string $cutoff,
         Session $session,
         SensitiveColumnCodec $codec,
     ): array {
@@ -210,7 +223,9 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         $candidates = $connection
             ->table('counterparties')
             ->where('counterparties.user_id', $this->userId)
-            ->whereNotExists($this->notRecentlyTransacted(...))
+            ->whereNotExists(function (Builder $query) use ($cutoff): void {
+                $this->notRecentlyTransacted($query, $cutoff);
+            })
             ->whereNotNull('counterparties.merchant_name')
             ->get(['id', 'merchant_name']);
 
@@ -260,7 +275,7 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
     // Encrypted with no KEK, the alias half is skipped rather than guessed
     // at — never a wrongful prune. The candidates are re-evaluated on a
     // later run that has one.
-    private function logSkippedEncryptedHalf(ConnectionInterface $connection, ?LoggerInterface $logger): void
+    private function logSkippedEncryptedHalf(ConnectionInterface $connection, string $cutoff, ?LoggerInterface $logger): void
     {
         if ($logger === null) {
             return;
@@ -269,7 +284,9 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         $skippedCount = $connection
             ->table('counterparties')
             ->where('counterparties.user_id', $this->userId)
-            ->whereNotExists($this->notRecentlyTransacted(...))
+            ->whereNotExists(function (Builder $query) use ($cutoff): void {
+                $this->notRecentlyTransacted($query, $cutoff);
+            })
             ->whereNotNull('counterparties.merchant_name')
             ->count();
 
@@ -283,11 +300,15 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
 
     // transactions.counterparty_id carries no ON DELETE cascade, so the FK is
     // NULLed before the DELETE: the history row stays, only the link goes.
+    // Both writes are announced — without that a GC run on one device left the
+    // peer holding rows this device deleted and links this device broke.
     /**
      * @param  list<int>  $orphans
      */
-    private function pruneOrphans(ConnectionInterface $connection, array $orphans): void
+    private function pruneOrphans(ConnectionInterface $connection, array $orphans, ?Dispatcher $events): void
     {
+        $unlinked = $this->transactionIdsLinkedTo($connection, $orphans);
+
         $connection
             ->table('transactions')
             ->where('user_id', $this->userId)
@@ -299,5 +320,47 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
             ->where('user_id', $this->userId)
             ->whereIn('id', $orphans)
             ->delete();
+
+        if ($events === null) {
+            return;
+        }
+
+        // Broken links first: a peer that saw the delete before the unlink
+        // would replay a transaction still pointing at a row it just dropped.
+        foreach ($unlinked as $transactionId) {
+            $events->dispatch(new TransactionMutated(
+                transactionId: $transactionId,
+                userId: $this->userId,
+                mutationType: 'edit',
+                dirtyFields: ['counterparty_id' => null],
+            ));
+        }
+
+        foreach ($orphans as $orphanId) {
+            $events->dispatch(new EntityMutated(
+                table: 'counterparties',
+                pk: $orphanId,
+                userId: $this->userId,
+                mutationType: 'delete',
+            ));
+        }
+    }
+
+    /**
+     * @param  list<int>  $orphans
+     * @return list<int>
+     */
+    private function transactionIdsLinkedTo(ConnectionInterface $connection, array $orphans): array
+    {
+        $ids = $connection
+            ->table('transactions')
+            ->where('user_id', $this->userId)
+            ->whereIn('counterparty_id', $orphans)
+            ->pluck('id')
+            ->filter(static fn (mixed $id): bool => is_numeric($id))
+            ->map(static fn (int|float|string $id): int => (int) $id)
+            ->all();
+
+        return array_values($ids);
     }
 }

@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Operacionālā virsma lietotnē iegultajai izstrādes konsolei.',
     'worker_heartbeat' => 'Darbinieka pulss',
     'not_running' => 'NEDARBOJAS',
+    'heartbeat_age' => 'pirms :count s · ttl :ttl s|pirms :count s · ttl :ttl s|pirms :count s · ttl :ttl s',
     'queue' => 'Rinda',
     'pending' => 'gaida',
     'failed' => 'neizdevās',

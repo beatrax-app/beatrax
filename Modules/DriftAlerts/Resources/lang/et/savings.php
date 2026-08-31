@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Tellimused →',
     'disclaimer' => 'Ametlikud lingid tugiteabe kogumist — Beatrax ei ütle midagi üles ega vaheta midagi sinu eest.',
     'dismiss_aria' => 'Peida soovitus',
+    'dismiss_caption' => 'Peida',
 
     'insight' => [
         'cheaper_message' => ':name võib pakkuda odavamat paketti — maksad :monthly/kuus.',

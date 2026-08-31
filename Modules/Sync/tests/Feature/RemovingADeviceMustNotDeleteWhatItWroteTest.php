@@ -12,8 +12,10 @@ use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
+use Modules\Sync\Internal\Transport\PeerCatchUpCursors;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Psr\Log\NullLogger;
 
 uses(RefreshDatabase::class);
 
@@ -217,7 +219,7 @@ it('offers a removed device\'s ops to the peer catching up instead of withholdin
         ->where('device_id', REMOVED_PHONE_DEVICE_ID)
         ->update(['confirmed_at' => null]);
 
-    $exchanger = new PeerCatchUpExchanger($db, new TransportFramer);
+    $exchanger = new PeerCatchUpExchanger($db, new TransportFramer, new NullLogger);
 
-    expect($exchanger->opsAfterWatermark($userId, 0, 0))->not->toBe([]);
+    expect($exchanger->opsAfterWatermark($userId, PeerCatchUpCursors::none()))->not->toHaveCount(0);
 });

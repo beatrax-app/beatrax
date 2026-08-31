@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Piešķiriet šim kontam nosaukumu.',
 
     'ics' => [
+        'name' => 'ICS karte',
         'heading' => 'Piešķiriet nosaukumu savam ICS kartes kontam.',
         'help' => 'Šī ir pirmā reize, kad importējat ICS datus. Piešķiriet šai kartei nosaukumu, lai tā visā lietotnē parādītos vienādi.',
         'placeholder' => 'piem. ICS karte',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Piešķiriet nosaukumu savam PayPal kontam.',
         'help' => 'Šī ir pirmā reize, kad importējat PayPal datus. Piešķiriet šim makam nosaukumu, lai tas visā lietotnē parādītos vienādi.',
         'placeholder' => 'piem. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Piešķiriet nosaukumu savam Google Play kontam.',
+        'help' => 'Šī ir pirmā reize, kad importējat Google Play čeku. Piešķiriet šim kontam nosaukumu, lai tas visā lietotnē parādītos vienādi.',
+        'placeholder' => 'piem. Google Play',
     ],
 
     'col_date' => 'Datums',
@@ -53,28 +62,41 @@ return [
         'error' => 'Kļūda',
     ],
 
-    'chain' => [
-        'heading' => 'Nosaka ķēdes…',
-        'pending' => 'Rindā. Ķēžu atrisinātājs sāks darbu drīzumā.',
-        'running' => 'Saista finansējuma ķēdes un sadala konta izraksta norēķinus.',
-        'failed_prefix' => 'Ķēžu noteikšana neizdevās:',
-        'failed_detail' => 'sīkāka informācija ir darbu žurnālā',
-        'open_horizon' => 'Atveriet Horizon',
-        'failed_suffix' => 'lai mēģinātu vēlreiz vai pārbaudītu.',
-    ],
-
     'rows_shown' => 'Rādītās rindas: :shown no :total',
 
     'show_more' => 'Rādīt vairāk rindu',
 
     'errors' => [
         'app_locked' => 'Atbloķējiet lietotni, lai importētu: šifrēšanas atslēgas nevar izmantot, kamēr tā ir bloķēta.',
+        'archive_holds_one_message' => 'Šis fails ir viens e-pasta ziņojums, nevis pastkastes arhīvs, tāpēc, lasīts kā arhīvs, tajā nekā nav. Augšupielādē to vēlreiz ar formātu E-pasta ziņojums.',
+        'email_file_is_an_archive' => 'Šis fails ir pastkastes arhīvs: tajā ir vairāk nekā viens ziņojums, un, lasīts kā viens ziņojums, tas paņemtu tikai pirmo. Augšupielādē to vēlreiz ar formātu Pastkastes arhīvs.',
         'file_stopped_short' => 'Galvenes rinda sakrita, tātad formāts ir pareizs. Lasīšana apstājās pirms faila beigām. To izraisa viena nenolasāma rinda, kā arī šai ierīcei pārāk liels fails. Pamēģini īsāku laikposmu.',
         'file_unreadable' => 'Šo failu neizdevās nolasīt.',
+        'file_unreadable_detail' => 'Lietotne nevarēja nolasīt šo failu (:code). Pilnas ziņas ir lietotnes žurnālā; ziņojot par problēmu, norādiet šo kodu.',
         'iban_not_in_preview' => 'Šis IBAN nav daļa no pašreizējā priekšskatījuma.',
-        'pdf_reader_unavailable' => 'PDF izrakstiem nepieciešama programma pdftotext, kas šeit nav uzstādīta. Importē šo failu datorā, kurā tā ir, vai izmanto bankas CSV eksportu.',
+        'not_an_email_file' => 'Šis fails nav ne e-pasta ziņojums, ne pastkastes arhīvs, tāpēc tajā nav ko lasīt kā čeku. Izvēlies importa veidu un formātu, kas atbilst tavam failam.',
+        'pdf_has_no_text_layer' => 'Šajā PDF nav teksta — tas ir izraksta skenējums vai fotoattēls, tāpēc tajā nav ko lasīt. Lejupielādē pašu izrakstu no savas bankas vai izmanto CSV eksportu.',
+        'pdf_password_protected' => 'Šis PDF ir aizsargāts ar paroli, tāpēc to nevar atvērt neviens lasītājs. Saglabā PDF skatītājā neaizsargātu kopiju un importē to.',
+        'pdf_reader_unavailable' => 'Šai lietotnes versijai nav nekāda PDF lasītāja, tāpēc PDF izrakstu šeit nevar atvērt. Importē šo failu citā ierīcē vai izmanto bankas CSV eksportu.',
+        'row_belongs_to_another_statement' => 'Šī rinda pieder darījumam citā pārskata failā. Importējiet arī šo pārskatu — abi tiek lasīti kopā.',
         'row_unreadable' => 'Šo rindu neizdevās nolasīt.',
+        'row_unreadable_detail' => 'Lietotne nevarēja nolasīt šo rindu (:code). Pilnas ziņas ir lietotnes žurnālā; ziņojot par problēmu, norādiet šo kodu.',
         'unknown_account' => 'Šī rinda pieder kontam, kuram vēl neesi devis nosaukumu.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Šis fails tika nolasīts kā e-pasts',
+        'saved' => 'Kas tajā bija, ir uzskaitīts zemāk, un katra vēstule ir saglabāta.',
+        'none_imported' => 'Nekas no tā nekļuva par darījumu, tāpēc virsgrāmatai netika pievienots nekas.',
+        'shown' => 'Rādītās vēstules: :shown no :total',
+        'no_subject' => 'Bez temata',
+
+        'state' => [
+            'read' => 'Nolasīts kā maksājums — apstipriniet šo importu, lai tas nonāktu virsgrāmatā.',
+            'not_a_payment' => 'Tas nav maksājums. Šī vēstule kaut ko paziņo, nevis apstiprina maksājumu.',
+            'unreadable' => 'Saglabāts. Lietotne nolasa šā sūtītāja čekus, taču šajā vēstulē neatrada ne summu, ne tirgotāju, ne atsauci.',
+            'unknown_sender' => 'Saglabāts. Lietotne nenolasa šā sūtītāja čekus, tāpēc no vēstules neko nepaņēma.',
+        ],
     ],
 
     'failed' => [

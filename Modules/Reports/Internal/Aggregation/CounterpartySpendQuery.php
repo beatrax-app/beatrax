@@ -8,21 +8,22 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use stdClass;
 
-final class CounterpartySpendQuery
+final readonly class CounterpartySpendQuery
 {
     use CoercesScalars;
 
-    private const NO_COUNTERPARTY_SENTINEL = -1;
+    private const int NO_COUNTERPARTY_SENTINEL = -1;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly CounterpartyProfileQuery $counterpartyProfileQuery,
-        private readonly SpendFilterApplier $filterApplier,
+        private DatabaseManager $db,
+        private CounterpartyProfileQuery $counterpartyProfileQuery,
+        private SpendFilterApplier $filterApplier,
     ) {}
 
     /**
@@ -68,12 +69,16 @@ final class CounterpartySpendQuery
         $result = [];
         foreach ($map as $key => $amountMinor) {
             if ($key === self::NO_COUNTERPARTY_SENTINEL) {
-                $result[] = new ReportResultRow(groupKey: null, groupLabel: 'No counterparty', amountMinor: $amountMinor, currency: $currency);
+                $result[] = new ReportResultRow(groupKey: null, groupLabel: Lang::get('reports::builder.no_counterparty'), amountMinor: $amountMinor, currency: $currency);
 
                 continue;
             }
 
-            $label = $identities[$key]['displayName'] ?? 'Unknown counterparty';
+            // A counterparty this device cannot resolve -- cross-tenant, deleted,
+            // or arrived ahead of its own row over Sync -- is a DIFFERENT fact
+            // from having no counterparty at all, and one word for both would put
+            // two unrelated rows under one name with no way to tell them apart.
+            $label = $identities[$key]['displayName'] ?? Lang::get('reports::builder.unavailable_counterparty');
             $result[] = new ReportResultRow(groupKey: $key, groupLabel: $label, amountMinor: $amountMinor, currency: $currency);
         }
 

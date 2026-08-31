@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Opozorila o odstopanju',
-    'heading' => 'Opozorila',
     'intro_anomaly' => 'Posamezne bremenitve, ki so zate videti nenavadne.',
     'intro_drift' => 'Odobrene ponavljajoče serije, pri katerih je zadnja bremenitev presegla tvoj prag.',
     'adjust_threshold' => 'Prilagodi prag →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/leto',
         'meta_prior_now' => 'prej :prior → zdaj :now',
         'meta_detected' => 'zaznano :date',
-        'meta_threshold' => 'prag ±:percent%',
+        'meta_threshold' => 'prag ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/leto)',
         'cancel_impact' => 'Prekliči to → prihrani :amount/leto',
         'cadence_flipped' => 'Pogostost se je spremenila — prikazuje se tudi v',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'To opozorilo ne obstaja več.',
         'acknowledged' => 'Potrjeno',
         'snoozed' => 'Odloženo',
         'dismissed' => 'Opuščeno',

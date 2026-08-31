@@ -13,6 +13,12 @@ use Modules\Transfers\Public\Enums\CounterLegOrder;
 // the ranking measures from.
 final readonly class CounterLegWindow
 {
+    // How far apart the two legs of one movement may sit. The bank pairer
+    // called it WINDOW_DAYS and the PayPal funding resolver DATE_WINDOW_DAYS,
+    // both three, both rebuilding the bounds from their own copy. The real
+    // PayPal export puts both legs on one timestamp, so three days is slack.
+    public const int DEFAULT_DAYS = 3;
+
     public function __construct(
         public CarbonImmutable $bookedAt,
         public int $windowDays,

@@ -26,5 +26,8 @@ final class EnvelopeRow extends Data
         // resolve the name again in the language its recipient reads.
         public readonly string $categorySlug = '',
         public readonly bool $categoryNameIsDefault = false,
+        // The group in front of the leaf, which is what the grid and both
+        // move-money pickers render: two envelopes can share $categoryName.
+        public readonly string $categoryPath = '',
     ) {}
 }

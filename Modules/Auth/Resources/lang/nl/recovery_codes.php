@@ -21,5 +21,6 @@ return [
         'body' => 'Herstelcodes zijn de enige manier om weer in je account te komen als je je wachtwoord vergeet.',
         'warning' => 'Ze worden gehasht opgeslagen en kunnen dus niet opnieuw worden getoond. Een nieuwe set maken zet de oude meteen buiten werking.',
         'regenerate' => 'Nieuwe codes maken',
+        'regenerate_confirm' => 'Een nieuwe set herstelcodes maken? De set die je nu hebt werkt niet meer zodra de nieuwe is gemaakt, en kan niet nogmaals worden getoond — een geprinte of overgeschreven kopie wordt waardeloos. Bewaar de nieuwe codes voordat je deze pagina verlaat.',
     ],
 ];

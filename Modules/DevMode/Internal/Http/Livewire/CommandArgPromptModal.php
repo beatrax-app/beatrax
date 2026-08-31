@@ -13,6 +13,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Services\DevConsoleBuildGate;
 use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Enums\ArgType;
 use Modules\DevMode\Internal\Enums\CommandTier;
@@ -31,9 +32,11 @@ final class CommandArgPromptModal extends Component
     // /dev route gate never sees it. EnsureDeveloperMode's predicate is
     // restated here because a component reachable from the wire has to answer
     // for itself; the layout condition below it is only the outer skin.
-    private static function isDeveloper(CurrentUser $user): bool
+    private static function isDeveloper(CurrentUser $user, DevConsoleBuildGate $build): bool
     {
-        return $user->isAuthenticated() && $user->user()->is_developer === true;
+        return $build->permits()
+            && $user->isAuthenticated()
+            && $user->user()->is_developer === true;
     }
 
     // Locked because it selects the registry entry submit() resolves: a
@@ -57,9 +60,9 @@ final class CommandArgPromptModal extends Component
      * @param  array<string, mixed>  $prefill
      */
     #[On('command-args:prompt')]
-    public function open(string $name, DevCommandRegistry $registry, CurrentUser $user, string $tier = CommandTier::Safe->value, array $prefill = []): void
+    public function open(string $name, DevCommandRegistry $registry, CurrentUser $user, DevConsoleBuildGate $build, string $tier = CommandTier::Safe->value, array $prefill = []): void
     {
-        if (! self::isDeveloper($user)) {
+        if (! self::isDeveloper($user, $build)) {
             return;
         }
 
@@ -93,8 +96,9 @@ final class CommandArgPromptModal extends Component
         CommandSpawner $spawner,
         CurrentUser $user,
         CommandArgValidator $validator,
+        DevConsoleBuildGate $build,
     ): void {
-        if (! self::isDeveloper($user)) {
+        if (! self::isDeveloper($user, $build)) {
             return;
         }
 
@@ -270,7 +274,7 @@ final class CommandArgPromptModal extends Component
             }
             $value = $this->values[$arg->name] ?? null;
             if ($value === null || $value === '' || $value === []) {
-                $missing[] = $arg->label !== '' ? $arg->label : $arg->name;
+                $missing[] = $arg->labelKey !== '' ? Lang::get($arg->labelKey) : $arg->name;
             }
         }
 

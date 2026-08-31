@@ -19,6 +19,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
+use Psr\Log\LoggerInterface;
 
 final class SuggestMappingModal extends Component
 {
@@ -61,6 +63,7 @@ final class SuggestMappingModal extends Component
         GitHubCompareUrlBuilder $urlBuilder,
         Dispatcher $events,
         ContributionLog $contributions,
+        LoggerInterface $logger,
     ): void {
         $this->submitError = '';
 
@@ -97,7 +100,8 @@ final class SuggestMappingModal extends Component
         try {
             $openUrl($url);
         } catch (InvalidArgumentException $e) {
-            $this->submitError = $e->getMessage();
+            $logger->warning('SuggestMappingModal: the suggestion URL was refused.', SafeExceptionContext::describe($e));
+            $this->submitError = Lang::get('community::suggest.errors.browser_refused');
 
             return;
         }

@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Uredi davčno oznako: :label',
     'tag' => 'Označi',
     'tag_aria' => 'Označi kot davčno pomembno',
+    'tag_caption' => 'Označi',
 ];

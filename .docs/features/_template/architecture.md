@@ -1,8 +1,8 @@
 <!--
   Template for `.docs/features/<module-slug>/architecture.md`. Fill in
-  per-module in a follow-up plan; the four template files in this
-  `_template/` directory form the canonical shape every module's
-  feature deep-dive should match.
+  per-module; the three template files in this `_template/` directory
+  form the canonical shape every module's feature deep-dive should
+  match.
 
   Keep each section short — half a page total. The detail belongs in
   `code.md` (file references) and `how-to-test.md` (test recipes and

@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Največji odhodki',
     'no_expenses' => 'Kategoriziranih odhodkov še ni.',
+    'top_spending_refunded' => 'Ni na lestvici — :amount se je vrnilo',
 
     'recent_transactions' => 'Nedavne transakcije',
     'view_all' => 'Prikaži vse',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategorija',
     'th_amount' => 'Znesek',
     'uncategorized' => 'Brez kategorije',
+
+    'jump_to_records' => [
+        'body' => 'Za to obdobje ni ničesar. Vaše najnovejše transakcije so še vedno tu.',
+        'action' => 'Prikaži obdobje :period',
+    ],
 
     'reauth' => [
         'title' => 'Nabiralnik je treba znova povezati.',

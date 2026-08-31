@@ -98,6 +98,64 @@ so the *revoke* can never be the thing that survives alone. `removeDevice()` log
 exception through `SafeExceptionContext::describe()` when any of this fails, so the split
 state has something naming it; it used to catch `\Throwable` with no bound variable at all.
 
+## The revoke half is local to the device you perform it on
+
+A removal does two things, and only one of them reaches the rest of the household.
+
+The **rotation** is household-wide by construction. A new epoch is minted here and fanned out
+to every device still confirmed here, and the removed device is structurally absent from that
+loop. Every sensitive column written anywhere after the removal is sealed under a key it does
+not hold, on every device.
+
+The **revoke** is not. `confirmed_at` lives in `device_registry`, which appears **nowhere** in
+`MergeRulesRegistry`: it is a device-local trust store on purpose, because an op that arrives
+claiming trust is not a ceremony. So clearing the phone's `confirmed_at` on the desktop clears
+it on the desktop. A second desktop in the same household still has that row, and until the
+same removal is performed there:
+
+- it still admits the phone's Noise handshake, because `deviceX25519Keys()` reads its own
+  `confirmed_at`;
+- it still ships the phone every op it has, including `amount_minor`, `booked_at`,
+  `account_id`, `category_id`, `accounts.name` and `accounts.iban`, none of which
+  `SensitiveFieldRegistry::columns()` seals;
+- and it still accepts and relays the phone's *own* writes, because `opsAfterWatermark()`
+  filters on a registry ROW rather than on `confirmed_at` — deliberately, so a removed
+  device's history stays replicable — and `receiveOps()` verifies against the retained key map.
+
+The mid-session revocation check and the `PEER_REVOKED` message do not close this either. They
+are statements about **this** connection: the desktop tells the phone that *it* no longer
+confirms it, and the phone clears its confirmation of the desktop. Neither says anything to a
+third device, and neither is addressed to one.
+
+### Which of the two behaviours is intended
+
+Per-device is what ships, and the copy in the removal modal now says so: alongside "rotates the
+key" and "cannot erase what is already there" it reads *"Your other devices keep their own
+list. Until you remove it there too, they will go on syncing with it."* — shown only when
+another confirmed device is actually there to keep it, so it is never a warning about nothing.
+
+That is a statement of what the code does, not an argument that it is finished. A revocation
+that propagates is the better end state, and the reasoning is the same one this page opens
+with: revoke-only and rotate-only are each an access-control gap, and a removal where the
+rotate half is household-wide while the revoke half is not is that same gap one level up. The
+household-trust position — that members are co-equal — argues *for* propagation rather than
+against it: there is no "my devices" and "your devices" for a per-device removal to be scoped
+to, so a removal is a household act whoever performs it.
+
+The shape it would take is a **signed, monotonic revocation**: the acting device states "device
+X is revoked", signed with its own Ed25519 key, carried over the channels the epoch fan-out
+already uses, and applied by a recipient through the `forgetPeerConfirmation()` path that
+`MSG_PEER_REVOKED` already exercises. Monotonic is the load-bearing word — a revocation can only
+ever *remove* trust, so an unauthenticated or replayed one cannot grant any, which is exactly
+why `device_registry` must never become a merged table instead.
+
+What that is not is a small change. It is a new wire message with its own delivery, replay and
+re-pairing semantics, verifiable only on a real multi-device harness, and it is a behaviour
+change, which this repository requires a merged spec change for first. A removal that propagates
+*sometimes* would be harder to reason about than one that plainly does not, so the interim
+position is the honest one rather than the convenient one: the code, this page and the on-screen
+copy all say the same thing.
+
 ## Epoch ids are minted, not counted
 
 `GdkEpochId::mint()` picks `random_int(1, 2^53 - 1)` and retries against the ids this

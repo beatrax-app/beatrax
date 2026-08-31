@@ -4,20 +4,25 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Actions;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Illuminate\Support\DateFactory;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Import\Models\MerchantAlias;
+use Modules\Import\Public\Services\MerchantNameResolver;
+use Modules\Sync\Public\Events\EntityMutated;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class MergeMerchantAliases
+final readonly class MergeMerchantAliases
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly DateFactory $dates,
+        private DatabaseManager $db,
+        private DateFactory $dates,
+        private Dispatcher $events,
+        private MerchantNameResolver $resolver,
     ) {}
 
     /**
@@ -37,6 +42,9 @@ final class MergeMerchantAliases
 
         $expectedCount = count(array_unique($aliasIds));
 
+        /** @var list<EntityMutated> $captured */
+        $captured = [];
+
         /** @var MerchantAlias $surviving */
         $surviving = $this->db->connection()->transaction(function () use (
             $user,
@@ -44,6 +52,7 @@ final class MergeMerchantAliases
             $expectedCount,
             $friendlyName,
             $generalizedPattern,
+            &$captured,
         ): MerchantAlias {
             $rows = $this->loadAliasRows($user, $aliasIds, $expectedCount);
 
@@ -52,19 +61,72 @@ final class MergeMerchantAliases
             $absorbed = $rows;
             $survivingId = isset($survivingRow->id) && is_numeric($survivingRow->id) ? (int) $survivingRow->id : 0;
 
-            $this->rewriteSurviving(
-                $user,
-                $survivingId,
-                $friendlyName,
-                $generalizedPattern,
-                $this->buildMergedFrom($survivingRow, $absorbed),
-            );
-            $this->deleteAbsorbed($user, $absorbed);
+            $mergedFrom = $this->buildMergedFrom($survivingRow, $absorbed);
+
+            $this->rewriteSurviving($user, $survivingId, $friendlyName, $generalizedPattern, $mergedFrom);
+            $absorbedIds = $this->deleteAbsorbed($user, $absorbed);
+
+            $captured = $this->captureFor($user, $survivingId, $friendlyName, $generalizedPattern, $mergedFrom, $absorbedIds);
 
             return $this->reloadSurviving($user, $survivingId);
         });
 
+        // Only once the rows are committed, mirroring AliasYamlImporter: a
+        // rollback would otherwise leave the op log describing a merge no local
+        // row matches, and the paired device would perform it anyway.
+        foreach ($captured as $event) {
+            $this->events->dispatch($event);
+        }
+
+        // A merge rewrites one alias and deletes the rest, so a memo not told
+        // about it keeps answering with the absorbed names the reader merged
+        // away.
+        $this->resolver->forget($user->id);
+
         return $surviving;
+    }
+
+    // Three writes, three ops. Renaming a counterparty is one of the commonest
+    // edits there is and none of it left the device.
+    /**
+     * @param  list<array{v: string, tag: string}>  $mergedFrom
+     * @param  list<int>  $absorbedIds
+     * @return list<EntityMutated>
+     */
+    private function captureFor(
+        User $user,
+        int $survivingId,
+        string $friendlyName,
+        string $generalizedPattern,
+        array $mergedFrom,
+        array $absorbedIds,
+    ): array {
+        $events = [new EntityMutated(
+            table: 'merchant_aliases',
+            pk: $survivingId,
+            userId: $user->id,
+            mutationType: 'edit',
+            dirtyFields: [
+                'friendly_name' => $friendlyName,
+                'generalized_pattern' => $generalizedPattern,
+                // The OR-Set wire shape, not the column's. `added` carries the
+                // WHOLE set, not this merge's delta: the replayer resolves a
+                // field from one batch's ops alone, so a lone delta would
+                // project a set missing every earlier merge.
+                'merged_from' => ['added' => $mergedFrom, 'removed' => []],
+            ],
+        )];
+
+        foreach ($absorbedIds as $absorbedId) {
+            $events[] = new EntityMutated(
+                table: 'merchant_aliases',
+                pk: $absorbedId,
+                userId: $user->id,
+                mutationType: 'delete',
+            );
+        }
+
+        return $events;
     }
 
     /**
@@ -87,32 +149,60 @@ final class MergeMerchantAliases
         return $rows;
     }
 
+    // Elements in the OR-Set shape the merge registry declares for this column
+    // — {v, tag} pairs, keyed by a content-derived tag so two devices merging
+    // the same aliases mint the same element and the union stays idempotent.
     /**
      * @param  Collection<int, stdClass>  $absorbed
-     * @return list<array<string, mixed>>
+     * @return list<array{v: string, tag: string}>
      */
     private function buildMergedFrom(stdClass $survivingRow, Collection $absorbed): array
     {
-        $mergedFrom = self::decodeMergedFrom($survivingRow);
+        $elements = self::decodeMergedFrom($survivingRow);
         $mergedAt = $this->dates->now()->toIso8601String();
 
         foreach ($absorbed as $row) {
             // Raw statement text carries the occasional non-UTF8 byte, and
             // json_encode() under JSON_THROW_ON_ERROR aborts the whole
             // transaction for one of them.
-            $mergedFrom[] = [
-                'pattern' => self::coerceUtf8(self::rowString($row, 'pattern')),
-                'generalized_pattern' => self::coerceUtf8(self::rowString($row, 'generalized_pattern')),
-                'friendly_name' => self::coerceUtf8(self::rowString($row, 'friendly_name')),
-                'merged_at' => $mergedAt,
-            ];
+            $elements[self::tagFor($row, $mergedAt)] = self::elementValue($row, $mergedAt);
         }
 
-        return $mergedFrom;
+        return self::asElementList($elements);
+    }
+
+    private static function tagFor(stdClass $row, string $mergedAt): string
+    {
+        return substr(hash('sha256', self::elementValue($row, $mergedAt)), 0, 32);
+    }
+
+    private static function elementValue(stdClass $row, string $mergedAt): string
+    {
+        return json_encode([
+            'pattern' => self::coerceUtf8(self::rowString($row, 'pattern')),
+            'generalized_pattern' => self::coerceUtf8(self::rowString($row, 'generalized_pattern')),
+            'friendly_name' => self::coerceUtf8(self::rowString($row, 'friendly_name')),
+            'merged_at' => $mergedAt,
+        ], JSON_THROW_ON_ERROR);
     }
 
     /**
-     * @param  list<array<string, mixed>>  $mergedFrom
+     * @param  array<string, string>  $elements  tag => value
+     * @return list<array{v: string, tag: string}>
+     */
+    private static function asElementList(array $elements): array
+    {
+        $list = [];
+
+        foreach ($elements as $tag => $value) {
+            $list[] = ['v' => $value, 'tag' => $tag];
+        }
+
+        return $list;
+    }
+
+    /**
+     * @param  list<array{v: string, tag: string}>  $mergedFrom
      */
     private function rewriteSurviving(User $user, int $survivingId, string $friendlyName, string $generalizedPattern, array $mergedFrom): void
     {
@@ -130,8 +220,9 @@ final class MergeMerchantAliases
 
     /**
      * @param  Collection<int, stdClass>  $absorbed
+     * @return list<int> The ids actually deleted, for the tombstone ops.
      */
-    private function deleteAbsorbed(User $user, Collection $absorbed): void
+    private function deleteAbsorbed(User $user, Collection $absorbed): array
     {
         $absorbedIds = [];
         foreach ($absorbed as $row) {
@@ -147,6 +238,8 @@ final class MergeMerchantAliases
                 ->whereIn('id', $absorbedIds)
                 ->delete();
         }
+
+        return $absorbedIds;
     }
 
     private function reloadSurviving(User $user, int $survivingId): MerchantAlias
@@ -164,8 +257,11 @@ final class MergeMerchantAliases
         return $refreshed;
     }
 
+    // Keyed by tag so a repeat merge of the same rows collapses rather than
+    // doubling. A row written before this column carried OR-Set elements holds
+    // bare descriptors; those are re-tagged here rather than discarded.
     /**
-     * @return list<array<string, mixed>>
+     * @return array<string, string> tag => element value
      */
     private static function decodeMergedFrom(stdClass $survivingRow): array
     {
@@ -175,8 +271,28 @@ final class MergeMerchantAliases
 
         $decoded = json_decode($survivingRow->merged_from, true);
 
-        /** @var list<array<string, mixed>> */
-        return is_array($decoded) ? $decoded : [];
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        $elements = [];
+
+        foreach ($decoded as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $value = isset($item['v']) && is_string($item['v'])
+                ? $item['v']
+                : json_encode($item, JSON_THROW_ON_ERROR);
+            $tag = isset($item['tag']) && is_string($item['tag'])
+                ? $item['tag']
+                : substr(hash('sha256', $value), 0, 32);
+
+            $elements[$tag] = $value;
+        }
+
+        return $elements;
     }
 
     private static function rowString(stdClass $row, string $field): string

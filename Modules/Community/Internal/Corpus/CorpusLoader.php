@@ -12,16 +12,16 @@ use Modules\Import\Public\Services\PatternGeneralizer;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class CorpusLoader
+final readonly class CorpusLoader
 {
-    private const DEFAULT_CONTRIBUTOR = 'beatrax-bot';
+    private const string DEFAULT_CONTRIBUTOR = 'beatrax-bot';
 
     public function __construct(
-        private readonly PatternGeneralizer $generalizer,
-        private readonly LoggerInterface $logger,
-        private readonly DatabaseManager $db,
-        private readonly CorpusYamlReader $reader,
-        private readonly MerchantContactReader $contactReader,
+        private PatternGeneralizer $generalizer,
+        private LoggerInterface $logger,
+        private DatabaseManager $db,
+        private CorpusYamlReader $reader,
+        private MerchantContactReader $contactReader,
     ) {}
 
     /**
@@ -58,7 +58,7 @@ final class CorpusLoader
         return $entries;
     }
 
-    private const REGION_MAX = 8;
+    private const int REGION_MAX = 8;
 
     private function regionFromFilename(string $file): string
     {
@@ -171,7 +171,10 @@ final class CorpusLoader
     private function fetchKnownCategoryNames(): array
     {
         try {
-            $rows = $this->db->connection()->table('categories')->pluck('name');
+            // The bundled corpus is checked against the DEFAULT tree, whose
+            // rows carry user_id = NULL. Unscoped, a household member's own
+            // category silently answered "known" for every other reader.
+            $rows = $this->db->connection()->table('categories')->whereNull('user_id')->pluck('name');
         } catch (Throwable $e) {
             $this->logger->warning('CorpusLoader: could not read categories table.', SafeExceptionContext::describe($e));
 

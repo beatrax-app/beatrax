@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Le motif est obligatoire.',
         'name_required' => 'Le nom est obligatoire.',
+        'browser_refused' => "Ton navigateur n'a pas pu être ouvert : rien n'a été envoyé et rien n'a quitté cet appareil. Réessaie, ou copie toi-même l'aperçu YAML ci-dessus dans une pull request.",
     ],
 ];

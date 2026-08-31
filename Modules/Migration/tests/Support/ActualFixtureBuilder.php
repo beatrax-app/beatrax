@@ -15,9 +15,13 @@ final class ActualFixtureBuilder
 {
     public const BUDGET_FILE_CURRENCY = 'USD';
 
+    // A real Actual export routinely ships without a preferences.budgetType
+    // row; this variant is v1 with exactly that row left out.
+    public const NO_BUDGET_TYPE = 'no-budget-type';
+
     public static function build(string $zipPath, string $variant = 'v1'): void
     {
-        if (! in_array($variant, ['v1', 'v2'], true)) {
+        if (! in_array($variant, ['v1', 'v2', self::NO_BUDGET_TYPE], true)) {
             throw new RuntimeException("Unknown ActualFixtureBuilder variant: {$variant}");
         }
 
@@ -303,7 +307,9 @@ final class ActualFixtureBuilder
         $insertBudget->execute(['id' => 'zb-4', 'month' => 202602, 'category' => 'cat-household', 'amount' => 10000]);
 
         $insertPreference = $pdo->prepare('INSERT INTO preferences (id, value) VALUES (:id, :value)');
-        $insertPreference->execute(['id' => 'budgetType', 'value' => 'envelope']);
+        if ($variant !== self::NO_BUDGET_TYPE) {
+            $insertPreference->execute(['id' => 'budgetType', 'value' => 'envelope']);
+        }
         $insertPreference->execute(['id' => 'currencyCode', 'value' => self::BUDGET_FILE_CURRENCY]);
 
         $rule = json_encode(['conditions' => [['field' => 'payee', 'op' => 'is', 'value' => 'payee-landlord']], 'actions' => [['field' => 'category', 'value' => 'cat-household']]], JSON_THROW_ON_ERROR);

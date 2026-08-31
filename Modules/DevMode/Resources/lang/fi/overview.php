@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Operatiivinen näkymä sovelluksen sisäiseen kehityskonsoliin.',
     'worker_heartbeat' => 'Työntekijän elonmerkki',
     'not_running' => 'EI KÄYNNISSÄ',
+    'heartbeat_age' => ':count s sitten · ttl :ttl s|:count s sitten · ttl :ttl s',
     'queue' => 'Jono',
     'pending' => 'odottaa',
     'failed' => 'epäonnistui',

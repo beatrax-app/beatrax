@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Største utgifter',
     'no_expenses' => 'Ingen kategoriserte utgifter ennå.',
+    'top_spending_refunded' => 'Ikke rangert — :amount kom tilbake',
 
     'recent_transactions' => 'Siste transaksjoner',
     'view_all' => 'Vis alle',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategori',
     'th_amount' => 'Beløp',
     'uncategorized' => 'Ikke kategorisert',
+
+    'jump_to_records' => [
+        'body' => 'Ingenting for denne perioden. De nyeste posteringene dine er fortsatt her.',
+        'action' => 'Vis :period',
+    ],
 
     'reauth' => [
         'title' => 'En innboks må kobles til på nytt.',

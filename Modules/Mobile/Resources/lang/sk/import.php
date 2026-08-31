@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Heslá sa nezhodujú.',
         'password_length' => 'Použi aspoň 12 znakov.',
         'pin_length' => 'PIN musí mať aspoň 6 číslice.',
+        'pin_digits' => 'PIN musí mať 6 až 10 číslic — iba číslice.',
         'pins_mismatch' => 'PIN-y sa nezhodujú. Skús to znova.',
         'session_expired' => 'Relácia vypršala skôr, než sa nastavenie dokončilo. Zadaj znova svoj PIN a heslo.',
         'retry_failed' => 'Nastavenie tohto zariadenia sa stále nepodarilo dokončiť. Skús to znova.',

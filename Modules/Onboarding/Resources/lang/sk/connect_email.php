@@ -6,6 +6,8 @@ return [
     'eyebrow' => 'Účtenky z e-mailu (voliteľné)',
     'h1' => 'Nech Beatrax sleduje e-maily o nákupoch',
     'lede' => 'Prepoj Gmail alebo Outlook a potvrdenia objednávok aj účtenky za predplatné sa automaticky pripoja k tvojim transakciám. Tento krok môžeš preskočiť a doplniť neskôr.',
+    'h1_phone' => 'E-maily o nákupoch sleduje počítač',
+    'lede_phone' => 'Potvrdenia objednávok aj účtenky za predplatné sa v aplikácii pre počítač automaticky pripájajú k tvojim transakciám a na tento telefón dorazia cez synchronizáciu. Nič v tomto telefóne tvoju poštu nečíta, takže tento krok tu preskoč a prepoj ju na počítači.',
 
     'mini' => [
         'signin_label' => 'Prihlásenie',

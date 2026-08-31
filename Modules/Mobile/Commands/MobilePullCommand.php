@@ -12,6 +12,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Psr\Log\LoggerInterface;
 use stdClass;
+use Throwable;
 
 final class MobilePullCommand extends Command
 {
@@ -59,8 +60,20 @@ final class MobilePullCommand extends Command
     // LAN target, falling straight to the off-LAN relay leg.
     private function runOneBoundedBurstFor(int $userId): void
     {
-        $result = $this->container->make(MobileSyncTriggerService::class)
-            ->syncOnce($userId, ($this->session)());
+        // The fan-out is the isolation boundary: one unreadable identity file
+        // or one refused relay dial is that user's tick, not every user's. An
+        // OS-scheduled process has nobody to report a fatal to.
+        try {
+            $result = $this->container->make(MobileSyncTriggerService::class)
+                ->syncOnce($userId, ($this->session)());
+        } catch (Throwable $e) {
+            $this->logger?->warning('sync:mobile-pull: bounded background sync burst failed.', [
+                'user_id' => $userId,
+                'exception' => $e,
+            ]);
+
+            return;
+        }
 
         if ($result === null) {
             $this->logger?->info('sync:mobile-pull: no usable device identity — tick skipped cleanly.', [

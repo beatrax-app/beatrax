@@ -11,7 +11,6 @@ Modules/Categorization/
 │   │   ├── AppliesAutoCategory.php
 │   │   └── AssignsCategory.php
 │   ├── Actions/
-│   │   ├── AssignCategory.php
 │   │   ├── CreateCategorizationRule.php
 │   │   ├── UpdateCategorizationRule.php
 │   │   └── DeleteCategorizationRule.php
@@ -23,14 +22,18 @@ Modules/Categorization/
 │   │   ├── TriageBatch.php
 │   │   └── TriageRow.php
 │   ├── Events/
-│   │   ├── TransactionCategorized.php
-│   │   └── CategorizationDiverged.php
+│   │   └── TransactionCategorized.php
+│   ├── Http/Livewire/
+│   │   ├── InlineCategoryPicker.php
+│   │   └── CategorizationProvenancePanel.php
 │   └── Services/
 │       ├── UncategorizedTriageQuery.php
 │       ├── CategoryOptionsQuery.php
 │       ├── CategorizationRuleQuery.php
 │       └── MerchantMemoryQuery.php
 ├── Internal/
+│   ├── Actions/
+│   │   └── AssignCategory.php
 │   ├── Pipeline/
 │   │   └── ApplyAutoCategoryStage.php
 │   ├── Services/
@@ -42,11 +45,8 @@ Modules/Categorization/
 │   │   └── MerchantMemoryWriter.php
 │   └── Http/Livewire/
 │       ├── TriageInbox.php
-│       ├── InlineCategoryPicker.php
 │       ├── RulesPage.php
-│       ├── RuleFormModal.php
-│       ├── CategorizationProvenancePanel.php
-│       └── CorrectionDivergenceToast.php
+│       └── RuleFormModal.php
 ├── Models/
 │   └── CategorizationRule.php
 ├── Database/
@@ -78,13 +78,11 @@ on `transactions`.
 
 - **Contracts/**
   - `AssignsCategory` — single-method contract for the manual-categorise
-    write path. Bound to `AssignCategory`.
+    write path. Bound to `Internal/Actions/AssignCategory`; a neighbour
+    resolves the contract and never names the class.
   - `AppliesAutoCategory` — single-method contract injected into
     `ImportPipeline`. Bound to `ApplyAutoCategoryStage`.
 - **Actions/**
-  - `AssignCategory` — implements `AssignsCategory`. Reads prior
-    provenance, delegates the write to Ledger, dispatches
-    `TransactionCategorized` and conditional `CategorizationDiverged`.
   - `CreateCategorizationRule` / `UpdateCategorizationRule` /
     `DeleteCategorizationRule` — the CRUD trio behind `/rules`.
 - **DTOs/**
@@ -97,10 +95,6 @@ on `transactions`.
 - **Events/**
   - `TransactionCategorized` — `(transactionId, categoryId, userId)`.
     Raised by `AssignCategory` after every successful write.
-  - `CategorizationDiverged` — `(transactionId, newCategoryId, ruleId,
-    ruleCategoryId, userId)`. Raised only when a manual reclassify
-    contradicts a still-active rule. Static factory
-    `fromProvenance(...)` decides whether the divergence is real.
 - **Services/**
   - `UncategorizedTriageQuery` — pages the rows that need triage,
     optionally suggested-with-counterparty-link.
@@ -112,6 +106,11 @@ on `transactions`.
 
 ## Internal services
 
+- `Internal/Actions/AssignCategory` — implements the Public
+  `AssignsCategory`. Delegates the write to Ledger, dispatches
+  `TransactionCategorized`, and stamps `field_provenance`. Its static
+  `readPriorProvenance(...)` is the decoder
+  `CategorizationProvenancePanel` reads the column through.
 - `Internal/Pipeline/ApplyAutoCategoryStage` — the ImportPipeline stage.
   Logs and falls back to `manual($tx)` on evaluator exceptions; bumps
   `categorization_rules.hits_count` atomically on a successful rule

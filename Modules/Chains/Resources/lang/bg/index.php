@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Импортирай няколко извлечения (банка, PayPal, карта) и разрешаващият модул автоматично ще покаже тук веригите между сметките.',
 
     'no_counterparty' => '(без контрагент)',
-    'open_from_row' => 'Отвори реда източник',
-    'open_to_row' => 'Отвори реда получател',
     'leg_count' => ':count плащане|:count плащания',
+    'legs_more' => '+ още :count',
     'state_aria' => 'Състояние: :state',
+
+    'state' => [
+        'candidate' => 'Кандидат',
+        'confirmed' => 'Потвърдено',
+        'rejected' => 'Отхвърлено',
+    ],
 
     'kind' => [
         'paypal_funding' => 'Финансиране през PayPal',

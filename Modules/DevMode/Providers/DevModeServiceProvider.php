@@ -21,6 +21,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
@@ -109,111 +110,111 @@ final class DevModeServiceProvider extends ServiceProvider
         return [
             new CommandSpec(
                 name: 'db:backup',
-                label: 'Back up database',
+                labelKey: 'dev::runner.command.db_backup.label',
                 tier: CommandTier::Safe,
                 argsSchema: [
                     new ArgSpec(
                         name: 'destination',
-                        label: 'Destination file',
+                        labelKey: 'dev::runner.arg.destination.label',
                         type: ArgType::FilePath,
                         rules: ['nullable', 'string', 'max:1024'],
-                        placeholder: '/path/to/backup.sqlite (optional)',
-                        helpText: 'Leave blank to use the default backups directory.',
+                        placeholderKey: 'dev::runner.arg.destination.placeholder',
+                        helpTextKey: 'dev::runner.arg.destination.help',
                     ),
                 ],
-                description: 'Write a timestamped SQLite copy to the backups directory (or the given path).',
+                descriptionKey: 'dev::runner.command.db_backup.description',
             ),
             new CommandSpec(
                 name: 'beatrax:doctor',
-                label: 'Run doctor',
+                labelKey: 'dev::runner.command.doctor.label',
                 tier: CommandTier::Safe,
                 argsSchema: [],
-                description: 'Report installed PHP / Composer / SQLite versions and verify minimums.',
+                descriptionKey: 'dev::runner.command.doctor.description',
             ),
             new CommandSpec(
                 name: 'beatrax:failed-jobs',
-                label: 'Prune failed jobs',
+                labelKey: 'dev::runner.command.failed_jobs.label',
                 tier: CommandTier::Safe,
                 argsSchema: [
                     new ArgSpec(
                         name: 'action',
-                        label: 'Action',
+                        labelKey: 'dev::runner.arg.action.label',
                         type: ArgType::Select,
                         rules: ['required', 'in:prune'],
                         options: ['prune'],
                     ),
                 ],
-                description: 'Prune resolved entries from the Laravel-managed failed_jobs table.',
+                descriptionKey: 'dev::runner.command.failed_jobs.description',
             ),
             new CommandSpec(
                 name: 'cache:clear',
-                label: 'Clear cache',
+                labelKey: 'dev::runner.command.cache_clear.label',
                 tier: CommandTier::Safe,
                 argsSchema: [],
-                description: 'Flush the application cache store.',
+                descriptionKey: 'dev::runner.command.cache_clear.description',
             ),
             new CommandSpec(
                 name: 'route:list',
-                label: 'List routes',
+                labelKey: 'dev::runner.command.route_list.label',
                 tier: CommandTier::Safe,
                 argsSchema: [],
-                description: 'Print every registered HTTP route to stdout.',
+                descriptionKey: 'dev::runner.command.route_list.description',
             ),
             new CommandSpec(
                 name: 'config:show',
-                label: 'Show config',
+                labelKey: 'dev::runner.command.config_show.label',
                 tier: CommandTier::Safe,
                 argsSchema: [
                     // config:show's positional argument is required upstream;
                     // a no-arg invocation aborts Symfony Console.
                     new ArgSpec(
                         name: 'config',
-                        label: 'Config key',
+                        labelKey: 'dev::runner.arg.config.label',
                         type: ArgType::Text,
                         rules: ['required', 'string', 'max:255'],
-                        placeholder: 'app.name',
-                        helpText: 'The config file or dotted key to print, e.g. `app` or `database.connections.sqlite`.',
+                        placeholderKey: 'dev::runner.arg.config.placeholder',
+                        helpTextKey: 'dev::runner.arg.config.help',
                     ),
                 ],
-                description: 'Print the value at the given dotted config key.',
+                descriptionKey: 'dev::runner.command.config_show.description',
             ),
             new CommandSpec(
                 name: 'view:clear',
-                label: 'Clear view cache',
+                labelKey: 'dev::runner.command.view_clear.label',
                 tier: CommandTier::Safe,
                 argsSchema: [],
-                description: 'Flush the compiled Blade-view cache.',
+                descriptionKey: 'dev::runner.command.view_clear.description',
             ),
             new CommandSpec(
                 name: 'queue:retry',
-                label: 'Retry failed jobs',
+                labelKey: 'dev::runner.command.queue_retry.label',
                 tier: CommandTier::Safe,
                 argsSchema: [
                     new ArgSpec(
                         name: 'id',
-                        label: 'Job id',
+                        labelKey: 'dev::runner.arg.id.label',
                         type: ArgType::Text,
                         rules: ['nullable', 'string', 'max:64'],
-                        placeholder: 'all (or a specific id)',
-                        helpText: 'Leave blank to retry every failed job; pass an id to retry a single entry.',
+                        placeholderKey: 'dev::runner.arg.id.placeholder',
+                        helpTextKey: 'dev::runner.arg.id.help',
                     ),
                     new ArgSpec(
                         name: '--queue',
-                        label: 'Queue name',
+                        labelKey: 'dev::runner.arg.queue.label',
                         type: ArgType::Text,
                         rules: ['nullable', 'string', 'max:255'],
-                        placeholder: 'default',
-                        helpText: 'Optional queue filter; defaults to all queues.',
+                        placeholderKey: 'dev::runner.arg.queue.placeholder',
+                        helpTextKey: 'dev::runner.arg.queue.help',
                     ),
                 ],
-                description: 'Retry one (by id) or every (blank id) failed job.',
+                descriptionKey: 'dev::runner.command.queue_retry.description',
             ),
             new CommandSpec(
                 name: 'beatrax:rederive-fingerprints',
-                label: 'Rederive fingerprints',
+                labelKey: 'dev::runner.command.rederive_fingerprints.label',
                 tier: CommandTier::Safe,
                 argsSchema: [],
-                description: 'Re-compute every transaction fingerprint using the current normalization version.',
+                descriptionKey: 'dev::runner.command.rederive_fingerprints.description',
             ),
         ];
     }
@@ -226,78 +227,78 @@ final class DevModeServiceProvider extends ServiceProvider
         return [
             new CommandSpec(
                 name: 'db:restore',
-                label: 'Restore database',
+                labelKey: 'dev::runner.command.db_restore.label',
                 tier: CommandTier::Destructive,
                 argsSchema: [
                     new ArgSpec(
                         name: 'from',
-                        label: 'Backup file path',
+                        labelKey: 'dev::runner.arg.from.label',
                         type: ArgType::FilePath,
                         rules: ['required', 'string', 'max:1024'],
-                        placeholder: '/path/to/backup.sqlite',
-                        helpText: 'Replaces the current database with the file at the given path.',
+                        placeholderKey: 'dev::runner.arg.from.placeholder',
+                        helpTextKey: 'dev::runner.arg.from.help',
                     ),
                 ],
-                description: 'Replace the current database with the given backup file.',
+                descriptionKey: 'dev::runner.command.db_restore.description',
             ),
             new CommandSpec(
                 name: 'migrate:fresh',
-                label: 'Drop tables and re-migrate',
+                labelKey: 'dev::runner.command.migrate_fresh.label',
                 tier: CommandTier::Destructive,
                 argsSchema: [],
-                description: 'Drop every table, then re-run every migration.',
+                descriptionKey: 'dev::runner.command.migrate_fresh.description',
             ),
             new CommandSpec(
                 name: 'beatrax:reset-password',
-                label: 'Reset password',
+                labelKey: 'dev::runner.command.reset_password.label',
                 tier: CommandTier::Destructive,
                 argsSchema: [
                     new ArgSpec(
                         name: 'username',
-                        label: 'Username',
+                        labelKey: 'dev::runner.arg.username.label',
                         type: ArgType::Text,
                         rules: ['required', 'string', 'max:64'],
-                        placeholder: 'alice',
+                        placeholderKey: 'dev::runner.arg.username.placeholder',
                     ),
                 ],
-                description: 'Interactively reset a user password (refuses non-interactive use).',
+                descriptionKey: 'dev::runner.command.reset_password.description',
             ),
             new CommandSpec(
                 name: 'beatrax:regenerate-recovery-codes',
-                label: 'Regenerate recovery codes',
+                labelKey: 'dev::runner.command.regenerate_recovery_codes.label',
                 tier: CommandTier::Destructive,
                 argsSchema: [
                     new ArgSpec(
                         name: 'username',
-                        label: 'Username',
+                        labelKey: 'dev::runner.arg.username.label',
                         type: ArgType::Text,
                         rules: ['required', 'string', 'max:64'],
-                        placeholder: 'alice',
+                        placeholderKey: 'dev::runner.arg.username.placeholder',
                     ),
                 ],
-                description: 'Regenerate the 10 single-use recovery codes for a user.',
+                descriptionKey: 'dev::runner.command.regenerate_recovery_codes.description',
             ),
             new CommandSpec(
                 name: 'beatrax:grant-dev',
-                label: 'Grant developer access',
+                labelKey: 'dev::runner.command.grant_dev.label',
                 tier: CommandTier::Destructive,
                 argsSchema: [
                     new ArgSpec(
                         name: 'username',
-                        label: 'Username',
+                        labelKey: 'dev::runner.arg.username.label',
                         type: ArgType::Text,
                         rules: ['required', 'string', 'max:64'],
-                        placeholder: 'alice',
+                        placeholderKey: 'dev::runner.arg.username.placeholder',
                     ),
                 ],
-                description: 'Set is_developer=true for the given user.',
+                descriptionKey: 'dev::runner.command.grant_dev.description',
             ),
             new CommandSpec(
                 name: 'beatrax:install',
-                label: 'Run install',
+                labelKey: 'dev::runner.command.install.label',
                 tier: CommandTier::Destructive,
                 argsSchema: [],
-                description: 'Idempotent first-run setup. Re-running on a configured install is destructive.',
+                descriptionKey: 'dev::runner.command.install.description',
             ),
         ];
     }
@@ -390,17 +391,25 @@ final class DevModeServiceProvider extends ServiceProvider
      */
     private static function devNavRows(): array
     {
+        // Read here rather than carried as a key: NavigationRegistry is
+        // bound rather than shared, so every resolution rebuilds these rows
+        // in the reader's language, which is how appNavEntries() already
+        // gets its labels.
+
+        // Doctor's gear ends in an invisible U+FE0F, and so do the palette
+        // action icons further down. Without it the two phone engines disagree
+        // about whether the character is a picture or a glyph.
         return [
-            ['id' => 'dev.overview', 'label' => 'Dev Overview', 'hint' => 'System tiles + recent runs', 'icon' => '›_', 'route' => 'dev.overview', 'keywords' => ['dev', 'console']],
-            ['id' => 'dev.artisan', 'label' => 'Artisan runner', 'hint' => 'Run whitelisted commands', 'icon' => '›_', 'route' => 'dev.artisan', 'keywords' => ['command', 'cli']],
-            ['id' => 'dev.audit', 'label' => 'Dev audit log', 'hint' => 'Every dev-mode action', 'icon' => '⌗', 'route' => 'dev.audit', 'keywords' => ['history', 'activity']],
-            ['id' => 'dev.logs', 'label' => 'Log tailer', 'hint' => 'Live laravel-*.log stream', 'icon' => '≡', 'route' => 'dev.logs', 'keywords' => ['tail', 'errors']],
-            ['id' => 'dev.queue', 'label' => 'Queue inspector', 'hint' => 'Pending / failed / batches', 'icon' => '↻', 'route' => 'dev.queue', 'keywords' => ['jobs', 'failed', 'batches']],
-            ['id' => 'dev.doctor', 'label' => 'Doctor', 'hint' => 'System probes', 'icon' => '⚙', 'route' => 'dev.doctor', 'keywords' => ['probes', 'diagnose']],
-            ['id' => 'dev.sql', 'label' => 'SQL panel', 'hint' => 'SELECT-only browser', 'icon' => '⌕', 'route' => 'dev.sql', 'keywords' => ['query', 'schema']],
-            ['id' => 'dev.system', 'label' => 'System snapshot', 'hint' => 'Env + paths + config', 'icon' => '◇', 'route' => 'dev.system', 'keywords' => ['env', 'config']],
-            ['id' => 'dev.horizon', 'label' => 'Horizon', 'hint' => 'Embedded queue dashboard', 'icon' => '↗', 'route' => 'dev.horizon', 'keywords' => ['queue', 'dashboard']],
-            ['id' => 'dev.sync-health', 'label' => 'Sync Health', 'hint' => 'Quarantined / skipped merge ops', 'icon' => '⇄', 'route' => 'dev.sync-health', 'keywords' => ['sync', 'quarantine', 'merge', 'oplog']],
+            ['id' => 'dev.overview', 'label' => Lang::get('dev::palette.nav.overview.label'), 'hint' => Lang::get('dev::palette.nav.overview.hint'), 'icon' => '›_', 'route' => 'dev.overview', 'keywords' => ['dev', 'console']],
+            ['id' => 'dev.artisan', 'label' => Lang::get('dev::palette.nav.artisan.label'), 'hint' => Lang::get('dev::palette.nav.artisan.hint'), 'icon' => '›_', 'route' => 'dev.artisan', 'keywords' => ['command', 'cli']],
+            ['id' => 'dev.audit', 'label' => Lang::get('dev::palette.nav.audit.label'), 'hint' => Lang::get('dev::palette.nav.audit.hint'), 'icon' => '⌗', 'route' => 'dev.audit', 'keywords' => ['history', 'activity']],
+            ['id' => 'dev.logs', 'label' => Lang::get('dev::palette.nav.logs.label'), 'hint' => Lang::get('dev::palette.nav.logs.hint'), 'icon' => '≡', 'route' => 'dev.logs', 'keywords' => ['tail', 'errors']],
+            ['id' => 'dev.queue', 'label' => Lang::get('dev::palette.nav.queue.label'), 'hint' => Lang::get('dev::palette.nav.queue.hint'), 'icon' => '↻', 'route' => 'dev.queue', 'keywords' => ['jobs', 'failed', 'batches']],
+            ['id' => 'dev.doctor', 'label' => Lang::get('dev::palette.nav.doctor.label'), 'hint' => Lang::get('dev::palette.nav.doctor.hint'), 'icon' => '⚙️', 'route' => 'dev.doctor', 'keywords' => ['probes', 'diagnose']],
+            ['id' => 'dev.sql', 'label' => Lang::get('dev::palette.nav.sql.label'), 'hint' => Lang::get('dev::palette.nav.sql.hint'), 'icon' => '⌕', 'route' => 'dev.sql', 'keywords' => ['query', 'schema']],
+            ['id' => 'dev.system', 'label' => Lang::get('dev::palette.nav.system.label'), 'hint' => Lang::get('dev::palette.nav.system.hint'), 'icon' => '◇', 'route' => 'dev.system', 'keywords' => ['env', 'config']],
+            ['id' => 'dev.horizon', 'label' => Lang::get('dev::palette.nav.horizon.label'), 'hint' => Lang::get('dev::palette.nav.horizon.hint'), 'icon' => '↗', 'route' => 'dev.horizon', 'keywords' => ['queue', 'dashboard']],
+            ['id' => 'dev.sync-health', 'label' => Lang::get('dev::palette.nav.sync_health.label'), 'hint' => Lang::get('dev::palette.nav.sync_health.hint'), 'icon' => '⇄', 'route' => 'dev.sync-health', 'keywords' => ['sync', 'quarantine', 'merge', 'oplog']],
         ];
     }
 
@@ -415,8 +424,8 @@ final class DevModeServiceProvider extends ServiceProvider
             if ($importsNew !== null) {
                 $actions[] = new AppAction(
                     id: 'action.run-import',
-                    label: 'Run import',
-                    hint: 'Open the import wizard',
+                    labelKey: 'dev::palette.action.run_import.label',
+                    hintKey: 'dev::palette.action.run_import.hint',
                     icon: '⊕',
                     handlerEvent: null,
                     url: $importsNew,
@@ -428,9 +437,9 @@ final class DevModeServiceProvider extends ServiceProvider
             if ($inboxes !== null) {
                 $actions[] = new AppAction(
                     id: 'action.scan-email',
-                    label: 'Scan email now',
-                    hint: 'Run the inbox sync immediately',
-                    icon: '✉',
+                    labelKey: 'dev::palette.action.scan_email.label',
+                    hintKey: 'dev::palette.action.scan_email.hint',
+                    icon: '✉️',
                     handlerEvent: 'email-scan.run',
                     url: null,
                     keywords: ['inbox', 'gmail', 'imap', 'sync'],
@@ -441,9 +450,9 @@ final class DevModeServiceProvider extends ServiceProvider
             if ($settings !== null) {
                 $actions[] = new AppAction(
                     id: 'action.open-profile',
-                    label: 'Open profile',
-                    hint: 'Settings — account and preferences',
-                    icon: '⚙',
+                    labelKey: 'dev::palette.action.open_profile.label',
+                    hintKey: 'dev::palette.action.open_profile.hint',
+                    icon: '⚙️',
                     handlerEvent: null,
                     url: $settings,
                     keywords: ['profile', 'preferences', 'account'],
@@ -451,8 +460,8 @@ final class DevModeServiceProvider extends ServiceProvider
 
                 $actions[] = new AppAction(
                     id: 'action.toggle-theme',
-                    label: 'Toggle theme',
-                    hint: 'Switch between light and dark',
+                    labelKey: 'dev::palette.action.toggle_theme.label',
+                    hintKey: 'dev::palette.action.toggle_theme.hint',
                     icon: '◐',
                     handlerEvent: 'theme.cycle',
                     url: null,
@@ -518,6 +527,12 @@ final class DevModeServiceProvider extends ServiceProvider
     public function boot(Router $router, LivewireManager $livewire, Dispatcher $events, ConfigRepository $config): void
     {
         $router->aliasMiddleware('ensureDeveloperMode', EnsureDeveloperMode::class);
+
+        // The /dev routes gate the address bar; Livewire's update endpoint runs
+        // outside them, so without this a snapshot minted while the flag was on
+        // kept driving the SQL panel, the runner and the queue inspector after
+        // it came off -- schema and all, on a URL that answered 404.
+        $livewire->addPersistentMiddleware(EnsureDeveloperMode::class);
 
         $this->loadModuleResources('dev');
 

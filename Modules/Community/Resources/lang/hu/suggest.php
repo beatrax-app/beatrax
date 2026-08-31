@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'A minta megadása kötelező.',
         'name_required' => 'A név megadása kötelező.',
+        'browser_refused' => 'A böngésződ nem nyílt meg, így semmi sem lett elküldve, és semmi sem hagyta el ezt az eszközt. Próbáld újra, vagy másold be magad a fenti YAML-előnézetet egy pull requestbe.',
     ],
 ];

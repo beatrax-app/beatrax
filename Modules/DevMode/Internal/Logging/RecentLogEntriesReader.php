@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Logging;
 
-use Modules\Core\Public\Services\UserDataPathService;
+use SplFileObject;
 use Throwable;
 
 final readonly class RecentLogEntriesReader
@@ -19,6 +19,7 @@ final readonly class RecentLogEntriesReader
 
     public function __construct(
         private RedactSecretsProcessor $scrubber,
+        private ActiveLogFile $file,
     ) {}
 
     /**
@@ -26,7 +27,7 @@ final readonly class RecentLogEntriesReader
      */
     public function recent(int $limit): array
     {
-        $tail = array_slice($this->readLogLines(), -self::LINE_READ_CAP);
+        $tail = $this->tailLines();
 
         $entries = [];
         foreach ($tail as $raw) {
@@ -35,7 +36,7 @@ final readonly class RecentLogEntriesReader
                 // Folded into the preceding entry so a stack trace's first
                 // line stays searchable from that row's deep link.
                 if ($entries !== []) {
-                    $tailEntry = $entries[array_key_last($entries)];
+                    $tailEntry = array_last($entries);
                     $tailEntry['message'] = $tailEntry['message']."\n".$raw;
                     $entries[array_key_last($entries)] = $tailEntry;
                 }
@@ -50,10 +51,8 @@ final readonly class RecentLogEntriesReader
         $out = [];
         foreach ($recent as $entry) {
             $scrubbed = $this->scrubber->scrub($entry['message']);
-            $excerpt = $this->truncate($scrubbed, self::EXCERPT_MAX, appendEllipsis: true);
-            // /dev/logs matches `contains` literally against the source line,
-            // where no ellipsis exists — hence no ellipsis here either.
-            $hrefContains = $this->truncate($scrubbed, self::HREF_CONTAINS_MAX, appendEllipsis: false);
+            $excerpt = $this->truncate($scrubbed, self::EXCERPT_MAX);
+            $hrefContains = $this->hrefNeedle($scrubbed, self::HREF_CONTAINS_MAX);
             $out[] = [
                 'timestamp' => $entry['timestamp'],
                 'severity' => $entry['severity'],
@@ -67,23 +66,42 @@ final readonly class RecentLogEntriesReader
         return $out;
     }
 
+    // Line-by-line via SplFileObject rather than file(), for the reason its
+    // sibling LogFileStats gives: this pane backs /dev, the page opened
+    // BECAUSE something is wrong, and a 32 MB daily log loaded whole took the
+    // request's peak memory from 26 MB to 97 MB.
     /**
      * @return list<string>
      */
-    private function readLogLines(): array
+    private function tailLines(): array
     {
-        $path = UserDataPathService::dailyLogFile();
+        $path = $this->file->path();
         if (! is_file($path)) {
             return [];
         }
 
+        $window = [];
+
         try {
-            $all = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            $file = new SplFileObject($path, 'r');
+            $file->setFlags(SplFileObject::DROP_NEW_LINE | SplFileObject::SKIP_EMPTY);
+
+            foreach ($file as $line) {
+                if (! is_string($line) || $line === '') {
+                    continue;
+                }
+                $window[] = $line;
+                // Trimmed in blocks rather than per line: array_shift on every
+                // line is O(cap) per line over the whole file.
+                if (count($window) > 2 * self::LINE_READ_CAP) {
+                    $window = array_slice($window, -self::LINE_READ_CAP);
+                }
+            }
         } catch (Throwable) {
-            return [];
+            return array_slice($window, -self::LINE_READ_CAP);
         }
 
-        return is_array($all) ? $all : [];
+        return array_slice($window, -self::LINE_READ_CAP);
     }
 
     /**
@@ -103,21 +121,26 @@ final readonly class RecentLogEntriesReader
         ];
     }
 
-    /**
-     * @param  bool  $appendEllipsis  false returns the prefix verbatim, as a
-     *                                literal substring of the source line.
-     */
-    private function truncate(string $value, int $max, bool $appendEllipsis): string
+    // The dashboard row is one line, so runs of whitespace collapse here —
+    // which is exactly why the href needle below cannot reuse it.
+    private function truncate(string $value, int $max): string
     {
         $single = trim(preg_replace('/\s+/', ' ', $value) ?? $value);
         if (mb_strlen($single) <= $max) {
             return $single;
         }
 
-        if ($appendEllipsis) {
-            return mb_substr($single, 0, $max - 1).'…';
-        }
+        return mb_substr($single, 0, $max - 1).'…';
+    }
 
-        return mb_substr($single, 0, $max);
+    // /dev/logs filters with a literal `includes()`, so the needle must be a
+    // verbatim prefix: collapsing whitespace turned `PHP Warning:  Undefined
+    // array key` — PHP's own two-space shape — into a needle no line holds.
+    // Folded continuation lines are cut because the tailer rows them apart.
+    private function hrefNeedle(string $message, int $max): string
+    {
+        $ownLine = explode("\n", $message, 2)[0];
+
+        return rtrim(mb_substr($ownLine, 0, $max));
     }
 }

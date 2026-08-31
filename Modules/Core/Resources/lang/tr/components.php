@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Toplam :count kaydın en yeni :shown tanesi gösteriliyor.',
+
     'drawer_nav' => 'Gezinme',
 
     'search_placeholder' => 'Ara…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Verilerini telefonunda da görmek ister misin?',
         'body' => 'Finanslarına hızlıca erişmek için Beatrax uygulamasını telefonuna yükle.',
         'dismiss_aria' => 'Yükleme ipucunu kapat',
+        'dismiss_caption' => 'Kapat',
         'install_app' => 'Uygulamayı yükle',
 
         'desktop_html' => 'Beatrax uygulamasını telefonunun tarayıcısında aç ve "Ana Ekrana Ekle" seçeneğine dokun — ya da Safari paylaşım menüsündeki <strong style="color: var(--color-text);">⚡</strong> simgesine dokun.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Seçilen dosyalar: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Bir tarih seç',
         'prev_month' => 'Önceki ay',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Dakika',
         'empty' => 'saat seçilmedi',
     ],
+
+    'toast_undo' => 'Geri al',
 
     'veil_locked' => 'Uygulama kilitli',
 

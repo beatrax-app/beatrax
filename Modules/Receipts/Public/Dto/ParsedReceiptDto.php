@@ -7,10 +7,10 @@ namespace Modules\Receipts\Public\Dto;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
-// The shape every matcher emits on a successful parse. ownIban carries
-// the synthetic per-provider IBAN literal (PAYPAL/ICS-CARD/GOOGLE-PLAY);
-// chainHints carries optional structured cross-source clues a matcher
-// found in the body (the common case is an empty array).
+// The shape every matcher emits on a successful parse. ownIban carries the
+// per-provider sentinel Ingestion's SyntheticIban enum spells; chainHints
+// carries optional structured cross-source clues a matcher found in the body
+// (the common case is an empty array).
 final class ParsedReceiptDto extends Data
 {
     /**

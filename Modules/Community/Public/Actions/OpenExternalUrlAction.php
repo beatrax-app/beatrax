@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace Modules\Community\Public\Actions;
 
 use InvalidArgumentException;
-use Modules\Community\Public\Support\LoggableUrl;
+use Modules\Community\Internal\Support\LoggableUrl;
 use Native\Desktop\Contracts\Shell;
 use Psr\Log\LoggerInterface;
 
-final class OpenExternalUrlAction
+final readonly class OpenExternalUrlAction
 {
     /** @var list<string> */
-    private const ALLOWED_HOSTS = ['github.com'];
+    private const array ALLOWED_HOSTS = ['github.com'];
 
     public function __construct(
-        private readonly Shell $shell,
-        private readonly LoggerInterface $logger,
+        private Shell $shell,
+        private LoggerInterface $logger,
     ) {}
 
     public function __invoke(string $url): void

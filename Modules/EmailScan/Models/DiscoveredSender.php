@@ -19,7 +19,6 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property string|null $sender_name
  * @property int $occurrence_count
  * @property CarbonImmutable $last_seen_at
- * @property int|null $sample_message_id
  * @property string $state
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
@@ -38,7 +37,6 @@ final class DiscoveredSender extends Model
         'sender_name',
         'occurrence_count',
         'last_seen_at',
-        'sample_message_id',
         'state',
     ];
 
@@ -57,11 +55,5 @@ final class DiscoveredSender extends Model
     public function inbox(): BelongsTo
     {
         return $this->belongsTo(Inbox::class);
-    }
-
-    /** @return BelongsTo<InboxMessage, $this> */
-    public function sampleMessage(): BelongsTo
-    {
-        return $this->belongsTo(InboxMessage::class, 'sample_message_id');
     }
 }

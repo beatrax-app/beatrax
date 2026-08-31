@@ -9,7 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\SeriesCadence;
-use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Recurring\Public\Services\RecurringOccurrenceQuery;
 
 final readonly class RangeProjector
 {
@@ -19,13 +19,10 @@ final readonly class RangeProjector
 
     private const int MIN_OCCURRENCES_FOR_PERCENTILE = 6;
 
-    private const int JITTER_WINDOW_DAYS = 3;
-
     public function __construct(
         private Percentile $percentile,
-        private CadenceJitter $jitter,
         private CadenceWalk $walk,
-        private RecurringSeriesQuery $seriesQuery,
+        private RecurringOccurrenceQuery $occurrenceQuery,
     ) {}
 
     /**
@@ -41,18 +38,16 @@ final readonly class RangeProjector
         $isHighVariance = $series->varianceTolerancePercent >= self::HIGH_VARIANCE_THRESHOLD_PERCENT;
 
         $occurrences = $isHighVariance
-            ? $this->seriesQuery->occurrencesForSeries($series->seriesId, $user)
+            ? $this->occurrenceQuery->occurrencesForSeries($series->seriesId, $user)
             : [];
 
         $usePercentile = $isHighVariance && count($occurrences) >= self::MIN_OCCURRENCES_FOR_PERCENTILE;
 
         if ($usePercentile) {
-            $contributions = $this->percentileTier($series, $accountId, $asOf, $horizonDays, $occurrences);
-
-            return $this->jitter->apply($contributions, self::JITTER_WINDOW_DAYS);
+            return $this->percentileTier($series, $accountId, $asOf, $horizonDays, $occurrences);
         }
 
-        // No jitter here: an envelope-tier series has predictable charge dates,
+        // Left un-marked: an envelope-tier series has predictable charge dates,
         // so smearing the band would invent uncertainty it does not carry.
         return $this->envelope($series, $accountId, $asOf, $horizonDays, $user);
     }
@@ -102,14 +97,13 @@ final readonly class RangeProjector
 
         $contributions = [];
 
-        foreach ($this->walk->datesInHorizon($next, $cadence, $asOf, $horizonEnd) as $date) {
+        foreach ($this->walk->datesInHorizon($next, $cadence, $asOf, $horizonEnd, $series->billingDay) as $date) {
             $contributions[] = new ForecastContribution(
                 date: $date,
                 pointMinor: $point,
                 lowMinor: $lowMinor,
                 highMinor: $highMinor,
                 currency: $currency,
-                fxRateUsed: $series->latestFxRateUsed,
                 seriesId: $series->seriesId,
                 accountId: $accountId,
             );
@@ -160,16 +154,16 @@ final readonly class RangeProjector
         $horizonEnd = $asOf->addDays($horizonDays);
         $contributions = [];
 
-        foreach ($this->walk->datesInHorizon($next, $cadence, $asOf, $horizonEnd) as $date) {
+        foreach ($this->walk->datesInHorizon($next, $cadence, $asOf, $horizonEnd, $series->billingDay) as $date) {
             $contributions[] = new ForecastContribution(
                 date: $date,
                 pointMinor: $pointMinor,
                 lowMinor: $lowMinor,
                 highMinor: $highMinor,
                 currency: $currency,
-                fxRateUsed: $series->latestFxRateUsed,
                 seriesId: $series->seriesId,
                 accountId: $accountId,
+                dateIsUncertain: true,
             );
         }
 

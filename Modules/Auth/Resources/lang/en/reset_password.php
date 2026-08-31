@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Use at least 12 characters.',
     'error_wrong_code' => 'That username and recovery code do not match. Check the code carefully — uppercase, no zero, no oh, no one, no L.',
+    'error_throttled' => 'Too many attempts — try again in :wait.',
 ];

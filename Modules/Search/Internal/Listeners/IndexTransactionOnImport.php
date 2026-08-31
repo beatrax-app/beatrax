@@ -11,10 +11,10 @@ use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 // write as the transaction insert. Exceptions are NOT caught here; a
 // failed upsert must bubble so the outer import-chunk transaction
 // rolls back cleanly rather than leaving the index desynced.
-final class IndexTransactionOnImport
+final readonly class IndexTransactionOnImport
 {
     public function __construct(
-        private readonly SearchIndexWriterContract $writer,
+        private SearchIndexWriterContract $writer,
     ) {}
 
     public function handle(TransactionImported $event): void

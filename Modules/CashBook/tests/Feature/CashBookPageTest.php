@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Livewire\Livewire;
@@ -174,7 +175,7 @@ it('keeps blaming the digits when the amount is not one', function (): void {
         ->test(CashBookPage::class)
         ->set('amount', '🎉')
         ->call('add')
-        ->assertSet('error', 'That amount could not be read. Enter it without a thousands separator and with at most two decimals, for example 1250.00.');
+        ->assertSet('error', 'That amount could not be read. Enter it with at most 2 decimal places, for example 1250.00.');
 });
 
 it('still asks for a figure, rather than blaming one, when the field is empty', function (): void {
@@ -195,7 +196,7 @@ it('says a grouped thousands amount could not be read, not that it is smaller th
         ->set('counterparty', 'Bakery')
         ->set('date', '2026-06-05')
         ->call('add')
-        ->assertSet('error', 'That amount could not be read. Enter it without a thousands separator and with at most two decimals, for example 1250.00.');
+        ->assertSet('error', 'That amount could not be read. Enter it with at most 2 decimal places, for example 1250.00.');
 
     expect(DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->count())->toBe(0);
 });
@@ -236,7 +237,8 @@ it('keeps the too-large message for an amount that was read and is too big', fun
 
 // A byte comparison files every accented name after Z, and nothing here
 // asserted the order the picker is actually built with — so the collation and
-// the id tiebreak beside it were both free to change unnoticed.
+// the id tiebreak beside it were both free to change unnoticed. The (2) is
+// CategoryPathName::distinct numbering the later of two identical paths.
 it('orders the category options by collated name, then by id', function (): void {
     foreach ([['Appel', 'cb-order-appel-1'], ['Appel', 'cb-order-appel-2'], ['Zebra', 'cb-order-zebra'], ['Émile', 'cb-order-emile']] as [$name, $slug]) {
         DB::table('categories')->insert([
@@ -250,11 +252,11 @@ it('orders the category options by collated name, then by id', function (): void
 
     $mine = array_values(array_filter(
         $categories->all(),
-        static fn (stdClass $row): bool => str_starts_with((string) $row->slug, 'cb-order-'),
+        static fn (stdClass $row): bool => str_starts_with((string) $row->category_slug, 'cb-order-'),
     ));
 
     expect(array_map(static fn (stdClass $row): string => (string) $row->name, $mine))
-        ->toBe(['Appel', 'Appel', 'Émile', 'Zebra']);
+        ->toBe(['Appel', 'Appel (2)', 'Émile', 'Zebra']);
 
     expect((int) $mine[0]->id)->toBeLessThan((int) $mine[1]->id);
 });
@@ -314,4 +316,51 @@ it('prints a cash entry under the sign of the currency it was recorded in', func
     Livewire::actingAs($this->user)
         ->test(CashBookPage::class)
         ->assertSee(Money::ofMinor(-1250, 'USD')->format());
+});
+
+// The action gives up after five collisions on the fingerprint's booked_at
+// second, and the page toasted "Cash entry added." either way — six identical
+// coffees on one day produced twelve of that sentence and six rows. The last
+// five seconds of a day are the only place the walk can still run out.
+it('says an entry was not recorded rather than toasting one that was not', function (): void {
+    CarbonImmutable::setTestNow('2026-06-05 23:59:59');
+
+    $component = Livewire::actingAs($this->user)->test(CashBookPage::class);
+
+    for ($i = 0; $i < 5; $i++) {
+        $component->set('amount', '2,50')->set('counterparty', 'Kiosk')->set('date', '2026-06-05')
+            ->call('add')
+            ->assertSet('error', '')
+            ->assertDispatched('toast', message: 'Cash entry added.');
+    }
+
+    $component->set('amount', '2,50')->set('counterparty', 'Kiosk')->set('date', '2026-06-05')
+        ->call('add')
+        ->assertSet('error', 'That entry was not recorded. Try adding it again.')
+        ->assertNotDispatched('toast');
+
+    expect(DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->count())
+        ->toBe(5);
+
+    CarbonImmutable::setTestNow(null);
+});
+
+// The form clears itself on a successful add, so a reader told the entry was
+// not recorded on a cleared form has to reconstruct what they typed.
+it('keeps what the reader typed when the entry was not recorded', function (): void {
+    CarbonImmutable::setTestNow('2026-06-05 23:59:59');
+
+    $component = Livewire::actingAs($this->user)->test(CashBookPage::class);
+
+    for ($i = 0; $i < 5; $i++) {
+        $component->set('amount', '2,50')->set('counterparty', 'Kiosk')->set('date', '2026-06-05')->call('add');
+    }
+
+    $component->set('amount', '2,50')->set('counterparty', 'Kiosk')->set('description', 'coffee')->set('date', '2026-06-05')
+        ->call('add')
+        ->assertSet('amount', '2,50')
+        ->assertSet('counterparty', 'Kiosk')
+        ->assertSet('description', 'coffee');
+
+    CarbonImmutable::setTestNow(null);
 });

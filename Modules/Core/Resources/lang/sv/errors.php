@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Tillbaka till Beatrax',
 
+    'not_saved' => 'Ingenting sparades. Dina uppgifter är oförändrade — försök igen.',
+
+    'no_longer_here' => 'Det finns inte längre.',
+
     '404' => [
         'title' => 'Den här sidan finns inte',
         'body' => 'Länken kan vara gammal, eller så har sidan bytt namn. Det är inget fel på dina uppgifter.',

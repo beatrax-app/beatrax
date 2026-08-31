@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Numele categoriei nu poate fi gol.',
         'name_duplicate' => 'Există deja o categorie cu acest nume.',
+        'category_not_saved' => 'Această categorie nu a putut fi salvată. Încearcă din nou.',
+        'tag_refused' => 'Această etichetă nu a putut fi salvată. Închide selectorul și încearcă din nou.',
     ],
 ];

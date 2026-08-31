@@ -9,19 +9,17 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\OpenBanking\Internal\Dto\OpenBankingConnectionView;
+use Modules\OpenBanking\Internal\Enums\CuratedInstitution;
+use Modules\OpenBanking\Internal\Support\ConsentWindow;
 
-final class OpenBankingConnectionQuery
+final readonly class OpenBankingConnectionQuery
 {
-    private const AGGREGATOR = 'Enable Banking';
-
-    // Consent status transitions to 'expiring' once fewer than this many
-    // days remain until consent_expires_at.
-    private const EXPIRING_SOON_DAYS = 14;
+    private const string AGGREGATOR = 'Enable Banking';
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly OpenBankingSecretsRepository $secrets,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private OpenBankingSecretsRepository $secrets,
+        private Clock $clock,
     ) {}
 
     public function current(int $userId): ?OpenBankingConnectionView
@@ -55,7 +53,7 @@ final class OpenBankingConnectionQuery
             enabled: $enabled,
             institutionId: $institutionId,
             bankDisplayName: self::bankDisplayNameFor($institutionId),
-            consentStatus: $this->consentStatusFor($consentExpiresAt),
+            consentStatus: ConsentWindow::fromStoredRow($row, $this->clock->now())->status(),
             consentExpiresAt: $consentExpiresAt,
             lastSuccessfulSyncAt: $lastSuccessfulSyncAt,
             lastAttemptAt: $lastAttemptAt,
@@ -65,33 +63,11 @@ final class OpenBankingConnectionQuery
         );
     }
 
-    /**
-     * @return 'connected'|'expiring'|'expired'
-     */
-    private function consentStatusFor(?CarbonImmutable $consentExpiresAt): string
-    {
-        if ($consentExpiresAt === null) {
-            return 'expired';
-        }
-
-        $now = $this->clock->now();
-
-        return match (true) {
-            $consentExpiresAt->lessThanOrEqualTo($now) => 'expired',
-            $consentExpiresAt->lessThanOrEqualTo($now->addDays(self::EXPIRING_SOON_DAYS)) => 'expiring',
-            default => 'connected',
-        };
-    }
-
     // open_banking_connections.bank_display_name exists but is never populated,
     // so the name is derived from the institution id at read time.
     private static function bankDisplayNameFor(string $institutionId): string
     {
-        return match ($institutionId) {
-            'ASNBNL21' => 'ASN Bank',
-            'SNSBNL21' => 'SNS (de Volksbank)',
-            default => $institutionId,
-        };
+        return CuratedInstitution::tryFrom($institutionId)?->displayName() ?? $institutionId;
     }
 
     private static function toDateTime(mixed $value): ?CarbonImmutable

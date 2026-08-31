@@ -27,6 +27,5 @@ final class SourceTransactionDto extends Data
         public readonly int $sourceRowIndex,
         public readonly ?int $settledAmountMinor = null,
         public readonly ?string $settledCurrency = null,
-        public readonly ?string $fxRateUsed = null,
     ) {}
 }

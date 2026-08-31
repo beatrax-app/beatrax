@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Modules\Budgets\Models\EnvelopeAssignment;
 use Modules\Budgets\Models\EnvelopeSetting;
 use Modules\Budgets\Public\Services\CarryoverQuery;
+use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -89,13 +89,7 @@ it('default reduce_to_budget resets carried_in to zero next period and debits th
     $next = app(PeriodQuery::class)->next($current);
 
     // No EnvelopeSetting row at all: the implicit default is reduce_to_budget.
-    EnvelopeAssignment::create([
-        'user_id' => $this->user->id,
-        'category_id' => $this->groceries->id,
-        'period_start' => $current->start->toDateString(),
-        'assigned_minor' => 10000,
-        'currency' => 'EUR',
-    ]);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $current->start, 10000);
     overspendTx($this->user->id, $this->account->id, $this->run->id, -13000, $this->groceries->id, $current->start);
     // available = 10000 - 13000 = -3000 (overspent €30).
 
@@ -117,13 +111,7 @@ it('carry_negative keeps the negative in the envelope and leaves the pool untouc
         'overspend_mode' => 'carry_negative',
     ]);
 
-    EnvelopeAssignment::create([
-        'user_id' => $this->user->id,
-        'category_id' => $this->groceries->id,
-        'period_start' => $current->start->toDateString(),
-        'assigned_minor' => 10000,
-        'currency' => 'EUR',
-    ]);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $current->start, 10000);
     overspendTx($this->user->id, $this->account->id, $this->run->id, -13000, $this->groceries->id, $current->start);
 
     $before = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $current);

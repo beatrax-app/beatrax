@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'per_month_suffix' => '/mo',
     'page_title' => ':name · Beatrax',
     'variance_tolerance_aria' => 'Variance tolerance',
     'tolerance' => 'Tolerance',

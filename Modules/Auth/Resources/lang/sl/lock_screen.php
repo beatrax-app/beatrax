@@ -16,7 +16,7 @@ return [
     'ok_aria' => 'V redu — potrdi PIN',
     'ok' => 'V redu',
 
-    'error_too_short' => 'PIN mora imeti vsaj 6 števke.',
+    'error_pin_shape' => 'PIN mora imeti :min do :max števk — samo številke.',
 
     'error_backoff' => 'Preveč poskusov — poskusi znova čez :wait.',
 

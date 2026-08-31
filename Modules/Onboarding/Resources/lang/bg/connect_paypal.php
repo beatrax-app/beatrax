@@ -6,7 +6,7 @@ return [
     'eyebrow' => 'Твоят профил в PayPal',
     'h1' => 'Свържи своя профил в PayPal',
 
-    'lede_html' => 'Пусни експорта с детайли за транзакциите от PayPal — в нидерландски профил той се води <em lang="nl">Rapport Transactiegegevens</em>. Отчетът за салдото (<span lang="nl">Saldorapport</span>) не върши работа — нужни са ни данни за всяко събитие.',
+    'lede_html' => 'Пусни експорта на движенията от PayPal — по един ред на транзакция, а не обобщението на салдото. PayPal именува отчетите си на езика на профила ти, а засега четем нидерландската двойка: <em lang="nl">Rapport Transactiegegevens</em>, а не <span lang="nl">Saldorapport</span>. Ако твоят излиза на друг език, превключи PayPal на нидерландски, преди да изтеглиш.',
 
     'format_group_aria' => 'PayPal експортира само в CSV',
     'got_it_as' => 'Получи го като:',
@@ -20,7 +20,7 @@ return [
         'download_label' => 'Изтегли като CSV',
     ],
 
-    'drop_lead' => 'Пусни CSV файла с детайли за транзакциите тук',
+    'drop_lead' => 'Пусни тук експорта на движенията',
     'browse_file' => 'или потърси файл',
 
     'file_ready' => '· ✓ готово',
@@ -29,9 +29,9 @@ return [
     'continue' => 'Продължи →',
 
     'errors' => [
-        'required' => 'Първо пусни в полето CSV файла PayPal Rapport Transactiegegevens.',
-        'max' => 'Файлът е твърде голям. Експортите PayPal Rapport Transactiegegevens обикновено са доста под 10 MB.',
-        'extensions' => 'Този файл не прилича на CSV от PayPal. Изтегли от PayPal Rapport Transactiegegevens (а не отчета за салдото Saldorapport) като CSV.',
+        'required' => 'Първо пусни в полето експорта на движенията от PayPal.',
+        'max' => 'Файлът е твърде голям. Експортът на движенията от PayPal обикновено е доста под 10 MB.',
+        'extensions' => 'Този файл не прилича на CSV от PayPal. Изтегли експорта на движенията — по един ред на транзакция, а не обобщението на салдото — като CSV.',
         'unreadable' => 'Файлът не можа да бъде прочетен. Пълната грешка е в /dev/logs.',
     ],
 ];

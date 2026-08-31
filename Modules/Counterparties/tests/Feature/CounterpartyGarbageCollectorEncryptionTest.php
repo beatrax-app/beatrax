@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Mockery\MockInterface;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Counterparties\Internal\Jobs\CounterpartyGarbageCollectorJob;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -103,6 +104,7 @@ it('skips the merchant_name-dependent prune with a logged warning when the KEK i
     $job = new CounterpartyGarbageCollectorJob($user->id);
     $job->handle(
         $this->app->make(DatabaseManager::class),
+        $this->app->make(Clock::class),
         $session,
         $this->app->make(AppLockKeyService::class),
         $this->app->make(EncryptionMigrationService::class),
@@ -132,6 +134,7 @@ it('decrypts merchant_name in PHP and compares against alias friendly_names when
     $job = new CounterpartyGarbageCollectorJob($user->id);
     $job->handle(
         $this->app->make(DatabaseManager::class),
+        $this->app->make(Clock::class),
         $session,
         $this->app->make(AppLockKeyService::class),
         $this->app->make(EncryptionMigrationService::class),
@@ -156,6 +159,7 @@ it('leaves a non-encrypted user\'s prune completely unchanged (regression lock)'
     $job = new CounterpartyGarbageCollectorJob($user->id);
     $job->handle(
         $this->app->make(DatabaseManager::class),
+        $this->app->make(Clock::class),
         $session,
         $this->app->make(AppLockKeyService::class),
         $this->app->make(EncryptionMigrationService::class),
@@ -167,13 +171,13 @@ it('leaves a non-encrypted user\'s prune completely unchanged (regression lock)'
     expect(DB::table('counterparties')->where('id', $orphanId)->count())->toBe(0);
 });
 
-it('keeps the legacy bare 1-arg handle() test-call shape working (all crypto params default null)', function (): void {
+it('keeps the short handle() call shape working (all crypto params default null)', function (): void {
     $user = cgeUser('cge-legacy-call');
     $aliasProtectedId = cgeCounterparty($user->id, 'cge-legacy-spotify', 'Spotify', 'Spotify');
     cgeAlias($user->id, 'SPOTIFY AB', 'Spotify');
 
     $job = new CounterpartyGarbageCollectorJob($user->id);
-    $job->handle($this->app->make(DatabaseManager::class));
+    $job->handle($this->app->make(DatabaseManager::class), $this->app->make(Clock::class));
 
     expect(DB::table('counterparties')->where('id', $aliasProtectedId)->count())->toBe(1);
 });

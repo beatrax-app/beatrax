@@ -14,6 +14,7 @@ use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Category;
 
@@ -100,7 +101,7 @@ it('renders a multi-condition rule with the combinator badge + N-more chip and p
     // The priority=5 rule ("SECOND") renders before the priority=50 rule
     // ("FIRST"): the table is the engine's execution order.
     Livewire::test(RulesPage::class)
-        ->assertSee('ALL')
+        ->assertSee(Lang::get('categorization::rules.combinator_all'))
         ->assertSee('+1 more')
         ->assertSee('Category: Groceries')
         ->assertSee('Counterparty: Spotify')

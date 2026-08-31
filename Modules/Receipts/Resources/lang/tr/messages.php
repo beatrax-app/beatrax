@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Bir e-posta iletisi (.eml) veya posta kutusu arşivi (.mbox) bırak. Eşleştirici, PayPal fişlerini tanır ve bunları kanonik işlemler olarak gösterir; eşleşmeyen gönderenler ayıklama için denetim kaydında kalır.',
-    ],
-
     'conflict' => [
 
         'field' => [

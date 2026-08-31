@@ -17,6 +17,7 @@ use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 use stdClass;
@@ -28,7 +29,7 @@ use stdClass;
 /**
  * @link ../../../../.docs/architecture/module-boundaries.md#a-public-facade-keeps-its-door-and-moves-its-work
  */
-final class PairingGateway
+final readonly class PairingGateway
 {
     use ReportsLocalPairingState;
 
@@ -39,15 +40,15 @@ final class PairingGateway
     public const string STATE_EXPIRED = PairingState::Expired->value;
 
     public function __construct(
-        private readonly DeviceIdentityLoader $identityLoader,
-        private readonly PairingTokenService $tokenService,
-        private readonly WordCodeEncoder $wordEncoder,
-        private readonly PairingTokenRowReader $rows,
-        private readonly DeviceIdentityService $identityService,
-        private readonly GdkRotationService $rotationService,
-        private readonly PairingPeerLink $peerLink,
-        private readonly SafetyNumberDeriver $safetyDeriver,
-        private readonly PeerDiscovery $discovery,
+        private DeviceIdentityLoader $identityLoader,
+        private PairingTokenService $tokenService,
+        private WordCodeEncoder $wordEncoder,
+        private PairingTokenRowReader $rows,
+        private DeviceIdentityService $identityService,
+        private GdkRotationService $rotationService,
+        private PairingPeerLink $peerLink,
+        private SafetyNumberDeriver $safetyDeriver,
+        private PeerDiscovery $discovery,
     ) {}
 
     // The companion question to discoverInitiatorOnLan()'s NoPeerReached: could
@@ -62,11 +63,25 @@ final class PairingGateway
         return $this->discovery->reach();
     }
 
+    // Whether an undelivered frame had anywhere to go at all: a browse this
+    // device can actually run, a configured relay, or an address the scanned
+    // code carried. It is the whole of what a screen may say about a failed
+    // send — which roads existed here, never a cause on the far side.
+    /**
+     * @link ../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md
+     */
+    public function hadAnyRoadTo(string $tokenHash, string $peerDeviceId): bool
+    {
+        return $this->discovery->reach()->silenceMeansNoPeers()
+            || $this->peerLink->hasRelayRoad()
+            || $this->peerLink->knowsWhereToReach($tokenHash, $peerDeviceId);
+    }
+
     // A word-code carries the token alone, so a fresh responder has no local row to
     // accept against; this asks the LAN for the identity half the code cannot carry.
     // On failure it returns WHY, because the two reasons need opposite advice.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
     public function discoverInitiatorOnLan(string $wordCode): array|PairingOfferLookup
     {
@@ -136,15 +151,9 @@ final class PairingGateway
 
     // Closes the gap where acceptToken() finds no local row on a fresh device
     // database. The seeded row still requires the full accept + both-confirm ceremony.
-    public function seedResponderToken(
-        string $tokenHex,
-        string $initiatorDeviceId,
-        string $initiatorEd25519Hex,
-        string $initiatorX25519Hex,
-        int $userId,
-        ?string $initiatorName = null,
-    ): void {
-        $this->tokenService->seedFromInitiator($userId, $initiatorDeviceId, $initiatorEd25519Hex, $initiatorX25519Hex, $tokenHex, $initiatorName);
+    public function seedResponderToken(string $tokenHex, PairingPeerIdentity $initiator, int $userId): void
+    {
+        $this->tokenService->seedFromInitiator($userId, $initiator, $tokenHex);
     }
 
     // Raw hex — the QR path. The word-code path base32-encodes this same hex

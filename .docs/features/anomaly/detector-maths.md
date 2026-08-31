@@ -26,10 +26,15 @@ Every sample is drawn from `transactions` under the same five constraints:
 
 - `user_id` matches (explicitly — these detectors run under the queue and
   the console, where the `BelongsToUser` global scope does not fire),
-- `type` is in the direction's transaction-type set (an expense is never
-  compared against income),
+- `type` is in the direction's **external-movement** set — `[expense, fee]`
+  facing down, `[income, refund]` facing up, from
+  `TransactionType::externalMovementValuesFor()`. An expense is never compared
+  against income, and neither is compared against the reader's own transfers:
+  a month of savings moves used to sit in the expense sample and raise the bar
+  a genuine anomaly had to clear (see
+  [what this module does not judge](architecture.md#what-this-module-does-not-judge)),
 - `settled_currency` matches the charge under test exactly,
-- `posted_at >= now - WINDOW_MONTHS`,
+- `posted_at >= the charge's own posted_at - WINDOW_MONTHS`,
 - `id !=` the charge under test, so a charge is never part of its own
   baseline.
 
@@ -50,8 +55,24 @@ its own latest amount — a salary spike rendered as
 `WINDOW_MONTHS = 12`. Twelve months is the top of the intended 6–12 month
 range: it covers a full seasonal cycle — an annual subscription renewal, a
 salary step — without letting amounts from two years ago define "typical".
-The window start is computed with `subMonthsNoOverflow()`, so running on the
-31st does not skip a month.
+The window start is computed with `subMonthsNoOverflow()`, so a charge posted
+on the 31st does not skip a month.
+
+### The window is anchored on the charge, not on today
+
+The anchor is the row's own `posted_at`, resolved once per charge by
+`Modules\Anomaly\Internal\Support\ChargeAnchor` and read by all three
+detectors, so no verdict can be half about the charge and half about the wall
+clock.
+
+Anchoring the baseline on `now` was safe only while every charge was
+evaluated within days of being posted, and it never was: `SafetyNetAnomalySweepJob`
+selects on `transactions.created_at`, which matches freshly-imported *historic*
+rows. A charge posted 2024-03-15 and imported on 2026-08-30 was asked "is this
+first ever?" of its own date and "is this large?" of a twelve-month window
+opening 533 days later — a window holding no row contemporaneous with the
+charge, and usually no rows at all. Both detectors then abstained for want of a
+sample, so a whole backfilled statement produced no alerts and looked clean.
 
 ## Large vs typical, per merchant
 
@@ -103,7 +124,8 @@ applies.
 
 ### The sensitivity knob
 
-The user has one control, a sensitivity level from 1 to 100, and
+The user has one control, an `AnomalySensitivity` from
+`AnomalySensitivity::MIN_PERCENT` to `MAX_PERCENT`, and
 `kForSensitivity()` maps it onto the trip multiplier:
 
 ```
@@ -113,10 +135,19 @@ k = clamp(K_BASE − K_SLOPE × (sensitivity − K_PIVOT), K_MIN, K_MAX)
 with `K_BASE = 3.0`, `K_SLOPE = 0.04`, `K_PIVOT = 50.0`, `K_MIN = 1.5`,
 `K_MAX = 4.0`. At the 50% default this yields exactly `k = 3.0`. The slope is
 negative in effect: **higher sensitivity means lower k means more alerts.**
-The clamp is reached at both ends of the slider — sensitivity 0 would compute
-k = 5.0 and is held at 4.0; sensitivity 100 would compute k = 1.0 and is held
-at 1.5 — so neither extreme can turn the feature off entirely or turn it into
-a firehose.
+
+The parameter is the value object, not a bare percent, and that is
+load-bearing: the `clamp` above is a rounding guard, and it was doing
+duty as a range check it cannot perform. A stored `500` — which nothing
+but the settings form ever validated — arrived as `k = -15`, clamped to
+`K_MIN`, and the knob silently became maximum sensitivity. Anything
+outside the range now reads as `AnomalySensitivity::default()` on the
+way out of the row, and is refused on the way in.
+The clamp is reached at both ends of the slider — `MIN_PERCENT` is 1, and
+sensitivity 1 computes k = 4.96 and is held at 4.0, while sensitivity 100
+computes k = 1.0 and is held at 1.5 — so neither extreme can turn the feature
+off entirely or turn it into a firehose. Sensitivity 0 is not one of the ends:
+the value object refuses it, and a stored 0 reads back as the default.
 
 The k actually used is recorded on the alert as `sensitivity_percent_used`,
 so an alert stays explainable after the user moves the slider.
@@ -164,13 +195,19 @@ above `CATEGORY_PERCENTILE = 95.0` of the category sample.
 `RobustStatistics::exceedsPercentile()` compares with `>=`, not `>`, and this
 is deliberate. `percentile()` interpolates linearly between ranks: for a
 sample of size n it takes `rank = (p/100) × (n − 1)` and blends the two
-neighbouring sorted values. At p95 with a small n, that rank sits on or
-essentially on the last index — for n = 5, `rank = 3.8`; for n = 6,
-`rank = 4.75` — so **p95 collapses onto the sample maximum**. Under a strict
-`>`, a charge that exactly repeats the largest charge the user has ever made
-in that category would be below threshold and pass silently. Repeat-of-the-
-extreme is precisely the case the feature exists to catch, so the boundary
-includes the tie.
+neighbouring sorted values. At p95 with a small n that rank lands just short
+of the last index — for n = 5, `rank = 3.8`; for n = 6, `rank = 4.75` — so on
+a sample of five distinct values `1,2,3,4,5` the threshold is **4.8, not 5**.
+A charge repeating a *unique* maximum therefore clears the bar under either
+comparison, and that is not what the tie is for.
+
+What the tie is for is a maximum the sample already holds twice. Interpolating
+between two equal neighbours returns that value exactly: `1,2,3,5,5` puts p95
+on **5.0**, and a one-element sample returns its own element. Under a strict
+`>` a charge equal to it is *not* above threshold and passes silently — and a
+user who has already made two charges at the top of a category is precisely
+the user whose third one matters. The boundary includes the tie so that
+equal-to-the-extreme fires.
 
 `percentile()` degenerates safely: an empty sample returns 0.0, a
 single-element sample returns that element.
@@ -182,6 +219,16 @@ which must hold:
 
 1. the user has **zero** prior `transactions` rows for this counterparty
    (excluding the charge itself), and
+
+   *Prior*, on the date, not merely *other*. Asking for no other charge made
+   the reason unreachable from any path that sees a merchant's whole history:
+   the first charge of every merchant the user went on to use again was
+   disqualified by its own successors, and a full backfill produced zero
+   `first_time` alerts over a dataset full of new payees. Same-day siblings
+   cannot be ordered by date, so the `id <` tie-break settles those — the same
+   convention `DuplicateChargeDetector`'s backward window uses, which is what
+   makes exactly one charge of a same-day pair the first one.
+
 2. the charge is at or above p95 of the user's *overall* same-direction,
    same-settled-currency distribution over the same 12-month window.
 
@@ -256,6 +303,16 @@ any query runs. Statistically a €1.20 coffee can be a five-sigma event
 against a merchant whose history is all €0.30; it is not worth an alert.
 The floor is a per-user setting, checked first, so the detectors do no work
 at all on small charges.
+
+It is an **amount**, not a count of minor units. Each detector compares it
+against the charge's own `settled_amount_minor`, which is denominated in
+whatever the row settled in, so `AnomalyEvaluator::floorIn()` converts the
+reader's figure into that currency once before any detector sees it. Read raw,
+a yen — which has no minor unit at all — cleared a euro floor roughly a hundred
+times too easily: a JPY1,200 charge worth about €7.55 carried the integer 1200
+past a floor meaning €10.00. A currency no rate reaches is left unfloored
+rather than floored by a number that means nothing in it, because an alert too
+many is one the reader dismisses and one never raised is one they never see.
 
 ## Where the numbers live
 

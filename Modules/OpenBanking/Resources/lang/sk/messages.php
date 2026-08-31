@@ -20,6 +20,7 @@ return [
         'manage' => 'Spravovať open banking',
         'not_connected' => 'Nie je pripojená žiadna banka. Pripoj jednu a transakcie sa budú importovať automaticky.',
         'expired' => 'Súhlas expiroval — treba sa znova pripojiť.',
+        'revoked' => 'Tvoja banka ukončila pripojenie — pripoj sa znova.',
         'connected' => 'Pripojené cez Enable Banking. Banka: :bank. Posledná synchronizácia: :when.',
         'never' => 'nikdy',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Expirovaný — pripoj sa znova',
         'pill_expiring' => 'Čoskoro vyprší',
         'pill_connected' => 'Pripojené',
+        'pill_revoked' => 'Ukončené bankou — pripoj sa znova',
         'whats_fetched_label' => 'Čo sa sťahuje',
         'whats_fetched' => 'Zaúčtované transakcie + zostatky, posledných 90 dní',
         'last_successful_sync_label' => 'Posledná úspešná synchronizácia',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — zlyhalo (:reason)',
         'reason_consent_expired' => 'súhlas expiroval',
         'reason_error' => 'chyba',
+        'reason_truncated' => 'zastavené predčasne',
+        'reason_nothing_imported' => 'nič sa nepodarilo zaznamenať',
+        'reason_consent_revoked' => 'ukončené bankou',
         'disconnect_button' => 'Odpojiť',
     ],
 
     'consent_banner' => [
         'heading' => 'Súhlas expiroval — pripoj sa znova',
+        'heading_revoked' => 'Tvoja banka ukončila pripojenie',
         'body' => 'Posledná úspešná synchronizácia: :when. Pripoj sa znova a automatická synchronizácia bude pokračovať.',
+        'body_revoked' => 'Tvoja banka alebo Enable Banking odobrala prístup, takže synchronizácia sa zastavila. Posledná úspešná synchronizácia: :when. Pripoj sa znova a bude pokračovať.',
         'never' => 'nikdy',
         'reconnect' => 'Znova pripojiť',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking je dočasne nedostupné. Skús to o chvíľu znova.',
         'new_found' => 'Nájdená :count nová transakcia.|Nájdené :count nové transakcie.|Nájdených :count nových transakcií.',
         'none' => 'Žiadne nové transakcie.',
+        'none_importable' => 'Tvoja banka poslala transakcie, ale ani jednu sa nepodarilo zaznamenať. Otvor kontrolu importu a zisti prečo.',
+        'in_progress' => 'Synchronizácia už prebieha. Skúste to o chvíľu znova.',
+        'truncated' => 'Tvoja banka mala viac transakcií, než zvládne jedna synchronizácia stiahnuť, takže tento beh skončil predčasne. Nič sa nezaznamenalo ako synchronizované — ďalšia synchronizácia začne na rovnakom mieste.',
     ],
 
     'disconnect' => [
@@ -139,10 +149,6 @@ return [
             'save_application_id_failed' => 'Identifikátor aplikácie sa nepodarilo uložiť na disk — skontroluj práva priečinka so secrets a skús to znova.',
             'choose_bank' => 'Skôr než budeš pokračovať, vyber banku.',
         ],
-    ],
-
-    'alert' => [
-        'reconsent' => 'Znova pripoj svoju banku',
     ],
 
     'errors' => [

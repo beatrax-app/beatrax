@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Sinu krediitkaart (ICS)',
+    'eyebrow' => 'Sinu krediitkaart',
     'h1' => 'Võta oma kuised PDF-väljavõtted',
-    'lede' => 'Lohista siia kõik oma kuised ICS PDF-väljavõtted — me ühendame need üheks eelvaateks.',
+    'lede' => 'Lohista siia kõik oma kuised PDF-väljavõtted — me ühendame need üheks eelvaateks.',
 
     'format_group_aria' => 'ICS ekspordib ainult PDF-i',
+    'issuer_note' => 'ICS on praegu ainus kaardiväljastaja, keda oskame lugeda, ja sedagi ainult tema hollandikeelse väljavõtte kujul. Kui sinu kaart on mõnelt teiselt väljastajalt, jäta see samm vahele.',
     'got_it_as' => 'Sain selle kujul:',
     'badge_only_format' => 'ainus vorming',
 

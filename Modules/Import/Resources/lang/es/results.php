@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Subir otro extracto',
 
+    'chain' => [
+        'heading' => 'Resolviendo cadenas…',
+        'pending' => 'En cola. El resolutor de cadenas empezará en breve.',
+        'running' => 'Enlazando cadenas de financiación y descomponiendo liquidaciones del extracto.',
+    ],
+
     'issues' => [
         'row' => 'Fila :row: :reason',
         'file_stopped' => 'El archivo no se ha podido leer más allá de la fila :row. Nada posterior a esa fila se ha importado.',

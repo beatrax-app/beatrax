@@ -119,7 +119,7 @@ thing that forces the event onto a Public surface.
   envelope amounts per expense category (via the shared,
   ownership-checked `EnvelopeWriter::setAssigned()` keyed to
   `PeriodQuery::current()` — new users start in the envelope model
-  from day one, never the retired `category_budgets` table);
+  from day one);
   `CountryStep` records the user's country preference through
   `Modules\Core\Public\Services\UserCountry`, which raises
   `UserCountryChanged`; Tax listens for that event and seeds the
@@ -196,9 +196,8 @@ The wizard has two exits and they mean different things.
 `wizard_progress` exactly as it stands, so `ResumeStepResolver` still
 finds the first pending step on the next visit and `isResuming` raises
 the resume banner. It used to mark every not-done row `skipped`, which
-is why a device walk found it abandoning 229 parsed transactions that
-were staged and waiting for the commit step, under a control whose
-aria-label says it "saves your progress".
+abandoned parsed transactions that were staged and waiting for the commit
+step, under a control whose aria-label says it "saves your progress".
 
 The per-step "Skip this step" control is the other exit, and that one
 does mark its own row `skipped` — through `SetupWizard::skip()`, gated
@@ -227,8 +226,10 @@ GET /setup-wizard
   → SetupWizard::mount
        → re-run WizardProgressInitializer (idempotent safety net for
          a manual URL hit that raced UserInstalled)
-       → if ?force=1: reset every row for this user to pending +
-         completed_at=null (the "Settings → re-run setup" affordance)
+       → if ?force=1 AND the relative signature validates: reset
+         every row for this user to pending + completed_at=null
+         (the "Settings → re-run setup" affordance, which signs
+         its link); unsigned, it is logged and ignored
        → ResumeStepResolver::resolve($user) → step key ('' = all
          done/skipped, bounce to /)
        → render the matching Step SFC
@@ -295,10 +296,14 @@ IBAN, then re-previews the same stored file so the preview cache
 resolves against the new account. Without this, every row would
 resolve to `UnknownAccount`, land in status `error`, and the
 consolidated commit surface would show "0 rows" even though rows were
-visible. A CSV format pick additionally requires a bank-format hint
-(ASN/ING) — enforced both by the step's own validator and, as a
-backstop, by the `RunsImports` public-contract boundary — since CSV
-dialects aren't self-describing the way CAMT.053/MT940 are.
+visible. The account is named after the CSV layout the user picked,
+taking the label from the preset registry; CAMT.053 and MT940 name no
+issuer, so an account created from one gets a neutral translated name
+rather than a bank the user never chose. A CSV format pick
+additionally requires a layout pick — enforced both by the step's own
+validator and, as a backstop, by the `RunsImports` public-contract
+boundary — since CSV dialects aren't self-describing the way
+CAMT.053/MT940 are.
 
 `ConnectCardStep` and `ConnectPaypalStep` follow the same
 auto-create-then-re-preview pattern as `ConnectBankStep`, keyed to
@@ -310,6 +315,49 @@ every row and the alias bridge in `known_counterparty_ibans` maps to).
 several at once) and is tolerant of partial failure: a per-file parse
 error is logged and skipped rather than aborting the whole submit,
 and the step only surfaces a blocking error when every file failed.
+
+### What each connector step can actually read
+
+The wizard is the first screen a new install shows, so a format it does
+not offer is a capability the product has and never mentions. Two of the
+three upload steps are narrower than the app, and only one of those two
+is narrow by accident.
+
+- **`ConnectBankStep`** offers CAMT.053, MT940, and every layout
+  `CsvPresetRegistry::allLayouts()` holds. The CSV list is read from the
+  registry rather than written out in the step: it used to be a
+  hand-written constant naming ASN and ING NL only, while the registry —
+  and the `/imports` screen that reads it through `ImportType::Csv` —
+  already carried N26 and Revolut. A reader banking outside the
+  Netherlands was shown two Dutch banks and a `Continue` that imported
+  their file as CAMT.053. Adding a preset now offers it in the wizard;
+  the registry holds bank presets only, so nothing has to exclude
+  PayPal's own CSV. CAMT.053 and MT940 are ISO 20022 / SWIFT interchange
+  formats and are not country-scoped in any way — nothing in
+  `Modules/Ingestion` gates a format on a country.
+
+- **`ConnectPaypalStep`** reads the per-event activity download and not
+  the balance report, and — the part the copy has to carry —
+  `PaypalCsvLanguageProfile` registers exactly one language signature,
+  `nl`. PayPal names its reports in the account holder's own language,
+  so a German or Estonian reader's export is refused at the sniffer with
+  `UnsupportedPaypalCsvLanguageException`. The step therefore names the
+  report by what it is, gives the Dutch names as `lang="nl"`-tagged
+  helpers, and says outright that the Dutch export is the one read
+  today. Registering a second signature is what makes that copy stale.
+
+- **`ConnectCardStep`** is named for the category and states its issuer
+  in the body. `IcsPdfAdapter` parses the Dutch-language Mijn ICS
+  statement — Dutch month names and abbreviations, `Af`/`Bij` amount
+  markers, EUR settlement — so the reach is one issuer's one layout
+  whatever markets that issuer serves. A reader on another issuer is
+  told to skip the step rather than left to discover it by uploading.
+
+`asn-csv` and `ing-nl-csv` are genuinely one Dutch bank's layout each and
+are named as such; `n26-csv` and `revolut-csv` are pan-European issuers.
+There is no free-form column-mapping path: `GenericCsvAdapter` is the
+engine the header-name presets run on, not a layout a reader can
+configure, so a bank with no preset is directed at CAMT.053 or MT940.
 
 `ConnectEmailStep` is the odd one out among connector steps — it has
 no file upload and holds no secrets state itself. Gmail/Microsoft 365

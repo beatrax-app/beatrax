@@ -37,9 +37,13 @@ return [
     'parse_preview' => 'Analizar y previsualizar',
     'cancel_import' => 'Cancelar la importación',
 
-    'diff_new' => 'nuevos,',
-    'diff_unchanged' => 'sin cambios,',
-    'diff_conflicts' => 'conflictos.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: es · diff_unchanged — sin cambios is invariable, so both arms
+    // repeat it and the singular reads terse beside nuevo. The participle
+    // inalterado would agree but drops the wording this file already had.
+    'diff_new' => ':count nuevo|:count nuevos',
+    'diff_unchanged' => ':count sin cambios|:count sin cambios',
+    'diff_conflicts' => ':count conflicto|:count conflictos',
 
     'conflicts_heading' => 'Conflictos',
     'conflict_name' => 'nombre — actual: :existing → archivo: :file',
@@ -54,8 +58,7 @@ return [
     'test_heading' => 'Probar con mis transacciones',
     'test_help' => 'Edita el patrón generalizado de una fila para ver con qué transacciones coincidiría.',
     'typing' => 'Escribiendo…',
-    'matches_prefix' => 'Coincide con',
-    'matches_suffix' => 'transacciones de tu historial reciente.',
+    'matches' => 'Coincide con :count transacción de tu historial reciente.|Coincide con :count transacciones de tu historial reciente.',
 
     'merge_modal_title' => 'Fusionar :count alias|Fusionar :count alias',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'No se ha subido ningún archivo.',
         'unreadable' => 'No se ha podido leer el archivo subido.',
         'too_short' => 'El patrón es demasiado corto para probarlo.',
+        'file_not_yaml' => 'Este archivo no es YAML válido, así que no se ha podido leer nada de él. Exporta tus alias otra vez y sube el archivo que obtengas.',
+        'file_unreadable_as_yaml' => 'Este archivo no se ha podido leer como una lista de alias. Exporta tus alias otra vez y sube el archivo que obtengas.',
+        'file_has_no_entries_list' => 'Este archivo no empieza por una lista entries: de primer nivel, así que no contiene alias que importar. Comprueba que has elegido el archivo correcto.',
+        'entry_is_not_a_mapping' => 'La entrada :entry es un valor suelto donde se esperaban un patrón y un nombre. Dale los dos campos, o elimínala, y sube el archivo otra vez.',
+        'entry_is_missing_a_field' => 'A la entrada :entry le falta el patrón o el nombre, y un alias necesita los dos. Completa lo que falta, o elimina esa entrada, y sube el archivo otra vez.',
     ],
 ];

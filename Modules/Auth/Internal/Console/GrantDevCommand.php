@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Console;
 
 use Illuminate\Console\Command;
+use Modules\Auth\Public\Support\Username;
 use Modules\Core\Models\User;
 
 // The Dev Console gates the equivalent action behind a triple-confirm modal.
@@ -21,7 +22,7 @@ class GrantDevCommand extends Command
     {
         // Larastan narrows the required `username` argument to string from the
         // typed signature, so no is_string() guard is needed.
-        $username = strtolower(trim($this->argument('username')));
+        $username = Username::normalize($this->argument('username'));
         if ($username === '') {
             $this->error('Username is required.');
 

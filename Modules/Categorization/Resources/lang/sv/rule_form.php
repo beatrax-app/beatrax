@@ -24,6 +24,7 @@ return [
     'to' => 'till',
     'text_placeholder' => 't.ex. SPOTIFY',
     'remove_condition' => 'Ta bort villkor',
+    'remove_condition_caption' => 'Ta bort',
     'add_condition' => '+ Lägg till villkor',
 
     'then' => 'Då',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Lägg till',
     'deduction_category_aria' => 'Avdragskategori för åtgärd :number',
     'remove_action' => 'Ta bort åtgärd',
+    'remove_action_caption' => 'Ta bort',
     'add_action' => '+ Lägg till åtgärd',
 
     'this_year_only' => 'Endast i år ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Åtgärder med skatteetikett tillämpas nästa gång du kör reglerna igen, inte vid den aktuella importen.',
 
     'priority' => 'Prioritet',
-    'priority_help' => 'Lägre nummer körs först. Regler utan gemensamma fält krockar aldrig.',
+    'priority_help' => 'Regler körs från det lägsta numret och uppåt, så det högsta numret vinner när två sätter samma fält. Regler utan gemensamma fält krockar aldrig.',
 
     'cancel' => 'Avbryt',
     'save_changes' => 'Spara ändringar',

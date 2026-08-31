@@ -20,6 +20,7 @@ return [
         'manage' => 'Manage open banking',
         'not_connected' => 'No bank connected. Connect one to import transactions automatically.',
         'expired' => 'Consent expired — reconnect needed.',
+        'revoked' => 'Your bank ended the connection — reconnect needed.',
         'connected' => 'Connected to :bank via Enable Banking. Last synced :when.',
         'never' => 'never',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Expired — reconnect',
         'pill_expiring' => 'Expiring soon',
         'pill_connected' => 'Connected',
+        'pill_revoked' => 'Ended by your bank — reconnect',
         'whats_fetched_label' => 'What’s fetched',
         'whats_fetched' => 'Booked transactions + balances, last 90 days',
         'last_successful_sync_label' => 'Last successful sync',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — failed (:reason)',
         'reason_consent_expired' => 'consent expired',
         'reason_error' => 'error',
+        'reason_truncated' => 'stopped early',
+        'reason_nothing_imported' => 'nothing could be filed',
+        'reason_consent_revoked' => 'ended by your bank',
         'disconnect_button' => 'Disconnect',
     ],
 
     'consent_banner' => [
         'heading' => 'Consent expired — reconnect',
+        'heading_revoked' => 'Your bank ended the connection',
         'body' => 'Your last successful sync was :when. Reconnect to resume automatic syncing.',
+        'body_revoked' => 'Your bank or Enable Banking withdrew access, so syncing has stopped. Your last successful sync was :when. Reconnect to resume.',
         'never' => 'never',
         'reconnect' => 'Reconnect',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking is temporarily unavailable. Try again shortly.',
         'new_found' => ':count new transaction found.|:count new transactions found.',
         'none' => 'No new transactions.',
+        'none_importable' => 'Your bank sent transactions, but none of them could be filed. Open the import review to see why.',
+        'in_progress' => 'A sync is already running. Try again in a moment.',
+        'truncated' => 'Your bank had more transactions than one sync can fetch, so this run stopped early. Nothing was recorded as synced — the next sync starts from the same point.',
     ],
 
     'disconnect' => [
@@ -139,10 +149,6 @@ return [
             'save_application_id_failed' => 'Could not save your application ID to disk — check your secrets-directory permissions and try again.',
             'choose_bank' => 'Choose a bank before continuing.',
         ],
-    ],
-
-    'alert' => [
-        'reconsent' => 'Reconnect your bank',
     ],
 
     'errors' => [

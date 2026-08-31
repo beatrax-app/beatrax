@@ -24,6 +24,7 @@ return [
     'to' => 'ja',
     'text_placeholder' => 'esim. SPOTIFY',
     'remove_condition' => 'Poista ehto',
+    'remove_condition_caption' => 'Poista',
     'add_condition' => '+ Lisää ehto',
 
     'then' => 'Sitten',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Lisää perään',
     'deduction_category_aria' => 'Vähennyskategoria toiminnolle :number',
     'remove_action' => 'Poista toiminto',
+    'remove_action_caption' => 'Poista',
     'add_action' => '+ Lisää toiminto',
 
     'this_year_only' => 'Vain tämä vuosi ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Verotunnistetoiminnot tulevat voimaan seuraavalla uudelleenkäytöllä, eivät nykyisessä tuonnissa.',
 
     'priority' => 'Prioriteetti',
-    'priority_help' => 'Pienemmät numerot ajetaan ensin. Säännöt, joilla ei ole yhteisiä kenttiä, eivät koskaan ole ristiriidassa.',
+    'priority_help' => 'Säännöt suoritetaan pienimmästä numerosta ylöspäin, joten suurin numero voittaa, kun kaksi asettaa saman kentän. Säännöt, joilla ei ole yhteisiä kenttiä, eivät koskaan ole ristiriidassa.',
 
     'cancel' => 'Peruuta',
     'save_changes' => 'Tallenna muutokset',

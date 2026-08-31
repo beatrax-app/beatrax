@@ -35,7 +35,7 @@ function ivtSeedMonthly(
     $start = CarbonImmutable::parse('2025-05-25');
 
     for ($i = 0; $i < 12; $i++) {
-        $postedAt = $start->addMonths($i)->toDateString();
+        $postedAt = $start->addMonthsNoOverflow($i)->toDateString();
 
         $db->connection()->table('transactions')->insert([
             'user_id' => $user->id,

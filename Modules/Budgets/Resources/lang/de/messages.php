@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategorie',
         'assigned' => 'Zugewiesen',
+        'carried_in' => 'Übertragen',
+        'moved' => 'Umgebucht',
         'spent' => 'Ausgegeben',
         'available' => 'Verfügbar',
         'if_overspent' => 'Bei Überschreitung',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Verlauf ausblenden ↑',
         'moved_from' => 'Verschoben aus :category',
         'moved_to' => 'Verschoben nach :category',
+        'moved_unreadable' => 'Mit :category verschoben, von einer neueren Version von Beatrax',
         'undo' => 'Rückgängig',
     ],
 
     'phone' => [
         'spent' => 'Ausgegeben :amount',
+        'carried_in' => 'Übertragen :amount',
+        'moved' => 'Umgebucht :amount',
         'available' => 'Verfügbar :amount',
         'notify_at' => 'Benachrichtigen bei',
     ],

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Luokittelematon',
+    'no_counterparty' => 'Ei vastapuolta',
+    'unavailable_counterparty' => 'Vastapuolta ei ole tällä laitteella',
     'title' => 'Raportit',
     'page_title' => 'Raportit · Beatrax',
     'subtitle' => 'Kokoa raportti tilikirjastasi.',
@@ -109,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Kaavio valuutassa :currency — :list ei piirretä',
+        'undrawn' => 'Ei renkaassa — :amount kulkee toiseen suuntaan',
         'bar_title' => 'Napsauta pylvästä, niin näet sen tapahtumat',
         'line_title' => 'Napsauta pistettä, niin näet sen tapahtumat',
         'donut_title' => 'Napsauta segmenttiä, niin näet sen tapahtumat',

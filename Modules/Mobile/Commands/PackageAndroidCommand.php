@@ -20,19 +20,23 @@ final class PackageAndroidCommand extends Command
     /** @var string */
     protected $description = 'Package a signed Android release, refusing to report success unless an artifact exists.';
 
-    private const ARTIFACTS = [
+    private const array ARTIFACTS = [
         'release' => 'nativephp/android/app/build/outputs/apk/release/app-release.apk',
         'bundle' => 'nativephp/android/app/build/outputs/bundle/release/app-release.aab',
     ];
 
-    private const PROJECT = 'nativephp/android';
+    private const string PROJECT = 'nativephp/android';
 
-    private const GRADLE = 'nativephp/android/app/build.gradle.kts';
+    private const string GRADLE = 'nativephp/android/app/build.gradle.kts';
 
     // A release assemble on a cold CI runner, with no daemon to reuse and the
     // whole Android toolchain to warm up. Only ever spent on a build that has
     // already failed, so a generous ceiling costs nothing in the normal case.
-    private const GRADLE_TIMEOUT_SECONDS = 1800;
+    private const int GRADLE_TIMEOUT_SECONDS = 1800;
+
+    // nativephp/mobile's own config default, indistinguishable from a real
+    // choice of 1 and never a code this app ships.
+    private const int PACKAGE_DEFAULT_VERSION_CODE = 1;
 
     public function __construct(
         private readonly Filesystem $files,
@@ -208,17 +212,36 @@ final class PackageAndroidCommand extends Command
 
     private function versionCodeFailure(): ?string
     {
-        $configured = $this->config->get('nativephp.version_code');
+        $configured = $this->configuredVersionCode();
 
         // 1 is nativephp/mobile's own package default, which is what resolves
         // whenever NATIVEPHP_APP_VERSION_CODE is unset — as it is on every CI
         // runner, because release.yml exports only NATIVEPHP_APP_VERSION. An
         // APK below the code already on a device is refused as a downgrade.
-        if ($configured !== 1 && $configured !== null) {
+        if ($configured !== null && $configured !== self::PACKAGE_DEFAULT_VERSION_CODE) {
+            // Written back as an int: the read-back below compares identically
+            // against a value Gradle hands over as a number.
+            $this->config->set('nativephp.version_code', $configured);
+
             return null;
         }
 
         return $this->derivedVersionCodeFailure();
+    }
+
+    // config('nativephp.version_code') is env('NATIVEPHP_APP_VERSION_CODE', 1),
+    // and env() answers with a STRING for every variable that IS set — so
+    // setting the code, which is what this command's other refusal tells the
+    // operator to do, made the same number a different type.
+    private function configuredVersionCode(): ?int
+    {
+        $configured = $this->config->get('nativephp.version_code');
+
+        if (is_int($configured)) {
+            return $configured;
+        }
+
+        return is_string($configured) && ctype_digit($configured) ? (int) $configured : null;
     }
 
     private function derivedVersionCodeFailure(): ?string
@@ -252,7 +275,7 @@ final class PackageAndroidCommand extends Command
             return "No {$gradlePath}, so the version code the APK carries cannot be read back.";
         }
 
-        $expected = $this->config->get('nativephp.version_code');
+        $expected = $this->configuredVersionCode();
         $actual = AndroidVersionCode::inGradle($this->files->get($gradlePath));
 
         if ($actual === $expected) {
@@ -264,7 +287,7 @@ final class PackageAndroidCommand extends Command
             .'alone, so a wrong one is either refused as a downgrade or spends a number the next '
             .'release needs.',
             $actual ?? 'no readable value',
-            is_int($expected) ? $expected : 'the resolved value',
+            $expected ?? 'the resolved value',
         );
     }
 

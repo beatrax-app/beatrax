@@ -5,11 +5,11 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
-use Modules\Core\Public\Support\Lang;
 
 uses(RefreshDatabase::class);
 
@@ -110,4 +110,3 @@ it('refines a query from the first row rather than the previous ones cursor', fu
         ->set('searchQuery', 'Window')
         ->assertSet('cursorId', null);
 });
-

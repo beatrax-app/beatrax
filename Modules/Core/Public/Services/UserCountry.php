@@ -38,7 +38,6 @@ final class UserCountry
             return $this->currentByUser[$userId];
         }
 
-        /** @var mixed $code */
         $code = $this->db->connection()
             ->table('users')
             ->where('id', $userId)

@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\Ledger\Models\Account;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -152,7 +153,7 @@ it('dispatches three ProjectForecastJobs (one per baseline horizon) on save', fu
         ->call('save');
 
     Bus::assertDispatched(ProjectForecastJob::class, function (ProjectForecastJob $job): bool {
-        return $job->scenarioId === null && in_array($job->horizonDays, [30, 60, 90], true);
+        return $job->scenarioId === null && in_array($job->horizonDays, ForecastHorizon::days(), true);
     });
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 3);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, count(ForecastHorizon::cases()));
 });

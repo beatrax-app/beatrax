@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— henkilöyhteystiedoille ei muodostu rahoitusketjuja',
     'tab_note_bank' => '— pankkikuluvastapuoli ei muodosta rahoitusketjuja',
+    'tab_note_bank_institution' => '— rahoituslaitosvastapuolille ei muodostu rahoitusketjuja',
     'tab_note_government' => '— julkishallinnon vastapuolille ei muodostu rahoitusketjuja',
 
     'recent_activity' => 'Viimeaikainen toiminta',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Pankkikulut kategorioittain',
+        'activity_heading' => 'Toiminta kategorioittain',
         'no_fees' => 'Tälle vastapuolelle ei ole vielä kirjattu kuluja.',
     ],
 

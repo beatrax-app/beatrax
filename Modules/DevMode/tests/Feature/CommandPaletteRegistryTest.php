@@ -6,6 +6,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\DevConsoleBuildGate;
 use Modules\DevMode\Internal\Http\Livewire\CommandPaletteModal;
 use Modules\DevMode\Internal\Navigation\NavigationRegistryImpl;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
@@ -69,6 +70,7 @@ it('emits the merged palette JSON for a developer (view + dev SAFE + action; ZER
         app(NavigationRegistry::class),
         app(DevCommandRegistry::class),
         app(AppActionRegistry::class),
+        app(DevConsoleBuildGate::class),
     );
 
     $sources = array_map(static fn (array $row): string => $row['source'], $registry);
@@ -103,6 +105,7 @@ it('emits a palette JSON without any dev rows for a non-developer', function ():
         app(NavigationRegistry::class),
         app(DevCommandRegistry::class),
         app(AppActionRegistry::class),
+        app(DevConsoleBuildGate::class),
     );
 
     $sources = array_unique(array_map(static fn (array $row): string => $row['source'], $registry));
@@ -116,10 +119,10 @@ it('emits a palette JSON without any dev rows for a non-developer', function ():
     expect($sources)->toContain('action');
 });
 
-it('persists Recent picks to dev_mode.palette_recent.{userId} with dedupe + cap-at-5 semantics', function (): void {
+it('persists Recent picks to dev_mode.palette_recent:{userId} with dedupe + cap-at-5 semantics', function (): void {
     $user = cpUser(true, 'cp-recent');
     $cache = app(CacheRepository::class);
-    $key = 'dev_mode.palette_recent.'.$user->id;
+    $key = 'dev_mode.palette_recent:'.$user->id;
     $cache->forget($key);
 
     /** @var CommandPaletteModal $component */

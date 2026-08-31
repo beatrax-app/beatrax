@@ -126,13 +126,22 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `DevMode` module.
-
-## Behavioral contracts
-
 - **`/dev/*` requires `is_developer = true`.** The
   `ensureDeveloperMode` middleware is on every route; a non-developer
   caller receives 404. No 403 — the surface stays hidden.
+- **A shipped build requires a second key.** `DevConsoleBuildGate`
+  runs ahead of the account check and answers the same 404 when the
+  build refuses. A development build is unaffected.
+- **Only `local` and `testing` are development builds.** The gate holds
+  an allow-list, not a `!== 'production'` comparison, so `staging`,
+  `prod` and `Production` all need the same key a release does. The
+  negative is pinned per spelling; the value is trimmed and
+  lower-cased first, so `Local` still opens.
+- **Nothing offers a console the build will not open.** The ⌘K
+  registry, the argument prompt, the sidebar Dev block, the dashboard
+  failed-job toast and the native Developer submenu all consult the
+  same gate, so a shipped build renders no entry rather than a dead
+  one.
 - **The artisan runner only spawns commands in
   `DevCommandRegistry`.** `CommandSpawner::start()` whitelists the
   command name against the registry before any `Process` is
@@ -143,9 +152,9 @@ The behavioural contract for the `DevMode` module.
   registry as the authoritative allow-list.
 - **DESTRUCTIVE-tier commands require the triple gate.** The
   `TripleGateModal` requires (a) the Advanced toggle on, (b) an
-  explicit confirm click, (c) a typed phrase matching the command
-  label. The runner page mounts with Advanced off; every Login
-  resets it (`ResetAdvancedToggleOnLogin`).
+  explicit confirm click, (c) the exact app name `Beatrax` typed in,
+  compared with `hash_equals`. The runner page mounts with Advanced
+  off; every Login resets it (`ResetAdvancedToggleOnLogin`).
 - **Every spawned command leaves exactly one audit row.** The
   spawner writes it eagerly as `AuditEvent::CommandExecuted` with
   no outcome; `FinalizeRunAudit` finds it again by `run_id` and
@@ -157,6 +166,11 @@ The behavioural contract for the `DevMode` module.
 - **`AuditWriter` is the only sanctioned path to a
   `dev_mode_audit` row.** Direct INSERTs are blocked by the
   `noUnsanctionedAuditWriter` arch invariant.
+- **`/dev/audit` reads and clears through one predicate.** Both
+  `render()` and `truncateAll()` filter on `log_name` plus
+  `causer_id`, so Clear all takes the rows the page shows and no
+  others — proven by giving two developers a row each and pressing
+  the button as one of them.
 - **Every log line is scrubbed by `RedactSecretsProcessor` before
   hitting disk.** Bearer tokens, JWT shapes, and every OAuth
   literal (decrypted from `oauth_secrets`) are replaced by

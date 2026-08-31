@@ -8,6 +8,7 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Sleep;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\Clients\FakeGraphApiClient;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
@@ -104,19 +105,20 @@ it('walks Graph pages, persists .eml + inbox_messages rows, establishes the delt
     expect($paypal->status)->toBe('fetched');
 
     // The provider-stamped receivedDateTime drives internal_date, never the
-    // message's own in-body Date: header.
-    expect($paypal->internal_date)->toBe('2026-05-11 09:14:21');
+    // message's own in-body Date: header — and it is stored in the app's own
+    // frame, which is what reads it back, not the UTC Graph sent it in.
+    expect($paypal->internal_date)->toBe('2026-05-11 11:14:21');
 
     $ics = $byId['ics-sample-statement-notice'];
     expect($ics->sender_email)->toBe('noreply@ics.nl');
     expect($ics->sender_name)->toBe('ICS Cards');
     expect($ics->subject)->toBe('Je nieuwe maandafschrift staat klaar');
-    expect($ics->internal_date)->toBe('2026-05-12 06:00:13');
+    expect($ics->internal_date)->toBe('2026-05-12 08:00:13');
 
     $play = $byId['googleplay-sample-purchase'];
     expect($play->sender_email)->toBe('googleplay-noreply@google.com');
     expect($play->subject)->toBe('Your Google Play Order Receipt');
-    expect($play->internal_date)->toBe('2026-05-13 17:45:49');
+    expect($play->internal_date)->toBe('2026-05-13 19:45:49');
 
     $inboxAfter = $db->connection()->table('inboxes')->where('id', $inboxId)->first(['backfill_progress']);
     expect($inboxAfter)->not->toBeNull();
@@ -190,4 +192,69 @@ it('catches RateLimitedException, transitions to rate_limited, and re-throws so 
     expect($scanState)->not->toBeNull();
     expect($scanState->status)->toBe('rate_limited');
     expect((string) $scanState->error_message)->toContain('5');
+});
+
+// Same short-month trap as the Gmail arm: 31 March back one month with plain
+// month arithmetic is 3 March, so the window opens a week after the day the
+// reader asked for and the oldest receipts are never walked.
+it('does not overflow the Graph window start out of a short month when the run lands on the 31st', function (): void {
+    $fixedNow = CarbonImmutable::create(2026, 3, 31, 12, 0, 0, 'UTC');
+    CarbonImmutable::setTestNow($fixedNow);
+
+    $clock = new class($fixedNow) implements Clock
+    {
+        public function __construct(private readonly CarbonImmutable $now) {}
+
+        public function now(): CarbonImmutable
+        {
+            return $this->now;
+        }
+    };
+    $this->app->instance(Clock::class, $clock);
+
+    $user = User::query()->create([
+        'username' => 'graph-window-eom',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+    ]);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $now = $fixedNow->toDateTimeString();
+
+    $inboxId = (int) $db->connection()->table('inboxes')->insertGetId([
+        'user_id' => $user->id,
+        'provider' => 'microsoft',
+        'email' => 'graph-window-eom@example.com',
+        'backfill_window_months' => 1,
+        'backfill_progress' => null,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+    $db->connection()->table('inbox_scan_state')->insert([
+        'user_id' => $user->id,
+        'inbox_id' => $inboxId,
+        'folder' => 'INBOX',
+        'status' => 'idle',
+        'retry_attempts' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    $fake = new FakeGraphApiClient($this->app->make(Filesystem::class));
+    $this->app->instance(GraphApiClientContract::class, $fake);
+
+    /** @var BackfillInboxJob $job */
+    $job = $this->app->make(BackfillInboxJob::class, ['inboxId' => $inboxId, 'windowMonths' => 1]);
+    $this->app->call([$job, 'handle']);
+
+    $calls = array_values(array_filter(
+        $fake->getRequestedCalls(),
+        static fn (array $c): bool => $c['method'] === 'listSenderMessagesPaged',
+    ));
+
+    expect($calls)->not->toBeEmpty();
+    expect($calls[0]['args']['windowStart'])->toStartWith('2026-02-28');
+
+    CarbonImmutable::setTestNow();
 });

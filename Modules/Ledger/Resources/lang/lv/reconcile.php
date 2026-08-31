@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'izvēlieties kontu',
+        'choose_date' => 'izvēlieties konta izraksta datumu',
         'enter_balance' => 'ievadiet konta izraksta atlikumu',
         'matched' => 'sakrīt — :amount',
         'discrepancy' => 'neatbilstība — :amount',
+        'reconciled_through' => 'saskaņots līdz :date',
     ],
 
     'mismatch_html' => 'Konta izraksta atlikums vēl nesakrīt ar jūsu apstiprināto atlikumu. Pārslēdziet apstiprinātās rindas <a href=":url" class="underline">darījumu sarakstā</a> vai koriģējiet ievadīto atlikumu, līdz starpība ir nulle — šī plūsma nekad neizveido izlīdzinošu ierakstu.',
+    'unreachable_no_baseline_html' => 'Neviena rindu kombinācija nevar samazināt šo starpību līdz nullei. Šim kontam nav reģistrēts sākuma atlikums, tāpēc tā atlikums tiek mērīts no nulles. Importējiet konta izrakstu, ar kuru konts sākas, vai iestatiet sākuma atlikumu sadaļā <a href=":url" class="underline">Iestatījumi</a>.',
+    'unreachable' => 'Neviena rindu kombinācija nevar samazināt šo starpību līdz nullei: tā ir ārpus visu šī konta rindu diapazona līdz norādītajam datumam. Pārbaudiet konta izraksta datumu un ievadīto atlikumu.',
 
     'check' => 'Pārbaudīt',
     'complete' => 'Pabeigt saskaņošanu',
+    'complete_unavailable' => 'Līdz šim datumam vairs nav ko fiksēt — atzīmējiet vairāk rindu kā apstiprinātas vai izvēlieties vēlāku konta izraksta datumu.',
 
     'errors' => [
         'choose_account' => 'Vispirms izvēlieties kontu.',

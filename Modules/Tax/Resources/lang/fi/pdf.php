@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Summa',
 
     'subtotal' => 'Välisumma',
+    'subtotal_income' => 'Tulojen välisumma',
 
     'footer' => 'Luonut Beatrax — vain laitteella toimiva talouden hallinta — :year',
 ];

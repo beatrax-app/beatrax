@@ -26,7 +26,7 @@ function demoGoalRowsByName(User $user): array
 it('seeds a pot-less demo goal whose progress comes from attributed transactions', function (): void {
     $this->artisan('demo:seed')->assertSuccessful();
 
-    $user = User::query()->where('username', 'demo-1@beatrax.local')->firstOrFail();
+    $user = User::query()->where('username', 'demo-1')->firstOrFail();
     $this->actingAs($user);
 
     $tyres = Goal::query()

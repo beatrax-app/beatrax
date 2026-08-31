@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'baseline :baseline → actual: :actual',
+    'charged' => 'charged :actual',
     'detected' => 'detected :date',
     'sensitivity' => 'sensitivity :percent of 100',
 

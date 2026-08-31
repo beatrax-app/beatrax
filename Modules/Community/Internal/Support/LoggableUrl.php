@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Community\Public\Support;
+namespace Modules\Community\Internal\Support;
 
 // A suggest-mapping URL carries the YAML body in its query string -- the
 // reader's own statement description, which encryption at rest exists to keep

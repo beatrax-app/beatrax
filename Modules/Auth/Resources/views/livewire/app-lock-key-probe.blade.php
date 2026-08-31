@@ -15,7 +15,7 @@
 --}}
 <div
     class="rounded-md p-3 space-y-2"
-    style="background:#0b1220; color:#f1f5f9; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.75rem;"
+    style="background:#0b1220; color:#f1f5f9; font-family: ui-monospace, monospace; font-size: 0.75rem;"
     data-testid="app-lock-key-probe"
     wire:poll.5s.keep-alive
 >

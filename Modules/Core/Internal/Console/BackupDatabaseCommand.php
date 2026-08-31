@@ -10,7 +10,9 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\Support\BackupRetentionPolicy;
+use Modules\Core\Internal\Console\Support\BackupSidecar;
 use Modules\Core\Internal\Enums\BackupAlertKind;
+use Modules\Core\Internal\Enums\BackupFailureCause;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
@@ -19,8 +21,11 @@ use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Exceptions\UnsafeBackupPathException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\CopyParam;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SqliteDatabase;
+use Modules\Core\Public\Support\StoredCopy;
 use PDO;
 use PDOException;
 use Psr\Log\LoggerInterface;
@@ -31,11 +36,17 @@ final class BackupDatabaseCommand extends Command
     // Not "see system_alerts": when the LIVE database is the corrupt one, the
     // alert row cannot be written into it, and sending the operator to an empty
     // table is worse than saying what happened here.
-    private const BACKUP_CORRUPT_MESSAGE = 'Backup failed — the database did not pass its integrity check.';
+    private const string BACKUP_CORRUPT_MESSAGE = 'Backup failed — the database did not pass its integrity check.';
+
+    // Kept apart from the message above because they send the operator to
+    // different places: one is a database to investigate, the other a disk to
+    // free. Reporting the first when the second happened cost a reader a
+    // corruption hunt over a full backups folder.
+    private const string BACKUP_WRITE_FAILED_MESSAGE = 'Backup failed — the database is sound, its backup files could not be written.';
 
     // The suffix a rejected copy is kept under, so the operator has something
     // to inspect rather than a deletion.
-    private const SUSPECT_SUFFIX = '.suspect';
+    private const string SUSPECT_SUFFIX = '.suspect';
 
     /** @var string */
     protected $signature = 'db:backup {--force : Keep the copy even when it is identical to the last backup}';
@@ -49,6 +60,7 @@ final class BackupDatabaseCommand extends Command
         private readonly Filesystem $files,
         private readonly Clock $clock,
         private readonly BackupRetentionPolicy $retention,
+        private readonly BackupSidecar $sidecar,
         private readonly UserDataPathService $paths,
         private readonly LoggerInterface $logger,
     ) {
@@ -78,7 +90,7 @@ final class BackupDatabaseCommand extends Command
             // Corrupt source, caught before VACUUM INTO runs: no file exists
             // yet, so the alert carries a null suspect path.
             $destinationForAlert = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
-            $this->failCorrupt($destinationForAlert, null, [
+            $this->failCorrupt($destinationForAlert, null, BackupFailureCause::SourceUnreadable, [
                 'pdo_exception' => $e->getMessage(),
                 'phase' => 'source_probe',
             ], self::BACKUP_CORRUPT_MESSAGE);
@@ -102,7 +114,7 @@ final class BackupDatabaseCommand extends Command
         // checkpoint and every unrelated session write.
         $digest = $this->readBackupDigest($partial);
 
-        if ($this->option('force') !== true && $this->isSkippable($backupsDir, $digest)) {
+        if ($this->option('force') !== true && $this->sidecar->recordsDigest($backupsDir, $digest)) {
             $this->files->delete($partial);
             $this->info('Skipped — the database is unchanged since the last backup.');
 
@@ -139,7 +151,7 @@ final class BackupDatabaseCommand extends Command
             if ($this->files->exists($destination)) {
                 $this->files->move($destination, $suspect);
             }
-            $this->failCorrupt($reportAs, $suspect, [
+            $this->failCorrupt($reportAs, $suspect, BackupFailureCause::SourceUnreadable, [
                 'pdo_exception' => $e->getMessage(),
                 'phase' => 'vacuum_into',
             ], self::BACKUP_CORRUPT_MESSAGE);
@@ -149,10 +161,10 @@ final class BackupDatabaseCommand extends Command
     private function assertOutputExists(string $destination, string $reportAs): void
     {
         if (! $this->files->exists($destination)) {
-            $this->failCorrupt($reportAs, null, [
+            $this->failCorrupt($reportAs, null, BackupFailureCause::WriteFailed, [
                 'phase' => 'vacuum_into',
                 'reason' => 'no output file produced',
-            ], self::BACKUP_CORRUPT_MESSAGE);
+            ], self::BACKUP_WRITE_FAILED_MESSAGE);
         }
     }
 
@@ -163,10 +175,10 @@ final class BackupDatabaseCommand extends Command
         // hence the explicit `=== false` sentinel below.
         if ($this->files->chmod($destination, 0o600) === false) {
             $this->files->delete($destination);
-            $this->failCorrupt($reportAs, null, [
+            $this->failCorrupt($reportAs, null, BackupFailureCause::WriteFailed, [
                 'phase' => 'chmod',
                 'reason' => 'chmod 0600 failed on freshly-written backup file',
-            ], self::BACKUP_CORRUPT_MESSAGE);
+            ], self::BACKUP_WRITE_FAILED_MESSAGE);
         }
     }
 
@@ -177,7 +189,7 @@ final class BackupDatabaseCommand extends Command
         if ($integrityRows !== ['ok']) {
             $suspect = $reportAs.self::SUSPECT_SUFFIX;
             $this->files->move($destination, $suspect);
-            $this->failCorrupt($reportAs, $suspect, [
+            $this->failCorrupt($reportAs, $suspect, BackupFailureCause::CopySuspect, [
                 'integrity_check' => $integrityRows,
                 'phase' => 'post_vacuum',
             ], self::BACKUP_CORRUPT_MESSAGE);
@@ -188,12 +200,12 @@ final class BackupDatabaseCommand extends Command
     {
         $completedAt = $this->clock->now();
         try {
-            $this->writeSidecar($destination, $digest, $startedAt->toIso8601String(), $completedAt->toIso8601String());
+            $this->sidecar->write($destination, $digest, $startedAt->toIso8601String(), $completedAt->toIso8601String());
         } catch (BackupIoException $e) {
             // A backup without its .meta.json makes the next run's smart-skip
             // read "no recent backup" and silently re-write, so the I/O failure
             // is surfaced as a critical alert rather than swallowed.
-            $this->failCorrupt($destination, null, [
+            $this->failCorrupt($destination, null, BackupFailureCause::WriteFailed, [
                 'phase' => 'sidecar_write',
                 'reason' => $e->getMessage(),
             ], 'Backup written but sidecar write failed — see system_alerts.');
@@ -205,14 +217,14 @@ final class BackupDatabaseCommand extends Command
      *
      * @throws BackupCorruptException
      */
-    private function failCorrupt(string $destination, ?string $suspectPath, array $metadata, string $consoleMessage): never
+    private function failCorrupt(string $destination, ?string $suspectPath, BackupFailureCause $cause, array $metadata, string $consoleMessage): never
     {
         try {
             // The alert lands in the database this command just found unreadable,
             // so on the corrupt-source branch the write itself throws. The
             // console line and exit code are the report that survives that;
             // losing them too turns a caught corruption into a crash.
-            $this->recordCorruptAlert($destination, $suspectPath, $metadata);
+            $this->recordCorruptAlert($destination, $suspectPath, $cause, $metadata);
         } catch (Throwable $e) {
             $this->logger->error('db:backup could not record its corruption alert.', SafeExceptionContext::describe($e));
         }
@@ -269,10 +281,10 @@ final class BackupDatabaseCommand extends Command
         if ($this->files->exists($destination) || @rename($partial, $destination) === false) {
             $suspect = $destination.self::SUSPECT_SUFFIX;
             $this->files->move($partial, $suspect);
-            $this->failCorrupt($destination, $suspect, [
+            $this->failCorrupt($destination, $suspect, BackupFailureCause::WriteFailed, [
                 'phase' => 'promote',
                 'reason' => 'could not rename the staged backup onto its final name',
-            ], self::BACKUP_CORRUPT_MESSAGE);
+            ], self::BACKUP_WRITE_FAILED_MESSAGE);
         }
     }
 
@@ -307,79 +319,6 @@ final class BackupDatabaseCommand extends Command
         }
     }
 
-    // Missing or unreadable sidecars must fall through to "not skippable":
-    // a wrong skip silently writes no backup at all.
-    private function isSkippable(string $backupsDir, string $digest): bool
-    {
-        $newest = $this->newestSidecarPath($backupsDir);
-        if ($newest === null) {
-            return false;
-        }
-
-        $decoded = json_decode((string) file_get_contents($newest), true);
-        $stored = is_array($decoded) ? ($decoded['content_sha256'] ?? null) : null;
-
-        // A sidecar written before this field existed carries none, and a
-        // backup nobody can date is one to redo rather than skip.
-        return is_string($stored) && $stored === $digest;
-    }
-
-    // Sorts basenames, not full paths, so a directory-shape change cannot flip
-    // the winner: the fixed `beatrax-` + zero-padded timestamp + suffix makes
-    // strcmp DESC equal newest-first.
-    private function newestSidecarPath(string $backupsDir): ?string
-    {
-        $candidates = glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite.meta.json');
-        if ($candidates === false || $candidates === []) {
-            return null;
-        }
-
-        usort($candidates, static fn (string $a, string $b): int => strcmp(basename($b), basename($a)));
-        $newest = $candidates[0];
-
-        return is_file($newest) ? $newest : null;
-    }
-
-    // umask + tmp + rename + chmod, mirroring OAuthSecretsRepository::writeAtomic.
-    // Every I/O return is checked so a disk-full or cross-device failure raises
-    // instead of leaving a half-written or world-readable sidecar.
-    private function writeSidecar(string $destination, string $digest, string $startedAt, string $completedAt): void
-    {
-        $sidecar = $destination.'.meta.json';
-        $tmp = $sidecar.'.tmp';
-
-        $payload = json_encode([
-            'content_sha256' => $digest,
-            'started_at' => $startedAt,
-            'completed_at' => $completedAt,
-            'integrity' => 'ok',
-        ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
-
-        $prevUmask = umask(0o077);
-        try {
-            // @-suppressed so the `=== false` checks decide: unsuppressed,
-            // Laravel's handler turns each E_WARNING into an ErrorException
-            // before the comparison runs, which the caller's catch misses.
-            if (@file_put_contents($tmp, $payload) === false) {
-                throw new BackupIoException('Failed to write backup sidecar tmp file at '.$tmp);
-            }
-            if (@chmod($tmp, 0o600) === false) {
-                throw new BackupIoException('Failed to chmod sidecar tmp file at '.$tmp.' to 0600.');
-            }
-            if (@rename($tmp, $sidecar) === false) {
-                throw new BackupIoException('Failed to rename sidecar tmp file to '.$sidecar.'.');
-            }
-            // rename() preserves the tmp file's mode on every common filesystem,
-            // so this re-chmod is belt-and-braces and its failure is non-fatal.
-            @chmod($sidecar, 0o600);
-        } finally {
-            umask($prevUmask);
-            if (is_file($tmp)) {
-                @unlink($tmp);
-            }
-        }
-    }
-
     // .suspect / pre-restore-* / .meta.json pass through untouched; a pruned
     // daily takes its sidecar with it.
     private function pruneRetention(string $backupsDir): void
@@ -399,7 +338,7 @@ final class BackupDatabaseCommand extends Command
             }
             $this->files->delete($backupsDir.DIRECTORY_SEPARATOR.$name);
 
-            $sidecar = $backupsDir.DIRECTORY_SEPARATOR.$name.'.meta.json';
+            $sidecar = $backupsDir.DIRECTORY_SEPARATOR.$name.BackupSidecar::SUFFIX;
             if ($this->files->exists($sidecar)) {
                 $this->files->delete($sidecar);
             }
@@ -407,26 +346,49 @@ final class BackupDatabaseCommand extends Command
     }
 
     // Only the post-VACUUM integrity-check branch leaves an on-disk .suspect
-    // file; every other corrupt branch passes null.
+    // file; every other corrupt branch passes null. The cause is recorded
+    // rather than inferred from that null, which is how three failures that
+    // had just cleared the database came to accuse it.
     /**
      * @param  array<string, mixed>  $metadata
      */
-    private function recordCorruptAlert(string $destination, ?string $suspectPath, array $metadata): void
+    private function recordCorruptAlert(string $destination, ?string $suspectPath, BackupFailureCause $cause, array $metadata): void
     {
-        $timestamp = $this->clock->now()->format('d M Y · H:i');
-        $message = $suspectPath !== null && $this->files->exists($suspectPath)
-            ? sprintf('Backup written at %s failed integrity check. Inspect %s.', $timestamp, basename($suspectPath))
-            : sprintf('Backup attempted at %s aborted before any file was produced — source DB failed integrity check.', $timestamp);
+        $timestamp = CopyParam::dateAndTime($this->clock->now());
+        $keptSuspect = $suspectPath !== null && $this->files->exists($suspectPath);
+
+        $line = $this->corruptAlertLine($cause, $timestamp, $keptSuspect ? $suspectPath : null);
 
         SystemAlert::create([
             'user_id' => null,
             'kind' => BackupAlertKind::Corrupt->value,
             'severity' => SystemAlertSeverity::Critical->value,
-            'message' => $message,
-            'metadata' => array_merge([
+            'message' => $line->sentence(),
+            'metadata' => array_merge(StoredCopy::inParams($line) + [
+                'cause' => $cause->value,
                 'suspect_path' => $suspectPath,
                 'destination' => $destination,
             ], $metadata),
         ]);
+    }
+
+    // The three arms the banner already chooses between for this kind, named
+    // here in the same order and on the same conditions, so the row and the
+    // screen cannot disagree about which failure this run had.
+    private function corruptAlertLine(BackupFailureCause $cause, CopyParam $timestamp, ?string $suspectPath): CopyLine
+    {
+        if ($suspectPath !== null) {
+            return CopyLine::of('core::alerts.messages.backup_corrupt_with_path', [
+                'timestamp' => $timestamp,
+                'path' => basename($suspectPath),
+            ]);
+        }
+
+        return CopyLine::of(
+            $cause === BackupFailureCause::SourceUnreadable
+                ? 'core::alerts.messages.backup_corrupt_no_path'
+                : 'core::alerts.messages.backup_write_failed',
+            ['timestamp' => $timestamp],
+        );
     }
 }

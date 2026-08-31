@@ -19,6 +19,17 @@ no separate `tinker`. The console is therefore gated tightly:
 `is_developer = true` plus an explicit middleware on every route,
 plus a triple-gate modal in front of every destructive command.
 
+On a build that shipped, `is_developer` is not enough on its own — it
+is a column in the user's own database, set for the first account that
+signed up. `DevConsoleBuildGate` adds a second lock the account cannot
+turn: a launch-environment flag on desktop, a debuggable build on a
+phone. It lives in `Core` because the sidebar, the dashboard toast and
+the native menu bar all have to ask it and none of them may depend on
+this module. Development builds are untouched. The rule, the reason the
+desktop flag is an environment variable rather than a launcher switch,
+and the honest gap in the mobile signal are in
+[the console on a shipped build](the-console-on-a-shipped-build.md).
+
 The Horizon dashboard is embedded the same way: `/dev/horizon` is an
 iframe Livewire page that loads Horizon's own UI behind a frame-
 ancestors header, registered only when `app.dev_mode` is true and the
@@ -39,7 +50,10 @@ What the module explicitly does NOT do:
   `RedactionExcerptCap` does the same for audit-row excerpts.
 - It never bypasses the dev gate. The
   `ensureDeveloperMode` middleware is the single sanctioned guard;
-  every `/dev/*` route carries it.
+  every `/dev/*` route carries it. The two components the layout
+  mounts on every page — the ⌘K palette and the command-argument
+  prompt — are not behind a route, so each restates both halves of
+  that guard for itself.
 
 ## Module boundary
 
@@ -129,8 +143,8 @@ layout to render the ⌘K palette and the sidebar nav-list:
   is tier-agnostic. The spawner uses a single tmp file with
   `> file 2>&1` redirection, so stdout and stderr are merged on disk;
   this hook treats the entire content as `stdout_excerpt` and leaves
-  `error_excerpt` empty (splitting them would require separate tmp
-  files, a bigger change than this hook's scope).
+  `error_excerpt` empty; splitting them would require separate tmp
+  files.
 - **Internal/Http/Controllers/ArtisanStreamController** — `GET
   /dev/artisan/stream/{runId}`, the SSE tail of one run's stdout.
   Resolves the cached `RunRecord` via `RunRegistry::find()` and tails
@@ -162,9 +176,11 @@ layout to render the ⌘K palette and the sidebar nav-list:
   inode change (logrotate truncate+rename, midnight rollover) OR a
   `?since` beyond the current file size both set `reset = true` and
   read from offset 0. The log path is computed from
-  `UserDataPathService::dailyLogFile()`, which respects the
-  `NATIVEPHP_STORAGE_PATH` retarget and has no user-controlled input
-  (no LFI surface). `GET /dev/logs/context` is the paired endpoint
+  `ActiveLogFile::path()`, which resolves the file the configured
+  channel actually writes — see
+  [the file the log viewer opens](the-file-the-log-viewer-opens.md) —
+  respects the `NATIVEPHP_STORAGE_PATH` retarget, and has no
+  user-controlled input (no LFI surface). `GET /dev/logs/context` is the paired endpoint
   returning the ±radius lines around a given absolute line offset for
   click-to-expand, with the same redaction re-applied per line.
 - **Internal/Enums/** — `CommandTier` (`Safe` / `Destructive`, with
@@ -184,7 +200,10 @@ layout to render the ⌘K palette and the sidebar nav-list:
   `OAuthSecret` save / delete.
 - **Internal/Http/Middleware/EnsureDeveloperMode** — the single
   sanctioned `/dev/*` guard. Refuses any non-developer caller with
-  404.
+  404. Also registered as Livewire persistent middleware, because
+  the update endpoint runs outside the route stack: without it a
+  snapshot minted while the flag was on kept driving the SQL panel,
+  the runner and the queue inspector after it came off.
 - **Internal/Http/Middleware/HorizonFrameAncestors** — the
   `frame-ancestors` header on the Horizon iframe page so the
   embed renders without the CSP rejecting it.
@@ -375,8 +394,8 @@ Per-page detail that doesn't fit the flow diagrams above:
   fresh, "NOT RUNNING" when stale/missing); queue counts (pending/
   failed/active batches via the raw query builder); and the last
   command (most recent `dev_mode_audit` row). The console-pane tail
-  shows the last 5 structured entries from today's rolling daily log
-  file via `RecentLogEntriesReader` (continuation lines fold into the
+  shows the last 5 structured entries from the log file the configured
+  channel writes, via `RecentLogEntriesReader` (continuation lines fold into the
   preceding entry; messages re-scrubbed), each linking to `/dev/logs`
   pre-filtered by severity + first words. The recent-runs card shows
   the calling developer's last 5 audit rows with a
@@ -464,7 +483,8 @@ Per-page detail that doesn't fit the flow diagrams above:
   viewer, via a defense-in-depth pipeline: (1) `SelectOnlyValidator::validate()`,
   a parse-time guard via the doctrine/sql-formatter Tokenizer; (2)
   `ReadOnlySqliteConnection::execute()`, an execution-time guard via
-  `PRAGMA query_only = 1` plus a 5-second `WallClockCap`; (3)
+  `PRAGMA query_only = 1` plus a 5-second cap enforced on a child
+  process (`IsolatedSelectProcess`); (3)
   `AuditWriter::recordSelectQuery()`, writing a `dev_mode_audit` row
   (`AuditEvent::SqlSelect`) on every successful query. The page is
   gated on Dev Mode ON (route middleware) plus the session-scoped
@@ -493,7 +513,7 @@ Per-page detail that doesn't fit the flow diagrams above:
   `;`, e.g. `SELECT 1; INSERT…`), `empty_statement`,
   `first_token_not_select:{token}`, `cte_contains_write:{keyword}`,
   and `cte_without_select`.
-- **RecentLogEntriesReader** — reads the tail of today's daily Laravel
+- **RecentLogEntriesReader** — reads the tail of the active Laravel
   log file line-by-line through `SplFileObject`, keeping only a
   200-line window (the same reason its sibling `LogFileStats` gives:
   this pane backs `/dev`, the page opened BECAUSE something is
@@ -513,16 +533,14 @@ Per-page detail that doesn't fit the flow diagrams above:
   class opens the PDO and applies `PRAGMA query_only = 1` per-PDO
   before executing, SQLite's engine-level read-only mode that rejects
   every write with `SQLITE_READONLY` (defense-in-depth alongside the
-  parse-time `SelectOnlyValidator`). The wall-clock cap exists because
-  `PDO::ATTR_TIMEOUT` is connection-level (lock-wait), not
-  query-duration — `set_time_limit($n)` is the reliable coarse cap,
-  invoked via the injected `WallClockCap` seam so unit tests can mock
-  `apply(int)` without touching the test runner's own execution-time
-  budget. Under tests, where the default connection is
-  `sqlite_testing` (in-memory), a separate `readonly_select` connection
-  instance would resolve to a SEPARATE `:memory:` database with an
-  empty schema — `resolveConnection()` special-cases that by falling
-  back to the default connection when it is `sqlite_testing`.
+  parse-time `SelectOnlyValidator`). Under tests, where the default
+  connection is `sqlite_testing` (in-memory), a separate
+  `readonly_select` connection instance would resolve to a SEPARATE
+  `:memory:` database with an empty schema — `resolveConnection()`
+  special-cases that by falling back to the default connection when it
+  is `sqlite_testing`, and that in-memory case is also the only one
+  that still executes in-process (see "The SQL panel's timeout runs
+  out of process" below).
 - **QueueInspectorPage** (`/dev/queue/{tab}`) — a three-tab queue
   inspector; `pending`/`failed`/`batches` deep-linkable URLs resolve to
   one component with the tab driven by the route param (the bare
@@ -580,6 +598,59 @@ Per-page detail that doesn't fit the flow diagrams above:
   `bulkDelete` and re-validates all three gates in its confirmed-event
   listener before delegating here — `QueueActions` itself is a thin,
   testable seam that trusts the caller to have validated the gates.
+
+## The SQL panel's timeout runs out of process
+
+`PDO::ATTR_TIMEOUT` is connection-level (lock-wait), not
+query-duration, so it caps nothing here. The cap used to be
+`set_time_limit(5)` around the in-process `select()`, read back in
+`SqlPanelPage` by matching `'maximum execution time'` on the caught
+exception's message. That branch could never run: an execution-time
+expiry is a PHP **fatal error**, not a `Throwable`, so neither the
+`catch` nor `register_shutdown_function()` fires. Worse, the bundle
+serves the app with the PHP built-in server, which is a single
+process — one `SELECT count(*)` over an endless recursive CTE (a
+statement `SelectOnlyValidator` allows: no write keyword, one
+statement) took the whole backend down. Reproduced against a real
+`php -S`: the runaway request answered with an empty reply, the next
+request got connection-refused, and the server pid was gone.
+
+Nothing in PHP can interrupt a statement SQLite is already stepping.
+`sqlite3_interrupt` and `sqlite3_progress_handler` are not exposed by
+`pdo_sqlite` or `ext-sqlite3`; ticks and `pcntl` signals are only
+dispatched between VM instructions, and the VM is blocked inside
+`sqlite3_step`. A statement-level timeout therefore does not exist to
+be asked for.
+
+So the query runs in a child process. `IsolatedSelectProcess` spawns
+`PHP_BINARY -r <child>` with the database path in argv and the SQL on
+stdin, and gives Symfony `Process` the 5-second timeout; on expiry
+Symfony SIGKILLs the child and the parent raises
+`QueryTimedOutException`, which is what `SqlPanelPage` maps to
+`dev::sql.errors.timeout`. The child needs no framework and no
+autoloader — PDO plus `json_encode` — and re-applies `PRAGMA
+query_only = 1` itself, so the engine-level write guard travels with
+it. Rows come back as JSON with `JSON_INVALID_UTF8_SUBSTITUTE` so a
+BLOB column cannot fail the encode.
+
+The child is the second and only other place allowed to issue `PRAGMA
+busy_timeout` (see `OneConnectionHoldsOneBusyTimeoutArchTest`). Its PDO
+is not one of Laravel's connections, so the `ConnectionEstablished`
+listener that normally applies the configured wait never fires for it,
+and without the pragma it would run at SQLite's default of not waiting
+at all — a regression against the 30 s the in-process path had while
+four desktop processes share one file. The number is still not written
+here: `ReadOnlySqliteConnection` reads `getConfig('busy_timeout')` off
+the calling connection and passes it in, and 0 means "the connection
+configures none", not "wait five seconds".
+
+What it costs: roughly 250 ms of interpreter start-up per query, and
+the child opens the database file directly rather than reusing the
+request's PDO. An in-memory database exists only inside the calling
+process, so `canIsolate()` refuses it and the in-process path is kept
+for the test connection; it is also refused when `PHP_BINARY` is empty
+(the embed SAPI), where the failure surfaces as an engine error rather
+than a silent uncapped run.
 
 ## Horizon conditional-registration arch invariants
 
@@ -652,10 +723,29 @@ JWT-shaped tokens out of both the rolling log file and the
   instantiation in unit tests still works.
 - **`RedactionExcerptCap`** (on-write, audit-row) — the same
   three-layer scrub applied to `stdout_excerpt`/`error_excerpt` before
-  `SpatieAuditWriter` persists them into `dev_mode_audit`. A separate
-  artifact from `RedactSecretsProcessor` because the two bound
-  different exit points (rolling log file vs. audit DB row), even
-  though the redaction order is identical.
+  `SpatieAuditWriter` persists them into `dev_mode_audit`, plus one
+  layer the log tap does not need: the recovery-code shape. A
+  registered destructive command, `beatrax:regenerate-recovery-codes`,
+  prints ten live single-use credentials to stdout, and stdout is
+  exactly what this excerpt is — the codes were landing in the table
+  verbatim, behind a Copy button. The pattern is
+  `RecoveryCodeGenerator`'s own: five hyphen-joined groups of four from
+  an alphabet with no I, L, O, 0 or 1. A separate artifact from
+  `RedactSecretsProcessor` because the two bound different exit points
+  (rolling log file vs. audit DB row).
+- **`AuditLogPage` reads AND clears causer-scoped.** `/dev/audit` used
+  to filter on `log_name` alone, so every developer-mode user read every
+  other one's rows — which is how a sheet of somebody else's recovery
+  codes became one click away. The read now carries
+  `where('causer_id', $user->id())` like every other `dev_mode_audit`
+  read, and the caller filter + caller column went with it: a
+  single-caller log has nothing to filter by. `truncateAll()` reads
+  through the same predicate. It used to `delete()` the bare table, so
+  the Clear all button — one Alpine `confirm()` in front of it —
+  destroyed history the pressing developer was no longer allowed to
+  open, including the rows recording another operator's destructive
+  runs. Wiping what you cannot read is not a narrower power than
+  reading it; the button now takes exactly the rows the page shows.
 - **`LogStreamController`** (on-read) — re-applies the same processor
   to every chunk returned by `/dev/logs/poll` and `/dev/logs/context`,
   giving belt-and-braces redaction at both write time and read time.

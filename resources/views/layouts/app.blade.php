@@ -67,7 +67,7 @@
     </head>
     <body
         class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
-        style="font-family: 'Inter', system-ui, -apple-system, sans-serif;"
+        style="font-family: system-ui, -apple-system, sans-serif;"
         x-data="{
             onKey(e) {
                 /*
@@ -160,7 +160,6 @@
                 <main class="flex-1 min-w-0 overflow-auto" x-bind:inert="$store.overlay.blocking || null">
                     @livewire('core.system-alerts-banner')
                     @livewire('categorization.rule-form-modal')
-                    @livewire('categorization.correction-divergence-toast')
                     @livewire('receipts.receipt-conflict-toast')
                     @livewire('community.suggest-mapping-modal')
                     @livewire('email-scan.oauth-client-wizard-modal')
@@ -183,7 +182,7 @@
                  every authenticated page. --}}
             @livewire('search.palette-search-endpoint')
             {{-- Arg-prompt modal for SAFE-tier commands with args
-                 (config:show, Beatrax:reset-password, etc.). The
+                 (config:show, beatrax:reset-password, etc.). The
                  palette dispatches `command-args:prompt` when the
                  picked command's CommandSpec carries argsSchema;
                  the form submits as `spawn-command` so the runner

@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Otpremi još jedan izvod',
 
+    'chain' => [
+        'heading' => 'Razrešavanje lanaca…',
+        'pending' => 'U redu čekanja. Razrešavanje lanaca uskoro počinje.',
+        'running' => 'Povezivanje lanaca finansiranja i razlaganje poravnanja sa izvoda.',
+    ],
+
     'issues' => [
         'row' => 'Red :row: :reason',
         'file_stopped' => 'Fajl nije bilo moguće pročitati dalje od reda :row. Ništa posle tog reda nije uvezeno.',

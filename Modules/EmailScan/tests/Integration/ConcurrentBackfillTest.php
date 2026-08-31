@@ -16,6 +16,7 @@ use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
+use Modules\EmailScan\Internal\Jobs\GraphDeltaWalk;
 use Modules\EmailScan\Internal\Jobs\JobUserContext;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
@@ -98,6 +99,7 @@ it('keeps the configured busy_timeout in force through every per-page transactio
         new InboxScanStateMachine($realDb, $this->app->make(Clock::class)),
         $this->app->make(KnownSenderQuery::class),
         $this->app->make(JobUserContext::class),
+        $this->app->make(GraphDeltaWalk::class),
     );
 
     // No write path may re-issue the pragma: one that does lowers the timeout

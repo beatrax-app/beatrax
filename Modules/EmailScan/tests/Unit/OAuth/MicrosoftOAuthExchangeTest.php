@@ -148,3 +148,48 @@ it('reports any other provider rejection as an exchange failure', function (): v
 
     $provider->exchangeAuthorizationCode('auth-code-123', $this->redirect);
 })->throws(OAuthExchangeFailed::class);
+
+// Recording the requested scope instead of the granted one leaves an inbox
+// the app believes can read mail; the first scan 403s into a generic error
+// rather than the actionable needs_reauth.
+it('records the scope Microsoft granted, not the one that was requested', function (): void {
+    $provider = microsoftProviderReturning([
+        azureOpenIdConfigResponse(),
+        azureTokenResponse(['scope' => 'offline_access User.Read']),
+        azureMeResponse(),
+    ]);
+
+    $result = $provider->exchangeAuthorizationCode('auth-code-123', $this->redirect);
+
+    expect($result->scope)->toBe('offline_access User.Read');
+});
+
+it('falls back to the requested scope when Microsoft omits one', function (): void {
+    $provider = microsoftProviderReturning([
+        azureOpenIdConfigResponse(),
+        azureTokenResponse(['scope' => null]),
+        azureMeResponse(),
+    ]);
+
+    $result = $provider->exchangeAuthorizationCode('auth-code-123', $this->redirect);
+
+    expect($result->scope)->toBe('Mail.Read offline_access User.Read');
+});
+
+// The library hands the error body over as a PSR-7 stream, never an array, so
+// the is_array() arm never ran. It went unnoticed because the flat
+// {"error":"invalid_grant"} body puts the same string in the message. Azure's
+// nested shape does not, and that one fell through to a retryable failure.
+it('reads invalid_grant out of a nested error body the message does not name', function (): void {
+    $provider = microsoftProviderReturning([
+        azureOpenIdConfigResponse(),
+        new Response(400, ['Content-Type' => 'application/json'], (string) json_encode([
+            'error' => [
+                'code' => 'invalid_grant',
+                'message' => 'The refresh token has expired.',
+            ],
+        ])),
+    ]);
+
+    $provider->refreshAccessToken('revoked-refresh-token');
+})->throws(InvalidGrantException::class);

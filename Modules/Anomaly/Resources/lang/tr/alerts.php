@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'referans :baseline → gerçekleşen: :actual',
+    'charged' => 'tahsil edildi :actual',
     'detected' => ':date tarihinde algılandı',
     'sensitivity' => 'duyarlılık 100 üzerinden :percent',
 

@@ -26,14 +26,11 @@ return [
 
     'your_devices' => 'Sinu seadmed',
 
-    // Seaded viitavad ainult ümber kolinud vaatele; see osa asub
-    // nüüd /sync all koos oleku ja sünkroonimise nupuga.
-    'moved_help' => 'Sidumine, seadmenimed ja krüpteerimine asuvad nüüd koos sinu sünkroonimise olekuga.',
-    'moved_cta' => 'Ava sünkroonimine ja seade',
     'device_name' => 'Seadme nimi',
     'save' => 'Salvesta',
     'peer_default_name' => 'Seotud seade',
     'rename_device' => 'Nimeta seade ümber',
+    'rename_device_caption' => 'Nimeta',
     'this_device' => 'See seade',
     'removed' => 'Eemaldatud',
     'confirmed' => 'Kinnitatud',
@@ -51,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Relee aadress',
     'relay_endpoint_help' => 'Valikuline. Kui see on määratud, sünkroonivad võrguühenduseta seadmed selle relee kaudu. Jäta tühjaks, et sünkroonida ainult otse kohtvõrgus.',
+    'relay_endpoint_help_phone' => 'Valikuline. Kui see on määratud, liiguvad muudatused selle relee kaudu ka siis, kui su seadmed pole samas võrgus. See seade võtab need vastu, kui sünkroonid sellelt ekraanilt — mitte kunagi taustal, sest rakenduse lukk hoiab ainsat võtit. Jäta tühjaks, et sünkroonida ainult otse kohtvõrgus.',
     'relay_endpoint_aria' => 'Relee aadressi URL',
     'relay_insecure_warning' => 'See relee aadress kasutab tavalist HTTP-d. Kuigi relee ei dekrüpteeri kunagi sinu andmeid, paljastab ebaturvaline ühendus krüpteeritud andmete mahud ja ajastuse võrgu jälgijatele. Parima privaatsuse jaoks kasuta <strong>https://</strong> aadressi.',
 
@@ -72,6 +70,7 @@ return [
     'removing' => 'Eemaldan:',
     'remove_rotates_key' => 'Selle seadme eemaldamine vahetab krüpteerimisvõtme, nii et see ei saa enam uuendusi.',
     'remove_cannot_erase' => 'See ei kustuta andmeid, mis on juba selles seadmes. Kui seade kadus või varastati, käsitle kõiki selles olnud andmeid avalikuks saanutena.',
+    'remove_is_local' => 'Sinu teistel seadmetel on oma loend. Kuni sa seda ka seal ei eemalda, jätkavad nad sellega sünkroonimist.',
     'remove_device' => 'Eemalda seade',
     'keep_device' => 'Jäta seade alles',
     'rotating_key' => 'Vahetan krüpteerimisvõtit…',

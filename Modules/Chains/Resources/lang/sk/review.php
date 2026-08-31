@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Potvrď alebo zamietni kandidátske prepojenia, ktoré sa nepodarilo potvrdiť automaticky.',
 
     'empty_heading' => 'Nie je čo kontrolovať',
-    'empty_body' => 'Každé prepojenie reťazca je potvrdené alebo zamietnuté. Noví kandidáti sa tu objavia, keď dorazia ďalšie importy.',
+    'empty_body' => 'Každé prepojenie, ktoré resolver dokázal spárovať, je potvrdené alebo zamietnuté. Noví kandidáti sa tu objavia, keď dorazia ďalšie importy.',
 
     'auto_confirm_nudge' => 'Ešte jedno potvrdenie a podobné prepojenia sa budú potvrdzovať automaticky.',
 

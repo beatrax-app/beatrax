@@ -14,11 +14,11 @@ use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 /**
  * @implements Scope<Model>
  */
-final class UserScope implements Scope
+final readonly class UserScope implements Scope
 {
     public function __construct(
-        private readonly CurrentUser $currentUser,
-        private readonly Application $app,
+        private CurrentUser $currentUser,
+        private Application $app,
     ) {}
 
     /**

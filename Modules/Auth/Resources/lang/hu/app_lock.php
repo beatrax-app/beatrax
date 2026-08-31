@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Az eszközöd elutasította a kulcs tárolását. A biometrikus feloldás nem érhető el.',
     'heading' => 'Alkalmazászár',
 
-    'moved_help' => 'A PIN-kód, az automatikus zárolás ideje és a biometrikus feloldás ennek az eszköznek a szinkronizálási beállításai között található.',
-    'moved_cta' => 'Szinkronizálás és eszköz megnyitása',
-
     'toggle_label' => 'Alkalmazás zárolása PIN-kóddal',
     'toggle_description' => 'A napi bejelentkezést PIN-kódra cseréli. A munkamenetek 30 napig aktívak maradnak.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'PIN-kód megtartása',
 
     'error_pin_too_short' => 'A PIN-kódnak legalább 6 számjegyűnek kell lennie.',
-    'error_pin_digits' => 'A PIN-kódnak 6–10 számjegyből kell állnia — csak számok.',
+    'error_pin_digits' => 'A PIN-kódnak :min–:max számjegyből kell állnia — csak számok.',
     'error_pin_mismatch' => 'A PIN-kódok nem egyeznek. Próbáld újra.',
     'error_pin_required' => 'Add meg a PIN-kódodat.',
     'error_pin_incorrect' => 'Hibás PIN-kód.',

@@ -14,9 +14,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
+use Modules\Auth\Internal\Lock\LockIdleClock;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Services\UserDataPathService;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -25,7 +27,7 @@ final readonly class AppLockMiddleware
     /**
      * @var list<string>
      */
-    private const ALLOWED_ROUTE_NAMES = [
+    private const array ALLOWED_ROUTE_NAMES = [
         'auth.lock',
         'auth.lock.biometric.challenge',
         'auth.lock.biometric.verify',
@@ -42,25 +44,32 @@ final readonly class AppLockMiddleware
     /**
      * @link ../../../../../.docs/features/auth/architecture.md#why-the-mobile-runtime-forced-two-changes-here
      */
-    private const LIVEWIRE_UPDATE_ROUTE = '*livewire.update';
+    private const string LIVEWIRE_UPDATE_ROUTE = '*livewire.update';
 
     // Only the config is cached; last_activity_at is written per request, so
     // a longer TTL would buy nothing and delay a settings change.
-    private const SESSION_CONFIG_TTL_SECONDS = 60;
+    // The cached lock config is re-read this often, so a setting change is
+    // never more than a minute from taking effect.
+    private static function sessionConfigTtlSeconds(): int
+    {
+        return Duration::Minute->seconds();
+    }
 
     // Public so an unlock can invalidate it: a stale copy re-locked the
     // session on the next request and asked for the PIN twice.
-    public const SESSION_CONFIG_CACHE = 'beatrax_lock_config_cache';
+    public const string SESSION_CONFIG_CACHE = 'beatrax_lock_config_cache';
 
     // Restorable across a lock engaged from the client, which never reaches
     // this middleware.
-    public const SESSION_LAST_PAGE = 'beatrax_lock_last_page';
+    public const string SESSION_LAST_PAGE = 'beatrax_lock_last_page';
 
-    public const SESSION_BACKGROUNDED_AT = 'beatrax_lock_backgrounded_at';
+    public const string SESSION_BACKGROUNDED_AT = 'beatrax_lock_backgrounded_at';
 
-    // Mirrors lock.js's GRACE_MS, and is the only clock that works on Android:
-    // a suspended WebView never fires the page timer.
-    private const BACKGROUND_GRACE_SECONDS = 30;
+    // The idle clock, per session. `last_activity_at` is one column shared by
+    // every session of the account, so a desktop app polling in the background
+    // held a browser tab's idle timer open forever. The column stays: the
+    // engage grace window and the client's own timer read it.
+    public const string SESSION_LAST_ACTIVITY = 'beatrax_lock_last_activity';
 
     public function __construct(
         private CurrentUser $currentUser,
@@ -69,6 +78,7 @@ final readonly class AppLockMiddleware
         private DatabaseManager $db,
         private Clock $clock,
         private Router $routes,
+        private LockIdleClock $idleClock,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -109,7 +119,7 @@ final readonly class AppLockMiddleware
 
     private function handleUnlocked(Request $request, Closure $next, Session $session, int $userId, ?string $routeName): Response
     {
-        $this->settleUnlockActivity($session, $userId);
+        $this->idleClock->settleUnlock($session, $userId);
 
         $config = $this->resolveConfig($session, $userId);
         if ($config === null || ! $config['lock_enabled']) {
@@ -119,32 +129,19 @@ final readonly class AppLockMiddleware
         // Ahead of the idle check, and evaluated on every pass, because the
         // marker is spent either way: this request itself proves the app is
         // back in the foreground.
-        if ($this->backgroundGraceExpired($session) || $this->isIdleExpired($config)) {
+        if ($this->idleClock->backgroundGraceExpired($session) || $this->idleClock->idleExpired($session, $config)) {
             return $this->lockForIdle($request, $next, $session, $routeName);
         }
 
-        $this->recordActivity($session, $userId, $routeName);
+        // Livewire updates are not activity: wire:poll traffic would hold the
+        // idle timer open forever.
+        if (! $this->isExemptRoute($routeName) && ! $this->isLivewireUpdate()) {
+            $this->idleClock->recordActivity($session, $userId);
+        }
+
         $this->rememberPage($request, $session, $routeName);
 
         return $this->pass($request, $next);
-    }
-
-    // Runs before anything reads the idle clock: a user who just proved
-    // presence must not then be told the session went idle.
-    private function settleUnlockActivity(Session $session, int $userId): void
-    {
-        if ($session->pull(LockStateManager::SESSION_UNLOCK_ACTIVITY_PENDING, false) !== true) {
-            return;
-        }
-
-        // Cache and row both: LockEngageController's grace window reads the
-        // row, and the cache still holds the timestamp the lock rendered with.
-        $session->forget(self::SESSION_CONFIG_CACHE);
-
-        $this->db->connection()
-            ->table('user_app_lock_configs')
-            ->where('user_id', $userId)
-            ->update(['last_activity_at' => $this->clock->now()->toDateTimeString()]);
     }
 
     // A client-side idle lock goes straight to the lock screen, so the
@@ -173,35 +170,6 @@ final readonly class AppLockMiddleware
     private function isLivewireUpdate(): bool
     {
         return $this->routes->currentRouteNamed(self::LIVEWIRE_UPDATE_ROUTE);
-    }
-
-    // Pulled, not read: any request at all means the app is in the foreground
-    // again, so the marker is spent on either branch.
-    private function backgroundGraceExpired(Session $session): bool
-    {
-        $markedAt = $session->pull(self::SESSION_BACKGROUNDED_AT);
-
-        if (! is_int($markedAt)) {
-            return false;
-        }
-
-        return $this->clock->now()->getTimestamp() - $markedAt >= self::BACKGROUND_GRACE_SECONDS;
-    }
-
-    /**
-     * @param  array{lock_enabled: bool, idle_timeout_minutes: int, last_activity_at: CarbonImmutable|null, cached_at: int}  $config
-     */
-    private function isIdleExpired(array $config): bool
-    {
-        $lastActivity = $config['last_activity_at'];
-        if ($lastActivity === null) {
-            return false;
-        }
-
-        $idleMs = $config['idle_timeout_minutes'] * 60 * 1000;
-        $elapsedMs = $this->clock->now()->diffInMilliseconds($lastActivity, absolute: true);
-
-        return $elapsedMs >= $idleMs;
     }
 
     private function lockForIdle(Request $request, Closure $next, Session $session, ?string $routeName): Response
@@ -260,23 +228,6 @@ final readonly class AppLockMiddleware
             : 'auth.lock';
     }
 
-    // Livewire updates are not activity: wire:poll traffic would hold the idle
-    // timer open forever.
-    private function recordActivity(Session $session, int $userId, ?string $routeName): void
-    {
-        if ($this->isExemptRoute($routeName) || $this->isLivewireUpdate()) {
-            return;
-        }
-
-        $now = $this->clock->now();
-        $this->db->connection()
-            ->table('user_app_lock_configs')
-            ->where('user_id', $userId)
-            ->update(['last_activity_at' => $now->toDateTimeString()]);
-
-        $this->refreshCachedActivity($session, $now);
-    }
-
     private function isExemptRoute(?string $routeName): bool
     {
         return in_array($routeName, self::ALLOWED_ROUTE_NAMES, true);
@@ -302,7 +253,7 @@ final readonly class AppLockMiddleware
         if (is_array($cached)
             && isset($cached['cached_at'])
             && is_int($cached['cached_at'])
-            && ($now - $cached['cached_at']) < self::SESSION_CONFIG_TTL_SECONDS) {
+            && ($now - $cached['cached_at']) < self::sessionConfigTtlSeconds()) {
             /** @var array{lock_enabled: bool, idle_timeout_minutes: int, last_activity_at: CarbonImmutable|null, cached_at: int} $cached */
             return $cached;
         }
@@ -334,16 +285,5 @@ final readonly class AppLockMiddleware
         $session->put(self::SESSION_CONFIG_CACHE, $payload);
 
         return $payload;
-    }
-
-    private function refreshCachedActivity(Session $session, CarbonImmutable $now): void
-    {
-        $cached = $session->get(self::SESSION_CONFIG_CACHE);
-        if (! is_array($cached)) {
-            return;
-        }
-
-        $cached['last_activity_at'] = $now;
-        $session->put(self::SESSION_CONFIG_CACHE, $cached);
     }
 }

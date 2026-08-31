@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Din enhed afviste at gemme nøglen. Biometrisk oplåsning er ikke tilgængelig.',
     'heading' => 'Applås',
 
-    'moved_help' => 'Din PIN-kode, tidsrum for automatisk lås og biometrisk oplåsning ligger sammen med denne enheds synkroniseringsindstillinger.',
-    'moved_cta' => 'Åbn Synkronisering og enhed',
-
     'toggle_label' => 'Lås appen med PIN-kode',
     'toggle_description' => 'Erstatter det daglige login med en PIN-kode. Sessioner er aktive i 30 dage.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Behold PIN-kode',
 
     'error_pin_too_short' => 'PIN-koden skal have mindst 6 cifre.',
-    'error_pin_digits' => 'PIN-koden skal have 6 til 10 cifre — kun tal.',
+    'error_pin_digits' => 'PIN-koden skal have :min til :max cifre — kun tal.',
     'error_pin_mismatch' => 'PIN-koderne er ikke ens. Prøv igen.',
     'error_pin_required' => 'Indtast din PIN-kode.',
     'error_pin_incorrect' => 'Forkert PIN-kode.',

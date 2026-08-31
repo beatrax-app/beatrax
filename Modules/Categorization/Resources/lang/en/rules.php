@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Rules stay on this device. They are not shared with your other devices.',
 
     'reapply' => 'Re-apply rules to history',
+    'reapply_confirm' => 'Re-apply every rule to your whole history? Every category, counterparty, note and tax tag a rule put there is rewritten. What you set by hand stays, and so does anything on a reconciled statement. Nothing puts the old values back.',
     'reapplying' => 'Re-applying…',
     'new_rule' => 'New rule',
 
-    'reapply_progress_lead' => 'Re-applying rules…',
-    'reapply_progress_of' => 'of',
-    'reapply_progress_trail' => 'transactions checked',
+    'reapply_progress' => 'Re-applying rules… :checked of :count transaction checked|Re-applying rules… :checked of :count transactions checked',
 
     'empty_heading' => 'No rules yet',
     'empty_body' => 'Rules match transactions on multiple conditions and apply category, counterparty, note, and tax-tag changes automatically — on import, and any time you re-apply them to your existing history.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Created',
     'col_row_actions' => 'Actions',
     'inactive_badge' => 'Off',
+    'combinator_all' => 'ALL',
+    'combinator_any' => 'ANY',
     'inactive_title' => 'This rule does not run. A rule switches off when the category or counterparty it points at is deleted.',
 
     'more_conditions' => '+:count more',

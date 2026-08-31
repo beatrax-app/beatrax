@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Načíst a zobrazit náhled',
     'cancel_import' => 'Zrušit import',
 
-    'diff_new' => 'nových,',
-    'diff_unchanged' => 'beze změny,',
-    'diff_conflicts' => 'konfliktů.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count nový|:count nové|:count nových',
+    'diff_unchanged' => ':count beze změny|:count beze změny|:count beze změny',
+    'diff_conflicts' => ':count konflikt|:count konflikty|:count konfliktů',
 
     'conflicts_heading' => 'Konflikty',
     'conflict_name' => 'název — stávající: :existing → soubor: :file',
@@ -54,8 +55,7 @@ return [
     'test_heading' => 'Vyzkoušet na mých transakcích',
     'test_help' => 'Uprav v řádku zobecněný vzor a uvidíš, které transakce by mu odpovídaly.',
     'typing' => 'Píše se…',
-    'matches_prefix' => 'Odpovídá',
-    'matches_suffix' => 'transakcím v tvé nedávné historii.',
+    'matches' => 'Odpovídá :count transakci v tvé nedávné historii.|Odpovídá :count transakcím v tvé nedávné historii.|Odpovídá :count transakcím v tvé nedávné historii.',
 
     'merge_modal_title' => 'Sloučit :count alias|Sloučit :count aliasy|Sloučit :count aliasů',
 
@@ -84,5 +84,10 @@ return [
         'no_file' => 'Nebyl nahrán žádný soubor.',
         'unreadable' => 'Nahraný soubor se nepodařilo přečíst.',
         'too_short' => 'Vzor je příliš krátký na test.',
+        'file_not_yaml' => 'Tento soubor není platný YAML, takže se z něj nedalo nic přečíst. Vyexportuj své aliasy znovu a nahraj získaný soubor.',
+        'file_unreadable_as_yaml' => 'Tento soubor se nepodařilo přečíst jako seznam aliasů. Vyexportuj své aliasy znovu a nahraj získaný soubor.',
+        'file_has_no_entries_list' => 'Tento soubor nezačíná seznamem entries: na nejvyšší úrovni, takže v něm nejsou žádné aliasy k importu. Zkontroluj, že jde o správný soubor.',
+        'entry_is_not_a_mapping' => 'Položka :entry je prostá hodnota tam, kde se čekal vzor a název. Doplň obě pole, nebo ji odeber, a nahraj soubor znovu.',
+        'entry_is_missing_a_field' => 'Položce :entry chybí vzor nebo název a alias potřebuje obojí. Doplň, co chybí, nebo tuto položku odeber, a nahraj soubor znovu.',
     ],
 ];

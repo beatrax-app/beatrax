@@ -6,16 +6,16 @@ namespace Modules\Ledger\Internal\Services;
 
 // The status surface is deliberately small: callers only have to tell
 // "all good" from "stop, do not write".
-final class FingerprintRederiveOutcome
+final readonly class FingerprintRederiveOutcome
 {
     /**
      * @param  list<array{existing_id:int,colliding_id:int,fingerprint:string}>  $collisions
      */
     private function __construct(
-        public readonly string $status,
-        public readonly int $targetVersion,
-        public readonly int $rowsAffected,
-        public readonly array $collisions,
+        public string $status,
+        public int $targetVersion,
+        public int $rowsAffected,
+        public array $collisions,
     ) {}
 
     public static function noop(int $targetVersion): self

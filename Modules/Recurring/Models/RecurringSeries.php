@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Chains\Models\ChainLink;
+use Modules\Core\Public\Casts\DateOnlyCast;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
@@ -21,13 +22,13 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property string $cadence
  * @property int $latest_amount_minor
  * @property string $latest_currency
- * @property string|null $latest_fx_rate_used
  * @property int|null $monthly_equivalent_minor
  * @property int $variance_tolerance_percent
  * @property int|null $latest_funding_chain_link_id
  * @property CarbonImmutable|null $snoozed_until
  * @property CarbonImmutable|null $next_expected_at
  * @property bool $next_expected_confidence_low
+ * @property int|null $billing_day
  * @property string $cluster_key
  * @property string|null $cluster_counterparty_key
  * @property CarbonImmutable $created_at
@@ -48,13 +49,13 @@ final class RecurringSeries extends Model
         'cadence',
         'latest_amount_minor',
         'latest_currency',
-        'latest_fx_rate_used',
         'monthly_equivalent_minor',
         'variance_tolerance_percent',
         'latest_funding_chain_link_id',
         'snoozed_until',
         'next_expected_at',
         'next_expected_confidence_low',
+        'billing_day',
         'cluster_key',
         'cluster_counterparty_key',
     ];
@@ -67,7 +68,7 @@ final class RecurringSeries extends Model
             'monthly_equivalent_minor' => 'integer',
             'variance_tolerance_percent' => 'integer',
             'snoozed_until' => 'immutable_datetime',
-            'next_expected_at' => 'immutable_date',
+            'next_expected_at' => DateOnlyCast::class,
             'next_expected_confidence_low' => 'boolean',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',

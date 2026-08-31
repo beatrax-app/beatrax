@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Odstrániť :count úlohu|Odstrániť :count úlohy|Odstrániť :count úloh',
     'empty_pending' => 'Front je prázdny.',
     'empty_failed' => 'Žiadne zlyhané úlohy.',
-    'empty_batches' => 'Žiadne aktívne dávky.',
+    'empty_batches' => 'Žiadne dávky.',
     'select_aria' => 'Vybrať',
     'select_row_aria' => 'Vybrať riadok :key',
     'col_id' => 'Id',
     'col_queue' => 'Front',
     'col_attempts' => 'Pokusy',
+    'col_state' => 'Stav',
     'col_created' => 'Vytvorené',
     'col_uuid' => 'UUID',
     'col_failed' => 'Zlyhalo',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Čakajúce',
     'col_actions' => 'Akcie',
     'delete_job' => 'Odstrániť úlohu',
+    'worker_running' => 'Worker ju spracúva',
     'delete_pending_confirm' => 'Odstrániť čakajúcu úlohu #:key?',
     'retry_job' => 'Zopakovať úlohu',
     'forget_confirm' => 'Odstrániť zlyhanú úlohu :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Vybrané zlyhané úlohy sa vrátia do frontu, aby ich worker zopakoval.',
     'cancel' => 'Zrušiť',
 
+    'state' => [
+        'available' => 'Pripravená',
+        'reserved' => 'Rezervovaná',
+        'scheduled' => 'Naplánovaná',
+    ],
+
     'tab' => [
         'pending' => 'Čakajúce',
         'failed' => 'Zlyhané',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Čakajúca úloha odstránená',
+        'pending_already_gone' => 'Táto úloha už tam nebola',
         'failed_requeued' => 'Zlyhaná úloha vrátená do frontu',
         'failed_removed' => 'Zlyhaná úloha odstránená',
         'batch_cancelled' => 'Dávka zrušená',
         'batch_deleted' => 'Dávka odstránená',
         'batch_failures_requeued' => 'Zlyhania z dávky vrátené do frontu',
+        'batch_failures_none' => 'V dávke nezostali žiadne chyby na opätovné zaradenie',
         'failed_jobs_requeued' => 'Zlyhané úlohy vrátené do frontu',
+        'failed_jobs_none' => 'Nezostali žiadne neúspešné úlohy na opätovné zaradenie',
         'bulk_refused' => 'Hromadné mazanie odmietnuté — :reason',
         'rows_deleted' => 'Vybrané riadky odstránené',
     ],

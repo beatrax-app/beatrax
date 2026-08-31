@@ -77,7 +77,7 @@ it('lists the goals still running rather than the one already closed', function 
         'name' => 'Closed goal',
         'target_minor' => 20000,
         'start_date' => CarbonImmutable::now()->subDays(60)->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => GoalStatus::Completed->value,
     ]);
     closedGoalCardFund($this->user, $this->account->id, $closed->id, 15000, 1);
@@ -89,7 +89,7 @@ it('lists the goals still running rather than the one already closed', function 
             'name' => $name,
             'target_minor' => 500000,
             'start_date' => CarbonImmutable::now()->subDays(60)->toDateString(),
-            'target_date' => CarbonImmutable::now()->addYears(3)->toDateString(),
+            'target_date' => CarbonImmutable::now()->addYearsNoOverflow(3)->toDateString(),
             'status' => GoalStatus::Active->value,
         ]);
         closedGoalCardFund($this->user, $this->account->id, $goal->id, 5000 + $row, $row);

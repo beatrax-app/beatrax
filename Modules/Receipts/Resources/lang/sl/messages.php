@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Spusti sporočilo e-pošte (.eml) ali arhiv nabiralnika (.mbox). Ujemalnik prepozna potrdila PayPal in jih pokaže kot običajne transakcije; neujemajoči se pošiljatelji ostanejo v revizijskem dnevniku za triažo.',
-    ],
-
     'conflict' => [
 
         'field' => [

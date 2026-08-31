@@ -9,9 +9,12 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Navigation\NavBadgeEvents;
+use Modules\Core\Public\Services\DevConsoleBuildGate;
 use Modules\Core\Public\Services\NavCountsService;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
@@ -19,7 +22,12 @@ use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 
 final class AppSidebar extends Component
 {
-    private const HEARTBEAT_CACHE_KEY = 'dev_mode.queue_worker_heartbeat';
+    private const string HEARTBEAT_CACHE_KEY = 'dev_mode.queue_worker_heartbeat';
+
+    // Empty body: every badge is read in render(), so the listener existing is
+    // what makes Livewire render again and recount them.
+    #[On(NavBadgeEvents::REFRESH)]
+    public function recount(): void {}
 
     public function render(
         CurrentUser $currentUser,
@@ -30,9 +38,14 @@ final class AppSidebar extends Component
         Clock $clock,
         CounterpartyTriageQueue $triage,
         NavCountsService $navCounts,
+        DevConsoleBuildGate $console,
     ): View {
         $user = $currentUser->user();
-        $isDeveloper = $user->is_developer === true;
+
+        // The build half as well as the account half: on a shipped build every
+        // /dev address answers 404, and a rail entry pointing at one reads as
+        // a broken app rather than a console that was never included.
+        $isDeveloper = $console->permits() && $user->is_developer === true;
 
         // Live Dev-block reads — only materialise for developers so
         // a non-dev render does not pay the cache + jobs-count cost

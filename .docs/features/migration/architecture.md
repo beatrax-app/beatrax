@@ -38,9 +38,12 @@ identically to data imported any other way.
 - **Internal/Parsers** — `AbstractYnabParser` (shared YNAB4/nYNAB parsing body)
   with its two one-line format subclasses, `ActualParser` (SQLite-backed), and
   their `Support/` helpers (amount-string parsing, CSV column mapping, split
-  reconstruction, transfer matching, ZIP extraction).
+  reconstruction, transfer matching, ZIP extraction — see
+  [reading a ZIP without ext-zip](reading-a-zip-without-ext-zip.md), which is
+  what happens on a phone, where `ext-zip` does not exist).
 - **Internal/Pipeline** — `StagingWriter` (batch → staging tables),
-  `PromoteStagingToDomain` (staging → domain, the fixed six-writer order),
+  `PromoteStagingToDomain` (staging → domain, the fixed six-writer order) and
+  `PromoteBudgetAssignments`, which owns the budget-grid step of that order,
   `ThreeWayMergeResolver` + `EntityChangeApplier` + `ConflictRow`/
   `ConflictValueCodec`/`MergeDecision`/`PromoteResult` (the reconciliation
   machinery).
@@ -87,6 +90,14 @@ identically to data imported any other way.
    item carries the underlying row's id so `PreviewMigration::resolveConflict()`
    can act on one specific conflict.
 
+   "Nothing is unmapped" is also true of a run that staged **nothing at all**,
+   which is how a reader whose export parsed to zero rows was told everything
+   mapped cleanly and invited to confirm an import of nothing.
+   `PreviewSummary::stagedNothing()` is the third state — every mapped count
+   AND every unmapped count zero — and the preview renders
+   `migration::preview.nothing_staged` for it. The all-clean line now requires
+   that something was actually staged.
+
    There are two groups here and not four. `category` and `payee` were the
    other two, and nothing could ever fill them: the preview renders *before*
    promotion, so a promote-time failure could not reach it, and at parse time
@@ -112,9 +123,25 @@ Every promotion step first asks `SourceMapWriter::resolve()` whether a source
 entity was already promoted by an earlier confirm of the same export; a hit
 reuses the existing Beatrax id and performs no further writes. This is what
 makes a byte-identical re-run a true no-op, not merely "safe to call again."
-Budget-grid assignments are the one deliberate exception:
-`EnvelopeWriter::setAssigned()` is already idempotent by value, so no separate
-resolve-gate is needed there.
+
+Budget-grid assignments do not use that resolve-gate — `EnvelopeWriter::
+setAssigned()` is idempotent by value — but they carry two gates of their own,
+because a budget cell is the one entity a re-import can *destroy* rather than
+merely restate:
+
+- **Nothing to promote.** If the staged amount already equals this cell's
+  stored `migration_import_baseline` value, the export has not moved since it
+  was last imported and the cell is left alone. Re-applying it would overwrite
+  whatever the reader did to that month in between — including a kept-local
+  conflict decision, which is exactly the value the export disagrees with.
+- **A zero is not a delete order.** A staged zero for a cell with no
+  `migration_source_map` row is the export having no budget there, not an
+  instruction to remove one the reader typed in. Only a zero for a cell this
+  importer has previously mapped goes through to `setAssigned($user, …, 0)`,
+  which is `EnvelopeWriter`'s delete. Because that write leaves no
+  `envelope_assignments` row to point at, the source-map entry keeps the id its
+  last non-zero import mapped, so the cell stays addressable and its baseline
+  still advances to `0`.
 
 `SourceMapWriter` persists `(user_id, source_product, source_entity_type,
 source_external_id) → (beatrax_entity_type, beatrax_id)` in
@@ -179,9 +206,31 @@ reconstruction via the `"Split (n/m)"` convention, transfer-payee pairing via
 the `"Transfer : <Account>"` convention, cleared codes, amount format) is
 identical. `Ynab4Parser`/`NynabParser` supply only the format identifier.
 Neither format's CSV export carries goal or scheduled-transaction data, or a
-per-row currency — the parser always stamps the batch with a fixed `'EUR'`
-budget currency (Beatrax's own base currency, the documented fallback when a
-source carries no currency signal at all).
+currency anywhere — not per row, not in a header — so the parser stamps the
+batch with the READER's own base currency (`BaseCurrency::forUser()`, the same
+resolution `ActualParser` falls back to when an Actual export names none). A
+fixed `'EUR'` stood there before, which booked a dollar household's whole YNAB
+history in euros and then had `PromoteBudgetAssignments::promote()` refuse
+every budget month for disagreeing with that household's envelopes — the reader was told
+their budget history was "in EUR", which the export never said. That currency
+is also what the amount cells are read at: `AmountStringParser` passes it to
+`MoneyInput`, so a yen cell resolves at the yen's own scale rather than at a
+hundredth of one.
+
+Neither export carries a per-transaction id either, and the row's position in
+the file is not one: a reader who types a single older transaction between two
+exports pushes every row below it down by one, and a positional
+`source_external_id` then resolved each of them to the PREVIOUS row's
+`migration_source_map` entry — the reconciliation rewrote already-imported
+transactions with their neighbours' amounts, swallowed the genuinely new row as
+already-imported, and re-inserted an unrelated one. The identity is instead the
+row's own content — account, date, payee and category, hashed — plus an
+occurrence ordinal among rows sharing that tuple, so a second identical charge
+on one day is still its own transaction while an edit elsewhere in the file
+moves nothing. The amount is deliberately NOT part of it: an amount change is
+what `ThreeWayMergeResolver::reconcileTransactionAmounts()` exists to
+reconcile, and folding it into the identity would make every corrected figure
+a new transaction instead.
 
 `ActualParser` is the one format whose extracted directory is a SQLite
 database rather than a CSV pair. It drives `ActualSqliteReader` — a wholly
@@ -204,10 +253,17 @@ in PHPStan's stubs regardless of fetch mode. `categories()`/`payees()`/
 `goalDefs()` fall back to the raw, tombstone-filtered table via a simple SQL
 ternary when the resolved view is absent; `transactions()` falls back to a
 hand-replicated join+filter since its view resolution is more involved.
-`budgetType()` normalizes Actual's legacy pre-migration preference values
-(`'rollover'`→envelope, `'report'`→tracking) onto the current
-`'envelope'|'tracking'` pair; `budgetAssignments()` branches on it to read
-`zero_budgets` or `reflect_budgets` — an empty/absent result from the file's
+`budgetType()` returns an `ActualBudgetType`, normalizing Actual's legacy
+pre-migration preference values (`'rollover'`→envelope, `'report'`→tracking)
+onto the current `envelope`/`tracking` pair; `budgetAssignments()` branches on
+it to read `zero_budgets` or `reflect_budgets`. A real export routinely ships
+with no `preferences.budgetType` row at all, and refusing those rejected the
+whole file, so `declaredBudgetType()` returns `null` there and `budgetType()`
+falls back to `ActualSqliteReader::DEFAULT_BUDGET_TYPE` (envelope, Actual's own
+default). `ActualParser` records the assumption as one `extra`
+`UnmappedItemDto`, exactly as it does for a missing `currencyCode`. A
+`budgetType` row that IS present but unreadable still throws — the file saying
+something this importer cannot parse is not the same as it saying nothing — an empty/absent result from the file's
 OTHER, inactive-mode table is never reported as "no budget history", since
 this method only ever queries the table matching the file's own active mode. `ActualGoalDefInterpreter` decodes the
 `categories.goal_def` JSON blob's supported flat subset (a single target
@@ -238,12 +294,45 @@ collapse into a group. A lone memo-tagged row is left ungrouped, since a
 genuine split always has 2+ legs, so a singleton is more likely a
 coincidental "Split" substring in an otherwise plain memo.
 
-`AmountStringParser` (the Dutch/plain-decimal amount-string parser for YNAB4/
-nYNAB CSV cells) is copied verbatim from
+The `n` and `m` are read, not just matched. That triple is a natural key, not
+an identity: two separate splits at one payee on one date share it exactly,
+and grouping on it alone folded them into a single transaction whose amount was
+the sum of both. A buffered group therefore continues only while the memo's own
+`n` is the next in sequence for the same `m`, which is the only per-row
+identity this export format carries. A second `Split (1/2)` starts a second
+group.
+
+A group whose legs sum to zero is a legitimate shape — a reclassification
+moving an amount between two categories — and is NOT rejected. It once threw
+`UnrecognizedMigrationFileException` mid-generator, which
+`StartMigrationRun` turns into a deleted run: one such row cost the reader
+every other row in the export. `assertLegsPresent()` now only refuses a group
+with no legs at all. Beatrax cannot store the legs themselves (a
+`transaction_splits` leg must share its parent's sign, and a zero-net parent
+has none), so `createSplitLegs()` degrades it the same way it degrades an
+uncarryable split: the transaction lands on its own and the loss becomes an
+`extra` row in `migration_staging_unmapped_items`. That catch covers
+`InvalidArgumentException` from `SaveTransactionSplit` as well as
+`SplitSumMismatchException`, so no split shape the writer refuses can fail a
+whole run.
+
+`AmountStringParser::parse()` (the Dutch/plain-decimal amount-string parser for
+YNAB4/nYNAB CSV cells) is copied verbatim from
 `Modules\Budgets\Public\Services\EnvelopeWriter::parseAmount()` rather than
 re-derived — any future bugfix to that shared parsing rule should be ported
 here too. It matches that method's contract exactly: a blank or `0.00` cell
-resolves to "no amount" (`null`), never zero.
+resolves to "no amount" (`null`), never zero. It takes the currency the batch
+resolved as well, which that method does not, because a typed budget amount is
+already in the reader's own currency while a CSV cell is a file's spelling of
+one: at a fixed hundredth a yen figure read a hundred times itself.
+
+A `Budget.csv` cell needs the opposite reading, which is what the sibling
+`parseSigned()` is for. There, `0,00` and a negative are both figures the
+reader wrote, and only an *absent* cell means the export says nothing —
+`parseBudgetedMinor()` returns `null` for that one and
+`buildBudgetAssignments()` stages no row at all. Collapsing the two into a
+single `int` staged a month the file never mentioned as a budget of zero,
+which promotion then applied by deleting the reader's own figure for it.
 
 `ZipExtractor` extracts an uploaded export ZIP into a scoped temp directory
 under `storage/app/`, never a web-served path, guarding against a zip-bomb
@@ -270,6 +359,28 @@ derived running total); Beatrax's own `CarryoverQuery` derives balances, so
 the promote step feeds `budgeted` straight into `EnvelopeWriter::setAssigned()`
 and nothing else.
 
+Every source format emits a budget month as a month START (`startOfMonth()`
+in `AbstractYnabParser` and `ActualParser` alike), which is a period boundary
+for a reader on `period_start_day = 1` and nobody else.
+`EnvelopeWriter::setAssigned()` therefore re-keys it onto the period that
+contains it; the promoter's own follow-up read of the written row (for the
+`migration_source_map` entry) resolves the same period, while the source map's
+composite `{categoryExternalId}|{period_start}` external id keeps the RAW
+source month — that key belongs to the export, not to the reader's calendar,
+and a reconciliation of a later export has to land on the same one.
+`ThreeWayMergeResolver::reconcileBudgetAssignments()` reads the live
+`envelope_assignments` row through the same period resolution.
+
+An envelope is denominated in the reader's own base currency and the fold
+never converts, so a budget month whose staged `currency` is not that
+currency is **not written**: writing it would relabel a $500 plan as a €500
+one at one to one. Each such currency becomes one `extra`
+`migration_staging_unmapped_items` row naming the currency and how many
+months went unwritten, which the results page already surfaces. A goal is
+different — `goals.target_currency` is a real per-goal column, so
+`GoalWriter::save()` takes the staged `target_currency` and stores it rather
+than stamping the reader's base currency over it.
+
 A `MigrationTransactionDto`'s `amount` is always the WHOLE-transaction
 settled amount — for a split parent this is the sum of every leg (Actual's
 own `is_parent` row already carries the parent total; the YNAB parsers
@@ -283,6 +394,21 @@ re-deriving the pairing logic; `Transfers\PairsTransferLegs::pairOrphansForUser(
 still runs once after promotion as the authoritative sweep, since the
 parser's own textual pairing is advisory, not canonical.
 
+A split leg that resolves to no category is not carried, and neither is the
+split it belongs to. `transaction_splits.category_id` is NOT NULL by design — a
+leg exists to carry a category — so such a leg cannot be stored, and dropping it
+on its own would leave the survivors short of the parent, which
+`SaveTransactionSplit` rejects with `SplitSumMismatchException` *after* the
+parent row is already inserted. `PromoteStagingToDomain::createSplitLegs()`
+therefore abandons the whole split for that parent, promotes the transaction at
+its full amount, and records an `extra` row in
+`migration_staging_unmapped_items` naming the transaction and the reason. The
+same degradation covers legs that simply do not add up to their parent. The
+reader then finds the transaction where the app already models "no category
+yet" — `category_id IS NULL`, the triage inbox — rather than under a synthetic
+"Uncategorized" category row that would split that bucket in two and hide the
+row from the very surface built to catch it.
+
 `migration_source_map` records ONE row per promoted transaction, not one per
 split leg — `SaveTransactionSplit::save()` has a `void` return (no leg ids to
 map), and the parent-level resolve-gate already fully protects split-leg
@@ -295,11 +421,20 @@ transfer linkage actually rests on.
 ## Promotion order
 
 `PromoteStagingToDomain::promote()` runs a fixed sequence: categories → budget
-grid (`EnvelopeWriter::setAssigned()`) → accounts → transactions (via
+grid (`PromoteBudgetAssignments::promote()`, which writes through
+`EnvelopeWriter::setAssigned()`) → accounts → transactions (via
 `ResolvesCounterparties::run()` THEN `RecordTransactions`, in that order,
 since the stamped counterparty id is what `RecordTransactions` persists) →
 splits (`SaveTransactionSplit`) → transfer sweep
-(`PairsTransferLegs::pairOrphansForUser()`) → goals (Actual only). Categories
+(`PairsTransferLegs::pairOrphansForUser()`) → goals (Actual only).
+
+The `transfersPaired` count is NOT that sweep's return value.
+`RecordTransactions` dispatches `TransactionImported` per row and Transfers'
+`PairTransferCandidates` listener pairs most legs there and then, so by the
+time the sweep runs there is usually nothing left to find and it answers zero
+for an import that paired every transfer in the file. The count is the
+half-difference in rows carrying a `pair_transaction_id` across the whole
+transaction pass, since every new pair sets that column on exactly two rows. Categories
 are promoted in staging-insert order so a group's synthetic parent row —
 always staged before its children — is already resolved by the time a child
 row looks up its parent. When `RecordTransactions` silently drops a row as a
@@ -307,6 +442,30 @@ fingerprint duplicate of an unrelated row (a vanishingly rare cross-source
 coincidence), it is surfaced as a visible `unmapped` item rather than silently
 counted as a success, since nothing else (source-map, split legs, payee
 resolution) is linked for that row.
+
+Before it creates a category at all, the promoter asks whether the reader
+already has one at that path. A staged row whose resolved parent, name and
+`kind` match a category the reader can see — matched on the row's stored name
+**and** on the reader's translation of it, the same union
+`EntityNameSearch` matches over — is mapped onto that category rather than
+creating a second. The source map records the match, so a re-import resolves
+straight to it and the promoter's `categoriesCreated` count reflects what was
+actually made.
+
+That line is drawn at the **full path**, not the leaf. `Frequent: Groceries`
+arriving beside a seeded top-level `Groceries` is a different category and is
+still created: the group in front of the leaf tells the two apart on every
+screen. A second top-level `Income`, or a second `Salary` under it, has no such
+distinguisher left — every picker in the app would render both byte-identically
+— and it is the shape every export carrying an Income → Salary pair produced,
+which is all of them. Slug uniqueness could not have caught it: the walk is
+scoped to `user_id = <reader>`, so an imported `income` never met the seeded
+global `income`, and the *name* was never compared at all.
+
+A category matched into the shared tree is one no reconciliation may rename:
+`ThreeWayMergeResolver::reconcileCategories()` skips a mapped category the
+reader does not own, because `EntityChangeApplier` scopes every write to the
+reader's own rows and the decision would resolve to nothing either way.
 
 Slugs for the rows this promoter creates come from two places.
 `accounts.slug` is `AccountSlugResolver`'s — the Ledger service that owns
@@ -322,7 +481,17 @@ promotion never re-derives one for a row the source map already resolves.
 ## Reconciliation: the 3-way merge
 
 `CheckForUpdates` is the entry point for re-importing a newer export of an
-already-confirmed source. For every already-mapped entity in the new export,
+already-confirmed source, and it writes to no domain table at all. It stages
+the new export, resolves the merge, records the conflicts as
+`migration_staging_unmapped_items` rows and leaves the run in
+`'needs_attention'` — the preview is a read of what *would* happen, so
+`DiscardMigrationRun` genuinely undoes it. It used to promote and apply before
+the preview rendered, which meant a reader who looked and then discarded had
+already had their ledger rewritten. `ConfirmMigration` re-derives the merge
+(against live values, so the reader's own edits in between still count) and is
+the only place a reconciliation reaches the ledger; `MergeApplier` carries the
+non-conflicting half, skipping any field that already has a conflict row, since
+that one belongs to the reader's resolution. For every already-mapped entity in the new export,
 `ThreeWayMergeResolver` reads three values — the newly-parsed source value
 (`S_new`), the baseline stored at the entity's last import
 (`migration_import_baseline`, `B`), and the current live Beatrax value (`C`)
@@ -362,7 +531,11 @@ human label + resolution-aware copy from the structured columns for the UI —
 the two plain-text columns are a legacy/debug mirror, not the source of truth.
 `PreviewSummaryBuilder` resolves a human entity name for the label (e.g.
 "Groceries · January 2026 budget" rather than the raw internal
-"budget_assignment budgeted_minor") and formats money-shaped values via the
+"budget_assignment budgeted_minor"), splitting the composite budget key at its
+LAST `|` — the period start can never hold one and a category the reader named
+"Rent | Utilities" puts one in the other half, which sent a name fragment to
+the date parser and threw the whole preview away instead of listing the
+conflicts it was there to show and formats money-shaped values via the
 same `Money` formatter the rest of the app uses (e.g. "€ 300,00"), never a
 raw minor-unit integer; a transaction's counterparty name/description is
 decrypted for display via `SensitiveColumnCodec` (a documented no-op for a
@@ -371,10 +544,16 @@ plaintext user).
 `'take_source'` resolution writes the source value via the same
 `EntityChangeApplier::apply()` non-conflicting changes use (one writer per
 entity kind, never two), and every conflict's baseline is then advanced to
-whichever value ended up live — for `'keep_local'`/`NULL` this needs an
-explicit `EntityChangeApplier::advanceBaseline()` call; for a take-source
-budget assignment it already happened as a side effect of
-`promoteBudgetAssignments()`'s own unconditional-apply-by-value write.
+**what the source file said** — never to whichever value ended up live. The
+baseline's whole job is to answer "has the export changed since last time"; a
+kept-local decision that wrote the LOCAL value there made the same unchanged
+export read as a source-side change on the next run, and that run then applied
+the very value the reader had rejected. The reader's choice lives in the
+projection (the live row, left alone) and in the conflict row's `resolution`
+column, not in the baseline. For `'keep_local'`/`NULL` this needs an explicit
+`EntityChangeApplier::advanceBaseline()` call; for a take-source budget
+assignment it already happened as a side effect of
+`PromoteBudgetAssignments::promote()`'s own write.
 Budget assignments resolved anything other than `'take_source'` are threaded
 through `PromoteStagingToDomain::promote()`'s explicit skip-list, since that
 is the one entity kind `promote()` otherwise applies unconditionally on every
@@ -385,7 +564,7 @@ revisits an already-mapped row, so no separate skip-list is needed for them.
 change by resolving the Beatrax entity id via `SourceMapWriter`, writing the
 field, then advancing that entity's baseline snapshot to the newly-applied
 value; `budget_assignment` is deliberately never routed through it, since
-`PromoteStagingToDomain::promoteBudgetAssignments()`'s own unconditional path
+`PromoteBudgetAssignments::promote()`'s own unconditional path
 already applies it — routing it through `apply()` too would double-apply.
 `advanceBaseline()` pins a conflict's baseline to a specific value without
 writing to the domain at all, uniformly across every entity type, including
@@ -395,7 +574,27 @@ the same composite `sourceExternalId` `ThreeWayMergeResolver` already uses).
 `EntityChangeApplier::applyTransactionAmount()` recomputes a transaction's
 stored `fingerprint` in the same update as its `amount_minor` change, since
 that column is part of the SHA-256 fingerprint tuple and the
-`transactions_fingerprint_uq` composite unique index. A genuine fingerprint
+`transactions_fingerprint_uq` composite unique index.
+
+The amount itself is not one column. `amount_minor`/`currency` are the native
+leg the fingerprint is composed over; `settled_amount_minor`/`settled_currency`
+are the leg every balance, budget, forecast, report and split check sums; and
+`fx_rate_used` is the rate relating them. A correction that moved only the
+native leg therefore reached nothing a reader can see — a re-import that
+changed a €1250,00 row to €1260,00 left the account balance exactly where it
+was, and `transaction-detail` then printed two different EUR figures one above
+the other with no rate row to explain them. So the new amount is put through
+`Ledger::TransactionAmount::withAmountMinor()`, the same seam
+`Import::NormalizeStage`, `Import::ApplyEnrichments` and
+`Receipts::ApplyReceiptConflictResolution` write their amounts through, and
+its `toColumns()` — all five columns — travels in the update beside the
+recomputed fingerprint. On a single-currency row the settled leg follows the
+native one and no rate is stored. On a converted row the settled leg is the
+bank's own conversion, which a re-import of the native figure does not
+restate, so it stands and the rate is re-derived from the pair it now sits
+beside; the two legs also take one direction from the native leg, so a
+sign-flipping correction cannot leave a negative rate behind. A genuine
+fingerprint
 collision on that update returns `false` (no write performed) rather than
 letting the raw `QueryException` bubble out; any other `QueryException` is
 re-thrown rather than silently reclassified as a benign collision — this
@@ -466,9 +665,12 @@ re-reads the CURRENT resolution from `PreviewSummaryBuilder` on every render
 so the toggle reflects real persisted state, never a client-side-only copy.
 `confirm()` is safe to call uniformly for a first-time run ('parsed'
 → promotes + flips to 'confirmed'), a reconciliation run ('needs_attention'
-→ `ConfirmMigration`'s `promote()` call re-visits an already-resolve-gated
-batch, a safe no-op, and flips to 'confirmed' as a review acknowledgement),
-or an already-confirmed run (short-circuits to the persisted counts).
+→ re-resolves the merge, promotes, applies both the non-conflicting changes and
+the reader's own resolutions, and flips to 'confirmed'), or an
+already-confirmed run (short-circuits to the persisted counts). A
+reconciliation run always waits for that confirm, conflicts or not — the status
+is what tells `ConfirmMigration` a run came from `CheckForUpdates` and still
+owes the ledger its writes.
 Migration has no "name this account/category" naming flow analogous to
 `Import`'s ICS/PayPal/unfamiliar-IBAN prompts — every migrated account gets a
 deterministic synthetic pseudo-IBAN with no user input required, so there is
@@ -498,7 +700,11 @@ already-confirmed run (would orphan the domain rows already promoted) and
 already truncated, so a confirm would silently flip status back with all-zero
 counts) — the two exceptions guard symmetric ends of the same state machine.
 `DiscardMigrationRun::sweepAbandonedForUser()` deletes never-confirmed runs
-older than a fixed threshold for one user, cascade-wiping their staging via
+older than a fixed threshold for one user — BOTH never-confirmed statuses,
+`'parsed'` and `'needs_attention'`, since a reconciliation abandoned at its
+preview holds a whole export's staging rows and wrote no domain row that
+deleting it could orphan. Nothing in production calls it yet; it is reachable
+only from its own test until a scheduled hook exists, cascade-wiping their staging via
 the FK; every delete is scoped by both `id` AND `user_id` explicitly — never
 a bulk unscoped truncate — so it can never touch another user's rows even
 from a future scheduled hook that iterates every user.

@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'serija',
 
+    'template' => [
+        'cancel' => 'Nutraukti :name',
+        'change_amount' => 'Pakeisti :name sumą',
+    ],
+
     'summary' => [
         'cancel' => 'Nutraukti :name',
         'series_fallback' => 'serija #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenarijus pervadintas.',
         'mutation_added' => 'Pakeitimas pridėtas.',
         'mutation_updated' => 'Pakeitimas atnaujintas.',
-        'mutation_removed' => 'Pakeitimas pašalintas. Anuliuoti',
+        'mutation_removed' => 'Pakeitimas pašalintas.',
     ],
 
     'errors' => [
         'name_empty' => 'Scenarijaus pavadinimas negali būti tuščias.',
         'name_too_long' => 'Scenarijaus pavadinimas turi būti ne ilgesnis nei :max simbolis.|Scenarijaus pavadinimas turi būti ne ilgesnis nei :max simboliai.|Scenarijaus pavadinimas turi būti ne ilgesnis nei :max simbolių.',
         'name_taken' => 'Scenarijus tokiu pavadinimu jau yra.',
+        'date_out_of_range' => 'Ši data yra už kiekvieno prognozės horizonto — nuo šiandien iki :days dienos į priekį — todėl scenarijus nieko nepakeistų.|Ši data yra už kiekvieno prognozės horizonto — nuo šiandien iki :days dienų į priekį — todėl scenarijus nieko nepakeistų.|Ši data yra už kiekvieno prognozės horizonto — nuo šiandien iki :days dienų į priekį — todėl scenarijus nieko nepakeistų.',
         'pick_kind_first' => 'Pirmiausia pasirink pakeitimo tipą.',
         'amount_positive' => 'Suma turi būti teigiamas skaičius.',
+        'scenario_gone' => 'Šio scenarijaus nebėra — jis ištrintas kitur. Pasirink kitą scenarijų arba sukurk naują.',
+        'mutation_gone' => 'Šio pakeitimo nebėra — jis pašalintas kitur. Uždaryk redaktorių ir pridėk jį iš naujo, jei vis dar nori.',
     ],
 ];

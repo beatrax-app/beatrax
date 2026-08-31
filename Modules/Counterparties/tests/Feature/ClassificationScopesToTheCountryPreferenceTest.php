@@ -51,7 +51,6 @@ function resolveDescription(User $user, Account $account, string $description): 
         currency: 'EUR',
         settledAmountMinor: -12500,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: $description,
         counterpartyIban: null,
         counterpartyNormalized: strtolower($description),

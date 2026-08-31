@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Rediģēt nodokļu atzīmi: :label',
     'tag' => 'Atzīmēt',
     'tag_aria' => 'Atzīmēt kā nodokļiem būtisku',
+    'tag_caption' => 'Atzīmēt',
 ];

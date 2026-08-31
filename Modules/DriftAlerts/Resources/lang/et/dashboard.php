@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Muutuste hoiatused',
-    'aria' => 'Muutuste hoiatused — :count lahtist, aastane mõju :amount',
+    'aria' => 'Muutuste hoiatused — :count lahtist, :impact',
     'open' => 'lahtist',
-    'annualized_impact' => 'aastane mõju',
+    'impact_rising' => 'aastane mõju :amount',
+    'impact_flat' => 'lisanduvat aastakulu ei ole',
 ];

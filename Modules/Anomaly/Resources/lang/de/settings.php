@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Wie schnell Beatrax eine Abbuchung für diesen Händler oder diese Kategorie als ungewöhnlich einstuft, von 1 bis 100. Höher markiert mehr.',
 
     'min_amount_label' => 'Mindestbetrag der Abbuchung',
-    'min_amount_help' => 'Ignoriere Auffälligkeiten bei Abbuchungen unter diesem Betrag. Gespeichert in Cent (:symbol) — 1000 bedeutet :example.',
+    'min_amount_help' => 'Ignoriere Auffälligkeiten bei Abbuchungen unter diesem Betrag. Gespeichert in kleinsten Einheiten (:symbol) — :minor bedeutet :example.',
 
     'save' => 'Anomalie-Einstellungen speichern',
     'saved' => 'Gespeichert.',

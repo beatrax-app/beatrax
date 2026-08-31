@@ -10,15 +10,14 @@ return [
     'subtitle_full' => 'Istoric complet.',
     'subtitle_recent' => 'Tranzacții recente (ultimele 90 de zile).',
 
-    'currency_aria' => 'Vizualizare valută',
-    'currency_eur' => 'Doar :code',
-    'currency_original' => 'Valuta originală',
+    'currency_aria' => 'Sumă afișată',
+    'currency_eur' => 'Sumă decontată',
+    'currency_original' => 'Sumă originală',
 
     'show_recent' => 'Arată doar recentele',
     'show_full' => 'Arată istoricul complet',
 
     'empty_period' => 'Nimic aici pentru această perioadă.',
-
 
     'empty_recent_has_older' => 'Nimic în ultimele 90 de zile. Tranzacțiile mai vechi sunt încă aici.',
 

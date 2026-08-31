@@ -6,12 +6,15 @@ namespace Modules\Ledger\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Internal\Services\TransactionFilterOptions;
 use Modules\Ledger\Internal\Services\TransactionRowDecorator;
+use Modules\Ledger\Internal\Support\TransactionListViewData;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
 use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Ledger\Public\Enums\ClearedStatus;
@@ -32,7 +35,7 @@ final class TransactionsList extends Component
 
     // ~200-400 bytes JSON-encoded per row, so 500 rows stays well below
     // Livewire 4's 4MB snapshot limit. Oldest rows are trimmed past it.
-    private const MAX_ACCUMULATED_ROWS = 500;
+    private const int MAX_ACCUMULATED_ROWS = 500;
 
     public bool $fullHistory = false;
 
@@ -56,6 +59,12 @@ final class TransactionsList extends Component
     #[Url(as: 'category', except: [])]
     public array $filterCategories = [];
 
+    // A positive filter, not the absence of the one above: "no category" is a
+    // bucket a report groups by, and a row opened from it used to emit nothing
+    // at all and land the reader on the whole period.
+    #[Url(as: 'uncategorized', except: false)]
+    public bool $filterUncategorized = false;
+
     /** @var list<int> */
     #[Url(as: 'counterparty', except: [])]
     public array $filterCounterparties = [];
@@ -77,13 +86,18 @@ final class TransactionsList extends Component
 
     // A direction alone cannot reconstruct a report figure: a fee and a
     // transfer out are both negative, and neither is counted as spend.
-    /** @var list<string> */
+    /** @var list<mixed> Query-string supplied, so the element type is whatever arrived. */
     #[Url(as: 'type', except: [])]
     public array $filterTypes = [];
 
     public ?bool $preSearchFullHistory = null;
 
-    /** @var list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}> */
+    // Locked, unlike the #[Url] filters above: the rows are projected from the
+    // query and named by no binding, and the phone card list hands each one's
+    // minor/currency pair to Money::ofMinor(). The docblock is a claim about
+    // what the server puts here, not about what a payload can.
+    /** @var list<array{id: int, postedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}> */
+    #[Locked]
     public array $accumulatedRows = [];
 
     public bool $hasMore = false;
@@ -94,15 +108,16 @@ final class TransactionsList extends Component
 
     // Public so Livewire dehydrates it into the encrypted snapshot — a
     // protected property re-initialises to [] on every request, making the
-    // duplicate-append guard ineffective.
+    // duplicate-append guard ineffective. Locked because a payload naming the
+    // current cursor here is what stops accumulate() replacing the rows.
     /** @var array<int, true> */
+    #[Locked]
     public array $appendedCursorIds = [];
 
     public function mount(CurrentUser $currentUser): void
     {
         if ($this->currency === '') {
-            $pref = $currentUser->user()->default_currency_view;
-            $this->currency = $pref === 'eur_only' ? CurrencyView::BaseOnly->value : CurrencyView::Original->value;
+            $this->currency = $currentUser->user()->default_currency_view->value;
         }
     }
 
@@ -111,6 +126,7 @@ final class TransactionsList extends Component
         return $this->searchQuery !== ''
             || $this->filterAccounts !== []
             || $this->filterCategories !== []
+            || $this->filterUncategorized
             || $this->filterCounterparties !== []
             || $this->filterAfter !== ''
             || $this->filterBefore !== ''
@@ -125,6 +141,7 @@ final class TransactionsList extends Component
         $this->searchQuery = '';
         $this->filterAccounts = [];
         $this->filterCategories = [];
+        $this->filterUncategorized = false;
         $this->filterCounterparties = [];
         $this->filterAfter = '';
         $this->filterBefore = '';
@@ -138,6 +155,15 @@ final class TransactionsList extends Component
             $this->preSearchFullHistory = null;
         }
 
+        $this->resetPagination();
+    }
+
+    // One chip holds both the ids and the "no category" bucket, so its clear
+    // button has to empty both or the list stays narrowed with nothing shown.
+    public function clearCategoryFilter(): void
+    {
+        $this->filterCategories = [];
+        $this->filterUncategorized = false;
         $this->resetPagination();
     }
 
@@ -187,22 +213,33 @@ final class TransactionsList extends Component
         TransactionFilterOptions $filterOptions,
         BaseCurrency $baseCurrency,
     ): View {
-        $this->normaliseFilterIds();
+        $this->normaliseFilters();
 
         return $this->isSearchActive()
             ? $this->renderSearch($currentUser, $views, $searchQuery, $rows, $filterOptions, $baseCurrency)
             : $this->renderList($currentUser, $listQuery, $views, $rows, $filterOptions, $baseCurrency);
     }
 
-    // Livewire hands a #[Url] array to the view as well as to the query, so
+    // Livewire hands a #[Url] property to the view as well as to the query, so
     // cleaning it on the way to the query alone left the chip partial
     // subscripting [0] on a shape the address bar chose. Coerced on the
-    // property instead, both readers see the same list.
-    private function normaliseFilterIds(): void
+    // property instead, both readers see the same filter.
+    private function normaliseFilters(): void
     {
         $this->filterAccounts = self::positiveIds($this->filterAccounts);
         $this->filterCategories = self::positiveIds($this->filterCategories);
         $this->filterCounterparties = self::positiveIds($this->filterCounterparties);
+        $this->filterAfter = self::supportedDay($this->filterAfter);
+        $this->filterBefore = self::supportedDay($this->filterBefore);
+    }
+
+    // ?before=2026 is not a wider filter, it is a string the DATE comparison
+    // read lexically: 187 rows all dated 2026 came back as none, under a chip
+    // printing "Before 2026" and a count claiming a filter was applied. The
+    // picker and every preset emit a day, so anything else is a bad link.
+    private static function supportedDay(string $raw): string
+    {
+        return SafeDate::dayOrNull($raw) === null ? '' : trim($raw);
     }
 
     // Captures $fullHistory on entry so clearSearch() can restore the view
@@ -231,7 +268,7 @@ final class TransactionsList extends Component
         );
 
         $this->accumulate(array_map(
-            static fn (SearchRowDto $row): array => self::searchRowToArray($row),
+            static fn (SearchRowDto $row): array => TransactionListViewData::searchRow($row),
             $page->rows,
         ));
 
@@ -242,24 +279,12 @@ final class TransactionsList extends Component
         $rowIds = array_map(static fn (SearchRowDto $row): int => $row->id, $page->rows);
         $state = $this->decorateAccumulatedRows($rowIds, $currentUser, $rows, $readerCurrency);
 
-        // Rebuilt per render, never accumulated: a stale highlight must not
-        // outlive the query that produced it.
-        $searchRows = [];
-        foreach ($page->rows as $row) {
-            $searchRows[$row->id] = $row;
-        }
-
         return $views->make('ledger::livewire.transactions-list', [
             ...$this->sharedViewData($state, $filterOptions, $user, $readerCurrency),
-            'page' => $page,
+            ...TransactionListViewData::searchPage($page),
             'chainTxIds' => [],
             'hasOlderTransactions' => false,
             'isSearchMode' => true,
-            'searchTotalCount' => $page->totalCount,
-            'searchTotalOut' => $page->totalOutMinor,
-            'searchTotalIn' => $page->totalInMinor,
-            'didYouMean' => $page->didYouMean,
-            'searchRows' => $searchRows,
             'activeFilterCount' => $this->activeFilterCount(),
         ]);
     }
@@ -283,7 +308,7 @@ final class TransactionsList extends Component
             : $listQuery->recent($user, daysBack: 90, cursorId: $this->cursorId, cursorPostedAt: $this->cursorPostedAt, currency: $queryCurrency);
 
         $this->accumulate(array_values(array_map(
-            static fn (TransactionRowDto $row): array => self::rowToArray($row),
+            static fn (TransactionRowDto $row): array => TransactionListViewData::row($row),
             $page->rows,
         )));
 
@@ -291,7 +316,7 @@ final class TransactionsList extends Component
         $this->nextCursorId = $page->nextCursorId;
         $this->nextCursorPostedAt = $page->nextCursorPostedAt;
 
-        $rowIds = array_values(array_map(static fn ($row): int => $row->id, $page->rows));
+        $rowIds = array_values(array_map(static fn (TransactionRowDto $row): int => $row->id, $page->rows));
         $state = $this->decorateAccumulatedRows($rowIds, $currentUser, $rows, $readerCurrency);
 
         // An empty recent window and an empty ledger look identical on screen,
@@ -311,6 +336,7 @@ final class TransactionsList extends Component
             'searchTotalCount' => 0,
             'searchTotalOut' => 0,
             'searchTotalIn' => 0,
+            'searchUnconverted' => '',
             'didYouMean' => null,
             'searchRows' => [],
             'activeFilterCount' => 0,
@@ -344,6 +370,7 @@ final class TransactionsList extends Component
             amountMax: $this->filterAmountMax !== '' ? $this->filterAmountMax : null,
             amountDirection: $this->filterAmountDir,
             types: $this->knownTypes(),
+            uncategorized: $this->filterUncategorized,
         );
     }
 
@@ -376,7 +403,7 @@ final class TransactionsList extends Component
     // appendedCursorIds stops a re-render at the same cursor appending the
     // same rows twice, which Livewire does whenever any property changes.
     /**
-     * @param  list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}>  $rows
+     * @param  list<array{id: int, postedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}>  $rows
      */
     private function accumulate(array $rows): void
     {
@@ -447,6 +474,7 @@ final class TransactionsList extends Component
             'searchQuery' => $this->searchQuery,
             'availableAccounts' => $filterOptions->accounts($user->id),
             'availableCategories' => $filterOptions->categories($user->id),
+            'dateRangePresets' => $filterOptions->dateRanges($user),
         ];
     }
 
@@ -456,7 +484,7 @@ final class TransactionsList extends Component
         if ($this->filterAccounts !== []) {
             $count++;
         }
-        if ($this->filterCategories !== []) {
+        if ($this->filterCategories !== [] || $this->filterUncategorized) {
             $count++;
         }
         if ($this->filterCounterparties !== []) {
@@ -471,51 +499,4 @@ final class TransactionsList extends Component
 
         return $count;
     }
-
-    // Money is not Livewire-dehydratable, so a row carries the minor integer
-    // and currency code and the blade rebuilds it via Money::ofMinor().
-    /** @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>} */
-    private static function rowToArray(TransactionRowDto $row): array
-    {
-        return [
-            'id' => $row->id,
-            'bookedAt' => $row->bookedAt,
-            'counterpartyName' => $row->counterpartyName,
-            'counterpartySlug' => $row->counterpartySlug,
-            'categoryId' => $row->categoryId,
-            'amountMinor' => $row->amount->toMinor(),
-            'amountCurrency' => $row->amount->currency(),
-            'secondaryMinor' => $row->secondaryAmount?->toMinor(),
-            'secondaryCurrency' => $row->secondaryAmount?->currency(),
-            'taxTagged' => false,
-            'taxCategoryShortName' => null,
-            'splitLegs' => [],
-        ];
-    }
-
-    /** @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>} */
-    private static function searchRowToArray(SearchRowDto $row): array
-    {
-        return [
-            'id' => $row->id,
-            'bookedAt' => $row->bookedAt,
-            'counterpartyName' => $row->counterpartyName,
-            'counterpartySlug' => $row->counterpartySlug,
-            'categoryId' => $row->categoryId,
-            'amountMinor' => $row->amountMinor,
-            'amountCurrency' => $row->amountCurrency,
-            'secondaryMinor' => $row->secondaryMinor,
-            'secondaryCurrency' => $row->secondaryCurrency,
-            'taxTagged' => false,
-            'taxCategoryShortName' => null,
-            'splitLegs' => [],
-        ];
-    }
-
-    // No user_id filter: every id arrives already user-scoped by the list
-    // query that produced it, so the transaction_id join cannot leak legs.
-    /**
-     * @param  array<int>  $transactionIds
-     * @return array<int, list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>>
-     */
 }

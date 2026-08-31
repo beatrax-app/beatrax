@@ -13,18 +13,18 @@ use Modules\EmailScan\Public\Dto\ScanCursor;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
 
-final class InboxScanStateMachine
+final readonly class InboxScanStateMachine
 {
     use CoercesScalars;
 
     // Indices past the end clamp to the final entry, so a runaway retry
     // count cannot push the delay past an hour.
     /** @var list<int> */
-    private const BACKOFF_SCHEDULE = [60, 300, 900, 3600];
+    private const array BACKOFF_SCHEDULE = [60, 300, 900, 3600];
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     public function applyStatus(
@@ -191,7 +191,7 @@ final class InboxScanStateMachine
     }
 
     /**
-     * @param  array{fetched_count: int, total_estimated: int, last_message_date: ?string}|null  $progress
+     * @param  array{fetched_count: int, total_estimated: int, last_message_date: ?string, page_cursor?: ?string, window_months?: int}|null  $progress
      */
     public function recordBackfillProgress(int $inboxId, ?array $progress): void
     {

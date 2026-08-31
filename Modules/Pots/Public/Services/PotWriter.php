@@ -9,31 +9,39 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
-use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
+use Modules\Pots\Internal\Exceptions\AccountCannotHoldPotsException;
 use Modules\Pots\Models\Pot;
+use Modules\Pots\Public\Enums\PotMovementKind;
 use Modules\Pots\Public\Enums\PotStatus;
+use Modules\Pots\Public\Exceptions\CrossAccountTransferException;
 use Modules\Pots\Public\Exceptions\GoalAlreadyLinkedException;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
 use Modules\Pots\Public\Exceptions\InvalidPotAmountException;
+use Modules\Pots\Public\Exceptions\PotAlreadyLinkedException;
+use Modules\Pots\Public\Exceptions\PotLinkedToCategoryException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
+use Modules\Pots\Public\Exceptions\SelfTransferException;
+use Modules\Pots\Public\Exceptions\TargetPotNotFoundException;
 use Modules\Sync\Public\Events\EntityMutated;
 
-final class PotWriter
+final readonly class PotWriter
 {
-    private const NOT_FOUND_MESSAGE = 'Pot not found or not owned by user.';
+    private const string NOT_FOUND_MESSAGE = 'Pot not found or not owned by user.';
 
-    private const INVALID_AMOUNT_MESSAGE = 'Invalid or non-positive amount.';
+    private const string INVALID_AMOUNT_MESSAGE = 'Invalid or non-positive amount.';
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly PotBalanceQuery $balance,
-        private readonly BaseCurrency $baseCurrency,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private PotBalanceQuery $balance,
+        private Dispatcher $events,
     ) {}
 
     /**
-     * @throws \InvalidArgumentException blank name / unowned account / both goal+category / bad amount
+     * @throws \InvalidArgumentException blank name / unowned account / both goal+category
+     * @throws InvalidPotAmountException when the initial amount does not read as a positive figure
+     * @throws AccountCannotHoldPotsException when the account holds no allocatable balance
      * @throws InsufficientUnallocatedException when initial funding exceeds unallocated
      */
     public function save(
@@ -55,22 +63,25 @@ final class PotWriter
             $this->assertGoalOwnedAndFree($user, $goalId);
         }
 
-        $currency = $this->accountCurrency($accountId, $user);
+        $currency = $this->balance->currencyForAccount($accountId, $user);
 
         // Parse the optional initial amount before any write so an invalid
         // amount string never leaves an orphan pot behind.
         $minor = null;
         if ($rawInitialAmount !== null && trim($rawInitialAmount) !== '') {
-            $minor = $this->parseAmount($rawInitialAmount);
+            $minor = $this->parseAmount($rawInitialAmount, $currency);
             if ($minor === null) {
-                throw new \InvalidArgumentException('Invalid or non-positive initial amount.');
+                throw new InvalidPotAmountException('Invalid or non-positive initial amount.');
             }
         }
+
+        /** @var list<EntityMutated> $events */
+        $events = [];
 
         // One transaction so a failed funding check rolls back the pot row:
         // no orphan pot in the list, no duplicate on resubmit.
         /** @var Pot $pot */
-        $pot = $this->db->connection()->transaction(function () use ($user, $name, $accountId, $goalId, $categoryId, $currency, $minor): Pot {
+        $pot = $this->db->connection()->transaction(function () use ($user, $name, $accountId, $goalId, $categoryId, $currency, $minor, &$events): Pot {
             /** @var Pot $pot */
             $pot = Pot::query()->withoutGlobalScope(UserScope::class)->create([
                 'user_id' => $user->id,
@@ -83,20 +94,20 @@ final class PotWriter
             ]);
 
             if ($minor !== null) {
-                $unallocated = $this->balance->currentUnallocatedForAccount($accountId, $user);
+                $unallocated = $this->balance->currentUnallocatedForAccount($accountId, $user, $currency);
                 if ($minor > $unallocated) {
                     throw new InsufficientUnallocatedException(
                         'Initial amount exceeds unallocated balance.'
                     );
                 }
 
-                $this->insertMovement([
+                $events[] = $this->insertMovement([
                     'user_id' => $user->id,
                     'pot_id' => $pot->id,
                     'counterpart_pot_id' => null,
                     'amount_minor' => $minor,
                     'currency' => $currency,
-                    'kind' => 'fund',
+                    'kind' => PotMovementKind::Fund->value,
                     'memo' => null,
                 ]);
             }
@@ -104,7 +115,7 @@ final class PotWriter
             return $pot;
         });
 
-        $this->capture($pot, 'create', [
+        $this->dispatchAll([$this->capture($pot, 'create', [
             'user_id' => $user->id,
             'account_id' => $accountId,
             'goal_id' => $goalId,
@@ -112,7 +123,7 @@ final class PotWriter
             'name' => $name,
             'currency' => $currency,
             'status' => $pot->status,
-        ]);
+        ]), ...$events]);
 
         return $pot;
     }
@@ -148,13 +159,59 @@ final class PotWriter
         $pot->category_id = $categoryId;
         $pot->save();
 
-        $this->capture($pot, 'edit', [
+        $this->dispatchAll([$this->capture($pot, 'edit', [
             'name' => $name,
             'goal_id' => $goalId,
             'category_id' => $categoryId,
-        ]);
+        ])]);
 
         return $pot;
+    }
+
+    // The goal link on its own, so a relink never has to send the pot's other
+    // columns back through update(): re-reading a name to rewrite it loses a
+    // concurrent rename, and a name that read back blank refused the link with
+    // "Enter a name for this pot."
+    /**
+     * @throws PotNotFoundException pot not found, not owned, or not active
+     * @throws GoalAlreadyLinkedException another active pot already holds this goal
+     * @throws PotAlreadyLinkedException this pot already holds another goal
+     * @throws PotLinkedToCategoryException the pot's category link is the one thing a goal link would destroy
+     */
+    public function linkGoal(User $user, int $potId, ?int $goalId): void
+    {
+        $pot = $this->findOwnedActivePot($user, $potId);
+        if (! $pot instanceof Pot) {
+            throw new PotNotFoundException(self::NOT_FOUND_MESSAGE);
+        }
+
+        if ($pot->goal_id === $goalId) {
+            return;
+        }
+
+        if ($goalId !== null) {
+            if ($pot->category_id !== null) {
+                throw new PotLinkedToCategoryException(
+                    'This pot is linked to a category; unlink that first.'
+                );
+            }
+
+            // Both directions, not just the goal's. Only the goal side was
+            // checked, so a goal write could take a pot another goal already
+            // held: the pot moved and the first goal read 0% with no pot.
+            if ($pot->goal_id !== null) {
+                throw new PotAlreadyLinkedException(
+                    'This pot already funds another goal. Unlink it there first.'
+                );
+            }
+
+            $this->assertGoalOwnedAndFree($user, $goalId);
+        }
+
+        $pot->goal_id = $goalId;
+        $pot->save();
+
+        $this->dispatchAll([$this->capture($pot, 'edit', ['goal_id' => $goalId])]);
     }
 
     /**
@@ -164,11 +221,6 @@ final class PotWriter
      */
     public function fund(User $user, int $potId, string $rawAmount, ?string $memo = null): void
     {
-        $minor = $this->parseAmount($rawAmount);
-        if ($minor === null) {
-            throw new InvalidPotAmountException(self::INVALID_AMOUNT_MESSAGE);
-        }
-
         $pot = $this->findOwnedActivePot($user, $potId);
         if (! $pot instanceof Pot) {
             throw new PotNotFoundException(self::NOT_FOUND_MESSAGE);
@@ -177,26 +229,41 @@ final class PotWriter
         $accountId = $pot->account_id;
         $currency = $pot->currency;
 
-        $this->db->connection()->transaction(function () use ($user, $potId, $minor, $accountId, $currency, $memo): void {
-            // Re-read inside the transaction; a concurrent writer makes the
-            // pre-transaction value stale.
-            $unallocated = $this->balance->currentUnallocatedForAccount($accountId, $user);
+        // The pot is found before the figure is read, because the pot's own
+        // denomination is what decides the scale: read at a hundredth, ¥13,840
+        // was refused outright and ¥120,000 was weighed as ¥12,000,000.
+        $minor = $this->parseAmount($rawAmount, $currency);
+        if ($minor === null) {
+            throw new InvalidPotAmountException(self::INVALID_AMOUNT_MESSAGE);
+        }
+
+        /** @var list<EntityMutated> $events */
+        $events = [];
+
+        $this->db->connection()->transaction(function () use ($user, $potId, $minor, $accountId, $currency, $memo, &$events): void {
+            // Re-read inside the transaction, and against the pot's own
+            // currency rather than the account's: a relabelled account weighed
+            // a euro pot against a yen line and refused every fund the euros
+            // could cover.
+            $unallocated = $this->balance->currentUnallocatedForAccount($accountId, $user, $currency);
             if ($minor > $unallocated) {
                 throw new InsufficientUnallocatedException(
                     'Amount exceeds unallocated balance for this account.'
                 );
             }
 
-            $this->insertMovement([
+            $events[] = $this->insertMovement([
                 'user_id' => $user->id,
                 'pot_id' => $potId,
                 'counterpart_pot_id' => null,
                 'amount_minor' => $minor,
                 'currency' => $currency,
-                'kind' => 'fund',
+                'kind' => PotMovementKind::Fund->value,
                 'memo' => $memo,
             ]);
         });
+
+        $this->dispatchAll($events);
     }
 
     /**
@@ -206,11 +273,6 @@ final class PotWriter
      */
     public function withdraw(User $user, int $potId, string $rawAmount, ?string $memo = null): void
     {
-        $minor = $this->parseAmount($rawAmount);
-        if ($minor === null) {
-            throw new InvalidPotAmountException(self::INVALID_AMOUNT_MESSAGE);
-        }
-
         $pot = $this->findOwnedActivePot($user, $potId);
         if (! $pot instanceof Pot) {
             throw new PotNotFoundException(self::NOT_FOUND_MESSAGE);
@@ -218,7 +280,15 @@ final class PotWriter
 
         $currency = $pot->currency;
 
-        $this->db->connection()->transaction(function () use ($user, $potId, $minor, $currency, $memo): void {
+        $minor = $this->parseAmount($rawAmount, $currency);
+        if ($minor === null) {
+            throw new InvalidPotAmountException(self::INVALID_AMOUNT_MESSAGE);
+        }
+
+        /** @var list<EntityMutated> $events */
+        $events = [];
+
+        $this->db->connection()->transaction(function () use ($user, $potId, $minor, $currency, $memo, &$events): void {
             $potBalance = $this->balance->balanceForPot($potId, $user);
             if ($minor > $potBalance) {
                 throw new InsufficientUnallocatedException(
@@ -226,21 +296,26 @@ final class PotWriter
                 );
             }
 
-            $this->insertMovement([
+            $events[] = $this->insertMovement([
                 'user_id' => $user->id,
                 'pot_id' => $potId,
                 'counterpart_pot_id' => null,
                 'amount_minor' => -$minor,
                 'currency' => $currency,
-                'kind' => 'withdraw',
+                'kind' => PotMovementKind::Withdraw->value,
                 'memo' => $memo,
             ]);
         });
+
+        $this->dispatchAll($events);
     }
 
     /**
-     * @throws \InvalidArgumentException invalid amount / cross-account / self-transfer
-     * @throws PotNotFoundException either pot not found or not owned
+     * @throws InvalidPotAmountException the amount does not read as a positive figure
+     * @throws PotNotFoundException the source pot is not found or not owned
+     * @throws SelfTransferException source and target are the same pot
+     * @throws TargetPotNotFoundException the target pot is not found or not owned
+     * @throws CrossAccountTransferException the two pots sit on different accounts
      * @throws InsufficientUnallocatedException amount exceeds source pot balance
      */
     public function transfer(
@@ -250,32 +325,38 @@ final class PotWriter
         string $rawAmount,
         ?string $memo = null,
     ): void {
-        $minor = $this->parseAmount($rawAmount);
-        if ($minor === null) {
-            throw new InvalidPotAmountException(self::INVALID_AMOUNT_MESSAGE);
-        }
-
-        if ($fromPotId === $toPotId) {
-            throw new \InvalidArgumentException('Source and target pot must be different.');
-        }
-
         $fromPot = $this->findOwnedActivePot($user, $fromPotId);
         if (! $fromPot instanceof Pot) {
             throw new PotNotFoundException('Source pot not found or not owned by user.');
         }
 
+        $currency = $fromPot->currency;
+
+        // Ahead of the same-pot rule, which the amount still outranks, but
+        // behind the source pot: the pot's denomination is what the figure is
+        // read at, and a yen one has no hundredth to read it in.
+        $minor = $this->parseAmount($rawAmount, $currency);
+        if ($minor === null) {
+            throw new InvalidPotAmountException(self::INVALID_AMOUNT_MESSAGE);
+        }
+
+        if ($fromPotId === $toPotId) {
+            throw new SelfTransferException('Source and target pot must be different.');
+        }
+
         $toPot = $this->findOwnedActivePot($user, $toPotId);
         if (! $toPot instanceof Pot) {
-            throw new PotNotFoundException('Target pot not found or not owned by user.');
+            throw new TargetPotNotFoundException('Target pot not found or not owned by user.');
         }
 
         if ($fromPot->account_id !== $toPot->account_id) {
-            throw new \InvalidArgumentException('Transfer is only supported between pots on the same account.');
+            throw new CrossAccountTransferException('Transfer is only supported between pots on the same account.');
         }
 
-        $currency = $fromPot->currency;
+        /** @var list<EntityMutated> $events */
+        $events = [];
 
-        $this->db->connection()->transaction(function () use ($user, $fromPotId, $toPotId, $minor, $currency, $memo): void {
+        $this->db->connection()->transaction(function () use ($user, $fromPotId, $toPotId, $minor, $currency, $memo, &$events): void {
             $sourceBalance = $this->balance->balanceForPot($fromPotId, $user);
             if ($minor > $sourceBalance) {
                 throw new InsufficientUnallocatedException(
@@ -285,26 +366,28 @@ final class PotWriter
 
             $now = CarbonImmutable::now()->toDateTimeString();
 
-            $this->insertMovement([
+            $events[] = $this->insertMovement([
                 'user_id' => $user->id,
                 'pot_id' => $fromPotId,
                 'counterpart_pot_id' => $toPotId,
                 'amount_minor' => -$minor,
                 'currency' => $currency,
-                'kind' => 'transfer_out',
+                'kind' => PotMovementKind::TransferOut->value,
                 'memo' => $memo,
             ], $now);
 
-            $this->insertMovement([
+            $events[] = $this->insertMovement([
                 'user_id' => $user->id,
                 'pot_id' => $toPotId,
                 'counterpart_pot_id' => $fromPotId,
                 'amount_minor' => $minor,
                 'currency' => $currency,
-                'kind' => 'transfer_in',
+                'kind' => PotMovementKind::TransferIn->value,
                 'memo' => $memo,
             ], $now);
         });
+
+        $this->dispatchAll($events);
     }
 
     public function archive(User $user, int $potId): void
@@ -314,26 +397,31 @@ final class PotWriter
             return;
         }
 
-        $this->db->connection()->transaction(function () use ($user, $pot): void {
+        /** @var list<EntityMutated> $events */
+        $events = [];
+
+        $this->db->connection()->transaction(function () use ($user, $pot, &$events): void {
             $balance = $this->balance->balanceForPot($pot->id, $user);
 
             if ($balance > 0) {
-                $this->insertMovement([
+                $events[] = $this->insertMovement([
                     'user_id' => $user->id,
                     'pot_id' => $pot->id,
                     'counterpart_pot_id' => null,
                     'amount_minor' => -$balance,
                     'currency' => $pot->currency,
-                    'kind' => 'withdraw',
-                    'memo' => 'Released on archive',
+                    'kind' => PotMovementKind::ReleasedOnArchive->value,
+                    'memo' => null,
                 ]);
             }
 
             $pot->status = PotStatus::Archived->value;
             $pot->save();
 
-            $this->capture($pot, 'edit', ['status' => $pot->status]);
+            $events[] = $this->capture($pot, 'edit', ['status' => $pot->status]);
         });
+
+        $this->dispatchAll($events);
     }
 
     public function restore(User $user, int $potId): void
@@ -368,12 +456,15 @@ final class PotWriter
         $pot->status = PotStatus::Active->value;
         $pot->save();
 
-        $this->capture($pot, 'edit', ['status' => $pot->status]);
+        $this->dispatchAll([$this->capture($pot, 'edit', ['status' => $pot->status])]);
     }
 
-    public function parseAmount(string $value): ?int
+    // The pot's own denomination, never the repo-wide hundredth: a pot on a
+    // yen account holds whole yen, and nothing here can tell the two apart
+    // without being told which one it is.
+    public function parseAmount(string $value, ?string $currencyCode = null): ?int
     {
-        return MoneyInput::tryToPositiveMinor($value);
+        return MoneyInput::tryToPositiveMinor($value, $currencyCode);
     }
 
     // Movements had merge rules but no capture, so a fund or withdraw made after
@@ -382,7 +473,7 @@ final class PotWriter
     /**
      * @param  array{user_id: int}&array<string, mixed>  $row  Every column but the timestamps.
      */
-    private function insertMovement(array $row, ?string $now = null): void
+    private function insertMovement(array $row, ?string $now = null): EntityMutated
     {
         $stamp = $now ?? CarbonImmutable::now()->toDateTimeString();
         $row['created_at'] = $stamp;
@@ -390,13 +481,13 @@ final class PotWriter
 
         $id = $this->db->connection()->table('pot_movements')->insertGetId($row);
 
-        $this->events->dispatch(new EntityMutated(
+        return new EntityMutated(
             table: 'pot_movements',
             pk: $id,
             userId: $row['user_id'],
             mutationType: 'create',
             dirtyFields: $row,
-        ));
+        );
     }
 
     // Pots were absent from the capture wiring, so a pot created or renamed on one
@@ -404,15 +495,28 @@ final class PotWriter
     /**
      * @param  array<string, mixed>  $fields
      */
-    private function capture(Pot $pot, string $mutationType, array $fields): void
+    private function capture(Pot $pot, string $mutationType, array $fields): EntityMutated
     {
-        $this->events->dispatch(new EntityMutated(
+        return new EntityMutated(
             table: 'pots',
             pk: $pot->id,
             userId: (int) $pot->user_id,
             mutationType: $mutationType,
             dirtyFields: $fields,
-        ));
+        );
+    }
+
+    // Every write path in this class ends here, and every one of them ends here
+    // AFTER its transaction has committed. A listener that reads the row back
+    // from inside an open transaction sees a state no other connection has.
+    /**
+     * @param  list<EntityMutated>  $events
+     */
+    private function dispatchAll(array $events): void
+    {
+        foreach ($events as $event) {
+            $this->events->dispatch($event);
+        }
     }
 
     // The global user scope is dropped deliberately: ownership comes from the
@@ -426,33 +530,30 @@ final class PotWriter
             ->find($potId);
     }
 
+    // The account picker only ever offered an allocatable account, and the id it
+    // sends is the client's. A pot on a credit card is over-allocated the moment
+    // it exists and can never be funded, so the kind is re-asserted here.
     /**
-     * @throws \InvalidArgumentException
+     * @throws \InvalidArgumentException when the account is not the user's
+     * @throws AccountCannotHoldPotsException when the account holds no allocatable balance
      */
     private function assertOwnedAccount(User $user, int $accountId): void
-    {
-        $exists = $this->db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('id', $accountId)
-            ->exists();
-
-        if (! $exists) {
-            throw new \InvalidArgumentException('Account not owned by the authenticated user.');
-        }
-    }
-
-    private function accountCurrency(int $accountId, User $user): string
     {
         $row = $this->db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
             ->where('id', $accountId)
-            ->first(['default_currency']);
+            ->first(['kind']);
 
-        return ($row !== null && is_string($row->default_currency))
-            ? $row->default_currency
-            : $this->baseCurrency->code();
+        if ($row === null) {
+            throw new \InvalidArgumentException('Account not owned by the authenticated user.');
+        }
+
+        $kind = is_string($row->kind) ? AccountKind::tryFrom($row->kind) : null;
+
+        if ($kind?->holdsSpendableBalance() !== true) {
+            throw new AccountCannotHoldPotsException('This account holds no balance a pot can carve up.');
+        }
     }
 
     /**

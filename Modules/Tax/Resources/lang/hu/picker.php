@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Megjelölsz további :count tételt innen:',
     'batch_after' => '?',
+    'batch_confirm' => 'Adóból leírhatóként megjelölöd az összes hátralévő tranzakciót innen: :name? Mindegyik ezt a kategóriát és ezt a megjegyzést kapja. A címkét utána csak egyesével lehet levenni.',
     'batch_tag_all' => 'Mind megjelölése',
     'batch_dismiss' => 'Elvetés',
 ];

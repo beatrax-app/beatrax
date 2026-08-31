@@ -12,8 +12,16 @@
     max-w-5xl px-6 py-16 (2). Only the max-width is a decision anybody made on
     purpose — a counterparty table wants six columns of room, an import wizard
     wants a reading measure — so that is the prop. The gutter and the vertical
-    rhythm are not: px-8 py-12 carries ten against px-6 py-16's seven, so the
-    import and migration pages come to it.
+    rhythm are not: px-8 py-12 carried ten against px-6 py-16's seven, so the
+    import and migration pages came to it.
+
+    The rhythm is py-6 rather than the py-12 that vote settled on. Nobody chose
+    12 either — it was the majority of a drift — and at the 17px coarse-pointer
+    root it is 51px of empty band above and below every page in the product.
+    Halved it is 25.5px. The full-page Livewire components that are their own
+    container carry the same step, and
+    APageTakesItsShapeFromTheSharedComponentsArchTest is what keeps the two
+    halves of the product from drifting apart a second time.
 
     It renders a div and not a <main>. Sixteen of the seventeen opened a
     <main> here, but layouts.app already wraps @yield('content') in one, so
@@ -44,7 +52,7 @@
 @endphp
 
 <div {{ $attributes->merge(['class' => 'min-h-screen bg-white dark:bg-slate-950']) }}>
-    <div class="mx-auto {{ $pageShellWidth }} px-4 py-12 sm:px-8">
+    <div class="mx-auto {{ $pageShellWidth }} px-4 py-6 sm:px-8">
         {{ $slot }}
     </div>
 </div>

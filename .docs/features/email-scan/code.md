@@ -43,6 +43,7 @@ Modules/EmailScan/
 │   ├── Clients/
 │   │   ├── GmailApiClient.php
 │   │   ├── GmailApiClientContract.php
+│   │   ├── GmailInboxResources.php
 │   │   ├── GraphApiClient.php
 │   │   ├── GraphApiClientContract.php
 │   │   ├── FakeGmailApiClient.php
@@ -159,6 +160,10 @@ Modules/EmailScan/
   implement their respective `*Contract` so tests rebind to
   `FakeGmailApiClient` / `FakeGraphApiClient` via
   `$this->app->instance(...)`.
+- `Internal/Clients/GmailInboxResources` — the inbox's OAuth grant kept
+  fresh, and the authorized `users.messages` / `users.history` /
+  `users` resources built from it. `GmailApiClient` holds one and makes
+  no Google call that does not come through it.
 - `Internal/InboxScanStateMachine::transition($state, $next,
   $message)` — SOLE sanctioned mutator of
   `inbox_scan_state.status`. The arch invariant

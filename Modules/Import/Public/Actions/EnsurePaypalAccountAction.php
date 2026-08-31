@@ -6,29 +6,31 @@ namespace Modules\Import\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Import\Public\Services\AccountDenomination;
+use Modules\Ingestion\Public\Enums\SyntheticIban;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
-use Modules\Ledger\Public\Services\BaseCurrency;
 
 // Without this synthetic-IBAN account every imported PayPal row is an
 // unknown-IBAN error, the statement_summaries writer never fires, and the
 // starting-balance detector downstream has nothing to read.
 final readonly class EnsurePaypalAccountAction
 {
-    // Mirrors PreviewWizard::PAYPAL_OWN_IBAN; AccountResolver looks up by
-    // (iban, user_id), so the two must agree.
-    public const string PAYPAL_OWN_IBAN = 'PAYPAL';
+    // AccountResolver looks up by (iban, user_id), so this stays the one
+    // sentinel every PayPal row is keyed to.
+    public const string PAYPAL_OWN_IBAN = SyntheticIban::Paypal->value;
 
     public function __construct(
         private DatabaseManager $db,
         private AccountSlugResolver $slugs,
-        private BaseCurrency $baseCurrency,
+        private AccountDenomination $denomination,
     ) {}
 
     public function __invoke(
         User $user,
         ?string $nameOverride = null,
+        ?string $statementCurrency = null,
     ): bool {
         // Account::query()->exists() trips the strict-rules staticMethod.dynamicCall
         // check, so the existence probe goes through the raw query builder.
@@ -50,7 +52,7 @@ final readonly class EnsurePaypalAccountAction
             'slug' => $this->slugs->resolveUnique($user->id, $name),
             'kind' => AccountKind::Paypal->value,
             'iban' => self::PAYPAL_OWN_IBAN,
-            'default_currency' => $this->baseCurrency->code(),
+            'default_currency' => $this->denomination->forStatement($statementCurrency),
         ]);
 
         return true;

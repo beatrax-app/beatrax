@@ -6,6 +6,7 @@ namespace Modules\Recurring\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
@@ -14,6 +15,7 @@ use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesVarianceTolerance;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
+use Modules\Recurring\Public\Services\RecurringOccurrenceQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -21,6 +23,11 @@ final class RecurringSeriesDetailPage extends Component
 {
     use DispatchesToast;
 
+    // Locked because it arrives as a route segment, which puts it outside
+    // TamperedUrlParameterContractTest's reach: that test drives #[Url]
+    // properties only. Unlocked, editVarianceTolerance() wrote series 9
+    // while the address bar still read /recurring/series/5.
+    #[Locked]
     public int $seriesId = 0;
 
     public bool $showAllPoints = false;
@@ -39,20 +46,19 @@ final class RecurringSeriesDetailPage extends Component
         $this->showAllPoints = ! $this->showAllPoints;
     }
 
-    // Tolerance changes are not destructive (the user can simply pick
-    // another value), so no Undo affordance is wired on this toast.
     public function editVarianceTolerance(
         int $newTolerancePercent,
         CurrentUser $currentUser,
         EditRecurringSeriesVarianceTolerance $action,
     ): void {
         ($action)($this->seriesId, $currentUser->user(), $newTolerancePercent);
-        $this->toastWithUndo(Lang::get('recurring::detail.tolerance_toast', ['percent' => $newTolerancePercent]), undoAction: '', undoPayload: null);
+        $this->toast(Lang::get('recurring::detail.tolerance_toast', ['percent' => $newTolerancePercent]));
     }
 
     public function render(
         CurrentUser $currentUser,
         RecurringSeriesQuery $query,
+        RecurringOccurrenceQuery $occurrenceQuery,
         ViewFactory $views,
         CounterpartyProfileQuery $counterparties,
     ): View {
@@ -63,8 +69,8 @@ final class RecurringSeriesDetailPage extends Component
         }
 
         $maxPoints = $this->showAllPoints ? 1000 : 24;
-        $occurrences = $query->occurrencesForSeries($this->seriesId, $user);
-        $trend = $query->amountTrendForSeries($this->seriesId, $user, $maxPoints);
+        $occurrences = $occurrenceQuery->occurrencesForSeries($this->seriesId, $user);
+        $trend = $occurrenceQuery->amountTrendForSeries($this->seriesId, $user, $maxPoints);
         $apexOptions = $this->buildApexOptions($trend);
 
         $counterpartyId = $query->counterpartyIdForSeries($this->seriesId, $user);
@@ -95,15 +101,19 @@ final class RecurringSeriesDetailPage extends Component
         $shadowData = [];
         $shadowCurrency = '';
         foreach ($trend->points as $point) {
+            // Its own currency, not the series header's: the divisor is not a
+            // hundred everywhere, and a JPY980,000 occurrence under a euro
+            // header plotted at -9,800 beside an axis labelled in yen.
+            $pointCurrency = $point['currency'];
             $primaryData[] = [
                 'x' => $point['date'],
-                'y' => $point['amount_minor'] / Money::MINOR_UNITS_PER_MAJOR,
+                'y' => Money::majorUnits($point['amount_minor'], $pointCurrency === '' ? $trend->currency : $pointCurrency),
             ];
             if ($point['settled_amount_minor'] !== null) {
                 $shadowCurrency = $point['settled_currency'] ?? '';
                 $shadowData[] = [
                     'x' => $point['date'],
-                    'y' => $point['settled_amount_minor'] / Money::MINOR_UNITS_PER_MAJOR,
+                    'y' => Money::majorUnits($point['settled_amount_minor'], $shadowCurrency),
                 ];
             }
         }

@@ -8,10 +8,10 @@ use Modules\Core\Public\Contracts\SecretShield;
 
 // Makes a persisted secret machine-bound ciphertext, layered under the caller's
 // own APP_KEY encryption.
-final class SafeStorageSecretShield implements SecretShield
+final readonly class SafeStorageSecretShield implements SecretShield
 {
     public function __construct(
-        private readonly DesktopKeyCustodian $custodian,
+        private DesktopKeyCustodian $custodian,
     ) {}
 
     public function protect(string $plaintext): string
@@ -21,8 +21,9 @@ final class SafeStorageSecretShield implements SecretShield
 
     public function reveal(string $shielded): string
     {
-        // null means the value never was safeStorage ciphertext — a row written
-        // before shielding, or a changed keychain — so the stored bytes are it.
+        // null means this machine cannot produce the plaintext: a row written
+        // before shielding, a changed keychain, or a safeStorage that has not
+        // come up yet. The stored bytes are all there is to hand back.
         return $this->custodian->read($shielded) ?? $shielded;
     }
 

@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Nevezd el ezt a számlát.',
 
     'ics' => [
+        'name' => 'ICS-kártya',
         'heading' => 'Nevezd el az ICS-kártyaszámládat.',
         'help' => 'Most először importálsz ICS-adatokat. Adj nevet ennek a kártyának, hogy egységesen jelenjen meg az alkalmazásban.',
         'placeholder' => 'pl. ICS-kártya',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Nevezd el a PayPal-számládat.',
         'help' => 'Most először importálsz PayPal-adatokat. Adj nevet ennek a tárcának, hogy egységesen jelenjen meg az alkalmazásban.',
         'placeholder' => 'pl. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Nevezd el a Google Play-fiókodat.',
+        'help' => 'Most először importálsz Google Play-nyugtát. Adj nevet ennek a fióknak, hogy egységesen jelenjen meg az alkalmazásban.',
+        'placeholder' => 'pl. Google Play',
     ],
 
     'col_date' => 'Dátum',
@@ -53,28 +62,41 @@ return [
         'error' => 'Hiba',
     ],
 
-    'chain' => [
-        'heading' => 'Láncok feloldása…',
-        'pending' => 'Várólistán. A láncfeloldó hamarosan elindul.',
-        'running' => 'Finanszírozási láncok összekapcsolása és a kivonatelszámolások felbontása.',
-        'failed_prefix' => 'A láncfeloldás sikertelen:',
-        'failed_detail' => 'a részletek a feladatnaplóban vannak',
-        'open_horizon' => 'Horizon megnyitása',
-        'failed_suffix' => 'az újrapróbáláshoz vagy a megtekintéshez.',
-    ],
-
     'rows_shown' => 'Megjelenített sorok: :shown / :total',
 
     'show_more' => 'Több sor megjelenítése',
 
     'errors' => [
         'app_locked' => 'Oldja fel az alkalmazást az importáláshoz: a titkosítási kulcsok zárolt állapotban nem használhatók.',
+        'archive_holds_one_message' => 'Ez a fájl egyetlen e-mail-üzenet, nem postafiók-archívum, így archívumként olvasva nincs benne semmi. Töltsd fel újra E-mail-üzenet formátummal.',
+        'email_file_is_an_archive' => 'Ez a fájl postafiók-archívum: egynél több üzenetet tartalmaz, és egyetlen üzenetként olvasva csak az elsőt venné ki belőle. Töltsd fel újra Postafiók-archívum formátummal.',
         'file_stopped_short' => 'A fejléc egyezett, tehát a formátum jó. Az olvasás a fájl vége előtt megállt. Ezt egyetlen olvashatatlan sor is okozza, és az is, ha a fájl túl nagy ehhez az eszközhöz. Próbálj rövidebb időszakot.',
         'file_unreadable' => 'Ezt a fájlt nem sikerült beolvasni.',
+        'file_unreadable_detail' => 'Az alkalmazás nem tudta beolvasni ezt a fájlt (:code). A teljes részletek az alkalmazásnaplóban vannak; hibabejelentéskor adja meg ezt a kódot.',
         'iban_not_in_preview' => 'Ez az IBAN nem része az aktuális előnézetnek.',
-        'pdf_reader_unavailable' => 'A PDF kivonatokhoz a pdftotext program kell, ami itt nincs telepítve. Importáld ezt a fájlt olyan számítógépen, amelyen megvan, vagy használj CSV-exportot a bankodtól.',
+        'not_an_email_file' => 'Ez a fájl sem e-mail-üzenet, sem postafiók-archívum, így nincs benne mit bizonylatként kiolvasni. Válaszd azt az importtípust és formátumot, amely illik a fájlodhoz.',
+        'pdf_has_no_text_layer' => 'Ez a PDF nem tartalmaz szöveget — egy kivonat beolvasott képe vagy fényképe, így nincs benne mit kiolvasni. Töltsd le magát a kivonatot a bankodtól, vagy használj CSV-exportot.',
+        'pdf_password_protected' => 'Ez a PDF jelszóval védett, így egyetlen olvasó sem tudja megnyitni. Mentsd el a PDF-nézegetődből védelem nélküli másolatként, és azt importáld.',
+        'pdf_reader_unavailable' => 'Az alkalmazás ezen változatában nincs semmilyen PDF-olvasó, így PDF kivonatot itt nem lehet megnyitni. Importáld ezt a fájlt egy másik eszközön, vagy használj CSV-exportot a bankodtól.',
+        'row_belongs_to_another_statement' => 'Ez a sor egy másik kivonatfájlban lévő tranzakcióhoz tartozik. Importálja azt a kivonatot is — a kettőt együtt olvassuk be.',
         'row_unreadable' => 'Ezt a sort nem sikerült beolvasni.',
+        'row_unreadable_detail' => 'Az alkalmazás nem tudta beolvasni ezt a sort (:code). A teljes részletek az alkalmazásnaplóban vannak; hibabejelentéskor adja meg ezt a kódot.',
         'unknown_account' => 'Ez a sor olyan számlához tartozik, amelynek még nem adtál nevet.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Ezt a fájlt e-mailként olvastuk be',
+        'saved' => 'Ami benne volt, lent látható, és minden üzenet mentve van.',
+        'none_imported' => 'Ezekből egy sem lett tranzakció, így a főkönyvedbe nem került semmi.',
+        'shown' => 'Megjelenített üzenetek: :shown / :total',
+        'no_subject' => 'Nincs tárgy',
+
+        'state' => [
+            'read' => 'Fizetésként beolvasva — erősítsd meg ezt az importot, hogy bekerüljön a főkönyvedbe.',
+            'not_a_payment' => 'Nem fizetés. Ez az üzenet bejelent valamit, nem pedig fizetést igazol.',
+            'unreadable' => 'Mentve. Az alkalmazás olvassa ennek a feladónak a nyugtáit, de ebben az üzenetben nem talált összeget, kereskedőt és hivatkozást.',
+            'unknown_sender' => 'Mentve. Az alkalmazás nem olvassa ennek a feladónak a nyugtáit, ezért semmit nem vett át az üzenetből.',
+        ],
     ],
 
     'failed' => [

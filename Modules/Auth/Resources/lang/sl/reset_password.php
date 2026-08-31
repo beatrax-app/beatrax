@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Uporabi vsaj 12 znakov.',
     'error_wrong_code' => 'To uporabniško ime in koda za obnovitev se ne ujemata. Skrbno preveri kodo — same velike črke, brez ničle, brez črke O, brez enke, brez črke L.',
+    'error_throttled' => 'Preveč poskusov — poskusi znova čez :wait.',
 ];

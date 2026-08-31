@@ -22,18 +22,18 @@ use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-final class RecordTransactions implements RecordsTransactions
+final readonly class RecordTransactions implements RecordsTransactions
 {
-    private const CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
+    private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly FingerprintComposer $fingerprints,
-        private readonly Clock $clock,
-        private readonly Dispatcher $events,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly CapturesTransactionsForSync $syncCapture,
+        private DatabaseManager $db,
+        private FingerprintComposer $fingerprints,
+        private Clock $clock,
+        private Dispatcher $events,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private CapturesTransactionsForSync $syncCapture,
     ) {}
 
     // $captureForSync is the import path's opt-out, and only its: that

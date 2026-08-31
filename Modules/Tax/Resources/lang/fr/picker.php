@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Marquer aussi :count autres transactions de',
     'batch_after' => ' ?',
+    'batch_confirm' => 'Marquer toutes les transactions restantes de :name comme déductibles ? Chacune reçoit cette catégorie et cette note. Retirer le marquage ensuite se fait transaction par transaction.',
     'batch_tag_all' => 'Tout marquer',
     'batch_dismiss' => 'Ignorer',
 ];

@@ -10,10 +10,11 @@ return [
 
     'bank_title' => 'Banca ta',
     'bank_desc' => 'Trage aici un fișier cu extrasul de cont. Citim CSV, MT940 și CAMT.053 de la majoritatea băncilor europene.',
-    'card_title' => 'Cardul tău de credit (ICS)',
-    'card_desc' => 'Trage aici extrasul lunar în PDF din Mijn ICS.',
+    'card_title' => 'Cardul tău de credit',
+    'card_desc' => 'Trage aici extrasele lunare ale cardului în PDF. Deocamdată putem citi emitentul ICS.',
     'email_title' => 'Bonuri din e-mail',
     'email_desc' => 'Conectează Gmail sau Outlook ca să preiei automat confirmările de cumpărare.',
+    'email_desc_phone' => 'Confirmările de cumpărare sunt preluate de aplicația pentru computer; acest telefon arată prin sincronizare ce găsește ea.',
 
     'continue' => 'Continuă →',
 ];

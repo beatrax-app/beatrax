@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Position\Public\Services;
 
-use Modules\Budgets\Public\Services\BudgetProgressQuery;
+use Modules\Budgets\Public\Services\EnvelopeProgressQuery;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 use Modules\Ledger\Public\Dto\Period;
@@ -13,12 +13,13 @@ use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Position\Public\Dto\PositionSummaryDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Recurring\Public\Support\SeriesDueWindow;
 
 final readonly class PositionQuery
 {
     public function __construct(
         private ThisPeriodAtAGlanceQuery $glance,
-        private BudgetProgressQuery $budgets,
+        private EnvelopeProgressQuery $budgets,
         private RecurringSeriesQuery $recurringSeries,
         private ForecastHighlightsQuery $forecastHighlights,
     ) {}
@@ -29,7 +30,7 @@ final readonly class PositionQuery
 
         // Mirrors the dashboard's toggle byte for byte, which is what makes a
         // later seam-swap a pure no-op.
-        $tilesByCurrency = $user->default_currency_view === CurrencyView::Original->value
+        $tilesByCurrency = $user->default_currency_view === CurrencyView::Original
             ? $this->glance->forByCurrency($user, $period)
             : null;
 
@@ -40,7 +41,7 @@ final readonly class PositionQuery
             tilesByCurrency: $tilesByCurrency,
             emailScanHealth: $emailScanHealth,
             upcoming: $this->upcomingRecurringCharges($user, $period),
-            budgets: $this->budgets->forCurrentPeriod($user),
+            budgets: $this->budgets->forPeriod($user, $period),
             shortfallAhead: $this->forecastHighlights->activeShortfallCountForUser($user) > 0,
         );
     }
@@ -50,14 +51,7 @@ final readonly class PositionQuery
      */
     private function upcomingRecurringCharges(User $user, Period $period): array
     {
-        $series = $this->recurringSeries->allApprovedForUser($user);
-
-        $upcoming = array_values(array_filter(
-            $series,
-            static fn (RecurringSeriesDto $row): bool => $row->nextExpectedAt !== null
-                && ! $row->nextExpectedAt->lessThan($period->start)
-                && $row->nextExpectedAt->lessThan($period->endExclusive),
-        ));
+        $upcoming = SeriesDueWindow::dueWithin($this->recurringSeries->allApprovedForUser($user), $period);
 
         usort(
             $upcoming,

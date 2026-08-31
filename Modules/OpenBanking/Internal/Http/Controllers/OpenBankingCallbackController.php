@@ -20,16 +20,16 @@ use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
 use Modules\OpenBanking\Internal\Support\ConsentWindow;
 use RuntimeException;
 
-final class OpenBankingCallbackController
+final readonly class OpenBankingCallbackController
 {
     public function __construct(
-        private readonly EnableBankingHttpClient $client,
-        private readonly OpenBankingSecretsRepository $secrets,
-        private readonly OpenBankingStateRepository $oauthState,
-        private readonly CurrentUser $currentUser,
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Redirector $redirector,
+        private EnableBankingHttpClient $client,
+        private OpenBankingSecretsRepository $secrets,
+        private OpenBankingStateRepository $oauthState,
+        private CurrentUser $currentUser,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Redirector $redirector,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse
@@ -110,7 +110,7 @@ final class OpenBankingCallbackController
         $institutionId = $credentials->institutionId;
         $now = $this->clock->now();
         $nowString = $now->toDateTimeString();
-        $consentExpiresAt = $now->addDays(ConsentWindow::VALID_FOR_DAYS);
+        $consentExpiresAt = ConsentWindow::expiresAfter($now);
         $consentExpiresAtString = $consentExpiresAt->toDateTimeString();
 
         $upsert = $this->upsertConnectionRow($userId, $institutionId, $accountUid, $nowString, $consentExpiresAtString);
@@ -136,7 +136,7 @@ final class OpenBankingCallbackController
     }
 
     /**
-     * @return array{id: int, isNew: bool, priorConsentExpiresAt: ?string, priorAccountUid: ?string}
+     * @return array{id: int, isNew: bool, priorConsentExpiresAt: ?string, priorConsentRevokedAt: ?string, priorAccountUid: ?string}
      */
     private function upsertConnectionRow(
         int $userId,
@@ -148,13 +148,16 @@ final class OpenBankingCallbackController
         $existingRow = $this->db->connection()->table('open_banking_connections')
             ->where('user_id', $userId)
             ->where('institution_id', $institutionId)
-            ->first(['id', 'consent_expires_at', 'account_uid']);
+            ->first(['id', 'consent_expires_at', 'consent_revoked_at', 'account_uid']);
         $existingId = ($existingRow !== null && is_numeric($existingRow->id)) ? (int) $existingRow->id : null;
 
         // Snapshot the pre-update values so the re-link path can restore them if
         // the secrets write fails, rather than advertise a consent it cannot back.
         $priorConsentExpiresAt = ($existingRow !== null && is_string($existingRow->consent_expires_at))
             ? $existingRow->consent_expires_at
+            : null;
+        $priorConsentRevokedAt = ($existingRow !== null && is_string($existingRow->consent_revoked_at))
+            ? $existingRow->consent_revoked_at
             : null;
         $priorAccountUid = ($existingRow !== null && is_string($existingRow->account_uid))
             ? $existingRow->account_uid
@@ -171,6 +174,10 @@ final class OpenBankingCallbackController
                     ->where('user_id', $userId)
                     ->update([
                         'consent_expires_at' => $consentExpiresAtString,
+                        // A fresh consent is exactly what a revoked one needed:
+                        // leaving the stamp would keep the tile reading Revoked
+                        // over a session the bank has just re-granted.
+                        'consent_revoked_at' => null,
                         // A re-link may surface a different account_uid, or the
                         // first one, so always take THIS session's.
                         'account_uid' => $accountUid,
@@ -187,6 +194,7 @@ final class OpenBankingCallbackController
                 'bank_display_name' => null,
                 'enabled' => false,
                 'consent_expires_at' => $consentExpiresAtString,
+                'consent_revoked_at' => null,
                 'last_successful_sync_at' => null,
                 'last_attempt_at' => null,
                 'last_attempt_status' => null,
@@ -199,12 +207,13 @@ final class OpenBankingCallbackController
             'id' => $connectionId,
             'isNew' => $existingId === null,
             'priorConsentExpiresAt' => $priorConsentExpiresAt,
+            'priorConsentRevokedAt' => $priorConsentRevokedAt,
             'priorAccountUid' => $priorAccountUid,
         ];
     }
 
     /**
-     * @param  array{id: int, isNew: bool, priorConsentExpiresAt: ?string, priorAccountUid: ?string}  $upsert
+     * @param  array{id: int, isNew: bool, priorConsentExpiresAt: ?string, priorConsentRevokedAt: ?string, priorAccountUid: ?string}  $upsert
      */
     private function rollbackConnectionRow(array $upsert, int $userId, string $nowString): void
     {
@@ -225,6 +234,7 @@ final class OpenBankingCallbackController
                 ->where('user_id', $userId)
                 ->update([
                     'consent_expires_at' => $upsert['priorConsentExpiresAt'],
+                    'consent_revoked_at' => $upsert['priorConsentRevokedAt'],
                     'account_uid' => $upsert['priorAccountUid'],
                     'updated_at' => $nowString,
                 ]);

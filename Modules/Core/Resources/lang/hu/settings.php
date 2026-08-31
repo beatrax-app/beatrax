@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Pénznem megjelenítése',
+        'heading' => 'Összeg megjelenítése',
         'label' => 'Alapértelmezett nézet a tranzakciólistán',
-        'eur_only' => 'Csak :code',
-        'original' => 'Eredeti pénznem',
+        'eur_only' => 'Elszámolt összeg',
+        'original' => 'Eredeti összeg',
         'help' => 'A tranzakciólistán oldalanként továbbra is válthatsz.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'A csomagolt árfolyamok vannak használatban. Semmilyen adat nem hagyja el ezt az eszközt.',
         'fetch_aria' => 'Aktuális árfolyamok letöltése online',
         'refreshing' => 'Frissítés…',
-        'next_refresh' => 'Következő automatikus frissítés: naponta 09:00-kor',
+        'next_refresh' => 'Automatikus frissítés: naponta egyszer',
         'refresh_gave_up' => 'Az árfolyamokat nem sikerült frissíteni. Továbbra is az eszközön lévő árfolyamok érvényesek.',
         'refresh_now' => 'Frissítés most',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Időszak',
         'label' => 'Az időszak kezdőnapja',
         'help' => '1-től 28-ig számozva. A legtöbben az 1-en hagyják (naptári hónap). Használd a 25-öt, ha a fizetésed 25-én érkezik, és onnantól számítod „a saját hónapodat”.',
+
+        'move_confirm' => 'Ha az időszak a :day. napon kezdődik, minden borítékösszeg új helyre kerül, és összeadódik ott, ahol két hónap egybeolvad. A nap visszaállítása nem választja szét őket újra.',
+        'move_cancel' => 'Mégse',
+        'move_apply' => 'Alkalmaz',
     ],
 
     'recurring' => [
         'heading' => 'Ismétlődések felismerése',
         'window_label' => 'Felismerési ablak (hónap)',
         'window_help' => 'Hány hónapnyi előzményt vizsgáljon a rendszer, amikor a tranzakciókat ismétlődő mintákba csoportosítja.',
-        'income_label' => 'Bevételi minimum (cent)',
-        'income_help' => 'Az e küszöbérték alatti bevételek nem kerülnek automatikus csoportba. Centben tárolva — a 200000 azt jelenti: :example. A küszöb kikapcsolásához állítsd 0-ra.',
+        'income_label' => 'Bevételi minimum (váltópénzben)',
+        'income_help' => 'Az e küszöbérték alatti bevételek nem kerülnek automatikus csoportba. Váltópénzben tárolva — az :minor azt jelenti: :example. A küszöb kikapcsolásához állítsd 0-ra.',
     ],
 
     'drift' => [
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'A ledobó mappa aktív. A Beatrax 5 percenként átvizsgálja a <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> mappát új fájlokért.',
         'inactive_html' => 'Bekapcsolva a Beatrax 5 percenként átvizsgálja a <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> mappát <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> és <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> fájlokért, és ugyanazon az illesztési folyamaton importálja őket, mint a varázsló. A feldolgozott fájlok a <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> mappába kerülnek, így soha nem importálódnak kétszer.',
+        'active_phone_html' => 'A ledobó mappa aktív. A Beatrax a háttérben vizsgálja át a <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> mappát új fájlokért. Hogy mikor fut le egy háttérvizsgálat, azt a telefonod dönti el — ez lehet néhány perc, de akár több óra is.',
+        'inactive_phone_html' => 'Bekapcsolva a Beatrax a háttérben vizsgálja át a <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> mappát <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> és <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> fájlokért, és ugyanazon az illesztési folyamaton importálja őket, mint a varázsló. Hogy mikor fut le egy háttérvizsgálat, azt a telefonod dönti el — ez lehet néhány perc, de akár több óra is. A feldolgozott fájlok a <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> mappába kerülnek, így soha nem importálódnak kétszer.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Adó',
-    'shared_merchant_heading' => 'Közös kereskedőlista',
     'data_backup_heading' => 'Adatok és biztonsági mentés',
-    'install_heading' => 'Telepítés',
 
     'about_updates' => [
         'heading' => 'A frissítésekről',
         'body' => 'A Beatrax telepítés után automatikusan frissíti magát. A legelső verzió telepítése után a további verziók alkalmazáson belüli sávban érkeznek — nem kell visszatérned a GitHubra. Ha egy későbbi frissítés mégsem alkalmazható, a legfrissebb telepítőt bármikor letöltheted kézzel a kiadások oldaláról.',
+        'body_phone' => 'Itt a Beatrax nem frissíti magát. A mobilalkalmazás új verziói az App Store-on vagy a Google Play-en át érkeznek, ugyanúgy, mint a többi alkalmazásod. A kiadások oldala felsorolja, mi változott az egyesekben.',
         'open_releases' => 'Kiadások oldalának megnyitása →',
     ],
 
@@ -192,6 +197,7 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'A költségvetési hónapot nem sikerült áthelyezni, ezért ott maradt, ahol volt.',
         'currency_required' => 'Válassz pénznemet.',
         'window_months' => 'Válassz 2 és 60 hónap között.',
         'threshold' => 'Válassz küszöbértéket: 1%, 2%, 5%, 10%, 25% vagy 50%.',

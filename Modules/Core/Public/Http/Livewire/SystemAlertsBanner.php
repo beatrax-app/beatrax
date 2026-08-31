@@ -16,6 +16,7 @@ use Modules\Core\Public\Enums\UpdateAlertKind;
 use Modules\Core\Public\Events\UpdateInstallRequested;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Services\UserPreferenceWriter;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class SystemAlertsBanner extends Component
 {
@@ -35,7 +36,14 @@ final class SystemAlertsBanner extends Component
 
     public function acknowledge(int $alertId, AcknowledgeSystemAlert $action, CurrentUser $currentUser): void
     {
-        $action($alertId, $currentUser->user());
+        try {
+            $action($alertId, $currentUser->user());
+        } catch (NotFoundHttpException) {
+            // Mounted on every page, so the same alert is dismissible from two
+            // tabs at once and the second click names a row the first retired.
+            // It is already in the state the click asked for, and the banner
+            // re-renders without it rather than answering 404.
+        }
     }
 
     // The user consenting to a verified update. This shared banner only raises
@@ -59,7 +67,7 @@ final class SystemAlertsBanner extends Component
             UpdateInstallRequested::dispatch($latestVersion);
         }
 
-        $acknowledge($alertId, $currentUser->user());
+        $this->acknowledge($alertId, $acknowledge, $currentUser);
     }
 
     // Persists metadata.latestVersion into skipped_update_versions AND
@@ -81,7 +89,7 @@ final class SystemAlertsBanner extends Component
         $metadata = is_array($alert->metadata) ? $alert->metadata : [];
         $latestVersion = $metadata['latestVersion'] ?? null;
         if (! is_string($latestVersion) || $latestVersion === '') {
-            $acknowledge($alertId, $user);
+            $this->acknowledge($alertId, $acknowledge, $currentUser);
 
             return;
         }
@@ -96,7 +104,7 @@ final class SystemAlertsBanner extends Component
             $preferences->write($user->id, ['skipped_update_versions' => $current]);
         }
 
-        $acknowledge($alertId, $user);
+        $this->acknowledge($alertId, $acknowledge, $currentUser);
     }
 
     /**

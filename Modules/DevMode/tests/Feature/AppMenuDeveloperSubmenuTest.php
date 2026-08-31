@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
@@ -84,4 +85,53 @@ it('omits the Developer submenu for an unauthenticated request', function (): vo
     );
 
     expect($rendered)->not->toContain(devMenuLabel('developer_submenu'));
+});
+
+// Cmd+. on a shipped build would route to /dev, which that build answers with
+// 404 — an accelerator wired to a dead end reads as a broken app, not a shut
+// one. Appended to this file rather than a new one because the crossing into
+// Desktop's builder is pinned per file.
+it('omits the Developer submenu on a shipped build with no flag passed', function (): void {
+    $user = devMenuUser(true, 'menu-shipped');
+
+    test()->actingAs($user);
+
+    /** @var ConfigRepository $config */
+    $config = app(ConfigRepository::class);
+    $config->set('app.env', 'production');
+    $config->set('app.dev_mode', false);
+    $config->set('app.debug', false);
+
+    /** @var AppMenuBuilder $builder */
+    $builder = app(AppMenuBuilder::class);
+
+    $rendered = json_encode(
+        array_map(static fn (object $item): array => $item->toArray(), $builder->build()),
+        JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE,
+    );
+
+    expect($rendered)->not->toContain(devMenuLabel('developer_submenu'))
+        ->and($rendered)->not->toContain(devMenuLabel('dev_open_console'))
+        ->and($rendered)->not->toContain('Cmd+.');
+});
+
+it('keeps the Developer submenu on a shipped build once the flag is passed', function (): void {
+    $user = devMenuUser(true, 'menu-shipped-flagged');
+
+    test()->actingAs($user);
+
+    /** @var ConfigRepository $config */
+    $config = app(ConfigRepository::class);
+    $config->set('app.env', 'production');
+    $config->set('app.dev_mode', true);
+
+    /** @var AppMenuBuilder $builder */
+    $builder = app(AppMenuBuilder::class);
+
+    $rendered = json_encode(
+        array_map(static fn (object $item): array => $item->toArray(), $builder->build()),
+        JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE,
+    );
+
+    expect($rendered)->toContain(devMenuLabel('developer_submenu'));
 });

@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Nothing mysterious yet. Import some statements and Beatrax will surface the rows it could not identify here.',
 
+    'showing_capped' => 'Showing the top :shown of :total.',
+
     'footer' => 'The shared list is a bundled YAML file that ships with Beatrax. Submitting a suggestion opens GitHub in your browser; nothing else leaves this device.',
 
     'card' => [

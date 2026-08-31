@@ -10,39 +10,54 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Modules\Budgets\Public\Services\EnvelopePeriodRekeyer;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Country;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Enums\Theme;
+use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Core\Public\Services\LocaleNegotiator;
 use Modules\Core\Public\Services\UserCountry;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\ProjectLinks;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
 use Modules\FX\Public\Services\FxRefreshStatus;
 use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\Enums\CurrencyView;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Recurring\Public\Support\RecurringDetectionWindow;
 
 final class SettingsPage extends Component
 {
-    #[Validate('required|in:eur_only,original')]
-    public string $defaultCurrencyView = 'eur_only';
+    // Validated from rules() for the same reason locale is: an attribute
+    // argument must be a constant expression, and a hand-written copy of the
+    // enum's values drifts from it the day a third view is added.
+    public string $defaultCurrencyView = CurrencyView::BaseOnly->value;
 
-    #[Validate('required|integer|min:1|max:28')]
-    public int $periodStartDay = 1;
+    // In rules() beside the enum-derived ones: PeriodQuery clamps to the same
+    // pair, so a validator that widened alone would clamp instead of refuse.
+    public int $periodStartDay = PeriodQuery::MIN_START_DAY;
 
-    #[Validate('required|integer|min:2|max:60')]
-    public int $recurringDetectionWindowMonths = 2;
+    public bool $confirmingPeriodMove = false;
+
+    // The floor is the detectors' own fallback: below two months a monthly
+    // series cannot show the two occurrences they need, so a validator that
+    // widened alone would let the reader pick a window that detects nothing.
+    #[Validate('required|integer|min:'.RecurringDetectionWindow::MINIMUM_MONTHS.'|max:'.RecurringDetectionWindow::MAXIMUM_MONTHS)]
+    public int $recurringDetectionWindowMonths = RecurringDetectionWindow::MINIMUM_MONTHS;
 
     #[Validate('required|integer|min:0|max:100000000')]
-    public int $recurringIncomeMinAmountMinor = 200000;
+    public int $recurringIncomeMinAmountMinor = User::DEFAULT_RECURRING_INCOME_MIN_AMOUNT_MINOR;
 
     public int $driftAlertThresholdPercent = 5;
 
@@ -81,6 +96,12 @@ final class SettingsPage extends Component
 
     public ?string $fxLastUpdated = null;
 
+    // The desktop's electron-updater chain is inert on a device: all three
+    // AutoUpdater listeners return early on a mobile runtime, so the About
+    // section names the store that does the updating instead.
+    #[Locked]
+    public bool $onPhone = false;
+
     public function mount(
         CurrentUser $currentUser,
         DatabaseManager $db,
@@ -88,7 +109,7 @@ final class SettingsPage extends Component
         UserCountry $countries,
     ): void {
         $user = $currentUser->user();
-        $this->defaultCurrencyView = $user->default_currency_view;
+        $this->defaultCurrencyView = $user->default_currency_view->value;
         $this->periodStartDay = $user->period_start_day;
         $this->recurringDetectionWindowMonths = $user->recurring_detection_window_months;
         $this->recurringIncomeMinAmountMinor = $user->recurring_income_min_amount_minor;
@@ -99,6 +120,7 @@ final class SettingsPage extends Component
         $this->isDeveloper = $user->is_developer === true;
         $this->baseCurrency = $baseCurrency->forUser($user);
         $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
+        $this->onPhone = UserDataPathService::platform() !== null;
 
         $this->loadFxLastUpdated($db);
     }
@@ -197,7 +219,7 @@ final class SettingsPage extends Component
     // Bounded because the answer may never come: the fetch runs in a queued
     // job, the providers can all fail, and the button used to say "Refreshing…"
     // for as long as the page stayed open.
-    private const FX_REFRESH_MAX_POLLS = 15;
+    private const int FX_REFRESH_MAX_POLLS = 15;
 
     public function refreshFxRates(DispatchFxRatesRefresh $dispatch, CurrentUser $currentUser, DatabaseManager $db, FxRefreshStatus $fxStatus): void
     {
@@ -261,32 +283,72 @@ final class SettingsPage extends Component
         $this->fxLastUpdated = is_string($rawDate) ? substr($rawDate, 0, 10) : null;
     }
 
-    public function save(CurrentUser $currentUser, EnvelopePeriodRekeyer $envelopePeriods): void
+    public function save(CurrentUser $currentUser, EnvelopePeriodRekeyer $envelopePeriods, WriteUserPreference $preferences): void
     {
         $this->validate();
 
         $user = $currentUser->user();
-        $periodStartDayMoved = $user->period_start_day !== $this->periodStartDay;
-        $user->default_currency_view = $this->defaultCurrencyView;
+        $previousStartDay = $user->period_start_day;
+        $periodStartDayMoved = $previousStartDay !== $this->periodStartDay;
+
+        // The rekey at the foot of this method deletes every envelope
+        // assignment and re-files it, summing the two amounts wherever a pair
+        // of old periods folds onto one new one. Setting the day back re-runs
+        // the same merge rather than undoing it, so the move is asked for.
+        if ($periodStartDayMoved && ! $this->confirmingPeriodMove) {
+            $this->confirmingPeriodMove = true;
+
+            return;
+        }
+
+        $this->confirmingPeriodMove = false;
+        $user->default_currency_view = CurrencyView::from($this->defaultCurrencyView);
         $user->period_start_day = $this->periodStartDay;
         $user->recurring_detection_window_months = $this->recurringDetectionWindowMonths;
         $user->recurring_income_min_amount_minor = $this->recurringIncomeMinAmountMinor;
         $user->drift_alert_threshold_percent = $this->driftAlertThresholdPercent;
         $user->base_currency = $this->baseCurrency;
+
+        /** @var list<string> $changed */
+        $changed = array_keys($user->getDirty());
         $user->save();
+
+        // Six settings the other device reads too, and every one of them keys
+        // something that DOES sync: move the period day here and the re-keyed
+        // envelope rows arrive on a phone still asking for last month's window.
+        $preferences->announce($user->id, $changed);
 
         // Envelope rows are keyed by a literal period-start date, so moving
         // the day strands every one of them outside the periods the carryover
-        // fold walks. Re-keyed after the save, because the target period is
-        // computed from the day now stored on the user.
+        // fold walks. Re-keyed after the save, and handed the day it replaced,
+        // which is what says which period each stored key was written for.
         if ($periodStartDayMoved) {
-            $envelopePeriods->rekeyToCurrentPeriods();
+            try {
+                $envelopePeriods->rekeyToCurrentPeriods($previousStartDay);
+            } catch (IdReadBackFailedException) {
+                // The rekey owns one transaction, so its refusal left every
+                // envelope row on the old key. Only the old day matches those,
+                // and a day saved without them reads as a plan of nothing.
+                $this->periodStartDay = $previousStartDay;
+                $user->period_start_day = $previousStartDay;
+                $user->save();
+                $preferences->announce($user->id, ['period_start_day']);
+                $this->addError('periodStartDay', Lang::get('core::settings.errors.period_move_failed'));
+
+                return;
+            }
         }
 
         // No `settings-saved` dispatch: nothing listened for it. Every
         // sibling section on this page owns its own columns, and the only
         // feedback the save owes the user is the $saved line beside it.
         $this->saved = true;
+    }
+
+    public function cancelPeriodMove(CurrentUser $currentUser): void
+    {
+        $this->periodStartDay = $currentUser->user()->period_start_day;
+        $this->confirmingPeriodMove = false;
     }
 
     public function render(
@@ -400,6 +462,8 @@ final class SettingsPage extends Component
     public function rules(): array
     {
         return [
+            'defaultCurrencyView' => 'required|in:'.implode(',', CurrencyView::values()),
+            'periodStartDay' => 'required|integer|min:'.PeriodQuery::MIN_START_DAY.'|max:'.PeriodQuery::MAX_START_DAY,
             'theme' => 'required|in:'.implode(',', Theme::values()),
             'locale' => 'required|in:'.LocaleNegotiator::SYSTEM.','.implode(',', Locale::codes()),
             'driftAlertThresholdPercent' => 'required|integer|in:'.implode(',', DriftThresholdOptions::PERCENTS),

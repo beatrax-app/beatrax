@@ -15,10 +15,10 @@ use Symfony\Component\HttpFoundation\Response;
 // migrations bounce to desktop.setup, a fresh (zero-user) install
 // bounces to desktop.welcome. Both first-launch routes plus signup are
 // exempt so the redirect cannot loop.
-final class EnsureDatabaseReady
+final readonly class EnsureDatabaseReady
 {
     /** @var array<int, string> */
-    private const EXEMPT_ROUTE_PREFIXES = [
+    private const array EXEMPT_ROUTE_PREFIXES = [
         'desktop.setup',
         'desktop.welcome',
         'signup',
@@ -37,13 +37,13 @@ final class EnsureDatabaseReady
     ];
 
     /** @var array<int, string> */
-    private const EXEMPT_ROUTE_SUFFIXES = [
+    private const array EXEMPT_ROUTE_SUFFIXES = [
         'livewire.update',
     ];
 
     public function __construct(
-        private readonly FirstLaunchBootstrap $bootstrap,
-        private readonly UrlGenerator $urls,
+        private FirstLaunchBootstrap $bootstrap,
+        private UrlGenerator $urls,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -86,23 +86,11 @@ final class EnsureDatabaseReady
     // is ready — silently, and only on a fresh install.
     private function hasExemptPrefix(string $name): bool
     {
-        foreach (self::EXEMPT_ROUTE_PREFIXES as $prefix) {
-            if ($name === $prefix || str_starts_with($name, $prefix.'.')) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(self::EXEMPT_ROUTE_PREFIXES, fn (string $prefix): bool => $name === $prefix || str_starts_with($name, $prefix.'.'));
     }
 
     private function hasExemptSuffix(string $name): bool
     {
-        foreach (self::EXEMPT_ROUTE_SUFFIXES as $suffix) {
-            if (str_ends_with($name, $suffix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(self::EXEMPT_ROUTE_SUFFIXES, fn (string $suffix): bool => str_ends_with($name, $suffix));
     }
 }

@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Para birimi gösterimi',
+        'heading' => 'Tutar gösterimi',
         'label' => 'İşlem listesindeki varsayılan görünüm',
-        'eur_only' => 'Yalnızca :code',
-        'original' => 'Orijinal para birimi',
+        'eur_only' => 'Tahsil edilen tutar',
+        'original' => 'Orijinal tutar',
         'help' => 'İşlem listesinden sayfa bazında yine de değiştirebilirsin.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Uygulamayla birlikte gelen kurlar kullanılıyor. Bu cihazdan hiçbir veri çıkmıyor.',
         'fetch_aria' => 'Güncel döviz kurlarını çevrimiçi al',
         'refreshing' => 'Yenileniyor…',
-        'next_refresh' => 'Sonraki otomatik yenileme: her gün 09:00',
+        'next_refresh' => 'Otomatik yenileme: günde bir kez',
         'refresh_gave_up' => 'Kurlar yenilenemedi. Bu cihazdaki mevcut kurlar kullanılmaya devam ediyor.',
         'refresh_now' => 'Şimdi yenile',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Dönem',
         'label' => 'Dönemin başladığı gün',
         'help' => "1 ile 28 arasında numaralandırılır. Çoğu kullanıcı bunu 1 olarak bırakır (takvim ayı). Maaşın ayın 25'inde yatıyorsa ve “ayın” senin için o gün başlıyorsa 25 kullan.",
+
+        'move_confirm' => 'Dönem :day. günde başlarsa, tüm zarf tutarları yeniden yerleştirilir ve iki ayın tek aya katlandığı yerlerde toplanır. Günü geri almak onları yeniden ayırmaz.',
+        'move_cancel' => 'İptal',
+        'move_apply' => 'Uygula',
     ],
 
     'recurring' => [
         'heading' => 'Düzenli işlem algılama',
         'window_label' => 'Algılama penceresi (ay)',
         'window_help' => 'İşlemler düzenli kalıplar halinde kümelenirken kaç aylık geçmişin taranacağı.',
-        'income_label' => 'Asgari gelir (sent)',
-        'income_help' => 'Bu eşiğin altındaki gelirler otomatik olarak kümelenmez. Sent cinsinden saklanır — 200000, :example anlamına gelir. Eşiği devre dışı bırakmak için 0 yap.',
+        'income_label' => 'Asgari gelir (alt birim)',
+        'income_help' => 'Bu eşiğin altındaki gelirler otomatik olarak kümelenmez. Alt birim cinsinden saklanır — :minor, :example anlamına gelir. Eşiği devre dışı bırakmak için 0 yap.',
     ],
 
     'drift' => [
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Bırakma klasörü etkin. Beatrax, yeni dosyalar için <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> klasörünü 5 dakikada bir tarar.',
         'inactive_html' => 'Açık olduğunda Beatrax, <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> klasörünü 5 dakikada bir <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> ve <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> dosyaları için tarar ve bunları sihirbazla aynı eşleştirme hattından geçirerek içe aktarır. İşlenen dosyalar <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> klasörüne taşınır, böylece asla iki kez içe aktarılmaz.',
+        'active_phone_html' => 'Bırakma klasörü etkin. Beatrax, yeni dosyalar için <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> klasörünü arka planda tarar. Arka plan taramasının ne zaman çalışacağına telefonun karar verir, bu yüzden dakikalar da sürebilir saatler de.',
+        'inactive_phone_html' => 'Açık olduğunda Beatrax, <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> klasörünü arka planda <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> ve <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> dosyaları için tarar ve bunları sihirbazla aynı eşleştirme hattından geçirerek içe aktarır. Arka plan taramasının ne zaman çalışacağına telefonun karar verir, bu yüzden dakikalar da sürebilir saatler de. İşlenen dosyalar <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> klasörüne taşınır, böylece asla iki kez içe aktarılmaz.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Vergi',
-    'shared_merchant_heading' => 'Paylaşılan işyeri listesi',
     'data_backup_heading' => 'Veriler ve yedekleme',
-    'install_heading' => 'Yükleme',
 
     'about_updates' => [
         'heading' => 'Güncellemeler hakkında',
         'body' => "Beatrax kurulduktan sonra kendini otomatik olarak günceller. İlk sürümü kurduktan sonra yeni sürümler uygulama içi bir bant aracılığıyla gelir — GitHub'a yeniden uğraman gerekmez. İleride bir güncelleme uygulanamazsa, en son yükleyiciyi sürümler sayfasından her zaman elle indirebilirsin.",
+        'body_phone' => 'Burada Beatrax kendini güncellemez. Telefon uygulamasının yeni sürümleri, diğer uygulamalarında olduğu gibi App Store ya da Google Play üzerinden gelir. Sürümler sayfasında her sürümde neyin değiştiği yazar.',
         'open_releases' => 'Sürümler sayfasını aç →',
     ],
 
@@ -192,6 +197,7 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Bütçe ayı taşınamadı, bu yüzden olduğu yerde kaldı.',
         'currency_required' => 'Lütfen bir para birimi seç.',
         'window_months' => '2 ile 60 ay arasında bir değer seç.',
         'threshold' => '%1, %2, %5, %10, %25 veya %50 arasından bir eşik seç.',

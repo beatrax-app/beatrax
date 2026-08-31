@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'İşlem',
     'heading' => 'İşlem',
+    'booked_on' => ':date tarihinde işlendi',
 
     'counterparty' => 'Karşı taraf',
     'description' => 'Açıklama',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Not (isteğe bağlı)',
         'tax_deductible' => 'Vergiden indirilebilir',
         'remove_leg_aria' => 'Bu kategoriyi kaldır',
+        'remove_leg_caption' => 'Kaldır',
         'add_category' => '+ Kategori ekle',
         'soft_cap' => ':count / ~20 kategori — küçük tutarları gruplandırmayı düşün.',
         'remaining_zero' => 'Kalan :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'İşlemi sil',
         'help' => 'Bu işlemi kalıcı olarak kaldırır. Bu eylem geri alınamaz.',
         'button' => 'Sil',
-        'confirm_prompt' => 'Emin misin?',
+        'confirm_prompt' => 'Bu işlem silinsin mi? Notu, dağılımı ve vergi etiketleri de gider.',
         'confirm' => 'Evet, sil',
         'cancel' => 'İptal',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Zinciri görüntüle',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Mutabakatlı ve kilitli',
+        'help' => 'Tamamlanan bir mutabakat bu işlemi kilitledi. Kategorisi, notu, dağılımı ve vergi etiketleri sen kilidi açana kadar olduğu gibi kalır.',
+        'button' => 'Düzenlemek için kilidi aç',
+        'confirm_question' => 'Bu işlemin kilidi düzenlemek için açılsın mı? Üzerinde hiçbir şey değişmez, sonraki tamamlanan mutabakat onu yeniden kilitler.',
+        'cancel' => 'Kilitli kalsın',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Bu işlem mutabakatlı. Değişiklik yapmak için mutabakatı geri al.',
         'reclassified_pair_removed' => ':type olarak yeniden sınıflandırıldı — eşleştirme kaldırıldı',
         'reclassified' => ':type olarak yeniden sınıflandırıldı',
         'note_saved' => 'Not kaydedildi',
         'unreconciled' => 'Mutabakat geri alındı — bu işlemi yeniden düzenleyebilirsin.',
+        'note_too_long' => 'Bir not en fazla :max karakter olabilir.',
         'counterparty_updated' => 'Karşı taraf güncellendi',
         'goal_attributed' => 'Bu hedefe sayılıyor',
         'goal_attribution_removed' => 'Artık bu hedefe sayılmıyor',

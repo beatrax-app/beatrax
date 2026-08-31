@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Valiutos rodymas',
+        'heading' => 'Sumos rodymas',
         'label' => 'Numatytasis rodinys operacijų sąraše',
-        'eur_only' => 'Tik :code',
-        'original' => 'Pradinė valiuta',
+        'eur_only' => 'Atsiskaityta suma',
+        'original' => 'Originali suma',
         'help' => 'Kiekviename puslapyje vis tiek gali persijungti iš operacijų sąrašo.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Naudojami kartu pateikti kursai. Jokie duomenys neišeina iš šio įrenginio.',
         'fetch_aria' => 'Gauti dabartinius valiutų kursus internetu',
         'refreshing' => 'Atnaujinama…',
-        'next_refresh' => 'Kitas automatinis atnaujinimas: kasdien 09:00',
+        'next_refresh' => 'Automatinis atnaujinimas: kartą per dieną',
         'refresh_gave_up' => 'Nepavyko atnaujinti kursų. Toliau naudojami šiame įrenginyje jau esantys kursai.',
         'refresh_now' => 'Atnaujinti dabar',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Laikotarpis',
         'label' => 'Laikotarpis prasideda dieną',
         'help' => 'Nuo 1 iki 28. Dauguma naudotojų palieka 1 (kalendorinis mėnuo). Pasirink 25, jei atlyginimą gauni 25 dieną ir „savo mėnesį“ skaičiuoji nuo tada.',
+
+        'move_confirm' => 'Jei laikotarpis prasideda :day dieną, visos vokų sumos perkeliamos ir sudedamos ten, kur du mėnesiai susilieja į vieną. Grąžinus dieną atgal, jos vėl neišskaidomos.',
+        'move_cancel' => 'Atšaukti',
+        'move_apply' => 'Taikyti',
     ],
 
     'recurring' => [
         'heading' => 'Pasikartojančių mokėjimų aptikimas',
         'window_label' => 'Aptikimo langas (mėnesiais)',
         'window_help' => 'Kiek istorijos mėnesių nuskaityti grupuojant operacijas į pasikartojančius modelius.',
-        'income_label' => 'Mažiausios pajamos (centais)',
-        'income_help' => 'Už šią ribą mažesnės pajamos automatiškai negrupuojamos. Saugoma centais — 200000 reiškia :example. Nustatyk 0, kad ribos nebūtų.',
+        'income_label' => 'Mažiausios pajamos (smulkiaisiais vienetais)',
+        'income_help' => 'Už šią ribą mažesnės pajamos automatiškai negrupuojamos. Saugoma smulkiaisiais vienetais — :minor reiškia :example. Nustatyk 0, kad ribos nebūtų.',
     ],
 
     'drift' => [
@@ -125,12 +129,12 @@ return [
         'label' => 'Numatytoji pokyčio įspėjimo riba',
         'help' => 'Įspėjimai siunčiami, kai naujausia pasikartojančio mokėjimo suma nuo ankstesnės skiriasi daugiau nei šia procentine dalimi. Atskiroms serijoms nustatytos reikšmės turi pirmenybę.',
         'options' => [
-            '1' => '±1%',
-            '2' => '±2%',
-            '5' => '±5% (numatytoji)',
-            '10' => '±10%',
-            '25' => '±25%',
-            '50' => '±50%',
+            '1' => '±1 %',
+            '2' => '±2 %',
+            '5' => '±5 % (numatytoji)',
+            '10' => '±10 %',
+            '25' => '±25 %',
+            '50' => '±50 %',
         ],
     ],
 
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Įkėlimo aplankas aktyvus. Beatrax kas 5 minutes tikrina <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code>, ar nėra naujų failų.',
         'inactive_html' => 'Kai įjungta, Beatrax kas 5 minutes tikrina <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code>, ar nėra <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> ir <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> failų, ir importuoja juos tuo pačiu derinimo konvejeriu kaip ir vediklis. Apdoroti failai perkeliami į <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, kad niekada nebūtų importuoti du kartus.',
+        'active_phone_html' => 'Įkėlimo aplankas aktyvus. Beatrax fone tikrina <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code>, ar nėra naujų failų. Kada pasileis tikrinimas fone, sprendžia tavo telefonas — tai gali užtrukti minutes arba valandas.',
+        'inactive_phone_html' => 'Kai įjungta, Beatrax fone tikrina <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code>, ar nėra <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> ir <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> failų, ir importuoja juos tuo pačiu derinimo konvejeriu kaip ir vediklis. Kada pasileis tikrinimas fone, sprendžia tavo telefonas — tai gali užtrukti minutes arba valandas. Apdoroti failai perkeliami į <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, kad niekada nebūtų importuoti du kartus.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Mokesčiai',
-    'shared_merchant_heading' => 'Bendras prekybininkų sąrašas',
     'data_backup_heading' => 'Duomenys ir atsarginės kopijos',
-    'install_heading' => 'Diegimas',
 
     'about_updates' => [
         'heading' => 'Apie atnaujinimus',
         'body' => 'Įdiegta Beatrax atsinaujina automatiškai. Įdiegus pačią pirmąją versiją, būsimos versijos pasiekia tave per programėlės juostą — grįžti į GitHub nereikia. Jei kada nors atnaujinimo nepavyktų pritaikyti, naujausią diegimo failą visada gali ranka atsisiųsti iš laidų puslapio.',
+        'body_phone' => 'Čia Beatrax pati neatsinaujina. Naujos telefono programėlės versijos pasiekia tave per „App Store“ arba „Google Play“, kaip ir kitos tavo programėlės. Laidų puslapyje surašyta, kas kiekvienoje pasikeitė.',
         'open_releases' => 'Atverti laidų puslapį →',
     ],
 
@@ -192,9 +197,10 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Biudžeto mėnesio perkelti nepavyko, todėl jis liko ten, kur buvo.',
         'currency_required' => 'Pasirink valiutą.',
         'window_months' => 'Pasirink nuo 2 iki 60 mėnesių.',
-        'threshold' => 'Pasirink ribą iš 1%, 2%, 5%, 10%, 25% arba 50%.',
+        'threshold' => 'Pasirink ribą iš 1 %, 2 %, 5 %, 10 %, 25 % arba 50 %.',
         'amount' => 'Įvesk sumą nuo :zero ir daugiau.',
         'period_day' => 'Pasirink dieną nuo 1 iki 28.',
         'currency_view' => 'Pasirink vieną iš galimų parinkčių.',

@@ -14,15 +14,6 @@ return [
     'auto_categorized' => 'Automatski kategorizirano iz povijesti trgovca',
     'override' => 'Nadjačaj',
     'flash_rule_gone' => 'Pravilo više ne postoji (možda je izbrisano u drugoj kartici).',
-
-    'update_the_rule' => 'Ažurirati pravilo?',
-    'divergence_body' => 'Odabrao si drugu kategoriju. Ažuriraj pravilo da tome odgovara ili zadrži postojeće pravilo za buduće uvoze.',
-    'keep_current' => 'Zadrži trenutačno pravilo',
-    'flash_rule_gone_short' => 'Pravilo više ne postoji.',
-    'flash_rule_updated' => 'Pravilo je ažurirano.',
-    'flash_could_not_update' => 'Pravilo nije bilo moguće ažurirati.',
-    'flash_invalid_category' => 'Neispravna kategorija — osvježi stranicu.',
-
     'picker_category' => 'Kategorija',
     'reconciled_toast' => 'Ova transakcija je usklađena. Poništi usklađivanje da bi je mijenjao.',
 ];

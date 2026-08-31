@@ -9,22 +9,24 @@ use Modules\Desktop\Public\Events\FileOpenedFromOs;
 
 // The one validation boundary every OS-supplied file path converges on. The
 // path is only ever read, never handed to exec()/shell_exec().
-final class FileOpenIntake
+final readonly class FileOpenIntake
 {
-    // Lower-cased, no leading dot — matches the macOS CFBundleDocumentTypes and
-    // Linux MimeType= entries the published Electron project registers.
-    public const SUPPORTED_EXTENSIONS = ['csv', 'eml'];
+    // Lower-cased, no leading dot. The document types the OS is told about are
+    // declared by scripts/nativephp_inject_file_associations.php, and the two
+    // lists are pinned equal: an extension the shell routes here that this
+    // refuses is a double-click that opens the app and does nothing.
+    public const array SUPPORTED_EXTENSIONS = ['csv', 'eml'];
 
     /**
      * @var array<string, int>
      */
-    public const MAX_BYTES = [
+    public const array MAX_BYTES = [
         'csv' => 50 * 1024 * 1024, // 50 MB — large bank exports
         'eml' => 5 * 1024 * 1024,  // 5 MB — a fat receipt with inline images
     ];
 
     public function __construct(
-        private readonly Dispatcher $events,
+        private Dispatcher $events,
     ) {}
 
     public function receive(string $path): void

@@ -20,6 +20,7 @@ return [
         'manage' => 'Zarządzaj open bankingiem',
         'not_connected' => 'Nie połączono żadnego banku. Połącz bank, aby automatycznie importować transakcje.',
         'expired' => 'Zgoda wygasła — potrzebne ponowne połączenie.',
+        'revoked' => 'Twój bank zakończył połączenie — połącz ponownie.',
         'connected' => 'Połączono przez Enable Banking. Bank: :bank. Ostatnia synchronizacja: :when.',
         'never' => 'nigdy',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Wygasła — połącz ponownie',
         'pill_expiring' => 'Wkrótce wygaśnie',
         'pill_connected' => 'Połączono',
+        'pill_revoked' => 'Zakończone przez bank — połącz ponownie',
         'whats_fetched_label' => 'Co jest pobierane',
         'whats_fetched' => 'Zaksięgowane transakcje + salda, ostatnie 90 dni',
         'last_successful_sync_label' => 'Ostatnia udana synchronizacja',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — nieudana (:reason)',
         'reason_consent_expired' => 'zgoda wygasła',
         'reason_error' => 'błąd',
+        'reason_truncated' => 'zatrzymano wcześniej',
+        'reason_nothing_imported' => 'nic nie udało się zapisać',
+        'reason_consent_revoked' => 'zakończone przez bank',
         'disconnect_button' => 'Rozłącz',
     ],
 
     'consent_banner' => [
         'heading' => 'Zgoda wygasła — połącz ponownie',
+        'heading_revoked' => 'Twój bank zakończył połączenie',
         'body' => 'Ostatnia udana synchronizacja: :when. Połącz ponownie, aby wznowić automatyczną synchronizację.',
+        'body_revoked' => 'Twój bank lub Enable Banking cofnął dostęp, więc synchronizacja została zatrzymana. Ostatnia udana synchronizacja: :when. Połącz ponownie, aby ją wznowić.',
         'never' => 'nigdy',
         'reconnect' => 'Połącz ponownie',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking jest chwilowo niedostępne. Spróbuj ponownie za chwilę.',
         'new_found' => 'Znaleziono :count nową transakcję.|Znaleziono :count nowe transakcje.|Znaleziono :count nowych transakcji.',
         'none' => 'Brak nowych transakcji.',
+        'none_importable' => 'Twój bank przysłał transakcje, ale żadnej nie udało się zapisać. Otwórz przegląd importu, aby zobaczyć dlaczego.',
+        'in_progress' => 'Synchronizacja już trwa. Spróbuj ponownie za chwilę.',
+        'truncated' => 'Twój bank miał więcej transakcji, niż jedna synchronizacja może pobrać, więc ten przebieg zatrzymano wcześniej. Nic nie zostało zapisane jako zsynchronizowane — następna synchronizacja zacznie się w tym samym miejscu.',
     ],
 
     'disconnect' => [
@@ -139,10 +149,6 @@ return [
             'save_application_id_failed' => 'Nie udało się zapisać identyfikatora aplikacji na dysku — sprawdź uprawnienia katalogu z sekretami i spróbuj ponownie.',
             'choose_bank' => 'Wybierz bank, zanim przejdziesz dalej.',
         ],
-    ],
-
-    'alert' => [
-        'reconsent' => 'Połącz ponownie swój bank',
     ],
 
     'errors' => [

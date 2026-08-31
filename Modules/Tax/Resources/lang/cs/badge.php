@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Upravit daňové označení: :label',
     'tag' => 'Označit',
     'tag_aria' => 'Označit jako daňově relevantní',
+    'tag_caption' => 'Označit',
 ];

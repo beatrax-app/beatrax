@@ -14,7 +14,7 @@
      no .top-bar ever appears. A bar's height was standing in for the status
      bar here and is neither the same measurement nor on the same screen. --}}
 <div class="safe-screen min-h-screen flex items-start justify-center bg-white dark:bg-slate-950">
-    <div class="w-full max-w-md mx-auto px-6 space-y-6 pb-10 pt-6">
+    <div class="w-full max-w-md mx-auto px-4 sm:px-6 space-y-6 pb-10 pt-6">
 
         {{-- ===== Step: collect_pin ===== --}}
         @if ($bootstrapStep === ImportBootstrapStep::CollectPin && ! $alreadyProvisioned)

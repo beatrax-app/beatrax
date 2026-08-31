@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Kasice · Beatrax',
     'heading' => 'Kasice',
-    'subtitle' => 'Virtualna podstanja koja se uvijek zbrajaju u stvarno stanje računa.',
+    'subtitle' => 'Virtualna podstanja izdvojena iz stvarnog stanja računa.',
     'add_pot' => 'Dodaj kasicu',
 
     'pot_fallback' => 'kasica',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Prikaži povijest ↓',
         'hide' => 'Sakrij povijest ↑',
+        'truncated' => 'Posljednje promjene: :shown od :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Isplata',
         'moved_from' => 'Premješteno iz kasice: :name',
         'moved_to' => 'Premješteno u kasicu: :name',
+        'unreadable' => 'Zabilježeno novijom verzijom Beatraxa',
+        'released_on_archive' => 'Oslobođeno pri arhiviranju',
     ],
 
     'archived' => [
-        'toggle' => 'Arhivirane kasice (:count)',
+        'toggle' => 'Arhivirana kasica (:count)|Arhivirane kasice (:count)|Arhiviranih kasica (:count)',
         'badge' => 'Arhivirano',
     ],
 
@@ -119,12 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Unesi naziv ove kasice.',
         'select_account' => 'Odaberi račun za ovu kasicu.',
-        'amount_exceeds_unallocated' => 'Iznos premašuje neraspoređeno stanje.',
         'amount_exceeds_unallocated_available' => 'Iznos premašuje neraspoređeno stanje (dostupno: :amount).',
         'amount_exceeds_pot_balance' => 'Iznos premašuje stanje kasice „:name” (dostupno: :amount).',
         'generic' => 'Fond nije spremljen. Provjerite polja i pokušajte ponovno.',
         'amount_invalid' => 'Unesite iznos veći od nule.',
         'goal_already_linked' => 'Ovaj cilj već ima aktivan povezani fond. Prvo ga arhivirajte.',
+        'account_cannot_hold_pots' => 'Kasica treba račun na kojem stoji novac. Odaberi drugi račun.',
+        'select_target_pot' => 'Odaberi kasicu u koju premjestiti.',
+        'move_target_missing' => 'Ta kasica više nije dostupna. Odaberi drugu.',
+        'move_same_pot' => 'Kasica ne može premjestiti novac sama sebi. Odaberi drugu kasicu.',
+        'move_cross_account' => 'Kasice razmjenjuju novac samo unutar jednog računa, a :name je na računu :account.',
+        'pot_missing' => 'Ta kasica više nije dostupna.',
+        'operation_failed' => 'Nije prošlo. Novac nije premješten — pokušaj ponovno.',
     ],
 
     'toast' => [

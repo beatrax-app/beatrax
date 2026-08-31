@@ -17,15 +17,15 @@ use Modules\Reports\Models\SavedReport;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class TogglePin
+final readonly class TogglePin
 {
     use CoercesScalars;
 
     public const int MAX_PINS = PinCap::MAX_PINS;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Dispatcher $events,
     ) {}
 
     public function toggle(User $user, int $reportId): SavedReport

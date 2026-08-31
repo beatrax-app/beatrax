@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'series',
 
+    'template' => [
+        'cancel' => 'Cancel :name',
+        'change_amount' => 'Change :name amount',
+    ],
+
     'summary' => [
         'cancel' => 'Cancel :name',
         'series_fallback' => 'series #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenario renamed.',
         'mutation_added' => 'Mutation added.',
         'mutation_updated' => 'Mutation updated.',
-        'mutation_removed' => 'Mutation removed. Undo',
+        'mutation_removed' => 'Mutation removed.',
     ],
 
     'errors' => [
         'name_empty' => 'Scenario name cannot be empty.',
         'name_too_long' => 'Scenario name must be :max character or fewer.|Scenario name must be :max characters or fewer.',
         'name_taken' => 'A scenario with that name already exists.',
+        'date_out_of_range' => 'That date is outside every forecast horizon — today to :days day ahead — so this scenario would change nothing.|That date is outside every forecast horizon — today to :days days ahead — so this scenario would change nothing.',
         'pick_kind_first' => 'Pick a mutation kind first.',
         'amount_positive' => 'Amount must be a positive number.',
+        'scenario_gone' => 'This scenario is gone — it was deleted somewhere else. Pick another scenario, or make a new one.',
+        'mutation_gone' => 'This change is gone — it was removed somewhere else. Close the editor and add it again if you still want it.',
     ],
 ];

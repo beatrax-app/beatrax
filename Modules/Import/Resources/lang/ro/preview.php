@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Denumește acest cont.',
 
     'ics' => [
+        'name' => 'Card ICS',
         'heading' => 'Denumește-ți contul de card ICS.',
         'help' => 'Este prima dată când imporți date ICS. Dă-i un nume acestui card, ca să apară consecvent în toată aplicația.',
         'placeholder' => 'de ex. Card ICS',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Denumește-ți contul PayPal.',
         'help' => 'Este prima dată când imporți date PayPal. Dă-i un nume acestui portofel, ca să apară consecvent în toată aplicația.',
         'placeholder' => 'de ex. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Denumește-ți contul Google Play.',
+        'help' => 'Este prima dată când imporți o chitanță Google Play. Dă-i un nume acestui cont, ca să apară consecvent în toată aplicația.',
+        'placeholder' => 'de ex. Google Play',
     ],
 
     'col_date' => 'Dată',
@@ -53,28 +62,41 @@ return [
         'error' => 'Eroare',
     ],
 
-    'chain' => [
-        'heading' => 'Se rezolvă lanțurile…',
-        'pending' => 'În coadă. Rezolvarea lanțurilor va începe în curând.',
-        'running' => 'Se leagă lanțurile de finanțare și se descompun decontările din extras.',
-        'failed_prefix' => 'Rezolvarea lanțurilor a eșuat:',
-        'failed_detail' => 'detaliile sunt în jurnalul de sarcini',
-        'open_horizon' => 'Deschide Horizon',
-        'failed_suffix' => 'pentru a reîncerca sau a inspecta.',
-    ],
-
     'rows_shown' => 'Rânduri afișate: :shown din :total',
 
     'show_more' => 'Afișează mai multe rânduri',
 
     'errors' => [
         'app_locked' => 'Deblocați aplicația pentru a importa: cheile de criptare nu pot fi folosite cât timp este blocată.',
+        'archive_holds_one_message' => 'Acest fișier este un singur mesaj de e-mail, nu o arhivă de căsuță poștală, deci citit ca arhivă nu are nimic în el. Încarcă-l din nou cu formatul Mesaj de e-mail.',
+        'email_file_is_an_archive' => 'Acest fișier este o arhivă de căsuță poștală: conține mai mult de un mesaj, iar citit ca un singur mesaj ar lua doar primul. Încarcă-l din nou cu formatul Arhivă de căsuță poștală.',
         'file_stopped_short' => 'Rândul de antet se potrivea, deci formatul este corect. Citirea s-a oprit înainte de sfârșitul fișierului. O singură linie ilizibilă face asta, la fel și un fișier prea mare pentru acest dispozitiv. Încearcă o perioadă mai scurtă.',
         'file_unreadable' => 'Acest fișier nu a putut fi citit.',
+        'file_unreadable_detail' => 'Aplicația nu a putut citi acest fișier (:code). Detaliile complete se află în jurnalul aplicației; menționați acest cod dacă raportați o problemă.',
         'iban_not_in_preview' => 'Acest IBAN nu face parte din previzualizarea curentă.',
-        'pdf_reader_unavailable' => 'Extrasele PDF au nevoie de programul pdftotext, care nu este instalat aici. Importă acest fișier pe un computer care îl are sau folosește un export CSV de la bancă.',
+        'not_an_email_file' => 'Acest fișier nu este nici mesaj de e-mail, nici arhivă de căsuță poștală, deci nu are ce să fie citit în el ca bon. Alege tipul de import și formatul care se potrivesc fișierului tău.',
+        'pdf_has_no_text_layer' => 'Acest PDF nu conține text — este o scanare sau o fotografie a unui extras, deci nu are ce să fie citit în el. Descarcă extrasul propriu-zis de la bancă sau folosește un export CSV.',
+        'pdf_password_protected' => 'Acest PDF este protejat cu parolă, așa că niciun cititor nu îl poate deschide. Salvează o copie neprotejată din vizualizatorul tău de PDF și importă copia aceea.',
+        'pdf_reader_unavailable' => 'Această versiune a aplicației nu are niciun cititor PDF, așa că un extras PDF nu poate fi deschis aici. Importă acest fișier pe alt dispozitiv sau folosește un export CSV de la bancă.',
+        'row_belongs_to_another_statement' => 'Acest rând aparține unei tranzacții dintr-un alt fișier de extras. Importați și acel extras — cele două sunt citite împreună.',
         'row_unreadable' => 'Acest rând nu a putut fi citit.',
+        'row_unreadable_detail' => 'Aplicația nu a putut citi acest rând (:code). Detaliile complete se află în jurnalul aplicației; menționați acest cod dacă raportați o problemă.',
         'unknown_account' => 'Acest rând aparține unui cont căruia nu i-ai dat încă un nume.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Acest fișier a fost citit ca e-mail',
+        'saved' => 'Ce conținea este listat mai jos, iar fiecare mesaj a fost păstrat.',
+        'none_imported' => 'Nimic din toate acestea nu a devenit tranzacție, așa că în registrul tău nu s-a adăugat nimic.',
+        'shown' => 'Mesaje afișate: :shown din :total',
+        'no_subject' => 'Fără subiect',
+
+        'state' => [
+            'read' => 'Citit ca plată — confirmă acest import ca să ajungă în registrul tău.',
+            'not_a_payment' => 'Nu este o plată. Acest mesaj anunță ceva în loc să confirme o plată.',
+            'unreadable' => 'Păstrat. Aplicația citește bonuri de la acest expeditor, dar nu a găsit suma, comerciantul și referința în acest mesaj.',
+            'unknown_sender' => 'Păstrat. Aplicația nu citește bonuri de la acest expeditor, așa că nu a luat nimic din mesaj.',
+        ],
     ],
 
     'failed' => [

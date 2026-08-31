@@ -16,7 +16,7 @@ return [
     'ok_aria' => 'OK — confirmer le PIN',
     'ok' => 'OK',
 
-    'error_too_short' => 'Le PIN doit comporter au moins 6 chiffres.',
+    'error_pin_shape' => 'Le PIN doit comporter :min à :max chiffres — uniquement des chiffres.',
 
     'error_backoff' => 'Trop de tentatives — réessaie dans :wait.',
 

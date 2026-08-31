@@ -85,7 +85,7 @@ What the module explicitly does NOT do:
     is no single filtered list entry point; each review-page
     state has its own method, plus `cadenceChangedForUser` and
     the unpaged `allApprovedForUser`.
-  - `RecurringSeriesQuery::occurrencesForSeries($seriesId,
+  - `RecurringOccurrenceQuery::occurrencesForSeries($seriesId,
     $user)` — every occurrence row that contributed to the
     series, ordered `observed_at` DESC. This is the read
     `DriftAlerts::DriftEvaluator` consumes; it takes the first
@@ -169,7 +169,7 @@ What the module explicitly does NOT do:
   or the user moved the series is not an audit row.
 - `BusRecurringDetectionDispatcher::dispatchForUser($userId)` —
   dispatches `DetectRecurringSeriesJob` per user.
-- `RecurringSeriesQuery::occurrencesForSeries` — the occurrence
+- `RecurringOccurrenceQuery::occurrencesForSeries` — the occurrence
   read surface `DriftAlerts` consumes. It is not the only method
   `DriftAlerts` calls: `DriftEvaluator` also uses `forSeries` and
   `driftThresholdForSeries`, `DriftAlertQuery` uses
@@ -274,13 +274,18 @@ clearly-missed period is discounted.
 
 `ExpenseSeriesDetector` reads transactions of type `expense` and `fee`
 for the user inside the detection window (per-user
-`recurring_detection_window_months`, 18-month default) and clusters rows
+`recurring_detection_window_months`, two-month default, opened by
+`Modules\Recurring\Public\Support\RecurringDetectionWindow`) and clusters rows
 by `(counterparty_normalized, original_currency)` — original-currency
 clustering keeps a USD subscription stable when the settled-EUR amount
 drifts with FX rate noise. `IncomeSeriesDetector` mirrors this for
-`income`-type transactions, clustering by IBAN first (falling back to
+`income`-type transactions, opening its window through the same
+`RecurringDetectionWindow` — the two passes merge into one series set, so a
+window either of them computed for itself would give that set two different
+spans — and clustering by IBAN first (falling back to
 `counterparty_normalized`) with a minimum-amount floor
-(`recurring_income_min_amount_minor`, default €2000) so small refunds and
+(`recurring_income_min_amount_minor`, defaulting to
+`User::DEFAULT_RECURRING_INCOME_MIN_AMOUNT_MINOR`, €2000) so small refunds and
 cashbacks never pollute the income-series surface.
 
 Both detectors share the same per-cluster pipeline: run
@@ -408,8 +413,8 @@ explicitly skipped (never invoked) and a warning is logged naming the
 user — `ExpenseSeriesDetector` (which does not depend on
 `counterparty_iban`) still runs unaffected. A non-encrypted user's sweep
 is unaffected either way (the codec's decrypt call is a documented no-op
-pass-through for plaintext). **Known limitation:** until a future phase
-provides a headless-KEK mechanism, an encrypted user's income-series
+pass-through for plaintext). **Known limitation:** with no headless-KEK
+mechanism available, an encrypted user's income-series
 detection only actually clusters via the in-app "Detect now" button — the
 daily background sweep skips the iban-dependent pass for that user and
 logs why, rather than running it and reporting nothing.
@@ -425,10 +430,11 @@ context.
 Per-user scheduled reminder evaluation: emits `PaymentReminderDue` for
 every approved recurring series whose `nextExpectedAt` falls inside
 `[today, today + leadDays]` inclusive, skipping any candidate whose
-before-fire settlement check finds it already paid (`occurrencesForSeries()`
-returns rows ordered `observed_at DESC`, so the first entry's date tells
-whether the due charge already landed and the detector simply hasn't
-re-swept `next_expected_at` forward yet).
+before-fire settlement check finds it already paid
+(`RecurringOccurrenceQuery::latestObservedAtForSeriesIds()` answers the
+newest `observed_at` per series in one read, so that date tells whether the
+due charge already landed and the detector simply hasn't re-swept
+`next_expected_at` forward yet).
 
 `$leadDays` is a constructor parameter, not read from the notification
 store's preference query in here — this module reading that Public

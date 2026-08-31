@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'vali konto',
+        'choose_date' => 'vali väljavõtte kuupäev',
         'enter_balance' => 'sisesta väljavõtte jääk',
         'matched' => 'kattub — :amount',
         'discrepancy' => 'lahknevus — :amount',
+        'reconciled_through' => 'kooskõlastatud kuni :date',
     ],
 
     'mismatch_html' => 'Väljavõtte jääk ei kattu veel sinu laekunud jäägiga. Muuda laekunud ridade olekut <a href=":url" class="underline">tehingute loendis</a> või kohanda sisestatud jääki, kuni vahe on null — see voog ei loo kunagi tasakaalustavat kirjet.',
+    'unreachable_no_baseline_html' => 'Ridade lülitamine ei vii seda vahet nulli. Sellel kontol pole algjääki kirjas, seega mõõdetakse selle saldot nullist. Impordi väljavõte, millega konto avaneb, või määra algjääk <a href=":url" class="underline">Seadetes</a>.',
+    'unreachable' => 'Ridade lülitamine ei vii seda vahet nulli: see jääb väljapoole kõigi selle konto ridade vahemikku antud kuupäevani. Kontrolli väljavõtte kuupäeva ja sisestatud saldot.',
 
     'check' => 'Kontrolli',
     'complete' => 'Lõpeta kooskõlastus',
+    'complete_unavailable' => 'Selle kuupäevani pole enam midagi lukustada — märgi rohkem ridu laekunuks või vali hilisem väljavõtte kuupäev.',
 
     'errors' => [
         'choose_account' => 'Vali kõigepealt konto.',

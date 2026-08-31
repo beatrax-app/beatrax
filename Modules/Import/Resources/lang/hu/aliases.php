@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Beolvasás és előnézet',
     'cancel_import' => 'Import megszakítása',
 
-    'diff_new' => 'új,',
-    'diff_unchanged' => 'változatlan,',
-    'diff_conflicts' => 'ütközés.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count új|:count új',
+    'diff_unchanged' => ':count változatlan|:count változatlan',
+    'diff_conflicts' => ':count ütközés|:count ütközés',
 
     'conflicts_heading' => 'Ütközések',
     'conflict_name' => 'név — meglévő: :existing → fájl: :file',
@@ -54,8 +55,7 @@ return [
     'test_heading' => 'Tesztelés a saját tranzakcióimon',
     'test_help' => 'Szerkeszd egy sor általánosított mintáját, hogy lásd, mely tranzakciókra illeszkedne.',
     'typing' => 'Gépelés…',
-    'matches_prefix' => 'Illeszkedik',
-    'matches_suffix' => 'tranzakcióra a legutóbbi előzményedben.',
+    'matches' => 'Illeszkedik :count tranzakcióra a legutóbbi előzményedben.|Illeszkedik :count tranzakcióra a legutóbbi előzményedben.',
 
     'merge_modal_title' => ':count álnév egyesítése|:count álnév egyesítése',
 
@@ -84,5 +84,10 @@ return [
         'no_file' => 'Nem töltöttél fel fájlt.',
         'unreadable' => 'A feltöltött fájl nem olvasható.',
         'too_short' => 'A minta túl rövid a teszteléshez.',
+        'file_not_yaml' => 'Ez a fájl nem érvényes YAML, ezért semmit sem lehetett kiolvasni belőle. Exportáld újra az álneveidet, és töltsd fel a kapott fájlt.',
+        'file_unreadable_as_yaml' => 'Ezt a fájlt nem sikerült álnévlistaként beolvasni. Exportáld újra az álneveidet, és töltsd fel a kapott fájlt.',
+        'file_has_no_entries_list' => 'Ez a fájl nem egy legfelső szintű entries: listával kezdődik, ezért nincs benne importálható álnév. Ellenőrizd, hogy a megfelelő fájlt választottad-e.',
+        'entry_is_not_a_mapping' => 'A(z) :entry. bejegyzés egyszerű érték ott, ahol mintát és nevet vártunk. Add meg neki mindkét mezőt, vagy távolítsd el, és töltsd fel újra a fájlt.',
+        'entry_is_missing_a_field' => 'A(z) :entry. bejegyzésből hiányzik a minta vagy a név, pedig egy álnévhez mindkettő kell. Pótold a hiányzót, vagy távolítsd el a bejegyzést, és töltsd fel újra a fájlt.',
     ],
 ];

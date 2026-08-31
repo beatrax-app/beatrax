@@ -8,6 +8,7 @@ use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Public\Dto\EnrichedDisposition;
 use Modules\Import\Public\Enums\PreviewRowStatus;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -31,7 +32,6 @@ function canonicalForUser(User $user, int $accountId, string $sourceFormat, ?str
         currency: 'EUR',
         settledAmountMinor: -1234,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'Albert Heijn',
         counterpartyIban: null,
         counterpartyNormalized: 'albert heijn',
@@ -149,6 +149,30 @@ it('returns duplicate when fingerprint matches across statement formats (CSV →
 
     expect($disposition->status())->toBe(PreviewRowStatus::Duplicate);
 })->group('phase-2');
+
+it('enriches a paypal-csv row from the receipt that arrived as eml, the format a receipt row is really stored under', function (): void {
+    $existing = seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'paypal-csv', 'O-00000000000000001', $this->composer);
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, SourceFormat::Eml->value, 'PAYID-CANONICAL');
+
+    $disposition = $this->stage->classify($tx, $this->fixtureUser);
+
+    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
+    /** @var EnrichedDisposition $disposition */
+    expect($disposition->existingTransactionId)->toBe($existing->id);
+    expect($disposition->toSourceRef)->toBe('PAYID-CANONICAL');
+});
+
+it('enriches an ics-pdf row from the receipt that arrived inside an mbox archive', function (): void {
+    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'ics-pdf', 'PDF-ROW-12', $this->composer);
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, SourceFormat::Mbox->value, 'RECEIPT-REF');
+
+    $disposition = $this->stage->classify($tx, $this->fixtureUser);
+
+    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
+    /** @var EnrichedDisposition $disposition */
+    expect($disposition->fromSourceRef)->toBe('PDF-ROW-12');
+    expect($disposition->toSourceRef)->toBe('RECEIPT-REF');
+});
 
 it('returns duplicate when incoming rank is lower than existing (CSV after CAMT)', function (): void {
     seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'camt053', 'EREF-A', $this->composer);

@@ -10,15 +10,14 @@ return [
     'subtitle_full' => 'Cronologia completa.',
     'subtitle_recent' => 'Transazioni recenti (ultimi 90 giorni).',
 
-    'currency_aria' => 'Vista valuta',
-    'currency_eur' => 'Solo :code',
-    'currency_original' => 'Valuta originale',
+    'currency_aria' => 'Importo mostrato',
+    'currency_eur' => 'Importo regolato',
+    'currency_original' => 'Importo originale',
 
     'show_recent' => 'Mostra solo le recenti',
     'show_full' => 'Mostra tutta la cronologia',
 
     'empty_period' => "Non c'è nulla per questo periodo.",
-
 
     'empty_recent_has_older' => 'Niente negli ultimi 90 giorni. I movimenti più vecchi sono ancora qui.',
 

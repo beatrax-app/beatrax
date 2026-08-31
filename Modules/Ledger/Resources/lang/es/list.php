@@ -10,15 +10,14 @@ return [
     'subtitle_full' => 'Historial completo.',
     'subtitle_recent' => 'Transacciones recientes (últimos 90 días).',
 
-    'currency_aria' => 'Vista de moneda',
-    'currency_eur' => 'Solo :code',
-    'currency_original' => 'Moneda original',
+    'currency_aria' => 'Importe mostrado',
+    'currency_eur' => 'Importe liquidado',
+    'currency_original' => 'Importe original',
 
     'show_recent' => 'Mostrar solo las recientes',
     'show_full' => 'Mostrar el historial completo',
 
     'empty_period' => 'No hay nada en este periodo.',
-
 
     'empty_recent_has_older' => 'Nada en los últimos 90 días. Tus movimientos anteriores siguen aquí.',
 

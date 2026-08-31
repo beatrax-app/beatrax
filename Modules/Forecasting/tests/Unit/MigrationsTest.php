@@ -79,7 +79,7 @@ it('creates the forecast_shortfall_windows table with every required column', fu
     expect($schema->hasTable('forecast_shortfall_windows'))->toBeTrue();
 
     $columns = [
-        'id', 'user_id', 'account_id', 'scenario_id',
+        'id', 'user_id', 'account_id', 'scenario_id', 'horizon_days',
         'starts_at', 'ends_at', 'lowest_balance_minor', 'currency',
         'buffer_used_minor', 'created_at', 'updated_at',
     ];
@@ -346,6 +346,10 @@ it('registers the documented indexes on the four new tables', function (): void 
     $shortfalls = $indexNamesFor('forecast_shortfall_windows');
     expect(collect($shortfalls)->first(static fn (string $name): bool => str_contains($name, 'account_id')
         && str_contains($name, 'starts_at')))->not->toBeNull();
+    // Every read of this table is for one horizon, and so is every write, so
+    // the horizon belongs in the index the reads go through.
+    expect(collect($shortfalls)->first(static fn (string $name): bool => str_contains($name, 'account_id')
+        && str_contains($name, 'horizon_days')))->not->toBeNull();
     expect(collect($shortfalls)->first(static fn (string $name): bool => str_contains($name, 'scenario_id')))->not->toBeNull();
     expect(collect($shortfalls)->first(static fn (string $name): bool => str_contains($name, 'ends_at')))->not->toBeNull();
 

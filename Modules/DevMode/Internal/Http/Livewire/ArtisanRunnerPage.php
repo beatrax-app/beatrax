@@ -10,6 +10,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -23,6 +24,7 @@ use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
+use Modules\DevMode\Internal\Process\CommandArgValidator;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\ProcessLiveness;
 use Modules\DevMode\Internal\Process\RunRegistry;
@@ -43,6 +45,7 @@ final class ArtisanRunnerPage extends Component
         CommandSpawner $spawner,
         CurrentUser $user,
         DevCommandRegistry $registry,
+        CommandArgValidator $argValidator,
         ?string $spawn = null,
     ): void {
         // Session resume never refires Login, so a stale Advanced=true would
@@ -55,7 +58,7 @@ final class ArtisanRunnerPage extends Component
         // A palette pick made off-page arrives here as ?spawn=, and must
         // clear the same guard as one made on the page.
         if (is_string($spawn) && $spawn !== '') {
-            $this->spawn($spawn, [], $spawner, $user, $registry);
+            $this->spawn($spawn, [], $spawner, $user, $registry, $argValidator);
         }
     }
 
@@ -78,8 +81,9 @@ final class ArtisanRunnerPage extends Component
         CommandSpawner $spawner,
         CurrentUser $user,
         DevCommandRegistry $registry,
+        CommandArgValidator $argValidator,
     ): void {
-        if ($this->refused($command, $args, $registry)) {
+        if ($this->refused($command, $args, $registry, $argValidator)) {
             return;
         }
 
@@ -99,8 +103,12 @@ final class ArtisanRunnerPage extends Component
     /**
      * @param  array<string, mixed>  $args
      */
-    private function refused(string $command, array $args, DevCommandRegistry $registry): bool
-    {
+    private function refused(
+        string $command,
+        array $args,
+        DevCommandRegistry $registry,
+        CommandArgValidator $argValidator,
+    ): bool {
         try {
             $spec = $registry->find($command);
         } catch (\InvalidArgumentException) {
@@ -127,9 +135,28 @@ final class ArtisanRunnerPage extends Component
                     'list' => implode(', ', $missing),
                 ]),
             );
+
+            return true;
         }
 
-        return $missing !== [];
+        // The same rules both HTTP spawn controllers run. Without them this
+        // surface handed the shell values the allow-list calls impossible —
+        // a 5000-character string against `max:255`, or a positional whose
+        // leading `--` Symfony Console reads as an option.
+        try {
+            $argValidator->assertValid($spec, $args);
+        } catch (ValidationException $e) {
+            $this->toast(
+                Lang::get('dev::runner.toast.invalid_args', [
+                    'command' => $command,
+                    'reason' => $e->validator->errors()->first(),
+                ]),
+            );
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -146,7 +173,7 @@ final class ArtisanRunnerPage extends Component
             }
             $value = $args[$arg->name] ?? null;
             if ($value === null || $value === '' || $value === []) {
-                $missing[] = $arg->label !== '' ? $arg->label : $arg->name;
+                $missing[] = $arg->labelKey !== '' ? Lang::get($arg->labelKey) : $arg->name;
             }
         }
 
@@ -164,12 +191,13 @@ final class ArtisanRunnerPage extends Component
         CommandSpawner $spawner,
         CurrentUser $user,
         DevCommandRegistry $registry,
+        CommandArgValidator $argValidator,
     ): void {
         // `$tier` is caller-supplied and deliberately ignored; spawn()
         // re-reads the authoritative tier from the registry.
         unset($tier);
 
-        $this->spawn($name, $args, $spawner, $user, $registry);
+        $this->spawn($name, $args, $spawner, $user, $registry, $argValidator);
     }
 
     // Past the RunRegistry's 24h TTL the audit row survives but its spawn
@@ -183,6 +211,14 @@ final class ArtisanRunnerPage extends Component
         $record = $registry->find($runId);
         if ($record === null) {
             $this->toast(Lang::get('dev::runner.toast.run_expired'));
+
+            return;
+        }
+
+        // The stream and cancel controllers both refuse another developer's
+        // run; this one EXECUTES, and the audit row would name the caller.
+        if ($record->callerUserId !== $user->id()) {
+            $this->toast(Lang::get('dev::runner.toast.rerun_forbidden'));
 
             return;
         }
@@ -238,7 +274,7 @@ final class ArtisanRunnerPage extends Component
 
         $filtered = match ($this->filter) {
             'running' => $runs->where('status', 'running')->values(),
-            'failed' => $runs->filter(fn (array $r): bool => is_int($r['exitCode'] ?? null) && $r['exitCode'] !== 0)->values(),
+            'failed' => $runs->where('status', 'failed')->values(),
             'destructive' => $runs->where('tier', CommandTier::Destructive)->values(),
             default => $runs,
         };
@@ -288,11 +324,14 @@ final class ArtisanRunnerPage extends Component
         return is_array($decoded) ? $decoded : [];
     }
 
+    // `failed` is what the filter chip and the run card both key off, so it
+    // has to be a status the mapper can actually produce.
     private function runStatus(bool $cancelled, ?int $exitCode, ?string $finishedAt): string
     {
         return match (true) {
             $cancelled => 'cancelled',
             $exitCode === null && $finishedAt === null => 'running',
+            $exitCode !== null && $exitCode !== 0 => 'failed',
             default => 'done',
         };
     }
@@ -343,7 +382,7 @@ final class ArtisanRunnerPage extends Component
         $heartbeatTs = is_int($heartbeatTs) ? $heartbeatTs : null;
 
         return $heartbeatTs !== null
-            && $heartbeatTs > ($clock->now()->getTimestamp() - WriteWorkerHeartbeat::TTL_SECONDS);
+            && $heartbeatTs > ($clock->now()->getTimestamp() - WriteWorkerHeartbeat::ttlSeconds());
     }
 
     // A row whose RunRegistry entry has TTL'd has no PID to probe, so it is
@@ -387,8 +426,8 @@ final class ArtisanRunnerPage extends Component
                 continue;
             }
 
-            // exitCode is null because the bash detach lost it; the run card
-            // renders "exit ?" rather than claiming a code it never saw.
+            // Null rather than an invented code: FinalizeRunAudit resolves
+            // the real one from the sidecar the watcher subshell wrote.
             ($finalize)($runIdRaw, null, false);
         }
     }

@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Lock\AppLockCredentialRejections;
+use Modules\Auth\Internal\Lock\AppLockPinShape;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
@@ -29,7 +30,7 @@ it('rejects a PIN that is not digits', function (string $pin): void {
     /** @var AppLockCredentialRejections $rejections */
     $rejections = app(AppLockCredentialRejections::class);
 
-    expect($rejections->newPin($pin, $pin))->toBe(Lang::get('auth::app_lock.error_pin_digits'));
+    expect($rejections->newPin($pin, $pin))->toBe(Lang::get('auth::app_lock.error_pin_digits', ['min' => AppLockPinShape::MINIMUM_LENGTH, 'max' => AppLockPinShape::MAXIMUM_LENGTH]));
 })->with(['abcdef', 'abc123', '12345 6', '２４６８１０', '246810.', '-246810']);
 
 it('rejects a PIN longer than the keypad can hold', function (): void {
@@ -37,7 +38,7 @@ it('rejects a PIN longer than the keypad can hold', function (): void {
     $rejections = app(AppLockCredentialRejections::class);
 
     expect($rejections->newPin('12345678901', '12345678901'))
-        ->toBe(Lang::get('auth::app_lock.error_pin_digits'));
+        ->toBe(Lang::get('auth::app_lock.error_pin_digits', ['min' => AppLockPinShape::MINIMUM_LENGTH, 'max' => AppLockPinShape::MAXIMUM_LENGTH]));
 });
 
 it('still accepts a six-to-ten digit PIN', function (string $pin): void {
@@ -65,7 +66,7 @@ it('refuses to enable the lock from the settings screen with a lettered PIN', fu
         ->set('accountPassword', 'account-password')
         ->call('setPin')
         ->assertSet('lockEnabled', false)
-        ->assertSee(Lang::get('auth::app_lock.error_pin_digits'));
+        ->assertSee(Lang::get('auth::app_lock.error_pin_digits', ['min' => AppLockPinShape::MINIMUM_LENGTH, 'max' => AppLockPinShape::MAXIMUM_LENGTH]));
 });
 
 it('refuses to reset a forgotten PIN to a lettered one', function (): void {
@@ -81,7 +82,7 @@ it('refuses to reset a forgotten PIN to a lettered one', function (): void {
         ->set('confirmPin', 'abcdefg')
         ->set('accountPassword', 'account-password')
         ->call('resetForgottenPin')
-        ->assertSee(Lang::get('auth::app_lock.error_pin_digits'));
+        ->assertSee(Lang::get('auth::app_lock.error_pin_digits', ['min' => AppLockPinShape::MINIMUM_LENGTH, 'max' => AppLockPinShape::MAXIMUM_LENGTH]));
 
     // The PIN that was already there still opens the lock.
     expect($provisioner->changePin($user->id, '246810', '135791'))->toBeTrue();

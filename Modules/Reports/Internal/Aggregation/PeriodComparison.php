@@ -14,7 +14,7 @@ final class PeriodComparison
     /**
      * @param  list<ReportResultRow>  $currentRows
      * @param  callable(Period): ReportResultDto  $queryForPeriod  Re-runs the same dimension-query-plus-currency-mode pipeline (already carrying the driving definition's currency mode + filters) for an arbitrary Period, returning its full result (rows and FX-exclusion metadata).
-     * @return array{rows: list<ReportResultRow>, previousHasExcludedAccounts: bool, previousAccountsWithoutRate: int, previousTotalMinor: int, previousCurrency: string} rows is comparisonRows — previousAmountMinor/deltaMinor populated; previousHasExcludedAccounts/previousAccountsWithoutRate surface the previous period's own FX-exclusion state, and previousTotalMinor/previousCurrency its own headline total
+     * @return array{rows: list<ReportResultRow>, previousExcludedCurrencies: list<string>, previousExcludedAccountIds: list<int>, previousTotalMinor: ?int, previousCurrency: string} rows is comparisonRows — previousAmountMinor/deltaMinor populated; the two previousExcluded* sets surface the previous period's own FX-exclusion state, and previousTotalMinor/previousCurrency its own headline total
      */
     public function compare(Period $currentPeriod, array $currentRows, callable $queryForPeriod, ComparisonJoin $join = ComparisonJoin::Group): array
     {
@@ -25,9 +25,15 @@ final class PeriodComparison
             'rows' => $join === ComparisonJoin::Sequence
                 ? self::joinBySequence($currentRows, $previousResult->rows)
                 : self::joinByGroup($currentRows, $previousResult->rows),
-            'previousHasExcludedAccounts' => $previousResult->hasExcludedAccounts,
-            'previousAccountsWithoutRate' => $previousResult->accountsWithoutRate,
-            'previousTotalMinor' => $previousResult->totalMinor,
+            'previousExcludedCurrencies' => $previousResult->excludedCurrencies,
+            'previousExcludedAccountIds' => $previousResult->excludedAccountIds,
+            // A window that produced nothing is read the way the ROWS read it,
+            // or one screen makes two claims about the same fact: every bucket
+            // said "no counterpart" while the footer under them computed a
+            // full-value delta off a previous total of zero.
+            'previousTotalMinor' => $previousResult->rows === []
+                ? $join->missingCounterpartMinor()
+                : $previousResult->totalMinor,
             'previousCurrency' => $previousResult->currency,
         ];
     }
@@ -101,10 +107,7 @@ final class PeriodComparison
 
         $result = [];
         foreach (self::withOrdinals($currentRows) as $ordinal => $row) {
-            // Null, never zero, for a bucket the previous window does not
-            // reach: the table renders an em dash for it, and "no counterpart"
-            // must not read as "was zero then".
-            $previous = $previousByOrdinal[$ordinal] ?? null;
+            $previous = $previousByOrdinal[$ordinal] ?? ComparisonJoin::Sequence->missingCounterpartMinor();
 
             $result[] = new ReportResultRow(
                 groupKey: $row->groupKey,

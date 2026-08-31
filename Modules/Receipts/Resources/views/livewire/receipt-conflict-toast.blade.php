@@ -27,7 +27,7 @@
                 {{ Lang::get('receipts::messages.conflict.title') }}
             </div>
             <p class="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                {{ Lang::get('receipts::messages.conflict.body', ['heading' => $heading, 'receipt' => $receiptValue ?? '', 'statement' => $csvValue ?? '']) }}
+                {{ Lang::get('receipts::messages.conflict.body', ['heading' => $heading, 'receipt' => $quotedReceipt ?? '', 'statement' => $quotedStatement ?? '']) }}
             </p>
             <div class="mt-md flex items-center gap-sm">
                 <button

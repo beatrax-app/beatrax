@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Boot;
 
+use Modules\Core\Public\Enums\Duration;
 use Modules\Mobile\Internal\Exceptions\NativeBuildPatchException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Process\Process;
@@ -20,17 +21,23 @@ final readonly class NativeBuildPatches
 {
     // Generous: these rewrite generated sources on disk and never wait on
     // anything network-bound.
-    private const TIMEOUT_SECONDS = 60;
+    // Ceiling on a single patch subprocess during a native build.
+    private static function timeoutSeconds(): int
+    {
+        return Duration::Minute->seconds();
+    }
 
     // Every patch composer applies, because every build regenerates the project
     // that carries them. NativeBuildPatchCoverageTest holds the two lists
     // together — the file chooser was in composer's and not in this one, and a
     // CI-built APK would have shipped with no way to take a file in at all.
-    private const SCRIPTS = [
+    private const array SCRIPTS = [
         'nativephp_grant_webview_camera.php',
         'nativephp_android_file_chooser.php',
         'nativephp_android_share_file.php',
+        'nativephp_android_upload_limits.php',
         'nativephp_keep_webview_cookies.php',
+        'nativephp_android_single_content_type.php',
         'nativephp_exclude_data_from_backup.php',
         'nativephp_strip_unused_permissions.php',
         'nativephp_theme_native_shell.php',
@@ -42,15 +49,17 @@ final readonly class NativeBuildPatches
         'nativephp_ios_request_body_stream.php',
         'nativephp_ios_upload_limits.php',
         'nativephp_ios_download_delegate.php',
+        'nativephp_ios_theme_native_shell.php',
         'nativephp_ios_local_network_discovery.php',
         'nativephp_ios_privacy_manifest.php',
         'nativephp_ios_export_compliance.php',
+        'nativephp_dedupe_background_task_identifiers.php',
     ];
 
     // A cosmetic patch that fails degrades to the unpatched shell, which is
     // visible on the device. These two are invisible until App Store review
     // rejects the build, so they stop it here instead.
-    private const REQUIRED_SCRIPTS = [
+    private const array REQUIRED_SCRIPTS = [
         'nativephp_ios_privacy_manifest.php',
         'nativephp_ios_export_compliance.php',
     ];
@@ -114,7 +123,7 @@ final readonly class NativeBuildPatches
     {
         try {
             $process = new Process([PHP_BINARY, $path]);
-            $process->setTimeout(self::TIMEOUT_SECONDS);
+            $process->setTimeout(self::timeoutSeconds());
             $process->run();
 
             return $process->isSuccessful() ? null : trim($process->getErrorOutput());

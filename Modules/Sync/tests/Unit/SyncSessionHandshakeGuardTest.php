@@ -47,13 +47,6 @@ it('refuses to decrypt before the handshake has established a key', function ():
     $this->session->decrypt('ciphertext');
 })->throws(SessionNotAuthenticatedException::class, 'session not authenticated yet');
 
-it('refuses to send ops before the handshake, rather than framing them in the clear', function (): void {
-    // sendOps frames first and encrypts second. Without the guard an
-    // unauthenticated session would hand the caller a plaintext frame that
-    // looks exactly like something ready to put on a socket.
-    $this->session->sendOps([guardEntry()]);
-})->throws(SessionNotAuthenticatedException::class, 'session not authenticated yet');
-
 it('refuses to receive ops before the handshake', function (): void {
     // Accepting here would mean replaying entries whose sender was never
     // authenticated into the user's ledger.

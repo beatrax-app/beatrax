@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Modules\Chains\Database\Seeders\Demo;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Internal\ChainLinkInsertHelper;
+use Modules\Chains\Internal\Enums\ChainLinkResolver;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
@@ -16,7 +17,7 @@ use Modules\Ledger\Models\Transaction;
 final class DemoChainsSeeder
 {
     public function __construct(
-        private readonly DatabaseManager $db,
+        private readonly ChainLinkInsertHelper $inserter,
     ) {}
 
     /**
@@ -25,16 +26,17 @@ final class DemoChainsSeeder
      */
     public function run(array $users, array $accounts): int
     {
-        if (! isset($users['demo-1@beatrax.local'], $accounts['demo-1@beatrax.local'])) {
+        if (! isset($users['demo-1'], $accounts['demo-1'])) {
             return $this->countDemoLinks($users);
         }
 
-        $user = $users['demo-1@beatrax.local'];
+        $user = $users['demo-1'];
 
         $this->seedPaypalFundingChain($user);
-        $this->seedIcsBulkSettleChain($user, $accounts['demo-1@beatrax.local']);
+        $this->seedIcsBulkSettleChain($user, $accounts['demo-1']);
         $this->seedFundedByCardHintCandidate($user);
         $this->seedRefundOfHintCandidate($user);
+        $this->seedRefundOfCandidate($user);
 
         return $this->countDemoLinks($users);
     }
@@ -62,11 +64,12 @@ final class DemoChainsSeeder
                 continue;
             }
 
-            $this->upsertChainLink(
+            $this->seedTwoEndedLink(
                 userId: $user->id,
-                fromTransactionId: $charge->id,
-                toTransactionId: $funder->id,
-                kind: ChainLinkKind::PaypalFunding->value,
+                settlementTransactionId: $funder->id,
+                legTransactionId: $charge->id,
+                kind: ChainLinkKind::PaypalFunding,
+                state: ChainLinkState::Confirmed,
                 evidence: [
                     'amount_matched_minor' => abs($charge->amount_minor),
                     'date_offset_days' => 0,
@@ -110,11 +113,12 @@ final class DemoChainsSeeder
                 continue;
             }
 
-            $this->upsertChainLink(
+            $this->seedTwoEndedLink(
                 userId: $user->id,
-                fromTransactionId: $expense->id,
-                toTransactionId: $settlement->id,
-                kind: ChainLinkKind::IcsBulkSettle->value,
+                settlementTransactionId: $settlement->id,
+                legTransactionId: $expense->id,
+                kind: ChainLinkKind::IcsBulkSettle,
+                state: ChainLinkState::Confirmed,
                 evidence: [
                     'statement_period_end' => $settlement->posted_at->toDateString(),
                     'unaccounted_delta_minor' => 0,
@@ -139,10 +143,10 @@ final class DemoChainsSeeder
             return;
         }
 
-        $this->upsertHintCandidateLink(
+        $this->seedHintCandidate(
             userId: $user->id,
             fromTransactionId: $expense->id,
-            kind: ChainLinkKind::FundedByCardHint->value,
+            kind: ChainLinkKind::FundedByCardHint,
             evidence: [
                 'card_last4' => '1234',
                 'source_receipt' => 'demo-coolblue-receipt.eml',
@@ -166,10 +170,10 @@ final class DemoChainsSeeder
             return;
         }
 
-        $this->upsertHintCandidateLink(
+        $this->seedHintCandidate(
             userId: $user->id,
             fromTransactionId: $refund->id,
-            kind: ChainLinkKind::RefundOfHint->value,
+            kind: ChainLinkKind::RefundOfHint,
             evidence: [
                 'original_reference_id' => 'ORD-DEMO-99',
                 'source_receipt' => 'demo-bol-refund-receipt.eml',
@@ -177,6 +181,45 @@ final class DemoChainsSeeder
             ],
             confidence: '0.750',
         );
+    }
+
+    // The only seeded row /chains/review and its badge can see: both filter a
+    // NULL to-side out as unactionable, and every other candidate here is a
+    // one-ended hint. The partial amount is why it is a candidate and not a
+    // confirm.
+    private function seedRefundOfCandidate(User $user): void
+    {
+        $refund = $this->demoTransactionByDescription($user, 'refund', 'Retour Coolblue');
+        $charge = $this->demoTransactionByDescription($user, 'expense', 'COOLBLUE ROTTERDAM');
+
+        if ($refund === null || $charge === null) {
+            return;
+        }
+
+        $this->seedTwoEndedLink(
+            userId: $user->id,
+            settlementTransactionId: $charge->id,
+            legTransactionId: $refund->id,
+            kind: ChainLinkKind::RefundOfHint,
+            state: ChainLinkState::Candidate,
+            evidence: [
+                'original_reference_id' => 'ORD-DEMO-41',
+                'amount_matched_minor' => abs($refund->amount_minor),
+                'resolver_step' => 'demo-seed',
+            ],
+            confidence: '0.620',
+        );
+    }
+
+    private function demoTransactionByDescription(User $user, string $type, string $description): ?Transaction
+    {
+        return Transaction::query()
+            ->where('user_id', $user->id)
+            ->where('source_format', 'demo')
+            ->where('type', $type)
+            ->where('description', $description)
+            ->orderBy('posted_at')
+            ->first();
     }
 
     /**
@@ -193,75 +236,57 @@ final class DemoChainsSeeder
         return null;
     }
 
-    // No UNIQUE backs (user_id, from_transaction_id, kind); the seeder writes
-    // one link per cycle, so the read-then-insert is enough here.
+    // Named by role, not by column: the caller says which row is the
+    // settlement and which is the leg, and the kind decides which endpoint
+    // each becomes. Seeded the other way round, /chains drew one card per ICS
+    // charge, each claiming the whole settlement.
     /**
      * @param  array<string, mixed>  $evidence
      */
-    private function upsertChainLink(
+    private function seedTwoEndedLink(
         int $userId,
-        int $fromTransactionId,
-        int $toTransactionId,
-        string $kind,
+        int $settlementTransactionId,
+        int $legTransactionId,
+        ChainLinkKind $kind,
+        ChainLinkState $state,
         array $evidence,
         string $confidence,
     ): void {
-        $existing = $this->db->connection()
-            ->table('chain_links')
-            ->where('user_id', $userId)
-            ->where('from_transaction_id', $fromTransactionId)
-            ->where('kind', $kind)
-            ->first();
+        $settlementIsFrom = $kind->settlementIsFromSide();
 
-        if ($existing !== null) {
-            return;
-        }
-
-        ChainLink::query()->create([
-            'user_id' => $userId,
-            'from_transaction_id' => $fromTransactionId,
-            'to_transaction_id' => $toTransactionId,
-            'kind' => $kind,
-            'state' => ChainLinkState::Confirmed->value,
+        $this->inserter->insertIfNotExists([
+            'from_transaction_id' => $settlementIsFrom ? $settlementTransactionId : $legTransactionId,
+            'to_transaction_id' => $settlementIsFrom ? $legTransactionId : $settlementTransactionId,
+            'kind' => $kind->value,
+            'state' => $state->value,
             'confidence' => $confidence,
-            'resolver' => 'auto',
+            'resolver' => ChainLinkResolver::Auto->value,
             'evidence' => $evidence,
-        ]);
+        ], $userId);
     }
 
-    // Separate from upsertChainLink because the schema's NULL-endpoint guard
-    // permits to_transaction_id = NULL only for candidate hint kinds.
+    // Separate from seedConfirmedLink because the schema's NULL-endpoint guard
+    // permits to_transaction_id = NULL only for candidate hint kinds, which
+    // have no settlement side to place.
     /**
      * @param  array<string, mixed>  $evidence
      */
-    private function upsertHintCandidateLink(
+    private function seedHintCandidate(
         int $userId,
         int $fromTransactionId,
-        string $kind,
+        ChainLinkKind $kind,
         array $evidence,
         string $confidence,
     ): void {
-        $existing = $this->db->connection()
-            ->table('chain_links')
-            ->where('user_id', $userId)
-            ->where('from_transaction_id', $fromTransactionId)
-            ->where('kind', $kind)
-            ->first();
-
-        if ($existing !== null) {
-            return;
-        }
-
-        ChainLink::query()->create([
-            'user_id' => $userId,
+        $this->inserter->insertIfNotExists([
             'from_transaction_id' => $fromTransactionId,
             'to_transaction_id' => null,
-            'kind' => $kind,
+            'kind' => $kind->value,
             'state' => ChainLinkState::Candidate->value,
             'confidence' => $confidence,
-            'resolver' => 'receipt_hint',
+            'resolver' => ChainLinkResolver::Auto->value,
             'evidence' => $evidence,
-        ]);
+        ], $userId);
     }
 
     /**

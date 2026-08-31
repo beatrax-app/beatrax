@@ -27,14 +27,18 @@
 
     /**
      * Tint by whether the reader ends up worse off. Money in is positive and
-     * money out negative, so a negative delta is adverse in BOTH directions —
+     * money out negative, so a negative amount is adverse in BOTH directions —
      * a dearer subscription and a smaller salary alike. Branching on direction
      * as well as sign inverted every expense: the demo data's four price rises
      * all rendered emerald. Dark companions step into rose-300 / emerald-300
      * for the inline pill text on a slate-950 surface (UI-SPEC).
+     *
+     * It takes the figure rather than the row because a cadence restructure
+     * moves the two the row prints in opposite directions: one charge EUR 90
+     * bigger, the year EUR 20 cheaper.
      */
-    $tintFor = static function (object $row): string {
-        return $row->delta->isNegative()
+    $tintFor = static function (Money $amount): string {
+        return $amount->isNegative()
             ? 'text-rose-700 dark:text-rose-300'
             : 'text-emerald-700 dark:text-emerald-300';
     };
@@ -56,7 +60,7 @@
     };
 @endphp
 
-<div class="mx-auto max-w-5xl px-4 py-12">
+<div class="mx-auto max-w-5xl px-4 py-6">
     {{-- flex-wrap plus min-w-0: at phone width the two children were both
          squeezed rather than reflowed, and the action lost, breaking
          "Drempel aanpassen →" over three lines with the arrow alone on the
@@ -145,8 +149,14 @@
                 $anomalyFmt = static fn (Money $money): string => $money->format();
 
                 $anomalyTintFor = static function (object $row): string {
-                    $up = abs($row->latestAmount->toMinor()) >= abs($row->baselineAmount->toMinor());
-                    if ($row->direction === \Modules\Ledger\Public\Enums\Direction::Expense->value) {
+                    $isExpense = $row->direction === \Modules\Ledger\Public\Enums\Direction::Expense->value;
+                    // No baseline means no movement to colour, so the tint
+                    // falls back to what the charge itself is. Reading a null
+                    // baseline as zero pointed every duplicate-only alert up.
+                    $up = $row->baselineAmount === null
+                        ? $isExpense
+                        : abs($row->latestAmount->toMinor()) >= abs($row->baselineAmount->toMinor());
+                    if ($isExpense) {
                         return $up ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300';
                     }
                     // income: up is good (emerald), down is bad (rose)
@@ -181,7 +191,7 @@
                     <div class="mt-6 flex justify-center">
                         <button
                             type="button"
-                            wire:click="loadMoreAnomalies('{{ $anomalyRows[count($anomalyRows) - 1]->detectedAt->toDateTimeString() }}', '{{ $anomalyRows[count($anomalyRows) - 1]->anomalyAlertId }}')"
+                            wire:click="loadMore"
                             class="tap-link shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
                         >{{ Lang::get('drift-alerts::alerts.load_more') }}</button>
                     </div>
@@ -275,7 +285,7 @@
                         @endif
                     @endforeach
                 </div>
-                @if (count($grouped) >= $pageSize)
+                @if ($hasMoreGrouped)
                     <div class="mt-6 flex justify-center">
                         <button
                             type="button"

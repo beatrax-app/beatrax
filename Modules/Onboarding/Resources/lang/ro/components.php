@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Progresul configurării',
     'step_progress' => 'Pasul :current din :total',
-    'step_dot_aria' => 'Pasul :number din :total',
 
     'eyebrow_step' => 'Pasul :number — ',
 ];

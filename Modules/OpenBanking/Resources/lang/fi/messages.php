@@ -20,6 +20,7 @@ return [
         'manage' => 'Hallitse pankkiyhteyttä',
         'not_connected' => 'Ei yhdistettyä pankkia. Yhdistä pankki, niin tapahtumat tuodaan automaattisesti.',
         'expired' => 'Suostumus vanhentunut — yhdistä uudelleen.',
+        'revoked' => 'Pankkisi on päättänyt yhteyden — yhdistä uudelleen.',
         'connected' => 'Yhdistetty pankkiin :bank Enable Bankingin kautta. Viimeksi synkronoitu :when.',
         'never' => 'ei koskaan',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Vanhentunut — yhdistä uudelleen',
         'pill_expiring' => 'Vanhenee pian',
         'pill_connected' => 'Yhdistetty',
+        'pill_revoked' => 'Pankkisi päätti — yhdistä uudelleen',
         'whats_fetched_label' => 'Mitä haetaan',
         'whats_fetched' => 'Kirjatut tapahtumat ja saldot, viimeiset 90 päivää',
         'last_successful_sync_label' => 'Viimeisin onnistunut synkronointi',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — epäonnistui (:reason)',
         'reason_consent_expired' => 'suostumus vanhentunut',
         'reason_error' => 'virhe',
+        'reason_truncated' => 'pysähtyi kesken',
+        'reason_nothing_imported' => 'mitään ei voitu kirjata',
+        'reason_consent_revoked' => 'pankkisi päätti',
         'disconnect_button' => 'Katkaise yhteys',
     ],
 
     'consent_banner' => [
         'heading' => 'Suostumus vanhentunut — yhdistä uudelleen',
+        'heading_revoked' => 'Pankkisi on päättänyt yhteyden',
         'body' => 'Viimeisin onnistunut synkronointi oli :when. Yhdistä uudelleen, niin automaattinen synkronointi jatkuu.',
+        'body_revoked' => 'Pankkisi tai Enable Banking on perunut käyttöoikeuden, joten synkronointi on pysähtynyt. Viimeisin onnistunut synkronointi oli :when. Yhdistä uudelleen, niin se jatkuu.',
         'never' => 'ei koskaan',
         'reconnect' => 'Yhdistä uudelleen',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking ei ole hetkellisesti käytettävissä. Yritä pian uudelleen.',
         'new_found' => 'Löytyi :count uusi tapahtuma.|Löytyi :count uutta tapahtumaa.',
         'none' => 'Ei uusia tapahtumia.',
+        'none_importable' => 'Pankkisi lähetti tapahtumia, mutta yhtäkään ei voitu kirjata. Avaa tuonnin tarkistus nähdäksesi miksi.',
+        'in_progress' => 'Synkronointi on jo käynnissä. Yritä hetken kuluttua uudelleen.',
+        'truncated' => 'Pankissasi oli enemmän tapahtumia kuin yksi synkronointi ehtii hakea, joten tämä ajo pysähtyi kesken. Mitään ei merkitty synkronoiduksi — seuraava synkronointi alkaa samasta kohdasta.',
     ],
 
     'disconnect' => [
@@ -139,10 +149,6 @@ return [
             'save_application_id_failed' => 'Sovellustunnusta ei voitu tallentaa levylle — tarkista salaisuushakemiston käyttöoikeudet ja yritä uudelleen.',
             'choose_bank' => 'Valitse pankki ennen jatkamista.',
         ],
-    ],
-
-    'alert' => [
-        'reconsent' => 'Yhdistä pankkisi uudelleen',
     ],
 
     'errors' => [

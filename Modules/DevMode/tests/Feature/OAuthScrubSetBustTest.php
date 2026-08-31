@@ -108,7 +108,7 @@ it('busts the cache on UPDATE so a rotated secret is scrubbed on the next log li
     expect($second)->not->toContain('NEW_SECRET');
 });
 
-it('scrubs every leaf string inside an OAuthSecret tokens_blob (refresh tokens, access tokens, scope)', function (): void {
+it('collects the access and refresh tokens out of an OAuthSecret tokens_blob', function (): void {
     $user = scrubSetUser('scrubset-tokensblob');
     $this->actingAs($user);
 
@@ -135,8 +135,6 @@ it('scrubs every leaf string inside an OAuthSecret tokens_blob (refresh tokens, 
     $scrubSet = app(OAuthScrubSet::class);
     $secrets = $scrubSet->all();
 
-    // The set is deliberately aggressive: every leaf string in tokens_blob
-    // counts, so the email and the scope end up in it too.
     expect($secrets)->toContain('CLIENT_SECRET_X');
     expect($secrets)->toContain('REFRESH_TOKEN_VALUE');
     expect($secrets)->toContain('ACCESS_TOKEN_VALUE');
@@ -166,4 +164,44 @@ it('runs the OAuth scrub-set BEFORE Bearer + JWT so an OAuth secret that LOOKS l
     expect($contents)->toContain('[REDACTED]');
     expect($contents)->not->toContain('[JWT_REDACTED]');
     expect($contents)->not->toContain($jwtShapedToken);
+});
+
+it('leaves the non-secret tokens_blob fields out of the set, so an ordinary log line survives it', function (): void {
+    // Every leaf string used to be a needle, so "EmailScan: gmail inbox 7
+    // finished" read back as "EmailScan: [REDACTED] inbox 7 finished" — and
+    // GMAIL survived on the same line, because the pattern is case-sensitive.
+    $user = scrubSetUser('scrubset-nonsecret-fields');
+    $this->actingAs($user);
+
+    OAuthSecret::query()->create([
+        'user_id' => $user->id,
+        'provider' => 'gmail',
+        'client_id' => 'cid',
+        'client_secret' => 'CLIENT_SECRET_Y',
+        'redirect_uri' => 'https://example.test/cb',
+        'tokens_blob' => json_encode([
+            '7' => [
+                'id' => 7,
+                'provider' => 'gmail',
+                'email' => 'alice@example.test',
+                'refresh_token' => 'REFRESH_TOKEN_Y',
+                'scope' => 'https://www.googleapis.com/auth/gmail.readonly',
+                'expires_at' => '2026-08-27T10:00:00+00:00',
+            ],
+        ]),
+    ]);
+
+    /** @var OAuthScrubSet $scrubSet */
+    $scrubSet = app(OAuthScrubSet::class);
+    $secrets = $scrubSet->all();
+
+    expect($secrets)->toContain('REFRESH_TOKEN_Y');
+    expect($secrets)->not->toContain('gmail');
+    expect($secrets)->not->toContain('alice@example.test');
+    expect($secrets)->not->toContain('https://www.googleapis.com/auth/gmail.readonly');
+    expect($secrets)->not->toContain('2026-08-27T10:00:00+00:00');
+
+    $contents = logWithRedactionToTempFile('EmailScan: gmail inbox 7 finished at 2026-08-27T10:00:00+00:00');
+
+    expect($contents)->toContain('EmailScan: gmail inbox 7 finished at 2026-08-27T10:00:00+00:00');
 });

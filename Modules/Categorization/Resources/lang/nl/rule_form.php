@@ -24,6 +24,7 @@ return [
     'to' => 'tot',
     'text_placeholder' => 'bijv. SPOTIFY',
     'remove_condition' => 'Voorwaarde verwijderen',
+    'remove_condition_caption' => 'Verwijderen',
     'add_condition' => '+ Voorwaarde toevoegen',
 
     'then' => 'Dan',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Toevoegen',
     'deduction_category_aria' => 'Aftrekcategorie voor actie :number',
     'remove_action' => 'Actie verwijderen',
+    'remove_action_caption' => 'Verwijderen',
     'add_action' => '+ Actie toevoegen',
 
     'this_year_only' => 'Alleen dit jaar ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Belastinglabelacties gelden bij de volgende hertoepassing, niet bij de huidige import.',
 
     'priority' => 'Prioriteit',
-    'priority_help' => 'Lagere nummers gaan eerst. Regels zonder gedeelde velden botsen nooit.',
+    'priority_help' => 'Regels draaien van het laagste nummer omhoog, dus het hoogste nummer wint als twee regels hetzelfde veld zetten. Regels zonder gedeelde velden botsen nooit.',
 
     'cancel' => 'Annuleren',
     'save_changes' => 'Wijzigingen opslaan',

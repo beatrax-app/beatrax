@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Modules\Budgets\Models\EnvelopeAssignment;
 use Modules\Budgets\Public\Services\CarryoverQuery;
+use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -95,23 +95,16 @@ it('computes to-budget as income plus carryover minus assigned, to the cent, and
     expect($result['toBudgetMinor'])->toBeInt();
     expect($result['toBudgetMinor'])->toBe(100000);
 
-    $assignment = EnvelopeAssignment::create([
-        'user_id' => $this->user->id,
-        'category_id' => $this->groceries->id,
-        'period_start' => $period->start->toDateString(),
-        'assigned_minor' => 20000,
-        'currency' => 'EUR',
-    ]);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $period->start, 20000);
 
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
     expect($result['toBudgetMinor'])->toBe(80000);
 
-    $assignment->assigned_minor = 30000;
-    $assignment->save();
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $period->start, 30000);
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
     expect($result['toBudgetMinor'])->toBe(70000);
 
-    $assignment->delete();
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $period->start, 0);
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
     expect($result['toBudgetMinor'])->toBe(100000);
 });
@@ -120,13 +113,7 @@ it('permits assigning more than available, showing a negative to-budget without 
     $period = app(PeriodQuery::class)->current();
 
     // No income this period at all.
-    EnvelopeAssignment::create([
-        'user_id' => $this->user->id,
-        'category_id' => $this->groceries->id,
-        'period_start' => $period->start->toDateString(),
-        'assigned_minor' => 5000,
-        'currency' => 'EUR',
-    ]);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $period->start, 5000);
 
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
 
@@ -141,13 +128,7 @@ it('carries a positive leftover pool forward into the next period', function ():
     carryoverTx($this->user->id, $this->account->id, $this->run->id, 100000, null, $current->start);
     // No assignment this period at all -> full €1000 leftover carries forward.
 
-    EnvelopeAssignment::create([
-        'user_id' => $this->user->id,
-        'category_id' => $this->groceries->id,
-        'period_start' => $next->start->toDateString(),
-        'assigned_minor' => 20000,
-        'currency' => 'EUR',
-    ]);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $next->start, 20000);
 
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $next);
 
@@ -163,13 +144,7 @@ it('starts the genesis period with zero pool carry and zero carried-in', functio
     // contribute to `spent`.
     carryoverTx($this->user->id, $this->account->id, $this->run->id, -50000, $this->groceries->id, $period->start);
 
-    EnvelopeAssignment::create([
-        'user_id' => $this->user->id,
-        'category_id' => $this->groceries->id,
-        'period_start' => $period->start->toDateString(),
-        'assigned_minor' => 60000,
-        'currency' => 'EUR',
-    ]);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $period->start, 60000);
 
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
     $row = $result['rows'][$this->groceries->id];
@@ -209,13 +184,7 @@ it('surfaces settled spend it has no rate for via unconvertedSpentMinor without 
 
     // EUR 200 assigned and no reachable spend at all, so the envelope is
     // fully funded and the unreachable charge changes none of that.
-    EnvelopeAssignment::create([
-        'user_id' => $this->user->id,
-        'category_id' => $this->groceries->id,
-        'period_start' => $period->start->toDateString(),
-        'assigned_minor' => 20000,
-        'currency' => 'EUR',
-    ]);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $period->start, 20000);
 
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
     $row = $result['rows'][$this->groceries->id];

@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Adócímke szerkesztése: :label',
     'tag' => 'Megjelölés',
     'tag_aria' => 'Megjelölés adózási szempontból relevánsként',
+    'tag_caption' => 'Megjelölés',
 ];
