@@ -154,12 +154,10 @@ final readonly class OpLogEntryApplier
         return $selfRefs;
     }
 
-    // buildCreatePayload() writes these from the op itself, so a rule naming
-    // one of them is satisfied before a single field is read.
-    // What buildCreatePayload() supplies itself rather than reading off a
-    // field: the pk, and the owner it re-seeds authoritatively even when the op
-    // does carry one. Requiring either asks for something the emitter has no
-    // reason to send, and seven covered tables named user_id.
+    // buildCreatePayload() writes these from the op itself — the pk, and the
+    // owner it re-seeds even when the op carries one — so a rule naming either
+    // is satisfied before a field is read. Requiring them discarded rows the
+    // applier could have written, and seven covered tables named user_id.
     private const array SEEDED_BY_APPLIER = ['id', 'user_id'];
 
     // The row to write, or null when a gate refused it: a tombstone that
