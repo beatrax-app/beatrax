@@ -7,9 +7,11 @@ namespace Modules\Chains\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Internal\Enums\ChainLinkResolver;
+use Modules\Chains\Internal\Enums\SettlementToleranceUsed;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
+use Modules\Chains\Public\Support\SettlementTolerance;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
@@ -107,24 +109,68 @@ final class DemoChainsSeeder
             ->orderBy('posted_at')
             ->get();
 
+        /** @var array<int, list<Transaction>> $covered */
+        $covered = [];
+
         foreach ($icsExpenses as $expense) {
             $settlement = $this->nextSettlementAfter($settlements, $expense->posted_at);
             if ($settlement === null) {
                 continue;
             }
 
+            $covered[$settlement->id][] = $expense;
+        }
+
+        foreach ($settlements as $settlement) {
+            $this->seedOneSettlement($user, $settlement, $covered[$settlement->id] ?? []);
+        }
+    }
+
+    /**
+     * @param  list<Transaction>  $covered
+     */
+    private function seedOneSettlement(User $user, Transaction $settlement, array $covered): void
+    {
+        if ($covered === []) {
+            return;
+        }
+
+        // Measured, never assumed. A hard-coded zero here said the settlement
+        // accounted for its charges exactly while three of them were adrift by
+        // as much as 649.28, and /chains printed that zero back to the reader.
+        $chargedMinor = array_sum(array_map(
+            static fn (Transaction $e): int => abs($e->settled_amount_minor),
+            $covered,
+        ));
+
+        $delta = $chargedMinor - abs($settlement->settled_amount_minor);
+        $tolerance = SettlementTolerance::minorFor($settlement->settled_amount_minor);
+        $withinTolerance = abs($delta) <= $tolerance;
+
+        $state = $withinTolerance ? ChainLinkState::Confirmed : ChainLinkState::Candidate;
+        $toleranceUsed = match (true) {
+            ! $withinTolerance => SettlementToleranceUsed::Exceeded,
+            abs($delta) <= SettlementTolerance::FLOOR_MINOR => SettlementToleranceUsed::AmountFloor,
+            default => SettlementToleranceUsed::Percent,
+        };
+
+        foreach ($covered as $expense) {
             $this->seedTwoEndedLink(
                 userId: $user->id,
                 settlementTransactionId: $settlement->id,
                 legTransactionId: $expense->id,
                 kind: ChainLinkKind::IcsBulkSettle,
-                state: ChainLinkState::Confirmed,
+                state: $state,
+                // The shape IcsSettlementResolver writes, so /chains reads a
+                // seeded link the same way it reads a resolved one.
                 evidence: [
                     'statement_period_end' => $settlement->posted_at->toDateString(),
-                    'unaccounted_delta_minor' => 0,
+                    'unaccounted_delta_minor' => $delta,
+                    'tolerance_used' => $toleranceUsed->value,
+                    'covered_count' => count($covered),
                     'resolver_step' => 'demo-seed',
                 ],
-                confidence: '0.900',
+                confidence: $withinTolerance ? '0.900' : '0.600',
             );
         }
     }
