@@ -152,3 +152,81 @@ it('SaveTransactionSplit::unsplit refuses to collapse a reconciled transaction\'
 
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(2);
 });
+
+// The writes above were all guarded; the invitations to make them were not.
+// A locked row still offered "Split into categories", opened the editor, and
+// answered the first mistake with "Amount can't be €0.00" — a field, not the
+// reason. On a locked row that already had legs the editor loaded on mount
+// with Save and Unsplit live, under a panel saying the split cannot change.
+
+it('openSplitEditor does not open the editor on a reconciled transaction', function (): void {
+    $tx = $this->makeTransaction($this->user, $this->account, $this->run, [
+        'status' => 'reconciled',
+        'amount_minor' => -8000,
+        'settled_amount_minor' => -8000,
+    ]);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('openSplitEditor')
+        ->assertSet('editingSplit', false);
+});
+
+it('unsplit does not start the survivor prompt on a reconciled transaction', function (): void {
+    $tx = $this->makeTransaction($this->user, $this->account, $this->run, [
+        'status' => 'cleared',
+        'amount_minor' => -8000,
+        'settled_amount_minor' => -8000,
+    ]);
+
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => null, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
+        ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
+    ]);
+
+    Transaction::query()->whereKey($tx->id)->update(['status' => 'reconciled']);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('unsplit')
+        ->assertSet('confirmUnsplit', false);
+});
+
+it('offers no split controls on a reconciled transaction, and still shows the legs', function (): void {
+    $tx = $this->makeTransaction($this->user, $this->account, $this->run, [
+        'status' => 'cleared',
+        'amount_minor' => -8000,
+        'settled_amount_minor' => -8000,
+    ]);
+
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => null, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
+        ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
+    ]);
+
+    Transaction::query()->whereKey($tx->id)->update(['status' => 'reconciled']);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->assertDontSeeHtml('data-testid="split-save-button"')
+        ->assertDontSeeHtml('data-testid="split-add-leg"')
+        ->assertDontSeeHtml('data-testid="split-unsplit-link"')
+        ->assertDontSeeHtml('data-testid="split-leg-remove-0"')
+        // The legs are what the reader came to read; only the controls go.
+        ->assertSeeHtml('data-testid="split-leg-amount-0"');
+});
+
+it('still offers every split control on a transaction that is not reconciled', function (): void {
+    $tx = $this->makeTransaction($this->user, $this->account, $this->run, [
+        'status' => 'cleared',
+        'amount_minor' => -8000,
+        'settled_amount_minor' => -8000,
+    ]);
+
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => null, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
+        ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
+    ]);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->assertSeeHtml('data-testid="split-save-button"')
+        ->assertSeeHtml('data-testid="split-add-leg"')
+        ->assertSeeHtml('data-testid="split-unsplit-link"');
+});
