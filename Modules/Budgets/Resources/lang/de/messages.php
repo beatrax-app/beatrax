@@ -21,7 +21,9 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Noch nichts zugewiesen',
         'copy_hint' => 'Kopiere den Plan des letzten Monats oder klicke unten in eine Zelle, um mit dem Zuweisen zu beginnen.',
+        'copy_hint_touch' => 'Kopiere den Plan des letzten Monats oder tippe unten in eine Zelle, um mit dem Zuweisen zu beginnen.',
         'first_hint' => 'Klicke unten in eine Zelle, um deinen ersten Monat zuzuweisen.',
+        'first_hint_touch' => 'Tippe unten in eine Zelle, um deinen ersten Monat zuzuweisen.',
         'copy_button' => 'Letzten Monat kopieren',
     ],
 

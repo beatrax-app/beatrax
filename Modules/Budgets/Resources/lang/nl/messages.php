@@ -21,7 +21,9 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Nog niets toegewezen',
         'copy_hint' => 'Kopieer het plan van vorige maand of klik hieronder in een cel om te beginnen met toewijzen.',
+        'copy_hint_touch' => 'Kopieer het plan van vorige maand of tik hieronder in een cel om te beginnen met toewijzen.',
         'first_hint' => 'Klik hieronder in een cel om je eerste maand toe te wijzen.',
+        'first_hint_touch' => 'Tik hieronder in een cel om je eerste maand toe te wijzen.',
         'copy_button' => 'Vorige maand kopiëren',
     ],
 

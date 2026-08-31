@@ -21,7 +21,9 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Ingenting er fordelt ennå',
         'copy_hint' => 'Kopier forrige måneds plan, eller klikk i en celle nedenfor for å begynne å fordele.',
+        'copy_hint_touch' => 'Kopier forrige måneds plan, eller trykk i en celle nedenfor for å begynne å fordele.',
         'first_hint' => 'Klikk i en celle nedenfor for å begynne å fordele den første måneden din.',
+        'first_hint_touch' => 'Trykk i en celle nedenfor for å begynne å fordele den første måneden din.',
         'copy_button' => 'Kopier forrige måned',
     ],
 

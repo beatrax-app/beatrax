@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Mitään ei ole vielä jaettu',
         'copy_hint' => 'Kopioi viime kuun suunnitelma tai aloita jakaminen napsauttamalla alla olevaa solua.',
+        // i18n-review: fi · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Kopioi viime kuun suunnitelma tai aloita jakaminen napauttamalla alla olevaa solua.',
         'first_hint' => 'Aloita ensimmäisen kuukauden jakaminen napsauttamalla alla olevaa solua.',
+        // i18n-review: fi · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Aloita ensimmäisen kuukauden jakaminen napauttamalla alla olevaa solua.',
         'copy_button' => 'Kopioi viime kuu',
     ],
 

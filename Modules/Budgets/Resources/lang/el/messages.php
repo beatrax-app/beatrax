@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Δεν έχει κατανεμηθεί τίποτα ακόμη',
         'copy_hint' => 'Αντίγραψε το πλάνο του προηγούμενου μήνα ή κάνε κλικ σε ένα κελί παρακάτω για να ξεκινήσεις την κατανομή.',
+        // i18n-review: el · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Αντίγραψε το πλάνο του προηγούμενου μήνα ή πάτησε ένα κελί παρακάτω για να ξεκινήσεις την κατανομή.',
         'first_hint' => 'Κάνε κλικ σε ένα κελί παρακάτω για να ξεκινήσεις την κατανομή του πρώτου σου μήνα.',
+        // i18n-review: el · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Πάτησε ένα κελί παρακάτω για να ξεκινήσεις την κατανομή του πρώτου σου μήνα.',
         'copy_button' => 'Αντιγραφή προηγούμενου μήνα',
     ],
 

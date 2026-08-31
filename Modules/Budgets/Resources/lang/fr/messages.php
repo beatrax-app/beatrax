@@ -21,7 +21,9 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Rien d\'affecté pour l\'instant',
         'copy_hint' => 'Copie le plan du mois dernier, ou clique dans une cellule ci-dessous pour commencer à affecter.',
+        'copy_hint_touch' => 'Copie le plan du mois dernier, ou touche une cellule ci-dessous pour commencer à affecter.',
         'first_hint' => 'Clique dans une cellule ci-dessous pour affecter ton premier mois.',
+        'first_hint_touch' => 'Touche une cellule ci-dessous pour affecter ton premier mois.',
         'copy_button' => 'Copier le mois dernier',
     ],
 
