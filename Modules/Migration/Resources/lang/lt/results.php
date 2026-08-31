@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Kategorijos',
         'account' => 'Sąskaitos',
-        'payee' => 'Kitos šalys',
+        // i18n-review: lt · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Susietos kitos šalys',
         'transaction' => 'Operacijos',
         'budget' => 'Biudžeto mėnesiai',
     ],

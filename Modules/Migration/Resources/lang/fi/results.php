@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Kategoriat',
         'account' => 'Tilit',
-        'payee' => 'Vastapuolet',
+        // i18n-review: fi · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Linkitetyt vastapuolet',
         'transaction' => 'Tapahtumat',
         'budget' => 'Budjettikuukaudet',
     ],

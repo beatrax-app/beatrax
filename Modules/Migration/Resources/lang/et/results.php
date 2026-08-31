@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Kategooriad',
         'account' => 'Kontod',
-        'payee' => 'Vastaspooled',
+        // i18n-review: et · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Seotud vastaspooled',
         'transaction' => 'Tehingud',
         'budget' => 'Eelarvekuud',
     ],

@@ -17,7 +17,7 @@ return [
     'stats' => [
         'category' => 'Kategorier',
         'account' => 'Konti',
-        'payee' => 'Modparter',
+        'payee' => 'Tilknyttede modparter',
         'transaction' => 'Transaktioner',
         'budget' => 'Budgetmåneder',
     ],

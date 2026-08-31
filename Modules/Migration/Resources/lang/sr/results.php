@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Kategorije',
         'account' => 'Računi',
-        'payee' => 'Druge strane',
+        // i18n-review: sr · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Povezane druge strane',
         'transaction' => 'Transakcije',
         'budget' => 'Budžetski meseci',
     ],
