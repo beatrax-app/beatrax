@@ -73,6 +73,11 @@ final class DateOnlyCast implements CastsAttributes, SerializesCastableAttribute
             ));
         }
 
+        return self::dayFromString($model, $key, $value);
+    }
+
+    private static function dayFromString(Model $model, string $key, string $value): string
+    {
         // A day-shaped string is judged as a day: sync writes these columns
         // through the query builder rather than the model, so '2027-02-29'
         // reached the column and came back out of here as 1 March. Anything

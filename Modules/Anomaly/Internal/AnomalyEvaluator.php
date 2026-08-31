@@ -62,7 +62,10 @@ final readonly class AnomalyEvaluator
         return $converted?->toMinor() ?? 0;
     }
 
-    public function evaluate(int $transactionId, User $user): void
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function rowToJudge(int $transactionId, User $user): ?array
     {
         $row = $this->db->connection()->table('transactions')
             ->where('id', $transactionId)
@@ -70,7 +73,7 @@ final readonly class AnomalyEvaluator
             ->first();
 
         if ($row === null) {
-            return;
+            return null;
         }
 
         /** @var array<string, mixed> $txn */
@@ -78,9 +81,16 @@ final readonly class AnomalyEvaluator
 
         // The whole module asks "did the reader do something unusual", and
         // moving your own money between your own accounts is not something you
-        // did TO anyone. Gated here rather than in each detector because this
-        // decides eligibility for the row, not the maths of one reason.
-        if (! TransactionType::isExternalMovementOf($txn['type'] ?? null)) {
+        // did TO anyone. Decided here rather than in each detector because this
+        // is eligibility for the row, not the maths of one reason.
+        return TransactionType::isExternalMovementOf($txn['type'] ?? null) ? $txn : null;
+    }
+
+    public function evaluate(int $transactionId, User $user): void
+    {
+        $txn = $this->rowToJudge($transactionId, $user);
+
+        if ($txn === null) {
             return;
         }
 

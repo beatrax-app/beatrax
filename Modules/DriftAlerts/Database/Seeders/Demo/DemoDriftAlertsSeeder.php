@@ -90,6 +90,34 @@ final class DemoDriftAlertsSeeder
     }
 
     /**
+     * @param  array{id: int, prior_amount_minor: int, latest_amount_minor: int, currency: string, observed_at: string}  $step
+     */
+    private static function isAlertableMove(array $step, int $thresholdPercent): bool
+    {
+        $priorMinor = $step['prior_amount_minor'];
+        $latestMinor = $step['latest_amount_minor'];
+
+        // A zero prior has nothing to take a ratio against, and a move that
+        // crossed zero is a different event rather than a bigger one — the
+        // same pair AmountMovement refuses.
+        if ($priorMinor === 0 || ($priorMinor > 0) !== ($latestMinor > 0)) {
+            return false;
+        }
+
+        // The same test the evaluator applies, so the demo can never carry an
+        // alert the shipped detector would have refused to open.
+        return abs($latestMinor - $priorMinor) * 100 / abs($priorMinor) > $thresholdPercent;
+    }
+
+    private function alreadyAlerted(int $seriesId, int $occurrenceId): bool
+    {
+        return DriftAlert::query()
+            ->where('recurring_series_id', $seriesId)
+            ->where('latest_occurrence_id', $occurrenceId)
+            ->exists();
+    }
+
+    /**
      * @param  array{seriesClusterKey: string, state: string, actionedAfterDays: ?int}  $row
      */
     private function upsertAlertForUser(User $user, array $row): void
@@ -101,33 +129,15 @@ final class DemoDriftAlertsSeeder
             return;
         }
 
-        $latestMinor = $step['latest_amount_minor'];
-        $priorMinor = $step['prior_amount_minor'];
-
-        // A zero prior has nothing to take a ratio against, and a move that
-        // crossed zero is a different event rather than a bigger one — the
-        // same pair AmountMovement refuses.
-        if ($priorMinor === 0 || ($priorMinor > 0) !== ($latestMinor > 0)) {
-            return;
-        }
-
-        $deltaMinor = $latestMinor - $priorMinor;
         [$thresholdPercent, $thresholdSource] = $this->effectiveThreshold($user);
 
-        // The same test the evaluator applies, so the demo can never carry an
-        // alert the shipped detector would have refused to open.
-        if (abs($deltaMinor) * 100 / abs($priorMinor) <= $thresholdPercent) {
+        if (! self::isAlertableMove($step, $thresholdPercent) || $this->alreadyAlerted($series['id'], $step['id'])) {
             return;
         }
 
-        $existing = DriftAlert::query()
-            ->where('recurring_series_id', $series['id'])
-            ->where('latest_occurrence_id', $step['id'])
-            ->exists();
-
-        if ($existing) {
-            return;
-        }
+        $latestMinor = $step['latest_amount_minor'];
+        $priorMinor = $step['prior_amount_minor'];
+        $deltaMinor = $latestMinor - $priorMinor;
 
         $detectedAt = CarbonImmutable::parse($step['observed_at'])->setTime(12, 0);
         $actionedAt = $row['actionedAfterDays'] === null

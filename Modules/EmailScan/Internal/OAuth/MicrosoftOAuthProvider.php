@@ -229,13 +229,22 @@ class MicrosoftOAuthProvider
         return is_string($code) ? $code : '';
     }
 
+    private static function bodyText(mixed $body): string
+    {
+        if (is_string($body)) {
+            return $body;
+        }
+
+        return is_object($body) && method_exists($body, '__toString') ? (string) $body : '';
+    }
+
     /**
      * @return array<array-key, mixed>
      */
     private static function decodeBody(mixed $body): array
     {
-        $stringable = is_object($body) && method_exists($body, '__toString');
-        $text = is_string($body) ? $body : ($stringable ? (string) $body : '');
+        $text = self::bodyText($body);
+
         if ($text === '') {
             return [];
         }

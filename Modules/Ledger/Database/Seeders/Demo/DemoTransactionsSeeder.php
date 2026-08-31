@@ -26,6 +26,8 @@ final class DemoTransactionsSeeder
 {
     private const AH_COUNTERPARTY = 'Albert Heijn';
 
+    private const ASN_COUNTERPARTY = 'ASN Bank';
+
     // A plausible rate, not a real provider's: the point is that the
     // currency-mode toggle has non-trivial data to convert.
     private const EUR_PER_USD = '0.92000000';
@@ -250,7 +252,7 @@ final class DemoTransactionsSeeder
         // The monthly ICS card settlement, and the `to_transaction` side of
         // the ics_bulk_settle chain.
         $inserted += $this->seedMonthlySeries($user, $ics, $run, $rowIndex, [
-            ['day' => 18, 'type' => 'transfer_in', 'amountMinor' => 22500, 'description' => 'Afrekening MasterCard ICS', 'counterpartyName' => 'ASN Bank', 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
+            ['day' => 18, 'type' => 'transfer_in', 'amountMinor' => 22500, 'description' => 'Afrekening MasterCard ICS', 'counterpartyName' => self::ASN_COUNTERPARTY, 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
         ]);
 
         return $inserted;
@@ -348,7 +350,7 @@ final class DemoTransactionsSeeder
             'currency' => Currency::Jpy->value,
             'settledCurrency' => Currency::Jpy->value,
             'description' => 'Opwaardering reiskaart',
-            'counterpartyName' => 'ASN Bank',
+            'counterpartyName' => self::ASN_COUNTERPARTY,
             'counterpartyIban' => 'NL57ASNB0123456789',
             'date' => $windowStart->addDays(2),
             'paymentType' => PaymentType::Transfer,
@@ -433,7 +435,7 @@ final class DemoTransactionsSeeder
         // 10th: the chain_link wires that pair.
         $inserted += $this->seedMonthlySeries($user, $paypal, $run, $rowIndex, [
             ['day' => 10, 'type' => 'expense', 'amountMinor' => -7995, 'description' => 'Bol.com via PayPal', 'counterpartyName' => 'Bol.com', 'counterpartyIban' => null, 'paymentType' => PaymentType::Online, 'categorySlug' => 'subscriptions-cloud'],
-            ['day' => 10, 'type' => 'transfer_in', 'amountMinor' => 10000, 'description' => 'Top-up from ASN', 'counterpartyName' => 'ASN Bank', 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
+            ['day' => 10, 'type' => 'transfer_in', 'amountMinor' => 10000, 'description' => 'Top-up from ASN', 'counterpartyName' => self::ASN_COUNTERPARTY, 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
         ]);
 
         // Two rows, so the `refund` type and the `Refund` chip each have

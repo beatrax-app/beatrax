@@ -542,6 +542,15 @@ final class PromoteStagingToDomain
             return false;
         }
 
+        return $this->saveSplitLegs($runId, $user, $parentRow, $transactionId, $legs, $payeeNameMap);
+    }
+
+    /**
+     * @param  list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>  $legs
+     * @param  array<string, string>  $payeeNameMap
+     */
+    private function saveSplitLegs(int $runId, User $user, stdClass $parentRow, int $transactionId, array $legs, array $payeeNameMap): bool
+    {
         try {
             $this->splitSaver->save($user, $transactionId, $legs);
         } catch (SplitSumMismatchException) {
