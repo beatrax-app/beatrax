@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Κατηγορίες',
         'account' => 'Λογαριασμοί',
-        'payee' => 'Αντισυμβαλλόμενοι',
+        // i18n-review: el · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Συνδεδεμένοι αντισυμβαλλόμενοι',
         'transaction' => 'Συναλλαγές',
         'budget' => 'Μήνες προϋπολογισμού',
     ],

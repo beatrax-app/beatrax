@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Kategóriák',
         'account' => 'Számlák',
-        'payee' => 'Partnerek',
+        // i18n-review: hu · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Összekapcsolt partnerek',
         'transaction' => 'Tranzakciók',
         'budget' => 'Költségvetési hónapok',
     ],

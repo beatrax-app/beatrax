@@ -17,7 +17,7 @@ return [
     'stats' => [
         'category' => 'Categories',
         'account' => 'Accounts',
-        'payee' => 'Counterparties',
+        'payee' => 'Counterparties linked',
         'transaction' => 'Transactions',
         'budget' => 'Budget months',
     ],

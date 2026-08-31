@@ -17,7 +17,7 @@ return [
     'stats' => [
         'category' => 'Kategorien',
         'account' => 'Konten',
-        'payee' => 'Zahlungspartner',
+        'payee' => 'Zugeordnete Zahlungspartner',
         'transaction' => 'Transaktionen',
         'budget' => 'Budgetmonate',
     ],

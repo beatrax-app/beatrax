@@ -17,7 +17,7 @@ return [
     'stats' => [
         'category' => 'Categorieën',
         'account' => 'Rekeningen',
-        'payee' => 'Tegenpartijen',
+        'payee' => 'Gekoppelde tegenpartijen',
         'transaction' => 'Transacties',
         'budget' => 'Budgetmaanden',
     ],
