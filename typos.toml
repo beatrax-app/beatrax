@@ -127,6 +127,7 @@ importerad = "importerad"  # sv: "imported"
 Leeg = "Leeg"                    # nl: "empty", in a goal name
 Deterministisch = "Deterministisch"  # nl: "deterministic"
 Extracto = "Extracto"            # es: "statement"
+klick = "klick"                  # de/sv: "click", in the touch-copy guard
 
 [files]
 # Vendored, generated, and fixture trees are not ours to spell-check. Bank
