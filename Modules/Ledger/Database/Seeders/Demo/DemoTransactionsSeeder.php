@@ -696,11 +696,23 @@ final class DemoTransactionsSeeder
     ): int {
         $inserted = 0;
 
+        // A subscription's charge has not happened until its billing day
+        // arrives. Writing this month's anyway recorded a payment nobody had
+        // made, and moved the series' next charge a month out — off the grid
+        // the reader is standing on for the first days of a month.
+        $today = $this->clock->now()->startOfDay();
+
         foreach ($definitions as $series) {
-            foreach ($this->monthlyDates($series['day']) as $monthIndex => $date) {
+            $run_ = $this->monthlyDates($series['day']);
+            $billed = array_values(array_filter(
+                $run_,
+                static fn (CarbonImmutable $date): bool => ! $date->greaterThan($today),
+            ));
+
+            foreach ($billed as $monthIndex => $date) {
                 $inserted += $this->insertTransaction($user, $account, $run, $rowIndex++, [
                     'type' => $series['type'],
-                    'amountMinor' => self::amountForMonth($series, $monthIndex),
+                    'amountMinor' => self::amountForBilled($series, $monthIndex, count($billed)),
                     'description' => $series['description'],
                     'counterpartyName' => $series['counterpartyName'],
                     'counterpartyIban' => $series['counterpartyIban'],
@@ -723,13 +735,21 @@ final class DemoTransactionsSeeder
      * @param  array{amountMinor: int, priorAmountMinor?: int, priorMonths?: int}  $series
      * @param  int  $monthIndex  0 is the oldest month monthlyDates() returns
      */
-    private static function amountForMonth(array $series, int $monthIndex): int
+    private static function amountForBilled(array $series, int $monthIndex, int $billed): int
     {
         $priorAmountMinor = $series['priorAmountMinor'] ?? null;
 
-        return $priorAmountMinor !== null && $monthIndex < ($series['priorMonths'] ?? 0)
-            ? $priorAmountMinor
-            : $series['amountMinor'];
+        if ($priorAmountMinor === null) {
+            return $series['amountMinor'];
+        }
+
+        // A drift alert is read off the newest adjacent pair of charges whose
+        // amounts differ, so a run with this month still unbilled has to keep
+        // one charge at each price. Held to priorMonths whenever the whole run
+        // is written, which is every day but the first few of a month.
+        $atOldPrice = min($series['priorMonths'] ?? 0, max(0, $billed - 1));
+
+        return $monthIndex < $atOldPrice ? $priorAmountMinor : $series['amountMinor'];
     }
 
     /**

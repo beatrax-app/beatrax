@@ -266,8 +266,13 @@ it('produces the documented dataset shape after a single seed run', function ():
     expect($snap['accounts'])->toBe(7);
     // 158 baseline rows + 6 type-coverage rows + 2 cross-account pair legs
     // + 14 yen rows across the trip card and the euro card.
+    //
+    // The floor sits below that total because a subscription is only charged
+    // once its billing day arrives: early in a month the current period's
+    // instalments are still ahead, and writing them recorded payments nobody
+    // had made.
     expect($snap['transactions'])
-        ->toBeGreaterThanOrEqual(174)
+        ->toBeGreaterThanOrEqual(160)
         ->toBeLessThanOrEqual(200);
     expect($snap['recurring_series'])->toBe(7);
     expect($snap['recurring_series_transitions'])->toBeGreaterThanOrEqual(3);
@@ -458,7 +463,8 @@ it('coexists cleanly with the production reference seeders', function (): void {
     $snap = demoSeedSnapshot();
     expect($snap['users'])->toBe(2);
     expect($snap['accounts'])->toBe(7);
-    expect($snap['transactions'])->toBeGreaterThanOrEqual(174);
+    // Floored as above: this month's unbilled instalments are not written yet.
+    expect($snap['transactions'])->toBeGreaterThanOrEqual(160);
 });
 
 // The reset used to name the tables it cleared, and this test named the same
