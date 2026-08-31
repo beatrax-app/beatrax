@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Inga alias ännu',
     'empty_body' => 'Alias visas här när du klickar på den kursiva råa beskrivningen på en rad i importförhandsgranskningen och ger den ett begripligt namn.',
+    // i18n-review: sv · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Alias visas här när du trycker på den kursiva råa beskrivningen på en rad i importförhandsgranskningen och ger den ett begripligt namn.',
 
     'col_select' => 'Välj',
     'col_raw' => 'Rå beskrivning',

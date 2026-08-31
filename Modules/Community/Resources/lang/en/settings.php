@@ -16,6 +16,7 @@ return [
     'offer_to_contribute' => [
         'title' => 'Offer to contribute',
         'help' => 'Show the "Help others identify this" CTA on the triage row so you can submit a suggestion to the shared list with one click.',
+        'help_touch' => 'Show the "Help others identify this" CTA on the triage row so you can submit a suggestion to the shared list with one tap.',
     ],
 
     'update_on_updates' => [

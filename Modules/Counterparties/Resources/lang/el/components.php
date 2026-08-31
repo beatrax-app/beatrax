@@ -41,6 +41,9 @@ return [
     'iban_row' => [
         'label' => 'IBAN',
         'hidden_aria' => 'Το IBAN είναι κρυμμένο — κάνε κλικ στο «Εμφάνιση IBAN» για να το δεις',
+        // i18n-review: el · hidden_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'hidden_aria_touch' => 'Το IBAN είναι κρυμμένο — πάτησε στο «Εμφάνιση IBAN» για να το δεις',
         'show' => 'Εμφάνιση IBAN',
         'hide' => 'Απόκρυψη IBAN',
     ],

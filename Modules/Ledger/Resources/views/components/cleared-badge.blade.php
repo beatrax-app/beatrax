@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Services\UserDataPathService')
 @php
     /**
      * @var array<string,mixed> $transaction  Row array with keys: id, status
@@ -50,7 +51,7 @@
         type="button"
         wire:click="$dispatch('cleared-toggle', { id: {{ $txId }} })"
         class="status-pill {{ $variant }} cleared-badge-toggle"
-        aria-label="{{ Lang::get('ledger::common.badge.toggle_aria', ['label' => $label]) }}"
+        aria-label="{{ UserDataPathService::isMobileRuntime() ? Lang::get('ledger::common.badge.toggle_aria_touch', ['label' => $label]) : Lang::get('ledger::common.badge.toggle_aria', ['label' => $label]) }}"
         data-testid="cleared-badge-{{ $txId }}"
     >
         <span class="dot"></span>

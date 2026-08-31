@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Završi saglasnost u pregledaču',
         'step5_body' => 'Klikni ispod da otvoriš ekran za prijavu i saglasnost svoje banke. Završi prijavu i eventualnu dvofaktorsku potvrdu, nakon čega ćeš se automatski vratiti ovde da završiš uključivanje otvorenog bankarstva.',
+        // i18n-review: sr · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Dodirni ispod da otvoriš ekran za prijavu i saglasnost svoje banke. Završi prijavu i eventualnu dvofaktorsku potvrdu, nakon čega ćeš se automatski vratiti ovde da završiš uključivanje otvorenog bankarstva.',
 
         'cancel' => 'Otkaži',
         'continue' => 'Nastavi →',

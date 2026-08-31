@@ -41,6 +41,9 @@ return [
     'iban_row' => [
         'label' => 'IBAN',
         'hidden_aria' => 'IBAN ir paslēpts — noklikšķiniet Rādīt IBAN, lai to atklātu',
+        // i18n-review: lv · hidden_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'hidden_aria_touch' => 'IBAN ir paslēpts — pieskarieties Rādīt IBAN, lai to atklātu',
         'show' => 'Rādīt IBAN',
         'hide' => 'Slēpt IBAN',
     ],

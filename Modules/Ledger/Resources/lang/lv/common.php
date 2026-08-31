@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Saskaņots — vispirms atceliet saskaņojumu, lai mainītu statusu.',
         'toggle_aria' => ':label — noklikšķiniet, lai pārslēgtu',
+        // i18n-review: lv · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — pieskarieties, lai pārslēgtu',
     ],
 ];

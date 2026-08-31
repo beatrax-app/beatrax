@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Noch keine Aliase',
     'empty_body' => 'Aliase erscheinen hier, nachdem du auf die kursive Rohbeschreibung einer Zeile in der Importvorschau geklickt und ihr einen verständlichen Namen gegeben hast.',
+    // i18n-review: de · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Aliase erscheinen hier, nachdem du auf die kursive Rohbeschreibung einer Zeile in der Importvorschau getippt und ihr einen verständlichen Namen gegeben hast.',
 
     'col_select' => 'Auswählen',
     'col_raw' => 'Rohbeschreibung',

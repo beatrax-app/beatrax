@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Finalizează consimțământul în browser',
         'step5_body' => 'Dă clic mai jos pentru a deschide ecranul de autentificare și consimțământ al băncii tale. Finalizează autentificarea și eventualul pas de verificare în doi pași, apoi vei fi adus automat înapoi aici pentru a termina activarea open banking.',
+        // i18n-review: ro · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Atinge mai jos pentru a deschide ecranul de autentificare și consimțământ al băncii tale. Finalizează autentificarea și eventualul pas de verificare în doi pași, apoi vei fi adus automat înapoi aici pentru a termina activarea open banking.',
 
         'cancel' => 'Anulează',
         'continue' => 'Continuă →',

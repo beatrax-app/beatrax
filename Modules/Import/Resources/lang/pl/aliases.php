@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Brak aliasów',
     'empty_body' => 'Aliasy pojawią się tutaj, gdy klikniesz zapisany kursywą surowy opis w wierszu podglądu importu i nadasz mu czytelną nazwę.',
+    // i18n-review: pl · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Aliasy pojawią się tutaj, gdy dotkniesz zapisany kursywą surowy opis w wierszu podglądu importu i nadasz mu czytelną nazwę.',
 
     'col_select' => 'Wybór',
     'col_raw' => 'Surowy opis',

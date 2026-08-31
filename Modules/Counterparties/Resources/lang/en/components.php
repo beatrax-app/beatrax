@@ -41,6 +41,7 @@ return [
     'iban_row' => [
         'label' => 'IBAN',
         'hidden_aria' => 'IBAN hidden — click Show IBAN to reveal',
+        'hidden_aria_touch' => 'IBAN hidden — tap Show IBAN to reveal',
         'show' => 'Show IBAN',
         'hide' => 'Hide IBAN',
     ],

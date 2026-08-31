@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Anna nõusolek oma brauseris',
         'step5_body' => 'Klõpsa allpool, et avada oma panga sisselogimise ja nõusoleku ekraan. Tee sisselogimine ja võimalik kaheastmeline kinnitus ning sind tuuakse automaatselt siia tagasi, et pangaliidese lubamine lõpetada.',
+        // i18n-review: et · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Puuduta allpool, et avada oma panga sisselogimise ja nõusoleku ekraan. Tee sisselogimine ja võimalik kaheastmeline kinnitus ning sind tuuakse automaatselt siia tagasi, et pangaliidese lubamine lõpetada.',
 
         'cancel' => 'Tühista',
         'continue' => 'Jätka →',

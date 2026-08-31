@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Henüz takma ad yok',
     'empty_body' => 'Takma adlar, bir içe aktarma önizleme satırındaki italik ham açıklamaya tıklayıp ona anlaşılır bir ad verdikten sonra burada görünür.',
+    // i18n-review: tr · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Takma adlar, bir içe aktarma önizleme satırındaki italik ham açıklamaya dokunup ona anlaşılır bir ad verdikten sonra burada görünür.',
 
     'col_select' => 'Seç',
     'col_raw' => 'Ham açıklama',

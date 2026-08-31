@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Paku panustamist',
         'help' => 'Näita sortimisreal nuppu „Aita teistel see tuvastada“, et saaksid ühe klõpsuga jagatud nimekirja ettepaneku saata.',
+        // i18n-review: et · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Näita sortimisreal nuppu „Aita teistel see tuvastada“, et saaksid ühe puudutusega jagatud nimekirja ettepaneku saata.',
     ],
 
     'update_on_updates' => [

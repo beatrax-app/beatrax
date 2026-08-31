@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Fullfør samtykket i nettleseren din',
         'step5_body' => 'Klikk nedenfor for å åpne bankens pålogging og samtykkeside. Fullfør påloggingen og et eventuelt tofaktortrinn, så føres du automatisk tilbake hit for å fullføre aktiveringen av Open Banking.',
+        // i18n-review: nb · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Trykk nedenfor for å åpne bankens pålogging og samtykkeside. Fullfør påloggingen og et eventuelt tofaktortrinn, så føres du automatisk tilbake hit for å fullføre aktiveringen av Open Banking.',
 
         'cancel' => 'Avbryt',
         'continue' => 'Fortsett →',

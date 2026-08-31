@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Ofrecerte a contribuir',
         'help' => 'Muestra el botón «Ayuda a otros a identificar esto» en la fila de triaje para que puedas enviar una sugerencia a la lista compartida con un solo clic.',
+        // i18n-review: es · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Muestra el botón «Ayuda a otros a identificar esto» en la fila de triaje para que puedas enviar una sugerencia a la lista compartida con un solo toque.',
     ],
 
     'update_on_updates' => [

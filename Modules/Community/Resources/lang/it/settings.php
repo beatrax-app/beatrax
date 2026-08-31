@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Proponi di contribuire',
         'help' => 'Mostra il pulsante «Aiuta gli altri a identificarlo» nella riga di smistamento, così puoi inviare una proposta alla lista condivisa con un clic.',
+        // i18n-review: it · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Mostra il pulsante «Aiuta gli altri a identificarlo» nella riga di smistamento, così puoi inviare una proposta alla lista condivisa con un tocco.',
     ],
 
     'update_on_updates' => [

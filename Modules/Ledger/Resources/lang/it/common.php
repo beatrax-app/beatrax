@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Riconciliata — annulla prima la riconciliazione per cambiare stato.',
         'toggle_aria' => ':label — fai clic per cambiare',
+        // i18n-review: it · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — tocca per cambiare',
     ],
 ];

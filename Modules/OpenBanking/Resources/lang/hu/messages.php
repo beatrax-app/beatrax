@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Fejezd be a hozzájárulást a böngésződben',
         'step5_body' => 'Kattints alább a bankod bejelentkezési és hozzájárulási képernyőjének megnyitásához. Végezd el a bejelentkezést és az esetleges kétlépcsős azonosítást, utána automatikusan visszakerülsz ide, hogy befejezd a nyílt bankolás bekapcsolását.',
+        // i18n-review: hu · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Koppints alább a bankod bejelentkezési és hozzájárulási képernyőjének megnyitásához. Végezd el a bejelentkezést és az esetleges kétlépcsős azonosítást, utána automatikusan visszakerülsz ide, hogy befejezd a nyílt bankolás bekapcsolását.',
 
         'cancel' => 'Mégse',
         'continue' => 'Folytatás →',

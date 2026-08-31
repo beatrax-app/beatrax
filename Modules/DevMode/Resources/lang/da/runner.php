@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Kø-worker: KØRER',
     'worker_not_running' => 'Kø-worker: KØRER IKKE',
     'no_runs' => 'Ingen kørsler endnu. Klik på "Kør en kommando", eller brug kommandopaletten (⌘K).',
+    // i18n-review: da · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Ingen kørsler endnu. Tryk på "Kør en kommando", eller brug kommandopaletten (⌘K).',
     'recent_runs_aria' => 'Seneste kørsler',
     'modal_heading' => 'Kør en SAFE-kommando',
     'modal_intro' => 'Vælg en kommando på SAFE-niveau, der køres med det samme. DESTRUCTIVE-kommandoer står ikke her — brug Kør igen i tidslinjen eller ⌘K-paletten.',

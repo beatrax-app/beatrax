@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Onayı tarayıcında tamamla',
         'step5_body' => 'Bankanın giriş ve onay ekranını açmak için aşağıya tıkla. Girişi ve varsa 2 adımlı doğrulamayı tamamla, ardından Open Banking kurulumunu bitirmek için otomatik olarak buraya geri getirilirsin.',
+        // i18n-review: tr · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Bankanın giriş ve onay ekranını açmak için aşağıya dokun. Girişi ve varsa 2 adımlı doğrulamayı tamamla, ardından Open Banking kurulumunu bitirmek için otomatik olarak buraya geri getirilirsin.',
 
         'cancel' => 'İptal',
         'continue' => 'Devam →',

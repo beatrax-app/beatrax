@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Dokończ udzielanie zgody w przeglądarce',
         'step5_body' => 'Kliknij poniżej, aby otworzyć ekran logowania i zgody Twojego banku. Zaloguj się, przejdź weryfikację dwuskładnikową, a potem wrócisz tutaj automatycznie, aby dokończyć włączanie Open Bankingu.',
+        // i18n-review: pl · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Dotknij poniżej, aby otworzyć ekran logowania i zgody Twojego banku. Zaloguj się, przejdź weryfikację dwuskładnikową, a potem wrócisz tutaj automatycznie, aby dokończyć włączanie Open Bankingu.',
 
         'cancel' => 'Anuluj',
         'continue' => 'Dalej →',

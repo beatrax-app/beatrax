@@ -41,6 +41,9 @@ return [
     'iban_row' => [
         'label' => 'IBAN',
         'hidden_aria' => 'IBAN oculto — clica em Mostrar IBAN para o ver',
+        // i18n-review: pt · hidden_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'hidden_aria_touch' => 'IBAN oculto — toca em Mostrar IBAN para o ver',
         'show' => 'Mostrar IBAN',
         'hide' => 'Ocultar IBAN',
     ],

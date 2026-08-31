@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Još nema aliasa',
     'empty_body' => 'Aliasi se pojavljuju ovdje nakon što klikneš kurzivni izvorni opis u retku pregleda uvoza i daš mu razumljiv naziv.',
+    // i18n-review: hr · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Aliasi se pojavljuju ovdje nakon što dodirneš kurzivni izvorni opis u retku pregleda uvoza i daš mu razumljiv naziv.',
 
     'col_select' => 'Odaberi',
     'col_raw' => 'Izvorni opis',

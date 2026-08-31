@@ -41,6 +41,9 @@ return [
     'iban_row' => [
         'label' => 'IBAN',
         'hidden_aria' => 'IBAN on peidetud — selle nägemiseks klõpsa „Näita IBAN-i“',
+        // i18n-review: et · hidden_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'hidden_aria_touch' => 'IBAN on peidetud — selle nägemiseks puuduta „Näita IBAN-i“',
         'show' => 'Näita IBAN-i',
         'hide' => 'Peida IBAN',
     ],

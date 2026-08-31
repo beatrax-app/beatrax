@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Usaglašeno — prvo poništi usaglašavanje da promeniš status.',
         'toggle_aria' => ':label — klikni za promenu',
+        // i18n-review: sr · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — dodirni za promenu',
     ],
 ];

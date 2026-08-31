@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Viimeistele suostumus selaimessa',
         'step5_body' => 'Avaa pankkisi kirjautumis- ja suostumusnäkymä alta olevasta painikkeesta. Kirjaudu sisään ja tee mahdollinen kaksivaiheinen tunnistus, niin palaat tänne automaattisesti viimeistelemään pankkiyhteyden käyttöönoton.',
+        // i18n-review: fi · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Avaa pankkisi kirjautumis- ja suostumusnäkymä alta olevasta painikkeesta. Kirjaudu sisään ja tee mahdollinen kaksivaiheinen tunnistus, niin palaat tänne automaattisesti viimeistelemään pankkiyhteyden käyttöönoton.',
 
         'cancel' => 'Peruuta',
         'continue' => 'Jatka →',

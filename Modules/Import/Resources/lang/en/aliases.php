@@ -13,6 +13,7 @@ return [
 
     'empty_heading' => 'No aliases yet',
     'empty_body' => 'Aliases appear here after you click the italic raw description on an import preview row and give it a friendly name.',
+    'empty_body_touch' => 'Aliases appear here after you tap the italic raw description on an import preview row and give it a friendly name.',
 
     'col_select' => 'Select',
     'col_raw' => 'Raw description',

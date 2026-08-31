@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Worker della coda: IN ESECUZIONE',
     'worker_not_running' => 'Worker della coda: NON IN ESECUZIONE',
     'no_runs' => 'Ancora nessuna esecuzione. Fai clic su "Esegui un comando" oppure usa la palette dei comandi (⌘K).',
+    // i18n-review: it · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Ancora nessuna esecuzione. Tocca su "Esegui un comando" oppure usa la palette dei comandi (⌘K).',
     'recent_runs_aria' => 'Esecuzioni recenti',
     'modal_heading' => 'Esegui un comando SAFE',
     'modal_intro' => "Scegli un comando di livello SAFE da eseguire subito. I comandi DESTRUCTIVE non sono elencati qui — usa l'opzione Riesegui nella timeline oppure la palette ⌘K.",

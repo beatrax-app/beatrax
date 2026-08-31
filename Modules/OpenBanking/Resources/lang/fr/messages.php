@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Donne ton consentement dans le navigateur',
         'step5_body' => 'Clique ci-dessous pour ouvrir l\'écran de connexion et de consentement de ta banque. Termine la connexion et l\'éventuelle étape à deux facteurs : tu seras ramené ici automatiquement pour finir d\'activer l\'open banking.',
+        // i18n-review: fr · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Touche ci-dessous pour ouvrir l\'écran de connexion et de consentement de ta banque. Termine la connexion et l\'éventuelle étape à deux facteurs : tu seras ramené ici automatiquement pour finir d\'activer l\'open banking.',
 
         'cancel' => 'Annuler',
         'continue' => 'Continuer →',

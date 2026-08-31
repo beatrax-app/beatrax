@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Oferă-te să contribui',
         'help' => 'Afișează butonul „Ajută-i pe alții să identifice asta” pe rândul de triaj, ca să poți trimite o sugestie în lista comună dintr-un singur clic.',
+        // i18n-review: ro · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Afișează butonul „Ajută-i pe alții să identifice asta” pe rândul de triaj, ca să poți trimite o sugestie în lista comună dintr-o singură atingere.',
     ],
 
     'update_on_updates' => [

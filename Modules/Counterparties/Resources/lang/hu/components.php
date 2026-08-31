@@ -41,6 +41,9 @@ return [
     'iban_row' => [
         'label' => 'IBAN',
         'hidden_aria' => 'Az IBAN rejtve — kattints az IBAN megjelenítésére',
+        // i18n-review: hu · hidden_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'hidden_aria_touch' => 'Az IBAN rejtve — koppints az IBAN megjelenítésére',
         'show' => 'IBAN megjelenítése',
         'hide' => 'IBAN elrejtése',
     ],
