@@ -455,9 +455,19 @@ it('reads a supplied day before the op-log applier writes it, on both paths', fu
     $gate = base_path('Modules/Sync/Internal/Merge/SuppliedDateGate.php');
 
     expect(is_file($gate))->toBeTrue('SuppliedDateGate is gone — the applier writes supplied days unread again.');
-    // dayOrNull, not normalisedDayOrNull: this is the supplying side, so a
-    // value that is not exactly a day is refused rather than rolled into one.
-    expect((string) file_get_contents($gate))->toContain('SafeDate::dayOrNull');
+    // A refusing reader, never normalisedDayOrNull: this is the supplying
+    // side, so a value that is not exactly a day is refused rather than rolled
+    // into one. dayIgnoringTimeOrNull sets aside only the time the writer's own
+    // cast stamps on, then puts the day itself through dayOrNull.
+    $gateSource = (string) file_get_contents($gate);
+    expect($gateSource)->toContain('SafeDate::dayIgnoringTimeOrNull')
+        ->and($gateSource)->not->toContain('SafeDate::normalisedDayOrNull');
+
+    // And that reader must stay a refusing one: the name promises it discards
+    // a time, not that it rolls a day nobody meant into one that exists.
+    $safeDate = (string) file_get_contents(base_path('Modules/Core/Public/Support/SafeDate.php'));
+    $body = substr($safeDate, (int) strpos($safeDate, 'function dayIgnoringTimeOrNull'));
+    expect(substr($body, 0, (int) strpos($body, "\n    }")))->toContain('self::dayOrNull(');
 
     // Both writes, or neither: a create gates the column a Set rewrites
     // afterwards, and guarding one of them leaves the other open.

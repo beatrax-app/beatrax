@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Categorization\Database\Seeders\DefaultCategoryTreeSeeder;
 use Modules\Chains\Models\ChainLink;
@@ -345,8 +346,13 @@ it('produces the documented dataset shape after a single seed run', function ():
             ->toBeGreaterThanOrEqual(1, "DriftAlert state {$state} should carry ≥1 row");
     }
 
-    $systemAlertKinds = SystemAlert::query()
-        ->whereIn('user_id', demoSeedUserIds())
+    // System-wide rows included: the machine-local kinds carry no user_id, so
+    // they never ride the op log to a paired device. Reading only owned rows
+    // asked for kinds this seeder deliberately does not own.
+    $systemAlertKinds = SystemAlert::withoutGlobalScopes()
+        ->where(static function (EloquentBuilder $q): void {
+            $q->whereIn('user_id', demoSeedUserIds())->orWhereNull('user_id');
+        })
         ->pluck('kind')
         ->unique()
         ->values()
