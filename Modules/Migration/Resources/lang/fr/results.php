@@ -17,7 +17,7 @@ return [
     'stats' => [
         'category' => 'Catégories',
         'account' => 'Comptes',
-        'payee' => 'Tiers',
+        'payee' => 'Tiers associés',
         'transaction' => 'Transactions',
         'budget' => 'Mois budgétaires',
     ],

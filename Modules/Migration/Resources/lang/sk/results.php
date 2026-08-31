@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Kategórie',
         'account' => 'Účty',
-        'payee' => 'Protistrany',
+        // i18n-review: sk · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Spárované protistrany',
         'transaction' => 'Transakcie',
         'budget' => 'Rozpočtové mesiace',
     ],

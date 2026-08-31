@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Kategoriler',
         'account' => 'Hesaplar',
-        'payee' => 'Karşı taraflar',
+        // i18n-review: tr · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Eşleştirilen karşı taraflar',
         'transaction' => 'İşlemler',
         'budget' => 'Bütçe ayları',
     ],

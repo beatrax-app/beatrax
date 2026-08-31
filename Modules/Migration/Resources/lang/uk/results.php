@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Категорії',
         'account' => 'Рахунки',
-        'payee' => 'Контрагенти',
+        // i18n-review: uk · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Пов\'язані контрагенти',
         'transaction' => 'Транзакції',
         'budget' => 'Місяці бюджету',
     ],

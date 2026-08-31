@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Categorii',
         'account' => 'Conturi',
-        'payee' => 'Contrapărți',
+        // i18n-review: ro · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Contrapărți asociate',
         'transaction' => 'Tranzacții',
         'budget' => 'Luni de buget',
     ],

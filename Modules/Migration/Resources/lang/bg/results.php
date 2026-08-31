@@ -17,7 +17,9 @@ return [
     'stats' => [
         'category' => 'Категории',
         'account' => 'Сметки',
-        'payee' => 'Контрагенти',
+        // i18n-review: bg · stats.payee — the count is payees the import
+        // linked, not ones it created; check the participle agrees here.
+        'payee' => 'Свързани контрагенти',
         'transaction' => 'Транзакции',
         'budget' => 'Бюджетни месеци',
     ],
