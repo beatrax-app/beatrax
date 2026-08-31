@@ -355,16 +355,7 @@ final class InboxesPage extends Component
         string $provider,
         OAuthSecretsRepository $secrets,
     ): mixed {
-        if (MailProvider::tryFrom($provider) === null) {
-            return null;
-        }
-
-        // Both branches below end at the loopback callback, so neither can
-        // finish here — the wizard would print a URL this device does not
-        // serve, and the redirect would arrive nowhere.
-        if (! $this->connectsHere) {
-            $this->toast(Lang::get('email-scan::inboxes.phone_body'));
-
+        if (! $this->opensWizardFor($provider)) {
             return null;
         }
 
@@ -377,6 +368,24 @@ final class InboxesPage extends Component
         $this->dispatch('oauth-client-wizard:open', provider: $provider);
 
         return null;
+    }
+
+    // Says so on the way out, because the caller's remaining branches both end
+    // at the loopback callback: the wizard would print a URL this device does
+    // not serve, and the redirect would arrive nowhere.
+    private function opensWizardFor(string $provider): bool
+    {
+        if (MailProvider::tryFrom($provider) === null) {
+            return false;
+        }
+
+        if (! $this->connectsHere) {
+            $this->toast(Lang::get('email-scan::inboxes.phone_body'));
+
+            return false;
+        }
+
+        return true;
     }
 
     public function render(
