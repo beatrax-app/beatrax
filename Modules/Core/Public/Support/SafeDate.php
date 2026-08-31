@@ -52,16 +52,22 @@ final class SafeDate
             : null;
     }
 
+    // The shape a DATE column takes on the way out: the model cast stamps its
+    // midnight on, so the day arrives as 'Y-m-d H:i:s'. Anchored and no wider,
+    // because a value this does not recognise is simply read as a whole day.
+    private const string DAY_WITH_TIME = '/^\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}$/';
+
     // The same exact reading, for a value that reached a DATE column through
-    // a cast that stamped a time on it. Only a recognisable time suffix is set
-    // aside; the day itself still has to survive dayOrNull, which is what
-    // keeps '2027-02-29 00:00:00' refused rather than rolled forward.
+    // that cast. Only the time is set aside; the day still has to survive
+    // dayOrNull, which is what keeps '2027-02-29 00:00:00' refused rather
+    // than rolled forward into a day nobody meant.
     public static function dayIgnoringTimeOrNull(string $raw): ?CarbonImmutable
     {
         $trimmed = trim($raw);
-        $pattern = '/^(\\d{4}-\\d{2}-\\d{2})[ T]\\d{2}:\\d{2}(?::\\d{2})?(?:\\.\\d+)?(?:Z|[+-]\\d{2}:?\\d{2})?$/';
 
-        return self::dayOrNull(preg_match($pattern, $trimmed, $match) === 1 ? $match[1] : $trimmed);
+        return preg_match(self::DAY_WITH_TIME, $trimmed) === 1
+            ? self::dayOrNull(substr($trimmed, 0, 10))
+            : self::dayOrNull($trimmed);
     }
 
     // Named for what it does, because it is the wrong answer for anything a
